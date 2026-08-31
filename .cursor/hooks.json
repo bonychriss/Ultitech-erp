@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/start-auto-sync.ps1"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/trigger-sync.ps1"
+      }
+    ],
+    "afterTabFileEdit": [
+      {
+        "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/trigger-sync.ps1"
+      }
+    ]
+  }
+}

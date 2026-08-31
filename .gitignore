@@ -45,6 +45,11 @@ Thumbs.db
 .idea/
 .qodo/
 
+# Auto-sync runtime (local watcher state)
+.cursor/auto-sync.log
+.cursor/auto-sync-watcher.lock
+.cursor/auto-sync-pending.txt
+
 # Build caches (keep dist/ for deployed frontends)
 .cache/
 .parcel-cache/

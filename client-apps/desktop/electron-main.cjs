@@ -207,7 +207,7 @@ function createSplashWindow(config) {
     center: true,
     alwaysOnTop: true,
     show: false,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#f8fafc',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

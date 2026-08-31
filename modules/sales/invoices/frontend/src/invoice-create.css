@@ -882,8 +882,9 @@ body.page-inv-desk button.inv-line-btn--rounded {
 .inv-line-col-image { width: 52px; text-align: center; padding: 10px 6px !important; }
 .inv-line-table th:nth-child(1),
 .inv-line-table td:nth-child(1) { width: 2.25rem; text-align: center; }
-.inv-line-table th:nth-child(4),
-.inv-line-table td:nth-child(4) { width: 4.25rem; }
+.inv-line-col-qty { width: 9rem; min-width: 9rem; }
+.inv-line-table th.inv-line-col-qty,
+.inv-line-table td.inv-line-col-qty { width: 9rem; min-width: 9rem; }
 .inv-line-table th:nth-child(5),
 .inv-line-table td:nth-child(5) { width: 6.25rem; }
 .inv-line-table th:nth-child(6),
@@ -921,6 +922,21 @@ body.page-inv-desk button.inv-line-btn--rounded {
   padding: 0 8px;
   font-size: 12px;
   box-sizing: border-box;
+}
+.inv-line-table .inv-line-qty-input {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+.inv-line-table .inv-line-qty-input::-webkit-outer-spin-button,
+.inv-line-table .inv-line-qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.inv-line-table .inv-line-qty-input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 .inv-summary-box {
   margin-top: 1.5rem; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc;

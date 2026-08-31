@@ -653,7 +653,7 @@ export default function InvoiceCreatePage() {
                     <th>#</th>
                     <th className="inv-line-col-image">Image</th>
                     <th>Item</th>
-                    <th>Qty</th>
+                    <th className="inv-line-col-qty">Qty</th>
                     <th>Unit price</th>
                     <th>Disc %</th>
                     <th>Tax %</th>
@@ -737,8 +737,14 @@ export default function InvoiceCreatePage() {
                           )}
                           </div>
                         </td>
-                        <td>
-                          <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, { quantity: Math.max(1, parseFloat(e.target.value) || 1) })} />
+                        <td className="inv-line-col-qty">
+                          <input
+                            type="number"
+                            min="1"
+                            className="inv-line-qty-input"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(index, { quantity: Math.max(1, parseFloat(e.target.value) || 1) })}
+                          />
                         </td>
                         <td>
                           <input type="number" step="0.01" min="0" value={item.unit_price} onChange={(e) => updateItem(index, { unit_price: Math.max(0, parseFloat(e.target.value) || 0) })} />

@@ -2076,7 +2076,7 @@ function CreateOrderApp() {
 }
 .quote-layout, .quote-left { min-width:0; max-width:100% }
 .quote-card { max-width:100%; box-sizing:border-box }
-.quote-table-wrap { overflow: visible }
+.quote-table-wrap { overflow-x:auto }
 .quote-header { display:flex; justify-content:space-between; align-items:center; gap:18px; margin-bottom:32px }
 .quote-title h1 { font-size:28px; font-weight:800; color:#1e293b; margin:0 }
 .quote-title p { color:#64748b; font-size:14px; margin-top:6px }
@@ -2119,7 +2119,7 @@ function CreateOrderApp() {
 .summary-total span:first-child { font-size:12px; font-weight:800; text-transform:uppercase; color:#0f172a }
 .summary-total span:last-child { font-size:18px; font-weight:900; color:#2563eb }
 .summary-input { width:78px; height:32px; border:1px solid #e2e8f0; border-radius:8px; padding:0 8px; text-align:right; font-size:12px }
-.quote-table-wrap { width:100%; max-width:100%; overflow-x:visible; overflow-y:visible; -ms-overflow-style:none; scrollbar-width:none }
+.quote-table-wrap { width:100%; max-width:100%; overflow-x:auto; overflow-y:visible; -ms-overflow-style:auto; scrollbar-width:thin }
 .quote-table-wrap::-webkit-scrollbar { display:none; width:0; height:0 }
  .quote-table { width:100%; min-width:0; border-collapse:separate; border-spacing:0; table-layout:fixed }
 .quote-table th { background:#f8fafc; color:#64748b; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; padding:14px 10px; border-bottom:1px solid #e2e8f0; text-align:left; white-space:normal; line-height:1.2 }
@@ -2128,8 +2128,9 @@ function CreateOrderApp() {
 .quote-table .col-image { width:58px }
 .quote-table .col-item { width:17% }
 .quote-table .col-desc { width:18% }
-.quote-table .col-qty { width:132px }
-.quote-table td.col-qty { overflow:visible }
+.quote-table .col-qty { width:140px; min-width:140px !important }
+.quote-table th.col-qty,
+.quote-table td.col-qty { min-width:140px !important; width:140px !important; overflow:visible !important }
 .quote-table .col-price { width:11% }
 .quote-table .col-disc { width:58px }
 .quote-table .col-tax { width:64px }
@@ -2155,10 +2156,10 @@ function CreateOrderApp() {
 .li-item-change:hover { text-decoration:underline }
 .li-search-input { width:100%; max-width:100%; min-width:0; height:38px; border:1px solid #cbd5e1; border-radius:8px; padding:0 10px; font-size:12px; box-sizing:border-box }
 .li-desc-input { width:100%; max-width:100%; min-width:0; height:38px; border:1px solid #e2e8f0; border-radius:8px; padding:0 10px; font-size:12px; color:#334155; background:#fafafa; box-sizing:border-box }
-.li-qty-stepper { display:inline-flex; align-items:center; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff; max-width:100% }
-.li-qty-stepper button { width:30px; height:38px; border:0; background:#f8fafc; color:#475569; font-size:14px; font-weight:700; cursor:pointer; line-height:1; flex-shrink:0 }
-.li-qty-stepper button:hover { background:#e2e8f0 }
-.li-qty-stepper input { width:72px; min-width:72px; height:38px; border:0; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0; text-align:center; font-size:13px; font-weight:700; color:#0f172a; padding:0 4px; box-sizing:border-box }
+.li-qty-input { width:100%; max-width:100%; min-width:0; height:38px; border:1px solid #e2e8f0; border-radius:8px; padding:0 10px; font-size:13px; font-weight:700; text-align:center; color:#0f172a; background:#fff; box-sizing:border-box }
+.li-qty-input::-webkit-outer-spin-button,
+.li-qty-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0 }
+.li-qty-input[type=number] { -moz-appearance:textfield; appearance:textfield }
 .li-unit-price { font-weight:800; font-size:13px; color:#0f172a; white-space:nowrap }
 .li-price-input { width:100%; max-width:100%; min-width:0; height:34px; border:1px solid #e2e8f0; border-radius:8px; padding:0 8px; font-size:12px; font-weight:700; text-align:right; box-sizing:border-box }
 .li-disc-input { width:100%; max-width:52px; height:34px; border:1px solid #e2e8f0; border-radius:8px; padding:0 4px; font-size:12px; text-align:center; box-sizing:border-box }
@@ -2285,7 +2286,7 @@ function CreateOrderApp() {
       },
       /* @__PURE__ */ React.createElement("div", { style: { width: 56, height: 48, background: "#f1f5f9", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flex: "0 0 56px" } }, p.image_url ? /* @__PURE__ */ React.createElement("img", { src: p.image_url, alt: "", style: { width: "100%", height: "100%", objectFit: "contain" } }) : /* @__PURE__ */ React.createElement("i", { className: "fa-solid fa-box text-sm text-slate-400" })),
       /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { className: "font-semibold truncate text-sm text-slate-800" }, p.name), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-[11px] text-slate-500 mt-0.5" }, /* @__PURE__ */ React.createElement("span", { className: "truncate" }, p.product_code), /* @__PURE__ */ React.createElement("span", { className: "font-medium text-blue-600" }, "TSh ", formatCurrency(p.selling_price))))
-    )) : /* @__PURE__ */ React.createElement("div", { className: "py-2 px-3.5 text-slate-400 text-xs italic" }, "No matching products"))))), /* @__PURE__ */ React.createElement("td", { className: "col-desc" }, /* @__PURE__ */ React.createElement("input", { type: "text", name: `items[${index}][description]`, value: item.description, onChange: (e) => handleItemChange(index, "description", e.target.value), className: "li-desc-input", placeholder: "Description" })), /* @__PURE__ */ React.createElement("td", { className: "col-qty" }, /* @__PURE__ */ React.createElement("div", { className: "li-qty-stepper" }, /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => handleItemChange(index, "quantity", Math.max(1, (parseFloat(item.quantity) || 1) - 1)) }, "-"), /* @__PURE__ */ React.createElement("input", { type: "number", name: `items[${index}][quantity]`, min: "1", value: item.quantity, onChange: (e) => handleItemChange(index, "quantity", Math.max(1, parseFloat(e.target.value) || 1)) }), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => handleItemChange(index, "quantity", (parseFloat(item.quantity) || 1) + 1) }, "+"))), /* @__PURE__ */ React.createElement("td", { className: "col-price" }, /* @__PURE__ */ React.createElement("input", { type: "number", step: "0.01", name: `items[${index}][unit_price]`, value: item.unit_price, onChange: (e) => handleItemChange(index, "unit_price", Math.max(0, parseFloat(e.target.value) || 0)), className: "li-price-input" })), /* @__PURE__ */ React.createElement("td", { className: "col-disc" }, /* @__PURE__ */ React.createElement("input", { type: "number", step: "0.01", min: "0", max: "100", name: `items[${index}][discount]`, value: item.discount, onChange: (e) => handleItemChange(index, "discount", Math.max(0, Math.min(100, parseFloat(e.target.value) || 0))), className: "li-disc-input" })), /* @__PURE__ */ React.createElement("td", { className: "col-tax" }, /* @__PURE__ */ React.createElement("select", { className: "li-tax-select", value: taxVal, onChange: (e) => handleItemChange(index, "tax_percent", parseFloat(e.target.value) || 0) }, [0, 10, 18, 20].map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, t, "%")))), /* @__PURE__ */ React.createElement("td", { className: "li-line-total col-total" }, formatCurrency(item.line_total)), /* @__PURE__ */ React.createElement("td", { className: "col-action" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "li-action-btn", title: "Remove row", onClick: (e) => {
+    )) : /* @__PURE__ */ React.createElement("div", { className: "py-2 px-3.5 text-slate-400 text-xs italic" }, "No matching products"))))), /* @__PURE__ */ React.createElement("td", { className: "col-desc" }, /* @__PURE__ */ React.createElement("input", { type: "text", name: `items[${index}][description]`, value: item.description, onChange: (e) => handleItemChange(index, "description", e.target.value), className: "li-desc-input", placeholder: "Description" })), /* @__PURE__ */ React.createElement("td", { className: "col-qty" }, /* @__PURE__ */ React.createElement("input", { type: "number", name: `items[${index}][quantity]`, min: "1", value: item.quantity, onChange: (e) => handleItemChange(index, "quantity", Math.max(1, parseFloat(e.target.value) || 1)), className: "li-qty-input" })), /* @__PURE__ */ React.createElement("td", { className: "col-price" }, /* @__PURE__ */ React.createElement("input", { type: "number", step: "0.01", name: `items[${index}][unit_price]`, value: item.unit_price, onChange: (e) => handleItemChange(index, "unit_price", Math.max(0, parseFloat(e.target.value) || 0)), className: "li-price-input" })), /* @__PURE__ */ React.createElement("td", { className: "col-disc" }, /* @__PURE__ */ React.createElement("input", { type: "number", step: "0.01", min: "0", max: "100", name: `items[${index}][discount]`, value: item.discount, onChange: (e) => handleItemChange(index, "discount", Math.max(0, Math.min(100, parseFloat(e.target.value) || 0))), className: "li-disc-input" })), /* @__PURE__ */ React.createElement("td", { className: "col-tax" }, /* @__PURE__ */ React.createElement("select", { className: "li-tax-select", value: taxVal, onChange: (e) => handleItemChange(index, "tax_percent", parseFloat(e.target.value) || 0) }, [0, 10, 18, 20].map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, t, "%")))), /* @__PURE__ */ React.createElement("td", { className: "li-line-total col-total" }, formatCurrency(item.line_total)), /* @__PURE__ */ React.createElement("td", { className: "col-action" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "li-action-btn", title: "Remove row", onClick: (e) => {
       e.stopPropagation();
       removeItem(index);
     } }, /* @__PURE__ */ React.createElement("i", { className: "fa-regular fa-trash-can" }))));

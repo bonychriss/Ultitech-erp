@@ -3,6 +3,13 @@ includes/env.php
 includes/env.prod.php
 includes/env.local.php
 env.php
+env.local.php
+env.production.php
+env.production.backup.php
+env.old.php
+config_mail.php
+mail-bridges/ultimate/config.php
+mail-bridges/roadmaster/config.php
 erp_deployment_package/env.php
 erp_deployment_package/includes/env.php
 .vscode/settings.json

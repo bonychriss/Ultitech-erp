@@ -1,4 +1,5 @@
 # Sync local changes to GitHub (add, commit if dirty, push).
+# Respects .gitignore — secrets and uploads are never staged.
 param(
     [string]$RepoRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 )
@@ -33,7 +34,20 @@ try {
     $git = Get-GitExe
     $env:Path = "C:\Program Files\Git\cmd;C:\Program Files\GitHub CLI;" + $env:Path
 
+    # Stage tracked changes and new files; .gitignore blocks secrets/uploads
     & $git add -A 2>&1 | Out-Null
+
+    # Safety net: never commit known secret paths even if .gitignore is misconfigured
+    $secretPaths = @(
+        'env.php', 'env.local.php', 'env.production.php', 'env.production.backup.php', 'env.old.php',
+        'includes/env.php', 'config_mail.php',
+        'mail-bridges/ultimate/config.php', 'mail-bridges/roadmaster/config.php',
+        'scripts/deploy.config.php'
+    )
+    foreach ($sp in $secretPaths) {
+        & $git reset HEAD -- $sp 2>&1 | Out-Null
+    }
+
     $status = & $git status --porcelain 2>&1
     if (-not $status) {
         Write-SyncLog 'No changes to sync.'

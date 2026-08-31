@@ -1,0 +1,12 @@
+---
+# UltiTech ERP  cPanel Git deployment (GitHub ? public_html)
+# Configure in cPanel: Git Version Control ? Manage ? Deploy HEAD Commit
+# Set deployment path to: /home/CPANEL_USERNAME/public_html/
+#
+# Uses rsync WITHOUT --delete so server-only files survive deploy:
+#   env.php, vendor/, uploads/, storage/, logs/, desktop .exe installer
+
+deployment:
+  tasks:
+    - /bin/rsync -rlptgoD --exclude=.git --exclude=.github --exclude=.cursor --exclude=node_modules --exclude=vendor --exclude='*.md' --exclude='*.sql' --exclude=scripts/deploy.config.php --exclude=env.php --exclude=includes/env.php --exclude=env.local.php --exclude=env.production.php --exclude=env.old.php --exclude=env.production.backup.php --exclude=config_mail.php --exclude=mail-bridges/ultimate/config.php --exclude=mail-bridges/roadmaster/config.php --exclude=assets/uploads --exclude=assets/signatures --exclude=uploads --exclude=storage --exclude=logs --exclude=backups --exclude=tmp --exclude=client-apps/desktop/dist --exclude=erp_deployment_package --exclude=deploy --exclude=cloud_erp --exclude=sales_update_pkg --exclude=upload_pkg ./ $DEPLOYPATH
+    - cd $DEPLOYPATH && (/usr/local/bin/composer install --no-dev --optimize-autoloader 2>/dev/null || /usr/bin/composer install --no-dev --optimize-autoloader 2>/dev/null || true)

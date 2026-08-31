@@ -1,6 +1,6 @@
 <?php
 /**
- * Sales Report  AI + ERP autofill from live system data (group-wise team report).
+ * Sales Report ï¿½ AI + ERP autofill from live system data (group-wise team report).
  */
 
 declare(strict_types=1);

@@ -1,0 +1,52 @@
+{
+  "name": "ultitech-erp-desktop",
+  "version": "1.0.0",
+  "description": "UltiTech ERP desktop client (Electron shell for the hosted web app)",
+  "main": "electron-main.cjs",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "start:local": "cross-env ULTITECH_USE_LOCAL_DEV=true electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win"
+  },
+  "build": {
+    "appId": "io.ultitech.erp.desktop",
+    "productName": "UltiTech ERP",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron-main.cjs",
+      "load-config.cjs",
+      "preload.cjs",
+      "config.json",
+      "../shared/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../shared/config.example.json",
+        "to": "config.example.json"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "UltiTech-ERP-Setup-${version}.${ext}",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^34.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}

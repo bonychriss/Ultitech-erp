@@ -241,7 +241,7 @@ function salesReportsUiJsonFlags(): int
 }
 
 /**
- * Lightweight editor bootstrap ù document HTML is loaded via editor-init.php API.
+ * Lightweight editor bootstrap ÔøΩ document HTML is loaded via editor-init.php API.
  */
 function salesReportsUiBuildEditorShellConfig(PDO $pdo, int $reportId): ?array
 {

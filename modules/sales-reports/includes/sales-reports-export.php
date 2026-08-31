@@ -1,6 +1,6 @@
 <?php
 /**
- * Sales Report  export helpers (PDF, Word, Excel, Print).
+ * Sales Report ï¿½ export helpers (PDF, Word, Excel, Print).
  */
 
 declare(strict_types=1);

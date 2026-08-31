@@ -395,8 +395,8 @@ function reportDomainFinanceExpenseCalculationsHtml(PDO $pdo, array $filters, ar
             ['Total Income (collected)', 'Sum of invoice payments in period', salesReportsFormatMoney($totalIncome)],
             ['Total Expenses', 'Sum of approved vouchers and other expense sources', salesReportsFormatMoney($totalExpenses)],
             ['Net Profit / (Loss)', 'Total Income ? Total Expenses', salesReportsFormatMoney($netProfit)],
-            ['Expense Ratio', 'Total Expenses ÷ Total Income', $totalIncome > 0 ? number_format(($totalExpenses / $totalIncome) * 100, 1) . '%' : 'N/A'],
-            ['Net Margin', 'Net Profit ÷ Total Income', $totalIncome > 0 ? number_format(($netProfit / $totalIncome) * 100, 1) . '%' : 'N/A'],
+            ['Expense Ratio', 'Total Expenses ï¿½ Total Income', $totalIncome > 0 ? number_format(($totalExpenses / $totalIncome) * 100, 1) . '%' : 'N/A'],
+            ['Net Margin', 'Net Profit ï¿½ Total Income', $totalIncome > 0 ? number_format(($netProfit / $totalIncome) * 100, 1) . '%' : 'N/A'],
         ]
     );
 

@@ -12,6 +12,7 @@ import {
   ListChecks,
   Mail,
   Monitor,
+  Download,
   Palette,
   PieChart,
   Receipt,
@@ -266,6 +267,8 @@ export default function SelectModulePage() {
   const enabledLabels = Array.isArray(cfg.enabledModuleLabels) ? cfg.enabledModuleLabels : []
   const modules = Array.isArray(cfg.modules) ? cfg.modules : []
   const mailUpdate = cfg.mailUpdate && typeof cfg.mailUpdate === 'object' ? cfg.mailUpdate : null
+  const desktopAppDownloadUrl = cfg.desktopAppDownloadUrl || ''
+  const showDesktopAppDownload = Boolean(cfg.showDesktopAppDownload && desktopAppDownloadUrl)
   const enabledPreview = enabledLabels.slice(0, 4).join(', ')
   const enabledMore = enabledLabels.length > 4
 
@@ -404,6 +407,19 @@ export default function SelectModulePage() {
         onSkip={skipRate}
         onSubmitted={onRated}
       />
+
+      {showDesktopAppDownload ? (
+        <a
+          href={desktopAppDownloadUrl}
+          className="sm-desktop-download"
+          title="Download UltiTech ERP for Windows"
+          download
+        >
+          <Monitor className="sm-desktop-download-icon" strokeWidth={1.75} aria-hidden="true" />
+          <span className="sm-desktop-download-text">Desktop app</span>
+          <Download className="sm-desktop-download-arrow" strokeWidth={2} aria-hidden="true" />
+        </a>
+      ) : null}
     </div>
   )
 }

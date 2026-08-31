@@ -1,6 +1,6 @@
 <?php
 /**
- * Sales Report Document System  core library.
+ * Sales Report Document System ï¿½ core library.
  * Editable document-based sales reports with ERP data integration.
  */
 
@@ -380,7 +380,7 @@ function salesReportsCreate(PDO $pdo, array $data): int
         $status = 'draft';
     }
 
-    $defaultName = $domain === 'sales' ? 'Untitled Sales Report' : (reportEngineDomainLabel($domain) . '  ' . date('M Y'));
+    $defaultName = $domain === 'sales' ? 'Untitled Sales Report' : (reportEngineDomainLabel($domain) . ' ï¿½ ' . date('M Y'));
     $filtersJson = $filters !== [] ? json_encode($filters, JSON_UNESCAPED_UNICODE) : null;
 
     $st = $pdo->prepare("INSERT INTO sales_reports

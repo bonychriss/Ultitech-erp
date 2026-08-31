@@ -1,6 +1,6 @@
 <?php
 /**
- * Sales Report ù ERP data providers (group-wise team reporting).
+ * Sales Report ÔøΩ ERP data providers (group-wise team reporting).
  */
 
 declare(strict_types=1);
@@ -207,7 +207,7 @@ function salesReportsDataTeamPerformance(array $team, array $drill): array
         . '<tr><td><strong>Active Sales Personnel</strong></td><td>' . number_format((int) ($team['rep_count'] ?? count($reps))) . '</td></tr>'
         . '<tr><td><strong>Reps On Track</strong></td><td>' . number_format((int) ($team['reps_on_track'] ?? 0)) . '</td></tr>'
         . '</table>'
-        . '<p><em>Individual contributions below ù presented as team group analysis, not individual rep reports.</em></p>'
+        . '<p><em>Individual contributions below ÔøΩ presented as team group analysis, not individual rep reports.</em></p>'
         . '<table class="sr-data-table" border="1" cellpadding="5" style="border-collapse:collapse;width:100%;">'
         . '<thead><tr style="background:#4361ee;color:#fff;"><th>Salesperson</th><th>Department</th><th>Invoices</th><th>Quotations</th><th>Actual Sales</th><th>Target</th><th>Achievement</th></tr></thead><tbody>';
     foreach ($reps as $r) {
@@ -244,9 +244,9 @@ function salesReportsDataPaymentAnalysis(array $drill): array
         . '<h4>AR Aging</h4>'
         . '<table class="sr-data-table" border="1" cellpadding="5" style="border-collapse:collapse;width:100%;">'
         . '<tr><td>Current</td><td align="right">' . salesReportsFormatMoney((float) ($aging['current'] ?? 0)) . '</td></tr>'
-        . '<tr><td>1ù30 Days</td><td align="right">' . salesReportsFormatMoney((float) ($aging['days_1_30'] ?? 0)) . '</td></tr>'
-        . '<tr><td>31ù60 Days</td><td align="right">' . salesReportsFormatMoney((float) ($aging['days_31_60'] ?? 0)) . '</td></tr>'
-        . '<tr><td>61ù90 Days</td><td align="right">' . salesReportsFormatMoney((float) ($aging['days_61_90'] ?? 0)) . '</td></tr>'
+        . '<tr><td>1ÔøΩ30 Days</td><td align="right">' . salesReportsFormatMoney((float) ($aging['days_1_30'] ?? 0)) . '</td></tr>'
+        . '<tr><td>31ÔøΩ60 Days</td><td align="right">' . salesReportsFormatMoney((float) ($aging['days_31_60'] ?? 0)) . '</td></tr>'
+        . '<tr><td>61ÔøΩ90 Days</td><td align="right">' . salesReportsFormatMoney((float) ($aging['days_61_90'] ?? 0)) . '</td></tr>'
         . '<tr><td>90+ Days</td><td align="right">' . salesReportsFormatMoney((float) ($aging['days_90_plus'] ?? 0)) . '</td></tr>'
         . '</table>';
     return ['html' => $html, 'snapshot' => ['summary' => $s, 'aging' => $aging], 'type' => 'summary'];
@@ -353,7 +353,7 @@ function salesReportsDataChartTeam(array $team): array
     $values = array_map(static fn($r) => (float) ($r['actual'] ?? 0), $reps);
     $chartId = 'chart_' . bin2hex(random_bytes(4));
     $html = '<div class="sr-chart-block" data-chart-type="bar" data-chart-id="' . $chartId . '" data-labels="' . htmlspecialchars(json_encode($labels), ENT_QUOTES) . '" data-values="' . htmlspecialchars(json_encode($values), ENT_QUOTES) . '">'
-        . '<p><em>Team group chart ù sales by team member</em></p>'
+        . '<p><em>Team group chart ÔøΩ sales by team member</em></p>'
         . '<canvas id="' . $chartId . '" width="600" height="300"></canvas></div>';
     return ['html' => $html, 'snapshot' => $reps, 'type' => 'chart', 'chart' => ['labels' => $labels, 'values' => $values]];
 }

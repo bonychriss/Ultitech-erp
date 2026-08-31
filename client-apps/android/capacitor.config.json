@@ -1,0 +1,37 @@
+{
+  "appId": "io.ultitech.erp",
+  "appName": "UltiTech ERP",
+  "webDir": "www",
+  "server": {
+    "url": "https://ultitech.io/login.php",
+    "androidScheme": "https",
+    "cleartext": false,
+    "allowNavigation": [
+      "ultitech.io",
+      "*.ultitech.io",
+      "localhost",
+      "127.0.0.1",
+      "10.0.0.0/8",
+      "192.168.0.0/16",
+      "172.16.0.0/12"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#0f172a",
+      "showSpinner": true,
+      "spinnerColor": "#ffffff"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0f172a"
+    }
+  }
+}

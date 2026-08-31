@@ -1,0 +1,24 @@
+{
+  "name": "ultitech-erp-android",
+  "version": "1.0.0",
+  "description": "UltiTech ERP Android client (Capacitor shell for the hosted web app)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "npm run copy-config && npx cap sync android",
+    "copy-config": "node scripts/copy-config.js",
+    "open:android": "npx cap open android",
+    "build:apk": "npm run sync && cd android && gradlew.bat assembleDebug",
+    "build:apk:release": "npm run sync && cd android && gradlew.bat assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.2.0",
+    "@capacitor/app": "^7.0.1",
+    "@capacitor/core": "^7.2.0",
+    "@capacitor/splash-screen": "^7.0.1",
+    "@capacitor/status-bar": "^7.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.2.0"
+  }
+}

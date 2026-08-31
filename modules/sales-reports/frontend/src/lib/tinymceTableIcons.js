@@ -1,4 +1,4 @@
-/** Filled table-toolbar icons (24×24) — clearer than default TinyMCE line art. */
+/** Filled table-toolbar icons (24ï¿½24) ï¿½ clearer than default TinyMCE line art. */
 const svg = (body) =>
   `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${body}</svg>`
 

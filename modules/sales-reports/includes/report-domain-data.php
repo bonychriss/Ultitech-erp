@@ -1,6 +1,6 @@
 <?php
 /**
- * Report Engine  ERP data dispatcher and shared render helpers.
+ * Report Engine ï¿½ ERP data dispatcher and shared render helpers.
  */
 
 declare(strict_types=1);

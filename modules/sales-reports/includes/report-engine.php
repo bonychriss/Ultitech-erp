@@ -1,6 +1,6 @@
 <?php
 /**
- * Multi-domain AI Report Engine  registry, schema, routing.
+ * Multi-domain AI Report Engine ï¿½ registry, schema, routing.
  * Sales remains the default domain; existing behaviour is preserved.
  */
 

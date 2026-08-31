@@ -44,21 +44,21 @@ This document describes the **existing implementation only**, based on source-co
 
 The module aggregates ERP operational data into dashboards for:
 
-- **Financial overview** ù sales, expenses, profit, receivables, inventory alerts
-- **Sales & revenue** ù invoice totals, collections, customer rankings, invoice detail
-- **Finance & expenses** ù income vs expense, voucher tracking, expense breakdown
-- **Weekly mission performance** ù team completion rates, leaderboard, mission status
-- **Business Reports hub card** ó links to the multi-domain report editor (`modules/sales-reports/`)
-- **Advanced Sales Analytics** (`smart_report_sales.php`) ù deep sales drill-down with monthly matrices, targets, pipeline, AR aging, and a data-verification gate
-- **Rep detail** (`smart_report_rep_detail.php`) ù per-sales-employee quotations/invoices with rule-based or AI insights
+- **Financial overview** ÔøΩ sales, expenses, profit, receivables, inventory alerts
+- **Sales & revenue** ÔøΩ invoice totals, collections, customer rankings, invoice detail
+- **Finance & expenses** ÔøΩ income vs expense, voucher tracking, expense breakdown
+- **Weekly mission performance** ÔøΩ team completion rates, leaderboard, mission status
+- **Business Reports hub card** ÔøΩ links to the multi-domain report editor (`modules/sales-reports/`)
+- **Advanced Sales Analytics** (`smart_report_sales.php`) ÔøΩ deep sales drill-down with monthly matrices, targets, pipeline, AR aging, and a data-verification gate
+- **Rep detail** (`smart_report_rep_detail.php`) ÔøΩ per-sales-employee quotations/invoices with rule-based or AI insights
 
 ### Who can access it
 
 | Check | Implementation |
 | ----- | -------------- |
 | Authentication | `requireLogin()` in `analytics_bootstrap()` (`includes/layout.php`) and all API files |
-| Module-specific role | **Not implemented** ù any logged-in user who can open the module picker sees this module |
-| Admin-only | **No** ù listed for all users in `select-module.php` |
+| Module-specific role | **Not implemented** ÔøΩ any logged-in user who can open the module picker sees this module |
+| Admin-only | **No** ÔøΩ listed for all users in `select-module.php` |
 | Company context | Multi-company routing via company slug URL + session `company_id`; queries use `analytics_append_company_scope()` where wired |
 
 ### Business problem solved
@@ -168,7 +168,7 @@ Optional AJAX: customer_invoices.php on matrix row click
 | Export CSV button | Download current section | Passes `section` + filter query params | `analytics_export_url()` ? `api/export.php` |
 | Filter bar | Date, department, employee (+ optional week/module/status) | `$filters`, `$departments`, `$employees` | `includes/filters.php` |
 
-**Note:** `.da-nav` / `.da-shell` classes are output in PHP but **no CSS rules for `.da-nav` exist** in `assets/css/analytics.css` ù tabs may appear minimally styled.
+**Note:** `.da-nav` / `.da-shell` classes are output in PHP but **no CSS rules for `.da-nav` exist** in `assets/css/analytics.css` ÔøΩ tabs may appear minimally styled.
 
 ---
 
@@ -186,7 +186,7 @@ Optional AJAX: customer_invoices.php on matrix row click
 
 **Empty states:** Charts render with empty datasets if tables missing. Hub card shows `0 reports` if Sales Reports schema fails silently.
 
-**Loading states:** None ù full page SSR.
+**Loading states:** None ÔøΩ full page SSR.
 
 ---
 
@@ -231,7 +231,7 @@ Optional AJAX: customer_invoices.php on matrix row click
 
 ### Sales Analytics (`smart_report_sales.php`)
 
-**Not linked from main tab navigation** ù reachable only via direct URL  
+**Not linked from main tab navigation** ÔøΩ reachable only via direct URL  
 `modules/analytics/smart_report_sales.php?module=analytics`.
 
 | Component | Purpose | Data | Source |
@@ -299,7 +299,7 @@ Currency format: **`TSh {amount}`** with zero decimals via `analytics_fmt_money(
 
 ### Performance page
 
-No dedicated KPI cards ù data is in tables/charts. Top Performer highlight shows name, department, points, completion %.
+No dedicated KPI cards ÔøΩ data is in tables/charts. Top Performer highlight shows name, department, points, completion %.
 
 ### Sales Analytics KPIs (smart_report_sales)
 
@@ -322,17 +322,17 @@ No dedicated KPI cards ù data is in tables/charts. Top Performer highlight shows
 
 ## 6. Charts
 
-All main-dashboard charts use **Chart.js** (loaded from CDN in `layout.php`). Data is embedded at page render time ù **no chart API**.
+All main-dashboard charts use **Chart.js** (loaded from CDN in `layout.php`). Data is embedded at page render time ÔøΩ **no chart API**.
 
 | Chart | Page | Type | X-Axis | Y-Axis / Series | Data Function |
 | ----- | ---- | ---- | ------ | --------------- | ------------- |
 | Sales Trend | Overview, Sales | Line | Invoice dates (`M j`) | `SUM(total_amount)` per day | `analytics_sales_trend()` |
 | Income vs Expense | Overview, Finance | Bar | Months (`M Y`) | Income (paid), Expenses (approved vouchers) | `analytics_income_vs_expense()` |
-| Employee Performance | Overview, Performance | Bar (horizontal if >6 labels) | Employee names | Completion % (0ù100) | `analytics_employee_performance_chart()` ? `wm_leaderboard()` |
+| Employee Performance | Overview, Performance | Bar (horizontal if >6 labels) | Employee names | Completion % (0ÔøΩ100) | `analytics_employee_performance_chart()` ? `wm_leaderboard()` |
 | Mission Status | Overview, Performance | Doughnut | Status labels | Count per status | `analytics_mission_status_chart()` |
 | Expense Breakdown | Finance | Doughnut | First 40 chars of description/payee | `SUM(total_amount)` | Inline SQL in `finance.php` |
 
-### Sales Analytics ùchartsù
+### Sales Analytics ÔøΩchartsÔøΩ
 
 Sales Analytics does **not** use Chart.js. It uses **monthly matrix HTML tables** (`smart_report_render_erp_matrix_html()`) with heat-map-style cell coloring based on `smart_report_matrix_value_class()`.
 
@@ -341,9 +341,9 @@ Matrix types:
 | Matrix | Builder | Tree / grouping |
 | ------ | ------- | --------------- |
 | Revenue by Territory | `smart_report_sales_revenue_matrices()` | Territory from `customers.city` or `country` + `ai_territory_mappings` |
-| Top Customers by Revenue | `smart_report_ranking_matrices()` | Customer ù month |
-| Dormant Products | `smart_report_ranking_matrices()` | Product ù month (90+ days since last sale) |
-| Open Deals by Month | `smart_report_pipeline_matrices()` | Order ù month |
+| Top Customers by Revenue | `smart_report_ranking_matrices()` | Customer ÔøΩ month |
+| Dormant Products | `smart_report_ranking_matrices()` | Product ÔøΩ month (90+ days since last sale) |
+| Open Deals by Month | `smart_report_pipeline_matrices()` | Order ÔøΩ month |
 
 ---
 
@@ -355,15 +355,15 @@ Matrix types:
 
 **Hard-coded highlights:**
 
-- **Monthly Top Performer** ù employee with highest `SUM(award_points)` and best `AVG(completion_rate)` since first day of current month (`analytics_monthly_top_performer()`).
+- **Monthly Top Performer** ÔøΩ employee with highest `SUM(award_points)` and best `AVG(completion_rate)` since first day of current month (`analytics_monthly_top_performer()`).
 
-### Sales Analytics ù Data Checker
+### Sales Analytics ÔøΩ Data Checker
 
 | Aspect | Detail |
 | ------ | ------ |
 | Trigger | Every load of `smart_report_sales.php` |
-| What it checks | Displayed revenue, invoice count, gross profit math, margin %, team sales, rep sum, pipeline count/value, matrix totals vs re-queried ùground truthù |
-| Pass condition | All checks within tolerance (`smart_report_sales_amounts_close()`, default ù0.01) |
+| What it checks | Displayed revenue, invoice count, gross profit math, margin %, team sales, rep sum, pipeline count/value, matrix totals vs re-queried ÔøΩground truthÔøΩ |
+| Pass condition | All checks within tolerance (`smart_report_sales_amounts_close()`, default ÔøΩ0.01) |
 | On failure | **Entire sales analytics body hidden**; issues listed in checker UI |
 | AI on failure | `smart_report_sales_ai_verify_analysis()` calls OpenAI (if enabled) to explain issues |
 | Fallback | Rule-based issue list if AI disabled/unavailable |
@@ -397,10 +397,10 @@ Matrix types:
 | Employee | `employee` | `0` (all) | Overview mission KPIs, performance data, mission chart |
 | Week | `week_start` | Current ISO week Monday | Performance page only (`$showWeekFilter = true`) |
 | Module | `module` (mission category) | `""` | Mission status chart filter on `weekly_missions.category` |
-| Status | `status` | `""` | Mission chart ù zeroes non-selected statuses |
+| Status | `status` | `""` | Mission chart ÔøΩ zeroes non-selected statuses |
 | ERP module context | `module=analytics` | Required hidden field | Sidebar/navigation context only |
 
-**Submission:** HTML GET form ù **Apply** submits; **Reset** clears to `?module=analytics`.
+**Submission:** HTML GET form ÔøΩ **Apply** submits; **Reset** clears to `?module=analytics`.
 
 **Date validation:** `analytics_parse_filters()` enforces `YYYY-MM-DD`, swaps if start > end.
 
@@ -416,8 +416,8 @@ Matrix types:
 
 Additional params parsed but **not exposed in Sales Analytics UI**:
 
-- `tree_type` ù matrix grouping (default `customer_group`)
-- `value_qty` ù `value` or `quantity`
+- `tree_type` ÔøΩ matrix grouping (default `customer_group`)
+- `value_qty` ÔøΩ `value` or `quantity`
 
 ---
 
@@ -546,13 +546,13 @@ Revenue from `sales_order_items.line_total`; COGS from `quantity * products.{cos
 
 **Sales target proration:**
 
-Yearly target ù (`count(months in range)` / 12) via `smart_report_sales_rep_period_target()`.
+Yearly target ÔøΩ (`count(months in range)` / 12) via `smart_report_sales_rep_period_target()`.
 
 ### Performance notes
 
 - Invoice detail limited to **200 rows** (`analytics_sales_rows()`)
 - Finance rows capped at **200** after merge
-- Top customers limited to **10ù15** depending on page
+- Top customers limited to **10ÔøΩ15** depending on page
 - Matrix queries can be heavy on large datasets (multi-table joins, monthly pivot in PHP)
 
 ---
@@ -569,7 +569,7 @@ Yearly target ù (`count(months in range)` / 12) via `smart_report_sales_rep_peri
 | `SmartReportRepDetail` | `js/smart_report_rep_detail.jsx` | Rep detail SPA shell | `window.__REP_DETAIL_DATA__` | React render |
 | AI insights fetch | `smart_report_rep_detail.jsx` | Refresh suggestions | `rep_ai_insights.php` | Updates insights state |
 
-**Main dashboards:** No dedicated `.js` files ù charts only.
+**Main dashboards:** No dedicated `.js` files ÔøΩ charts only.
 
 ---
 
@@ -580,7 +580,7 @@ Yearly target ù (`count(months in range)` / 12) via `smart_report_sales_rep_peri
 | Login required | ? `requireLogin()` on all pages/APIs |
 | Role-based module access | ? Not implemented |
 | Rep detail cross-company | ? `analytics_user_in_company()` blocks wrong-company `user_id` |
-| Company SQL scoping | ?? Partial ù most invoice/sales queries scoped; several gaps (see [Known Issues](#20-known-issues--limitations)) |
+| Company SQL scoping | ?? Partial ÔøΩ most invoice/sales queries scoped; several gaps (see [Known Issues](#20-known-issues--limitations)) |
 | SQL injection | ? Prepared statements used in helper functions |
 | Input validation | ? Date regex validation; `tree_type` / `value_qty` whitelists in smart report |
 | Session company vs URL slug | Helper `analytics_url_company_mismatch()` exists but **not called** from analytics bootstrap |
@@ -592,13 +592,13 @@ Yearly target ù (`count(months in range)` / 12) via `smart_report_sales_rep_peri
 | Format | Trigger | Implementation | Sections |
 | ------ | ------- | -------------- | -------- |
 | CSV | Export CSV button | `api/export.php` | overview KPIs, sales invoices, finance transactions, performance rows |
-| PDF | ? | Not in analytics module | ù |
-| Excel | ? | ù | ù |
-| Print | ? | No dedicated print view | ù |
+| PDF | ? | Not in analytics module | ÔøΩ |
+| Excel | ? | ÔøΩ | ÔøΩ |
+| Print | ? | No dedicated print view | ÔøΩ |
 
 CSV includes UTF-8 BOM (`EF BB BF`). Filename pattern: `analytics-{section}-{date}.csv`.
 
-**Sales Reports module** (linked from nav) has its own PDF/export pipeline ù outside this folder.
+**Sales Reports module** (linked from nav) has its own PDF/export pipeline ÔøΩ outside this folder.
 
 ---
 
@@ -612,7 +612,7 @@ CSV includes UTF-8 BOM (`EF BB BF`). Filename pattern: `analytics-{section}-{dat
 | Export failure | Broken require path may cause fatal error (see export API note) |
 | Verification failure | Sales Analytics content hidden; checker shows issues |
 | AI failure | Falls back to rule-based insights/analysis |
-| Rep AI fetch (React) | `.catch(() => {})` ù silent failure, keeps initial rules insights |
+| Rep AI fetch (React) | `.catch(() => {})` ÔøΩ silent failure, keeps initial rules insights |
 | Auth failure | Redirect via global `requireLogin()` |
 
 **Weaknesses:** Silent AJAX failures on rep detail; no user-visible toast for chart render failures.
@@ -624,13 +624,13 @@ CSV includes UTF-8 BOM (`EF BB BF`). Filename pattern: `analytics-{section}-{dat
 | Area | Observation |
 | ---- | ----------- |
 | Overview page | **7+ separate query groups** per request (KPIs, 4 charts, top performer, sales report count) |
-| `smart_report_sales.php` | **Very heavy** ù full drilldown + 3 matrix builders + verification re-queries ground truth |
+| `smart_report_sales.php` | **Very heavy** ÔøΩ full drilldown + 3 matrix builders + verification re-queries ground truth |
 | Territory sync | May invoke OpenAI on first load when unmapped territories exist |
 | N+1 | Mostly avoided via aggregated SQL; rep targets queried per rep in loop |
-| Low stock query | **No company scope** ù full table scan |
+| Low stock query | **No company scope** ÔøΩ full table scan |
 | `performance_points` on overview | No company filter on AVG queries |
 | Browser payload | Matrices can be large HTML tables; preview row limits mitigate somewhat |
-| Caching | **None** ù every request hits DB |
+| Caching | **None** ÔøΩ every request hits DB |
 | Indexes | Not determinable from codebase; date-range filters on `invoice_date`, `week_start` benefit from indexes |
 
 ---
@@ -662,7 +662,7 @@ CSV includes UTF-8 BOM (`EF BB BF`). Filename pattern: `analytics-{section}-{dat
 | Sales & Revenue page | ? | `sales.php` | invoices, customers | |
 | Finance & Expenses page | ? | `finance.php` | invoices, payment_vouchers | |
 | Weekly Missions page | ? | `performance.php` | performance_points, weekly_missions, users | Requires todo mission tables |
-| Tab navigation | ? | `layout.php` ? `analytics_nav()` | ù | `.da-nav` CSS missing |
+| Tab navigation | ? | `layout.php` ? `analytics_nav()` | ÔøΩ | `.da-nav` CSS missing |
 | Shared date/employee filters | ? | `includes/filters.php` | users | |
 | Chart.js visualizations | ? | Main pages | SSR data | 4 chart types |
 | CSV export | ?? | `api/export.php` | Same as pages | Possible broken require path |
@@ -676,32 +676,32 @@ CSV includes UTF-8 BOM (`EF BB BF`). Filename pattern: `analytics-{section}-{dat
 | AI rep insights | ?? | `smart_report_rep_fetch_ai_insights()` | OpenAI | Requires AI enabled |
 | AI data checker analysis | ?? | `smart_report_sales_ai_verify_analysis()` | OpenAI | On verification failure only |
 | Customer invoice AJAX drill-down | ? | `customer_invoices.php` | invoices | Sales Analytics only |
-| Order Fulfillment section | ? | Sales Analytics | ù | "Coming soon" panel |
-| PDF/Excel export | ? | ù | ù | |
-| Role-based access control | ? | ù | ù | Login only |
-| Real-time / AJAX dashboard refresh | ? | Main pages | ù | Full page reload on filter |
-| smart_report hub page | ? | ù | ù | Removed (per codebase; no `smart_report.php`) |
+| Order Fulfillment section | ? | Sales Analytics | ÔøΩ | "Coming soon" panel |
+| PDF/Excel export | ? | ÔøΩ | ÔøΩ | |
+| Role-based access control | ? | ÔøΩ | ÔøΩ | Login only |
+| Real-time / AJAX dashboard refresh | ? | Main pages | ÔøΩ | Full page reload on filter |
+| smart_report hub page | ? | ÔøΩ | ÔøΩ | Removed (per codebase; no `smart_report.php`) |
 
 ---
 
 ## 20. Known Issues & Limitations
 
-1. **`api/export.php` require path** ù Uses `../../includes/functions.php` instead of `../../../includes/functions.php`; likely broken.
-2. **Sales Analytics not in navigation** ù `smart_report_sales.php` has no tab link; users must know the URL.
-3. **Data checker blocks entire Sales Analytics** ù Any verification mismatch hides all content (strict gate).
-4. **Order Fulfillment** ù UI shows "Coming soon" despite partial fulfillment metrics computed in `smart_report_sales_drilldown()`.
-5. **`.da-nav` unstyled** ù No CSS rules for tab navigation class.
+1. **`api/export.php` require path** ÔøΩ Uses `../../includes/functions.php` instead of `../../../includes/functions.php`; likely broken.
+2. **Sales Analytics not in navigation** ÔøΩ `smart_report_sales.php` has no tab link; users must know the URL.
+3. **Data checker blocks entire Sales Analytics** ÔøΩ Any verification mismatch hides all content (strict gate).
+4. **Order Fulfillment** ÔøΩ UI shows "Coming soon" despite partial fulfillment metrics computed in `smart_report_sales_drilldown()`.
+5. **`.da-nav` unstyled** ÔøΩ No CSS rules for tab navigation class.
 6. **Company scope gaps:**
-   - `analytics_low_stock_count()` ù no company filter
-   - `finance.php` expense category + pending voucher queries ù no `analytics_append_company_scope()`
-   - `erp_expenses` / `expenses_requests` fallbacks ù no company scope
-   - Some `performance_points` queries on overview ù no company filter
-7. **Pending Payments KPI** ù Uses all-time `SUM(balance_due)`, not limited to selected date range (subtitle says "Outstanding receivables").
-8. **Mission Completion KPI subtitle** ù Says "Current week team average" but uses selected week from filters when `week_start` set on overview (week filter only shown on performance page by default).
-9. **`debug_pdo_tables.php`** ù Hard-coded `company_slug = 'roadmaster'`; dev artifact, not production UI.
-10. **Rep detail JSX via Babel in browser** ù Not pre-built; depends on CDN availability.
-11. **`analytics_url_company_mismatch()`** ù Defined but unused in analytics bootstrap.
-12. **Hub card CSS for smart report** ù `.da-hub-card--smart` styles exist but smart report hub card was removed from index.
+   - `analytics_low_stock_count()` ÔøΩ no company filter
+   - `finance.php` expense category + pending voucher queries ÔøΩ no `analytics_append_company_scope()`
+   - `erp_expenses` / `expenses_requests` fallbacks ÔøΩ no company scope
+   - Some `performance_points` queries on overview ÔøΩ no company filter
+7. **Pending Payments KPI** ÔøΩ Uses all-time `SUM(balance_due)`, not limited to selected date range (subtitle says "Outstanding receivables").
+8. **Mission Completion KPI subtitle** ÔøΩ Says "Current week team average" but uses selected week from filters when `week_start` set on overview (week filter only shown on performance page by default).
+9. **`debug_pdo_tables.php`** ÔøΩ Hard-coded `company_slug = 'roadmaster'`; dev artifact, not production UI.
+10. **Rep detail JSX via Babel in browser** ÔøΩ Not pre-built; depends on CDN availability.
+11. **`analytics_url_company_mismatch()`** ÔøΩ Defined but unused in analytics bootstrap.
+12. **Hub card CSS for smart report** ÔøΩ `.da-hub-card--smart` styles exist but smart report hub card was removed from index.
 
 ---
 
@@ -753,8 +753,8 @@ Configured globally via AI settings (`includes/ai_helpers.php` ? `is_enabled`). 
 3. `requireLogin()` validates session; `analytics_bootstrap()` loads filters (default: month-to-date).
 4. Server runs `analytics_overview_kpis()`, trend/chart helpers, optional Sales Reports count.
 5. Page renders KPI cards, hub card, and four Chart.js charts with embedded data.
-6. User changes **From/To** dates and clicks **Apply** ù full page reload with new query string.
-7. User clicks **Export CSV** ù browser requests `api/export.php?section=overview&...` (if path works).
+6. User changes **From/To** dates and clicks **Apply** ÔøΩ full page reload with new query string.
+7. User clicks **Export CSV** ÔøΩ browser requests `api/export.php?section=overview&...` (if path works).
 8. User clicks **Sales Reports** hub card ? navigates to `modules/sales-reports/index.php?module=analytics`.
 
 ### Sales Analytics (direct URL)
@@ -780,11 +780,11 @@ Configured globally via AI settings (`includes/ai_helpers.php` ? `is_enabled`). 
 | Charts | Chart.js (main dashboards only) |
 | Calculations | SQL aggregation in PHP helpers; some derived metrics in PHP |
 | Authentication | Session-based `requireLogin()` |
-| Authorization | Minimal ù login + rep company check only |
+| Authorization | Minimal ÔøΩ login + rep company check only |
 | Multi-company | `salesAppendCompanyScope()` via `analytics_company_scope.php` (partial coverage) |
 | Reporting/export | CSV only (main dashboards) |
 | External services | OpenAI (optional) for territory mapping, data checker analysis, rep insights |
-| Related module | `modules/sales-reports/` ù multi-domain AI business report writer (React + TinyMCE) |
+| Related module | `modules/sales-reports/` ÔøΩ multi-domain AI business report writer (React + TinyMCE) |
 
 ---
 
@@ -830,7 +830,7 @@ modules/sales-reports/includes/
 
 | Domain key | Label | Primary ERP tables |
 | ---------- | ----- | ------------------ |
-| `sales` | Sales Report | `invoices`, `sales_orders`, `sales_targets`, ù (unchanged) |
+| `sales` | Sales Report | `invoices`, `sales_orders`, `sales_targets`, ÔøΩ (unchanged) |
 | `procurement` | Procurement Report | `stocks_purchase_orders`, `stocks_po_items`, `stocks_suppliers` (fallback: `erp_purchase_orders`) |
 | `finance` | Finance Report | `payment_vouchers`, `financial_accounts`, `invoices` |
 | `fleet` | Driver / Fleet Report | `delivery_trips`, `delivery_orders` |
@@ -875,7 +875,7 @@ Filters are stored in `filters_json` and merged into SQL via `reportEngineFilter
 
 ### Template vocabulary
 
-Section catalogs per domain in `reportEngineSectionCatalog()` ù e.g. Executive Summary, KPI Overview, domain-specific sections (Spend Analysis, Revenue Analysis, Trip Performance, Stock Movement), plus Recommendations, Action Plan, Conclusion.
+Section catalogs per domain in `reportEngineSectionCatalog()` ÔøΩ e.g. Executive Summary, KPI Overview, domain-specific sections (Spend Analysis, Revenue Analysis, Trip Performance, Stock Movement), plus Recommendations, Action Plan, Conclusion.
 
 Sections with no supporting data are omitted or noted in `data_quality_notes` rather than showing empty placeholders.
 
@@ -889,8 +889,8 @@ Sections with no supporting data are omitted or noted in `data_quality_notes` ra
 
 React/Vite app in `modules/sales-reports/frontend/`:
 
-- `CreateReportTypeModal.jsx` ù Step 1: domain picker; Step 2: date range + filters; Sales keeps monthly/quarterly presets.
-- `ReportCard.jsx` ù domain badge on list rows.
+- `CreateReportTypeModal.jsx` ÔøΩ Step 1: domain picker; Step 2: date range + filters; Sales keeps monthly/quarterly presets.
+- `ReportCard.jsx` ÔøΩ domain badge on list rows.
 - Built assets: `frontend/dist/` (run `npm run build` after JS/CSS changes).
 
 ### Export & editing
@@ -902,7 +902,7 @@ React/Vite app in `modules/sales-reports/frontend/`:
 
 ### Known limitations (report engine)
 
-1. Fleet reporting limited to delivery trip data ù no fuel/maintenance/vehicle registry tables in ERP.
+1. Fleet reporting limited to delivery trip data ÔøΩ no fuel/maintenance/vehicle registry tables in ERP.
 2. Procurement/finance KPIs depend on which tables exist per company database.
 3. Excel export not extended for non-sales domains.
 4. Section-level AI regenerate not implemented for new domains.
@@ -910,7 +910,7 @@ React/Vite app in `modules/sales-reports/frontend/`:
 
 ### CLI smoke test
 
-`modules/sales-reports/tools/test-domains-cli.php` ù verifies snapshot + ERP block generation for all non-sales domains.
+`modules/sales-reports/tools/test-domains-cli.php` ÔøΩ verifies snapshot + ERP block generation for all non-sales domains.
 
 ---
 

@@ -55,3 +55,12 @@ Thumbs.db
 .parcel-cache/
 .turbo/
 *.tsbuildinfo
+
+# Native client wrappers (Electron / Capacitor build output)
+client-apps/desktop/dist/
+client-apps/android/android/app/build/
+client-apps/android/android/.gradle/
+client-apps/android/android/build/
+client-apps/android/.capacitor/
+client-apps/android/android/local.properties
+client-apps/android/android/.idea/

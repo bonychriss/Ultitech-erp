@@ -188,7 +188,7 @@ function reportEngineGenerateAiText(PDO $pdo, array $report, string $section, st
 
         $system = "You are a professional {$domainLabel} writer for an ERP management report. "
             . 'CRITICAL: Use ONLY numeric figures from the JSON snapshot. Never invent numbers. '
-            . 'Do NOT duplicate KPI tables or repeat every metric — KPI Overview already contains the figures. '
+            . 'Do NOT duplicate KPI tables or repeat every metric ï¿½ KPI Overview already contains the figures. '
             . 'Write concise interpretive prose for narrative sections. Omit sections/topics with no data. '
             . 'Return plain HTML only (p, ul, li). No markdown.';
 

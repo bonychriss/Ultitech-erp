@@ -1,0 +1,14 @@
+{
+  "appName": "UltiTech ERP",
+  "startUrl": "https://ultitech.io/login.php",
+  "localDevUrl": "http://192.168.1.100/public_html/login.php",
+  "useLocalDev": false,
+  "allowedHosts": [
+    "ultitech.io",
+    "www.ultitech.io",
+    "localhost",
+    "127.0.0.1"
+  ],
+  "openExternalInBrowser": true,
+  "userAgentSuffix": " UltiTechAndroid/1.0"
+}

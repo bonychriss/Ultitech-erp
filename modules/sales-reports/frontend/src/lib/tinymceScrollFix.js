@@ -20,7 +20,7 @@ export function preventEditorScrollJump(editor) {
     return restore
   }
 
-  // TinyMCE scrolls the parent page when the caret moves — skip that inside tables.
+  // TinyMCE scrolls the parent page when the caret moves ï¿½ skip that inside tables.
   editor.selection.scrollIntoView = () => {}
 
   editor.on('mousedown touchstart', (e) => {

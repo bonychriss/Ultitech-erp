@@ -1,4 +1,4 @@
-const { app, dialog } = require('electron');
+const { app, dialog, ipcMain } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { loadConfig } = require('./load-config.cjs');
 
@@ -6,11 +6,19 @@ const { loadConfig } = require('./load-config.cjs');
 let getMainWindow = () => null;
 
 let manualCheckPending = false;
+let pendingUpdateVersion = null;
 
 function getUpdateFeedUrl() {
   const config = loadConfig();
   const url = String(config.updateFeedUrl || 'https://ultitech.io/client-apps/desktop/updates/').trim();
   return url.endsWith('/') ? url : `${url}/`;
+}
+
+function sendToRenderer(channel, payload) {
+  const win = getMainWindow();
+  if (win && !win.isDestroyed()) {
+    win.webContents.send(channel, payload || {});
+  }
 }
 
 function setupAutoUpdater(mainWindowGetter) {
@@ -29,7 +37,30 @@ function setupAutoUpdater(mainWindowGetter) {
     url: getUpdateFeedUrl(),
   });
 
+  ipcMain.on('ultitech:update-download', () => {
+    autoUpdater.downloadUpdate().catch((error) => {
+      sendToRenderer('ultitech:update-dismiss');
+      const win = getMainWindow();
+      dialog.showMessageBox(win && !win.isDestroyed() ? win : undefined, {
+        type: 'error',
+        title: 'Update failed',
+        message: 'Could not download the update.',
+        detail: String(error?.message || error),
+        buttons: ['OK'],
+      });
+    });
+  });
+
+  ipcMain.on('ultitech:update-install', () => {
+    autoUpdater.quitAndInstall(false, true);
+  });
+
+  ipcMain.on('ultitech:update-dismiss', () => {
+    sendToRenderer('ultitech:update-dismiss');
+  });
+
   autoUpdater.on('error', async (error) => {
+    sendToRenderer('ultitech:update-dismiss');
     if (!manualCheckPending) {
       return;
     }
@@ -49,32 +80,13 @@ function setupAutoUpdater(mainWindowGetter) {
       return;
     }
     manualCheckPending = false;
-    const win = getMainWindow();
-    await dialog.showMessageBox(win && !win.isDestroyed() ? win : undefined, {
-      type: 'info',
-      title: 'Up to date',
-      message: 'You already have the latest UltiTech ERP desktop app.',
-      detail: `Current version: ${app.getVersion()}`,
-      buttons: ['OK'],
-    });
+    sendToRenderer('ultitech:update-up-to-date', { version: app.getVersion() });
   });
 
-  autoUpdater.on('update-available', async (info) => {
+  autoUpdater.on('update-available', (info) => {
     manualCheckPending = false;
-    const win = getMainWindow();
-    const { response } = await dialog.showMessageBox(win && !win.isDestroyed() ? win : undefined, {
-      type: 'info',
-      title: 'Update available',
-      message: `UltiTech ERP ${info.version} is available.`,
-      detail: `You are on ${app.getVersion()}.\n\nDownload and install the update now?`,
-      buttons: ['Download', 'Later'],
-      defaultId: 0,
-      cancelId: 1,
-      noLink: true,
-    });
-    if (response === 0) {
-      await autoUpdater.downloadUpdate();
-    }
+    pendingUpdateVersion = info.version || null;
+    sendToRenderer('ultitech:update-available', { version: pendingUpdateVersion });
   });
 
   autoUpdater.on('download-progress', (progress) => {
@@ -82,26 +94,19 @@ function setupAutoUpdater(mainWindowGetter) {
     if (win && !win.isDestroyed() && typeof progress.percent === 'number') {
       win.setProgressBar(Math.max(0, Math.min(1, progress.percent / 100)));
     }
+    sendToRenderer('ultitech:update-downloading', {
+      version: pendingUpdateVersion,
+      percent: progress.percent,
+    });
   });
 
-  autoUpdater.on('update-downloaded', async (info) => {
+  autoUpdater.on('update-downloaded', (info) => {
     const win = getMainWindow();
     if (win && !win.isDestroyed()) {
       win.setProgressBar(-1);
     }
-    const { response } = await dialog.showMessageBox(win && !win.isDestroyed() ? win : undefined, {
-      type: 'info',
-      title: 'Update ready',
-      message: `Version ${info.version} has been downloaded.`,
-      detail: 'Restart now to install the update.',
-      buttons: ['Restart now', 'Later'],
-      defaultId: 0,
-      cancelId: 1,
-      noLink: true,
-    });
-    if (response === 0) {
-      autoUpdater.quitAndInstall(false, true);
-    }
+    pendingUpdateVersion = info.version || pendingUpdateVersion;
+    sendToRenderer('ultitech:update-ready', { version: pendingUpdateVersion });
   });
 }
 
@@ -113,7 +118,7 @@ function scheduleBackgroundUpdateCheck() {
     autoUpdater.checkForUpdates().catch(() => {
       /* silent background check */
     });
-  }, 10000);
+  }, 8000);
 }
 
 async function checkForUpdatesManual() {

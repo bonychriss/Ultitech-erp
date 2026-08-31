@@ -11,6 +11,6 @@
   ],
   "openExternalInBrowser": true,
   "userAgentSuffix": " UltiTechClient/1.0",
-  "splashDurationMs": 2000,
+  "splashDurationMs": 2800,
   "updateFeedUrl": "https://ultitech.io/client-apps/desktop/updates/"
 }

@@ -1,6 +1,6 @@
 {
   "name": "ultitech-erp-desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "UltiTech ERP desktop client (Electron shell for the hosted web app)",
   "author": "UltiTech",
   "main": "electron-main.cjs",
@@ -28,6 +28,7 @@
     "files": [
       "electron-main.cjs",
       "auto-update.cjs",
+      "update-banner.cjs",
       "load-config.cjs",
       "preload.cjs",
       "config.json",

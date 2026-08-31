@@ -198,8 +198,10 @@ function closeSplashWindow() {
 
 function createSplashWindow(config) {
   splashWindow = new BrowserWindow({
-    width: 440,
-    height: 320,
+    width: 1280,
+    height: 860,
+    minWidth: 960,
+    minHeight: 640,
     frame: false,
     resizable: false,
     center: true,
@@ -231,9 +233,27 @@ function createSplashWindow(config) {
 }
 
 function waitForSplashDuration(config) {
-  const ms = Math.max(800, Number(config.splashDurationMs) || 2000);
+  const ms = Math.max(1500, Number(config.splashDurationMs) || 2800);
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
+  });
+}
+
+function waitForMainFramePaint(window) {
+  return new Promise((resolve) => {
+    if (!window || window.isDestroyed()) {
+      resolve();
+      return;
+    }
+    const { webContents } = window;
+    const done = () => resolve();
+    if (!webContents.isLoading()) {
+      setTimeout(done, 120);
+      return;
+    }
+    webContents.once('did-finish-load', () => {
+      setTimeout(done, 120);
+    });
   });
 }
 
@@ -271,6 +291,7 @@ async function createWindow() {
   const [, loadOk] = await Promise.all([
     waitForSplashDuration(appConfig),
     loadErpIntoWindow(mainWindow),
+    waitForMainFramePaint(mainWindow),
   ]);
 
   closeSplashWindow();

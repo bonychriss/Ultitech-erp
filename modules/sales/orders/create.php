@@ -2128,7 +2128,8 @@ function CreateOrderApp() {
 .quote-table .col-image { width:58px }
 .quote-table .col-item { width:17% }
 .quote-table .col-desc { width:18% }
-.quote-table .col-qty { width:92px }
+.quote-table .col-qty { width:132px }
+.quote-table td.col-qty { overflow:visible }
 .quote-table .col-price { width:11% }
 .quote-table .col-disc { width:58px }
 .quote-table .col-tax { width:64px }
@@ -2155,9 +2156,9 @@ function CreateOrderApp() {
 .li-search-input { width:100%; max-width:100%; min-width:0; height:38px; border:1px solid #cbd5e1; border-radius:8px; padding:0 10px; font-size:12px; box-sizing:border-box }
 .li-desc-input { width:100%; max-width:100%; min-width:0; height:38px; border:1px solid #e2e8f0; border-radius:8px; padding:0 10px; font-size:12px; color:#334155; background:#fafafa; box-sizing:border-box }
 .li-qty-stepper { display:inline-flex; align-items:center; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff; max-width:100% }
-.li-qty-stepper button { width:30px; height:34px; border:0; background:#f8fafc; color:#475569; font-size:14px; font-weight:700; cursor:pointer; line-height:1; flex-shrink:0 }
+.li-qty-stepper button { width:30px; height:38px; border:0; background:#f8fafc; color:#475569; font-size:14px; font-weight:700; cursor:pointer; line-height:1; flex-shrink:0 }
 .li-qty-stepper button:hover { background:#e2e8f0 }
-.li-qty-stepper input { width:36px; min-width:0; height:34px; border:0; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0; text-align:center; font-size:12px; font-weight:700; color:#0f172a; padding:0 }
+.li-qty-stepper input { width:72px; min-width:72px; height:38px; border:0; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0; text-align:center; font-size:13px; font-weight:700; color:#0f172a; padding:0 4px; box-sizing:border-box }
 .li-unit-price { font-weight:800; font-size:13px; color:#0f172a; white-space:nowrap }
 .li-price-input { width:100%; max-width:100%; min-width:0; height:34px; border:1px solid #e2e8f0; border-radius:8px; padding:0 8px; font-size:12px; font-weight:700; text-align:right; box-sizing:border-box }
 .li-disc-input { width:100%; max-width:52px; height:34px; border:1px solid #e2e8f0; border-radius:8px; padding:0 4px; font-size:12px; text-align:center; box-sizing:border-box }

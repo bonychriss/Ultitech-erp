@@ -10,5 +10,6 @@
     "127.0.0.1"
   ],
   "openExternalInBrowser": true,
-  "userAgentSuffix": " UltiTechClient/1.0"
+  "userAgentSuffix": " UltiTechClient/1.0",
+  "splashDurationMs": 2000
 }

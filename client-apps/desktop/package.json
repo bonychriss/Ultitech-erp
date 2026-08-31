@@ -22,6 +22,8 @@
       "load-config.cjs",
       "preload.cjs",
       "config.json",
+      "splash.html",
+      "assets/**/*",
       "../shared/**/*"
     ],
     "extraResources": [

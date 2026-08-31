@@ -7,6 +7,8 @@ const ERP_PERMISSIONS = new Set(['media', 'geolocation', 'fullscreen', 'clipboar
 
 /** @type {import('electron').BrowserWindow | null} */
 let mainWindow = null;
+/** @type {import('electron').BrowserWindow | null} */
+let splashWindow = null;
 /** @type {ReturnType<typeof loadConfig> | null} */
 let appConfig = null;
 let isHandlingLoadError = false;
@@ -144,13 +146,14 @@ async function loadErpIntoWindow(window) {
     return true;
   } catch (error) {
     const shouldRetry = await showLoadErrorDialog(
-      window,
+      splashWindow && !splashWindow.isDestroyed() ? splashWindow : window,
       'The application could not reach the server.',
       `${formatLoadError(error)}\n\nURL: ${appConfig.activeUrl}\n\nCheck your network connection or edit client-apps/desktop/config.json.`
     );
     if (shouldRetry) {
       return loadErpIntoWindow(window);
     }
+    closeSplashWindow();
     app.quit();
     return false;
   }
@@ -175,14 +178,64 @@ function attachMainFrameFailureHandler(window) {
     if (shouldRetry) {
       await loadErpIntoWindow(window);
     } else {
+      closeSplashWindow();
       app.quit();
     }
   });
 }
 
-function createWindow() {
+function closeSplashWindow() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+  }
+  splashWindow = null;
+}
+
+function createSplashWindow(config) {
+  splashWindow = new BrowserWindow({
+    width: 440,
+    height: 320,
+    frame: false,
+    resizable: false,
+    center: true,
+    alwaysOnTop: true,
+    show: false,
+    backgroundColor: '#0f172a',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  splashWindow.loadFile(path.join(__dirname, 'splash.html'), {
+    query: { appName: config.appName || 'UltiTech ERP' },
+  });
+
+  splashWindow.once('ready-to-show', () => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.show();
+    }
+  });
+
+  splashWindow.on('closed', () => {
+    splashWindow = null;
+  });
+
+  return splashWindow;
+}
+
+function waitForSplashDuration(config) {
+  const ms = Math.max(800, Number(config.splashDurationMs) || 2000);
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function createWindow() {
   appConfig = loadConfig();
   configurePermissionHandler(appConfig);
+  createSplashWindow(appConfig);
 
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -205,17 +258,24 @@ function createWindow() {
   configureWebContents(mainWindow.webContents, appConfig);
   attachMainFrameFailureHandler(mainWindow);
 
-  mainWindow.once('ready-to-show', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-    }
-  });
-
-  loadErpIntoWindow(mainWindow);
-
   mainWindow.on('closed', () => {
     mainWindow = null;
+    closeSplashWindow();
   });
+
+  const [, loadOk] = await Promise.all([
+    waitForSplashDuration(appConfig),
+    loadErpIntoWindow(mainWindow),
+  ]);
+
+  closeSplashWindow();
+
+  if (!loadOk || !mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.show();
+  mainWindow.focus();
 }
 
 app.whenReady().then(() => {

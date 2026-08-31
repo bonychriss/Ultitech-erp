@@ -75,7 +75,21 @@ export default function VoucherActions({
             <i className="fas fa-print" aria-hidden="true" /> Print
           </button>
 
-          <a href={actions.backUrl} className="dropdown-item">
+          <a
+            href={actions.backUrl}
+            className="dropdown-item"
+            onClick={(e) => {
+              e.preventDefault()
+              if (actions.returnFinance) {
+                window.location.href = actions.backUrl
+                return
+              }
+              if (window.erpNavBack && typeof window.erpNavBack.go === 'function') {
+                if (window.erpNavBack.go(actions.backUrl)) return
+              }
+              window.location.href = actions.backUrl
+            }}
+          >
             <i className="fas fa-arrow-left" aria-hidden="true" /> Back
           </a>
 

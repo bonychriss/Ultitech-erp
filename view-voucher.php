@@ -153,7 +153,9 @@ $result = vv_load_view_payload($pdo, $voucher_id, [
 if (!$result['ok']) {
     $code = (int) ($result['code'] ?? 500);
     http_response_code($code);
-    $back = app_url(isAdmin() ? 'admin/dashboard.php' : 'employee/dashboard.php') . $vvModuleQs;
+    $back = (function_exists('company_url')
+        ? company_url(isAdmin() ? 'admin/dashboard.php' : 'employee/dashboard.php')
+        : app_url(isAdmin() ? 'admin/dashboard.php' : 'employee/dashboard.php')) . $vvModuleQs;
     echo '<!DOCTYPE html><html><head><title>Voucher</title></head><body style="font-family:sans-serif;text-align:center;margin-top:50px;color:#b91c1c;">';
     echo '<h1>' . ($code === 403 ? 'Access Denied' : 'Not Found') . '</h1>';
     echo '<p>' . htmlspecialchars($result['error'] ?? 'Error') . '</p>';
@@ -239,6 +241,7 @@ $vvCssV = (string) time();
     <script>
         window.__VV_CFG__ = <?= json_encode($vvConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     </script>
+    <?php require __DIR__ . '/includes/nav-back-script.php'; ?>
     <style>
         :root { --vv-page-bg: #ffffff; }
         body.dashboard.vv-view-voucher-page,

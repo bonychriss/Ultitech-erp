@@ -87,8 +87,72 @@ function submitForm(action, fields) {
   form.submit()
 }
 
-function goView(id) {
+function rememberListAndView(id, listState) {
+  if (typeof window !== 'undefined') {
+    const state = { ...(listState || {}), selectedId: id }
+    writeListStateToUrl(state.search, state.filters, id)
+    if (window.erpNavBack && typeof window.erpNavBack.push === 'function') {
+      window.erpNavBack.push({
+        href: window.location.href,
+        state,
+      })
+    }
+    const dest = new URL(URLS.view, window.location.href)
+    dest.search = ''
+    dest.searchParams.set('id', String(id))
+    if (MODULE) dest.searchParams.set('module', MODULE)
+    window.location.href = dest.href
+    return
+  }
   window.location.href = `${URLS.view}?id=${id}${APPEND_MODULE}`
+}
+
+function readListStateFromUrl() {
+  if (typeof window === 'undefined') {
+    return { search: '', selectedId: 0, filters: { status: '', from_date: '', to_date: '' } }
+  }
+  const p = new URLSearchParams(window.location.search)
+  return {
+    search: p.get('q') || '',
+    selectedId: Number(p.get('sel') || 0) || 0,
+    filters: {
+      status: p.get('status') || '',
+      from_date: p.get('from_date') || '',
+      to_date: p.get('to_date') || '',
+    },
+  }
+}
+
+function writeListStateToUrl(search, filters, selectedId) {
+  if (typeof window === 'undefined' || !window.history || typeof window.history.replaceState !== 'function') return
+  const url = new URL(window.location.href)
+  const setOrDel = (key, value) => {
+    const v = String(value || '').trim()
+    if (v) url.searchParams.set(key, v)
+    else url.searchParams.delete(key)
+  }
+  setOrDel('q', search)
+  setOrDel('status', filters && filters.status)
+  setOrDel('from_date', filters && filters.from_date)
+  setOrDel('to_date', filters && filters.to_date)
+  setOrDel('sel', selectedId ? String(selectedId) : '')
+  const next = url.pathname + url.search + url.hash
+  const cur = window.location.pathname + window.location.search + window.location.hash
+  if (next !== cur) {
+    window.history.replaceState(window.history.state, '', next)
+  }
+}
+
+let consumedRestore = undefined
+function takeRestoredListState() {
+  if (consumedRestore !== undefined) return consumedRestore
+  consumedRestore = null
+  if (typeof window === 'undefined' || !window.erpNavBack || typeof window.erpNavBack.consumeRestore !== 'function') {
+    return null
+  }
+  const restored = window.erpNavBack.consumeRestore()
+  consumedRestore = restored && restored.state ? restored.state : null
+  return consumedRestore
 }
 
 function quickDelete(id) {
@@ -439,12 +503,39 @@ export default function DashboardPage() {
   const [error, setError] = useState('')
   const [flash, setFlash] = useState(() => (CFG.flash ? String(CFG.flash) : ''))
 
-  const [searchInput, setSearchInput] = useState('')
+  const restoredList = takeRestoredListState()
+  const urlList = readListStateFromUrl()
+  const [searchInput, setSearchInput] = useState(() => (
+    restoredList && typeof restoredList.search === 'string'
+      ? restoredList.search
+      : urlList.search
+  ))
   const [togglingRef, setTogglingRef] = useState(null)
-  const [aiFilters, setAiFilters] = useState({ status: '', from_date: '', to_date: '' })
-  const [suggestOpen, setSuggestOpen] = useState(false)
+  const [aiFilters, setAiFilters] = useState(() => (
+    restoredList && restoredList.filters
+      ? {
+          status: restoredList.filters.status || '',
+          from_date: restoredList.filters.from_date || '',
+          to_date: restoredList.filters.to_date || '',
+        }
+      : {
+          status: urlList.filters.status || '',
+          from_date: urlList.filters.from_date || '',
+          to_date: urlList.filters.to_date || '',
+        }
+  ))
+  const [suggestOpen, setSuggestOpen] = useState(() => {
+    const q = restoredList && typeof restoredList.search === 'string' ? restoredList.search : urlList.search
+    return String(q || '').trim() !== ''
+  })
   const [aiLoading, setAiLoading] = useState(false)
-  const [aiNote, setAiNote] = useState('')
+  const [aiNote, setAiNote] = useState(() => (
+    restoredList && typeof restoredList.note === 'string' ? restoredList.note : ''
+  ))
+  const [highlightedId, setHighlightedId] = useState(() => {
+    const fromRestore = restoredList && restoredList.selectedId
+    return Number(fromRestore || urlList.selectedId || 0) || 0
+  })
   const [payVoucher, setPayVoucher] = useState(null)
   const [headerSearchSlot, setHeaderSearchSlot] = useState(null)
   const [openMenuId, setOpenMenuId] = useState(null)
@@ -462,6 +553,21 @@ export default function DashboardPage() {
     const t = window.setTimeout(() => setFlash(''), 4000)
     return () => window.clearTimeout(t)
   }, [flash])
+
+  useEffect(() => {
+    writeListStateToUrl(searchInput, aiFilters, highlightedId)
+  }, [searchInput, aiFilters, highlightedId])
+
+  useEffect(() => {
+    if (!highlightedId) return undefined
+    const timer = window.setTimeout(() => {
+      const el = document.querySelector(`[data-voucher-id="${highlightedId}"]`)
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
+    }, 80)
+    return () => window.clearTimeout(timer)
+  }, [highlightedId, data])
 
   useEffect(() => {
     if (!suggestOpen) return undefined
@@ -502,7 +608,27 @@ export default function DashboardPage() {
     setSearchInput(value)
     setAiFilters({ status: '', from_date: '', to_date: '' })
     setAiNote('')
+    setHighlightedId(0)
     setSuggestOpen(value.trim() !== '')
+  }
+
+  function goView(id) {
+    rememberListAndView(id, {
+      search: searchInput,
+      filters: aiFilters,
+      note: aiNote,
+      selectedId: id,
+    })
+  }
+
+  function rememberListBeforeOpen(id) {
+    if (typeof window === 'undefined' || !window.erpNavBack || typeof window.erpNavBack.push !== 'function') return
+    if (id) setHighlightedId(id)
+    writeListStateToUrl(searchInput, aiFilters, id)
+    window.erpNavBack.push({
+      href: window.location.href,
+      state: { search: searchInput, filters: aiFilters, note: aiNote, selectedId: id || 0 },
+    })
   }
 
   function setVoucherReference(id, value) {
@@ -646,7 +772,8 @@ export default function DashboardPage() {
               <button
                 key={v.id}
                 type="button"
-                className="ed-suggest-card"
+                data-voucher-id={v.id}
+                className={`ed-suggest-card${highlightedId === v.id ? ' is-selected' : ''}`}
                 onMouseDown={(e) => { e.preventDefault(); if (v.can_view !== false) goView(v.id) }}
               >
                 <div className="ed-suggest-left">
@@ -758,7 +885,8 @@ export default function DashboardPage() {
                   return (
                     <tr
                       key={r.id}
-                      className={`ed-row${canView ? '' : ' ed-row--locked'}`}
+                      data-voucher-id={r.id}
+                      className={`ed-row${canView ? '' : ' ed-row--locked'}${highlightedId === r.id ? ' is-selected' : ''}`}
                       onClick={canView ? () => goView(r.id) : undefined}
                       style={canView ? undefined : { cursor: 'default' }}
                     >
@@ -791,6 +919,7 @@ export default function DashboardPage() {
                             href={`${URLS.view}?id=${r.id}${APPEND_MODULE}#attachments`}
                             className="ed-doc-link"
                             title={`View ${r.attachment_count} attachment(s)`}
+                            onClick={() => rememberListBeforeOpen(r.id)}
                           >
                             <Paperclip size={13} aria-hidden="true" />
                             <span>{r.attachment_count}</span>

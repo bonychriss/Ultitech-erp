@@ -117,6 +117,7 @@ $employeeHeaderRightHtml = null;
         window.__DASHBOARD_API_BASE__ = <?= json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) ?>;
         window.__DASHBOARD_CFG__ = <?= json_encode($dashboardConfig, JSON_UNESCAPED_SLASHES) ?>;
     </script>
+    <?php require __DIR__ . '/../includes/nav-back-script.php'; ?>
     <style>
         :root { --bg-body: #f1f5f9; --header-height: 72px; --ad-header-h: 64px; }
         body.dashboard { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }

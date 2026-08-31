@@ -120,7 +120,17 @@ export default function ViewVoucherPage() {
     return (
       <div className="vv-react-error">
         <h2>{error || 'Voucher unavailable'}</h2>
-        <a href={data?.actions?.backUrl || 'employee/dashboard.php'}>Return to Dashboard</a>
+        <a
+          href={data?.actions?.backUrl || 'employee/dashboard.php'}
+          onClick={(e) => {
+            const fallback = data?.actions?.backUrl || 'employee/dashboard.php'
+            if (data?.actions?.returnFinance) return
+            if (window.erpNavBack && typeof window.erpNavBack.go === 'function') {
+              e.preventDefault()
+              if (!window.erpNavBack.go(fallback)) window.location.href = fallback
+            }
+          }}
+        >Return to Dashboard</a>
       </div>
     )
   }

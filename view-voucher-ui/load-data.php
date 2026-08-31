@@ -305,10 +305,25 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         $comments = $stmtC->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (Throwable $e) { /* ignore */ }
 
-    // Permissions + URLs
-    $backLink = isAdmin() ? app_url('admin/dashboard.php') : app_url('employee/dashboard.php');
+    // Permissions + URLs (tenant-prefixed so Back never drops /{company}/)
+    $vvJoinQs = static function (string $url, string $qs): string {
+        $qs = ltrim($qs, '?&');
+        if ($qs === '') {
+            return $url;
+        }
+        return $url . (strpos($url, '?') !== false ? '&' : '?') . $qs;
+    };
+    $dashPath = isAdmin() ? 'admin/dashboard.php' : 'employee/dashboard.php';
+    $allPath = isAdmin() ? 'admin/all-vouchers.php' : 'employee/my-vouchers.php';
+    $backLink = function_exists('company_url') ? company_url($dashPath) : app_url($dashPath);
+    $backLink = $vvJoinQs($backLink, $moduleQs);
+    $homeLink = $backLink;
+    $allLink = function_exists('company_url') ? company_url($allPath) : app_url($allPath);
+    $allLink = $vvJoinQs($allLink, $moduleQs !== '' ? $moduleQs : 'module=voucher');
     if ($returnFinance) {
-        $backLink = app_url('modules/finance/my_expenses.php');
+        $backLink = function_exists('company_url')
+            ? company_url('modules/finance/my_expenses.php')
+            : app_url('modules/finance/my_expenses.php');
     }
     $approvedByAdmin = !empty($voucher['approved_by']) && (isset($voucher['approver_role']) && defined('ROLE_ADMIN') && $voucher['approver_role'] === ROLE_ADMIN);
     $canMarkPaid = !$isPaid && $statusLower === 'approved' && (
@@ -523,8 +538,8 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             'shareUrl' => $shareUrl,
             'profileSignature' => $profileSig,
             'breadcrumbs' => [
-                'home' => isAdmin() ? app_url('admin/dashboard.php') . $moduleQs : app_url('employee/dashboard.php') . $moduleQs,
-                'all' => isAdmin() ? app_url('admin/all-vouchers.php?module=voucher') : app_url('employee/my-vouchers.php?module=voucher'),
+                'home' => $homeLink,
+                'all' => $allLink,
             ],
         ],
     ];

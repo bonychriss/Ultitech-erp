@@ -182,6 +182,10 @@
 }
 .ed-suggest-card + .ed-suggest-card { margin-top: 2px; }
 .ed-suggest-card:hover { background: #f1f5f9; }
+.ed-suggest-card.is-selected {
+  background: #ede9fe;
+  box-shadow: inset 3px 0 0 #7c3aed;
+}
 .ed-suggest-left {
   min-width: 0;
   flex: 1;
@@ -349,6 +353,13 @@
 .ed-table tbody tr:nth-child(even) td { background: #f1f5f9; }
 .ed-table tbody tr { cursor: pointer; }
 .ed-table tbody tr:hover td { background: #e2e8f0 !important; }
+.ed-table tbody tr.is-selected td {
+  background: #ede9fe !important;
+  box-shadow: inset 0 0 0 1px #c4b5fd;
+}
+.ed-table tbody tr.is-selected td:first-child {
+  box-shadow: inset 3px 0 0 #7c3aed;
+}
 .ed-ta-right { text-align: right; }
 .ed-ta-center { text-align: center; }
 .ed-vno { font-weight: 600; color: #334155; white-space: nowrap; }
@@ -828,6 +839,11 @@ html[data-theme="dark"] .ed-suggest-card:hover {
   background: #334155;
 }
 
+html[data-theme="dark"] .ed-suggest-card.is-selected {
+  background: #312e81;
+  box-shadow: inset 3px 0 0 #a78bfa;
+}
+
 html[data-theme="dark"] .ed-suggest-payee,
 html[data-theme="dark"] .ed-suggest-amt {
   color: #f8fafc !important;
@@ -878,6 +894,10 @@ html[data-theme="dark"] .ed-table tbody tr:nth-child(even) td {
 
 html[data-theme="dark"] .ed-table tbody tr:hover td {
   background: #334155 !important;
+}
+
+html[data-theme="dark"] .ed-table tbody tr.is-selected td {
+  background: #312e81 !important;
 }
 
 html[data-theme="dark"] .ed-doc-link {

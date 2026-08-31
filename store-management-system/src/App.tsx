@@ -6,6 +6,7 @@ import {
   ArrowUpCircle,
   Boxes,
   FileDown,
+  FileSpreadsheet,
   Inbox,
   Loader2,
   Search,
@@ -19,6 +20,7 @@ import StoreReceiveForm from './components/StoreReceiveForm';
 import ExportPdfModal, { type ExportPdfRange } from './components/ExportPdfModal';
 import { fetchInit, fetchMovements, fetchProducts } from './api';
 import { exportMovementsPdf } from './utils/exportMovementsPdf';
+import { exportMovementsExcel } from './utils/excelWarehouse';
 import type { Product, StockMovement, StoreConfig, Warehouse } from './types';
 import type { OutgoingKind } from './components/StoreOutgoingForm';
 
@@ -41,6 +43,7 @@ export default function App() {
   const [outgoingKind, setOutgoingKind] = useState<OutgoingKind>('sold');
   const [selectedMovement, setSelectedMovement] = useState<StockMovement | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [exportPdfOpen, setExportPdfOpen] = useState(false);
   const [exportPdfError, setExportPdfError] = useState<string | null>(null);
 
@@ -156,6 +159,19 @@ export default function App() {
     setView('detail');
   };
 
+  const handleExportExcel = async () => {
+    if (!selectedWarehouse) return;
+    setExportingExcel(true);
+    setError(null);
+    try {
+      await exportMovementsExcel(listedMovements, selectedWarehouse.name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export Excel');
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   const openExportPdf = () => {
     setExportPdfError(null);
     setExportPdfOpen(true);
@@ -230,21 +246,39 @@ export default function App() {
   }
 
   if (view === 'receive' || view === 'outgoing' || view === 'detail') {
+    const isExcelReceive = view === 'receive';
     return (
-      <div className="sms-desk-page">
-        <div className="sms-desk-page-header sms-desk-page-header--simple">
-          <button
-            type="button"
-            className="sms-desk-btn sms-desk-btn-secondary"
-            onClick={() => {
-              setSelectedMovement(null);
-              setView('list');
-            }}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to records
-          </button>
-        </div>
+      <div className={`sms-desk-page${isExcelReceive ? ' sms-desk-page--excel-receive' : ''}`}>
+        {isExcelReceive ? (
+          <div className="sms-excel-page-top">
+            <button
+              type="button"
+              className="sms-desk-back-link"
+              onClick={() => {
+                setSelectedMovement(null);
+                setView('list');
+              }}
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back
+            </button>
+            <h3 className="sms-excel-page-title">Confirm into stock</h3>
+          </div>
+        ) : (
+          <div className="sms-desk-page-header sms-desk-page-header--simple">
+            <button
+              type="button"
+              className="sms-desk-back-link"
+              onClick={() => {
+                setSelectedMovement(null);
+                setView('list');
+              }}
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back
+            </button>
+          </div>
+        )}
         {error && (
           <div className="sms-desk-flash sms-desk-flash-error" role="alert">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -254,6 +288,7 @@ export default function App() {
         {view === 'receive' ? (
           <StoreReceiveForm
             warehouseId={warehouseId}
+            products={products}
             canReceivePurchaseOrders={Boolean(config?.canManageProducts)}
             onReceived={async () => {
               await refreshData();
@@ -394,6 +429,16 @@ export default function App() {
                 <X size={12} aria-hidden="true" />
               </button>
             )}
+            <button
+              type="button"
+              className="sms-desk-btn sms-desk-btn-secondary sms-desk-btn-sm sms-btn-rounded"
+              onClick={handleExportExcel}
+              disabled={exportingExcel || loadingMovements || listedMovements.length === 0}
+              title="Export results as Excel"
+            >
+              {exportingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
+              <span>Export Excel</span>
+            </button>
             <button
               type="button"
               className="sms-desk-btn sms-desk-btn-secondary sms-desk-btn-sm sms-btn-rounded"

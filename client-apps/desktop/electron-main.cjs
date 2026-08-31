@@ -5,6 +5,7 @@ const {
   setupAutoUpdater,
   scheduleBackgroundUpdateCheck,
   checkForUpdatesManual,
+  checkForUpdatesSilent,
 } = require('./auto-update.cjs');
 
 const SESSION_PARTITION = 'persist:ultitech-erp';
@@ -344,6 +345,7 @@ app.whenReady().then(() => {
   setupAutoUpdater(() => mainWindow);
   buildApplicationMenu();
   ipcMain.handle('ultitech:check-for-updates', () => checkForUpdatesManual());
+  ipcMain.handle('ultitech:check-for-updates-silent', () => checkForUpdatesSilent());
 
   createWindow();
 

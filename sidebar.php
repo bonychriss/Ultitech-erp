@@ -1974,6 +1974,27 @@ if (!isset($_GET['print'])) {
         }
     endif; ?>
 
+    <?php if (in_array($active_module, ['warehouses', 'store-management'], true)): ?>
+    <div class="px-3 mb-2 mt-3 small fw-bold text-muted sidebar-text" style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5;">
+        Quick
+    </div>
+    <ul class="nav nav-pills flex-column sidebar-header-tools">
+        <li class="nav-item sidebar-notif-item">
+            <?php
+            $notifDisplayMode = 'sidebar';
+            require __DIR__ . '/includes/partials/header_notifications.php';
+            unset($notifDisplayMode);
+            ?>
+        </li>
+        <li class="nav-item">
+            <button type="button" id="themeToggleBtn" class="nav-link sidebar-theme-toggle w-100 text-start border-0 bg-transparent" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
+                <i class="fas fa-moon" id="themeToggleIcon"></i>
+                <span class="sidebar-text">Dark / Light</span>
+            </button>
+        </li>
+    </ul>
+    <?php endif; ?>
+
     <?php if ($active_module !== 'analytics'): ?>
     <div class="px-3 mb-2 mt-4 small fw-bold text-muted sidebar-text" style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5;">
         Account

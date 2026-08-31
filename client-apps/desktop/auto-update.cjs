@@ -137,8 +137,18 @@ async function checkForUpdatesManual() {
   await autoUpdater.checkForUpdates();
 }
 
+async function checkForUpdatesSilent() {
+  if (!app.isPackaged) {
+    return;
+  }
+  await autoUpdater.checkForUpdates().catch(() => {
+    /* silent background check */
+  });
+}
+
 module.exports = {
   setupAutoUpdater,
   scheduleBackgroundUpdateCheck,
   checkForUpdatesManual,
+  checkForUpdatesSilent,
 };

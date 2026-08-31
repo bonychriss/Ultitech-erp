@@ -1,19 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpCircle,
-  ChevronDown,
   CloudUpload,
   Gift,
   Loader2,
   Package,
   Paperclip,
   RefreshCw,
-  Search,
   ShoppingBag,
   X,
 } from 'lucide-react';
 import { dispatchInvoice, fetchInvoiceDetail, fetchPendingInvoices, recordSampleStockOut } from '../api';
 import StatusPopup, { type StatusPopupTone } from './StatusPopup';
+import ExcelToolbar from './ExcelToolbar';
+import ExcelGrid, { type ExcelColumn } from './ExcelGrid';
+import { exportOutgoingTemplate, parseExcelFile, parseOutgoingRows } from '../utils/excelWarehouse';
 import type { InvoiceLine, PendingInvoice, Product } from '../types';
 
 interface StoreOutgoingFormProps {
@@ -26,9 +27,24 @@ interface StoreOutgoingFormProps {
 
 export type OutgoingKind = 'sample' | 'sold';
 
-interface SampleSelection {
+interface SampleGridRow {
+  rowId: string;
+  sku: string;
   productId: string;
   quantity: string;
+  rowNotes: string;
+}
+
+let sampleGridRowSeq = 0;
+function createSampleGridRow(): SampleGridRow {
+  sampleGridRowSeq += 1;
+  return {
+    rowId: `sample-row-${sampleGridRowSeq}`,
+    sku: '',
+    productId: '',
+    quantity: '',
+    rowNotes: '',
+  };
 }
 
 const SAMPLE_REASONS = [
@@ -58,26 +74,6 @@ function InvoiceLineThumb({ line }: { line: InvoiceLine }) {
   );
 }
 
-function ProductThumb({ product, compact = false }: { product: Product; compact?: boolean }) {
-  const [failed, setFailed] = useState(false);
-  const showImage = Boolean(product.imageUrl) && !failed;
-
-  return (
-    <div className={`sms-product-thumb${compact ? ' sms-product-thumb--sm' : ' sms-po-details-thumb'}`}>
-      {showImage ? (
-        <img
-          src={product.imageUrl}
-          alt={product.name}
-          loading="lazy"
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <Package className={compact ? 'w-4 h-4 text-slate-400' : 'w-5 h-5 text-slate-400'} aria-hidden="true" />
-      )}
-    </div>
-  );
-}
-
 /**
  * Outgoing products form - sample giveaways or sold (invoice) releases.
  * Sample releases use the signed-in user's account signature automatically.
@@ -93,11 +89,10 @@ export default function StoreOutgoingForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Sample fields
-  const [sampleSelections, setSampleSelections] = useState<SampleSelection[]>([]);
-  const [sampleDropdownOpen, setSampleDropdownOpen] = useState(false);
-  const [sampleSearch, setSampleSearch] = useState('');
-  const [sampleCheckedIds, setSampleCheckedIds] = useState<string[]>([]);
+  // Sample fields — Excel-style grid rows
+  const [sampleGridRows, setSampleGridRows] = useState<SampleGridRow[]>(() =>
+    Array.from({ length: 15 }, () => createSampleGridRow())
+  );
   const [reason, setReason] = useState(SAMPLE_REASONS[0]);
   const [notes, setNotes] = useState('');
   const [issuerName, setIssuerName] = useState('');
@@ -118,25 +113,16 @@ export default function StoreOutgoingForm({
     tone: StatusPopupTone;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const sampleDropdownRef = useRef<HTMLDivElement | null>(null);
-  const sampleSearchRef = useRef<HTMLInputElement | null>(null);
 
-  const sortedProducts = useMemo(
-    () => [...products].sort((a, b) => a.name.localeCompare(b.name)),
-    [products]
-  );
-  const sampleSelectableProducts = useMemo(() => {
-    const selected = new Set(sampleSelections.map((item) => item.productId));
-    const query = sampleSearch.trim().toLowerCase();
-    return sortedProducts.filter((product) => {
-      if (selected.has(product.id)) return false;
-      if (!query) return true;
-      return (
-        product.name.toLowerCase().includes(query) ||
-        (product.sku || '').toLowerCase().includes(query)
-      );
-    });
-  }, [sampleSearch, sampleSelections, sortedProducts]);
+  const productBySku = useMemo(() => {
+    const map = new Map<string, Product>();
+    for (const product of products) {
+      if (product.sku) map.set(product.sku.toLowerCase(), product);
+    }
+    return map;
+  }, [products]);
+
+  const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   const addReceiptFiles = useCallback((fileList: FileList | File[] | null) => {
     if (!fileList) return;
@@ -233,30 +219,93 @@ export default function StoreOutgoingForm({
   }, [initialKind]);
 
   useEffect(() => {
-    if (!sampleDropdownOpen) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!sampleDropdownRef.current?.contains(event.target as Node)) {
-        setSampleDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [sampleDropdownOpen]);
-
-  useEffect(() => {
-    if (!sampleDropdownOpen) return;
-    const timer = window.setTimeout(() => sampleSearchRef.current?.focus(), 0);
-    return () => window.clearTimeout(timer);
-  }, [sampleDropdownOpen]);
-
-  useEffect(() => {
     if (!preselectedProductId) return;
-    setSampleSelections((prev) => {
-      if (prev.some((item) => item.productId === preselectedProductId)) return prev;
-      if (!products.some((product) => product.id === preselectedProductId)) return prev;
-      return [...prev, { productId: preselectedProductId, quantity: '' }];
+    const product = productById.get(preselectedProductId);
+    if (!product) return;
+    setSampleGridRows((prev) => {
+      if (prev.some((row) => row.productId === product.id)) return prev;
+      const emptyIdx = prev.findIndex((row) => !row.productId);
+      if (emptyIdx >= 0) {
+        const next = [...prev];
+        next[emptyIdx] = {
+          ...next[emptyIdx],
+          sku: product.sku || '',
+          productId: product.id,
+        };
+        return next;
+      }
+      return [...prev, { ...createSampleGridRow(), sku: product.sku || '', productId: product.id }];
     });
-  }, [preselectedProductId, products]);
+  }, [preselectedProductId, productById]);
+
+  const sampleColumns: ExcelColumn<SampleGridRow>[] = useMemo(
+    () => [
+      {
+        key: 'sku',
+        header: 'Product SKU',
+        letter: 'A',
+        width: '9rem',
+        editable: true,
+        getValue: (row) => row.sku,
+        setValue: (row, value) => {
+          const product = productBySku.get(value.trim().toLowerCase());
+          return {
+            ...row,
+            sku: value,
+            productId: product?.id ?? '',
+          };
+        },
+        cellClass: (row) => (row.sku.trim() && !row.productId ? 'is-error' : ''),
+      },
+      {
+        key: 'name',
+        header: 'Product Name',
+        letter: 'B',
+        width: '14rem',
+        getValue: (row) => productById.get(row.productId)?.name ?? '',
+      },
+      {
+        key: 'stock',
+        header: 'On Hand',
+        letter: 'C',
+        width: '6rem',
+        align: 'right',
+        getValue: (row) => {
+          const product = productById.get(row.productId);
+          return product ? `${product.stock} ${product.unit}` : '';
+        },
+      },
+      {
+        key: 'quantity',
+        header: 'Qty Out',
+        letter: 'D',
+        width: '6rem',
+        align: 'right',
+        editable: true,
+        type: 'number',
+        getValue: (row) => row.quantity,
+        setValue: (row, value) => ({ ...row, quantity: value }),
+        cellClass: (row) => {
+          const product = productById.get(row.productId);
+          const qty = Number(row.quantity);
+          if (!product || !row.quantity) return '';
+          if (Number.isNaN(qty) || qty <= 0) return 'is-error';
+          if (qty > product.stock) return 'is-error';
+          return '';
+        },
+      },
+      {
+        key: 'rowNotes',
+        header: 'Line Notes',
+        letter: 'E',
+        width: '12rem',
+        editable: true,
+        getValue: (row) => row.rowNotes,
+        setValue: (row, value) => ({ ...row, rowNotes: value }),
+      },
+    ],
+    [productById, productBySku]
+  );
 
   const refreshInvoices = React.useCallback(async () => {
     if (kind !== 'sold') return;
@@ -340,69 +389,84 @@ export default function StoreOutgoingForm({
     };
   }, [selectedInvoiceId, warehouseId]);
 
-  const addSampleProducts = useCallback((productIds: string[]) => {
-    const uniqueIds = Array.from(new Set(productIds.filter(Boolean)));
-    if (uniqueIds.length === 0) {
-      alert('Select at least one product.');
-      return;
-    }
-
-    const missing = uniqueIds.filter((id) => !products.some((product) => product.id === id));
-    if (missing.length > 0) {
-      alert('One or more selected products were not found.');
-      return;
-    }
-
-    setSampleSelections((prev) => {
-      const existing = new Set(prev.map((item) => item.productId));
-      const next = [...prev];
-      for (const productId of uniqueIds) {
-        if (!existing.has(productId)) {
-          next.push({ productId, quantity: '' });
-        }
+  const handleSampleExcelImport = async (file: File) => {
+    try {
+      const sheetRows = await parseExcelFile(file);
+      const { rows, errors } = parseOutgoingRows(sheetRows, products);
+      if (errors.length > 0) {
+        setStatusPopup({
+          title: 'Excel import errors',
+          message: errors.slice(0, 8).join('\n'),
+          tone: 'error',
+        });
+        return;
       }
-      return next;
-    });
-    setSampleCheckedIds([]);
-    setSampleDropdownOpen(false);
-    setSampleSearch('');
-  }, [products]);
-
-  const toggleSampleChecked = useCallback((productId: string) => {
-    setSampleCheckedIds((prev) =>
-      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
-    );
-  }, []);
-
-  const updateSampleQuantity = useCallback((productId: string, quantity: string) => {
-    setSampleSelections((prev) => prev.map((item) => (item.productId === productId ? { ...item, quantity } : item)));
-  }, []);
-
-  const removeSampleProduct = useCallback((productId: string) => {
-    setSampleSelections((prev) => prev.filter((item) => item.productId !== productId));
-  }, []);
+      if (rows.length === 0) {
+        setStatusPopup({
+          title: 'No rows found',
+          message: 'The Excel file has no valid outgoing product rows.',
+          tone: 'error',
+        });
+        return;
+      }
+      setSampleGridRows((prev) => {
+        const filled = [...prev];
+        let insertAt = 0;
+        for (const row of rows) {
+          const product = productById.get(row.productId);
+          const entry: SampleGridRow = {
+            rowId: createSampleGridRow().rowId,
+            sku: product?.sku || row.productSku,
+            productId: row.productId,
+            quantity: row.quantity,
+            rowNotes: row.notes,
+          };
+          const emptyIdx = filled.findIndex((r, i) => i >= insertAt && !r.productId && !r.sku.trim());
+          if (emptyIdx >= 0) {
+            filled[emptyIdx] = { ...filled[emptyIdx], ...entry, rowId: filled[emptyIdx].rowId };
+          } else {
+            filled.push(entry);
+          }
+          insertAt = emptyIdx >= 0 ? emptyIdx + 1 : filled.length;
+        }
+        while (filled.length < 15) filled.push(createSampleGridRow());
+        return filled;
+      });
+      if (rows[0]?.reason) setReason(rows[0].reason);
+      if (rows[0]?.notes) setNotes(rows[0].notes);
+      setStatusPopup({
+        title: 'Excel imported',
+        message: `Loaded ${rows.length} product line(s). Review quantities, then submit.`,
+        tone: 'success',
+      });
+    } catch (err) {
+      setStatusPopup({
+        title: 'Import failed',
+        message: err instanceof Error ? err.message : 'Could not read Excel file',
+        tone: 'error',
+      });
+    }
+  };
 
   const resetSample = () => {
-    setSampleSelections([]);
-    setSampleCheckedIds([]);
-    setSampleSearch('');
-    setSampleDropdownOpen(false);
+    setSampleGridRows(Array.from({ length: 15 }, () => createSampleGridRow()));
     setNotes('');
     setReceipts([]);
   };
 
   const handleSampleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (sampleSelections.length === 0) {
-      alert('Add at least one product.');
+    const activeRows = sampleGridRows.filter((row) => row.productId && Number(row.quantity) > 0);
+    if (activeRows.length === 0) {
+      alert('Enter at least one product SKU and quantity in the sheet.');
       return;
     }
     const items: Record<string, number> = {};
-    for (const item of sampleSelections) {
-      const product = products.find((p) => p.id === item.productId);
-      const qty = Number(item.quantity);
+    for (const row of activeRows) {
+      const product = productById.get(row.productId);
+      const qty = Number(row.quantity);
       if (!product) {
-        alert('One of the selected products no longer exists.');
+        alert(`Product not found for SKU "${row.sku}".`);
         return;
       }
       if (!qty || qty <= 0) {
@@ -413,7 +477,7 @@ export default function StoreOutgoingForm({
         alert(`Only ${product.stock} ${product.unit} available for ${product.name}.`);
         return;
       }
-      items[item.productId] = qty;
+      items[row.productId] = (items[row.productId] ?? 0) + qty;
     }
     if (!issuerName.trim()) {
       alert('Enter the invoice / document issuer name.');
@@ -423,10 +487,14 @@ export default function StoreOutgoingForm({
     setSaving(true);
     setError(null);
     try {
+      const lineNotes = activeRows
+        .map((row) => row.rowNotes.trim())
+        .filter(Boolean)
+        .join('; ');
       await recordSampleStockOut(warehouseId, {
         items,
         reason,
-        notes: notes.trim(),
+        notes: [notes.trim(), lineNotes].filter(Boolean).join(' | '),
         issuerName: issuerName.trim(),
         receipts,
       });
@@ -572,140 +640,30 @@ export default function StoreOutgoingForm({
                 <Gift className="w-4 h-4 text-amber-600" />
                 Sample outgoing
               </h3>
-              <p className="sms-table-meta">Remove stock for samples, demos, or promotional units.</p>
+              <p className="sms-table-meta">
+                Type product SKUs and quantities in the Excel-style sheet — same layout as the template file.
+                Tab between cells, or paste rows from Excel (Ctrl+V).
+              </p>
+              <ExcelToolbar
+                compact
+                templateLabel="Download template"
+                importLabel="Import Excel file"
+                onExportTemplate={exportOutgoingTemplate}
+                onImport={handleSampleExcelImport}
+              />
             </div>
 
-            <div className="sms-movement-grid">
-              <div className="sms-movement-notes">
-                <label className="sms-field-label" htmlFor="sms-sample-product-trigger">
-                  Product *
-                </label>
-                <div
-                  className={`sms-po-dropdown${sampleDropdownOpen ? ' is-open' : ''}`}
-                  ref={sampleDropdownRef}
-                >
-                  <button
-                    id="sms-sample-product-trigger"
-                    type="button"
-                    className="sms-po-dropdown-trigger"
-                    aria-haspopup="listbox"
-                    aria-expanded={sampleDropdownOpen}
-                    onClick={() => setSampleDropdownOpen((open) => !open)}
-                  >
-                    <span className="sms-po-dropdown-trigger-main">
-                      <span className="sms-po-dropdown-placeholder">
-                        {sampleSelections.length > 0
-                          ? 'Add another product...'
-                          : 'Select product...'}
-                      </span>
-                    </span>
-                    <span className="sms-po-dropdown-trigger-aside">
-                      <ChevronDown className={`sms-po-dropdown-chevron${sampleDropdownOpen ? ' is-open' : ''}`} />
-                    </span>
-                  </button>
+            <ExcelGrid
+              rows={sampleGridRows}
+              columns={sampleColumns}
+              rowKey={(row) => row.rowId}
+              sheetName="Outgoing"
+              onRowsChange={setSampleGridRows}
+              onCreateEmptyRow={createSampleGridRow}
+              minEmptyRows={15}
+            />
 
-                  {sampleDropdownOpen && (
-                    <div className="sms-po-dropdown-menu" role="listbox" aria-label="Products" aria-multiselectable="true">
-                      <div className="sms-incoming-search sms-incoming-search--dropdown">
-                        <Search className="sms-incoming-search-icon" aria-hidden="true" />
-                        <input
-                          ref={sampleSearchRef}
-                          type="search"
-                          className="sms-incoming-search-input"
-                          placeholder="Search product name or SKU..."
-                          value={sampleSearch}
-                          onChange={(e) => setSampleSearch(e.target.value)}
-                          aria-label="Search products"
-                        />
-                      </div>
-
-                      <div className="sms-po-dropdown-meta sms-product-picker-meta">
-                        <span>
-                          {sampleSelectableProducts.length} product
-                          {sampleSelectableProducts.length === 1 ? '' : 's'} available
-                          {sampleCheckedIds.length > 0 ? ` - ${sampleCheckedIds.length} selected` : ''}
-                        </span>
-                        {sampleSelectableProducts.length > 0 && (
-                          <button
-                            type="button"
-                            className="sms-product-picker-select-all"
-                            onClick={() => {
-                              const visibleIds = sampleSelectableProducts.map((product) => product.id);
-                              const allVisibleSelected = visibleIds.every((id) => sampleCheckedIds.includes(id));
-                              setSampleCheckedIds((prev) => {
-                                if (allVisibleSelected) {
-                                  return prev.filter((id) => !visibleIds.includes(id));
-                                }
-                                return Array.from(new Set([...prev, ...visibleIds]));
-                              });
-                            }}
-                          >
-                            {sampleSelectableProducts.every((product) => sampleCheckedIds.includes(product.id))
-                              ? 'Clear visible'
-                              : 'Select visible'}
-                          </button>
-                        )}
-                      </div>
-
-                      {sampleSelectableProducts.length === 0 ? (
-                        <div className="sms-incoming-empty sms-incoming-empty--menu">
-                          No products match this search.
-                        </div>
-                      ) : (
-                        <div className="sms-po-picker sms-po-picker--dropdown">
-                          {sampleSelectableProducts.map((product) => {
-                            const checked = sampleCheckedIds.includes(product.id);
-                            return (
-                              <label
-                                key={product.id}
-                                className={`sms-po-picker-item sms-product-picker-item${checked ? ' is-active' : ''}`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="sms-product-picker-checkbox"
-                                  checked={checked}
-                                  onChange={() => toggleSampleChecked(product.id)}
-                                  aria-label={`Select ${product.name}`}
-                                />
-                                <ProductThumb product={product} compact />
-                                <span className="sms-product-picker-copy">
-                                  <span className="sms-po-picker-ref">{product.name}</span>
-                                  <span className="sms-po-dropdown-trigger-sub">
-                                    {product.sku || '-'} - {product.stock} {product.unit} on hand
-                                  </span>
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      <div className="sms-product-picker-actions">
-                        <button
-                          type="button"
-                          className="sms-btn-secondary sms-btn-rounded"
-                          onClick={() => {
-                            setSampleCheckedIds([]);
-                            setSampleDropdownOpen(false);
-                            setSampleSearch('');
-                          }}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          className="sms-btn-primary sms-btn-rounded"
-                          disabled={sampleCheckedIds.length === 0}
-                          onClick={() => addSampleProducts(sampleCheckedIds)}
-                        >
-                          Add selected{sampleCheckedIds.length > 0 ? ` (${sampleCheckedIds.length})` : ''}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <p className="sms-field-hint">Tick one or more products, then click Add selected.</p>
-              </div>
+            <div className="sms-movement-grid mt-4">
               <div>
                 <label className="sms-field-label">Reason *</label>
                 <select required value={reason} onChange={(e) => setReason(e.target.value)} className="sms-input">
@@ -738,64 +696,6 @@ export default function StoreOutgoingForm({
                 />
               </div>
             </div>
-
-            {sampleSelections.length > 0 && (
-              <div className="sms-table-wrap sms-po-lines-table" style={{ margin: 0 }}>
-                <table className="sms-table sms-inventory-table">
-                  <thead>
-                    <tr>
-                      <th className="sms-col-image">Image</th>
-                      <th>Product</th>
-                      <th className="text-center">On hand</th>
-                      <th className="text-center">Qty out</th>
-                      <th className="text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sampleSelections.map((item) => {
-                      const product = products.find((p) => p.id === item.productId);
-                      if (!product) return null;
-                      return (
-                        <tr key={item.productId}>
-                          <td className="sms-col-image">
-                            <ProductThumb product={product} />
-                          </td>
-                          <td>
-                            <div className="font-semibold">{product.name}</div>
-                            <div className="sms-product-meta">
-                              <span className="sms-sku">{product.sku || '-'}</span>
-                            </div>
-                          </td>
-                          <td className="text-center font-mono">
-                            {product.stock} {product.unit}
-                          </td>
-                          <td className="text-center">
-                            <input
-                              type="number"
-                              min="1"
-                              max={product.stock}
-                              value={item.quantity}
-                              onChange={(e) => updateSampleQuantity(item.productId, e.target.value)}
-                              className="sms-input sms-po-qty-input"
-                              placeholder="Units"
-                            />
-                          </td>
-                          <td className="text-center">
-                            <button
-                              type="button"
-                              className="sms-btn-secondary sms-btn-sm"
-                              onClick={() => removeSampleProduct(item.productId)}
-                            >
-                              Remove
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
 
             {attachmentDropzone}
 

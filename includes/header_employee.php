@@ -84,6 +84,9 @@ if (!isset($hideHeaderCompanyBranding)) {
         || $headerModuleKey === 'voucher'
     );
 }
+if (!isset($hideHeaderThemeAndNotifications)) {
+    $hideHeaderThemeAndNotifications = false;
+}
 $__employeeHeaderShowHeading = ($employeeHeaderTitle !== null && $employeeHeaderTitle !== '');
 $__employeeHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCenterHtml !== '');
 
@@ -154,10 +157,12 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
             <?php if (!empty($employeeHeaderRightHtml)): ?>
                 <?= $employeeHeaderRightHtml ?>
             <?php endif; ?>
+            <?php if (empty($hideHeaderThemeAndNotifications)): ?>
             <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
                 <i class="fas fa-moon" id="themeToggleIcon"></i>
             </button>
             <?php require __DIR__ . '/partials/header_notifications.php'; ?>
+            <?php endif; ?>
         </div>
     </div>
 </header>
@@ -249,14 +254,37 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     // Clock Function Removed
     function positionMobileNotifDropdown() {
         var dd = document.getElementById('notif-dd');
-        var btn = document.querySelector('.header-notif-bell-btn');
-        if (!dd || !btn || !window.matchMedia('(max-width: 767.98px)').matches) {
-            if (dd) { dd.style.top = ''; dd.style.right = ''; }
+        var sidebarBtn = document.querySelector('.sidebar-notif-trigger');
+        var btn = sidebarBtn || document.querySelector('.header-notif-bell-btn');
+        if (!dd || !btn) {
+            if (dd) { dd.style.top = ''; dd.style.right = ''; dd.style.left = ''; }
             return;
         }
-        var r = btn.getBoundingClientRect();
-        dd.style.top = Math.round(r.bottom + 8) + 'px';
-        dd.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
+        if (window.matchMedia('(max-width: 767.98px)').matches) {
+            if (sidebarBtn) {
+                dd.style.top = '';
+                dd.style.right = '';
+                dd.style.left = '';
+                return;
+            }
+            var r = btn.getBoundingClientRect();
+            dd.style.top = Math.round(r.bottom + 8) + 'px';
+            dd.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
+            dd.style.left = '';
+            return;
+        }
+        if (sidebarBtn) {
+            var rect = sidebarBtn.getBoundingClientRect();
+            dd.style.position = 'fixed';
+            dd.style.top = Math.round(rect.top) + 'px';
+            dd.style.left = Math.round(rect.right + 8) + 'px';
+            dd.style.right = 'auto';
+            return;
+        }
+        dd.style.position = '';
+        dd.style.top = '';
+        dd.style.right = '';
+        dd.style.left = '';
     }
 
     function syncNotifBackdrop(isOpen) {
@@ -272,7 +300,7 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     function toggleNotif(e){
         if (e) { e.preventDefault(); e.stopPropagation(); }
         var dd=document.getElementById('notif-dd');
-        var btn = e && e.currentTarget ? e.currentTarget : document.querySelector('.header-notif-bell-btn');
+        var btn = e && e.currentTarget ? e.currentTarget : (document.querySelector('.sidebar-notif-trigger') || document.querySelector('.header-notif-bell-btn'));
         if(!dd) return;
         var willOpen = !dd.classList.contains('open');
         dd.classList.toggle('open');
@@ -280,9 +308,13 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
         if (btn) btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
         if (willOpen && !dd.classList.contains('notif-dropdown--v2')) {
             positionMobileNotifDropdown();
+        } else if (willOpen && document.querySelector('.sidebar-notif-trigger')) {
+            positionMobileNotifDropdown();
         } else {
             dd.style.top = '';
             dd.style.right = '';
+            dd.style.left = '';
+            dd.style.position = '';
         }
         syncNotifBackdrop(dd.classList.contains('open'));
         if (willOpen) document.body.classList.add('notif-panel-open');
@@ -290,7 +322,7 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     }
     function closeNotif(){
         var dd=document.getElementById('notif-dd');
-        var btn = document.querySelector('.header-notif-bell-btn');
+        var btn = document.querySelector('.sidebar-notif-trigger') || document.querySelector('.header-notif-bell-btn');
         if(dd) {
             dd.classList.remove('open');
             dd.setAttribute('aria-hidden', 'true');
@@ -300,6 +332,10 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
         if (btn) btn.setAttribute('aria-expanded', 'false');
         syncNotifBackdrop(false);
         document.body.classList.remove('notif-panel-open');
+        if (dd) {
+            dd.style.position = '';
+            dd.style.left = '';
+        }
     }
 
     window.addEventListener('resize', function () {
@@ -384,6 +420,32 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
         }
     });
 </script>
+
+<?php
+$erpDesktopLatestVersion = null;
+$erpDesktopDownloadUrl = function_exists('app_url') ? app_url('/client-apps/download-desktop.php') : '/client-apps/download-desktop.php';
+$selectModuleLib = __DIR__ . '/../select-module-ui/lib.php';
+if (is_file($selectModuleLib)) {
+    require_once $selectModuleLib;
+    if (function_exists('selectModuleDesktopLatestVersion')) {
+        $erpDesktopLatestVersion = selectModuleDesktopLatestVersion();
+    }
+}
+if ($erpDesktopLatestVersion !== null):
+    $desktopBannerCss = dirname(__DIR__) . '/assets/css/desktop-update-banner.css';
+    $desktopBannerJs = dirname(__DIR__) . '/assets/js/desktop-update-banner.js';
+    $desktopBannerCssVer = is_file($desktopBannerCss) ? (int) filemtime($desktopBannerCss) : time();
+    $desktopBannerJsVer = is_file($desktopBannerJs) ? (int) filemtime($desktopBannerJs) : time();
+?>
+<link rel="stylesheet" href="<?= htmlspecialchars(app_url('/assets/css/desktop-update-banner.css')) ?>?v=<?= $desktopBannerCssVer ?>">
+<script>
+window.__ERP_DESKTOP_UPDATE__ = <?= json_encode([
+    'latestVersion' => $erpDesktopLatestVersion,
+    'downloadUrl' => $erpDesktopDownloadUrl,
+], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+</script>
+<script src="<?= htmlspecialchars(app_url('/assets/js/desktop-update-banner.js')) ?>?v=<?= $desktopBannerJsVer ?>" defer></script>
+<?php endif; ?>
 
 <script src="<?= app_url('/assets/js/responsive-table.js') ?>"></script>
 <?php require_once __DIR__ . '/mobile_footer.php'; ?>

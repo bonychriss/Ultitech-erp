@@ -246,7 +246,7 @@ export default function StockMovements({
                 <option value="">Select product...</option>
                 {sortedProducts.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.sku}) � {p.stock} {p.unit} on hand
+                    {p.name} ({p.sku}) - {p.stock} {p.unit} on hand
                   </option>
                 ))}
               </select>
@@ -466,13 +466,13 @@ export default function StockMovements({
                               : 'text-blue-600'
                         }
                       >
-                        {m.movementType === 'in' ? '+' : m.movementType === 'out' ? '-' : '�'}
+                        {m.movementType === 'in' ? '+' : m.movementType === 'out' ? '-' : '~'}
                         {m.quantity}
                       </span>
                     </td>
                     <td className="max-w-xs">
                       <div className="text-slate-700 truncate" title={m.notes}>
-                        {m.notes || '�'}
+                        {m.notes || '-'}
                       </div>
                     </td>
                   </tr>

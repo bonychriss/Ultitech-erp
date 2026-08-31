@@ -2212,6 +2212,80 @@ try {
             ]);
             break;
 
+        case 'update_pending_receipt':
+            $receiptId = (int) ($_POST['receipt_id'] ?? 0);
+            $warehouseId = (int) ($_POST['warehouse_id'] ?? 0);
+            $qtyExpected = isset($_POST['qty_expected']) ? (float) $_POST['qty_expected'] : null;
+            $poReference = trim((string) ($_POST['po_reference'] ?? ''));
+
+            if ($receiptId <= 0 || $warehouseId <= 0 || $qtyExpected === null || $qtyExpected < 0) {
+                sms_error('receipt_id, warehouse_id and qty_expected are required');
+            }
+            if (function_exists('ensureStoreWarehouseReceiptsTable')) {
+                ensureStoreWarehouseReceiptsTable($pdo);
+            }
+
+            $stmt = $pdo->prepare("UPDATE store_warehouse_receipts SET qty_expected = ?, po_reference = ? WHERE id = ? AND warehouse_id = ? AND status = 'pending'");
+            $stmt->execute([$qtyExpected, $poReference, $receiptId, $warehouseId]);
+            if ($stmt->rowCount() <= 0) {
+                sms_error('Pending receipt not found or already processed', 404);
+            }
+
+            sms_json(['success' => true, 'message' => 'Receipt updated']);
+            break;
+
+        case 'manual_incoming_confirm':
+            $warehouseId = (int) ($_POST['warehouse_id'] ?? 0);
+            $productId = (int) ($_POST['product_id'] ?? 0);
+            $qtyExpected = isset($_POST['qty_expected']) ? (float) $_POST['qty_expected'] : 0;
+            $qtyVerified = isset($_POST['qty_verified']) ? (float) $_POST['qty_verified'] : 0;
+            $poReference = trim((string) ($_POST['po_reference'] ?? ''));
+            $notes = trim((string) ($_POST['notes'] ?? ''));
+
+            if ($warehouseId <= 0 || $productId <= 0 || $qtyVerified <= 0) {
+                sms_error('warehouse_id, product_id and qty_verified are required');
+            }
+            if ($qtyExpected <= 0) {
+                $qtyExpected = $qtyVerified;
+            }
+            if (!function_exists('storeReceiptCreatePending') || !function_exists('storeReceiptVerify')) {
+                sms_error('Store verification is not available on this server');
+            }
+
+            $prodCheck = $pdo->prepare('SELECT id FROM products WHERE id = ?');
+            $prodCheck->execute([$productId]);
+            if (!$prodCheck->fetchColumn()) {
+                sms_error('Product not found', 404);
+            }
+
+            $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+            $receiptId = storeReceiptCreatePending(
+                $pdo,
+                $warehouseId,
+                $productId,
+                $qtyExpected,
+                null,
+                null,
+                $poReference !== '' ? $poReference : 'Manual incoming',
+                $notes !== '' ? $notes : 'Manual entry from store confirmation sheet',
+                $userId
+            );
+            if ($receiptId <= 0) {
+                sms_error('Failed to create incoming receipt row');
+            }
+
+            $result = storeReceiptVerify($pdo, $receiptId, $warehouseId, $qtyVerified, $notes, $userId);
+            if (!($result['ok'] ?? false)) {
+                sms_error((string) ($result['message'] ?? 'Verification failed'));
+            }
+
+            sms_json([
+                'success' => true,
+                'message' => (string) ($result['message'] ?? 'Stock confirmed'),
+                'receiptId' => (string) $receiptId,
+            ]);
+            break;
+
         case 'purchase_orders':
             sms_json([
                 'success' => true,

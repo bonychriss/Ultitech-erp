@@ -5,7 +5,7 @@ const { setupUpdateBanner } = require('./update-banner.cjs');
 contextBridge.exposeInMainWorld('ultitechClient', {
   platform: 'desktop',
   version: pkg.version,
-  checkForUpdates: () => ipcRenderer.invoke('ultitech:check-for-updates'),
+  checkForUpdates: () => ipcRenderer.invoke('ultitech:check-for-updates-silent'),
   downloadUpdate: () => ipcRenderer.send('ultitech:update-download'),
   installUpdate: () => ipcRenderer.send('ultitech:update-install'),
   dismissUpdate: () => ipcRenderer.send('ultitech:update-dismiss'),

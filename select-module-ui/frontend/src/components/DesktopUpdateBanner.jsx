@@ -88,8 +88,15 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
 
     if (client) {
       client.checkForUpdates?.().catch(() => {
-        /* handled via events or silent */
+        /* silent; banner also driven by server version + IPC events */
       })
+      if (latestVersion && !readDismissed(latestVersion)) {
+        const installed = client.version || '0'
+        if (compareVersions(installed, latestVersion) < 0) {
+          setVersion(latestVersion)
+          setPhase('available')
+        }
+      }
     } else if (latestVersion && downloadUrl && !readDismissed(latestVersion)) {
       setVersion(latestVersion)
       setPhase('available')
@@ -124,18 +131,19 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
 
   const message = (() => {
     if (phase === 'downloading') {
-      return `Downloading update${percent > 0 ? ` ${Math.round(percent)}%` : ''}`
+      return `Downloading update${percent > 0 ? `  ${Math.round(percent)}%` : ''}`
     }
     if (phase === 'ready') {
       return version ? `Update ${version} ready to install` : 'Update ready to install'
     }
-    return client ? 'New update available' : `Desktop app ${version || latestVersion} available`
+    const v = version || latestVersion
+    return v ? `Desktop app ${v} available` : 'Desktop app update available'
   })()
 
   const primaryLabel = (() => {
     if (phase === 'downloading') return 'Downloading'
     if (phase === 'ready') return 'Install Now'
-    return client ? 'Install Now' : 'Download'
+    return 'Download'
   })()
 
   const onLater = () => {

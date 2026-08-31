@@ -1,0 +1,105 @@
+#ultitech-update-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: #2d2d2d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 2147483646;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  color: #cccccc;
+  box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.35);
+  animation: ultitech-banner-in 0.25s ease-out;
+}
+
+#ultitech-update-banner.ultitech-update-banner--toast {
+  justify-content: center;
+}
+
+@keyframes ultitech-banner-in {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+#ultitech-update-banner .ultitech-update-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+#ultitech-update-banner .ultitech-update-icon {
+  display: flex;
+  color: #e0e0e0;
+  flex-shrink: 0;
+}
+
+#ultitech-update-banner .ultitech-update-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#ultitech-update-banner .ultitech-update-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+#ultitech-update-banner .ultitech-btn-later {
+  background: none;
+  border: none;
+  color: #cccccc;
+  font: inherit;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+
+#ultitech-update-banner .ultitech-btn-later:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#ultitech-update-banner .ultitech-btn-primary {
+  background: #0078d4;
+  border: none;
+  color: #fff;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: 4px;
+}
+
+#ultitech-update-banner .ultitech-btn-primary:hover:not(:disabled) {
+  background: #1084d8;
+}
+
+#ultitech-update-banner .ultitech-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+body.ultitech-update-banner-open {
+  padding-bottom: 48px;
+}
+
+@media (max-width: 640px) {
+  #ultitech-update-banner {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 48px;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  #ultitech-update-banner .ultitech-update-text {
+    white-space: normal;
+  }
+}

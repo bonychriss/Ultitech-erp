@@ -45,6 +45,7 @@ foreach ($warehouseRows as $wh) {
 }
 
 $hideHeaderCompanyBranding = true;
+$hideHeaderThemeAndNotifications = true;
 $employeeHeaderExtraClass = 'employee-header--store-mgmt';
 $employeeHeaderRightHtml = '';
 $bodyExtraClass = 'page-store-management';
@@ -119,11 +120,7 @@ include __DIR__ . '/../stock/includes/header.php';
     }
 
     body.page-store-management .employee-header--store-mgmt .header-right.header-actions-tray {
-        display: flex !important;
-        align-items: center !important;
-        gap: 0.5rem;
-        margin-left: auto !important;
-        flex-shrink: 0;
+        display: none !important;
     }
 
     main.main-content.store-management-shell {
@@ -141,6 +138,10 @@ include __DIR__ . '/../stock/includes/header.php';
         width: 100%;
         max-width: none;
         margin: 0;
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: calc(100vh - 4rem);
     }
 
     @media (max-width: 767.98px) {
@@ -161,6 +162,28 @@ include __DIR__ . '/../stock/includes/header.php';
     html[data-theme="dark"] body.page-store-management .employee-header.employee-header--store-mgmt,
     html[data-theme="dark"] main.main-content.store-management-shell {
         background: #0f172a !important;
+    }
+
+    body.page-store-management #native-sidebar .sidebar-theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.55rem 1rem;
+        color: inherit;
+        font-weight: 500;
+        font-size: 0.95rem;
+        cursor: pointer;
+    }
+
+    body.page-store-management #native-sidebar .sidebar-theme-toggle:hover,
+    body.page-store-management #native-sidebar .sidebar-notif-trigger:hover {
+        opacity: 0.85;
+    }
+
+    body.page-store-management #native-sidebar .sidebar-theme-toggle i {
+        width: 1.25rem;
+        text-align: center;
+        flex-shrink: 0;
     }
 </style>
 

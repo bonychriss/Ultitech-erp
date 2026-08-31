@@ -244,6 +244,48 @@ export async function verifyReceipt(
   return { message: data.message };
 }
 
+export async function updatePendingReceipt(
+  warehouseId: number,
+  payload: { receiptId: string; qtyExpected: number; poReference?: string }
+): Promise<{ message: string }> {
+  const data = await request<{ message: string }>('update_pending_receipt', {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'update_pending_receipt',
+      warehouse_id: warehouseId,
+      receipt_id: payload.receiptId,
+      qty_expected: payload.qtyExpected,
+      po_reference: payload.poReference ?? '',
+    }),
+  });
+  return { message: data.message };
+}
+
+export async function confirmManualIncoming(
+  warehouseId: number,
+  payload: {
+    productId: string;
+    qtyExpected: number;
+    qtyVerified: number;
+    poReference?: string;
+    notes?: string;
+  }
+): Promise<{ message: string }> {
+  const data = await request<{ message: string }>('manual_incoming_confirm', {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'manual_incoming_confirm',
+      warehouse_id: warehouseId,
+      product_id: payload.productId,
+      qty_expected: payload.qtyExpected,
+      qty_verified: payload.qtyVerified,
+      po_reference: payload.poReference ?? '',
+      notes: payload.notes ?? '',
+    }),
+  });
+  return { message: data.message };
+}
+
 export async function fetchPurchaseOrders(): Promise<PurchaseOrderSummary[]> {
   const data = await request<{ orders: PurchaseOrderSummary[] }>('purchase_orders');
   return data.orders;

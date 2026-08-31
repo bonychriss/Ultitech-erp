@@ -13,6 +13,8 @@ $headerNotifFeed = isset($headerNotifFeed) && is_array($headerNotifFeed) ? $head
 $notifBellLabel = $unread > 0
     ? 'Notifications (' . ($unread > 99 ? '99+' : (string) $unread) . ' unread)'
     : 'Notifications';
+$notifDisplayMode = $notifDisplayMode ?? 'header';
+$notifIsSidebar = ($notifDisplayMode === 'sidebar');
 
 $ncAllItems = [];
 try {
@@ -95,16 +97,72 @@ $ncCss = function_exists('app_url') ? app_url('/assets/css/notifications-centre.
     pointer-events: none;
     z-index: 1;
 }
+<?php if ($notifIsSidebar): ?>
+.sidebar-notif-item .notif {
+    width: 100%;
+    position: relative;
+}
+.sidebar-notif-item .header-notif-bell-btn {
+    width: 100%;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 0.55rem 1rem;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    border-radius: 0.375rem;
+    color: inherit !important;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+.sidebar-notif-item .header-notif-bell-inner {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+}
+.sidebar-notif-item .header-notif-bell-svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+.sidebar-notif-item .header-notif-dot {
+    top: 0.45rem;
+    left: 1.65rem;
+    right: auto;
+}
+.sidebar-notif-item .sidebar-notif-label {
+    flex: 1 1 auto;
+    text-align: start;
+}
+body.sidebar-collapsed .sidebar-notif-item .sidebar-notif-label {
+    display: none;
+}
+@media (min-width: 768px) {
+    .sidebar-notif-item .notif-dropdown--v2.notif-dropdown {
+        position: fixed !important;
+        top: auto !important;
+        left: var(--sidebar-notif-left, 260px) !important;
+        right: auto !important;
+        margin-top: 0 !important;
+        z-index: 10120 !important;
+    }
+}
+<?php endif; ?>
 </style>
 <div class="notif" style="display:flex;align-items:center;">
-    <button type="button" class="header-notif-bell-btn" data-notifications-url="<?= htmlspecialchars($notificationsListUrl) ?>" onclick="toggleNotif(event)" aria-label="<?= htmlspecialchars($notifBellLabel) ?>" title="<?= htmlspecialchars($notifBellLabel) ?>" aria-expanded="false" aria-controls="notif-dd">
+    <button type="button" class="header-notif-bell-btn<?= $notifIsSidebar ? ' nav-link sidebar-notif-trigger' : '' ?>" data-notifications-url="<?= htmlspecialchars($notificationsListUrl) ?>" onclick="toggleNotif(event)" aria-label="<?= htmlspecialchars($notifBellLabel) ?>" title="<?= htmlspecialchars($notifBellLabel) ?>" aria-expanded="false" aria-controls="notif-dd">
         <span class="header-notif-bell-inner" aria-hidden="true">
+            <?php if ($notifIsSidebar): ?>
+            <i class="bi bi-bell"></i>
+            <?php else: ?>
             <svg class="header-notif-bell-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
+            <?php endif; ?>
         </span>
-        <?php if ($unread > 0): ?>
+        <?php if ($notifIsSidebar): ?>
+            <span class="sidebar-text sidebar-notif-label">Notifications<?php if ($unread > 0): ?> <span class="badge rounded-pill bg-primary ms-1"><?= $unread > 99 ? '99+' : (int) $unread ?></span><?php endif; ?></span>
+        <?php elseif ($unread > 0): ?>
             <span class="header-notif-dot" aria-hidden="true"></span>
         <?php endif; ?>
     </button>

@@ -107,6 +107,34 @@
   gap: 1rem;
 }
 
+.sms-desk-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.sms-desk-back-link:hover {
+  color: #0f172a;
+  text-decoration: underline;
+}
+
+html[data-theme="dark"] .sms-desk-back-link {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .sms-desk-back-link:hover {
+  color: #f1f5f9;
+}
+
 .sms-desk-page-header-search {
   grid-column: 2;
   width: 100%;
@@ -654,6 +682,57 @@ body.page-store-management .sms-desk-page button.sms-desk-kpi-card {
   .sms-desk-kpi-card {
     flex: 1 1 100%;
   }
+}
+
+.sms-desk-page--excel-receive {
+  gap: 0.35rem;
+  flex: 1 1 auto;
+  min-height: calc(100vh - 5.5rem);
+}
+
+.sms-form-shell--excel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sms-excel-grid-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sms-excel-page-top {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0 0 0.15rem;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: #fff;
+}
+
+.sms-excel-page-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.sms-form-shell--excel {
+  gap: 0.25rem;
+}
+
+html[data-theme="dark"] .sms-excel-page-top {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] .sms-excel-page-title {
+  color: #f1f5f9;
 }
 
 .sms-form-shell {
@@ -3091,6 +3170,19 @@ body.page-store-management .sms-desk-page button.sms-desk-kpi-card {
   padding-top: 0.5rem;
 }
 
+.sms-po-receive--excel {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.sms-movement-form-head--excel {
+  padding: 0 0 0.75rem;
+  border-bottom: none;
+  background: transparent;
+}
+
 .sms-po-empty {
   border: 1px dashed #e2e8f0;
   border-radius: 0.75rem;
@@ -3543,3 +3635,700 @@ html[data-theme="dark"] .sms-incoming-card {
   color: #e2e8f0;
 }
 
+/* Excel full desktop interface */
+.sms-excel-window {
+  border: 1px solid #a6a6a6;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: none;
+  font-family: "Segoe UI", Calibri, Inter, sans-serif;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: calc(100vh - 12rem);
+  max-height: none;
+}
+
+.sms-excel-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.sms-excel-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.2rem 0.5rem 0.2rem 0.65rem;
+  background: #217346;
+  color: #fff;
+  min-height: 2rem;
+}
+
+.sms-excel-titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.sms-excel-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: #fff;
+  color: #217346;
+  font-weight: 800;
+  font-size: 0.75rem;
+  border-radius: 2px;
+}
+
+.sms-excel-titlebar-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.sms-excel-app {
+  font-weight: 600;
+  font-size: 0.6875rem;
+  opacity: 0.95;
+}
+
+.sms-excel-filename {
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sms-excel-window-controls {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.sms-excel-win-btn {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.sms-excel-win-btn-close {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.sms-excel-qat {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.15rem 0.5rem;
+  background: #217346;
+  border-bottom: 1px solid #1a5c38;
+}
+
+.sms-excel-qat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.45rem;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  cursor: default;
+}
+
+.sms-excel-qat-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sms-excel-ribbon {
+  background: #f3f3f3;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+.sms-excel-ribbon-tabs-row {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: #217346;
+  padding-right: 0.5rem;
+}
+
+.sms-excel-ribbon-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  padding: 0 0.35rem;
+  background: #217346;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sms-excel-ribbon-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0.25rem 0;
+}
+
+.sms-excel-ribbon-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 1.85rem;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  background: #fff;
+  color: #15803d;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.sms-excel-ribbon-confirm-btn:hover:not(:disabled) {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.sms-excel-ribbon-confirm-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sms-excel-ribbon-tab {
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.85rem 0.3rem;
+  cursor: pointer;
+}
+
+.sms-excel-ribbon-tab.is-active {
+  background: #f3f3f3;
+  color: #217346;
+  font-weight: 600;
+  border-radius: 3px 3px 0 0;
+}
+
+.sms-excel-ribbon-body {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-height: 4.5rem;
+  padding: 0.35rem 0.5rem;
+  overflow-x: auto;
+}
+
+.sms-excel-ribbon-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0 0.65rem;
+  border-right: 1px solid #d9d9d9;
+}
+
+.sms-excel-ribbon-group:last-child {
+  border-right: none;
+}
+
+.sms-excel-ribbon-group-items {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.sms-excel-ribbon-group-label {
+  text-align: center;
+  font-size: 0.625rem;
+  color: #666;
+  padding-top: 0.15rem;
+}
+
+.sms-excel-ribbon-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  min-width: 2.5rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: #333;
+  font-size: 0.625rem;
+  cursor: default;
+}
+
+.sms-excel-ribbon-btn:hover {
+  background: #e7e7e7;
+  border-color: #c8c8c8;
+}
+
+.sms-excel-ribbon-btn-sm {
+  min-width: 1.65rem;
+  padding: 0.25rem;
+}
+
+.sms-excel-ribbon-select {
+  height: 1.5rem;
+  border: 1px solid #c8c8c8;
+  border-radius: 2px;
+  background: #fff;
+  font-size: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+.sms-excel-ribbon-select-sm {
+  width: 2.75rem;
+}
+
+.sms-excel-ribbon-note {
+  font-size: 0.75rem;
+  color: #555;
+  padding: 0.35rem 0.15rem;
+}
+
+.sms-excel-ribbon-zoom {
+  min-width: 2.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #333;
+}
+
+.sms-excel-formula {
+  display: grid;
+  grid-template-columns: 2rem 3.25rem 1px 1fr;
+  align-items: center;
+  border-bottom: 1px solid #d4d4d4;
+  background: #fff;
+  min-height: 1.65rem;
+}
+
+.sms-excel-fx {
+  border: none;
+  background: transparent;
+  color: #666;
+  font-style: italic;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: default;
+}
+
+.sms-excel-name-box {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #333;
+  padding: 0 0.25rem;
+  font-family: var(--font-mono);
+}
+
+.sms-excel-formula-divider {
+  width: 1px;
+  height: 100%;
+  background: #d4d4d4;
+}
+
+.sms-excel-formula-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.8125rem;
+  color: #111;
+  font-family: Calibri, "Segoe UI", sans-serif;
+}
+
+.sms-excel-formula-input:focus {
+  outline: none;
+}
+
+.sms-excel-scroll {
+  overflow: auto;
+  flex: 1 1 auto;
+  min-height: calc(100vh - 18rem);
+  background: #e8e8e8;
+}
+
+.sms-excel-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.8125rem;
+  font-family: Calibri, "Segoe UI", Inter, sans-serif;
+  background: #fff;
+}
+
+.sms-excel-table th,
+.sms-excel-table td {
+  border: 1px solid #d0d0d0;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.sms-excel-letters th {
+  background: #f0f0f0;
+  color: #555;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-align: center;
+  height: 1.2rem;
+  padding: 0.05rem;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.sms-excel-corner {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  background: #f0f0f0;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 6;
+}
+
+.sms-excel-headers th {
+  background: #217346;
+  color: #fff;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.45rem 0.55rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: sticky;
+  top: 1.35rem;
+  z-index: 4;
+}
+
+.sms-excel-row-num {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  text-align: center;
+  background: #f0f0f0;
+  color: #555;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  user-select: none;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.sms-excel-cell {
+  background: #fff;
+  height: 2rem;
+  min-height: 2rem;
+  position: relative;
+}
+
+.sms-excel-cell-pad {
+  background: #fff;
+  height: 2rem;
+  min-height: 2rem;
+}
+
+.sms-excel-row-pad .sms-excel-row-num {
+  color: #888;
+}
+
+.sms-excel-cell.is-readonly {
+  background: #fff;
+  color: #222;
+}
+
+.sms-excel-cell.is-editable:hover {
+  background: #f5fbff;
+}
+
+.sms-excel-cell.is-active {
+  outline: 2px solid #217346;
+  outline-offset: -2px;
+  z-index: 1;
+  box-shadow: inset 0 0 0 1px #fff;
+}
+
+.sms-excel-cell.is-warn {
+  background: #fffbeb;
+}
+
+.sms-excel-cell.is-error {
+  background: #fef2f2;
+}
+
+.sms-excel-align-center { text-align: center; }
+.sms-excel-align-right { text-align: right; }
+
+.sms-excel-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  color: inherit;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.sms-excel-input:focus {
+  outline: none;
+}
+
+.sms-excel-readonly {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  min-height: 2rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sms-excel-empty {
+  text-align: center;
+  padding: 2rem 1rem !important;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.sms-excel-bottom-bar {
+  display: flex;
+  flex-direction: column;
+  background: #f0f0f0;
+  border-top: 1px solid #bfbfbf;
+}
+
+.sms-excel-sheet-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.15rem 0.35rem 0;
+  background: #f0f0f0;
+}
+
+.sms-excel-sheet-nav,
+.sms-excel-sheet-add {
+  border: none;
+  background: transparent;
+  color: #555;
+  font-size: 0.7rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: default;
+}
+
+.sms-excel-sheet-tab {
+  padding: 0.2rem 0.85rem;
+  font-size: 0.75rem;
+  color: #333;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+}
+
+.sms-excel-sheet-tab.is-active {
+  background: #fff;
+  border-color: #bfbfbf;
+  font-weight: 600;
+  color: #217346;
+}
+
+.sms-excel-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.15rem 0.5rem;
+  min-height: 1.35rem;
+  background: #217346;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.6875rem;
+}
+
+.sms-excel-status-item {
+  white-space: nowrap;
+}
+
+.sms-excel-status-zoom {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sms-excel-status-zoom button {
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.sms-excel-status-zoom button:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sms-excel-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: #fafafa;
+  border-top: 1px solid #d4d4d4;
+}
+
+.sms-excel-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  min-height: 2rem;
+}
+
+.sms-excel-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  border: 1px solid #d1d5db;
+  border-radius: 2px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.sms-excel-action-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.sms-excel-action-btn-confirm {
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.sms-excel-action-btn-confirm:hover {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.sms-excel-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sms-excel-hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+html[data-theme="dark"] .sms-excel-window {
+  border-color: #475569;
+  background: #0f172a;
+}
+
+html[data-theme="dark"] .sms-excel-chrome {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] .sms-excel-ribbon {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .sms-excel-ribbon-tab.is-active {
+  background: #1e293b;
+  color: #4ade80;
+}
+
+html[data-theme="dark"] .sms-excel-ribbon-group {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .sms-excel-ribbon-btn,
+html[data-theme="dark"] .sms-excel-ribbon-note {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .sms-excel-formula {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .sms-excel-name-box,
+html[data-theme="dark"] .sms-excel-formula-input,
+html[data-theme="dark"] .sms-excel-fx {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .sms-excel-bottom-bar,
+html[data-theme="dark"] .sms-excel-sheet-tabs {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+html[data-theme="dark"] .sms-excel-sheet-tab.is-active {
+  background: #0f172a;
+  border-color: #475569;
+  color: #4ade80;
+}
+
+html[data-theme="dark"] .sms-excel-letters th,
+html[data-theme="dark"] .sms-excel-row-num,
+html[data-theme="dark"] .sms-excel-corner {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .sms-excel-cell,
+html[data-theme="dark"] .sms-excel-cell-pad {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .sms-excel-cell.is-readonly {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .sms-excel-input {
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .sms-excel-scroll {
+  background: #111827;
+}
+
+html[data-theme="dark"] .sms-excel-footer {
+  background: #1e293b;
+  border-color: #334155;
+}

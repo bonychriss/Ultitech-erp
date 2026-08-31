@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { ClipboardCheck, Truck } from 'lucide-react';
 import PurchaseOrderReceive from './PurchaseOrderReceive';
 import VerifyReceipts from './VerifyReceipts';
+import type { Product } from '../types';
 
 interface StoreReceiveFormProps {
   warehouseId: number;
+  products: Product[];
   canReceivePurchaseOrders?: boolean;
   onReceived: () => Promise<void>;
 }
@@ -18,13 +20,14 @@ type ReceiveMode = 'purchase' | 'verify';
  */
 export default function StoreReceiveForm({
   warehouseId,
+  products,
   canReceivePurchaseOrders = false,
   onReceived,
 }: StoreReceiveFormProps) {
   const [mode, setMode] = useState<ReceiveMode>('verify');
 
   return (
-    <div className="sms-form-shell">
+    <div className="sms-form-shell sms-form-shell--excel">
       {canReceivePurchaseOrders && (
         <div className="sms-form-mode-toggle" role="tablist" aria-label="Receive mode">
           <button
@@ -50,13 +53,13 @@ export default function StoreReceiveForm({
         </div>
       )}
 
-      <div className="sms-form-card sms-form-card--flush">
-        {mode === 'purchase' && canReceivePurchaseOrders ? (
+      {mode === 'purchase' && canReceivePurchaseOrders ? (
+        <div className="sms-form-card sms-form-card--flush">
           <PurchaseOrderReceive warehouseId={warehouseId} onReceived={onReceived} />
-        ) : (
-          <VerifyReceipts warehouseId={warehouseId} onVerified={onReceived} />
-        )}
-      </div>
+        </div>
+      ) : (
+        <VerifyReceipts warehouseId={warehouseId} products={products} onVerified={onReceived} />
+      )}
     </div>
   );
 }

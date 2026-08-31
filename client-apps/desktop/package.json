@@ -1,6 +1,6 @@
 {
   "name": "ultitech-erp-desktop",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "UltiTech ERP desktop client (Electron shell for the hosted web app)",
   "author": "UltiTech",
   "main": "electron-main.cjs",

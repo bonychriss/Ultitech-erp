@@ -772,3 +772,124 @@ html[data-theme="dark"] .sm-desktop-download {
     transform: none;
   }
 }
+
+.sm-page--update-banner .sm-desktop-download {
+  bottom: 64px;
+}
+
+.sm-desktop-update-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+  padding: 0 20px;
+  background: #2d2d2d;
+  color: #cccccc;
+  font-size: 13px;
+  box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.35);
+  animation: sm-update-banner-in 0.25s ease-out;
+}
+
+.sm-desktop-update-banner--toast {
+  justify-content: center;
+}
+
+.sm-desktop-update-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sm-desktop-update-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #e0e0e0;
+}
+
+.sm-desktop-update-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sm-desktop-update-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.sm-desktop-update-later {
+  background: none;
+  border: none;
+  color: #cccccc;
+  font: inherit;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+
+.sm-desktop-update-later:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sm-desktop-update-primary {
+  background: #0078d4;
+  border: none;
+  color: #fff;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: 4px;
+}
+
+.sm-desktop-update-primary:hover:not(:disabled) {
+  background: #1084d8;
+}
+
+.sm-desktop-update-primary:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+@keyframes sm-update-banner-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .sm-page--update-banner .sm-desktop-download {
+    bottom: 56px;
+  }
+
+  .sm-desktop-update-banner {
+    padding: 8px 14px;
+    flex-wrap: wrap;
+    min-height: 52px;
+  }
+
+  .sm-desktop-update-text {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sm-desktop-update-banner {
+    animation: none;
+  }
+}

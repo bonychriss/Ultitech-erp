@@ -1,11 +1,31 @@
 /**
- * Injected into ERP pages via preload ó VS Code-style update bar at the bottom.
+ * Injected into ERP pages via preload ù VS Code-style update bar at the bottom.
  * @param {typeof import('electron').ipcRenderer} ipcRenderer
  */
 function setupUpdateBanner(ipcRenderer) {
   const BANNER_ID = 'ultitech-update-banner';
   const GIFT_ICON =
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M12 8V21M12 8c-1.8 0-3-1.2-3-3s1.2-3 3-3 3 1.2 3 3-1.2 3-3 3zM3 12h18M7.5 8C6 6.5 6 4 8 4s2.5 2 4 4M16.5 8C18 6.5 18 4 16 4s-2.5 2-4 4"/></svg>';
+
+  function isSelectModulePage() {
+    try {
+      return /select-module/i.test(window.location.pathname || '');
+    } catch {
+      return false;
+    }
+  }
+
+  function notifySelectModule(type, payload) {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('ultitech:desktop-update', {
+          detail: { type, ...(payload || {}) },
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+  }
 
   /** @type {'available' | 'downloading' | 'ready' | null} */
   let state = null;
@@ -107,7 +127,7 @@ function setupUpdateBanner(ipcRenderer) {
 
   function messageForCurrentState() {
     if (state === 'downloading') {
-      return 'Downloading updateÖ';
+      return 'Downloading updateù';
     }
     if (state === 'ready') {
       return version ? `Update ${version} ready to install` : 'Update ready to install';
@@ -120,7 +140,7 @@ function setupUpdateBanner(ipcRenderer) {
       return 'Install Now';
     }
     if (state === 'downloading') {
-      return 'DownloadingÖ';
+      return 'Downloadingù';
     }
     return 'Install Now';
   }
@@ -177,6 +197,10 @@ function setupUpdateBanner(ipcRenderer) {
   ipcRenderer.on('ultitech:update-available', (_event, payload) => {
     state = 'available';
     version = payload && payload.version ? String(payload.version) : null;
+    notifySelectModule('available', { version });
+    if (isSelectModulePage()) {
+      return;
+    }
     renderBanner();
   });
 
@@ -184,6 +208,13 @@ function setupUpdateBanner(ipcRenderer) {
     state = 'downloading';
     if (payload && payload.version) {
       version = String(payload.version);
+    }
+    notifySelectModule('downloading', {
+      version,
+      percent: payload?.percent,
+    });
+    if (isSelectModulePage()) {
+      return;
     }
     renderBanner();
     const text = document.querySelector(`#${BANNER_ID} .ultitech-update-text`);
@@ -195,14 +226,25 @@ function setupUpdateBanner(ipcRenderer) {
   ipcRenderer.on('ultitech:update-ready', (_event, payload) => {
     state = 'ready';
     version = payload && payload.version ? String(payload.version) : version;
+    notifySelectModule('ready', { version });
+    if (isSelectModulePage()) {
+      return;
+    }
     renderBanner();
   });
 
   ipcRenderer.on('ultitech:update-dismiss', () => {
+    notifySelectModule('dismiss');
     removeBanner();
   });
 
   ipcRenderer.on('ultitech:update-up-to-date', (_event, payload) => {
+    notifySelectModule('up-to-date', { version: payload?.version || null });
+    if (isSelectModulePage()) {
+      state = null;
+      version = null;
+      return;
+    }
     state = 'available';
     version = null;
     removeBanner();

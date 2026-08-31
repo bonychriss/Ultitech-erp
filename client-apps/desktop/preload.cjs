@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('ultitechClient', {
   platform: 'desktop',
   version: pkg.version,
   checkForUpdates: () => ipcRenderer.invoke('ultitech:check-for-updates'),
+  downloadUpdate: () => ipcRenderer.send('ultitech:update-download'),
+  installUpdate: () => ipcRenderer.send('ultitech:update-install'),
+  dismissUpdate: () => ipcRenderer.send('ultitech:update-dismiss'),
 });
 
 function initWhenDomReady() {

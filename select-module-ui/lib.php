@@ -62,3 +62,28 @@ function selectModuleUiLoadReactAssets(): ?array
         'jsVersion' => is_file($jsPath) ? (string) filemtime($jsPath) : (string) time(),
     ];
 }
+
+/**
+ * Read published desktop app version from updates/latest.yml (if present on server).
+ */
+function selectModuleDesktopLatestVersion(): ?string
+{
+    $candidates = [
+        dirname(__DIR__) . '/client-apps/desktop/updates/latest.yml',
+        dirname(__DIR__) . '/client-apps/desktop/dist-build/latest.yml',
+    ];
+    foreach ($candidates as $path) {
+        if (!is_readable($path)) {
+            continue;
+        }
+        $content = file_get_contents($path);
+        if (!is_string($content) || $content === '') {
+            continue;
+        }
+        if (preg_match('/^version:\s*([^\s#]+)/m', $content, $matches)) {
+            $version = trim($matches[1]);
+            return $version !== '' ? $version : null;
+        }
+    }
+    return null;
+}

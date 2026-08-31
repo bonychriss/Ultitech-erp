@@ -336,6 +336,7 @@ if ($assets === null) {
 $logoutUrl = function_exists('app_url') ? app_url('/logout.php') : 'logout.php';
 $statusUrl = function_exists('app_url') ? app_url('/system-status.php') : 'system-status.php';
 $desktopAppDownloadUrl = function_exists('app_url') ? app_url('/client-apps/download-desktop.php') : '/client-apps/download-desktop.php';
+$desktopLatestVersion = selectModuleDesktopLatestVersion();
 
 $selectModuleConfig = [
     'companyName' => $currentCompanyName,
@@ -346,6 +347,10 @@ $selectModuleConfig = [
     'showStatus' => $isRootAdminUsername,
     'desktopAppDownloadUrl' => $desktopAppDownloadUrl,
     'showDesktopAppDownload' => true,
+    'desktopUpdate' => $desktopLatestVersion !== null ? [
+        'latestVersion' => $desktopLatestVersion,
+        'downloadUrl' => $desktopAppDownloadUrl,
+    ] : null,
     'enabledModuleLabels' => $enabledModuleNames,
     'modules' => $modules,
     'mailUpdate' => $emailModuleUpdateCampaign,

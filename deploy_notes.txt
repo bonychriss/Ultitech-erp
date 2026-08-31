@@ -1,0 +1,32 @@
+DEPLOYMENT INSTRUCTIONS
+=======================
+
+1. DATABASE UPDATES
+-------------------
+Run the following SQL commands in your database to add the necessary columns:
+
+-- Add Restricted Vouchers support
+ALTER TABLE payment_vouchers ADD COLUMN IF NOT EXISTS is_restricted TINYINT(1) DEFAULT 0;
+
+-- Add Order Tracking columns (Shipper, ECC)
+ALTER TABLE order_tracking ADD COLUMN IF NOT EXISTS shipper VARCHAR(100) AFTER shipment_date;
+ALTER TABLE order_tracking ADD COLUMN IF NOT EXISTS ecc DECIMAL(15,2) DEFAULT 0.00 AFTER shipper;
+
+
+2. FILE UPLOADS
+---------------
+Upload the contents of this zip file to your server, overwriting existing files.
+- admin/dashboard.php (Ensure this file is needed, typically employee/dashboard.php is the main one updated)
+- employee/dashboard.php
+- employee/my-vouchers.php
+- create-voucher.php
+- view-voucher.php
+- erp/petty-cash/index.php
+- includes/functions.php
+- order-tracking/ (all files)
+
+3. VERIFICATION
+---------------
+- Create a restricted voucher and verify it is locked/masked for unauthorized users.
+- Check Order Tracking for new columns.
+- Check Admin Petty Cash dashboard for correct total balance.

@@ -1,0 +1,14 @@
+{
+    "host": "local-business-search.p.rapidapi.com",
+    "limit": 50,
+    "lat": 37.381315,
+    "lng": -122.046148,
+    "language": "en",
+    "region": "us",
+    "mode": "manual",
+    "key": "d9ac2d7cb4msh15a9298d2e7cbccp13fb7bjsnf56f69e9044d",
+    "autoSave": false,
+    "sendMode": "manual",
+    "hashtags": "#ultimate general trading\n",
+    "intervalMinutes": 2
+}

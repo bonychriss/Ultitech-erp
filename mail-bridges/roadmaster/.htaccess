@@ -1,0 +1,15 @@
+# Deny direct access to config (Apache 2.2 + 2.4 compatible)
+<FilesMatch "^(config\.php|config\.sample\.php)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^src/ - [F,L]
+</IfModule>

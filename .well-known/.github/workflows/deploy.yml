@@ -1,0 +1,37 @@
+name: Deploy to InfinityFree via FTP
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }} # e.g. ftpupload.net
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          server-dir: ${{ secrets.FTP_DIR }} # e.g. /htdocs/
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*/**
+            **/.github/**
+            **/.vscode/**
+            **/*.md
+            **/node_modules/**
+            **/tasks/**
+            **/laravel-core/**
+            **/reset_database.sh
+            **/database_*.sql
+            includes/env.php
+            includes/env.*.php
+            assets/uploads/**
+            assets/signatures/**

@@ -1,0 +1,5 @@
+[29-Nov-2025 14:34:55 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_inventory_batches' doesn't exist in /home/ultimate/public_html/staff/erp/inventory/batches.php:15
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/inventory/batches.php(15): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/inventory/batches.php on line 15

@@ -1,0 +1,105 @@
+[01-Jan-2026 20:06:24 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "PHP_SESSION__ACTIVE" in /home/ultimate/public_html/staff/stock/integrity_check.php:71
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/integrity_check.php on line 71
+[09-Apr-2026 14:11:10 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.image' in 'SELECT' in /home/ultimate/public_html/staff/stock/dashboard.php:55
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/dashboard.php(55): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/dashboard.php on line 55
+[21-Apr-2026 12:00:50 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:50 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:50 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:50 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:50 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:50 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:50 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3
+[21-Apr-2026 12:00:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireLogin() in /home/ultimate/public_html/staff/stock/product_image.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/product_image.php on line 3

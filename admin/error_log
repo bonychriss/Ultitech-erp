@@ -1,0 +1,238 @@
+[25-Nov-2025 07:50:24 Africa/Kampala] POST received. Data: Array
+(
+    [action] => approve_plan
+    [task_id] => 2
+)
+
+[17-Dec-2025 09:26:29 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Call to undefined function markVoucherPaid() in /home/ultimate/public_html/staff/admin/all-vouchers.php:15
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/admin/all-vouchers.php on line 15
+[18-Dec-2025 10:55:24 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Call to undefined function markVoucherPaid() in /home/ultimate/public_html/staff/admin/dashboard.php:94
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/admin/dashboard.php on line 94
+[18-Dec-2025 11:01:41 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Call to undefined function markVoucherPaid() in /home/ultimate/public_html/staff/admin/dashboard.php:94
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/admin/dashboard.php on line 94
+[21-Dec-2025 22:41:56 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[21-Dec-2025 22:41:56 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[21-Dec-2025 22:44:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[21-Dec-2025 22:44:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[21-Dec-2025 22:45:04 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[21-Dec-2025 22:45:04 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 14:40:31 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 14:40:31 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 14:41:33 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 14:41:33 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 14:41:55 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 14:41:55 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 14:51:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 14:51:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 14:56:32 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 14:56:32 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 14:57:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 14:57:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 14:58:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 14:58:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 14:58:54 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 14:58:54 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 15:11:52 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 15:11:52 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 15:15:01 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 15:15:01 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 15:21:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 15:21:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 15:33:14 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 15:33:14 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 15:37:20 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 15:37:20 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 15:38:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 15:38:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 20:47:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "role" in /home/ultimate/public_html/staff/admin/manage-users.php on line 80
+[27-Dec-2025 17:42:48 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:48 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/dashboard.php(7): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[28-Dec-2025 23:03:46 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "role" in /home/ultimate/public_html/staff/admin/manage-users.php on line 80
+[30-Dec-2025 23:26:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "role" in /home/ultimate/public_html/staff/admin/manage-users.php on line 80
+[31-Dec-2025 00:20:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $links in /home/ultimate/public_html/staff/includes/mobile_footer.php on line 103
+[31-Dec-2025 00:20:23 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/includes/mobile_footer.php on line 103
+[31-Dec-2025 00:22:06 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $links in /home/ultimate/public_html/staff/includes/mobile_footer.php on line 108
+[31-Dec-2025 00:22:06 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/includes/mobile_footer.php on line 108
+[05-Jan-2026 11:52:51 Africa/Kampala] PHP Warning:  Undefined array key "role" in /home/ultimate/public_html/staff/admin/manage-users.php on line 80
+[07-Jan-2026 16:01:01 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function markVoucherPaid() in /home/ultimate/public_html/staff/admin/dashboard.php:94
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/admin/dashboard.php on line 94
+[08-Jan-2026 19:16:24 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function markVoucherPaid() in /home/ultimate/public_html/staff/admin/dashboard.php:94
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/admin/dashboard.php on line 94
+[15-Jan-2026 17:33:54 Africa/Kampala] PHP Warning:  Undefined array key "role" in /home/ultimate/public_html/staff/admin/manage-users.php on line 80
+[15-Jan-2026 20:15:44 Africa/Kampala] PHP Warning:  Undefined array key "role" in /home/ultimate/public_html/staff/admin/manage-users.php on line 80
+[23-Jan-2026 10:22:43 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function markVoucherPaid() in /home/ultimate/public_html/staff/admin/dashboard.php:94
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/admin/dashboard.php on line 94
+[30-Mar-2026 01:02:16 Africa/Kampala] PHP Warning:  require_once(../includes/accounting_service.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/admin/dashboard.php on line 9
+[30-Mar-2026 01:02:16 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/accounting_service.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/admin/dashboard.php:9
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/admin/dashboard.php on line 9
+[08-Apr-2026 08:50:25 Africa/Kampala] Registration Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'registration_token' in 'INSERT INTO'
+[08-Apr-2026 08:50:30 Africa/Kampala] Registration Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'registration_token' in 'INSERT INTO'
+[08-Apr-2026 08:50:48 Africa/Kampala] Registration Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'registration_token' in 'INSERT INTO'
+[08-Apr-2026 08:53:17 Africa/Kampala] Registration Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'registration_token' in 'INSERT INTO'
+[08-Apr-2026 08:53:21 Africa/Kampala] Registration Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'registration_token' in 'INSERT INTO'
+[08-Apr-2026 08:53:24 Africa/Kampala] Registration Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'registration_token' in 'INSERT INTO'
+[08-Apr-2026 08:53:26 Africa/Kampala] Registration Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'registration_token' in 'INSERT INTO'
+[08-Apr-2026 08:55:34 Africa/Kampala] Registration Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'registration_token' in 'INSERT INTO'
+[08-Apr-2026 08:58:55 Africa/Kampala] Registration Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'registration_token' in 'INSERT INTO'
+[14-Apr-2026 11:35:24 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[14-Apr-2026 16:01:17 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 10:33:19 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 10:39:24 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 10:46:06 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 10:46:15 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 10:46:25 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 12:04:08 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 12:04:16 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 12:06:20 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 12:07:53 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 14:53:38 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 14:54:33 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 14:54:44 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[15-Apr-2026 16:29:03 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[16-Apr-2026 16:13:14 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[16-Apr-2026 16:13:24 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[17-Apr-2026 18:05:21 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[17-Apr-2026 18:07:59 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[17-Apr-2026 18:12:07 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[18-Apr-2026 14:48:45 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[18-Apr-2026 14:49:13 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 07:43:55 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 07:44:10 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:24:57 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:26:43 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:27:34 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:31:42 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:37:29 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:37:49 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:38:12 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:38:31 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:39:52 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:40:07 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:40:26 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:41:17 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:41:47 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:42:32 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:42:42 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:44:29 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:45:18 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:45:43 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 13:53:27 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 14:01:37 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 14:03:22 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 14:06:31 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 14:07:15 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 14:12:54 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 15:20:10 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 16:09:54 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 16:16:44 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 16:17:55 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 16:18:42 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 16:24:30 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 16:24:31 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 16:25:22 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 12:50:27 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 12:57:00 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 12:57:20 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 13:00:37 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 13:00:41 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 13:49:56 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 13:58:44 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:01:34 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:02:52 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:03:53 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:03:58 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:05:10 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:05:25 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:05:57 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:18:56 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:21:34 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:58:22 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:59:00 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:59:13 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 14:59:23 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[21-Apr-2026 15:03:48 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 12:20:33 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 12:55:15 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 12:56:10 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 13:02:59 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 13:04:11 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 13:04:32 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 13:04:50 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 13:05:07 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 13:05:14 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 13:05:51 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 13:07:04 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[22-Apr-2026 13:25:47 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[23-Apr-2026 23:02:34 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[23-Apr-2026 23:03:14 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 09:32:15 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 09:57:48 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 10:23:46 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 10:27:10 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 10:27:35 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 10:27:40 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 10:29:49 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 10:29:58 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 10:30:17 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 10:30:23 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 10:46:54 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 22:22:14 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 22:23:27 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 22:25:00 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 10:58:31 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 10:59:16 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 10:59:59 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:00:40 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:01:59 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:02:25 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:03:44 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:04:27 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:05:24 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:06:49 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:07:25 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:07:52 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:09:05 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:09:51 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:10:04 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[27-Apr-2026 11:10:20 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[28-Apr-2026 00:57:43 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[28-Apr-2026 00:59:59 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[28-Apr-2026 14:12:45 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 10:28:10 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 10:47:35 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 10:57:38 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 11:06:26 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 11:07:09 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 11:08:48 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 11:10:54 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 11:12:27 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 11:15:28 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 11:15:48 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 12:15:56 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 12:16:39 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 14:00:54 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 14:01:50 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 14:03:32 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 14:03:38 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 14:04:41 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 14:16:32 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 14:17:49 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 15:42:44 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9

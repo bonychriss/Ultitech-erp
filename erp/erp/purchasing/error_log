@@ -1,0 +1,5 @@
+[07-Dec-2025 09:59:57 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'created_at' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/purchasing/suppliers.php:27
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/purchasing/suppliers.php(27): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/purchasing/suppliers.php on line 27

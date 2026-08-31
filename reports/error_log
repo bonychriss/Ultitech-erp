@@ -1,0 +1,355 @@
+[29-Nov-2025 10:44:14 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'status' in 'WHERE' in /home/ultimate/public_html/staff/erp/reports/index.php:15
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/reports/index.php(15): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/reports/index.php on line 15
+[12-Feb-2026 10:41:44 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[12-Feb-2026 10:41:44 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[13-Feb-2026 14:05:33 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[13-Feb-2026 14:05:33 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[18-Feb-2026 14:27:52 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[18-Feb-2026 14:27:52 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[18-Feb-2026 14:27:56 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[18-Feb-2026 14:27:56 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[22-Feb-2026 21:39:54 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[22-Feb-2026 21:39:54 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[22-Feb-2026 21:39:56 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[22-Feb-2026 21:39:56 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[22-Feb-2026 21:39:57 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[22-Feb-2026 21:39:57 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[22-Feb-2026 21:39:57 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[22-Feb-2026 21:39:57 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:07 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:07 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:26 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:26 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:29 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:29 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:34 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:34 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:38 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:38 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:43 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:01:43 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:02:06 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:02:06 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:02:25 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:02:25 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:04:52 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:04:52 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:04:54 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:04:54 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:04:57 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[03-Mar-2026 10:04:57 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[09-Mar-2026 20:23:51 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[09-Mar-2026 20:23:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[22-Mar-2026 09:41:56 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[22-Mar-2026 09:41:56 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[24-Mar-2026 09:08:30 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[24-Mar-2026 09:08:30 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[25-Mar-2026 05:36:36 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[25-Mar-2026 05:36:36 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[27-Mar-2026 07:49:57 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/index.php on line 2
+[27-Mar-2026 07:49:57 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/index.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/index.php on line 2
+[27-Mar-2026 10:00:02 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.image' in 'SELECT' in /home/ultimate/public_html/staff/reports/sales.php:42
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/sales.php(42): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/sales.php on line 42
+[27-Mar-2026 10:02:42 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.image' in 'SELECT' in /home/ultimate/public_html/staff/reports/sales.php:42
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/sales.php(42): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/sales.php on line 42
+[27-Mar-2026 10:02:44 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.image' in 'SELECT' in /home/ultimate/public_html/staff/reports/sales.php:42
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/sales.php(42): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/sales.php on line 42
+[27-Mar-2026 10:16:32 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.image' in 'SELECT' in /home/ultimate/public_html/staff/reports/sales.php:42
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/sales.php(42): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/sales.php on line 42
+[27-Mar-2026 10:51:05 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.cost_price' in 'SELECT' in /home/ultimate/public_html/staff/reports/sales.php:36
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/sales.php(36): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/sales.php on line 36
+[27-Mar-2026 10:51:15 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/inventory.php on line 2
+[27-Mar-2026 10:51:15 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/inventory.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/inventory.php on line 2
+[27-Mar-2026 10:51:19 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.cost_price' in 'SELECT' in /home/ultimate/public_html/staff/reports/sales.php:36
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/sales.php(36): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/sales.php on line 36
+[27-Mar-2026 10:56:24 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.cost_price' in 'SELECT' in /home/ultimate/public_html/staff/reports/sales.php:36
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/sales.php(36): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/sales.php on line 36
+[27-Mar-2026 11:00:26 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.cost_price' in 'SELECT' in /home/ultimate/public_html/staff/reports/sales.php:36
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/sales.php(36): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/sales.php on line 36
+[27-Mar-2026 11:31:35 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/financial.php on line 2
+[27-Mar-2026 11:31:35 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/financial.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 2
+[27-Mar-2026 11:36:47 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/hr.php on line 2
+[27-Mar-2026 11:36:47 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/hr.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/hr.php on line 2
+[27-Mar-2026 11:56:36 Africa/Kampala] PHP Warning:  Undefined array key "id" in /home/ultimate/public_html/staff/reports/sales.php on line 673
+[27-Mar-2026 11:56:36 Africa/Kampala] PHP Warning:  Undefined array key "id" in /home/ultimate/public_html/staff/reports/sales.php on line 673
+[27-Mar-2026 11:56:36 Africa/Kampala] PHP Warning:  Undefined array key "id" in /home/ultimate/public_html/staff/reports/sales.php on line 673
+[27-Mar-2026 11:56:36 Africa/Kampala] PHP Warning:  Undefined array key "id" in /home/ultimate/public_html/staff/reports/sales.php on line 673
+[27-Mar-2026 11:56:36 Africa/Kampala] PHP Warning:  Undefined array key "id" in /home/ultimate/public_html/staff/reports/sales.php on line 673
+[27-Mar-2026 11:56:36 Africa/Kampala] PHP Warning:  Undefined array key "id" in /home/ultimate/public_html/staff/reports/sales.php on line 673
+[27-Mar-2026 11:56:36 Africa/Kampala] PHP Warning:  Undefined array key "id" in /home/ultimate/public_html/staff/reports/sales.php on line 673
+[27-Mar-2026 11:56:36 Africa/Kampala] PHP Warning:  Undefined array key "id" in /home/ultimate/public_html/staff/reports/sales.php on line 673
+[27-Mar-2026 11:56:36 Africa/Kampala] PHP Warning:  Undefined array key "id" in /home/ultimate/public_html/staff/reports/sales.php on line 673
+[27-Mar-2026 11:56:36 Africa/Kampala] PHP Warning:  Undefined array key "id" in /home/ultimate/public_html/staff/reports/sales.php on line 673
+[27-Mar-2026 14:39:35 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.product_code' in 'SELECT' in /home/ultimate/public_html/staff/reports/inventory.php:217
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/inventory.php(217): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/inventory.php on line 217
+[27-Mar-2026 14:39:39 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.product_code' in 'SELECT' in /home/ultimate/public_html/staff/reports/inventory.php:217
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/inventory.php(217): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/inventory.php on line 217
+[27-Mar-2026 15:01:09 Africa/Kampala] Outgoing Products Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.product_code' in 'SELECT'
+[27-Mar-2026 15:01:12 Africa/Kampala] Outgoing Products Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.product_code' in 'SELECT'
+[27-Mar-2026 15:12:00 Africa/Kampala] Outgoing Products Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.product_code' in 'SELECT'
+[27-Mar-2026 15:12:06 Africa/Kampala] Outgoing Products Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.product_code' in 'SELECT'
+[27-Mar-2026 15:12:15 Africa/Kampala] Outgoing Products Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.product_code' in 'SELECT'
+[27-Mar-2026 15:12:38 Africa/Kampala] Outgoing Products Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.product_code' in 'SELECT'
+[27-Mar-2026 17:34:07 Africa/Kampala] Outgoing Products Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.product_code' in 'SELECT'
+[27-Mar-2026 17:34:38 Africa/Kampala] Outgoing Products Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.product_code' in 'SELECT'
+[27-Mar-2026 17:40:19 Africa/Kampala] Outgoing Products Error: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'unit_price' in SELECT is ambiguous
+[27-Mar-2026 17:43:17 Africa/Kampala] Outgoing Products Error: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'unit_price' in SELECT is ambiguous
+[27-Mar-2026 17:45:58 Africa/Kampala] Outgoing Products Error: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'unit_price' in SELECT is ambiguous
+[27-Mar-2026 17:46:10 Africa/Kampala] Outgoing Products Error: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'unit_price' in SELECT is ambiguous
+[27-Mar-2026 17:49:38 Africa/Kampala] Outgoing Products Error: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'unit_price' in SELECT is ambiguous
+[27-Mar-2026 17:53:16 Africa/Kampala] Outgoing Products Error: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'unit_price' in SELECT is ambiguous
+[27-Mar-2026 18:25:29 Africa/Kampala] Outgoing Products Error: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'unit_price' in SELECT is ambiguous
+[27-Mar-2026 18:55:59 Africa/Kampala] Outgoing Products Error: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'unit_price' in SELECT is ambiguous
+[27-Mar-2026 18:58:13 Africa/Kampala] Outgoing Products Error: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'unit_price' in SELECT is ambiguous
+[27-Mar-2026 19:03:00 Africa/Kampala] PHP Warning:  Undefined variable $outgoingProducts in /home/ultimate/public_html/staff/reports/inventory.php on line 781
+[27-Mar-2026 19:03:00 Africa/Kampala] PHP Fatal error:  Uncaught TypeError: array_column(): Argument #1 ($array) must be of type array, null given in /home/ultimate/public_html/staff/reports/inventory.php:781
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/inventory.php(781): array_column()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/inventory.php on line 781
+[27-Mar-2026 19:03:04 Africa/Kampala] PHP Warning:  Undefined variable $outgoingProducts in /home/ultimate/public_html/staff/reports/inventory.php on line 781
+[27-Mar-2026 19:03:04 Africa/Kampala] PHP Fatal error:  Uncaught TypeError: array_column(): Argument #1 ($array) must be of type array, null given in /home/ultimate/public_html/staff/reports/inventory.php:781
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/inventory.php(781): array_column()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/inventory.php on line 781
+[27-Mar-2026 20:15:54 Africa/Kampala] PHP Warning:  Undefined variable $outgoingProducts in /home/ultimate/public_html/staff/reports/inventory.php on line 781
+[27-Mar-2026 20:15:54 Africa/Kampala] PHP Fatal error:  Uncaught TypeError: array_column(): Argument #1 ($array) must be of type array, null given in /home/ultimate/public_html/staff/reports/inventory.php:781
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/inventory.php(781): array_column()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/inventory.php on line 781
+[27-Mar-2026 22:31:31 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/financial.php on line 2
+[27-Mar-2026 22:31:31 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/financial.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 2
+[28-Mar-2026 06:44:52 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/financial.php on line 2
+[28-Mar-2026 06:44:52 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/financial.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 2
+[28-Mar-2026 06:58:43 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'voucher_number' in 'SELECT' in /home/ultimate/public_html/staff/reports/financial.php:217
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/financial.php(217): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 217
+[28-Mar-2026 07:01:58 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'voucher_number' in 'SELECT' in /home/ultimate/public_html/staff/reports/financial.php:213
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/financial.php(213): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 213
+[28-Mar-2026 07:06:36 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.cost_price' in 'SELECT' in /home/ultimate/public_html/staff/reports/financial.php:298
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/financial.php(298): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 298
+[28-Mar-2026 07:06:39 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.cost_price' in 'SELECT' in /home/ultimate/public_html/staff/reports/financial.php:298
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/financial.php(298): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 298
+[28-Mar-2026 07:19:14 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'UNION ALL
+    
+    SELECT 
+        'By Month' as dimension,
+        DATE_...' at line 14 in /home/ultimate/public_html/staff/reports/financial.php:475
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/financial.php(475): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 475
+[28-Mar-2026 07:19:16 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'UNION ALL
+    
+    SELECT 
+        'By Month' as dimension,
+        DATE_...' at line 14 in /home/ultimate/public_html/staff/reports/financial.php:475
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/financial.php(475): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 475
+[28-Mar-2026 07:19:17 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'UNION ALL
+    
+    SELECT 
+        'By Month' as dimension,
+        DATE_...' at line 14 in /home/ultimate/public_html/staff/reports/financial.php:475
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/financial.php(475): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 475
+[28-Mar-2026 07:19:50 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'UNION ALL
+    
+    SELECT 
+        'By Month' as dimension,
+        DATE_...' at line 14 in /home/ultimate/public_html/staff/reports/financial.php:475
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/financial.php(475): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/financial.php on line 475
+[28-Mar-2026 07:35:12 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/financial.php on line 484
+[28-Mar-2026 07:35:20 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/financial.php on line 484
+[28-Mar-2026 07:41:32 Africa/Kampala] PHP Warning:  require_once(../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/reports/hr.php on line 2
+[28-Mar-2026 07:41:32 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/reports/hr.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/reports/hr.php on line 2
+[28-Mar-2026 07:46:08 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/financial.php on line 484
+[28-Mar-2026 07:54:59 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/financial.php on line 484
+[28-Mar-2026 08:37:31 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'salary' in 'SELECT' in /home/ultimate/public_html/staff/reports/hr.php:136
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/hr.php(136): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/hr.php on line 136
+[28-Mar-2026 08:40:27 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'salary' in 'SELECT' in /home/ultimate/public_html/staff/reports/hr.php:136
+Stack trace:
+#0 /home/ultimate/public_html/staff/reports/hr.php(136): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/reports/hr.php on line 136
+[28-Mar-2026 08:46:21 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 250
+[28-Mar-2026 08:54:53 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 241
+[28-Mar-2026 08:58:24 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 241
+[28-Mar-2026 09:04:49 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 317
+[28-Mar-2026 09:05:07 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 317
+[28-Mar-2026 09:05:38 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 317
+[28-Mar-2026 09:06:59 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 317
+[28-Mar-2026 09:10:39 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 316
+[28-Mar-2026 09:14:26 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 317
+[28-Mar-2026 09:14:53 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 317
+[28-Mar-2026 09:16:58 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 317
+[28-Mar-2026 09:17:09 Africa/Kampala] PHP Parse error:  syntax error, unexpected token ";" in /home/ultimate/public_html/staff/reports/logistics.php on line 726
+[28-Mar-2026 09:17:15 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 317
+[28-Mar-2026 09:21:54 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 364
+[28-Mar-2026 09:24:49 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 365
+[28-Mar-2026 09:28:46 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 467
+[28-Mar-2026 09:28:59 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 467
+[28-Mar-2026 09:29:23 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 467
+[28-Mar-2026 09:31:25 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/logistics.php on line 148
+[28-Mar-2026 09:36:37 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 467
+[28-Mar-2026 10:05:36 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 467
+[28-Mar-2026 10:09:12 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 510
+[28-Mar-2026 10:10:35 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 529
+[28-Mar-2026 10:12:10 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/hr.php on line 531
+[28-Mar-2026 10:24:42 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/logistics.php on line 191
+[28-Mar-2026 10:24:50 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/logistics.php on line 191
+[28-Mar-2026 10:30:59 Africa/Kampala] PHP Parse error:  syntax error, unexpected end of file in /home/ultimate/public_html/staff/reports/hr.php on line 1752
+[28-Mar-2026 10:32:04 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/logistics.php on line 252
+[28-Mar-2026 10:32:12 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/logistics.php on line 252
+[28-Mar-2026 10:41:30 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/financial.php on line 484
+[28-Mar-2026 10:42:14 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/financial.php on line 484
+[10-Apr-2026 12:19:46 Africa/Kampala] PHP Parse error:  syntax error, unexpected end of file in /home/ultimate/public_html/staff/reports/hr.php on line 1752
+[10-Apr-2026 12:19:50 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/financial.php on line 484
+[10-Apr-2026 12:23:03 Africa/Kampala] PHP Warning:  Undefined array key "action" in /home/ultimate/public_html/staff/reports/financial.php on line 484
+[20-Apr-2026 07:45:23 Africa/Kampala] PHP Parse error:  syntax error, unexpected end of file in /home/ultimate/public_html/staff/reports/hr.php on line 1752

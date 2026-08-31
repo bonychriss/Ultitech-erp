@@ -1,0 +1,308 @@
+/* Float bobbing keyframes for the robot */
+@keyframes robotFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+/* Waving keyframes for arms */
+@keyframes waveLeft {
+    0%, 100% { transform: rotate(-25deg) translateY(0); }
+    50% { transform: rotate(-35deg) translateY(-2px); }
+}
+@keyframes waveRight {
+    0%, 100% { transform: rotate(25deg) translateY(0); }
+    50% { transform: rotate(15deg) translateY(-2px); }
+}
+
+/* Glowing eye pulse */
+@keyframes eyeGlow {
+    0%, 100% { filter: drop-shadow(0 0 2px #00d2ff) brightness(1); }
+    50% { filter: drop-shadow(0 0 5px #00d2ff) brightness(1.2); }
+}
+
+/* Robot Launcher Container */
+.chatbot-launcher {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1500;
+    width: 60px;
+    height: 60px;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    cursor: pointer;
+    overflow: visible;
+    padding: 0;
+    transition: transform 0.2s ease;
+}
+
+.chatbot-launcher:hover {
+    transform: scale(1.08);
+}
+
+/* The Robot Body Wrapper */
+.robot-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    animation: robotFloat 3s ease-in-out infinite;
+}
+
+/* Robot Head */
+.robot-head {
+    position: absolute;
+    top: 2px;
+    left: 8px;
+    width: 44px;
+    height: 34px;
+    background: #ffffff;
+    border: 3px solid #cbd5e1;
+    border-radius: 14px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+/* Screen inside Head */
+.robot-screen {
+    width: 32px;
+    height: 22px;
+    background: #0f172a;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 4px;
+}
+
+/* Winking Eyes */
+.robot-eye {
+    width: 6px;
+    height: 6px;
+    background: #00d2ff;
+    border-radius: 50%;
+    animation: eyeGlow 2s infinite;
+}
+
+/* Left eye is a winking curve (like winking) */
+.robot-eye.left {
+    width: 8px;
+    height: 4px;
+    background: transparent;
+    border-radius: 0 0 8px 8px;
+    border-bottom: 2.5px solid #00d2ff;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    margin-top: 2px;
+}
+
+/* Robot Torso */
+.robot-torso {
+    position: absolute;
+    top: 32px;
+    left: 14px;
+    width: 32px;
+    height: 24px;
+    background: #ffffff;
+    border: 3px solid #cbd5e1;
+    border-radius: 50% 50% 40% 40%;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+    z-index: 1;
+}
+
+/* Robot Arms (Floating/Waving) */
+.robot-arm {
+    position: absolute;
+    width: 8px;
+    height: 18px;
+    background: #ffffff;
+    border: 2.5px solid #cbd5e1;
+    border-radius: 99px;
+}
+
+.robot-arm.left {
+    left: 1px;
+    top: 20px;
+    transform: rotate(-25deg);
+    transform-origin: top center;
+    animation: waveLeft 3s ease-in-out infinite;
+}
+
+.robot-arm.right {
+    right: 1px;
+    top: 20px;
+    transform: rotate(25deg);
+    transform-origin: top center;
+    animation: waveRight 3s ease-in-out infinite;
+}
+
+/* Chatbot Panel Reskin - Premium Glassmorphism */
+.chatbot-panel {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 350px;
+    max-height: 520px;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
+    z-index: 1500;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chatbot-panel.hidden {
+    display: none;
+    opacity: 0;
+    transform: translateY(15px);
+}
+
+.chatbot-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.8);
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chatbot-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    font-family: 'Outfit', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chatbot-body {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    font-size: 13px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chatbot-footer {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(229, 231, 235, 0.8);
+    background: #ffffff;
+    display: flex;
+    gap: 8px;
+}
+
+.chatbot-footer input {
+    flex: 1;
+    padding: 10px 14px;
+    font-size: 13px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    outline: none;
+}
+
+.chatbot-footer input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.chatbot-footer button {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.chatbot-footer button:hover {
+    opacity: 0.95;
+}
+
+/* Chat Messages */
+.chatbot-msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    line-height: 1.45;
+}
+
+.chatbot-msg.bot {
+    align-self: flex-start;
+    background: #ffffff;
+    color: #1e293b;
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    border-top-left-radius: 4px;
+}
+
+.chatbot-msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: #ffffff;
+    border-top-right-radius: 4px;
+}
+
+/* Dynamic Suggestions */
+.chatbot-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+    align-self: flex-start;
+}
+
+.chatbot-suggestions button {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 50px;
+    transition: all 0.2s;
+}
+
+.chatbot-suggestions button:hover {
+    border-color: #6366f1;
+    color: #6366f1;
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.chatbot-close-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.chatbot-close-btn:hover {
+    color: #ffffff;
+}
+
+@media (max-width: 480px) {
+    .chatbot-panel {
+        right: 12px;
+        left: 12px;
+        bottom: 96px;
+        width: auto;
+    }
+}

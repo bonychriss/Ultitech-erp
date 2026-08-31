@@ -1,0 +1,5 @@
+[05-Jan-2026 11:00:37 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.sales_settings' doesn't exist in /home/ultimate/public_html/staff/modules/sales/settings/index.php:63
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/sales/settings/index.php(63): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/sales/settings/index.php on line 63

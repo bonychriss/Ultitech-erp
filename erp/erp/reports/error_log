@@ -1,0 +1,5 @@
+[29-Nov-2025 10:44:14 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'status' in 'WHERE' in /home/ultimate/public_html/staff/erp/reports/index.php:15
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/reports/index.php(15): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/reports/index.php on line 15

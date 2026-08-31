@@ -1,0 +1,2 @@
+[15-Jan-2026 22:11:10 Africa/Kampala] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/ultimate/public_html/staff/includes/sidebar.php:103) in /home/ultimate/public_html/staff/stock/config/functions.php on line 16
+[15-Jan-2026 22:11:22 Africa/Kampala] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/ultimate/public_html/staff/includes/sidebar.php:103) in /home/ultimate/public_html/staff/stock/config/functions.php on line 16

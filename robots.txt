@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /includes/
+Disallow: /scripts/
+Disallow: /tasks/
+Disallow: /admin/
+Disallow: /employee/

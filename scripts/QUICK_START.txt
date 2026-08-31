@@ -1,0 +1,40 @@
+========================================
+  QUICK START - Auto-Deploy to InfinityFree
+========================================
+
+METHOD 1: Double-Click (Easiest)
+---------------------------------
+1. Double-click: scripts\start-auto-deploy.bat
+2. Wait for "Watcher started" message
+3. Edit and save any file in your project
+4. Changes will deploy automatically after 3 seconds
+
+METHOD 2: VS Code/Cursor Task
+---------------------------------
+1. Press Ctrl+Shift+P
+2. Type: "Tasks: Run Task"
+3. Select: "Start Auto-Deploy to InfinityFree"
+4. A new terminal will open with the watcher
+
+METHOD 3: PowerShell
+---------------------------------
+1. Open PowerShell in project folder
+2. Run: .\scripts\auto-deploy.ps1
+
+STOPPING THE WATCHER
+---------------------------------
+Press Ctrl+C in the terminal where it's running
+
+MANUAL DEPLOYMENT
+---------------------------------
+VS Code: Ctrl+Shift+P → "Tasks: Run Task" → "Deploy to InfinityFree (One-time)"
+Command: C:\xampp\php\php.exe scripts\deploy.php
+
+TROUBLESHOOTING
+---------------------------------
+- PHP not found? Check C:\xampp\php\php.exe exists
+- FTP error? Check scripts/deploy.config.php has correct credentials
+- Too many deployments? Increase debounce time in auto-deploy.ps1
+
+For more details, see: AUTO_DEPLOY.md
+

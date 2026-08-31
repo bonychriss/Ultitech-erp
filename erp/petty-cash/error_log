@@ -1,0 +1,289 @@
+[19-Dec-2025 17:51:01 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1237
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1237): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1237
+[19-Dec-2025 17:51:25 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1237
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1237): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1237
+[19-Dec-2025 17:56:40 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1237
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1237): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1237
+[19-Dec-2025 17:58:05 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1237
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1237): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1237
+[19-Dec-2025 17:58:12 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1237
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1237): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1237
+[23-Dec-2025 15:33:26 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 15:33:26 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[23-Dec-2025 15:33:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 15
+[23-Dec-2025 15:33:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $script_name in /home/ultimate/public_html/staff/includes/sidebar.php on line 18
+[27-Dec-2025 17:42:42 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:42 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/petty-cash/reports.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:44 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:44 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/petty-cash/index.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[05-Jan-2026 08:45:28 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 08:45:45 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 08:45:51 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 08:46:02 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 08:46:16 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 08:46:31 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 08:48:11 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 08:48:19 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 08:49:08 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 08:51:55 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 09:15:25 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[05-Jan-2026 09:15:32 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[08-Jan-2026 17:26:22 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[08-Jan-2026 17:26:37 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[08-Jan-2026 17:26:41 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[08-Jan-2026 17:26:46 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[08-Jan-2026 17:38:50 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[09-Jan-2026 00:12:06 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'is_restricted' in 'INSERT INTO' in /home/ultimate/public_html/staff/includes/functions.php:1331
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1331): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1331
+[09-Jan-2026 00:56:16 Africa/Kampala] PHP Fatal error:  Cannot redeclare ensurePettyCashSchema() (previously declared in /home/ultimate/public_html/staff/includes/functions.php:1046) in /home/ultimate/public_html/staff/includes/functions.php on line 3466
+[09-Jan-2026 01:01:39 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function requireFinanceOrAdmin() in /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php on line 3
+[09-Jan-2026 01:04:34 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'voucher_no' in 'SELECT' in /home/ultimate/public_html/staff/includes/functions.php:1290
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1290): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(40): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1290
+[09-Jan-2026 01:10:27 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'voucher_no' in 'SELECT' in /home/ultimate/public_html/staff/includes/functions.php:1290
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1290): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/create-voucher.php(50): createPettyCashVoucher()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1290
+[09-Jan-2026 21:04:45 Africa/Kampala] PHP Fatal error:  Cannot redeclare ensureDeliveryNotesSchema() (previously declared in /home/ultimate/public_html/staff/includes/functions.php:3263) in /home/ultimate/public_html/staff/includes/functions.php on line 3447
+[09-Jan-2026 21:04:53 Africa/Kampala] PHP Fatal error:  Cannot redeclare ensureDeliveryNotesSchema() (previously declared in /home/ultimate/public_html/staff/includes/functions.php:3263) in /home/ultimate/public_html/staff/includes/functions.php on line 3447
+[09-Jan-2026 21:04:55 Africa/Kampala] PHP Fatal error:  Cannot redeclare ensureDeliveryNotesSchema() (previously declared in /home/ultimate/public_html/staff/includes/functions.php:3263) in /home/ultimate/public_html/staff/includes/functions.php on line 3447
+[09-Jan-2026 21:04:58 Africa/Kampala] PHP Fatal error:  Cannot redeclare ensureDeliveryNotesSchema() (previously declared in /home/ultimate/public_html/staff/includes/functions.php:3263) in /home/ultimate/public_html/staff/includes/functions.php on line 3447
+[09-Jan-2026 21:04:59 Africa/Kampala] PHP Fatal error:  Cannot redeclare ensureDeliveryNotesSchema() (previously declared in /home/ultimate/public_html/staff/includes/functions.php:3263) in /home/ultimate/public_html/staff/includes/functions.php on line 3447
+[16-Jan-2026 07:41:15 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[16-Jan-2026 07:41:15 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[16-Jan-2026 07:41:15 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1241
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1241): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1241
+[16-Jan-2026 07:41:20 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[16-Jan-2026 07:41:20 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[16-Jan-2026 07:41:20 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1241
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1241): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1241
+[16-Jan-2026 07:41:24 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[16-Jan-2026 07:41:24 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[16-Jan-2026 07:41:24 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1241
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1241): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1241
+[16-Jan-2026 07:41:39 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[16-Jan-2026 07:41:39 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[16-Jan-2026 07:41:39 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1241
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1241): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1241
+[16-Jan-2026 07:41:44 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[16-Jan-2026 07:41:44 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[16-Jan-2026 07:41:44 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1241
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1241): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1241
+[16-Jan-2026 13:43:56 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[16-Jan-2026 13:43:56 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[16-Jan-2026 13:43:56 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1241
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1241): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1241
+[19-Jan-2026 09:11:31 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[19-Jan-2026 09:11:31 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[19-Jan-2026 09:11:31 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1241
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1241): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1241
+[20-Jan-2026 08:33:27 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[20-Jan-2026 08:33:27 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[20-Jan-2026 08:33:27 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1241
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1241): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1241
+[26-Jan-2026 08:06:48 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[26-Jan-2026 08:06:48 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[26-Jan-2026 08:06:48 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1250
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1250): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1250
+[26-Jan-2026 08:19:35 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[26-Jan-2026 08:19:35 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[26-Jan-2026 08:19:35 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1250
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1250): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1250
+[28-Jan-2026 07:35:44 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[28-Jan-2026 07:35:44 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[28-Jan-2026 07:35:44 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1255
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1255): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1255
+[04-Feb-2026 10:21:04 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[04-Feb-2026 10:21:04 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[04-Feb-2026 10:21:04 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1291
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1291): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1291
+[04-Feb-2026 10:32:55 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[04-Feb-2026 10:32:55 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[04-Feb-2026 10:32:55 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1291
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1291): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1291
+[04-Feb-2026 22:09:03 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 28
+[04-Feb-2026 22:09:03 Africa/Kampala] PHP Warning:  Undefined variable $user_id in /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php on line 46
+[04-Feb-2026 22:09:03 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`ultimate_trading_voucher`.`petty_cash_balance`, CONSTRAINT `petty_cash_balance_ibfk_1` FOREIGN KEY (`custodian_id`) REFERENCES `users` (`id`)) in /home/ultimate/public_html/staff/includes/functions.php:1291
+Stack trace:
+#0 /home/ultimate/public_html/staff/includes/functions.php(1291): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/petty-cash/replenishment.php(46): updatePettyCashBalance()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 1291
+[04-Feb-2026 22:27:32 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/erp/petty-cash/index.php on line 77

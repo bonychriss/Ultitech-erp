@@ -1,0 +1,79 @@
+@import url('../../../assets/css/erp-system-font.css.php');
+
+body {
+    font-family: var(--erp-font-family, 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+}
+
+/* Mobile Footer Support - Ensure create buttons are visible above mobile footer */
+@media (max-width: 640px) {
+    body.has-mobile-footer { 
+        padding-bottom: calc(120px + env(safe-area-inset-bottom, 0)) !important; 
+        min-height: 100vh;
+    }
+
+    /* Ensure create buttons and floating elements are above footer */
+    .btn-create, .btn-floating, .fab, .btn-floating-create, .btn-fixed-create,
+    button[title*="Create"], button[title*="Add"], button[title*="New"] {
+        position: relative !important;
+        z-index: 1000 !important;
+        margin-bottom: 130px !important;
+    }
+
+    /* Specifically target green create buttons */
+    .btn-success, .btn-primary, .bg-green, .bg-green-500 {
+        position: relative !important;
+        z-index: 1000 !important;
+    }
+
+    /* Fixed positioned elements near bottom */
+    [style*="position: fixed"], [style*="position:fixed"] {
+        bottom: 130px !important;
+    }
+}
+
+/* Local stock-specific sidebar styles removed to use main system sidebar */
+
+.main-content {
+    padding: 20px;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid #eee;
+    font-weight: bold;
+}
+
+.bg-primary-custom {
+    background-color: #2c3e50 !important;
+}
+
+.text-primary-custom {
+    color: #2c3e50 !important;
+}
+
+/* Ensure dropdowns are visible in responsive tables */
+.table-responsive {
+    overflow-y: visible !important;
+    overflow-x: auto;
+}
+
+.dropdown-menu {
+    z-index: 9999 !important;
+}
+
+/* Improve Actions button appearance */
+.btn-ellipsis {
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.btn-ellipsis:hover {
+    background: rgba(0, 0, 0, 0.05);
+}

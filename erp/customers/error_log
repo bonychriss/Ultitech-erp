@@ -1,0 +1,27 @@
+[30-Nov-2025 08:03:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "balance" in /home/ultimate/public_html/staff/erp/customers/list.php on line 258
+[30-Nov-2025 09:07:41 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'created_at' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/customers/list.php:28
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/customers/list.php(28): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/customers/list.php on line 28
+[30-Nov-2025 09:09:41 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'created_at' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/customers/list.php:28
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/customers/list.php(28): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/customers/list.php on line 28
+[30-Nov-2025 09:09:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'created_at' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/customers/list.php:28
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/customers/list.php(28): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/customers/list.php on line 28
+[16-Dec-2025 19:48:42 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'n.user_id' in 'ON' in /home/ultimate/public_html/staff/erp/customers/view.php:23
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/customers/view.php(23): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/customers/view.php on line 23
+[27-Dec-2025 17:40:08 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:40:08 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/customers/list.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2

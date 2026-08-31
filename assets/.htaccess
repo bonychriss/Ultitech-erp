@@ -1,0 +1,6 @@
+# Prevent execution of PHP inside uploads and asset subfolders
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.php$">
+    Require all denied
+  </FilesMatch>
+</IfModule>

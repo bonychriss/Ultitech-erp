@@ -1,0 +1,1256 @@
+[29-Nov-2025 16:19:16 Africa/Dar_es_Salaam] PHP Warning:  include(includes/sidebar.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/erp/index.php on line 130
+[29-Nov-2025 16:19:16 Africa/Dar_es_Salaam] PHP Warning:  include(): Failed opening 'includes/sidebar.php' for inclusion (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/erp/index.php on line 130
+[29-Nov-2025 20:46:38 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(26): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:49:01 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(26): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:40 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:43 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:43 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 21:01:40 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 21:11:57 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 21:12:00 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 21:19:12 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 21:19:21 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[30-Nov-2025 07:26:01 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[16-Dec-2025 18:51:55 Africa/Kampala] PHP Warning:  require_once(includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/erp/run_replenishment_test.php on line 2
+[16-Dec-2025 18:51:55 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/erp/run_replenishment_test.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/erp/run_replenishment_test.php on line 2
+[27-Dec-2025 17:42:41 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:41 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/select-module.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:56 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:56 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/select-module.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:48:58 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:48:58 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/select-module.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:49:00 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:49:00 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/select-module.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:49:08 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 17:49:08 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/dashboard_stats.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/index.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 17:54:16 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:56:23 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 17:56:23 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/dashboard_stats.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/index.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 17:56:25 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 17:56:25 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/dashboard_stats.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/index.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 17:58:40 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 17:58:40 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/dashboard_stats.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/index.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 19:21:03 Africa/Dar_es_Salaam] PHP Warning:  require_once(config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/meeting-lobby.php on line 10
+[27-Dec-2025 19:21:03 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Failed opening required 'config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/meeting-lobby.php:10
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/meeting-lobby.php on line 10
+[27-Dec-2025 19:24:44 Africa/Dar_es_Salaam] PHP Warning:  require_once(config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/meeting-lobby-debug.php on line 13
+[27-Dec-2025 19:24:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Failed opening required 'config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/meeting-lobby-debug.php:13
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/meeting-lobby-debug.php on line 13
+[27-Dec-2025 19:25:22 Africa/Dar_es_Salaam] PHP Warning:  require_once(config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/meeting-lobby-debug.php on line 13
+[27-Dec-2025 19:25:22 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Failed opening required 'config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/meeting-lobby-debug.php:13
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/meeting-lobby-debug.php on line 13
+[27-Dec-2025 19:35:38 Africa/Dar_es_Salaam] Lobby fetch error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.active_meetings' doesn't exist
+[27-Dec-2025 20:13:52 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 20:13:52 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/dashboard_stats.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/index.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 20:14:24 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 20:14:24 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/dashboard_stats.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/index.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 20:14:58 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 20:14:58 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/dashboard_stats.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/index.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/dashboard_stats.php on line 2
+[27-Dec-2025 21:10:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $suggestions in /home/ultimate/public_html/staff/system-status.php on line 333
+[27-Dec-2025 21:10:08 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 333
+[27-Dec-2025 21:15:56 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $userStats in /home/ultimate/public_html/staff/system-status.php on line 272
+[27-Dec-2025 21:15:56 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 272
+[27-Dec-2025 21:15:56 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $voucherStats in /home/ultimate/public_html/staff/system-status.php on line 277
+[27-Dec-2025 21:15:56 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 277
+[27-Dec-2025 21:15:56 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $activeMeetings in /home/ultimate/public_html/staff/system-status.php on line 283
+[27-Dec-2025 21:15:56 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $poPending in /home/ultimate/public_html/staff/system-status.php on line 288
+[27-Dec-2025 21:15:56 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $logs in /home/ultimate/public_html/staff/system-status.php on line 309
+[27-Dec-2025 21:15:56 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 309
+[27-Dec-2025 21:15:56 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $users in /home/ultimate/public_html/staff/system-status.php on line 377
+[27-Dec-2025 21:15:56 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 377
+[27-Dec-2025 21:16:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $userStats in /home/ultimate/public_html/staff/system-status.php on line 272
+[27-Dec-2025 21:16:15 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 272
+[27-Dec-2025 21:16:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $voucherStats in /home/ultimate/public_html/staff/system-status.php on line 277
+[27-Dec-2025 21:16:15 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 277
+[27-Dec-2025 21:16:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $activeMeetings in /home/ultimate/public_html/staff/system-status.php on line 283
+[27-Dec-2025 21:16:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $poPending in /home/ultimate/public_html/staff/system-status.php on line 288
+[27-Dec-2025 21:16:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $logs in /home/ultimate/public_html/staff/system-status.php on line 309
+[27-Dec-2025 21:16:15 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 309
+[27-Dec-2025 21:16:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $users in /home/ultimate/public_html/staff/system-status.php on line 377
+[27-Dec-2025 21:16:15 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 377
+[27-Dec-2025 21:16:20 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $userStats in /home/ultimate/public_html/staff/system-status.php on line 272
+[27-Dec-2025 21:16:20 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 272
+[27-Dec-2025 21:16:20 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $voucherStats in /home/ultimate/public_html/staff/system-status.php on line 277
+[27-Dec-2025 21:16:20 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 277
+[27-Dec-2025 21:16:20 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $activeMeetings in /home/ultimate/public_html/staff/system-status.php on line 283
+[27-Dec-2025 21:16:20 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $poPending in /home/ultimate/public_html/staff/system-status.php on line 288
+[27-Dec-2025 21:16:20 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $logs in /home/ultimate/public_html/staff/system-status.php on line 309
+[27-Dec-2025 21:16:20 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 309
+[27-Dec-2025 21:16:20 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $users in /home/ultimate/public_html/staff/system-status.php on line 377
+[27-Dec-2025 21:16:20 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 377
+[27-Dec-2025 21:23:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $userStats in /home/ultimate/public_html/staff/system-status.php on line 278
+[27-Dec-2025 21:23:18 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 278
+[27-Dec-2025 21:23:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $voucherStats in /home/ultimate/public_html/staff/system-status.php on line 283
+[27-Dec-2025 21:23:18 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 283
+[27-Dec-2025 21:23:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $activeMeetings in /home/ultimate/public_html/staff/system-status.php on line 289
+[27-Dec-2025 21:23:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $poPending in /home/ultimate/public_html/staff/system-status.php on line 294
+[27-Dec-2025 21:23:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $logs in /home/ultimate/public_html/staff/system-status.php on line 315
+[27-Dec-2025 21:23:18 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 315
+[27-Dec-2025 21:23:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $users in /home/ultimate/public_html/staff/system-status.php on line 383
+[27-Dec-2025 21:23:18 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 22:13:12 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.official_letters' doesn't exist in /home/ultimate/public_html/staff/write-letter.php:71
+Stack trace:
+#0 /home/ultimate/public_html/staff/write-letter.php(71): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/write-letter.php on line 71
+[28-Dec-2025 22:21:16 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.official_letters' doesn't exist in /home/ultimate/public_html/staff/write-letter.php:71
+Stack trace:
+#0 /home/ultimate/public_html/staff/write-letter.php(71): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/write-letter.php on line 71
+[28-Dec-2025 22:21:20 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.official_letters' doesn't exist in /home/ultimate/public_html/staff/write-letter.php:71
+Stack trace:
+#0 /home/ultimate/public_html/staff/write-letter.php(71): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/write-letter.php on line 71
+[28-Dec-2025 22:26:18 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.official_letters' doesn't exist in /home/ultimate/public_html/staff/write-letter.php:71
+Stack trace:
+#0 /home/ultimate/public_html/staff/write-letter.php(71): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/write-letter.php on line 71
+[28-Dec-2025 22:30:25 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 124
+[28-Dec-2025 23:25:06 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $userStats in /home/ultimate/public_html/staff/system-status.php on line 278
+[28-Dec-2025 23:25:06 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 278
+[28-Dec-2025 23:25:06 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $voucherStats in /home/ultimate/public_html/staff/system-status.php on line 283
+[28-Dec-2025 23:25:06 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 283
+[28-Dec-2025 23:25:06 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $activeMeetings in /home/ultimate/public_html/staff/system-status.php on line 289
+[28-Dec-2025 23:25:06 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $poPending in /home/ultimate/public_html/staff/system-status.php on line 294
+[28-Dec-2025 23:25:06 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $logs in /home/ultimate/public_html/staff/system-status.php on line 315
+[28-Dec-2025 23:25:06 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 315
+[28-Dec-2025 23:25:06 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $users in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 23:25:06 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 23:35:13 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $userStats in /home/ultimate/public_html/staff/system-status.php on line 278
+[28-Dec-2025 23:35:13 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 278
+[28-Dec-2025 23:35:13 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $voucherStats in /home/ultimate/public_html/staff/system-status.php on line 283
+[28-Dec-2025 23:35:13 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 283
+[28-Dec-2025 23:35:13 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $activeMeetings in /home/ultimate/public_html/staff/system-status.php on line 289
+[28-Dec-2025 23:35:13 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $poPending in /home/ultimate/public_html/staff/system-status.php on line 294
+[28-Dec-2025 23:35:13 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $logs in /home/ultimate/public_html/staff/system-status.php on line 315
+[28-Dec-2025 23:35:13 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 315
+[28-Dec-2025 23:35:13 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $users in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 23:35:13 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 23:35:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $userStats in /home/ultimate/public_html/staff/system-status.php on line 278
+[28-Dec-2025 23:35:39 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 278
+[28-Dec-2025 23:35:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $voucherStats in /home/ultimate/public_html/staff/system-status.php on line 283
+[28-Dec-2025 23:35:39 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 283
+[28-Dec-2025 23:35:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $activeMeetings in /home/ultimate/public_html/staff/system-status.php on line 289
+[28-Dec-2025 23:35:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $poPending in /home/ultimate/public_html/staff/system-status.php on line 294
+[28-Dec-2025 23:35:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $logs in /home/ultimate/public_html/staff/system-status.php on line 315
+[28-Dec-2025 23:35:39 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 315
+[28-Dec-2025 23:35:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $users in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 23:35:39 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 23:36:21 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $userStats in /home/ultimate/public_html/staff/system-status.php on line 278
+[28-Dec-2025 23:36:21 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 278
+[28-Dec-2025 23:36:21 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $voucherStats in /home/ultimate/public_html/staff/system-status.php on line 283
+[28-Dec-2025 23:36:21 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 283
+[28-Dec-2025 23:36:21 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $activeMeetings in /home/ultimate/public_html/staff/system-status.php on line 289
+[28-Dec-2025 23:36:21 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $poPending in /home/ultimate/public_html/staff/system-status.php on line 294
+[28-Dec-2025 23:36:21 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $logs in /home/ultimate/public_html/staff/system-status.php on line 315
+[28-Dec-2025 23:36:21 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 315
+[28-Dec-2025 23:36:21 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $users in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 23:36:21 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 23:36:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $userStats in /home/ultimate/public_html/staff/system-status.php on line 278
+[28-Dec-2025 23:36:41 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 278
+[28-Dec-2025 23:36:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $voucherStats in /home/ultimate/public_html/staff/system-status.php on line 283
+[28-Dec-2025 23:36:41 Africa/Dar_es_Salaam] PHP Warning:  Trying to access array offset on value of type null in /home/ultimate/public_html/staff/system-status.php on line 283
+[28-Dec-2025 23:36:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $activeMeetings in /home/ultimate/public_html/staff/system-status.php on line 289
+[28-Dec-2025 23:36:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $poPending in /home/ultimate/public_html/staff/system-status.php on line 294
+[28-Dec-2025 23:36:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $logs in /home/ultimate/public_html/staff/system-status.php on line 315
+[28-Dec-2025 23:36:41 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 315
+[28-Dec-2025 23:36:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $users in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 23:36:41 Africa/Dar_es_Salaam] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/system-status.php on line 383
+[28-Dec-2025 23:49:16 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "COMPANY_NAME" in /home/ultimate/public_html/staff/notice.php:27
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/notice.php on line 27
+[28-Dec-2025 23:50:02 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "COMPANY_NAME" in /home/ultimate/public_html/staff/notice.php:27
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/notice.php on line 27
+[29-Dec-2025 08:44:50 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 124
+[29-Dec-2025 08:54:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $page in /home/ultimate/public_html/staff/revenue_list.php on line 253
+[29-Dec-2025 08:54:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $totalPages in /home/ultimate/public_html/staff/revenue_list.php on line 257
+[29-Dec-2025 08:54:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $page in /home/ultimate/public_html/staff/revenue_list.php on line 263
+[29-Dec-2025 08:54:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $totalPages in /home/ultimate/public_html/staff/revenue_list.php on line 263
+[29-Dec-2025 09:55:49 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 124
+[29-Dec-2025 09:55:57 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 124
+[29-Dec-2025 09:56:02 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 124
+[29-Dec-2025 23:40:35 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.stock_intakes' doesn't exist in /home/ultimate/public_html/staff/procurement.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/procurement.php(57): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/procurement.php on line 57
+[30-Dec-2025 23:43:17 Africa/Dar_es_Salaam] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[30-Dec-2025 23:43:17 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[30-Dec-2025 23:43:30 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[30-Dec-2025 23:43:30 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[30-Dec-2025 23:43:34 Africa/Dar_es_Salaam] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[30-Dec-2025 23:43:34 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[30-Dec-2025 23:43:49 Africa/Dar_es_Salaam] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[30-Dec-2025 23:43:49 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[31-Dec-2025 21:33:44 Africa/Dar_es_Salaam] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[31-Dec-2025 21:33:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[31-Dec-2025 21:34:11 Africa/Dar_es_Salaam] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[31-Dec-2025 21:34:11 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[31-Dec-2025 21:34:33 Africa/Dar_es_Salaam] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[31-Dec-2025 21:34:33 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[31-Dec-2025 21:34:45 Africa/Dar_es_Salaam] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[31-Dec-2025 21:34:45 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[01-Jan-2026 19:30:54 Africa/Kampala] Database Connection Error (1045): SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
+[01-Jan-2026 19:31:01 Africa/Kampala] Database Connection Error (1045): SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
+[01-Jan-2026 19:31:07 Africa/Kampala] Database Connection Error (1045): SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
+[01-Jan-2026 19:31:10 Africa/Kampala] Database Connection Error (1045): SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
+[01-Jan-2026 19:31:11 Africa/Kampala] Database Connection Error (1045): SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
+[01-Jan-2026 19:31:11 Africa/Kampala] Database Connection Error (1045): SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
+[01-Jan-2026 19:33:38 Africa/Kampala] Database Connection Error (1045): SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
+[01-Jan-2026 19:33:40 Africa/Kampala] Database Connection Error (1045): SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
+[01-Jan-2026 19:37:45 Africa/Kampala] Database Connection Error (1045): SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
+[01-Jan-2026 20:18:22 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:18:22 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:18:26 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:18:26 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:18:33 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:18:33 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:18:48 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:18:48 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:28:43 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:28:43 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:29:11 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 20:29:11 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 21:16:32 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[01-Jan-2026 21:16:32 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[01-Jan-2026 21:16:55 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 21:16:55 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 21:16:58 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[01-Jan-2026 21:16:58 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[02-Jan-2026 20:22:03 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[02-Jan-2026 20:22:03 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 07:40:10 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 07:40:10 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 10:27:11 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 10:27:11 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 10:27:13 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 10:27:13 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:50:42 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:50:42 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:50:50 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:50:50 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:51:13 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:51:13 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:51:18 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:51:18 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:51:59 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:51:59 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:52:05 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 11:52:05 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 12:08:49 Africa/Kampala] PHP Parse error:  syntax error, unexpected string content "", expecting "-" or identifier or variable or number in /home/ultimate/public_html/staff/debug_supplier_root.php on line 47
+[05-Jan-2026 13:59:07 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 13:59:07 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 13:59:13 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 13:59:13 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 17:02:10 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[05-Jan-2026 17:02:10 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[05-Jan-2026 17:09:02 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 17:09:02 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 17:09:09 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 17:09:09 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 17:31:14 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[05-Jan-2026 17:31:14 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[06-Jan-2026 12:51:21 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 12:51:21 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 12:52:19 Africa/Kampala] PHP Warning:  require_once(../../config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/index.php on line 3
+[06-Jan-2026 12:52:19 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../../config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/index.php on line 3
+[06-Jan-2026 12:54:44 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 12:54:44 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 12:56:43 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 12:56:43 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 12:58:59 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 12:58:59 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 13:37:57 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 13:37:57 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 13:38:29 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 13:38:29 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 13:41:23 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 13:41:23 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[06-Jan-2026 18:00:11 Africa/Kampala] PHP Warning:  require(config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/debug_check_004.php on line 3
+[06-Jan-2026 18:00:11 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/debug_check_004.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/debug_check_004.php on line 3
+[06-Jan-2026 18:00:59 Africa/Kampala] PHP Warning:  require(config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/debug_check_004.php on line 3
+[06-Jan-2026 18:00:59 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/debug_check_004.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/debug_check_004.php on line 3
+[06-Jan-2026 18:06:38 Africa/Kampala] PHP Warning:  require(/home/ultimate/public_html/staff/config/database.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/debug_check_004.php on line 7
+[06-Jan-2026 18:06:38 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/config/database.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/debug_check_004.php:7
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/debug_check_004.php on line 7
+[06-Jan-2026 18:08:32 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/ultimate/public_html/config/database.php:16
+Stack trace:
+#0 /home/ultimate/public_html/staff/debug_check_004.php(10): require()
+#1 {main}
+  thrown in /home/ultimate/public_html/config/database.php on line 16
+[07-Jan-2026 00:00:23 Africa/Kampala] PHP Warning:  Undefined variable $page in /home/ultimate/public_html/staff/revenue_list.php on line 253
+[07-Jan-2026 00:00:23 Africa/Kampala] PHP Warning:  Undefined variable $totalPages in /home/ultimate/public_html/staff/revenue_list.php on line 257
+[07-Jan-2026 00:00:23 Africa/Kampala] PHP Warning:  Undefined variable $page in /home/ultimate/public_html/staff/revenue_list.php on line 263
+[07-Jan-2026 00:00:23 Africa/Kampala] PHP Warning:  Undefined variable $totalPages in /home/ultimate/public_html/staff/revenue_list.php on line 263
+[07-Jan-2026 14:25:36 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[07-Jan-2026 14:25:36 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[07-Jan-2026 14:26:06 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[07-Jan-2026 14:26:06 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[08-Jan-2026 13:50:38 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[08-Jan-2026 13:50:38 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[08-Jan-2026 14:31:13 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[08-Jan-2026 14:31:13 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[08-Jan-2026 19:22:22 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 124
+[09-Jan-2026 09:13:12 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[09-Jan-2026 09:13:12 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[09-Jan-2026 09:17:12 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[09-Jan-2026 09:17:12 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[09-Jan-2026 09:28:58 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[09-Jan-2026 09:28:58 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[09-Jan-2026 13:09:09 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[09-Jan-2026 13:09:09 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[09-Jan-2026 13:09:14 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[09-Jan-2026 13:09:14 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[09-Jan-2026 16:28:43 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[09-Jan-2026 16:28:43 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1242
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1242
+[09-Jan-2026 21:05:17 Africa/Kampala] PHP Fatal error:  Cannot redeclare ensureDeliveryNotesSchema() (previously declared in /home/ultimate/public_html/staff/includes/functions.php:3263) in /home/ultimate/public_html/staff/includes/functions.php on line 3447
+[12-Jan-2026 18:32:02 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[12-Jan-2026 18:32:02 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[13-Jan-2026 08:16:55 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[13-Jan-2026 08:16:55 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[13-Jan-2026 08:20:01 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[13-Jan-2026 08:20:01 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[13-Jan-2026 08:21:04 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:04 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:08 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:08 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:13 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:13 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:14 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:14 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:15 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:15 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:16 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:16 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:16 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:16 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:16 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:16 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:16 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:16 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:16 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:16 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:17 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:17 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:17 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:17 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:18 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:18 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:19 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 08:21:19 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[13-Jan-2026 09:05:16 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[13-Jan-2026 09:05:16 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[19-Jan-2026 07:25:04 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[19-Jan-2026 07:25:04 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[19-Jan-2026 07:25:12 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[19-Jan-2026 07:25:12 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[19-Jan-2026 07:25:15 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 2
+[19-Jan-2026 07:25:15 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 2
+[19-Jan-2026 10:35:16 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[19-Jan-2026 10:35:16 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[19-Jan-2026 14:26:15 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[19-Jan-2026 14:26:15 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[20-Jan-2026 07:19:10 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[20-Jan-2026 07:19:10 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[20-Jan-2026 18:01:31 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 124
+[20-Jan-2026 18:02:23 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 124
+[21-Jan-2026 08:12:25 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[21-Jan-2026 08:12:25 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[21-Jan-2026 08:18:34 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[21-Jan-2026 08:18:34 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[21-Jan-2026 08:19:48 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[21-Jan-2026 08:19:48 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[21-Jan-2026 08:35:31 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[21-Jan-2026 08:35:31 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[21-Jan-2026 12:23:28 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 124
+[23-Jan-2026 10:35:54 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[23-Jan-2026 10:35:54 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[23-Jan-2026 10:36:26 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[23-Jan-2026 10:36:26 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[23-Jan-2026 11:27:38 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[23-Jan-2026 11:27:38 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[23-Jan-2026 11:27:48 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[23-Jan-2026 11:27:48 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[23-Jan-2026 11:27:55 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[23-Jan-2026 11:27:55 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[23-Jan-2026 11:27:58 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[23-Jan-2026 11:27:58 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[26-Jan-2026 08:41:44 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/mobile_footer.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[26-Jan-2026 08:41:44 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/mobile_footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/view-voucher.php:1553
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/view-voucher.php on line 1553
+[26-Jan-2026 09:05:32 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/check_live_file.php on line 31
+[26-Jan-2026 09:20:15 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 09:20:15 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 09:21:14 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 09:21:14 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 09:21:20 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 09:21:20 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 11:54:12 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 11:54:12 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 11:54:26 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 11:54:26 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 11:57:58 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 11:57:58 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 11:58:04 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 11:58:04 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 12:06:41 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 12:06:41 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 14:19:39 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 14:19:39 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 16:15:07 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 16:15:07 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 20:40:08 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 20:40:08 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 20:40:09 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 20:40:09 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 20:40:09 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 20:40:09 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 20:40:09 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[26-Jan-2026 20:40:09 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 15:31:18 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 15:31:18 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 15:31:23 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 15:31:23 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 15:31:29 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 15:31:29 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 16:42:02 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 16:42:02 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 16:54:55 Africa/Kampala] PHP Warning:  Undefined variable $myProfileSig in /home/ultimate/public_html/staff/view-voucher.php on line 1490
+[27-Jan-2026 21:20:09 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 21:20:09 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 21:20:24 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 21:20:24 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 21:21:14 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 21:21:14 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 21:21:26 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/../includes/header_employee.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 21:21:26 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/../includes/header_employee.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dashboard.php:125
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dashboard.php on line 125
+[27-Jan-2026 23:33:12 Africa/Kampala] PHP Parse error:  syntax error, unexpected token "endif", expecting end of file in /home/ultimate/public_html/staff/select-module.php on line 485
+[27-Jan-2026 23:33:47 Africa/Kampala] PHP Parse error:  syntax error, unexpected token "endif", expecting end of file in /home/ultimate/public_html/staff/select-module.php on line 485
+[27-Jan-2026 23:35:29 Africa/Kampala] PHP Parse error:  syntax error, unexpected token "endif", expecting end of file in /home/ultimate/public_html/staff/select-module.php on line 560
+[27-Jan-2026 23:35:30 Africa/Kampala] PHP Parse error:  syntax error, unexpected token "endif", expecting end of file in /home/ultimate/public_html/staff/select-module.php on line 560
+[28-Jan-2026 00:41:39 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[28-Jan-2026 00:41:39 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/my-vouchers.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[28-Jan-2026 08:39:15 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 280
+[28-Jan-2026 11:55:37 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[28-Jan-2026 11:55:37 Africa/Kampala] #0 {main}
+[28-Jan-2026 19:50:11 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[28-Jan-2026 19:50:11 Africa/Kampala] #0 {main}
+[28-Jan-2026 19:51:47 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[28-Jan-2026 19:51:47 Africa/Kampala] #0 {main}
+[28-Jan-2026 20:25:58 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[28-Jan-2026 20:25:58 Africa/Kampala] #0 {main}
+[28-Jan-2026 20:28:06 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[28-Jan-2026 20:28:06 Africa/Kampala] #0 {main}
+[29-Jan-2026 15:10:09 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[29-Jan-2026 15:10:09 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/my-vouchers.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[29-Jan-2026 17:55:24 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/mark-paid.php on line 2
+[29-Jan-2026 17:55:24 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/mark-paid.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/mark-paid.php on line 2
+[29-Jan-2026 17:55:29 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/mark-paid.php on line 2
+[29-Jan-2026 17:55:29 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/mark-paid.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/mark-paid.php on line 2
+[29-Jan-2026 17:55:39 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/mark-paid.php on line 2
+[29-Jan-2026 17:55:39 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/mark-paid.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/mark-paid.php on line 2
+[29-Jan-2026 17:56:14 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/mark-paid.php on line 2
+[29-Jan-2026 17:56:14 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/mark-paid.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/mark-paid.php on line 2
+[29-Jan-2026 23:16:13 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 280
+[30-Jan-2026 14:53:06 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 14:53:06 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/my-vouchers.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 15:52:58 Africa/Kampala] Delete Attachment Error: There is already an active transaction
+[30-Jan-2026 15:57:01 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/test_del_att.php on line 45
+[30-Jan-2026 15:57:29 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/test_del_att.php on line 45
+[30-Jan-2026 15:57:31 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/test_del_att.php on line 45
+[30-Jan-2026 16:19:38 Africa/Kampala] PHP Fatal error:  Cannot redeclare renderWaLink() (previously declared in /home/ultimate/public_html/staff/view-voucher.php:1054) in /home/ultimate/public_html/staff/includes/functions.php on line 2821
+[30-Jan-2026 16:19:42 Africa/Kampala] PHP Fatal error:  Cannot redeclare renderWaLink() (previously declared in /home/ultimate/public_html/staff/view-voucher.php:1054) in /home/ultimate/public_html/staff/includes/functions.php on line 2821
+[30-Jan-2026 16:19:46 Africa/Kampala] PHP Fatal error:  Cannot redeclare renderWaLink() (previously declared in /home/ultimate/public_html/staff/view-voucher.php:1054) in /home/ultimate/public_html/staff/includes/functions.php on line 2821
+[30-Jan-2026 16:28:04 Africa/Kampala] PHP Fatal error:  Cannot redeclare renderWaLink() (previously declared in /home/ultimate/public_html/staff/view-voucher.php:1054) in /home/ultimate/public_html/staff/includes/functions.php on line 2821
+[30-Jan-2026 16:38:35 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 16:38:35 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/my-vouchers.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 16:40:43 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 16:40:43 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/my-vouchers.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 16:40:46 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 16:40:46 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/my-vouchers.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 16:40:47 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 16:40:47 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/my-vouchers.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 16:40:51 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 16:40:51 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/my-vouchers.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 22:56:47 Africa/Kampala] PHP Warning:  require_once(../includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[30-Jan-2026 22:56:47 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/my-vouchers.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/my-vouchers.php on line 2
+[31-Jan-2026 17:13:18 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 280
+[31-Jan-2026 17:13:19 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 280
+[04-Feb-2026 13:41:48 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[04-Feb-2026 13:41:48 Africa/Kampala] #0 {main}
+[04-Feb-2026 13:42:23 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[04-Feb-2026 13:42:23 Africa/Kampala] #0 {main}
+[04-Feb-2026 18:32:16 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[04-Feb-2026 18:32:16 Africa/Kampala] #0 {main}
+[04-Feb-2026 18:33:02 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[04-Feb-2026 18:33:02 Africa/Kampala] #0 {main}
+[06-Feb-2026 14:40:17 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[06-Feb-2026 14:40:17 Africa/Kampala] #0 {main}
+[10-Feb-2026 12:40:28 Africa/Dar_es_Salaam] PHP Warning:  file_get_contents(update_database_tables.sql): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/check_schema.php on line 48
+[10-Feb-2026 12:40:28 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught ValueError: PDO::exec(): Argument #1 ($statement) cannot be empty in /home/ultimate/public_html/staff/check_schema.php:50
+Stack trace:
+#0 /home/ultimate/public_html/staff/check_schema.php(50): PDO->exec()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/check_schema.php on line 50
+[10-Feb-2026 12:40:37 Africa/Dar_es_Salaam] PHP Warning:  file_get_contents(update_database_tables.sql): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/check_schema.php on line 48
+[10-Feb-2026 12:40:37 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught ValueError: PDO::exec(): Argument #1 ($statement) cannot be empty in /home/ultimate/public_html/staff/check_schema.php:50
+Stack trace:
+#0 /home/ultimate/public_html/staff/check_schema.php(50): PDO->exec()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/check_schema.php on line 50
+[11-Feb-2026 13:38:01 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[11-Feb-2026 13:38:01 Africa/Kampala] #0 {main}
+[11-Feb-2026 13:38:42 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[11-Feb-2026 13:38:42 Africa/Kampala] #0 {main}
+[11-Feb-2026 13:39:05 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[11-Feb-2026 13:39:05 Africa/Kampala] #0 {main}
+[11-Feb-2026 13:40:35 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[11-Feb-2026 13:40:35 Africa/Kampala] #0 {main}
+[12-Feb-2026 10:41:35 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 280
+[12-Feb-2026 13:42:17 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 13:42:17 Africa/Kampala] #0 {main}
+[12-Feb-2026 13:50:00 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 13:50:00 Africa/Kampala] #0 {main}
+[12-Feb-2026 13:52:00 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 13:52:00 Africa/Kampala] #0 {main}
+[12-Feb-2026 13:54:03 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 13:54:03 Africa/Kampala] #0 {main}
+[12-Feb-2026 13:56:06 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 13:56:06 Africa/Kampala] #0 {main}
+[12-Feb-2026 13:56:42 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 13:56:42 Africa/Kampala] #0 {main}
+[12-Feb-2026 14:13:32 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 14:13:32 Africa/Kampala] #0 {main}
+[12-Feb-2026 14:54:23 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 14:54:23 Africa/Kampala] #0 {main}
+[12-Feb-2026 17:36:05 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 17:36:05 Africa/Kampala] #0 {main}
+[12-Feb-2026 17:37:00 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 17:37:00 Africa/Kampala] #0 {main}
+[12-Feb-2026 17:55:29 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[12-Feb-2026 17:55:29 Africa/Kampala] #0 {main}
+[16-Feb-2026 10:50:34 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[16-Feb-2026 10:50:34 Africa/Kampala] #0 {main}
+[16-Feb-2026 11:11:37 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[16-Feb-2026 11:11:37 Africa/Kampala] #0 {main}
+[16-Feb-2026 16:11:13 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[16-Feb-2026 16:11:13 Africa/Kampala] #0 {main}
+[16-Feb-2026 16:11:43 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[16-Feb-2026 16:11:43 Africa/Kampala] #0 {main}
+[16-Feb-2026 16:12:07 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[16-Feb-2026 16:12:07 Africa/Kampala] #0 {main}
+[16-Feb-2026 16:13:23 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[16-Feb-2026 16:13:23 Africa/Kampala] #0 {main}
+[16-Feb-2026 16:15:39 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[16-Feb-2026 16:15:39 Africa/Kampala] #0 {main}
+[16-Feb-2026 16:22:17 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[16-Feb-2026 16:22:17 Africa/Kampala] #0 {main}
+[17-Feb-2026 08:51:55 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[17-Feb-2026 08:51:55 Africa/Kampala] #0 {main}
+[18-Feb-2026 09:40:29 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[18-Feb-2026 09:40:29 Africa/Kampala] #0 {main}
+[18-Feb-2026 09:42:08 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[18-Feb-2026 09:42:08 Africa/Kampala] #0 {main}
+[18-Feb-2026 11:53:36 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[18-Feb-2026 11:53:36 Africa/Kampala] #0 {main}
+[18-Feb-2026 11:53:59 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[18-Feb-2026 11:53:59 Africa/Kampala] #0 {main}
+[18-Feb-2026 23:06:28 Africa/Kampala] PHP Warning:  Undefined array key "full_name" in /home/ultimate/public_html/staff/messages.php on line 184
+[20-Feb-2026 08:53:00 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[20-Feb-2026 08:53:00 Africa/Kampala] #0 {main}
+[20-Feb-2026 09:27:00 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 280
+[20-Feb-2026 11:23:59 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 280
+[23-Feb-2026 11:16:24 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[23-Feb-2026 11:16:24 Africa/Kampala] #0 {main}
+[24-Feb-2026 11:27:49 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[24-Feb-2026 11:27:49 Africa/Kampala] #0 {main}
+[28-Feb-2026 13:27:25 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[28-Feb-2026 13:27:25 Africa/Kampala] #0 {main}
+[03-Mar-2026 11:36:08 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[03-Mar-2026 11:36:08 Africa/Kampala] #0 {main}
+[05-Mar-2026 11:38:06 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[05-Mar-2026 11:38:06 Africa/Kampala] #0 {main}
+[05-Mar-2026 11:38:48 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[05-Mar-2026 11:38:48 Africa/Kampala] #0 {main}
+[05-Mar-2026 12:06:21 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[05-Mar-2026 12:06:21 Africa/Kampala] #0 {main}
+[05-Mar-2026 12:09:03 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[05-Mar-2026 12:09:03 Africa/Kampala] #0 {main}
+[05-Mar-2026 12:09:27 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[05-Mar-2026 12:09:27 Africa/Kampala] #0 {main}
+[09-Mar-2026 09:19:21 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[09-Mar-2026 09:19:21 Africa/Kampala] #0 {main}
+[09-Mar-2026 20:47:01 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 280
+[10-Mar-2026 16:41:21 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[10-Mar-2026 16:41:21 Africa/Kampala] #0 {main}
+[10-Mar-2026 16:42:03 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[10-Mar-2026 16:42:03 Africa/Kampala] #0 {main}
+[10-Mar-2026 16:51:09 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[10-Mar-2026 16:51:09 Africa/Kampala] #0 {main}
+[10-Mar-2026 16:51:37 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[10-Mar-2026 16:51:37 Africa/Kampala] #0 {main}
+[10-Mar-2026 17:02:59 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[10-Mar-2026 17:02:59 Africa/Kampala] #0 {main}
+[18-Mar-2026 11:24:52 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[18-Mar-2026 11:24:52 Africa/Kampala] #0 {main}
+[18-Mar-2026 11:25:38 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[18-Mar-2026 11:25:38 Africa/Kampala] #0 {main}
+[20-Mar-2026 12:57:21 Africa/Kampala] PHP Parse error:  Unclosed '{' on line 28 in /home/ultimate/public_html/staff/debug_image.php on line 53
+[23-Mar-2026 07:02:33 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:02:33 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:02:56 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:02:56 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:02:56 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:02:56 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:02:57 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:02:57 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:02:57 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:02:57 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:01 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:01 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:01 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:03:01 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:03:01 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:01 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:02 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:02 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:04 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:04 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:04 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:03:04 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:03:04 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:04 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:04 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:04 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:09 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:09 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:09 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:03:09 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:03:10 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:10 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:10 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:10 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:16 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:16 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:16 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:03:16 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:03:16 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:16 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:17 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:17 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:37 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:37 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:03:37 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:03:37 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:03:38 Afric[23-Mar-2026 07:05:01 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_b8lp3a6g27dt8i3hptive0ecdr, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:01 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:01 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_b8lp3a6g27dt8i3hptive0ecdr, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:05:01 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:05:02 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_b8lp3a6g27dt8i3hptive0ecdr, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:02 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:02 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_b8lp3a6g27dt8i3hptive0ecdr, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:02 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:45 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:45 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:45 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:05:45 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:05:45 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:45 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:46 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_2tii64kit3s4l4alc7m72m7h97, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:05:46 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:06:45 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_hifdushd2b39rlg87rpp4mklun, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:06:45 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[2[23-Mar-2026 07:16:29 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_726ug1e19mobgbrlo93gro5ok2, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:16:29 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:16:35 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_726ug1e19mobgbrlo93gro5ok2, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:16:35 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:16:35 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_726ug1e19mobgbrlo93gro5ok2, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:16:35 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/includes/functions.php on line 95
+[23-Mar-2026 07:16:38 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_726ug1e19mobgbrlo93gro5ok2, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:16:38 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:16:38 Africa/Kampala] PHP Warning:  session_start(): open(/var/cpanel/php/sessions/ea-php82/sess_726ug1e19mobgbrlo93gro5ok2, O_RDWR) failed: No space left on device (28) in /home/ultimate/public_html/staff/config.php on line 102
+[23-Mar-2026 07:16:38 Africa/Kampala] PHP Warning:  session_start(): Failed to read session data: files (path: /var/cpanel/php/sessions/ea-php82) in /home/ultimate/public_html/staff/config.php on line 102
+[26-Mar-2026 10:02:45 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[26-Mar-2026 10:02:45 Africa/Kampala] #0 {main}
+[30-Mar-2026 06:46:44 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[30-Mar-2026 06:46:44 Africa/Kampala] #0 {main}
+[30-Mar-2026 08:37:23 Africa/Kampala] Balances Recalculate: Account ID 2 | Opening 3787414.87 | Inflow 26561800.00 | Outflow 5000000.00 | New 25349214.87
+[31-Mar-2026 12:56:57 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[31-Mar-2026 12:56:57 Africa/Kampala] #0 {main}
+[08-Apr-2026 12:01:36 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[08-Apr-2026 12:01:36 Africa/Kampala] #0 {main}
+[08-Apr-2026 12:02:01 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[08-Apr-2026 12:02:01 Africa/Kampala] #0 {main}
+[08-Apr-2026 12:02:55 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[08-Apr-2026 12:02:55 Africa/Kampala] #0 {main}
+[08-Apr-2026 12:04:33 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[08-Apr-2026 12:04:33 Africa/Kampala] #0 {main}
+[09-Apr-2026 15:59:52 Africa/Kampala] Balances Recalculate: Account ID 5 | Opening 0.00 | Inflow 4189000.00 | Outflow 30000.00 | New 4159000
+[09-Apr-2026 16:04:57 Africa/Kampala] Balances Recalculate: Account ID 5 | Opening 0.00 | Inflow 4342400.00 | Outflow 30000.00 | New 4312400
+[09-Apr-2026 16:07:10 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 70399730.00 | Outflow 7459778.40 | New 81828482.99
+[09-Apr-2026 16:08:25 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 77899810.00 | Outflow 7459778.40 | New 89328562.99
+[09-Apr-2026 16:11:11 Africa/Kampala] Balances Recalculate: Account ID 2 | Opening 3787414.87 | Inflow 32951500.00 | Outflow 5000000.00 | New 31738914.87
+[11-Apr-2026 14:05:57 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 280
+[11-Apr-2026 14:05:57 Africa/Kampala] PHP Warning:  Undefined array key "reply" in /home/ultimate/public_html/staff/manage-letters.php on line 280
+[13-Apr-2026 22:51:44 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 're.source_invoice_id' in 'ON' in /home/ultimate/public_html/staff/revenue.php:54
+Stack trace:
+#0 /home/ultimate/public_html/staff/revenue.php(54): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/revenue.php on line 54
+[13-Apr-2026 22:51:48 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 're.source_invoice_id' in 'ON' in /home/ultimate/public_html/staff/revenue.php:54
+Stack trace:
+#0 /home/ultimate/public_html/staff/revenue.php(54): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/revenue.php on line 54
+[13-Apr-2026 22:51:50 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 're.source_invoice_id' in 'ON' in /home/ultimate/public_html/staff/revenue.php:54
+Stack trace:
+#0 /home/ultimate/public_html/staff/revenue.php(54): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/revenue.php on line 54
+[13-Apr-2026 22:51:50 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 're.source_invoice_id' in 'ON' in /home/ultimate/public_html/staff/revenue.php:54
+Stack trace:
+#0 /home/ultimate/public_html/staff/revenue.php(54): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/revenue.php on line 54
+[13-Apr-2026 22:51:50 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 're.source_invoice_id' in 'ON' in /home/ultimate/public_html/staff/revenue.php:54
+Stack trace:
+#0 /home/ultimate/public_html/staff/revenue.php(54): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/revenue.php on line 54
+[13-Apr-2026 22:54:37 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 're.source_invoice_id' in 'ON' in /home/ultimate/public_html/staff/revenue.php:54
+Stack trace:
+#0 /home/ultimate/public_html/staff/revenue.php(54): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/revenue.php on line 54
+[14-Apr-2026 13:24:56 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[14-Apr-2026 13:24:56 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[14-Apr-2026 13:24:59 Africa/Kampala] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[16-Apr-2026 17:36:50 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 78249857.00 | Outflow 15457536.40 | New 81680851.99
+[17-Apr-2026 08:08:09 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[17-Apr-2026 08:08:09 Africa/Kampala] #0 {main}
+[17-Apr-2026 16:36:58 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[17-Apr-2026 16:36:58 Africa/Kampala] #0 {main}
+[17-Apr-2026 16:37:26 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[17-Apr-2026 16:37:26 Africa/Kampala] #0 {main}
+[27-Apr-2026 09:32:56 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 79524257.00 | Outflow 39147236.68 | New 59265551.71
+[27-Apr-2026 09:38:32 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 81152657.00 | Outflow 39147236.68 | New 60893951.71
+[27-Apr-2026 09:51:26 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 84562857.00 | Outflow 39147236.68 | New 64304151.71
+[27-Apr-2026 09:53:10 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 94433557.00 | Outflow 39147236.68 | New 74174851.71
+[27-Apr-2026 10:08:30 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 95837757.00 | Outflow 39147236.68 | New 75579051.71
+[27-Apr-2026 10:12:14 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 98752357.00 | Outflow 39147236.68 | New 78493651.71
+[27-Apr-2026 10:23:25 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 104966236.99 | Outflow 39147236.68 | New 84707531.7
+[27-Apr-2026 10:43:54 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 105416996.99 | Outflow 39147236.68 | New 85158291.7
+[27-Apr-2026 10:45:13 Africa/Kampala] Balances Recalculate: Account ID 5 | Opening 0.00 | Inflow 5581400.00 | Outflow 30000.00 | New 5551400
+[27-Apr-2026 10:46:41 Africa/Kampala] Balances Recalculate: Account ID 1 | Opening 18888531.39 | Inflow 105806396.99 | Outflow 39147236.68 | New 85547691.7
+[28-Apr-2026 06:59:28 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[28-Apr-2026 06:59:28 Africa/Kampala] #0 {main}
+[28-Apr-2026 07:00:30 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[28-Apr-2026 07:00:30 Africa/Kampala] #0 {main}
+[28-Apr-2026 07:00:40 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[28-Apr-2026 07:00:40 Africa/Kampala] #0 {main}
+[29-Apr-2026 13:00:05 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[29-Apr-2026 13:00:05 Africa/Kampala] #0 {main}
+[29-Apr-2026 13:01:18 Africa/Kampala] Voucher update failed: Please add at least one payment item
+[29-Apr-2026 13:01:18 Africa/Kampala] #0 {main}

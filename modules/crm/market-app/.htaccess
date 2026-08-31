@@ -1,0 +1,5 @@
+AcceptPathInfo On
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ proxy.php [L,QSA]
+DirectoryIndex proxy.php

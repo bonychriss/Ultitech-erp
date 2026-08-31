@@ -1,0 +1,203 @@
+/* Sidebar Theme Variables & Styles */
+
+:root {
+    /* Default - "Trust Blue" */
+    --sidebar-bg: #0d47a1;
+    /* Dark Blue */
+    --sidebar-text: #ffffff;
+    --sidebar-hover-bg: rgba(255, 255, 255, 0.1);
+    --sidebar-active-bg: #42a5f5;
+    /* Bright Blue */
+    --sidebar-active-text: #ffffff;
+    --sidebar-border: #0a357a;
+    --sidebar-icon-color: #bbdefb;
+    --sidebar-hover-text: #ffffff;
+    /* Default hover text */
+    --sidebar-hover-icon: #ffffff;
+    /* Default hover icon */
+}
+
+/* Theme 2: Deep Ocean */
+.theme-deep-ocean {
+    --sidebar-bg: #001f2f;
+    /* Very dark navy */
+    --sidebar-text: #e0f7fa;
+    --sidebar-hover-bg: #00364d;
+    --sidebar-active-bg: #00bcd4;
+    /* Cyan */
+    --sidebar-active-text: #000000;
+    --sidebar-border: #001520;
+    --sidebar-icon-color: #00bcd4;
+}
+
+/* Theme 3: Clean White */
+.theme-clean-white {
+    --sidebar-bg: #ffffff;
+    --sidebar-text: #1a237e;
+    /* Dark Blue Text */
+    --sidebar-hover-bg: #f5f5f5;
+    --sidebar-active-bg: #e8eaf6;
+    /* Very Light Blue */
+    --sidebar-active-text: #1a237e;
+    --sidebar-border: #e0e0e0;
+    --sidebar-icon-color: #3949ab;
+}
+
+/* Theme 5: Night Mode */
+.theme-night-mode {
+    --sidebar-bg: #121212;
+    --sidebar-text: #e0e0e0;
+    --sidebar-hover-bg: #2c2c2c;
+    --sidebar-active-bg: rgba(66, 165, 245, 0.15);
+    /* Low opacity blue */
+    --sidebar-active-text: #42a5f5;
+    /* Bright Blue Text */
+    --sidebar-border: #1e1e1e;
+    --sidebar-icon-color: #42a5f5;
+}
+
+/* Theme 8: Royal Purple */
+.theme-royal-purple {
+    --sidebar-bg: linear-gradient(180deg, #4a148c 0%, #311b92 100%);
+    --sidebar-text: #ede7f6;
+    --sidebar-hover-bg: rgba(255, 255, 255, 0.1);
+    --sidebar-active-bg: #7c43bd;
+    --sidebar-active-text: #ffffff;
+    --sidebar-border: #4a148c;
+    --sidebar-icon-color: #d1c4e9;
+    --sidebar-hover-icon: #d1c4e9;
+}
+
+/* Themes 6-10 Removed per user request */
+
+/* --- User Requested Themes --- */
+
+/* Theme: Professional */
+.theme-professional {
+    --sidebar-bg: #1e40af;
+    --sidebar-text: #ffffff;
+    /* Adjusted for contrast */
+    --sidebar-hover-bg: #ffffff;
+    /* High contrast White */
+    --sidebar-hover-text: #1e40af;
+    /* Dark Blue Text */
+    --sidebar-active-bg: #3b82f6;
+    --sidebar-active-text: #ffffff;
+    --sidebar-border: #1e3a8a;
+    --sidebar-icon-color: #93c5fd;
+    --sidebar-hover-icon: #1e40af;
+    /* Dark Blue Icon */
+}
+
+/* Theme: Creative */
+.theme-creative {
+    --sidebar-bg: #7c3aed;
+    --sidebar-text: #ffffff;
+    --sidebar-hover-bg: rgba(245, 243, 255, 0.1);
+    --sidebar-hover-text: #ffffff;
+    --sidebar-active-bg: #a78bfa;
+    --sidebar-active-text: #ffffff;
+    --sidebar-border: #6d28d9;
+    --sidebar-icon-color: #ddd6fe;
+    --sidebar-hover-icon: #ddd6fe;
+}
+
+/* Theme: Minimal */
+.theme-minimal {
+    --sidebar-bg: #ffffff;
+    --sidebar-text: #334155;
+    --sidebar-hover-bg: #f1f5f9;
+    --sidebar-hover-text: #0f172a;
+    /* Darker text on hover */
+    --sidebar-active-bg: #f8fafc;
+    --sidebar-active-text: #0f172a;
+    --sidebar-border: #cbd5e1;
+    --sidebar-icon-color: #64748b;
+    --sidebar-hover-icon: #64748b;
+}
+
+/* Theme: Dark Mode (Platform) */
+.theme-dark-mode-v2 {
+    --sidebar-bg: #0f172a;
+    --sidebar-text: #cbd5e1;
+    --sidebar-hover-bg: #334155;
+    --sidebar-hover-text: #cbd5e1;
+    --sidebar-active-bg: #1e293b;
+    --sidebar-active-text: #ffffff;
+    --sidebar-border: #1e293b;
+    --sidebar-icon-color: #94a3b8;
+    --sidebar-hover-icon: #94a3b8;
+}
+
+/* Theme: Cool */
+.theme-cool {
+    --sidebar-bg: #ecfeff;
+    --sidebar-text: #155e75;
+    --sidebar-hover-bg: #f0f9ff;
+    --sidebar-hover-text: #155e75;
+    --sidebar-active-bg: #cffafe;
+    --sidebar-active-text: #0e7490;
+    --sidebar-border: #cffafe;
+    --sidebar-icon-color: #0891b2;
+}
+
+/* Apply Variables */
+#native-sidebar {
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
+    transition: background 0.5s ease;
+}
+
+/* Enhanced Animations */
+.nav-pills .nav-link {
+    color: var(--sidebar-text);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.nav-pills .nav-link i {
+    color: var(--sidebar-icon-color);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* Bouncy */
+}
+
+/* Hover Effects */
+.nav-pills .nav-link:hover {
+    background-color: var(--sidebar-hover-bg);
+    color: var(--sidebar-hover-text) !important;
+    /* Keep labels inside the sidebar width */
+    padding-left: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.nav-pills .nav-link:hover i {
+    transform: scale(1.2) rotate(5deg);
+    /* Grow and tilt */
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.4));
+    color: var(--sidebar-hover-icon, var(--sidebar-icon-color)) !important;
+    /* Allow icon color change */
+}
+
+/* Active State */
+.nav-pills .nav-link.active {
+    background: var(--sidebar-active-bg);
+    color: var(--sidebar-active-text) !important;
+    border-left: none;
+    /* Remove border, use full fill */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    font-weight: 700;
+    transform: scale(1.02);
+    /* Pop out slightly */
+}
+
+.nav-pills .nav-link.active i {
+    color: var(--sidebar-active-text) !important;
+}
+
+/* Secondary Links (Logout) */
+.text-danger {
+    color: #ef5350 !important;
+}

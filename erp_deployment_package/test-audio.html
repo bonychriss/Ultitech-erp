@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Audio Test - Ultimate General Trading</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #4a9eff;
+        }
+
+        .test-section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .test-section h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #6db3ff;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .status.pending {
+            background: #4a4a00;
+            color: #ffff99;
+        }
+
+        .status.success {
+            background: #004a00;
+            color: #99ff99;
+        }
+
+        .status.error {
+            background: #4a0000;
+            color: #ff9999;
+        }
+
+        .status.info {
+            background: #003a4a;
+            color: #99ddff;
+        }
+
+        button {
+            background: #4a9eff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #3a8eef;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .audio-visualizer {
+            width: 100%;
+            height: 60px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .audio-bar {
+            position: absolute;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to top, #4a9eff, #6db3ff);
+            transition: height 0.1s;
+        }
+
+        .log {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 3px 0;
+        }
+
+        .log-entry.error {
+            color: #ff6b6b;
+        }
+
+        .log-entry.success {
+            color: #51cf66;
+        }
+
+        .log-entry.info {
+            color: #74c0fc;
+        }
+
+        .log-entry.warn {
+            color: #ffd43b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎤 Meeting Audio System Test</h1>
+
+        <div class="test-section">
+            <h2>1. Browser Compatibility</h2>
+            <div id="browserStatus" class="status pending">Checking browser...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. Microphone Access</h2>
+            <button id="btnMicTest" onclick="testMicrophone()">Test Microphone</button>
+            <div id="micStatus" class="status pending">Click button to test</div>
+            <div id="micVisualizer" class="audio-visualizer" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. Audio Playback</h2>
+            <button onclick="testAudioPlayback()">Test Audio Playback</button>
+            <div id="audioStatus" class="status pending">Click button to test</div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. WebRTC Connection</h2>
+            <button onclick="testWebRTC()">Test WebRTC</button>
+            <div id="webrtcStatus" class="status pending">Click button to test</div>
+        </div>
+
+        <div class="test-section">
+            <h2>5. SimplePeer Library</h2>
+            <div id="peerStatus" class="status pending">Checking...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 Diagnostic Log</h2>
+            <button onclick="clearLog()">Clear Log</button>
+            <button onclick="copyLog()">Copy Log</button>
+            <div id="logContainer" class="log"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
+    <script>
+        let localStream = null;
+        let audioContext = null;
+        let analyser = null;
+
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(`[${type.toUpperCase()}]`, message);
+        }
+
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+        }
+
+        function copyLog() {
+            const logText = document.getElementById('logContainer').innerText;
+            navigator.clipboard.writeText(logText).then(() => {
+                alert('Log copied to clipboard!');
+            });
+        }
+
+        // Test 1: Browser Compatibility
+        function checkBrowser() {
+            const status = document.getElementById('browserStatus');
+            const checks = {
+                'getUserMedia': navigator.mediaDevices && navigator.mediaDevices.getUserMedia,
+                'RTCPeerConnection': window.RTCPeerConnection,
+                'AudioContext': window.AudioContext || window.webkitAudioContext,
+                'WebRTC Support': navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+            };
+
+            let allPassed = true;
+            let details = [];
+
+            for (const [feature, supported] of Object.entries(checks)) {
+                if (supported) {
+                    log(`✓ ${feature} supported`, 'success');
+                    details.push(`✓ ${feature}`);
+                } else {
+                    log(`✗ ${feature} NOT supported`, 'error');
+                    details.push(`✗ ${feature}`);
+                    allPassed = false;
+                }
+            }
+
+            if (allPassed) {
+                status.className = 'status success';
+                status.textContent = '✓ Browser fully compatible: ' + details.join(', ');
+            } else {
+                status.className = 'status error';
+                status.textContent = '✗ Browser missing features: ' + details.join(', ');
+            }
+        }
+
+        // Test 2: Microphone Access
+        async function testMicrophone() {
+            const status = document.getElementById('micStatus');
+            const visualizer = document.getElementById('micVisualizer');
+            const btn = document.getElementById('btnMicTest');
+
+            try {
+                status.className = 'status pending';
+                status.textContent = 'Requesting microphone access...';
+                log('Requesting microphone access...', 'info');
+
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+
+                const audioTracks = localStream.getAudioTracks();
+                log(`✓ Microphone access granted`, 'success');
+                log(`Audio tracks: ${audioTracks.length}`, 'info');
+
+                audioTracks.forEach((track, i) => {
+                    log(`Track ${i}: ${track.label}, enabled: ${track.enabled}, muted: ${track.muted}`, 'info');
+                });
+
+                status.className = 'status success';
+                status.textContent = `✓ Microphone working: ${audioTracks[0].label}`;
+
+                // Show visualizer
+                visualizer.style.display = 'block';
+                startAudioVisualization();
+
+                btn.textContent = 'Stop Microphone';
+                btn.onclick = stopMicrophone;
+
+            } catch (error) {
+                log(`✗ Microphone error: ${error.message}`, 'error');
+                status.className = 'status error';
+                status.textContent = `✗ Microphone access denied: ${error.message}`;
+            }
+        }
+
+        function stopMicrophone() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+                log('Microphone stopped', 'info');
+            }
+            document.getElementById('micVisualizer').style.display = 'none';
+            const btn = document.getElementById('btnMicTest');
+            btn.textContent = 'Test Microphone';
+            btn.onclick = testMicrophone;
+        }
+
+        function startAudioVisualization() {
+            const visualizer = document.getElementById('micVisualizer');
+            visualizer.innerHTML = '';
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const microphone = audioContext.createMediaStreamSource(localStream);
+
+            analyser.smoothingTimeConstant = 0.8;
+            analyser.fftSize = 64;
+
+            microphone.connect(analyser);
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            // Create bars
+            const bars = [];
+            for (let i = 0; i < bufferLength; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'audio-bar';
+                bar.style.left = (i * (100 / bufferLength)) + '%';
+                visualizer.appendChild(bar);
+                bars.push(bar);
+            }
+
+            function draw() {
+                if (!localStream) return;
+
+                analyser.getByteFrequencyData(dataArray);
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const height = (dataArray[i] / 255) * 100;
+                    bars[i].style.height = height + '%';
+                }
+
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        // Test 3: Audio Playback
+        function testAudioPlayback() {
+            const status = document.getElementById('audioStatus');
+            log('Testing audio playback...', 'info');
+
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 440; // A4 note
+                gainNode.gain.value = 0.3;
+
+                oscillator.start();
+                setTimeout(() => oscillator.stop(), 500);
+
+                status.className = 'status success';
+                status.textContent = '✓ Audio playback working (you should hear a beep)';
+                log('✓ Audio playback test completed', 'success');
+
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = `✗ Audio playback failed: ${error.message}`;
+                log(`✗ Audio playback error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 4: WebRTC
+        async function testWebRTC() {
+            const status = document.getElementById('webrtcStatus');
+            log('Testing WebRTC connection...', 'info');
+
+            try {
+                const pc = new RTCPeerConnection({
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' }
+                    ]
+                });
+
+                pc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        log(`ICE Candidate: ${event.candidate.candidate}`, 'info');
+                    }
+                };
+
+                pc.oniceconnectionstatechange = () => {
+                    log(`ICE Connection State: ${pc.iceConnectionState}`, 'info');
+                };
+
+                // Create a data channel to trigger ICE gathering
+                pc.createDataChannel('test');
+
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                log('✓ WebRTC peer connection created', 'success');
+                log('✓ Offer created successfully', 'success');
+
+                status.className = 'status success';
+                status.textContent = '✓ WebRTC working - ICE gathering started';
+
+                // Clean up
+                setTimeout(() => pc.close(), 5000);
+
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = `✗ WebRTC failed: ${error.message}`;
+                log(`✗ WebRTC error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 5: SimplePeer
+        function checkSimplePeer() {
+            const status = document.getElementById('peerStatus');
+
+            if (typeof SimplePeer !== 'undefined') {
+                status.className = 'status success';
+                status.textContent = '✓ SimplePeer library loaded';
+                log('✓ SimplePeer library available', 'success');
+            } else {
+                status.className = 'status error';
+                status.textContent = '✗ SimplePeer library not loaded';
+                log('✗ SimplePeer library missing', 'error');
+            }
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            log('Audio test script initialized', 'info');
+            checkBrowser();
+            setTimeout(checkSimplePeer, 1000); // Wait for CDN load
+        };
+    </script>
+</body>
+
+</html>

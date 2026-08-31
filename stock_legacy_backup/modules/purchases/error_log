@@ -1,0 +1,218 @@
+[05-Jan-2026 12:02:01 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'status' at row 1 in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php:135
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php(135): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php on line 135
+[05-Jan-2026 12:23:37 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'status' at row 1 in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php:139
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php(139): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php on line 139
+[05-Jan-2026 12:26:57 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[05-Jan-2026 12:33:01 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 212
+[05-Jan-2026 12:33:01 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 212
+[05-Jan-2026 13:16:10 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[05-Jan-2026 13:17:38 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[05-Jan-2026 17:02:35 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[05-Jan-2026 17:02:35 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php on line 441
+[13-Jan-2026 12:35:08 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[13-Jan-2026 12:35:53 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'comment' in 'INSERT INTO' in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php:28
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php(28): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php on line 28
+[13-Jan-2026 12:37:07 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[13-Jan-2026 12:37:07 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[13-Jan-2026 12:38:10 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[13-Jan-2026 12:38:10 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[13-Jan-2026 12:38:48 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[13-Jan-2026 12:38:48 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[04-Feb-2026 09:50:29 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[04-Feb-2026 10:02:36 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[04-Feb-2026 10:02:36 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[04-Feb-2026 10:11:06 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[04-Feb-2026 10:11:19 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[04-Feb-2026 10:11:19 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[17-Feb-2026 13:09:37 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[17-Feb-2026 13:10:48 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'comment' in 'INSERT INTO' in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php:28
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php(28): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php on line 28
+[18-Feb-2026 11:29:50 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:29:50 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:31:29 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:31:29 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:32:30 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:32:30 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:33:33 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:33:33 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:49:08 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:49:08 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 12:00:25 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 12:00:25 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 12:00:43 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 12:00:43 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[06-Mar-2026 15:57:01 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[06-Mar-2026 16:13:36 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[06-Mar-2026 16:13:36 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[19-Mar-2026 12:50:52 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[19-Mar-2026 12:50:52 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[26-Mar-2026 12:46:38 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[26-Mar-2026 12:46:38 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[08-Apr-2026 09:18:52 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'image' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/create.php:9
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/create.php(9): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/create.php on line 9
+[08-Apr-2026 09:18:55 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'image' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/create.php:9
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/create.php(9): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/create.php on line 9
+[08-Apr-2026 09:55:09 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'image' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/create.php:9
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/create.php(9): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/create.php on line 9
+[08-Apr-2026 09:55:43 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'image' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/create.php:9
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/create.php(9): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/create.php on line 9
+[09-Apr-2026 13:57:50 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.stocks_purchase_attachments' doesn't exist in /home/ultimate/public_html/staff/stock/modules/purchases/index.php:113
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/index.php(113): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/index.php on line 113
+[09-Apr-2026 13:57:56 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.stocks_purchase_attachments' doesn't exist in /home/ultimate/public_html/staff/stock/modules/purchases/index.php:113
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/index.php(113): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/index.php on line 113
+[09-Apr-2026 14:03:50 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.stocks_purchase_attachments' doesn't exist in /home/ultimate/public_html/staff/stock/modules/purchases/index.php:124
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/index.php(124): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/index.php on line 124
+[09-Apr-2026 14:03:57 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.stocks_purchase_attachments' doesn't exist in /home/ultimate/public_html/staff/stock/modules/purchases/index.php:124
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/index.php(124): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/index.php on line 124
+[10-Apr-2026 08:38:38 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 's.contact_person' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/domestic_receive.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/domestic_receive.php(21): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/domestic_receive.php on line 21
+[15-Apr-2026 12:25:01 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ss.email' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php:102
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php(102): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 102
+[15-Apr-2026 12:25:07 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ss.email' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php:102
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php(102): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 102
+[15-Apr-2026 12:26:23 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ss.email' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php:102
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php(102): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 102
+[17-Apr-2026 17:51:05 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ss.email' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php:102
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php(102): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 102
+[20-Apr-2026 18:47:02 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ss.email' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php:102
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php(102): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 102
+[20-Apr-2026 18:53:21 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ss.email' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php:102
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php(102): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 102
+[21-Apr-2026 10:24:35 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 's.contact_person' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/domestic_receive.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/domestic_receive.php(21): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/domestic_receive.php on line 21
+[21-Apr-2026 10:32:26 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ss.email' in 'SELECT' in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php:102
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php(102): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 102
+[24-Apr-2026 09:31:38 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'updated_at' in 'SET' in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php:503
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php(503): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 503
+[24-Apr-2026 09:59:47 Africa/Kampala] PHP Deprecated:  preg_replace(): Passing null to parameter #3 ($subject) of type array|string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 655
+[24-Apr-2026 09:59:47 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 880
+[24-Apr-2026 09:59:47 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 882
+[24-Apr-2026 09:59:47 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 883
+[24-Apr-2026 09:59:47 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1111
+[24-Apr-2026 10:00:56 Africa/Kampala] PHP Deprecated:  preg_replace(): Passing null to parameter #3 ($subject) of type array|string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 655
+[24-Apr-2026 10:00:56 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 880
+[24-Apr-2026 10:00:56 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 882
+[24-Apr-2026 10:00:56 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 883
+[24-Apr-2026 10:00:56 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1111
+[24-Apr-2026 10:02:48 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1111
+[24-Apr-2026 10:08:20 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1111
+[24-Apr-2026 10:13:31 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1155
+[24-Apr-2026 10:14:03 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1155
+[24-Apr-2026 10:14:16 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1155
+[24-Apr-2026 10:15:13 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1155
+[24-Apr-2026 10:17:19 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1160
+[24-Apr-2026 10:21:10 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1160
+[24-Apr-2026 10:24:26 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1160
+[24-Apr-2026 10:26:02 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1160
+[24-Apr-2026 10:26:56 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1160
+[24-Apr-2026 10:29:20 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1160
+[24-Apr-2026 10:36:33 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1151
+[24-Apr-2026 10:43:51 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1156
+[24-Apr-2026 10:48:44 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1156
+[24-Apr-2026 10:51:57 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[24-Apr-2026 11:01:36 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[24-Apr-2026 11:02:00 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[24-Apr-2026 11:02:55 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[24-Apr-2026 11:22:24 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[24-Apr-2026 11:22:31 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[24-Apr-2026 11:22:35 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[24-Apr-2026 11:35:21 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[27-Apr-2026 08:09:09 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[27-Apr-2026 08:33:07 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[27-Apr-2026 08:47:09 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[27-Apr-2026 08:47:43 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[27-Apr-2026 08:47:45 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213
+[27-Apr-2026 08:48:09 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 1213

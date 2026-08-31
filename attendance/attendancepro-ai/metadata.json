@@ -1,0 +1,7 @@
+{
+  "name": "AttendancePro AI",
+  "description": "A comprehensive Employee Attendance System with IP-restricted clocking, real-time analytics, and AI-powered workforce insights using Gemini.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

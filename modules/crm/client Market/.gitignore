@@ -1,0 +1,15 @@
+node_modules/
+.next/
+dist/
+bin/
+obj/
+__pycache__/
+.venv/
+venv/
+.env
+.env.local
+.env.production
+*.user
+*.suo
+coverage/
+.DS_Store

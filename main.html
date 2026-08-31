@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate General Trading - Payment Voucher System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .main-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+            width: 90%;
+            max-width: 900px;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(255,255,255,0.1),
+                rgba(255,255,255,0.1) 1px,
+                transparent 1px,
+                transparent 10px
+            );
+            animation: shimmer 20s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .company-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Ensure the company heading is centered when the logo is removed */
+        .company-info {
+            text-align: center;
+        }
+        .company-info h1 {
+            color: #f1c40f; /* yellow for main page company heading */
+        }
+
+        .logo-square {
+            width: 80px;
+            height: 80px;
+            background: #fff;
+            margin-right: 20px;
+            position: relative;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .logo-square::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 40px;
+            height: 40px;
+            background: #f39c12;
+            border-radius: 5px;
+        }
+
+        .company-info h1 {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 0;
+            line-height: 1;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .company-info h2 {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+            line-height: 1;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 18px;
+            margin-top: 15px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .access-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .access-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #f39c12;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .access-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(243,156,18,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .access-card:hover::before {
+            left: 100%;
+        }
+
+        .access-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            border-color: #e67e22;
+        }
+
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .card-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .card-description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .access-btn {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .access-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .access-btn:hover::before {
+            left: 100%;
+        }
+
+        .access-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .quick-info {
+            background: #e8f4f8;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .quick-info h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f39c12;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .info-value {
+            color: #666;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                margin: 20px;
+                width: calc(100% - 40px);
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .company-logo {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .logo-square {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            
+            .company-info h1 {
+                font-size: 28px;
+            }
+            
+            .company-info h2 {
+                font-size: 22px;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .access-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="status-indicator">🟢 ONLINE</div>
+        
+        <div class="header">
+            <div class="company-logo">
+                <div class="company-info">
+                    <h1>ULTIMATE</h1>
+                    <h2>GENERAL</h2>
+                    <h2>TRADING.</h2>
+                </div>
+            </div>
+            <div class="subtitle">Payment Voucher Management System</div>
+        </div>
+
+        <div class="content">
+            <div class="access-grid">
+                <div class="access-card">
+                    <span class="card-icon">🔐</span>
+                    <div class="card-title">Employee Login</div>
+                    <div class="card-description">
+                        Access your dashboard to create, manage, and track payment vouchers
+                    </div>
+                    <a href="payment-voucher-system/login.php" class="access-btn">Employee Login</a>
+                </div>
+
+                <div class="access-card">
+                    <span class="card-icon">👨‍💼</span>
+                    <div class="card-title">Admin Dashboard</div>
+                    <div class="card-description">
+                        Manage users, approve vouchers, and generate comprehensive reports
+                    </div>
+                    <a href="payment-voucher-system/login.php" class="access-btn">Admin Login</a>
+                </div>
+
+                <div class="access-card">
+                    <span class="card-icon">📝</span>
+                    <div class="card-title">New Employee Registration</div>
+                    <div class="card-description">
+                        Register yourself to join the system and start creating vouchers
+                    </div>
+                    <a href="payment-voucher-system/register.php" class="access-btn">Register Now</a>
+                </div>
+
+                <div class="access-card">
+                    <span class="card-icon">🔧</span>
+                    <div class="card-title">System Management</div>
+                    <div class="card-description">
+                        Database management, system status, and administrative tools
+                    </div>
+                    <a href="phpmyadmin/" class="access-btn">phpMyAdmin</a>
+                </div>
+            </div>
+
+            <div class="quick-info">
+                <h3>📋 Quick Access Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Admin Credentials</div>
+                        <div class="info-value">Username: admin<br>Password: admin123</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Sample Employee</div>
+                        <div class="info-value">Username: maureen<br>Password: password123</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Available Departments</div>
+                        <div class="info-value">Procurement, IT, Finance, Sales</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">System Status</div>
+                        <div class="info-value">✅ Database Connected<br>✅ All Services Running</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Ultimate General Trading Payment Voucher System v1.0</strong></p>
+            <p>Professional voucher management with complete workflow automation</p>
+        </div>
+    </div>
+</body>
+</html>

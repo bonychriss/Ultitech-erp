@@ -1,0 +1,52 @@
+# Ignore environment overrides and sensitive files
+includes/env.php
+includes/env.prod.php
+includes/env.local.php
+env.php
+erp_deployment_package/env.php
+erp_deployment_package/includes/env.php
+.vscode/settings.json
+.vscode/sftp.json
+scripts/deploy.config.php
+scripts/ftp-deploy.local.cmd
+scripts/ftp-password.txt
+*.sql
+
+# User uploads and generated assets
+assets/uploads/
+assets/signatures/
+uploads/
+signatures/
+storage/
+backups/
+tmp/
+logs/
+
+# Dependencies (reinstall with composer/npm on deploy)
+node_modules/
+vendor/
+
+# Local env files
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Archives and large media (keep out of git — use releases or external storage)
+*.zip
+*.7z
+*.rar
+vid tutorials/
+wallpapers/
+
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.qodo/
+
+# Build caches (keep dist/ for deployed frontends)
+.cache/
+.parcel-cache/
+.turbo/
+*.tsbuildinfo

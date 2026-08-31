@@ -1,0 +1,94 @@
+[29-Nov-2025 10:41:38 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'dn.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/delivery-notes.php(21): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php on line 21
+[29-Nov-2025 10:43:05 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'dn.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/delivery-notes.php(21): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php on line 21
+[29-Nov-2025 10:48:34 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'q.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/quotes.php:1
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/quotes.php(1): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 1
+[29-Nov-2025 13:36:32 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'q.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/quotes.php:1
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/quotes.php(1): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 1
+[29-Nov-2025 13:48:52 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'q.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/quotes.php:1
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/quotes.php(1): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 1
+[29-Nov-2025 14:25:49 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'q.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/quotes.php:1
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/quotes.php(1): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 1
+[29-Nov-2025 14:51:41 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'dn.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/delivery-notes.php(21): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php on line 21
+[29-Nov-2025 18:28:30 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'dn.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/delivery-notes.php(21): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php on line 21
+[29-Nov-2025 18:30:34 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'dn.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/delivery-notes.php(21): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php on line 21
+[29-Nov-2025 18:32:28 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'dn.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php:40
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/delivery-notes.php(40): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php on line 40
+[29-Nov-2025 18:32:35 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'dn.date' in 'ORDER BY' in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php:40
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/delivery-notes.php(40): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/sales/delivery-notes.php on line 40
+[16-Dec-2025 18:14:40 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[16-Dec-2025 18:44:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[16-Dec-2025 18:49:25 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[16-Dec-2025 18:52:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[16-Dec-2025 19:52:57 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[18-Dec-2025 09:10:29 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[18-Dec-2025 09:10:29 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[27-Dec-2025 17:14:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[27-Dec-2025 17:14:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[27-Dec-2025 17:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[27-Dec-2025 17:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[27-Dec-2025 17:42:31 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:31 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/create-sales-order.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:32 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:32 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/sales-orders.php(4): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:36 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:36 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/quotes.php(4): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:38 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:38 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/sales/create-quote.php(2): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[30-Dec-2025 19:26:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[30-Dec-2025 19:26:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[01-Jan-2026 21:01:28 Africa/Kampala] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214
+[01-Jan-2026 21:01:28 Africa/Kampala] PHP Warning:  Undefined array key "created_at" in /home/ultimate/public_html/staff/erp/sales/quotes.php on line 214

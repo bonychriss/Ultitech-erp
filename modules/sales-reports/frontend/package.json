@@ -1,0 +1,22 @@
+{
+  "name": "sales-reports-ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.13.5",
+    "@tinymce/tinymce-react": "^6.3.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tinymce": "^7.9.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "vite": "^7.2.4"
+  }
+}

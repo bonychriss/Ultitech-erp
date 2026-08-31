@@ -1,0 +1,338 @@
+.dlv-final-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #0f172a;
+  line-height: 1.45;
+  background: #f1f5f9;
+}
+
+.dlv-final-box {
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+  padding: 24px 22px;
+  text-align: center;
+}
+
+.dlv-final-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.dlv-final-brand img {
+  max-height: 42px;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+.dlv-final-brand h1 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.dlv-final-success-icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dcfce7;
+  color: #166534;
+  border-radius: 50%;
+}
+
+.dlv-final-box h2 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 6px;
+  color: #0f172a;
+}
+
+.dlv-final-lead {
+  color: #64748b;
+  font-size: 13px;
+  margin: 0;
+}
+
+.dlv-final-section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+  text-align: left;
+}
+
+.dlv-final-section h3 {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+.dlv-final-doc {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.dlv-final-doc-btn {
+  cursor: pointer;
+  appearance: none;
+}
+
+.dlv-final-doc-btn:disabled {
+  cursor: wait;
+}
+
+.dlv-final-doc-btn:hover:not(:disabled) {
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.dlv-final-doc--downloading {
+  opacity: 0.92;
+}
+
+.dlv-final-doc--success {
+  border-color: #86efac !important;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.15);
+}
+
+.dlv-final-doc--error {
+  border-color: #fca5a5 !important;
+}
+
+.dlv-final-doc--error span {
+  color: #b91c1c;
+  opacity: 1;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.dlv-final-doc-check {
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.dlv-final-doc-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.dlv-final-doc-progress-fill {
+  display: block;
+  height: 100%;
+  width: 35%;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  border-radius: 0 2px 2px 0;
+  animation: dlv-final-doc-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes dlv-final-doc-slide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+
+.dlv-final-doc-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dlv-final-doc-main svg {
+  flex-shrink: 0;
+}
+
+.dlv-final-doc strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.dlv-final-doc span {
+  display: block;
+  font-size: 10px;
+  opacity: 0.8;
+  line-height: 1.3;
+}
+
+.dlv-final-doc--blue { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; }
+.dlv-final-doc--green { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.dlv-final-doc--purple { background: #faf5ff; border-color: #e9d5ff; color: #7e22ce; }
+
+.dlv-final-doc:last-child {
+  margin-bottom: 0;
+}
+
+.dlv-final-stars {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  background: transparent;
+}
+
+.dlv-final-star {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  cursor: pointer;
+  color: #cbd5e1;
+  line-height: 0;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+}
+
+.dlv-final-star:focus,
+.dlv-final-star:focus-visible,
+.dlv-final-star:active {
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.dlv-final-star.is-active,
+.dlv-final-star:hover {
+  color: #eab308;
+  background: transparent;
+}
+
+.dlv-final-feedback {
+  background: transparent;
+}
+
+.dlv-final-feedback textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 12px;
+  margin-bottom: 10px;
+  resize: vertical;
+  min-height: 64px;
+  background: #f8fafc;
+}
+
+.dlv-final-feedback textarea:focus {
+  outline: none;
+  border-color: #93c5fd;
+  background: #fff;
+}
+
+.dlv-final-feedback button[type="submit"],
+.dlv-final-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dlv-final-feedback button[type="submit"]:disabled,
+.dlv-final-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dlv-final-error {
+  color: #b91c1c;
+  font-size: 11px;
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.dlv-final-feedback-saved {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 600;
+  font-size: 12px;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+}
+
+.dlv-final-footer {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.dlv-final-footer p {
+  margin: 0 0 4px;
+}
+
+.dlv-final-footer a {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.dlv-final-spin {
+  animation: dlv-final-spin 0.8s linear infinite;
+}
+
+@keyframes dlv-final-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .dlv-final-box {
+    padding: 20px 16px;
+    border-radius: 14px;
+  }
+}

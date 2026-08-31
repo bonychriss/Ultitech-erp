@@ -1,0 +1,6 @@
+# Prevent execution of PHP in voucher upload directories
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.php$">
+    Require all denied
+  </FilesMatch>
+</IfModule>

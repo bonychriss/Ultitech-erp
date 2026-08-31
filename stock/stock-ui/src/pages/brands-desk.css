@@ -1,0 +1,272 @@
+/* Brands desk � extends products-desk + category form patterns */
+
+.brand-desk-modal {
+  width: min(34rem, calc(100vw - 2rem));
+  max-height: min(92vh, 46rem);
+  overflow: auto;
+  padding: 1.35rem 1.35rem 1.15rem;
+}
+
+.brand-desk-modal-title {
+  margin: 0 0 1.1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.brand-desk-form-row {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 0.65rem 0.85rem;
+  align-items: start;
+  margin-bottom: 0.9rem;
+}
+
+.brand-desk-form-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #334155;
+  padding-top: 0.65rem;
+}
+
+.brand-desk-form-label .req {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.brand-desk-input,
+.brand-desk-select,
+.brand-desk-textarea {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #0f172a;
+  background: #fff;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.brand-desk-textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+}
+
+.brand-desk-input:focus,
+.brand-desk-select:focus,
+.brand-desk-textarea:focus {
+  border-color: #a5b4fc;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.brand-desk-type {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.brand-desk-type--truck {
+  color: #dc2626;
+}
+
+.brand-desk-type--spare {
+  color: #2563eb;
+}
+
+.brand-desk-type--general {
+  color: #475569;
+}
+
+.brand-desk-logo {
+  width: 3rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #94a3b8;
+  padding: 0.2rem;
+  box-sizing: border-box;
+}
+
+.brand-desk-logo img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.brand-desk-logo img.is-visible,
+.brand-desk-logo.is-loaded img {
+  opacity: 1;
+}
+
+.brand-desk-logo.is-empty {
+  color: #cbd5e1;
+}
+
+.brand-desk-dropzone {
+  position: relative;
+  display: block;
+  min-height: 8.5rem;
+  padding: 0;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+}
+
+.brand-desk-dropzone:hover,
+.brand-desk-dropzone.is-dragging {
+  border-color: #818cf8;
+  background: #eef2ff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.brand-desk-dropzone.has-preview {
+  border-style: solid;
+  border-color: #e2e8f0;
+  background: #0f172a;
+  min-height: 0;
+}
+
+.brand-desk-dropzone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  min-height: 8.5rem;
+  padding: 0.85rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.brand-desk-dropzone-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.brand-desk-dropzone-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.brand-desk-dropzone-hint {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.brand-desk-dropzone-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 10rem;
+  padding: 0.75rem;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.brand-desk-dropzone-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.brand-desk-image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.brand-desk-image-actions .prod-desk-btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.brand-desk-spinner {
+  animation: brand-desk-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes brand-desk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.prod-desk-modal-btn:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+@media (max-width: 640px) {
+  .brand-desk-form-row {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
+  .brand-desk-form-label {
+    padding-top: 0;
+  }
+}
+
+html[data-theme='dark'] .brand-desk-modal-title {
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .brand-desk-input,
+html[data-theme='dark'] .brand-desk-select,
+html[data-theme='dark'] .brand-desk-textarea,
+html[data-theme='dark'] .brand-desk-logo,
+html[data-theme='dark'] .brand-desk-dropzone {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .brand-desk-form-label,
+html[data-theme='dark'] .brand-desk-dropzone-hint {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .brand-desk-dropzone-frame {
+  background: #0f172a;
+}

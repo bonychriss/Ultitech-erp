@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug React/Babel</title>
+    <!-- React & Babel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.10/babel.min.js"></script>
+</head>
+<body>
+    <h1>React Debug Test</h1>
+    <div id="react-root">Loading React component...</div>
+    
+    <script>
+        window.addEventListener('error', function (ev) {
+            document.body.innerHTML += '<div style="color:red">Global Error: ' + (ev.message || ev) + '</div>';
+        });
+        setTimeout(function() {
+            var el = document.getElementById('react-root');
+            if (el && el.innerHTML.indexOf('Loading') !== -1) {
+                el.innerHTML = '<span style="color:orange">Timeout: React did not load in 5 seconds.</span>';
+                document.body.innerHTML += '<pre>typeof React = ' + (typeof React) + '\ntypeof ReactDOM = ' + (typeof ReactDOM) + '\ntypeof Babel = ' + (typeof Babel) + '</pre>';
+            }
+        }, 5000);
+    </script>
+
+    <script type="text/babel">
+        console.log("Babel block executing!");
+        try {
+            const { useState } = React;
+            function App() {
+                const [count, setCount] = useState(0);
+                return (
+                    <div style={{ border: '2px solid green', padding: '20px' }}>
+                        <h2>React is successfully rendering!</h2>
+                        <button onClick={() => setCount(c => c + 1)}>Count: {count}</button>
+                    </div>
+                );
+            }
+            
+            const rootEl = document.getElementById('react-root');
+            const root = ReactDOM.createRoot(rootEl);
+            root.render(<App />);
+            console.log("React render called!");
+        } catch (e) {
+            document.body.innerHTML += '<div style="color:red">Babel Block Exception: ' + e.message + '</div>';
+        }
+    </script>
+</body>
+</html>

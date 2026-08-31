@@ -1,0 +1,4 @@
+# Internal tasks should not be reachable via HTTP
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>

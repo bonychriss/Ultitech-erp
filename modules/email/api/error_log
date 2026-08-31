@@ -1,0 +1,407 @@
+[29-Apr-2026 21:32:09 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:174
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(174): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 174
+[29-Apr-2026 21:33:10 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:174
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(174): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 174
+[29-Apr-2026 21:33:38 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:174
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(174): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 174
+[29-Apr-2026 21:34:09 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:174
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(174): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 174
+[29-Apr-2026 21:35:10 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:174
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(174): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 174
+[29-Apr-2026 21:36:10 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:174
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(174): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 174
+[29-Apr-2026 21:36:38 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:36:47 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:37:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:38:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:39:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:40:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:41:45 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:42:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:43:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:44:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:45:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:46:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:47:45 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:48:46 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:179
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(179): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 179
+[29-Apr-2026 21:55:04 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:175
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(175): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 175
+[29-Apr-2026 21:56:01 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:175
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(175): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 175
+[29-Apr-2026 21:56:30 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:176
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(176): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 176
+[29-Apr-2026 21:56:36 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:176
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(176): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 176
+[29-Apr-2026 21:57:35 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:176
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(176): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 176
+[29-Apr-2026 21:57:57 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:176
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(176): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 176
+[29-Apr-2026 21:58:18 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:176
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(176): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 176
+[29-Apr-2026 21:58:54 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDal be...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/sync.php:176
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/sync.php(176): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 176
+[29-Apr-2026 21:59:54 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 119
+[29-Apr-2026 22:00:04 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 119
+[29-Apr-2026 22:01:02 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 119
+[29-Apr-2026 22:02:02 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/modules/email/api/sync.php on line 119
+[29-Apr-2026 22:03:15 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/modules/email/api/mail_pull.php on line 119
+[29-Apr-2026 22:04:11 Africa/Kampala] PHP Parse error:  Unmatched '}' in /home/ultimate/public_html/staff/modules/email/api/mail_pull.php on line 119
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 77
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 77
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 77
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 77
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 77
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 77
+[29-Apr-2026 22:09:23 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:11:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:12:42 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:09 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:09 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:09 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:09 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:09 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:09 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:13:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:38 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 78
+[29-Apr-2026 22:14:45 Africa/Dar_es_Salaam] PHP Warning:  Undefined property: stdClass::$encoding in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 79
+[29-Apr-2026 22:49:38 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 22:50:38 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 22:51:16 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 22:52:11 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 22:52:21 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 22:53:19 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 22:54:19 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 23:03:48 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 23:04:46 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 23:06:28 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 23:06:56 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 23:07:26 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[29-Apr-2026 23:08:26 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/modules/email/api/data_check.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/api/data_check.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/api/data_check.php on line 84
+[30-Apr-2026 00:27:22 Africa/Dar_es_Salaam] SMTP Error: SMTP Error [501]: 501 <Official ace=<wolfwigans@gmail.com>>: "@" or "." expected after "Official"
+
+[30-Apr-2026 00:27:42 Africa/Dar_es_Salaam] SMTP Error: SMTP Error [501]: 501 <Official ace=<wolfwigans@gmail.com>>: "@" or "." expected after "Official"
+

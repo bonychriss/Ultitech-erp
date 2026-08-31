@@ -1,0 +1,15 @@
+[29-Apr-2026 21:07:00 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.module_emails' doesn't exist in /home/ultimate/public_html/staff/modules/email/index.php:51
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/index.php(51): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/index.php on line 51
+[29-Apr-2026 21:14:29 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.module_emails' doesn't exist in /home/ultimate/public_html/staff/modules/email/index.php:61
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/index.php(61): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/index.php on line 61
+[29-Apr-2026 21:14:36 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.module_emails' doesn't exist in /home/ultimate/public_html/staff/modules/email/index.php:61
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/email/index.php(61): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/email/index.php on line 61

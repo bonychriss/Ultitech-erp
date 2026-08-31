@@ -1,0 +1,2629 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* Hide legacy lock icon spans injected by cached scripts */
+body {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 300;
+}
+
+.lock-icon {
+    display: none !important;
+}
+
+/* Icon buttons/links */
+.icon-btn,
+.icon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    /* square edges */
+    border-radius: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.icon-link {
+    text-decoration: none;
+}
+
+.icon {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.icon-btn:hover,
+.icon-link:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.icon-neutral {
+    color: #444;
+}
+
+.icon-primary {
+    color: #2563eb;
+}
+
+.icon-black {
+    color: #000;
+}
+
+.icon-white {
+    color: #fff;
+}
+
+.icon-danger {
+    color: #c62828;
+}
+
+/* Mobile: enlarge tap targets */
+@media (max-width: 640px) {
+
+    .icon-btn,
+    .icon-link {
+        width: 36px;
+        height: 36px;
+        border-radius: 0;
+    }
+
+    .icon {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+@media print {
+    .voucher-header {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 36px;
+        margin-bottom: 12px;
+    }
+
+    .voucher-logo img {
+        height: 80px !important;
+        /* Match screen size */
+        width: auto !important;
+        margin-right: 20px;
+        vertical-align: middle;
+        background: transparent;
+        border-radius: 0;
+        box-shadow: none;
+        filter: none;
+    }
+
+    .voucher-title {
+        flex: 1;
+        text-align: center;
+        margin: 0;
+    }
+
+    .voucher-title h1 {
+        font-size: 56px;
+        font-weight: 800;
+        margin: 0;
+        color: #000;
+        letter-spacing: 2px;
+    }
+
+    .signature-cell.prepared-by {
+        display: none !important;
+    }
+}
+
+.voucher-logo img {
+    height: 80px;
+    /* Print voucher logo size */
+    width: auto;
+    margin-right: 16px;
+    vertical-align: middle;
+}
+
+.company-logo-img {
+    height: 70px;
+    /* Header logo size (increased) */
+    width: auto;
+    margin-right: 12px;
+    vertical-align: middle;
+}
+
+@media (max-width: 640px) {
+    .company-logo-img {
+        height: 52px;
+        margin-right: 8px;
+    }
+}
+
+.voucher-meta-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+
+.voucher-meta-table td {
+    padding: 6px 12px;
+    border: none;
+    font-size: 15px;
+    background: #fff;
+}
+
+@media print {
+    .voucher-meta-table td {
+        padding: 4px 10px;
+        font-size: 15px;
+        border: none;
+    }
+
+    .voucher-meta-table {
+        margin-bottom: 8px;
+    }
+}
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #1f2937;
+    /* slate-800 */
+    background-color: #f3f4f6;
+    /* gray-100 */
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Simple circular avatar for user initial */
+.avatar-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #000;
+    /* changed from blue to black */
+    color: #fff;
+    /* keep initial white */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    text-transform: uppercase;
+    user-select: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    margin-right: 10px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Login Page Styles */
+.login-page {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+}
+
+.login-box {
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+.company-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.logo-square {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(45deg, #f39c12, #e67e22);
+    margin-right: 15px;
+    position: relative;
+}
+
+.logo-square::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    width: 30px;
+    height: 30px;
+    background: #333;
+}
+
+.company-info h1,
+.company-info h2 {
+    margin: 0;
+    line-height: 1;
+}
+
+.company-info h1 {
+    font-size: 24px;
+    color: #f39c12;
+    font-weight: bold;
+}
+
+.company-info h2 {
+    font-size: 18px;
+    color: #333;
+    font-weight: bold;
+}
+
+.login-form {
+    margin-top: 30px;
+}
+
+.input-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 0;
+    font-size: 16px;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(45deg, #f39c12, #e67e22);
+    color: white;
+    border: none;
+    border-radius: 0;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.demo-credentials {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    font-size: 12px;
+    color: #666;
+}
+
+.error-message {
+    background: #ff4757;
+    color: white;
+    padding: 10px;
+    border-radius: 0;
+    margin-bottom: 20px;
+}
+
+.success-message {
+    background: #2ed573;
+    color: white;
+    padding: 10px;
+    border-radius: 0;
+    margin-bottom: 20px;
+}
+
+/* Dashboard Styles */
+.dashboard {
+    background: white;
+    min-height: 100vh;
+}
+
+.header {
+    position: -webkit-sticky;
+    /* Safari support */
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    background: #000;
+    /* pure black */
+    color: white;
+    padding: 20px 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+    width: 100%;
+}
+
+/* Ensure admin and employee headers also stick */
+.admin-header,
+.employee-header {
+    position: -webkit-sticky !important;
+    /* Safari support */
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 999 !important;
+}
+
+/* subtle glossy sheen overlay for a shiny effect */
+.header::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 18%, rgba(255, 255, 255, 0) 40%);
+    pointer-events: none;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.header-logo {
+    display: flex;
+    align-items: center;
+}
+
+.header-logo .logo-square {
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+}
+
+.header-info h1 {
+    font-size: 20px;
+    margin: 0;
+    color: #f1c40f;
+    /* yellow for company header */
+}
+
+.header-info h2 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: normal;
+}
+
+.user-info {
+    text-align: right;
+}
+
+/* Mobile: keep header items on one row */
+@media (max-width: 640px) {
+    .header {
+        padding: 12px 0;
+    }
+
+    .header-content {
+        padding: 0 12px;
+        gap: 10px;
+        flex-direction: row !important;
+    }
+
+    .header-logo {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        width: auto;
+    }
+
+    .header .header-info {
+        position: static !important;
+        transform: none !important;
+        width: auto !important;
+        pointer-events: auto !important;
+        text-align: left;
+    }
+
+    .header .header-info h1 {
+        font-size: 16px;
+    }
+
+    .header .header-info h2 {
+        font-size: 12px;
+    }
+
+    .header .user-info {
+        width: auto;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: nowrap;
+        text-align: right;
+    }
+
+    /* Hide text block (name/role) to reduce clutter on small screens */
+    .header .user-info>div {
+        display: none;
+    }
+}
+
+/* Reduce username and department text sizes in header */
+.header .user-info>div p {
+    margin: 2px 0;
+    line-height: 1.2;
+    font-size: 12px;
+}
+
+.header .user-info>div p:first-child {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.logout-btn {
+    background: transparent;
+    color: #e74c3c;
+    text-decoration: none;
+    padding: 0;
+    border-radius: 0;
+    margin-top: 5px;
+    display: inline;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.logout-btn:hover {
+    color: #c0392b;
+    text-decoration: underline;
+}
+
+.notif {
+    position: relative;
+    margin-right: 12px;
+}
+
+.notif .badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 999px;
+    padding: 0 6px;
+    font-size: 11px;
+    line-height: 18px;
+    min-width: 18px;
+    text-align: center;
+}
+
+.notif-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    margin-top: 12px;
+    background: #fff;
+    color: #111;
+    width: 600px !important;
+    max-height: 600px;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    z-index: 1001;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+    transition: opacity .15s ease, transform .2s ease;
+}
+
+.notif-dropdown.open {
+    display: block;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.notif-dropdown::before {
+    content: "";
+    position: absolute;
+    right: 16px;
+    top: -8px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-left: 1px solid #e5e7eb;
+    border-top: 1px solid #e5e7eb;
+    transform: rotate(45deg);
+}
+
+.notif-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+}
+
+.notif-dropdown .item {
+    display: block;
+    padding: 12px 14px;
+    border-bottom: 1px solid #f3f4f6;
+    text-decoration: none;
+    color: inherit;
+}
+
+.notif-dropdown .item:hover {
+    background: #f9fafb;
+}
+
+.notif-dropdown .empty {
+    padding: 12px;
+    color: #6b7280;
+}
+
+.notif-actions {
+    padding: 10px;
+    text-align: right;
+}
+
+.notif-actions form {
+    display: inline;
+}
+
+.notif-dropdown .titlebar {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    border-bottom: 1px solid #eef2f7;
+    border-radius: 12px 12px 0 0;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+}
+
+.notif-dropdown .titlebar .title {
+    font-weight: 700;
+    color: #111827;
+}
+
+.notif-dropdown .titlebar a {
+    font-size: 12px;
+    text-decoration: none;
+    color: #2563eb;
+}
+
+.notif-dropdown .item.unread {
+    background: #f8fafc;
+    border-left: 3px solid #2563eb;
+}
+
+.notif-dropdown .item .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #2563eb;
+    display: inline-block;
+    margin-right: 6px;
+}
+
+.main-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+@media (max-width: 640px) {
+    .main-content {
+        padding: 16px 12px;
+    }
+}
+
+/* Recent Vouchers table: keep desktop appearance on mobile with horizontal scroll */
+@media (max-width: 640px) {
+
+    /* Override mobile styles for recent vouchers tables - keep desktop appearance */
+    body.dashboard .table-wrap.recent-vouchers-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+        margin: 0;
+        position: relative;
+        /* Smooth scrolling */
+        scroll-behavior: smooth;
+    }
+
+    /* Ensure table maintains desktop width */
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee {
+        min-width: 900px !important;
+        /* Full desktop width */
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    /* Keep desktop styling for recent vouchers tables - override mobile styles */
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin th,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin td,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee th,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee td {
+        padding: 10px !important;
+        /* Desktop padding */
+        font-size: 12px !important;
+        /* Desktop font size */
+        line-height: 1.5 !important;
+        /* Desktop line height */
+        white-space: nowrap !important;
+        /* Prevent text wrapping */
+    }
+
+    /* Show small text that was hidden on mobile */
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin td small,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee td small {
+        display: inline-block !important;
+        font-size: 11px !important;
+        margin-top: 2px;
+        white-space: normal;
+        /* Allow small text to wrap */
+    }
+
+    /* Desktop icon sizes */
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin .icon,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee .icon {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    /* Desktop link/button sizes */
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin .mark-paid-link,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee .mark-paid-link {
+        font-size: 14px !important;
+    }
+
+    /* Prevent stacked/card view - keep table layout */
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee {
+        border: 1px solid #e5e7eb !important;
+        border-collapse: collapse !important;
+        display: table !important;
+    }
+
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin thead,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee thead {
+        display: table-header-group !important;
+    }
+
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin tbody,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee tbody {
+        display: table-row-group !important;
+    }
+
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin tr,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee tr {
+        display: table-row !important;
+    }
+
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin td,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee td {
+        display: table-cell !important;
+        grid-template-columns: none !important;
+        padding: 10px !important;
+        border-bottom: 1px solid #eee !important;
+        border-right: none !important;
+        vertical-align: middle !important;
+    }
+
+    /* Hide data-label pseudo-elements from stacked view */
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin td::before,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee td::before {
+        display: none !important;
+        content: none !important;
+    }
+
+    /* Show ALL columns - override any hiding rules */
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee thead tr th:nth-child(n),
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee tbody tr td:nth-child(n),
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin thead tr th:nth-child(n),
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin tbody tr td:nth-child(n) {
+        display: table-cell !important;
+    }
+
+    /* Ensure buttons and actions are visible and properly sized */
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-admin .btn,
+    body.dashboard .table-wrap.recent-vouchers-wrapper table.recent-employee .btn {
+        padding: 5px 10px !important;
+        font-size: 12px !important;
+        white-space: nowrap;
+    }
+}
+
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+    border-left: 3px solid #2563eb;
+    /* blue accent */
+}
+
+.stat-number {
+    font-size: 22px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 12px;
+}
+
+/* Mobile: smaller, sharp-edged stat cards */
+@media (max-width: 640px) {
+    .dashboard-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .stat-card {
+        padding: 6px;
+        border-radius: 0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-number {
+        font-size: 16px;
+    }
+
+    .stat-label {
+        font-size: 10px;
+    }
+}
+
+
+
+.actions {
+    margin-bottom: 30px;
+}
+
+.btn {
+    padding: 12px 24px;
+    background: #2563eb;
+    /* primary blue */
+    color: white;
+    text-decoration: none;
+    border-radius: 0;
+    display: inline-block;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn:hover {
+    background: #1d4ed8;
+    /* darker blue */
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #9ca3af;
+    /* gray-400 */
+    color: #111827;
+}
+
+.btn-secondary:hover {
+    background: #6b7280;
+    /* gray-500 */
+    color: #fff;
+}
+
+.btn-success {
+    background: #27ae60;
+}
+
+.btn-success:hover {
+    background: #229954;
+}
+
+.btn-danger {
+    background: #e74c3c;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+/* Link-style action for Mark Paid (green text, no button chrome) */
+.mark-paid-link {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: #27ae60;
+    /* green */
+    font-weight: 300;
+    /* light */
+    cursor: pointer;
+    font-size: inherit;
+}
+
+.mark-paid-link:hover {
+    color: #229954;
+}
+
+/* Payment Voucher Styles - Exact replica from image */
+.voucher-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background: white;
+    border: 2px solid #000;
+    /* outer strong border like reference */
+    padding: 0;
+    font-family: 'Courier New', Courier, monospace;
+    /* match printed voucher look */
+}
+
+/* Modern card layout for voucher view */
+.voucher-card {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 6px 24px rgba(16, 24, 40, 0.06);
+    border-radius: 0;
+    overflow: hidden;
+}
+
+.voucher-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    background: linear-gradient(90deg, #ffffff, #fafafa);
+    border-bottom: 1px solid #edf2f7;
+}
+
+.voucher-company-name {
+    font-weight: 800;
+    font-size: 18px;
+    color: #111827;
+}
+
+.voucher-company-sub {
+    color: #6b7280;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.voucher-meta div {
+    margin-bottom: 6px;
+    color: #374151;
+}
+
+.voucher-meta strong {
+    color: #111827;
+    margin-right: 6px;
+}
+
+.voucher-card-body {
+    padding: 20px 24px;
+    background: white;
+}
+
+.voucher-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.summary-item {
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 0;
+}
+
+.summary-label {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.summary-value {
+    font-weight: 700;
+    font-size: 16px;
+    color: #111827;
+    margin-top: 6px;
+}
+
+.voucher-description {
+    margin: 12px 0 18px;
+    color: #374151;
+}
+
+.description-text {
+    margin-top: 6px;
+    padding: 10px;
+    background: #f9fafb;
+    border-radius: 0;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.modern-table {
+    border: 1px solid #e6e6e6;
+    border-radius: 0;
+    overflow: hidden;
+}
+
+.modern-table thead th {
+    background: #f3f4f6;
+    color: #111827;
+    font-weight: 700;
+    border-bottom: 1px solid #e6e6e6;
+}
+
+.modern-table td,
+.modern-table th {
+    padding: 12px 14px;
+    border-right: 1px solid #f1f5f9;
+}
+
+.modern-table tbody tr:nth-child(even) {
+    background: #ffffff;
+}
+
+.modern-table tfoot td {
+    background: #fafafa;
+}
+
+.modern-signatures {
+    display: flex;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.signature-item {
+    flex: 1;
+    text-align: center;
+}
+
+.signature-line {
+    height: 36px;
+    border-bottom: 1px dashed #cbd5e1;
+    margin-bottom: 8px;
+}
+
+.signature-title {
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.signature-name {
+    color: #6b7280;
+}
+
+/* Make sure voucher table amount cell aligns right */
+.modern-table .amount-cell {
+    text-align: right;
+}
+
+/* Generic responsive table wrapper */
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Ensure data tables keep readable layout and allow horizontal scroll on small screens */
+@media (max-width: 640px) {
+    .table-wrap .data-table {
+        min-width: 720px;
+    }
+}
+
+/* Attachments: allow sideways scroll on mobile */
+@media (max-width: 640px) {
+    #attachments .attachments-grid {
+        display: block !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        padding-bottom: 6px;
+    }
+
+    #attachments .attachments-grid .att-card {
+        display: inline-block;
+        vertical-align: top;
+        width: 220px;
+        margin-right: 10px;
+        white-space: normal;
+    }
+}
+
+/* Optional stacked card view for very small screens - EXCEPT recent vouchers */
+@media (max-width: 480px) {
+    .stacked-table table.data-table:not(.recent-admin):not(.recent-employee) {
+        border: 0;
+    }
+
+    .stacked-table table.data-table:not(.recent-admin):not(.recent-employee) thead {
+        display: none;
+    }
+
+    .stacked-table table.data-table:not(.recent-admin):not(.recent-employee) tr {
+        display: block;
+        margin-bottom: 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .stacked-table table.data-table:not(.recent-admin):not(.recent-employee) td {
+        display: grid;
+        grid-template-columns: 40% 60%;
+        gap: 8px;
+        padding: 10px 12px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .stacked-table table.data-table:not(.recent-admin):not(.recent-employee) td:last-child {
+        border-bottom: 0;
+    }
+
+    .stacked-table table.data-table:not(.recent-admin):not(.recent-employee) td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #374151;
+    }
+}
+
+/* Hide old heavy borders for modern view when screen is small */
+@media (max-width: 768px) {
+    .voucher-card {
+        margin: 0 12px;
+    }
+
+    .voucher-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
+
+/* Toast / popup notifications */
+.toast-container {
+    position: fixed;
+    left: 50%;
+    top: calc(env(safe-area-inset-top, 0px) + 16px);
+    transform: translateX(-50%);
+    z-index: 2000;
+    pointer-events: none;
+    /* clicks go through */
+}
+
+.toast {
+    background: rgba(17, 24, 39, 0.98);
+    /* near-black */
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transform: translate(-50%, -10px);
+    position: relative;
+    left: 50%;
+    transition: opacity .25s ease, transform .25s ease;
+    pointer-events: auto;
+    /* allow focus for a11y if needed */
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.toast.hide {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+}
+
+/* Reserve space when mobile footer is present */
+@media (max-width: 640px) {
+    body.has-mobile-footer {
+        padding-bottom: 72px;
+    }
+}
+
+/* Ensure mobile footer can't be shifted horizontally by accidental scroll */
+@media (max-width:640px) {
+
+    html,
+    body {
+        overflow-x: hidden;
+    }
+
+    .mobile-footer {
+        left: 0;
+        right: 0;
+        width: 100vw;
+        max-width: 100vw;
+    }
+
+    .mobile-footer .bar {
+        margin: 0 auto;
+        width: 100%;
+    }
+}
+
+/* Table-based voucher layout helpers */
+.voucher-table-full {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+}
+
+.voucher-table-full td,
+.voucher-table-full th {
+    padding: 10px 14px;
+    border: 1px solid #000;
+    vertical-align: top;
+    line-height: 1.25;
+    font-size: 14px;
+}
+
+.voucher-table-full {
+    table-layout: fixed;
+}
+
+.voucher-table-full td.label {
+    width: 18%;
+    font-weight: 700;
+    background: #f8fafc;
+}
+
+.voucher-table-full thead th {
+    border: none;
+    background: transparent;
+}
+
+/* Ensure voucher-table (items table) renders well in table layout */
+.voucher-table th,
+.voucher-table td {
+    border: none;
+    padding: 6px 8px;
+}
+
+.voucher-table tfoot td {
+    border-top: none;
+}
+
+.voucher-header {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    /* header background matches reference */
+    padding: 15px 20px;
+    border-bottom: 2px solid #000;
+}
+
+.voucher-logo {
+    display: flex;
+    align-items: center;
+    margin-right: 30px;
+}
+
+.voucher-logo .logo-square {
+    width: 60px;
+    height: 60px;
+    background: #f4b400;
+    /* richer yellow similar to image */
+    border: 3px solid #000;
+    margin-right: 15px;
+    position: relative;
+}
+
+.voucher-logo .logo-square::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    width: 25px;
+    height: 25px;
+    background: #000;
+}
+
+.voucher-company-info h1 {
+    font-size: 28px;
+    font-weight: bold;
+    margin: 0;
+    line-height: 1;
+    color: #000;
+}
+
+.voucher-company-info h2 {
+    font-size: 22px;
+    font-weight: bold;
+    margin: 0;
+    line-height: 1;
+    color: #000;
+}
+
+.voucher-title {
+    flex-grow: 1;
+    text-align: center;
+}
+
+.voucher-title h1 {
+    font-size: 56px;
+    font-weight: 800;
+    margin: 0;
+    color: #000;
+    letter-spacing: 2px;
+}
+
+.voucher-info {
+    padding: 0;
+}
+
+.voucher-info-row {
+    display: flex;
+    border-bottom: 1px solid #000;
+}
+
+.voucher-info-cell {
+    padding: 12px 15px;
+    border-right: 1px solid #000;
+    font-weight: bold;
+    background: #ffffff;
+    /* labels background white per reference */
+}
+
+.voucher-info-cell:last-child {
+    border-right: none;
+}
+
+.voucher-info-cell.value {
+    background: white;
+    font-weight: normal;
+}
+
+.voucher-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.voucher-table th {
+    background: #ffffff;
+    /* header cells white like reference */
+    padding: 10px 12px;
+    border: 1px solid #000;
+    font-weight: bold;
+    text-align: left;
+    font-size: 14px;
+}
+
+.voucher-table td {
+    padding: 12px 12px;
+    border: 1px solid #000;
+    vertical-align: top;
+    font-size: 14px;
+}
+
+.voucher-table .amount-cell {
+    text-align: right;
+    font-weight: bold;
+}
+
+.voucher-body {
+    padding: 0;
+}
+
+.voucher-signatures {
+    display: block;
+    /* Change from flex to block to allow rows */
+    border-top: 2px solid #000;
+}
+
+.signature-row {
+    display: flex;
+    border-bottom: 1px solid #000;
+}
+
+.signature-row:last-child {
+    border-bottom: none;
+}
+
+.signature-cell {
+    flex: 1;
+    padding: 20px 10px 10px;
+    text-align: center;
+    background: transparent;
+    font-weight: normal;
+    min-height: 60px;
+}
+
+.signature-cell:last-child {
+    border-right: none;
+}
+
+.signature-cell:first-child {
+    border-right: 1px solid #000;
+}
+
+
+.signature-line {
+    border-bottom: 1px solid #000;
+    margin-bottom: 4px;
+    height: 18px;
+}
+
+/* Printed signature image */
+.signature-img {
+    max-height: 52px;
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 0 4px 8px;
+}
+
+/* Form Styles */
+.form-container {
+    background: white;
+    padding: 30px;
+    border-radius: 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+/* Attendance sign page UI refinements */
+.attendance-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.attendance-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.attendance-card-body {
+    padding: 12px;
+}
+
+.status-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.status-row .label {
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.status-row .value {
+    font-weight: 600;
+    color: #111827;
+}
+
+.status-chip {
+    display: inline-block;
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #111827;
+}
+
+.status-chip.status-in {
+    border-color: #059669;
+    color: #065f46;
+}
+
+.status-chip.status-out {
+    border-color: #dc2626;
+    color: #7f1d1d;
+}
+
+.distance-meter {
+    margin-top: 6px;
+}
+
+.distance-meter .label {
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.distance-meter .value {
+    font-weight: 600;
+    color: #111827;
+}
+
+.sign-actions .btn {
+    min-width: 120px;
+}
+
+@media (max-width: 640px) {
+    .attendance-card-header {
+        padding: 8px 10px;
+    }
+
+    .attendance-card-body {
+        padding: 10px;
+    }
+
+    .sign-actions {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .sign-actions .btn {
+        width: 100%;
+    }
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 0;
+    font-size: 16px;
+}
+
+/* Ensure all inputs, selects, and textareas have sharp edges */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="file"],
+input[type="search"],
+select,
+textarea {
+    border-radius: 0 !important;
+}
+
+/* Ensure all buttons have sharp edges */
+button,
+.btn,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+    border-radius: 0 !important;
+}
+
+/* Modern status grid for voucher view */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px 20px;
+}
+
+.status-item .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.status-item .value {
+    font-weight: 600;
+    color: #111827;
+    word-break: break-word;
+}
+
+.form-group textarea {
+    height: 100px;
+    resize: vertical;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.voucher-items {
+    margin: 30px 0;
+}
+
+.voucher-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 100px;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #f8f8f8;
+    border-radius: 0;
+    align-items: end;
+}
+
+.remove-item {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 0;
+    cursor: pointer;
+    height: 40px;
+}
+
+.add-item {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 0;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.total-amount {
+    text-align: right;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 20px 0;
+    padding: 15px;
+    background: #e8f4f8;
+    border-radius: 0;
+}
+
+/* Table Styles */
+.data-table {
+    width: 100%;
+    background: white;
+    border-radius: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.data-table th {
+    background: #1f2937;
+    /* dark gray/blue */
+    color: white;
+    padding: 15px;
+    text-align: left;
+    font-weight: bold;
+}
+
+.data-table td {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.data-table tr:hover {
+    background: #f8f8f8;
+}
+
+
+/* Status as plain colored text (no pill/badge styling) */
+.status-badge {
+    padding: 0;
+    border-radius: 0;
+    background: transparent !important;
+    font-size: inherit;
+    font-weight: inherit;
+    text-transform: none;
+}
+
+.status-pending {
+    color: #2563eb;
+}
+
+.status-approved {
+    color: #27ae60;
+}
+
+.status-rejected {
+    color: #e74c3c;
+}
+
+/* Print Styles */
+@page {
+    size: A4;
+    margin: 20mm;
+}
+
+/* Print-specific helpers */
+.print-only {
+    display: none;
+}
+
+@media print {
+    body {
+        background: #fff !important;
+        font-size: 10pt;
+        /* Standardize print font size */
+        margin: 0;
+        color: #000;
+    }
+
+    .print-only {
+        display: block !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .voucher-container {
+        border: 2px solid #000 !important;
+        /* Ensure the main border is strong */
+        box-shadow: none !important;
+        margin: 0 !important;
+        max-width: none !important;
+        width: 100%;
+        page-break-inside: avoid;
+        /* Try to keep the voucher on one page */
+    }
+
+    /* Hide other UI pieces for print */
+    .header,
+    .main-content>*:not(.voucher-container) {
+        display: none !important;
+    }
+
+    /* Force background and color printing */
+    .voucher-header,
+    .voucher-info-cell,
+    .voucher-table th,
+    .signature-cell {
+        background-color: #fff !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Adjust padding for a tighter print layout */
+    .voucher-header {
+        padding: 10px 15px;
+    }
+
+    .voucher-info-cell {
+        padding: 8px 10px;
+    }
+
+    .voucher-table th,
+    .voucher-table td {
+        padding: 8px 10px;
+        font-size: 10pt;
+    }
+
+    .signature-cell {
+        padding: 15px 10px 5px;
+    }
+
+    .signature-line {
+        height: 25px;
+        /* Give more space for signing */
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: row;
+        /* keep a single row for logo, heading, logout */
+        gap: 12px;
+    }
+
+    .dashboard-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .voucher-item {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .voucher-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+
+    .voucher-info-row {
+        flex-direction: column;
+    }
+
+    .voucher-info-cell {
+        border-right: none;
+        border-bottom: 1px solid #000;
+    }
+
+    .voucher-signatures {
+        flex-direction: column;
+    }
+
+    .signature-cell {
+        border-right: none;
+        border-bottom: 1px solid #000;
+    }
+
+    .data-table:not(.recent-admin):not(.recent-employee) {
+        font-size: 14px;
+    }
+
+    .data-table:not(.recent-admin):not(.recent-employee) th,
+    .data-table:not(.recent-admin):not(.recent-employee) td {
+        padding: 10px 5px;
+    }
+}
+
+/* --- Enerpize-Style Sidebar Overrides --- */
+#mobileMenu {
+    background-color: #ffffff !important;
+    border-right: 1px solid #f1f5f9;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.05);
+}
+
+/* Header inside Sidebar */
+#mobileMenu .mobile-menu-header {
+    background: #ffffff;
+    border-bottom: 1px solid #f8fafc;
+    padding: 20px;
+}
+
+#mobileMenu .mobile-menu-header h3 {
+    color: #1e293b;
+    /* Slate-800 */
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+#mobileMenu .mobile-menu-header p {
+    color: #64748b;
+    /* Slate-500 */
+    font-size: 13px;
+}
+
+/* Sidebar Search */
+#sidebarSearchInput {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 14px;
+    margin-top: 12px;
+}
+
+#sidebarSearchInput::placeholder {
+    color: #94a3b8;
+}
+
+#sidebarSearchInput:focus {
+    background: #fff;
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Navigation Items */
+.mobile-menu-item {
+    color: #64748b !important;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 12px 24px;
+    border-left: 3px solid transparent;
+    /* default border */
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.mobile-menu-item .icon {
+    color: #94a3b8;
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    transition: stroke 0.2s;
+}
+
+.mobile-menu-item:hover {
+    background-color: #f8fafc;
+    color: #0f172a !important;
+    /* Darker slate */
+    border-left-color: #cbd5e1;
+}
+
+.mobile-menu-item:hover .icon {
+    color: #475569;
+    /* Darker slate icon */
+}
+
+/* Active State - simulating (if user adds .active class in PHP later) */
+.mobile-menu-item.active {
+    background-color: #eff6ff;
+    color: #2563eb !important;
+    border-left-color: #2563eb;
+}
+
+.mobile-menu-item.active .icon {
+    color: #2563eb;
+    stroke: #2563eb;
+}
+
+/* Section Titles */
+.mobile-menu-section-title {
+    padding: 16px 24px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+}
+
+
+/* --- Collapsible Sidebar Features --- */
+
+/* Show Hamburger on Desktop for Toggling */
+@media (min-width: 897px) {
+    .hamburger-menu {
+        display: inline-flex !important;
+        margin-right: 15px;
+    }
+}
+
+/* Collapsed State (Desktop Only) */
+@media (min-width: 897px) {
+
+    /* Sidebar Width Transition */
+    #sidebar {
+        transition: width 0.2s ease;
+    }
+
+    /* Collapsed Sidebar State */
+    body.sidebar-collapsed {
+        padding-left: 72px;
+        /* Standard mini-sidebar width */
+    }
+
+    body.sidebar-collapsed .header,
+    body.sidebar-collapsed .admin-header,
+    body.sidebar-collapsed .employee-header {
+        left: 72px !important;
+        width: calc(100% - 72px) !important;
+    }
+
+    body.sidebar-collapsed #sidebar {
+        width: 72px !important;
+        overflow-x: hidden;
+        /* Hide horizontal overflow */
+    }
+
+    /* Hide text labels and branding in collapsed mode */
+    body.sidebar-collapsed #sidebar .sidebar-label,
+    body.sidebar-collapsed #sidebar .text,
+    body.sidebar-collapsed #sidebar .sidebar-brand {
+        display: none !important;
+    }
+
+    /* Ensure icon container is centered and large enough */
+    body.sidebar-collapsed #sidebar .menu-item a {
+        padding: 12px 0;
+        /* Vertical padding only */
+        justify-content: center;
+        /* Center icon */
+    }
+
+    body.sidebar-collapsed #sidebar .d-icon {
+        margin-right: 0;
+        /* Remove right margin */
+        width: 40px;
+        height: 40px;
+        justify-content: center;
+    }
+
+    /* Ensure arrow is hidden in collapsed mode */
+    body.sidebar-collapsed #sidebar .menu-item.active::after {
+        display: none;
+    }
+
+    /* Show a mini logo or just an icon if user wants (optional) */
+    /* For now, we hide the main brand area to keep it clean */
+    body.sidebar-collapsed #mobileMenu .mobile-menu-item span[style*='float: right'] {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        font-size: 9px !important;
+        padding: 2px 4px !important;
+    }
+
+    /* Hide Text Labels (using font-size 0 hack for text nodes) */
+    body.sidebar-collapsed .mobile-menu-item {
+        font-size: 0 !important;
+        justify-content: center;
+        padding: 15px 0;
+        position: relative;
+    }
+
+    /* Ensure Icons stay visible and sized */
+    body.sidebar-collapsed .mobile-menu-item .icon {
+        margin-right: 0;
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Adjust Header inside collapsed sidebar */
+    body.sidebar-collapsed #mobileMenu .mobile-menu-header {
+        padding: 20px 0;
+        display: flex;
+        justify-content: center;
+    }
+
+    /* Show a small placeholder logo or icon if needed - using the company logo link wrapper */
+    body.sidebar-collapsed .company-logo-link {
+        margin: 0 !important;
+        width: 40px;
+        height: 40px;
+        background: #f1f5f9;
+        border-radius: 50%;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+    body.sidebar-collapsed .company-logo-link:after {
+        content: 'U';
+        /* Fallback initial */
+        font-weight: 800;
+        font-size: 20px;
+        color: #64748b;
+    }
+}
+
+/* --- FINALIZED SIDEBAR & LAYOUT STYLES --- */
+
+/* 1. Sidebar Base Styles */
+#sidebar {
+    display: none;
+    /* Mobile default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    background: #ffffff;
+    z-index: 9999;
+    box-shadow: 1px 0 0 #f1f1f1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: width 0.2s ease;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    /* Hide scrollbar for cleaner look */
+    scrollbar-width: thin;
+}
+
+#sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 3px;
+}
+
+.sidebar-brand {
+    padding: 0;
+    /* Let flex handle padding inside if needed, or keeping explicit */
+    height: 60px;
+    /* Fixed height for branding area */
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+    border-bottom: 1px solid #f9fafb;
+}
+
+.sidebar-logo {
+    max-width: 120px;
+    height: auto;
+    max-height: 40px;
+    transition: all 0.2s;
+}
+
+.sidebar-menu-container {
+    padding: 10px 0;
+}
+
+.sidebar-label {
+    padding: 12px 24px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* --- VFD ENTERPRISE THEME --- */
+
+/* 1. Global Theme Vars */
+:root {
+    --primary-blue: #0088cc;
+    /* VFD Blue */
+    --hover-bg: #f8f9fa;
+    --text-dark: #333333;
+    --sidebar-width: 260px;
+    --header-height: 70px;
+}
+
+/* --- Header & Sidebar Polish (New) --- */
+
+@media (max-width: 768px) {
+    .company-logo-text {
+        display: none;
+    }
+}
+
+.sidebar-label {
+    list-style: none;
+    padding: 24px 24px 8px;
+    color: #adb5bd;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    user-select: none;
+}
+
+.sidebar-menu .sidebar-label:first-child {
+    padding-top: 10px;
+}
+
+/* 2. Sidebar Layout */
+#sidebar {
+    background: #ffffff;
+    border-right: 1px solid #dee2e6;
+    padding-top: 0;
+    /* Other properties handled by unified logic block, focusing on aesthetics here */
+}
+
+/* Sidebar Brand */
+.sidebar-logo {
+    height: 40px;
+    width: auto;
+    margin: 15px 20px;
+}
+
+/* Sidebar Menu Items (Flat Full-Width) */
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0 0;
+}
+
+.menu-item {
+    margin: 0;
+    /* No margins, full width */
+    width: 100%;
+}
+
+.menu-item a {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    /* Spacious padding */
+    color: var(--text-dark);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 400;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+    /* Selection indicator space */
+}
+
+/* Icons - White with Black Borders */
+.menu-item .d-icon .icon {
+    width: 18px;
+    height: 18px;
+    stroke: #000000;
+    /* Black Border */
+    fill: #ffffff;
+    /* White Body */
+    stroke-width: 1.5;
+    /* Slightly thinner for clean outline */
+}
+
+.menu-item .text {
+    flex-grow: 1;
+    margin-left: 12px;
+}
+
+/* Chevron */
+.menu-chevron {
+    display: none;
+    color: #999;
+}
+
+/* Hover State */
+.menu-item a:hover {
+    background-color: #f3f4f6;
+    color: #000000;
+    border-left-color: #000000;
+}
+
+.menu-item a:hover .d-icon .icon {
+    stroke: #000000;
+    fill: #ffffff;
+}
+
+/* Active State */
+.menu-item.active a {
+    background-color: #e5e7eb;
+    color: #000000 !important;
+    font-weight: 700;
+    border-left-color: #000000;
+}
+
+.menu-item.active .d-icon .icon {
+    stroke: #000000;
+    fill: #ffffff;
+}
+
+.menu-item.active .menu-chevron {
+    color: #000000;
+}
+
+/* Collapsed Sidebar Aesthetics */
+body.sidebar-collapsed .menu-item a {
+    padding: 12px 0;
+    justify-content: center;
+}
+
+body.sidebar-collapsed .menu-chevron {
+    display: none;
+}
+
+
+/* 3. Header Styling */
+.header,
+.admin-header,
+.employee-header {
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    /* Minimal shadow */
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+}
+
+.header-content {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    /* Add some padding edges */
+}
+
+/* Square Hamburger */
+/* Square Hamburger Reverted - FIX VISIBILITY */
+.hamburger-menu {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 8px;
+    color: #0088cc !important;
+    width: 36px;
+    height: 36px;
+    z-index: 1001;
+}
+
+.hamburger-menu .icon {
+    width: 20px !important;
+    height: 20px !important;
+    stroke: #0088cc !important;
+    stroke-width: 2;
+}
+
+.hamburger-menu:hover {
+    background: #f1f1f1;
+}
+
+/* Date/Time Widget removed */
+/* User Profile Silhouette removed */
+
+
+/* 4. Table Styling (Blue Headers) */
+.table thead th {
+    background-color: var(--primary-blue) !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 13px;
+    padding: 12px;
+    border: none;
+    white-space: nowrap;
+}
+
+.table tbody td {
+    border-bottom: 1px solid #dee2e6;
+    padding: 12px;
+    vertical-align: middle;
+    color: #333;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f8ff;
+    /* Very light blue hover */
+}
+
+/* Action Buttons in Table */
+.btn-action-icon {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    /* Square */
+    color: white;
+    margin: 0 2px;
+}
+
+.btn-view {
+    background-color: #17a2b8;
+}
+
+.btn-edit {
+    background-color: #28a745;
+}
+
+.btn-delete {
+    background-color: #dc3545;
+}
+
+/* Desktop Overrides for Layout */
+@media (min-width: 1024px) {
+    #sidebar {
+        margin-top: 0;
+    }
+
+    /* The layout unified logic handles positioning, this handles visuals */
+}
+
+.user-info {
+    border-left: 1px solid #e5e7eb;
+    padding-left: 16px;
+    margin-left: 16px;
+    gap: 12px !important;
+}
+
+.logout-btn {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #dc2626 !important;
+    /* Soft Red */
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    transition: background 0.2s !important;
+}
+
+.logout-btn:hover {
+    background: #fef2f2 !important;
+    text-decoration: none !important;
+}
+
+/* Hamburger Menu refined */
+.hamburger-menu {
+    border-radius: 8px !important;
+    padding: 8px !important;
+    margin-right: 12px !important;
+    color: #4b5563 !important;
+    transition: background 0.2s !important;
+}
+
+.hamburger-menu:hover {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+}
+
+/* 4. Collapsed Sidebar - Tooltips & Polish */
+body.sidebar-collapsed .sidebar-menu {
+    padding: 0 8px !important;
+}
+
+body.sidebar-collapsed .menu-item a {
+    padding: 12px !important;
+    justify-content: center !important;
+}
+
+body.sidebar-collapsed .menu-item .d-icon {
+    margin-right: 0 !important;
+}
+
+body.sidebar-collapsed .sidebar-label {
+    display: none !important;
+}
+
+/* Collapsed Logo */
+body.sidebar-collapsed .sidebar-logo {
+    width: 28px !important;
+    height: 28px !important;
+    opacity: 0.8;
+}
+
+/* --- UNIFIED SIDEBAR (Refactored) --- */
+
+/* 1. Base Sidebar (Mobile Default - Hidden Drawer) */
+#sidebar {
+    display: block !important;
+    position: fixed;
+    top: 0 !important;
+    bottom: 0;
+    left: -280px;
+    /* Hidden off-screen */
+    width: 250px;
+    height: 100vh !important;
+    z-index: 2000 !important;
+    /* Above everything including header */
+    background: #ffffff;
+    border-right: 1px solid #f3f4f6;
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s ease, width 0.2s ease !important;
+    overflow-y: auto;
+    padding-top: 0;
+}
+
+/* Close button inside sidebar (Visible on mobile only) */
+.sidebar-close-btn {
+    display: flex;
+    justify-content: flex-end;
+    padding: 16px;
+    cursor: pointer;
+    color: #6b7280;
+}
+
+.sidebar-close-btn:hover {
+    color: #111827;
+}
+
+/* 2. Mobile Open State */
+body.sidebar-mobile-open #sidebar {
+    left: 0 !important;
+    transform: none !important;
+}
+
+/* Mobile Backdrop */
+.mobile-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+body.sidebar-mobile-open .mobile-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* 3. Desktop Dock State (Overwrites Mobile) */
+@media (min-width: 1024px) {
+    #sidebar {
+        left: 0 !important;
+        /* Always visible */
+        top: 0 !important;
+        /* Full height */
+        height: 100vh !important;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
+        z-index: 998 !important;
+        /* Below header z-index */
+    }
+
+    .sidebar-close-btn {
+        display: none !important;
+        /* No close button on desktop */
+    }
+
+    /* Collapsed State Logic */
+    body.sidebar-collapsed #sidebar {
+        width: 72px !important;
+    }
+
+    body.sidebar-collapsed .sidebar-label,
+    body.sidebar-collapsed .text {
+        opacity: 0;
+        pointer-events: none;
+        display: none;
+    }
+
+    body.sidebar-collapsed .menu-item a {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    body.sidebar-collapsed .d-icon {
+        margin-right: 0 !important;
+    }
+
+    /* Layout Adjustments */
+    .main-content,
+    .container,
+    .wrapper {
+        margin-left: 250px !important;
+        transition: margin-left 0.2s ease;
+        padding-top: 20px !important;
+    }
+
+    body.sidebar-collapsed .main-content,
+    body.sidebar-collapsed .container,
+    body.sidebar-collapsed .wrapper {
+        margin-left: 72px !important;
+    }
+
+    /* Header Full Width */
+    .header,
+    .admin-header,
+    .employee-header {
+        left: 250px !important;
+        width: calc(100% - 250px) !important;
+        z-index: 1000 !important;
+        transition: left 0.2s ease, width 0.2s ease;
+    }
+
+    body.sidebar-collapsed .header,
+    body.sidebar-collapsed .admin-header,
+    body.sidebar-collapsed .employee-header {
+        left: 72px !important;
+        width: calc(100% - 72px) !important;
+    }
+
+    /* Hamburger always visible to toggle collapse */
+    .hamburger-menu {
+        display: inline-flex !important;
+    }
+}
+
+/* Common Header Adjustments */
+.header-content {
+    max-width: 100%;
+    padding: 0 20px;
+}
+
+.header,
+.admin-header,
+.employee-header {
+    height: 72px;
+}@media (max-width: 640px) {
+    /* 1. Typography */
+    html, body {
+        font-size: 14px;
+    }
+    body, p, li, td, th {
+        line-height: 1.5;
+    }
+    h1 { font-size: 20px !important; }
+    h2 { font-size: 18px !important; }
+    h3 { font-size: 16px !important; }
+
+    /* 2. Generic Table Responsiveness */
+    .table-responsive, .table-wrap, .attendance-table, .table-card {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 15px;
+        border: 1px solid #eee;
+    }
+    table {
+        min-width: 600px;
+        width: 100%;
+    }
+
+    /* 3. Touch Targets (Buttons & Links) */
+    .btn, .icon-btn, a.action-icon-btn {
+        min-height: 44px;
+        min-width: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .btn {
+        padding: 10px 16px !important;
+        font-size: 14px !important;
+    }
+
+    /* 4. Form Inputs (Prevent Zoom) */
+    input[type='text'], input[type='number'], input[type='email'], input[type='password'], input[type='date'], select, textarea {
+        font-size: 16px !important;
+        padding: 10px !important;
+        height: auto !important;
+    }
+
+    /* 5. Header Improvements */
+    .main-header, .header, .admin-header, .employee-header {
+        width: 100% !important;
+        overflow: hidden;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    .hide-on-mobile {
+        display: none !important;
+    }
+}

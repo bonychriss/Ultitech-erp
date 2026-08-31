@@ -1,0 +1,240 @@
+/* /assets/css/voucher-view.css */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.voucher-card {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 0; /* square edges */
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.voucher-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 2rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.company-logo {
+    display: flex;
+    flex-direction: column;
+}
+
+.company-logo img {
+    max-width: 150px;
+    margin-bottom: 1rem;
+}
+
+.company-logo h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+.company-logo p {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #f39c12;
+    font-weight: bold;
+}
+
+.voucher-meta {
+    text-align: right;
+}
+
+.meta-item {
+    margin-bottom: 0.5rem;
+}
+
+.meta-item .label {
+    font-weight: bold;
+    color: #555;
+    margin-right: 0.5rem;
+}
+
+.meta-item .value {
+    color: #333;
+}
+
+.voucher-body {
+    padding: 2rem;
+}
+
+.payee-details {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    background-color: #fdfaf4;
+    border: 1px solid #fdebc8;
+    border-radius: 0;
+    margin-bottom: 2rem;
+}
+
+.detail-item .label {
+    color: #666;
+}
+
+.detail-item .value {
+    font-weight: bold;
+    color: #333;
+}
+
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+}
+
+.items-table th, .items-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.items-table thead th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #555;
+}
+
+.items-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.items-table .text-right {
+    text-align: right;
+}
+
+.items-table tfoot td {
+    border-top: 2px solid #333;
+    font-size: 1.1rem;
+}
+
+.voucher-summary {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px dashed #ccc;
+}
+
+.amount-in-words, .purpose {
+    margin-bottom: 1.5rem;
+}
+
+.amount-in-words p, .purpose p {
+    margin: 0.25rem 0 0 0;
+    background-color: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 0;
+}
+
+.voucher-footer {
+    padding: 2rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 2rem;
+}
+
+.signature-area {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.signature-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 22%;
+    min-width: 150px;
+}
+
+.signature-box .name {
+    border-bottom: 1px solid #999;
+    padding: 2rem 1rem 0.5rem 1rem;
+    width: 100%;
+    text-align: center;
+    min-height: 3.5em;
+    color: #555;
+}
+
+.signature-box .role {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #777;
+    font-weight: bold;
+}
+
+/* Approval History Timeline */
+.approval-history {
+    padding: 2rem;
+}
+
+.timeline {
+    list-style: none;
+    padding: 0;
+    position: relative;
+}
+
+.timeline:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 10px;
+    width: 2px;
+    background-color: #e0e0e0;
+}
+
+.timeline-item {
+    margin-bottom: 1.5rem;
+    position: relative;
+    padding-left: 35px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 5px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background-color: #f39c12;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #f39c12;
+}
+
+.timeline-title {
+    font-weight: bold;
+    display: block;
+}
+
+.timeline-time {
+    font-size: 0.85rem;
+    color: #777;
+}
+
+.timeline-comment {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-left: 3px solid #f39c12;
+    font-style: italic;
+}

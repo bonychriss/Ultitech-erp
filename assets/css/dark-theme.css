@@ -1,0 +1,658 @@
+/**
+ * Global dark theme � loaded on every page (head + body override).
+ * Beats page-local light styles via late injection before </body>.
+ * Toggle: html[data-theme="dark"] (set by theme init script + header toggle).
+ */
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+
+    /* Shared CSS variables used across modules */
+    --bg-body: #0f172a;
+    --text-main: rgba(248, 250, 252, 0.95);
+    --text-muted: rgba(148, 163, 184, 0.95);
+    --border-color: #334155;
+    --primary: #60a5fa;
+
+    /* Revenue details */
+    --rd-bg-page: #0f172a;
+    --rd-bg-card: #1e293b;
+    --rd-border: #334155;
+    --rd-text: #f8fafc;
+    --rd-text-secondary: #94a3b8;
+
+    /* Expense smart insights */
+    --esi-bg: #0f172a;
+    --esi-card: #1e293b;
+    --esi-border: #334155;
+    --esi-text: #f8fafc;
+    --esi-muted: #94a3b8;
+
+    /* Login / auth */
+    --bg-color: #0f172a;
+    --text-dark: #f8fafc;
+    --text-muted: #94a3b8;
+    --input-border: #334155;
+}
+
+/* ?? Theme toggle ?? */
+html[data-theme="dark"] .theme-toggle-btn {
+    color: #a5b4fc;
+}
+html[data-theme="dark"] .theme-toggle-btn:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* ?? Layout & backgrounds (beat style.css white !important) ?? */
+html[data-theme="dark"] body,
+html[data-theme="dark"] body.dashboard,
+html[data-theme="dark"] body.revenue-page,
+html[data-theme="dark"] body.voucher-module,
+html[data-theme="dark"] .layout-main-wrapper,
+html[data-theme="dark"] .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] .main-content,
+html[data-theme="dark"] .main-wrapper {
+    background-color: #0f172a !important;
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+/* ?? Typography ?? */
+html[data-theme="dark"] p,
+html[data-theme="dark"] span,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6,
+html[data-theme="dark"] label,
+html[data-theme="dark"] td,
+html[data-theme="dark"] th,
+html[data-theme="dark"] .employee-header-page-title,
+html[data-theme="dark"] .step-label,
+html[data-theme="dark"] .nav-title,
+html[data-theme="dark"] .app-label {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .text-muted,
+html[data-theme="dark"] .meta,
+html[data-theme="dark"] .kpi-label,
+html[data-theme="dark"] .kpi-sub,
+html[data-theme="dark"] .step-name,
+html[data-theme="dark"] .step-date,
+html[data-theme="dark"] .dash-header p,
+html[data-theme="dark"] .employee-header-page-subtitle,
+html[data-theme="dark"] .app-desc,
+html[data-theme="dark"] .rd-subtitle,
+html[data-theme="dark"] .rd-breadcrumb,
+html[data-theme="dark"] .rd-label {
+    color: #94a3b8 !important;
+}
+
+/* ?? Headers ?? */
+html[data-theme="dark"] .header,
+html[data-theme="dark"] .admin-header,
+html[data-theme="dark"] .employee-header,
+html[data-theme="dark"] body.rev-det-page .employee-header,
+html[data-theme="dark"] body.exp-expense-dashboard .employee-header,
+html[data-theme="dark"] body.page-sales-invoices header.employee-header,
+html[data-theme="dark"] body.page-sales-orders header.employee-header,
+html[data-theme="dark"] body.page-sales-create header.employee-header {
+    background-color: #1e293b !important;
+    background: #1e293b !important;
+    border-bottom: 1px solid #334155 !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+}
+
+html[data-theme="dark"] .employee-header-menu-btn,
+html[data-theme="dark"] .header-left .btn-link {
+    color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .top-bar {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    border-bottom-color: #334155 !important;
+}
+
+html[data-theme="dark"] .top-bar-logo-name {
+    color: #f8fafc !important;
+}
+
+/* ?? Sidebar ?? */
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] #native-sidebar {
+    --sidebar-bg: #0f172a !important;
+    --sidebar-text: #cbd5e1 !important;
+    --sidebar-hover-bg: #1e293b !important;
+    --sidebar-hover-text: #ffffff !important;
+    --sidebar-active-bg: #1e293b !important;
+    --sidebar-active-text: #ffffff !important;
+    --sidebar-border: #1e293b !important;
+    --sidebar-icon-color: #94a3b8 !important;
+    --sidebar-hover-icon: #cbd5e1 !important;
+    background-color: #0f172a !important;
+    background: #0f172a !important;
+    color: #cbd5e1 !important;
+    border-right: 1px solid #1e293b !important;
+}
+
+html[data-theme="dark"] #native-sidebar .user-profile-link .sidebar-text div {
+    color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .sidebar-submenu-nested .nav-link.sidebar-nested-under-category {
+    color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .sidebar-submenu-nested .nav-link.sidebar-nested-under-category:hover,
+html[data-theme="dark"] .sidebar-submenu-nested .nav-link.sidebar-nested-under-category.active {
+    color: #a78bfa !important;
+    background: rgba(124, 58, 237, 0.15) !important;
+}
+
+/* ?? Cards & containers ?? */
+html[data-theme="dark"] .dash-card,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .kpi-card,
+html[data-theme="dark"] .table-card,
+html[data-theme="dark"] .chart-card,
+html[data-theme="dark"] .report-card,
+html[data-theme="dark"] .rd-card,
+html[data-theme="dark"] .jed-card,
+html[data-theme="dark"] .pay-table-card,
+html[data-theme="dark"] .pay-filters,
+html[data-theme="dark"] .kpi,
+html[data-theme="dark"] .app-item,
+html[data-theme="dark"] .quote-card,
+html[data-theme="dark"] .exp-card,
+html[data-theme="dark"] .exp-detail-card,
+html[data-theme="dark"] .exp-form-card,
+html[data-theme="dark"] .esi-card,
+html[data-theme="dark"] .esi-panel,
+html[data-theme="dark"] .stock-dash .kpi-card,
+html[data-theme="dark"] .stock-dash .chart-card,
+html[data-theme="dark"] .stock-dash .table-card,
+html[data-theme="dark"] .stock-dash .insight-card,
+html[data-theme="dark"] .top-nav {
+    background-color: #1e293b !important;
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .dash-card-h,
+html[data-theme="dark"] .card-header,
+html[data-theme="dark"] .card-footer,
+html[data-theme="dark"] .table-header,
+html[data-theme="dark"] .table-footer,
+html[data-theme="dark"] .exp-card-header {
+    background-color: #1e293b !important;
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .kpi.orange,
+html[data-theme="dark"] .kpi.green,
+html[data-theme="dark"] .kpi.blue {
+    background: #1e293b !important;
+}
+
+/* ?? Tables ?? */
+html[data-theme="dark"] table,
+html[data-theme="dark"] .table,
+html[data-theme="dark"] .rd-table {
+    color: #f8fafc !important;
+    background-color: #1e293b !important;
+}
+
+html[data-theme="dark"] table th,
+html[data-theme="dark"] .table th,
+html[data-theme="dark"] .ledger-table thead th,
+html[data-theme="dark"] .table-card th,
+html[data-theme="dark"] .rd-table thead th,
+html[data-theme="dark"] .quote-table th,
+html[data-theme="dark"] .stock-dash .table-card th {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    border-bottom-color: #334155 !important;
+}
+
+html[data-theme="dark"] table td,
+html[data-theme="dark"] .table td,
+html[data-theme="dark"] .table-card td,
+html[data-theme="dark"] .rd-table td {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-bottom-color: #334155 !important;
+}
+
+html[data-theme="dark"] .ledger-table tbody tr:hover,
+html[data-theme="dark"] .table-card tbody tr:hover {
+    background-color: #334155 !important;
+}
+
+html[data-theme="dark"] .ledger-table tbody tr.selected {
+    background-color: #1e3a8a !important;
+    outline: 2px solid #3b82f6 !important;
+}
+
+html[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+    --bs-table-accent-bg: rgba(255, 255, 255, 0.03);
+    color: #e2e8f0;
+}
+
+/* ?? Forms & inputs ?? */
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .pay-filters input,
+html[data-theme="dark"] .pay-filters select,
+html[data-theme="dark"] .ledger-filters select,
+html[data-theme="dark"] .search-bar input,
+html[data-theme="dark"] .quote-input,
+html[data-theme="dark"] .quote-select,
+html[data-theme="dark"] .quote-textarea,
+html[data-theme="dark"] .li-tax-select {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+    color: #64748b !important;
+}
+
+html[data-theme="dark"] .tx-search-wrap {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .tx-search-input {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .quote-static-box,
+html[data-theme="dark"] .li-qty-stepper,
+html[data-theme="dark"] .date-picker a {
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .li-qty-stepper button {
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
+}
+
+/* ?? Buttons ?? */
+html[data-theme="dark"] .btn-outline,
+html[data-theme="dark"] .stock-dash .btn-outline,
+html[data-theme="dark"] .rd-btn-secondary,
+html[data-theme="dark"] .btn-pay,
+html[data-theme="dark"] .jed-btn,
+html[data-theme="dark"] .pager a,
+html[data-theme="dark"] .pager span,
+html[data-theme="dark"] .li-btn-catalogue,
+html[data-theme="dark"] .li-action-btn {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .btn-outline:hover,
+html[data-theme="dark"] .stock-dash .btn-outline:hover,
+html[data-theme="dark"] .rd-btn-secondary:hover,
+html[data-theme="dark"] .btn-pay:hover,
+html[data-theme="dark"] .li-btn-catalogue:hover {
+    background-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .action-btn {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .action-btn:hover {
+    background-color: #334155 !important;
+}
+
+/* ?? Modals & alerts ?? */
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .swal2-popup,
+html[data-theme="dark"] .dropdown-menu {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border: 1px solid #334155 !important;
+}
+
+html[data-theme="dark"] .swal2-title,
+html[data-theme="dark"] .swal2-html-container,
+html[data-theme="dark"] .modal-title,
+html[data-theme="dark"] .modal-body {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .dropdown-item {
+    color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .dropdown-item:hover,
+html[data-theme="dark"] .dropdown-item:focus {
+    background-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+/* ?? KPI icons ?? */
+html[data-theme="dark"] .kpi-icon--total { background: #1e3a8a !important; color: #60a5fa !important; }
+html[data-theme="dark"] .kpi-icon--active { background: #064e3b !important; color: #34d399 !important; }
+html[data-theme="dark"] .kpi-icon--inactive { background: #7f1d1d !important; color: #f87171 !important; }
+html[data-theme="dark"] .kpi-icon--default { background: #4c1d95 !important; color: #c084fc !important; }
+
+html[data-theme="dark"] .kpi-info .value,
+html[data-theme="dark"] .stock-dash .kpi-card .kpi-value,
+html[data-theme="dark"] .stock-dash .dash-header h1 {
+    color: #f8fafc !important;
+}
+
+/* ?? Links ?? */
+html[data-theme="dark"] a:not(.btn):not(.company-logo-link):not(.logout-btn):not(.action-btn):not(.app-item):not(.rd-btn-primary):not(.rd-btn-success):not(.rd-btn-danger) {
+    color: #60a5fa !important;
+}
+
+html[data-theme="dark"] a:not(.btn):not(.company-logo-link):not(.logout-btn):not(.action-btn):not(.app-item):hover {
+    color: #93c5fd !important;
+}
+
+/* ?? Select module page ?? */
+html[data-theme="dark"] body.select-module-page,
+html[data-theme="dark"] body.select-module-page .app-container {
+    background-color: #0f172a !important;
+}
+
+html[data-theme="dark"] .app-item {
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .app-item:hover {
+    background: #334155 !important;
+    border-color: #60a5fa !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .app-item:hover .app-label {
+    color: #f8fafc !important;
+}
+
+/* ?? Revenue module pages ?? */
+html[data-theme="dark"] body.rev-det-page,
+html[data-theme="dark"] body.rev-det-page .layout-main-wrapper > .flex-grow-1 {
+    background: var(--rd-bg-page) !important;
+    color: var(--rd-text) !important;
+}
+
+html[data-theme="dark"] body.dashboard.pay-page {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .rd-value,
+html[data-theme="dark"] .rd-page-header h1 {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .rd-voucher-icon {
+    background: #1e3a8a !important;
+    color: #60a5fa !important;
+}
+
+html[data-theme="dark"] .rd-timeline-dot {
+    border-color: #1e293b !important;
+}
+
+/* ?? Expenses module ?? */
+html[data-theme="dark"] body.exp-expense-dashboard,
+html[data-theme="dark"] body.exp-expense-list,
+html[data-theme="dark"] body.exp-expense-view,
+html[data-theme="dark"] body.exp-expense-create,
+html[data-theme="dark"] body.esi-page {
+    background: var(--bg-body) !important;
+    color: var(--text-main) !important;
+}
+
+html[data-theme="dark"] .exp-header-avatar {
+    background: #312e81 !important;
+    color: #a5b4fc !important;
+}
+
+html[data-theme="dark"] .exp-header-user-block {
+    border-left-color: #334155 !important;
+}
+
+html[data-theme="dark"] .search-bar .shortcut {
+    background: #334155 !important;
+    color: #94a3b8 !important;
+}
+
+/* ?? Sales module ?? */
+html[data-theme="dark"] html:has(body.page-sales-invoices),
+html[data-theme="dark"] body.page-sales-invoices,
+html[data-theme="dark"] body.page-sales-orders,
+html[data-theme="dark"] body.page-sales-create,
+html[data-theme="dark"] body.page-sales-invoices .layout-main-wrapper,
+html[data-theme="dark"] body.page-sales-invoices .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body.page-sales-orders .layout-main-wrapper,
+html[data-theme="dark"] body.page-sales-create .layout-main-wrapper {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] body.page-sales-invoices .sales-invoices-shell,
+html[data-theme="dark"] body.page-sales-orders .sales-orders-shell {
+    background-color: #0f172a !important;
+}
+
+/* ?? Balances / stock-dash ?? */
+html[data-theme="dark"] .stock-dash {
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] .stock-dash .dash-header h1 {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .stock-dash .dash-header p {
+    color: #94a3b8 !important;
+}
+
+/* ?? Accounting / journal ?? */
+html[data-theme="dark"] .jed-dl {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #60a5fa !important;
+}
+
+html[data-theme="dark"] .jed-card-header,
+html[data-theme="dark"] .jed-section {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+/* ?? Analytics full report themes ?? */
+html[data-theme="dark"] .theme-dark-glass,
+html[data-theme="dark"] .da-shell {
+    background: linear-gradient(135deg, #090d16 0%, #111827 100%) !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"]:not([data-analytics-theme]) .report-card,
+html[data-theme="dark"] .theme-indigo .report-card,
+html[data-theme="dark"] .theme-emerald .report-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .theme-indigo,
+html[data-theme="dark"] .theme-emerald {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .chat-messages {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .message-bubble.assistant {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .chat-input {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .chatbot-launcher,
+html[data-theme="dark"] button.chatbot-launcher,
+html[data-theme="dark"] #chatbotLauncher.chatbot-launcher {
+    background: #134e4a !important;
+    color: #ecfdf5 !important;
+    border-color: rgba(45, 212, 191, 0.45) !important;
+    border-radius: 50% !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] .chatbot-launcher:hover,
+html[data-theme="dark"] button.chatbot-launcher:hover,
+html[data-theme="dark"] #chatbotLauncher.chatbot-launcher:hover {
+    background: #0f766e !important;
+    color: #ffffff !important;
+}
+
+/* ?? DataTables ?? */
+html[data-theme="dark"] .dataTables_wrapper .dataTables_length,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_filter,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_info,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate {
+    color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .page-link {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .page-item.active .page-link {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+/* ?? Badges & status pills (keep hue, darken bg) ?? */
+html[data-theme="dark"] .badge.bg-light,
+html[data-theme="dark"] .badge.bg-white {
+    background-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+/* ?? List groups & nav tabs ?? */
+html[data-theme="dark"] .list-group-item {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .nav-tabs .nav-link {
+    color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .nav-tabs .nav-link.active {
+    background-color: #1e293b !important;
+    border-color: #334155 #334155 #1e293b !important;
+    color: #f8fafc !important;
+}
+
+/* ?? HR / attendance settings shells ?? */
+html[data-theme="dark"] .settings-shell,
+html[data-theme="dark"] .page-shell,
+html[data-theme="dark"] .editor-shell,
+html[data-theme="dark"] .po-shell,
+html[data-theme="dark"] .pay-shell {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+/* ?? Scrollbar (webkit) ?? */
+html[data-theme="dark"] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* ?? Select module inline overrides ?? */
+html[data-theme="dark"] .top-bar span[style*="border"] {
+    color: #94a3b8 !important;
+    border-color: #334155 !important;
+    background: #1e293b !important;
+}
+
+html[data-theme="dark"] .top-bar a[style*="background:#f3f4f6"],
+html[data-theme="dark"] .top-bar a[style*="background: #f3f4f6"] {
+    background: #334155 !important;
+    color: #e2e8f0 !important;
+    border-color: #475569 !important;
+}
+
+/* ?? Login / auth page ?? */
+html[data-theme="dark"] body.login-page,
+html[data-theme="dark"] .auth-container {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .auth-container {
+    background: #1e293b !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .auth-container input,
+html[data-theme="dark"] .auth-container select {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .auth-container label,
+html[data-theme="dark"] .auth-container h1,
+html[data-theme="dark"] .auth-container h2,
+html[data-theme="dark"] .auth-container p {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .auth-container .text-muted,
+html[data-theme="dark"] .auth-container small {
+    color: #94a3b8 !important;
+}

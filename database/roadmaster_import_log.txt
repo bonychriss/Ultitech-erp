@@ -1,0 +1,8 @@
+﻿& "C:\xampp\mysql\bin\mysql.exe" -u root -e "DROP DATABASE IF EXISTS `roadmaster_db-3530393454a2`; CREATE DATABASE `roadmaster_db-3530393454a2` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
+cmd : ERROR 1050 (42S01) at line 30: Table 'account_transactions' already exists
+At C:\Users\BRUCE\AppData\Local\Temp\ps-script-4435dad2-0556-4a45-903e-9ff268d27871.ps1:83 char:1
++ cmd /c "`"$mysql`" -u root --default-character-set=utf8mb4 `"$db`" <  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ERROR 1050 (42S... already exists:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

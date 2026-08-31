@@ -1,0 +1,327 @@
+[26-Jan-2026 13:25:26 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.employee_salary' doesn't exist in /home/ultimate/public_html/staff/modules/payroll/index.php:27
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/index.php(27): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/index.php on line 27
+[26-Jan-2026 21:46:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[26-Jan-2026 21:46:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[26-Jan-2026 21:46:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[26-Jan-2026 21:46:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[26-Jan-2026 21:46:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[26-Jan-2026 21:46:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:21:34 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:21:34 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:21:34 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:21:34 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:21:34 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:21:34 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:49:32 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:49:32 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:49:32 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:49:32 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:49:32 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[27-Jan-2026 14:49:32 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 31
+[29-Jan-2026 11:37:15 Africa/Dar_es_Salaam] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/ultimate/public_html/staff/sidebar.php:305) in /home/ultimate/public_html/staff/includes/functions.php on line 194
+[30-Jan-2026 21:20:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 23
+[30-Jan-2026 21:20:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 23
+[30-Jan-2026 21:20:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 23
+[30-Jan-2026 21:20:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 23
+[30-Jan-2026 21:20:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 23
+[30-Jan-2026 21:20:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 23
+[06-Feb-2026 15:46:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:15 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.payroll_tax_bands' doesn't exist in /home/ultimate/public_html/staff/modules/payroll/settings.php:28
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(28): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 28
+[06-Feb-2026 15:46:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:46:18 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.payroll_tax_bands' doesn't exist in /home/ultimate/public_html/staff/modules/payroll/settings.php:28
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(28): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 28
+[06-Feb-2026 15:46:29 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:29 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:29 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:29 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:29 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:29 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:58 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:58 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:58 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:58 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:58 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:46:58 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[06-Feb-2026 15:47:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:47:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:47:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:47:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:47:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:47:39 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 15:47:39 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.payroll_tax_bands' doesn't exist in /home/ultimate/public_html/staff/modules/payroll/settings.php:28
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(28): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 28
+[06-Feb-2026 17:19:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 17:19:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 17:19:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 17:19:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 17:19:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[06-Feb-2026 17:19:12 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:02:44 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:02:44 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:02:44 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:02:44 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:02:44 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:02:44 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:09:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:09:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:09:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:09:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:09:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:09:28 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:13:42 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[19-Feb-2026 15:13:59 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[19-Feb-2026 15:14:22 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[19-Feb-2026 15:23:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:23:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:23:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:23:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:23:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[19-Feb-2026 15:23:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 07:54:47 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[26-Feb-2026 07:54:49 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[26-Feb-2026 13:37:17 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 13:37:17 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 13:37:17 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 13:37:17 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 13:37:17 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 13:37:17 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 13:38:05 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'setting_key' in 'INSERT INTO' in /home/ultimate/public_html/staff/modules/payroll/settings.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(14): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 14
+[26-Feb-2026 13:40:46 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'setting_key' in 'INSERT INTO' in /home/ultimate/public_html/staff/modules/payroll/settings.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(14): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 14
+[26-Feb-2026 19:54:27 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 19:54:27 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 19:54:27 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 19:54:27 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 19:54:27 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[26-Feb-2026 19:54:27 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Feb-2026 08:27:32 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[27-Feb-2026 08:27:34 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[27-Feb-2026 08:27:35 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[27-Feb-2026 08:27:39 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[27-Feb-2026 08:27:41 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[27-Feb-2026 09:22:54 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "APP_BASE_PATH" in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php:41
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/edit_salary.php on line 41
+[27-Feb-2026 10:00:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Feb-2026 10:00:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Feb-2026 10:00:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Feb-2026 10:00:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Feb-2026 10:00:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Feb-2026 10:00:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[02-Mar-2026 08:21:40 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[02-Mar-2026 08:21:40 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[02-Mar-2026 08:21:40 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[02-Mar-2026 08:21:40 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[02-Mar-2026 08:21:40 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[02-Mar-2026 08:21:40 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[24-Mar-2026 08:19:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[24-Mar-2026 08:19:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[24-Mar-2026 08:19:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[24-Mar-2026 08:19:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[24-Mar-2026 08:19:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[24-Mar-2026 08:19:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Mar-2026 12:51:51 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Mar-2026 12:51:51 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Mar-2026 12:51:51 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Mar-2026 12:51:51 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Mar-2026 12:51:51 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Mar-2026 12:51:51 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/run_payroll.php on line 29
+[27-Mar-2026 12:54:49 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:54:49 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:54:49 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:54:49 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:54:49 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:54:49 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:55:03 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'setting_key' in 'INSERT INTO' in /home/ultimate/public_html/staff/modules/payroll/settings.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(14): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 14
+[27-Mar-2026 12:55:07 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'setting_key' in 'INSERT INTO' in /home/ultimate/public_html/staff/modules/payroll/settings.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(14): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 14
+[27-Mar-2026 12:55:11 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'setting_key' in 'INSERT INTO' in /home/ultimate/public_html/staff/modules/payroll/settings.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(14): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 14
+[27-Mar-2026 12:55:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:55:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:55:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:55:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:55:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:55:15 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:55:47 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'setting_key' in 'INSERT INTO' in /home/ultimate/public_html/staff/modules/payroll/settings.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(14): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 14
+[27-Mar-2026 12:57:25 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:57:25 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:57:25 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:57:25 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:57:25 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:57:25 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 12:57:40 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'setting_key' in 'INSERT INTO' in /home/ultimate/public_html/staff/modules/payroll/settings.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(14): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 14
+[27-Mar-2026 13:07:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 13:07:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 13:07:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 13:07:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 13:07:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_key" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 13:07:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "setting_value" in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 24
+[27-Mar-2026 13:07:13 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'setting_key' in 'INSERT INTO' in /home/ultimate/public_html/staff/modules/payroll/settings.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(14): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 14
+[27-Mar-2026 13:28:16 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'setting_key' in 'INSERT INTO' in /home/ultimate/public_html/staff/modules/payroll/settings.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(14): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 14
+[27-Mar-2026 13:32:35 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'meta_key' doesn't have a default value in /home/ultimate/public_html/staff/modules/payroll/settings.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/settings.php(14): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/settings.php on line 14
+[27-Mar-2026 15:16:37 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'status' at row 1 in /home/ultimate/public_html/staff/modules/payroll/view_run.php:66
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/view_run.php(66): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/view_run.php on line 66
+[27-Mar-2026 15:16:41 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'status' at row 1 in /home/ultimate/public_html/staff/modules/payroll/view_run.php:66
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/payroll/view_run.php(66): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/view_run.php on line 66
+[23-Apr-2026 09:03:58 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $payrollQs in /home/ultimate/public_html/staff/modules/payroll/index.php on line 36
+[23-Apr-2026 09:03:58 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Value of type null is not callable in /home/ultimate/public_html/staff/modules/payroll/index.php:36
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/index.php on line 36
+[23-Apr-2026 09:04:03 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $payrollQs in /home/ultimate/public_html/staff/modules/payroll/index.php on line 36
+[23-Apr-2026 09:04:03 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Value of type null is not callable in /home/ultimate/public_html/staff/modules/payroll/index.php:36
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/index.php on line 36
+[24-Apr-2026 19:26:55 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:26:55 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:28:43 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:28:43 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:29:17 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:30:37 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:30:37 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:30:37 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:30:52 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:30:52 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:31:08 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:31:09 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:31:20 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:31:21 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:34:11 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:42:46 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:42:46 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:43:53 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:43:53 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:44:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:44:10 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:46:13 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:46:13 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:53:47 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 19:53:47 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 22:08:35 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $payrollQs in /home/ultimate/public_html/staff/modules/payroll/index.php on line 22
+[24-Apr-2026 22:08:35 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Value of type null is not callable in /home/ultimate/public_html/staff/modules/payroll/index.php:22
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/index.php on line 22
+[24-Apr-2026 22:08:44 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $payrollQs in /home/ultimate/public_html/staff/modules/payroll/index.php on line 22
+[24-Apr-2026 22:08:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Value of type null is not callable in /home/ultimate/public_html/staff/modules/payroll/index.php:22
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/index.php on line 22
+[24-Apr-2026 22:11:11 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[25-Apr-2026 13:32:55 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 11:15:43 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 12:06:29 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "run_date" in /home/ultimate/public_html/staff/modules/payroll/email_run.php on line 143
+[29-Apr-2026 12:06:30 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "run_date" in /home/ultimate/public_html/staff/modules/payroll/email_run.php on line 143
+[29-Apr-2026 12:06:30 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "run_date" in /home/ultimate/public_html/staff/modules/payroll/email_run.php on line 143
+[29-Apr-2026 12:06:30 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "run_date" in /home/ultimate/public_html/staff/modules/payroll/email_run.php on line 143
+[29-Apr-2026 12:06:30 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "run_date" in /home/ultimate/public_html/staff/modules/payroll/email_run.php on line 143
+[29-Apr-2026 12:06:31 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "run_date" in /home/ultimate/public_html/staff/modules/payroll/email_run.php on line 143
+[29-Apr-2026 12:06:31 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "run_date" in /home/ultimate/public_html/staff/modules/payroll/email_run.php on line 143
+[29-Apr-2026 12:06:32 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "run_date" in /home/ultimate/public_html/staff/modules/payroll/email_run.php on line 143
+[29-Apr-2026 12:06:32 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "run_date" in /home/ultimate/public_html/staff/modules/payroll/email_run.php on line 143
+[29-Apr-2026 12:06:33 Africa/Dar_es_Salaam] PHP Warning:  Undefined array key "run_date" in /home/ultimate/public_html/staff/modules/payroll/email_run.php on line 143
+[29-Apr-2026 12:12:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[29-Apr-2026 12:37:41 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $payrollQs in /home/ultimate/public_html/staff/modules/payroll/index.php on line 36
+[29-Apr-2026 12:37:41 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught Error: Value of type null is not callable in /home/ultimate/public_html/staff/modules/payroll/index.php:36
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/modules/payroll/index.php on line 36

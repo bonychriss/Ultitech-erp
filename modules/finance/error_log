@@ -1,0 +1,24 @@
+[25-Jan-2026 06:04:07 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.finance_transactions' doesn't exist in /home/ultimate/public_html/staff/modules/finance/index.php:18
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/finance/index.php(18): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/modules/finance/index.php(31): getFinanceStats()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/modules/finance/index.php on line 18
+[25-Jan-2026 06:05:15 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.finance_transactions' doesn't exist in /home/ultimate/public_html/staff/modules/finance/index.php:18
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/finance/index.php(18): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/modules/finance/index.php(31): getFinanceStats()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/modules/finance/index.php on line 18
+[25-Jan-2026 06:20:40 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.finance_transactions' doesn't exist in /home/ultimate/public_html/staff/modules/finance/index.php:18
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/finance/index.php(18): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/modules/finance/index.php(31): getFinanceStats()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/modules/finance/index.php on line 18
+[27-Jan-2026 15:42:44 Africa/Kampala] PHP Warning:  Undefined array key "category_id" in /home/ultimate/public_html/staff/modules/finance/create_expense.php on line 29
+[27-Jan-2026 16:16:45 Africa/Kampala] PHP Warning:  Undefined array key "category_id" in /home/ultimate/public_html/staff/modules/finance/create_expense.php on line 29
+[27-Jan-2026 16:16:46 Africa/Kampala] PHP Warning:  Undefined array key "category_id" in /home/ultimate/public_html/staff/modules/finance/create_expense.php on line 29
+[28-Jan-2026 11:05:31 Africa/Kampala] PHP Warning:  Undefined array key "category_id" in /home/ultimate/public_html/staff/modules/finance/create_expense.php on line 29
+[28-Jan-2026 11:11:49 Africa/Kampala] PHP Warning:  Undefined array key "category_id" in /home/ultimate/public_html/staff/modules/finance/create_expense.php on line 29
+[29-Jan-2026 09:41:20 Africa/Kampala] PHP Warning:  Undefined array key "category_id" in /home/ultimate/public_html/staff/modules/finance/create_expense.php on line 29

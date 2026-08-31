@@ -1,0 +1,15 @@
+[15-Dec-2025 11:50:47 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.crm_leads' doesn't exist in /home/ultimate/public_html/staff/cloud_erp/modules/CRM/index.php:8
+Stack trace:
+#0 /home/ultimate/public_html/staff/cloud_erp/modules/CRM/index.php(8): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/cloud_erp/modules/CRM/index.php on line 8
+[15-Dec-2025 11:51:24 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.crm_leads' doesn't exist in /home/ultimate/public_html/staff/cloud_erp/modules/CRM/index.php:8
+Stack trace:
+#0 /home/ultimate/public_html/staff/cloud_erp/modules/CRM/index.php(8): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/cloud_erp/modules/CRM/index.php on line 8
+[15-Dec-2025 11:51:28 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.crm_leads' doesn't exist in /home/ultimate/public_html/staff/cloud_erp/modules/CRM/index.php:8
+Stack trace:
+#0 /home/ultimate/public_html/staff/cloud_erp/modules/CRM/index.php(8): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/cloud_erp/modules/CRM/index.php on line 8

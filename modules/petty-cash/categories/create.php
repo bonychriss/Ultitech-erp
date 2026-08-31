@@ -1,0 +1,8 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../includes/petty-cash-lib.php';
+
+header('Location: ' . pettyCashModuleUrl('categories/index.php'));
+exit;

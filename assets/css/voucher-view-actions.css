@@ -1,0 +1,434 @@
+/* Actions dropdown ? voucher view (inline fallback + shared) */
+.vv-header-actions {
+    position: relative;
+}
+
+.vv-actions-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.vv-actions-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0 16px !important;
+    border-radius: 9999px !important;
+    border: 1px solid #7c3aed;
+    background: #7c3aed;
+    color: #fff !important;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+.vv-actions-btn:hover {
+    background: #6d28d9;
+    border-color: #6d28d9;
+}
+
+.vv-actions-menu {
+    display: none !important;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: auto;
+    min-width: 240px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
+    padding: 8px 0;
+    z-index: 500;
+    margin: 0;
+    list-style: none;
+}
+
+.vv-actions-menu.show-dropdown {
+    display: block !important;
+}
+
+.vv-actions-form {
+    margin: 0;
+}
+
+.vv-actions-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    text-align: left;
+    cursor: pointer;
+    font-family: 'Poppins', system-ui, sans-serif;
+    box-sizing: border-box;
+}
+
+.vv-actions-menu .dropdown-item .content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vv-actions-menu .vv-download-btn {
+    border-radius: 0;
+    margin: 0;
+    width: 100%;
+    justify-content: flex-start;
+    color: #374151;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+}
+
+.vv-actions-menu .vv-download-btn .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    min-height: 18px;
+    font-weight: 400;
+}
+
+.vv-actions-menu .vv-download-btn:hover {
+    transform: none;
+    box-shadow: none;
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.vv-actions-menu .vv-download-btn.loading,
+.vv-actions-menu .vv-download-btn.success {
+    background: transparent;
+    box-shadow: none;
+    color: #374151;
+}
+
+.vv-actions-menu .vv-download-btn:disabled,
+.vv-actions-menu .vv-download-btn.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.95;
+    transform: none;
+}
+
+.vv-actions-menu .vv-download-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: vv-download-spin 0.75s linear infinite;
+}
+
+@keyframes vv-download-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.vv-download-progress {
+    margin: 0 12px 8px;
+    display: none;
+}
+
+.vv-download-progress.show {
+    display: block;
+}
+
+.vv-download-progress-track {
+    width: 100%;
+    height: 8px;
+    background: #ede9fe;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.vv-download-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+}
+
+.vv-download-progress-text {
+    font-size: 12px;
+    color: #6b7280;
+    text-align: center;
+}
+
+.vv-actions-menu .dropdown-item:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.vv-actions-menu .dropdown-item i {
+    width: 16px;
+    text-align: center;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.vv-actions-menu .dropdown-item--success {
+    color: #059669;
+}
+
+.vv-actions-menu .dropdown-item--primary {
+    color: #2563eb;
+}
+
+.vv-actions-menu .dropdown-item--danger {
+    color: #dc2626;
+}
+
+.vv-actions-menu .dropdown-item--muted,
+.vv-actions-menu .dropdown-item--pending {
+    cursor: default;
+    background: #fffbeb;
+    color: #92400e;
+    font-weight: 700;
+}
+
+.vv-actions-menu .dropdown-item--pending i {
+    color: #d97706 !important;
+}
+
+.vv-voucher-toolbar.voucher-actions-bar,
+.voucher-actions-bar.vv-voucher-toolbar {
+    margin-bottom: 16px;
+}
+
+.vv-voucher-toolbar .vv-actions-btn,
+.vv-mobile-toolbar .vv-actions-btn {
+    width: auto;
+    justify-content: center;
+}
+
+@media (max-width: 767.98px) {
+    .vv-voucher-toolbar .vv-actions-btn,
+    .vv-mobile-toolbar .vv-actions-btn {
+        width: auto !important;
+        min-width: 0;
+        padding: 0 14px !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .vv-actions-menu {
+        left: auto;
+        right: 0;
+    }
+}
+
+/* Approval / payment modals — must be top-level (not nested under header) */
+.modal-overlay-clean {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 20000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.modal-overlay-clean.is-open {
+    display: flex !important;
+}
+
+.modal-content-clean {
+    background: #fff;
+    width: 100%;
+    max-width: 480px;
+    max-height: min(92vh, 720px);
+    overflow-y: auto;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
+    position: relative;
+    padding: 24px;
+    animation: vv-modal-in 0.2s ease-out;
+}
+
+@keyframes vv-modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header-clean h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #111827;
+    font-weight: 700;
+}
+
+.modal-header-clean p {
+    margin: 4px 0 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.modal-header-clean .approve-role-label {
+    color: #4b5563;
+    font-weight: 500;
+}
+
+.signature-card-clean {
+    margin: 20px 0;
+    padding: 16px;
+    border: 1px dashed #e5e7eb;
+    background: #f9fafb;
+    border-radius: 8px;
+    text-align: center;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.signature-label-clean {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #9ca3af;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+.signature-card-clean img {
+    max-height: 80px;
+    width: auto;
+}
+
+.signature-card-clean canvas {
+    width: 100%;
+    height: 120px;
+    display: block;
+    touch-action: none;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.sig-toggle-link {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.875rem;
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.sig-toggle-link:hover {
+    text-decoration: underline;
+}
+
+.warning-alert-clean {
+    background: #fff5f5;
+    border: 1px solid #feb2b2;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+.warning-alert-clean__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #c53030;
+    margin-bottom: 4px;
+}
+
+.warning-alert-clean p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #c53030;
+    line-height: 1.4;
+}
+
+.warning-alert-clean strong {
+    font-weight: 700;
+}
+
+.checkbox-confirm-clean {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 24px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #374151;
+    user-select: none;
+}
+
+.checkbox-confirm-clean input {
+    margin-top: 3px;
+}
+
+.modal-footer-clean {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.btn-modal-cancel {
+    padding: 10px 20px;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 9999px !important;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-modal-cancel:hover {
+    background: #e5e7eb;
+}
+
+.btn-modal-submit {
+    padding: 10px 20px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 9999px !important;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-modal-submit:hover {
+    background: #1d4ed8;
+}
+
+.btn-modal-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+body.vv-modal-open {
+    overflow: hidden;
+}

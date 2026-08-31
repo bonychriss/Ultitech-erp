@@ -1,0 +1,20 @@
+[05-Jan-2026 11:28:11 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: There is no active transaction in /home/ultimate/public_html/staff/modules/sales/payments/create.php:70
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/sales/payments/create.php(70): PDO->rollBack()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/sales/payments/create.php on line 70
+[05-Jan-2026 11:34:01 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: There is no active transaction in /home/ultimate/public_html/staff/modules/sales/payments/create.php:70
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/sales/payments/create.php(70): PDO->rollBack()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/sales/payments/create.php on line 70
+[05-Jan-2026 11:34:06 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: There is no active transaction in /home/ultimate/public_html/staff/modules/sales/payments/create.php:70
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/sales/payments/create.php(70): PDO->rollBack()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/sales/payments/create.php on line 70
+[09-Feb-2026 07:29:11 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: There is no active transaction in /home/ultimate/public_html/staff/modules/sales/payments/create.php:92
+Stack trace:
+#0 /home/ultimate/public_html/staff/modules/sales/payments/create.php(92): PDO->rollBack()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/modules/sales/payments/create.php on line 92

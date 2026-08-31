@@ -1,0 +1,358 @@
+.cv-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.cv-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.cv-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cv-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.cv-action-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.cv-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.cv-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cv-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--exp-desk-radius, 14px);
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.cv-card-head {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.cv-card-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cv-profile-card {
+  padding: 1.25rem 1rem 1rem;
+  text-align: center;
+}
+
+.cv-profile-icon {
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0 auto 1rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.cv-profile-icon svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.cv-profile-name {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cv-profile-code {
+  margin: 0.25rem 0 1rem;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.cv-profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.cv-type-badge,
+.cv-balance-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.cv-type-badge {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.cv-balance-badge--clear {
+  background: #22c55e;
+  color: #fff;
+}
+
+.cv-balance-badge--due {
+  background: #ef4444;
+  color: #fff;
+}
+
+.cv-detail-list,
+.cv-finance-list {
+  margin: 0;
+  padding: 0;
+}
+
+.cv-detail-list {
+  text-align: left;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.85rem;
+}
+
+.cv-detail-item + .cv-detail-item {
+  margin-top: 0.75rem;
+}
+
+.cv-detail-item dt,
+.cv-finance-row dt {
+  margin: 0 0 0.15rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.cv-detail-item dd,
+.cv-finance-row dd {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.cv-finance-list {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.cv-finance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+.cv-finance-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.cv-finance-row dd {
+  font-weight: 700;
+  text-align: right;
+}
+
+.cv-orders-card {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.cv-table-wrap {
+  overflow-x: auto;
+}
+
+.cv-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cv-table th,
+.cv-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  font-size: 0.875rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cv-table th {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.cv-table-action-col {
+  width: 3.5rem;
+  text-align: right;
+}
+
+.cv-order-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.cv-order-row:hover {
+  background: #eff6ff;
+}
+
+.cv-order-number {
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.cv-order-total {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cv-order-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  color: #94a3b8;
+  text-decoration: none;
+}
+
+.cv-order-link:hover {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.cv-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.cv-status--green {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.cv-status--blue {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.cv-status--red {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.cv-status--gray {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.cv-empty {
+  margin: 1rem;
+}
+
+.cv-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 991.98px) {
+  .cv-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .cv-page-actions {
+    width: 100%;
+  }
+
+  .cv-action-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+
+html[data-theme="dark"] body.page-customer-view-desk .cv-card,
+html[data-theme="dark"] body.page-customer-view-desk .cv-card-head {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] body.page-customer-view-desk .cv-card-title,
+html[data-theme="dark"] body.page-customer-view-desk .cv-profile-name,
+html[data-theme="dark"] body.page-customer-view-desk .cv-detail-item dd,
+html[data-theme="dark"] body.page-customer-view-desk .cv-finance-row dd,
+html[data-theme="dark"] body.page-customer-view-desk .cv-order-total {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] body.page-customer-view-desk .cv-profile-code {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] body.page-customer-view-desk .cv-table th {
+  background: #0f172a;
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] body.page-customer-view-desk .cv-table td {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] body.page-customer-view-desk .cv-order-row:hover {
+  background: #0f172a;
+}

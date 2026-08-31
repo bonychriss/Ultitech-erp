@@ -1,0 +1,11 @@
+@echo off
+REM Copy to ftp-deploy.local.cmd (optional host/path overrides).
+REM Put your FTP password in ftp-password.txt (see ftp-password.txt.example).
+REM Do NOT put the password in this .cmd file if it contains ( ) < > # & characters.
+
+set FTP_HOST=ftp.us.ultitech.io
+set FTP_USER=ultitech.io
+set FTP_REMOTE=/public_html/ultimate
+
+REM cPanel often requires FTPS. Uncomment if uploads fail:
+set FTP_SSL=1

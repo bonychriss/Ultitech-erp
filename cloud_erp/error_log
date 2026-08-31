@@ -1,0 +1,10 @@
+[15-Dec-2025 11:23:52 Africa/Kampala] PHP Warning:  mkdir(): Permission denied in /home/ultimate/public_html/staff/cloud_erp/deploy_crm.php on line 9
+[15-Dec-2025 11:27:19 Africa/Kampala] PHP Warning:  mkdir(): Permission denied in /home/ultimate/public_html/staff/cloud_erp/deploy_crm.php on line 9
+[15-Dec-2025 11:42:20 Africa/Kampala] PHP Warning:  rename(/home/ultimate/public_html/staff/cloud_erp/cloud_erp\config\,/home/ultimate/public_html/staff/cloud_erp/config/): Not a directory in /home/ultimate/public_html/staff/cloud_erp/fix_backslashes.php on line 34
+[15-Dec-2025 11:42:20 Africa/Kampala] PHP Warning:  rename(/home/ultimate/public_html/staff/cloud_erp/cloud_erp\modules\,/home/ultimate/public_html/staff/cloud_erp/modules/): Not a directory in /home/ultimate/public_html/staff/cloud_erp/fix_backslashes.php on line 34
+[15-Dec-2025 11:42:20 Africa/Kampala] PHP Warning:  mkdir(): Permission denied in /home/ultimate/public_html/staff/cloud_erp/fix_backslashes.php on line 25
+[15-Dec-2025 11:42:20 Africa/Kampala] PHP Warning:  mkdir(): Permission denied in /home/ultimate/public_html/staff/cloud_erp/fix_backslashes.php on line 25
+[15-Dec-2025 11:42:20 Africa/Kampala] PHP Warning:  mkdir(): Permission denied in /home/ultimate/public_html/staff/cloud_erp/fix_backslashes.php on line 25
+[15-Dec-2025 11:42:20 Africa/Kampala] PHP Warning:  mkdir(): Permission denied in /home/ultimate/public_html/staff/cloud_erp/fix_backslashes.php on line 25
+[15-Dec-2025 11:42:20 Africa/Kampala] PHP Warning:  rename(/home/ultimate/public_html/staff/cloud_erp/cloud_erp\public\,/home/ultimate/public_html/staff/cloud_erp/public/): Not a directory in /home/ultimate/public_html/staff/cloud_erp/fix_backslashes.php on line 34
+[15-Dec-2025 11:45:41 Africa/Kampala] PHP Warning:  mkdir(): Permission denied in /home/ultimate/public_html/staff/cloud_erp/manual_crm_deploy.php on line 39

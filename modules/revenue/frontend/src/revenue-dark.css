@@ -1,0 +1,145 @@
+/* Revenue desk + quick view � dark theme */
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-kpi-label,
+html[data-theme="dark"] body.page-rev-desk .rev-desk-kpi-value {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-filters-panel {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-filters-head {
+  background: linear-gradient(180deg, #1e293b 0%, #172033 100%);
+  border-bottom-color: #334155;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-filters-title {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-filters-sub,
+html[data-theme="dark"] body.page-rev-desk .rev-desk-filters-section-label,
+html[data-theme="dark"] body.page-rev-desk .rev-desk-field label {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-filters-close {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-date-preset {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-date-preset:hover {
+  background: rgba(217, 119, 6, 0.15);
+  border-color: #d97706;
+  color: #fdba74;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-filters-footer {
+  background: #172033;
+  border-top-color: #334155;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-field select,
+html[data-theme="dark"] body.page-rev-desk .rev-desk-field input[type="date"] {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-amt {
+  color: #4ade80;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-amt--muted {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-amt--paid-clear,
+html[data-theme="dark"] body.page-rev-desk .rev-desk-amt--clear {
+  color: #4ade80;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-amt--due {
+  color: #f87171;
+}
+
+html[data-theme="dark"] .rev-desk-modal {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] .rev-desk-quick-head {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .rev-desk-quick-title,
+html[data-theme="dark"] .rev-desk-quick-subtitle,
+html[data-theme="dark"] .rev-desk-quick-date,
+html[data-theme="dark"] .rev-desk-quick-row dt,
+html[data-theme="dark"] .rev-desk-quick-row dd {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .rev-desk-quick-row dd.rev-desk-quick-amt {
+  color: #4ade80 !important;
+}
+
+html[data-theme="dark"] .rev-desk-quick-close {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .rev-desk-quick-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-quick-actions {
+  border-top-color: #334155;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-row-menu-btn {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-row-menu-btn:hover,
+html[data-theme="dark"] body.page-rev-desk .rev-desk-row-menu-wrap.is-open .rev-desk-row-menu-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-row-menu {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-row-menu a,
+html[data-theme="dark"] body.page-rev-desk .rev-desk-row-menu button {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-row-menu a:hover,
+html[data-theme="dark"] body.page-rev-desk .rev-desk-row-menu button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-row-menu .rev-desk-row-menu-pay {
+  color: #4ade80;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-row-menu .rev-desk-row-menu-pay:hover {
+  background: rgba(74, 222, 128, 0.12);
+  color: #86efac;
+}

@@ -1,0 +1,79 @@
+[05-Jan-2026 12:02:01 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'status' at row 1 in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php:135
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php(135): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php on line 135
+[05-Jan-2026 12:23:37 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'status' at row 1 in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php:139
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php(139): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php on line 139
+[05-Jan-2026 12:26:57 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[05-Jan-2026 12:33:01 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 212
+[05-Jan-2026 12:33:01 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 212
+[05-Jan-2026 13:16:10 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[05-Jan-2026 13:17:38 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[05-Jan-2026 17:02:35 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[05-Jan-2026 17:02:35 Africa/Kampala] PHP Deprecated:  htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php on line 441
+[13-Jan-2026 12:35:08 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[13-Jan-2026 12:35:53 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'comment' in 'INSERT INTO' in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php:28
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php(28): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php on line 28
+[13-Jan-2026 12:37:07 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[13-Jan-2026 12:37:07 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[13-Jan-2026 12:38:10 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[13-Jan-2026 12:38:10 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[13-Jan-2026 12:38:48 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[13-Jan-2026 12:38:48 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[04-Feb-2026 09:50:29 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[04-Feb-2026 10:02:36 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[04-Feb-2026 10:02:36 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[04-Feb-2026 10:11:06 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[04-Feb-2026 10:11:19 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[04-Feb-2026 10:11:19 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 316
+[17-Feb-2026 13:09:37 Africa/Kampala] SMTP Error: SMTP Error [550]: 550-The mail server could not deliver mail to procurement@shippex.co.tz.  The
+550-account or domain may not exist, they may be blacklisted, or missing the
+550 proper dns entries.
+
+[17-Feb-2026 13:10:48 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'comment' in 'INSERT INTO' in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php:28
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php(28): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/purchases/supplier_response.php on line 28
+[18-Feb-2026 11:29:50 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:29:50 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:31:29 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:31:29 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:32:30 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:32:30 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:33:33 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:33:33 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:49:08 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 11:49:08 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 12:00:25 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 12:00:25 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 12:00:43 Africa/Kampala] PHP Warning:  Undefined variable $items in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410
+[18-Feb-2026 12:00:43 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/purchases/view_po.php on line 410

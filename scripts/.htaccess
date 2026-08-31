@@ -1,0 +1,4 @@
+# CLI/maintenance scripts are not web endpoints
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>

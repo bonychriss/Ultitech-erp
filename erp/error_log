@@ -1,0 +1,105 @@
+[29-Nov-2025 16:19:16 Africa/Dar_es_Salaam] PHP Warning:  include(includes/sidebar.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/erp/index.php on line 130
+[29-Nov-2025 16:19:16 Africa/Dar_es_Salaam] PHP Warning:  include(): Failed opening 'includes/sidebar.php' for inclusion (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/erp/index.php on line 130
+[29-Nov-2025 20:46:38 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(26): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:49:01 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(26): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:40 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:43 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:43 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 20:53:44 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 21:01:40 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 21:11:57 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 21:12:00 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 21:19:12 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[29-Nov-2025 21:19:21 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[30-Nov-2025 07:26:01 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.erp_notifications' doesn't exist in /home/ultimate/public_html/staff/erp/includes/notifications.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/notifications.php(14): PDOStatement->execute()
+#1 /home/ultimate/public_html/staff/erp/index.php(28): get_unread_count()
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/erp/includes/notifications.php on line 14
+[16-Dec-2025 18:51:55 Africa/Kampala] PHP Warning:  require_once(includes/functions.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/erp/run_replenishment_test.php on line 2
+[16-Dec-2025 18:51:55 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'includes/functions.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/erp/run_replenishment_test.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/erp/run_replenishment_test.php on line 2
+[27-Dec-2025 17:42:33 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:33 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/dashboard_stats.php(2): require_once()
+#1 /home/ultimate/public_html/staff/erp/index.php(2): require_once('/home/ultimate/...')
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:40 Africa/Kampala] PHP Warning:  require_once(/home/ultimate/public_html/staff/includes/../config.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/includes/functions.php on line 2
+[27-Dec-2025 17:42:40 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '/home/ultimate/public_html/staff/includes/../config.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/includes/functions.php:2
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/includes/dashboard_stats.php(2): require_once()
+#1 /home/ultimate/public_html/staff/erp/index.php(2): require_once('/home/ultimate/...')
+#2 {main}
+  thrown in /home/ultimate/public_html/staff/includes/functions.php on line 2

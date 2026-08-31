@@ -1,0 +1,24 @@
+[30-Mar-2026 02:04:13 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 394
+[30-Mar-2026 02:04:13 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 394
+[30-Mar-2026 02:04:52 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 394
+[30-Mar-2026 02:04:52 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 394
+[30-Mar-2026 02:06:17 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 02:06:17 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 02:06:59 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 02:06:59 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 02:07:18 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 02:07:18 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 02:10:04 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 02:10:04 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 02:10:21 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 02:10:21 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 07:26:50 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[30-Mar-2026 07:26:50 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 403
+[27-Apr-2026 23:42:43 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 409
+[27-Apr-2026 23:42:43 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 409
+[27-Apr-2026 23:43:43 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 409
+[27-Apr-2026 23:43:43 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 409
+[27-Apr-2026 23:43:54 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 409
+[27-Apr-2026 23:43:54 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 409
+[28-Apr-2026 00:23:19 Africa/Kampala] PHP Warning:  Undefined variable $categories in /home/ultimate/public_html/staff/modules/expenses/view.php on line 409
+[28-Apr-2026 00:23:19 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/modules/expenses/view.php on line 409

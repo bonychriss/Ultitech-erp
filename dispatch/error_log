@@ -1,0 +1,40 @@
+[13-Feb-2026 17:32:53 Africa/Kampala] PHP Warning:  require_once(../includes/document_layouts.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dispatch/records.php on line 3
+[13-Feb-2026 17:32:53 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/document_layouts.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dispatch/records.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dispatch/records.php on line 3
+[25-Feb-2026 08:22:02 Africa/Kampala] PHP Warning:  require_once(../includes/document_layouts.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dispatch/records.php on line 3
+[25-Feb-2026 08:22:02 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/document_layouts.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dispatch/records.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dispatch/records.php on line 3
+[25-Feb-2026 08:22:04 Africa/Kampala] PHP Warning:  require_once(../includes/document_layouts.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dispatch/records.php on line 3
+[25-Feb-2026 08:22:04 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/document_layouts.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dispatch/records.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dispatch/records.php on line 3
+[02-Mar-2026 13:44:39 Africa/Kampala] PHP Warning:  require_once(../includes/document_layouts.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/dispatch/records.php on line 3
+[02-Mar-2026 13:44:39 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required '../includes/document_layouts.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/dispatch/records.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/dispatch/records.php on line 3
+[14-Apr-2026 11:26:45 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function getTotalHeaderUnreadNotificationCount() in /home/ultimate/public_html/staff/includes/header_employee.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/dispatch/index.php(483): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/header_employee.php on line 21
+[14-Apr-2026 11:26:58 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function getTotalHeaderUnreadNotificationCount() in /home/ultimate/public_html/staff/includes/header_employee.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/dispatch/index.php(483): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/header_employee.php on line 21
+[14-Apr-2026 11:27:13 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function getTotalHeaderUnreadNotificationCount() in /home/ultimate/public_html/staff/includes/header_employee.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/dispatch/index.php(483): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/header_employee.php on line 21
+[14-Apr-2026 11:27:41 Africa/Kampala] PHP Fatal error:  Uncaught Error: Call to undefined function getTotalHeaderUnreadNotificationCount() in /home/ultimate/public_html/staff/includes/header_employee.php:21
+Stack trace:
+#0 /home/ultimate/public_html/staff/dispatch/index.php(483): require_once()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/includes/header_employee.php on line 21

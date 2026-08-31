@@ -1,0 +1,109 @@
+/* Download Button Styling */
+
+/* Container for the button */
+.dl-container {
+    position: relative;
+    text-align: center;
+    display: inline-block;
+}
+
+/* The Main Download Download Button */
+.dl-button {
+    position: relative;
+    width: 140px;
+    /* Reduced from 200px */
+    height: 36px;
+    /* Reduced from 50px */
+    background: #ffffff;
+    border-radius: 50px;
+    /* Changed back to fully rounded pill shape */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, width 0.4s ease;
+    overflow: hidden;
+    color: #333;
+    border: 2px solid #ddd;
+    /* Increased thickness for circle border style */
+}
+
+/* Click effect */
+.dl-button:active {
+    transform: scale(0.96);
+}
+
+/* The Content inside the button (Icon + Text) */
+.dl-button .content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    /* Reduced from 16px */
+    font-weight: 500;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+/* Icon Styling */
+.dl-button .content i {
+    font-size: 14px;
+    /* Reduced from 20px */
+    color: #333;
+}
+
+/* Success State Styling */
+.dl-button.success {
+    background: #ffffff;
+    cursor: default;
+}
+
+.dl-button.success .content i {
+    color: #2ecc71;
+    /* Green checkmark */
+}
+
+/* Restart Button (Hidden by default) */
+.restart-btn {
+    margin-top: 5px;
+    /* Reduced from 20px */
+    color: #888;
+    font-size: 13px;
+    /* Slightly smaller */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+
+.restart-btn:hover {
+    color: #fff;
+}
+
+/* Show restart button class */
+.restart-btn.show {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* Animation for the cloud arrow */
+@keyframes bounce_arrow {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(3px);
+    }
+}
+
+.fa-cloud-arrow-down {
+    animation: bounce_arrow 2s infinite;
+}

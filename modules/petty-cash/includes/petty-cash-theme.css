@@ -1,0 +1,80 @@
+/* Petty cash module � primary purple buttons & links */
+:root {
+    --pc-purple: #7c3aed;
+    --pc-purple-hover: #6d28d9;
+    --pc-purple-light: #f3e8ff;
+    --pc-purple-ring: rgba(124, 58, 237, 0.18);
+}
+
+.btn-blue {
+    background: var(--pc-purple) !important;
+    color: #fff !important;
+    border: none;
+}
+
+.btn-blue:hover {
+    background: var(--pc-purple-hover) !important;
+    color: #fff !important;
+}
+
+.pc-top-search-btn {
+    background: var(--pc-purple) !important;
+}
+
+.pc-top-search-btn:hover {
+    background: var(--pc-purple-hover) !important;
+}
+
+.pc-top-search-form:focus-within {
+    border-color: #c4b5fd !important;
+    box-shadow: 0 0 0 3px var(--pc-purple-ring) !important;
+}
+
+.pc-search-hint a,
+.kpi-link,
+.action-link:not(.success):not(.danger):not(.muted) {
+    color: var(--pc-purple) !important;
+}
+
+.action-link:not(.success):not(.danger):not(.muted):hover {
+    color: var(--pc-purple-hover) !important;
+}
+
+.pc-btn-view {
+    color: var(--pc-purple) !important;
+    background: var(--pc-purple-light) !important;
+    border-color: #ddd6fe !important;
+}
+
+.pc-btn-view:hover {
+    background: #ede9fe !important;
+}
+
+.pc-lottie-btn--primary {
+    background: var(--pc-purple) !important;
+    border-color: var(--pc-purple) !important;
+}
+
+.pc-lottie-btn--primary:hover {
+    background: var(--pc-purple-hover) !important;
+}
+
+.pc-row-menu-item.view {
+    color: var(--pc-purple) !important;
+}
+
+.btn-primary {
+    background-color: var(--pc-purple) !important;
+    border-color: var(--pc-purple) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: var(--pc-purple-hover) !important;
+    border-color: var(--pc-purple-hover) !important;
+}
+
+.pc-chart-bar {
+    background: var(--pc-purple) !important;
+}

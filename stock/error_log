@@ -1,0 +1,4 @@
+[01-Jan-2026 20:06:24 Africa/Kampala] PHP Fatal error:  Uncaught Error: Undefined constant "PHP_SESSION__ACTIVE" in /home/ultimate/public_html/staff/stock/integrity_check.php:71
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/stock/integrity_check.php on line 71

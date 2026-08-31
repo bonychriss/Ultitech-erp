@@ -1,0 +1,103 @@
+[07-Jan-2026 10:50:16 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:13:03 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:13:25 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:16:05 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:16:13 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:26:03 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:26:04 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:26:06 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:26:07 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:26:08 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:28:11 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 07:59:14 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 20:12:41 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[08-Jan-2026 20:21:58 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.attendance_settings' doesn't exist in /home/ultimate/public_html/staff/attendance/classes/Attendance.php:14
+Stack trace:
+#0 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(14): PDO->query()
+#1 /home/ultimate/public_html/staff/attendance/classes/Attendance.php(10): Attendance->loadSettings()
+#2 /home/ultimate/public_html/staff/attendance/index.php(13): Attendance->__construct()
+#3 {main}
+  thrown in /home/ultimate/public_html/staff/attendance/classes/Attendance.php on line 14
+[17-Apr-2026 17:01:52 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 07:40:05 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[20-Apr-2026 07:40:50 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 09:32:18 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9
+[24-Apr-2026 09:32:27 Africa/Dar_es_Salaam] PHP Warning:  Undefined variable $prefix in /home/ultimate/public_html/staff/includes/header_admin.php on line 9

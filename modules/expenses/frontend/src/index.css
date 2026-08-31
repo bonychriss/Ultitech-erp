@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom ERP Styles Layer */
+@layer components {
+    .btn {
+        @apply inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-none hover:shadow-sm active:scale-[0.98] ring-offset-2 focus-visible:ring-2;
+    }
+
+    .btn-primary {
+        @apply !bg-white !text-[#1a73e8] !border-[#1a73e8];
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover {
+        @apply !bg-[#1a73e8] !text-white;
+        box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
+    }
+
+    .btn-secondary {
+        @apply bg-[#f8fafc] text-[#475569] border-[#e2e8f0] hover:bg-[#f1f5f9] hover:text-[#1e293b];
+    }
+
+    .btn-danger {
+        @apply bg-[#fef2f2] text-[#dc2626] border-[#fee2e2] hover:bg-[#fee2e2] hover:text-[#b91c1c];
+    }
+
+    .btn-reset {
+        @apply bg-[#f1f3f4] text-[#3c4043] px-2.5 py-1 rounded-md text-xs font-medium hover:bg-[#e8eaed] transition-colors border-none;
+    }
+
+    /* Form Controls */
+    .form-control {
+        @apply w-full px-3 py-2.5 bg-white border border-[#dadce0] rounded-lg text-sm text-[#3c4043] transition-all duration-200 outline-none;
+    }
+
+    .form-control:focus {
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+
+    .form-group label {
+        @apply block text-sm font-medium text-[#3c4043] mb-1.5;
+    }
+
+    /* Table Styles */
+    .table {
+        @apply w-full border-collapse;
+    }
+
+    .table th {
+        @apply text-left p-3 border-b border-[#f1f3f4] text-xs font-medium text-[#5f6368] uppercase tracking-wider bg-[#fafbfc];
+    }
+
+    .table td {
+        @apply p-3 border-b border-[#f1f3f4] text-sm text-[#3c4043] align-middle;
+    }
+
+    .table tr:last-child td {
+        @apply border-b-0;
+    }
+
+    .table tr:hover {
+        @apply bg-[#f8f9fa];
+    }
+
+    /* Status Badges */
+    .status-badge {
+        @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium capitalize;
+    }
+
+    .status-pending {
+        @apply bg-[#fef7e0] text-[#b06000];
+    }
+
+    .status-approved {
+        @apply bg-[#e6f4ea] text-[#137333];
+    }
+
+    .status-rejected {
+        @apply bg-[#fce8e6] text-[#c5221f];
+    }
+
+    .status-paid {
+        @apply bg-[#e8f0fe] text-[#1967d2];
+    }
+}
+
+/* Base global styles */
+body {
+    @apply font-sans antialiased text-[#3c4043] bg-[#f8f9fa];
+}
+
+.container {
+    @apply max-w-[1200px] mx-auto px-4 pb-8 sm:px-6;
+}
+
+.page-header {
+    @apply flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.page-title h1 {
+    @apply text-2xl font-normal text-[#202124] m-0;
+}

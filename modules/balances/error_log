@@ -1,0 +1,4 @@
+[01-Apr-2026 07:24:25 Africa/Dar_es_Salaam] Payment items query error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.payment_items' doesn't exist
+[01-Apr-2026 07:24:26 Africa/Dar_es_Salaam] Payment items query error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.payment_items' doesn't exist
+[01-Apr-2026 07:25:11 Africa/Dar_es_Salaam] Payment items query error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.payment_items' doesn't exist
+[01-Apr-2026 07:25:26 Africa/Dar_es_Salaam] Payment items query error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.payment_items' doesn't exist

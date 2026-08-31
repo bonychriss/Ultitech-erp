@@ -1,0 +1,19 @@
+{
+  "name": "invoices",
+  "version": "1.0.0",
+  "description": "",
+  "main": "test_babel.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@babel/core": "^8.0.0",
+    "@babel/preset-react": "^8.0.0",
+    "@babel/standalone": "^7.23.9",
+    "puppeteer": "^25.1.0"
+  }
+}

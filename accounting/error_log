@@ -1,0 +1,55 @@
+[29-Nov-2025 17:15:09 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'e.account_id' in 'ON' in /home/ultimate/public_html/staff/erp/accounting/expenses.php:1
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/accounting/expenses.php(1): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/accounting/expenses.php on line 1
+[29-Nov-2025 17:15:13 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'e.account_id' in 'ON' in /home/ultimate/public_html/staff/erp/accounting/expenses.php:1
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/accounting/expenses.php(1): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/accounting/expenses.php on line 1
+[29-Nov-2025 17:15:14 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'e.account_id' in 'ON' in /home/ultimate/public_html/staff/erp/accounting/expenses.php:1
+Stack trace:
+#0 /home/ultimate/public_html/staff/erp/accounting/expenses.php(1): PDO->query()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/erp/accounting/expenses.php on line 1
+[30-Mar-2026 00:39:45 Africa/Kampala] PHP Warning:  require_once(setup_schema.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[30-Mar-2026 00:39:45 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'setup_schema.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/accounting/profit-loss.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[30-Mar-2026 01:53:34 Africa/Kampala] PHP Warning:  require_once(setup_schema.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/accounting/balance-sheet.php on line 3
+[30-Mar-2026 01:53:34 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'setup_schema.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/accounting/balance-sheet.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/accounting/balance-sheet.php on line 3
+[15-Apr-2026 16:29:50 Africa/Kampala] PHP Warning:  require_once(setup_schema.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[15-Apr-2026 16:29:50 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'setup_schema.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/accounting/profit-loss.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[15-Apr-2026 16:29:52 Africa/Kampala] PHP Warning:  require_once(setup_schema.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[15-Apr-2026 16:29:52 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'setup_schema.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/accounting/profit-loss.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[24-Apr-2026 22:24:53 Africa/Kampala] PHP Warning:  require_once(setup_schema.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[24-Apr-2026 22:24:53 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'setup_schema.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/accounting/profit-loss.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[27-Apr-2026 23:49:43 Africa/Kampala] PHP Warning:  require_once(setup_schema.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[27-Apr-2026 23:49:43 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'setup_schema.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/accounting/profit-loss.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[27-Apr-2026 23:49:48 Africa/Kampala] PHP Warning:  require_once(setup_schema.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/accounting/balance-sheet.php on line 3
+[27-Apr-2026 23:49:48 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'setup_schema.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/accounting/balance-sheet.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/accounting/balance-sheet.php on line 3
+[28-Apr-2026 00:04:21 Africa/Kampala] PHP Warning:  require_once(setup_schema.php): Failed to open stream: No such file or directory in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3
+[28-Apr-2026 00:04:21 Africa/Kampala] PHP Fatal error:  Uncaught Error: Failed opening required 'setup_schema.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/ultimate/public_html/staff/accounting/profit-loss.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/ultimate/public_html/staff/accounting/profit-loss.php on line 3

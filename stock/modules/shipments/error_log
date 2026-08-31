@@ -1,0 +1,205 @@
+[02-Jan-2026 09:02:51 Africa/Kampala] PHP Warning:  Trying to access array offset on value of type bool in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 93
+[02-Jan-2026 09:03:03 Africa/Kampala] PHP Warning:  Trying to access array offset on value of type bool in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 93
+[02-Jan-2026 20:05:19 Africa/Kampala] PHP Warning:  Trying to access array offset on value of type bool in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 93
+[02-Jan-2026 20:07:01 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:51
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(51): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 51
+[02-Jan-2026 20:09:11 Africa/Kampala] PHP Warning:  Trying to access array offset on value of type bool in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 93
+[05-Jan-2026 13:48:21 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:74
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(74): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 74
+[05-Jan-2026 18:32:48 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:76
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(76): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 76
+[05-Jan-2026 18:32:57 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:76
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(76): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 76
+[05-Jan-2026 18:33:03 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:76
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(76): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 76
+[05-Jan-2026 18:33:11 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:76
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(76): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 76
+[05-Jan-2026 18:33:39 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:76
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(76): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 76
+[05-Jan-2026 18:36:19 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:76
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(76): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 76
+[05-Jan-2026 18:36:33 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:76
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(76): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 76
+[05-Jan-2026 18:36:51 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:76
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(76): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 76
+[05-Jan-2026 18:48:15 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:76
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(76): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 76
+[05-Jan-2026 18:48:45 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:76
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(76): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 76
+[05-Jan-2026 18:50:20 Africa/Kampala] PHP Warning:  Undefined variable $purchase_id in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 126
+[05-Jan-2026 18:50:20 Africa/Kampala] PHP Warning:  Undefined variable $suppliers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 18:50:20 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 18:50:20 Africa/Kampala] PHP Warning:  Undefined variable $shippers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 18:50:20 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 20:06:32 Africa/Kampala] PHP Warning:  Undefined variable $purchase_id in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 126
+[05-Jan-2026 20:06:32 Africa/Kampala] PHP Warning:  Undefined variable $suppliers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 20:06:32 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 20:06:32 Africa/Kampala] PHP Warning:  Undefined variable $shippers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 20:06:32 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 21:32:59 Africa/Kampala] PHP Warning:  Undefined variable $purchase_id in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 126
+[05-Jan-2026 21:32:59 Africa/Kampala] PHP Warning:  Undefined variable $suppliers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 21:32:59 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 21:32:59 Africa/Kampala] PHP Warning:  Undefined variable $shippers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 21:32:59 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 22:37:26 Africa/Kampala] PHP Warning:  Undefined variable $purchase_id in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 126
+[05-Jan-2026 22:37:26 Africa/Kampala] PHP Warning:  Undefined variable $suppliers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 22:37:26 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 22:37:26 Africa/Kampala] PHP Warning:  Undefined variable $shippers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 22:37:26 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 22:37:32 Africa/Kampala] PHP Warning:  Undefined variable $purchase_id in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 126
+[05-Jan-2026 22:37:32 Africa/Kampala] PHP Warning:  Undefined variable $suppliers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 22:37:32 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 22:37:32 Africa/Kampala] PHP Warning:  Undefined variable $shippers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 22:37:32 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 22:38:22 Africa/Kampala] PHP Warning:  Undefined variable $purchase_id in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 126
+[05-Jan-2026 22:38:22 Africa/Kampala] PHP Warning:  Undefined variable $suppliers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 22:38:22 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 138
+[05-Jan-2026 22:38:22 Africa/Kampala] PHP Warning:  Undefined variable $shippers in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 22:38:22 Africa/Kampala] PHP Warning:  foreach() argument must be of type array|object, null given in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 170
+[05-Jan-2026 22:44:36 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'shipment_number' doesn't have a default value in /home/ultimate/public_html/staff/stock/modules/shipments/create.php:86
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/create.php(86): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/create.php on line 86
+[05-Jan-2026 22:56:05 Africa/Kampala] PHP Parse error:  syntax error, unexpected identifier "color", expecting "," or ";" in /home/ultimate/public_html/staff/stock/modules/shipments/debug_live_shipment.php on line 31
+[05-Jan-2026 23:07:00 Africa/Kampala] PHP Parse error:  syntax error, unexpected identifier "color", expecting "," or ";" in /home/ultimate/public_html/staff/stock/modules/shipments/debug_live_shipment.php on line 31
+[06-Jan-2026 09:20:46 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 09:29:06 Africa/Kampala] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in /home/ultimate/public_html/staff/config.php on line 102
+[06-Jan-2026 09:45:55 Africa/Kampala] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in /home/ultimate/public_html/staff/config.php on line 102
+[06-Jan-2026 10:22:57 Africa/Kampala] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in /home/ultimate/public_html/staff/config.php on line 102
+[06-Jan-2026 10:22:59 Africa/Kampala] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in /home/ultimate/public_html/staff/config.php on line 102
+[06-Jan-2026 15:06:48 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:08:20 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:08:23 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:10:19 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:10:21 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:10:23 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:10:25 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:10:34 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:11:57 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:11:59 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:59:47 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 16:59:50 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 17:37:59 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 19:49:47 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[06-Jan-2026 20:10:17 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[07-Jan-2026 11:42:04 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[10-Jan-2026 09:07:52 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[10-Jan-2026 09:13:27 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57
+[10-Jan-2026 09:13:39 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ultimate_trading_voucher.ecc_documents' doesn't exist in /home/ultimate/public_html/staff/stock/modules/shipments/view.php:57
+Stack trace:
+#0 /home/ultimate/public_html/staff/stock/modules/shipments/view.php(57): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/stock/modules/shipments/view.php on line 57

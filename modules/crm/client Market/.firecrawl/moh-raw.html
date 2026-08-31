@@ -1,0 +1,2168 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Home|Ministry of Health</title>
+	<meta name="google" content="notranslate">
+        <meta name="description" content="">
+        <meta name="title" content="">
+        <meta name="author" content="OctoberCMS">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="generator" content="OctoberCMS">
+
+        <link rel="icon" type="image/ico" href="https://www.moh.go.tz/themes/wazalendo/assets/images/favicon.ico">
+        <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,900" rel="stylesheet">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/normalize.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/font-awesome.min.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/all.min.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/icomoon.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/animate.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/prettyPhoto.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/owl.carousel.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/owl.theme.default.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/transitions.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/main.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/color.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/moh.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/responsive.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/css/magnific-popup.min.css">
+        <link rel="stylesheet" href="https://www.moh.go.tz/themes/wazalendo/assets/leaflet/leaflet.css">
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/leaflet/leaflet.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/vendor/modernizr-2.8.3-respond-1.4.2.min.js"></script>
+                <style>
+            ul{
+                list-style-type: none;
+            }
+            .tg-logoandnoticeboard{
+                padding: 2px;
+            }
+            .tg-centerbox .tg-languagesdropdown select {
+              background: #155d9c;
+            }
+
+            button.navbar-toggle.collapsed {
+              background: #155d9c;
+            }
+
+            .tg-topbar, .tg-footerbar,.tg-footermiddlebar {
+              background: #155d9c;
+            }
+            .logo, .ngao{margin:0;position:relative}
+            .logo{float:right;text-align:center}
+            .banner{background-image:url('https://www.moh.go.tz/storage/app/uploads/public/623/a92/13d/623a9213dbadd201544488.png');}
+            .tagline{text-align:center; text-transform:capitalize;padding-right: 1rem;}
+            .tagline ul.pull-right{float:none!important}
+            .tagline h3.country-name{
+              font-size: 22px;
+              font-weight: 500;
+              color: white;
+              margin-bottom: 1rem;
+              
+            }
+            .tagline h3.site-name {
+              font-size: 24px;
+              font-weight: 600;
+              color: #2c2D3f;
+            }
+
+            .banner{width:100%}
+            .banner{height:auto;background-repeat:no-repeat;height:130px;padding:.7em 0}
+            .custom-counter ul{margin-left:0;padding-right:0;list-style-type:none;margin-bottom:20px}
+            .custom-counter li{counter-increment:b;position:relative;margin-bottom:.8333333333em;padding-bottom:.8333333333em;border-bottom:1px solid #eee}
+            .tg-widgettitle{
+                background-color: #155d9c;
+            }
+
+            .tg-widgettitle h3{
+                color: #ffffff;
+            }
+
+            li{
+              /* text-transform: lowercase; */
+              text-transform: capitalize;
+              font-weight: 500;
+              font-size: 14px;
+            }
+            p{
+              text-transform: none;
+              font-weight: 500;
+              font-size: 14px;
+            }
+
+            h2{
+              font-size: 14px;
+            }
+
+            #tg-main ul{
+                list-style-type: none !important;
+            }
+
+            #calendar{
+            font-family: Calibri, sans-serif;
+            font-family: 'Roboto Condensed', sans-serif;
+            color: #333;
+            }
+
+            .cld-main {
+              background: linear-gradient(to right, #a1c4fd, #c2e9fb);
+              padding: 2.4rem;
+              margin-bottom: 50px;
+              border-radius: 2px;
+            }
+
+            .cld-main a{
+              color: #333;
+              font-weight: bold;
+            }
+            .cld-datetime{
+              position: relative;
+              width: 66%;
+              min-width: 100px;
+              max-width: 300px;
+              margin: auto;
+              overflow: hidden;
+            }
+            .cld-datetime .today{
+              position: relative;
+              float: left;
+              width: calc(100% - 40px);
+              margin: auto;
+              text-align: center;
+            }
+            .cld-nav{
+              position: relative;
+              width: 20px;
+              height: 20px;
+              margin-top: 2px;
+            }
+            .cld-nav:hover{
+              cursor: pointer;
+            }
+            .cld-nav:hover svg{
+                fill: #666;
+            }
+            .cld-rwd{
+              float: left;
+            }
+            .cld-fwd{
+              float: right;
+            }
+            .cld-nav svg:hover{
+
+            }
+            .cld-labels, .cld-days{
+              padding-left: 0;
+            }
+            .cld-label, .cld-day{
+              display: inline-block;
+              width: 14.28%;
+              text-align: center;
+            }
+            .cld-day.today .cld-number{
+              display: inline-block;
+              height: 36px;
+              width: 36px;
+              border-radius: 50%;
+              background: #777;
+              color: #fff;
+            }
+            .cld-day.disableDay{
+              opacity: 0.5;
+            }
+            .cld-day.nextMonth, .cld-day.prevMonth{
+              opacity: 0.33;
+            }
+            .cld-number{
+              position: relative;
+              margin: 5px;
+              padding: 5px;
+            }
+            .cld-title{
+              position: absolute;
+              z-index: 5;
+              display: none;
+              top: 30px;
+              left: 0;
+              padding: 5px 10px;
+              background: #fff;
+              white-space: nowrap;
+              border: 1px solid #ccc;
+              border-radius: 5px;
+              font-size: 12px;
+            }
+            .cld-number:hover .cld-title{
+              display: block;
+            }
+            .cld-title::before{
+              content: '';
+              position: absolute;
+              top: -7.5px; left: 7.5px;
+              width: 0;
+              height: 0;
+              border-left: 7.5px solid transparent;
+              border-right: 7.5px solid transparent;
+
+              border-bottom: 7.5px solid #ccc;
+            }
+            .cld-number.eventday{
+              display: inline-block;
+              height: 36px;
+              width: 36px;
+              border-radius: 50%;
+              border: 1px solid #777;
+            }
+            .cld-number.eventday:hover{
+              cursor: pointer;
+              background: #eee;
+            }
+            .today .cld-number.eventday:hover{
+              background: #888;
+            }
+
+      .w3-light-grey{
+
+        color:#000!important;background-color:#f1f1f1!important;
+      }
+      .w3-center{
+        display:inline-block;width:auto;
+        text-align:center!important;
+      }
+      .w3-section{
+        margin-top:10px!important;margin-bottom:10px!important;
+      }
+      .w3-button{
+        color:#000!important;background-color:#ccc!important;
+        border:none;display:inline-block;padding:2px 10px;vertical-align:middle;overflow:hidden;text-decoration:none;color:inherit;background-color:inherit;text-align:center;cursor:pointer;white-space:nowrap;
+        -webkit-touch-callout:none;-webkit-user-select:none;-khtml-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
+        
+      }
+        </style>
+    </head>
+    <body>
+      <div class="container-fluid">
+        <!-- Header -->
+            <!--************************************
+			Wrapper Start
+	*************************************-->
+    <div id="tg-wrapper" class="tg-wrapper">
+        <!--************************************
+                Header Start
+        *************************************-->
+        <header id="tg-header" class="tg-header tg-haslayout"> 
+            <div>
+                <!-- <div class="tg-topbar container"></div> -->
+                <div class="tg-topbar container col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                    <span class="topspan col-md-3" >
+                                                <!-- <ul> -->
+        <span class="tg-tollfree"><a href="https://owa.moh.go.tz/"> Ongea na Mhe. Waziri wa Afya</a> </span>
+    <!-- </ul> -->                                            </span>
+                    <div  class="col-md-3">
+                        <form action="https://www.moh.go.tz/search" method="get">
+                          
+                              <div class="input-group" action="https://www.moh.go.tz/search" method="get" style="background-color: white;color: black;border-radius: 50px;">
+                                  <input type="search" name="q" id="search" placeholder="Search Here" class="form-control" style="color: black;">
+          
+                                  <div class="input-group-btn">
+                                      <button type="submit"><i class="fa fa-search" style="border-radius: 50px;"></i></button>
+                                  </div>
+                          
+                              </div>
+                        </form>  
+                     </div>
+                     <div class="tg-rightbox col-md-3" style="justify-content: left;">
+                        <div class="tg-social" >
+                    
+                                                      <a href=" https://web.facebook.com/wizaraafyatz/?_rdc=1&amp;_rdr" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                                                                                     <a href="https://twitter.com/wizara_afyatz"  target="_blank"><i class="fab fa-twitter"></i></a>
+                                               
+                                                          <a href="https://www.youtube.com/channel/UCjbzhwFBe8pSGMr8K0_utEw" target="_blank"><i class="fab fa-youtube"></i></a>
+                                               
+                                                      <a href="https://www.instagram.com/wizara_afyatz/?hl=en"  target="_blank"><i class="fab fa-instagram"></i></a>
+                                               
+                           <!--                     
+                                                      <a href="https://afyablog.moh.go.tz/"  target="_blank"><img src="https://www.moh.go.tz/themes/wazalendo/assets/images/social_links/blogger.png"></a>
+                            -->
+                    
+                       </div>
+                    </div>
+                    <div  class="col-md-3" style="padding: 0px;">
+                        <span class="tg-languagesdropdown" >
+                           <form method="POST" action="https://www.moh.go.tz" accept-charset="UTF-8" role="form"><input name="_session_key" type="hidden" value="7L9NnOG7a51RksMUVMmNcDoxjEnlQ7G9YSr2iZlh"><input name="_token" type="hidden" value="BibH56UGBeG2jRKEXGar7DaRGYm7lXzHeVVILXPa">
+    <select name="locale" data-request="onSwitchLocale" class="form-control">
+                    <option value="sw" selected >Kiswahili</option>
+                    <option value="en"  >English</option>
+            </select>
+</form>                       </span>
+                    </div>
+
+                </div>
+
+                <div>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 top-banner">
+                            <a href="https://www.moh.go.tz">
+                                <div class="tg-logoandnoticeboard">
+                                <!-- For bigger screens -->
+
+<div class="row hidden-sm hidden-xs">
+    <div class="col-md-12">
+
+        <div class="banner">
+            <div class="col-md-2 col-md-push-10 ">
+                <div class="logo">
+                    <a href="https://www.moh.go.tz">
+                        
+                                            </a>
+                </div>
+                <!-- /.logo -->
+            </div>
+            <!-- /.col-md-2 -->
+
+            <!-- <div class="col-md-2  col-md-pull-2 col-sm-2 col-xs-2 hidden-xs">
+                <div class="ngao">
+                    <a href=".">
+                                                <img src="https://www.moh.go.tz/themes/wazalendo/assets/images/ngao.png" alt="Government Web Framework" />
+                                            </a>
+                </div>
+          
+            </div> -->
+            <!-- /.col-md-2 -->
+            <div class="col-md-8  col-md-pull-2 col-sm-8 col-xs-12" style="text-align: center;">
+                <div class="tagline">
+                    <b><h3 class="hidden-md hidden-xs hidden-sm country-name" style="color:black">Jamhuri ya Muungano wa Tanzania<br /></h3></b>
+                    <h3 class="site-name" style="color: #3BB9FF;font-size:32px">Wizara Ya Afya</h3>
+                                    </div>
+            </div>
+            <!-- /.col-md-8 col-sm-12 col-xs-12 -->
+        </div>
+
+        <!-- /.banner -->
+    </div>
+    <!-- /.col-md-12 -->
+</div>
+
+<!-- For smaller screens -->
+<div class="row visible-sm visible-xs">
+    <div class="col-md-12">
+        <div class="">
+            <div class="col-sm-12 col-xs-12">
+                <h4 class="small-screen">
+                    Wizara Ya Afya
+                                    </h4>
+            </div>
+            <!-- /.col-md-8 col-sm-12 col-xs-12 -->
+        </div>
+        <!-- /.banner -->
+    </div>
+    <!-- /.col-md-12 -->
+</div>                                </div>
+                            </a>
+                            <div class="tg-navigationarea">
+                                <nav id="tg-nav" class="tg-nav">
+                                    <div class="navbar-header">
+                                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#tg-navigation" aria-expanded="false">
+                                            <span class="sr-only">Toggle navigation</span>
+                                            <span class="icon-bar" style="color: white;"></span>
+                                            <span class="icon-bar" style="color: white;"></span>
+                                            <span class="icon-bar" style="color: white;"></span>
+                                        </button>
+                                    </div>
+                                    <div id="tg-navigation" class="collapse navbar-collapse tg-navigation" style="background-color: #155d9c;">
+                                                                                <ul class="nav navbar-nav">
+        <li class="
+    current-menu-item 
+    "><a href="https://www.moh.go.tz">Mwanzo</a>
+            </li>
+        <li class="
+     menu-item-has-children
+    "><a href="#">Kuhusu sisi</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/about">Kuhusu Wizara</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/organization-structur">Muundo wa Utawala</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/mission-and-vis">Dira na Dhima</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/role">Kazi Zetu</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/standard">Mkataba Wa Huduma Kwa Wateja</a>
+            </li>
+    </ul>            </li>
+        <li class="
+     menu-item-has-children
+    "><a href="#">Utawala</a>
+                    <ul class="sub-menu">
+        <li class="
+     menu-item-has-children
+    "><a href="#">Idara</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/administration-and-human-resource-management">Utawala na Rasilimali Watu</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/policy_planning">Sera na Mipango</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/preventive-services">Huduma Za Kinga</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/curative-services">Huduma Za Tiba</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/health-quality-assurance">Uhakiki Ubora</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/finance-and-accoutance">Fedha na Akaunti</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/human-resources">Mafunzo Na Maendeleo Ya Watumishi</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/information-communication-technology">Teknolojia Ya Hbari Na Mawasiliano</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/nursing-mildwife">Nursing And Midwifery</a>
+            </li>
+    </ul>            </li>
+        <li class="
+     menu-item-has-children
+    "><a href="#">Vitengo</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/government-communication">Mawasiliano Serikalini</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/internal-audit">Ukaguzi wa ndani</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/procurement">Ununuzi</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/legal-services">Huduma za Kisheria</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/pharmaceutical-services">Huduma za Dawa</a>
+            </li>
+    </ul>            </li>
+    </ul>            </li>
+        <li class="
+     menu-item-has-children
+    "><a href="#">Mipango</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="https://nacp.go.tz/">Mpango wa Taifa wa Kudhibiti UKIMWI</a>
+            </li>
+        <li class="
+     
+    "><a href="">Mpango wa Taifa wa Kudhibiti Malaria</a>
+            </li>
+        <li class="
+     
+    "><a href="https://ntlp.go.tz/">Mpango wa Taifa wa Kifua Kikuu na Ukoma</a>
+            </li>
+        <li class="
+     
+    "><a href="#">Mpango wa Maendeleo ya Chanjo na Chanjo</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.ntdcp.go.tz/"> Mpango wa Kudhibiti Magonjwa ya Kitropiki Uliopuuzwa</a>
+            </li>
+        <li class="
+     
+    "><a href="#">Kuzuia Maambukizi ya Mama na Mtoto (PMTCT)</a>
+            </li>
+        <li class="
+     
+    "><a href="#">Magonjwa Yasiyo ya Kuambukiza (NCD)</a>
+            </li>
+        <li class="
+     
+    "><a href="#">Afya ya Uzazi na Mtoto (RCH)</a>
+            </li>
+        <li class="
+     
+    "><a href="#">Madawa ya Dharura</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.nbts.go.tz/">Mpango wa Taifa wa Damu Salama</a>
+            </li>
+    </ul>            </li>
+        <li class="
+     menu-item-has-children
+    "><a href="#">Taasisi</a>
+                    <ul class="sub-menu">
+        <li class="
+     menu-item-has-children
+    "><a href="#">Hospitali ya Taifa</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="http://www.mnh.or.tz/">Hospitali ya Taifa Muhimbili</a>
+            </li>
+    </ul>            </li>
+        <li class="
+     menu-item-has-children
+    "><a href="#">Hospitali za Kanda</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="https://www.bmh.or.tz/">Hospitali ya Benjamin Mkapa</a>
+            </li>
+        <li class="
+     
+    "><a href="https://mzrh.go.tz/">Hospitali ya Kanda ya Mbeya</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.chatozrh.go.tz/">Hospitali ya Kanda ya Chato</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.szrh.go.tz/">Kanda ya Kusini ya Mtwara</a>
+            </li>
+    </ul>            </li>
+        <li class="
+     menu-item-has-children
+    "><a href="#">Hospitali Maalum za Kitaifa</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="https://www.jkci.or.tz/">Jakaya Kikwete Moyo</a>
+            </li>
+        <li class="
+     
+    "><a href="http://kidh.go.tz/">Magonjwa ya Kuambukiza ya Kibong'oto(KIDH)</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.mloganzila.or.tz/">Hospitali ya Taifa Muhimbili - MLOGANZILA</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moi.ac.tz/">Taasisi ya Mifupa Muhimbili (MOI)</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.mhinnovation.net/organisations/mirembe-national-mental-health-hospital-mnmh">Afya ya Akili ya Mirembe (MMHH)</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.orci.or.tz/">Taasisi ya Saratani ya Ocean Road (ORCI)</a>
+            </li>
+    </ul>            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/rrh">Hospitali za Rufaa za Mkoa</a>
+            </li>
+        <li class="
+     menu-item-has-children
+    "><a href="#">Taasisi za Afya</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="https://www.msd.go.tz">Medical Store Department - MSD</a>
+            </li>
+        <li class="
+     
+    "><a href="nhif.or.tz">National Health Insurance Fund - NHIF</a>
+            </li>
+        <li class="
+     
+    "><a href="https://gcla.go.tz/">Government Chemistry Laboratory Authority - GCLA</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.nimr.or.tz/">Taasisi ya Utafiti wa Magonjwa ya Binadamu - NIMR</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.tfnc.go.tz/">Tanzania Food and Nutrition Centre - TFNC</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.tmda.go.tz/">Tanzania Medicines and Medical Devices Authority - TMDA</a>
+            </li>
+    </ul>            </li>
+    </ul>            </li>
+        <li class="
+     
+    "><a href="#"> Taasisi za Kitaaluma</a>
+            </li>
+        <li class="
+    current-menu-item menu-item-has-children
+    "><a href="#">Mabaraza ya Kitaaluma</a>
+                    <ul class="sub-menu">
+        <li class="
+     menu-item-has-children
+    "><a href="#">Health Councils</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="https://www.mct.go.tz/">Medical Council of Tanganyika - MCT</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.pc.go.tz/">Pharmacy Council - PC</a>
+            </li>
+        <li class="
+     
+    "><a href="https://tahpc.beyfoxsolutions.com/">Traditional and Alternative Health Practitioners Council-TAHPC</a>
+            </li>
+        <li class="
+     
+    "><a href="#">Medical Radiology and Imaging Practitioners Council - MRIPC</a>
+            </li>
+        <li class="
+     
+    "><a href="#">Optometry Council</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.tnmc.go.tz/">Tanzania Nursing and Midwifery Council - TNMC</a>
+            </li>
+        <li class="
+     
+    "><a href="#">Enviromental Health Practitioners Registration Council -EHPRC</a>
+            </li>
+        <li class="
+     
+    "><a href="#">Health Laboratory Practitioners Council</a>
+            </li>
+    </ul>            </li>
+        <li class="
+    current-menu-item menu-item-has-children
+    "><a href="/">Boards</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="http://41.59.227.94:9099/">Private Hospital Advisory Boards - PHAB</a>
+            </li>
+        <li class="
+     
+    "><a href="http://41.59.227.94:9097/">Private Health Laboratories Board - PHLB</a>
+            </li>
+    </ul>            </li>
+    </ul>            </li>
+        <li class="
+     menu-item-has-children
+    "><a href="#">Machapisho</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/guidelines">Mwongozo</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/report">Ripoti</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/budget">Bajeti</a>
+            </li>
+        <li class="
+     
+    "><a href="http://hidl.afya.go.tz/#/library/dashboard/published-list">Maktaba ya Nyaraka za Afya</a>
+            </li>
+        <li class="
+     
+    "><a href="https://drive.google.com/drive/folders/1mZnFyLbPH2CrlCyWdb7HwCpJc8vzISWE">GF Cycle 8 Application Materials</a>
+            </li>
+    </ul>            </li>
+        <li class="
+     menu-item-has-children
+    "><a href="#">Kituo cha Habari</a>
+                    <ul class="sub-menu">
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/releases">Taarifa Kwa Umma</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/news">Habari</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/photo-gallery">Maktaba ya Picha</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/video-gallery">Maktaba ya Video</a>
+            </li>
+        <li class="
+     
+    "><a href="https://www.moh.go.tz/speeches">Hotuba</a>
+            </li>
+    </ul>            </li>
+    </ul>                                                                            </div>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!--************************************
+                Header End
+        *************************************-->        <!-- Content -->
+            
+
+
+
+
+<!--************************************
+        Home Slider Start
+*************************************-->
+<div class="clearfix"></div>
+<div class="container-fluid hero">
+    <div class="row ">
+
+
+        <!-- <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12"> -->
+        <div class="col-md-2 leaders container-fluid hero">
+
+            <div class="row leader-section container-fluid hero">
+                <div class="slido">
+                                        
+                                        <img class="img-thumbnail text-center" src="https://www.moh.go.tz/storage/app/uploads/public/691/b1f/533/691b1f533f4b5818552450.png" alt="profile">
+                    
+                    <h3 class="text-center">Mohamed Omary Mchengerwa (Mb)<br /><span>Waziri</span></h3>
+                                    </div>
+            </div>
+
+            <div class="row leader-section container-fluid hero" >
+                <div class="slidotwo">
+                                        
+                                        <img class="img-thumbnail text-center" src="https://www.moh.go.tz/storage/app/uploads/public/6a3/e91/6c8/6a3e916c8ca60942760337.webp" alt="profile">
+                    
+
+                    <h3 class="text-center">Dkt. Grace Magembe<br /><span>Katibu Mkuu</span></h3>
+                                    </div>
+
+            </div>
+
+        </div>
+
+        <!-- </div> -->
+        <div class="col-md-8  slide container-fluid hero">
+            <style>
+                /*jssor slider loading skin spin css*/
+                .jssorl-009-spin img {
+                    animation-name: jssorl-009-spin;
+                    animation-duration: 1.6s;
+                    animation-iteration-count: infinite;
+                    animation-timing-function: linear;
+                }
+
+                @keyframes jssorl-009-spin {
+                    from {
+                        transform: rotate(0deg);
+                    }
+
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+
+                .jssora061 {
+                    display: block;
+                    position: absolute;
+                    cursor: pointer;
+                }
+
+                .jssora061 .a {
+                    fill: none;
+                    stroke: #fff;
+                    stroke-width: 360;
+                    stroke-linecap: round;
+                }
+
+                .jssora061:hover {
+                    opacity: .8;
+                }
+
+                .jssora061.jssora061dn {
+                    opacity: .5;
+                }
+
+                .jssora061.jssora061ds {
+                    opacity: .3;
+                    pointer-events: none;
+                }
+            </style>
+            <div id="jssor_1"
+                style="position:relative;margin:0 auto;top:0px;left:0px;width:4464px;height:2512px;overflow:hidden;visibility:hidden;">
+                <!-- Loading Screen -->
+                <div data-u="loading" class="jssorl-009-spin"
+                    style="position:absolute;top:0px;left:0px;width:100%;height:100%;text-align:center;background-color:rgba(0,0,0,0.7);">
+                    <img style="margin-top:-19px;position:relative;top:50%;width:38px;height:38px;"
+                        src="" />
+                </div>
+                <div data-u="slides"
+                    style="cursor:default;position:relative;top:0px;left:0px;width:4464px;height:2512px;overflow:hidden;" class="container-fluid hero">
+                                                            <div>
+                        <img data-u="image" src="https://www.moh.go.tz/storage/app/uploads/public/6a7/04d/0fe/thumb_3259_4464_2512_0_0_auto.jpeg">
+                        <div u="thumb">
+                                <h1 style="font-size: 55px;color: white;line-height: 52px;font-weight: 900px;padding-top: 40px;"></h1>
+                        </div>
+                    </div>
+                                        <div>
+                        <img data-u="image" src="https://www.moh.go.tz/storage/app/uploads/public/6a7/04e/e40/thumb_3261_4464_2512_0_0_auto.jpeg">
+                        <div u="thumb">
+                                <h1 style="font-size: 55px;color: white;line-height: 52px;font-weight: 900px;padding-top: 40px;"></h1>
+                        </div>
+                    </div>
+                                        <div>
+                        <img data-u="image" src="https://www.moh.go.tz/storage/app/uploads/public/6a7/053/a9a/thumb_3262_4464_2512_0_0_auto.jpeg">
+                        <div u="thumb">
+                                <h1 style="font-size: 55px;color: white;line-height: 52px;font-weight: 900px;padding-top: 40px;"></h1>
+                        </div>
+                    </div>
+                                        <div>
+                        <img data-u="image" src="https://www.moh.go.tz/storage/app/uploads/public/6a7/053/c7c/thumb_3263_4464_2512_0_0_auto.jpeg">
+                        <div u="thumb">
+                                <h1 style="font-size: 55px;color: white;line-height: 52px;font-weight: 900px;padding-top: 40px;"></h1>
+                        </div>
+                    </div>
+                                        
+
+                </div><a data-scale="0" href="https://www.jssor.com" style="display:none;position:absolute;">image
+                    gallery</a>
+                <!-- Thumbnail Navigator -->
+                <div u="thumbnavigator"
+                    style="position:absolute;bottom:0px;font-size: 24px;left:0px;width:4464px;height:400px;color:#FFF;overflow:hidden;cursor:default;background-color:rgba(0,0,0,.5);">
+                    <div u="slides">
+                        <div u="prototype" style="position:absolute;top:0;left:0;width:4464px;height:400px;">
+                            <div u="thumbnailtemplate"
+                                style="position:absolute;top:0;left:0;width:100%;height:100%;font-size:24px;padding-left:5px;box-sizing:border-box;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Arrow Navigator -->
+                <div data-u="arrowleft" class="jssora061" style="width:55px;height:55px;top:0px;left:25px;"
+                    data-autocenter="2" data-scale="0.75" data-scale-left="0.75">
+                    <svg viewbox="0 0 16000 16000" style="position:absolute;top:0;left:0;width:100%;height:100%;">
+                        <path class="a" d="M11949,1919L5964.9,7771.7c-127.9,125.5-127.9,329.1,0,454.9L11949,14079">
+                        </path>
+                    </svg>
+                </div>
+                <div data-u="arrowright" class="jssora061" style="width:55px;height:55px;top:0px;right:25px;"
+                    data-autocenter="2" data-scale="0.75" data-scale-right="0.75">
+                    <svg viewbox="0 0 16000 16000" style="position:absolute;top:0;left:0;width:100%;height:100%;">
+                        <path class="a" d="M5869,1919l5984.1,5852.7c127.9,125.5,127.9,329.1,0,454.9L5869,14079"></path>
+                    </svg>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-md-2  leaders container-fluid hero">
+
+            <div class="row leader-section container-fluid hero">
+
+                <div class="slido">
+                                        
+                                        <img class="img-thumbnail text-center" src="https://www.moh.go.tz/storage/app/uploads/public/691/b1e/645/691b1e6456115978441791.png" alt="profile">
+                    
+                    <h3 class="text-center">
+                        Dkt. Florence George Samizi (Mb)<br /><span>Naibu Waziri</span></h3>
+                                    </div>
+            </div>
+           <div class="row leader-section container-fluid hero">
+
+                <div class="slido">
+                                        
+                                        <img class="img-thumbnail text-center" src="https://www.moh.go.tz/storage/app/uploads/public/6a5/77d/2ea/6a577d2ea75a0182894421.png" alt="profile">
+
+                    <h3 class="text-center">
+                        Ismail Rumatila<br /><span>Naibu Katibu Mkuu</span></h3>
+                                    </div>
+            </div>
+
+            <div class="row leader-section container-fluid hero">
+
+                <div class="slidotwo">
+                                        
+                                        <img class="img-thumbnail text-center" src="https://www.moh.go.tz/storage/app/uploads/public/6a5/77d/072/6a577d0728dd2615205255.jpeg" alt="profile">
+                    
+                    <h3 class="text-center">
+                        Emmanuel Tayari<br /><span>Naibu Katibu Mkuu Dawa na Vifaa Tiba</span></h3>
+                                    </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+<!--************************************
+        Home Slider End
+
+        873 vs 424 silides
+*************************************--><!--************************************
+        Main Start
+*************************************-->
+<main id="tg-main" class="tg-main tg-haslayout">
+    <div class="container-fluid">
+
+        <div class="row">
+
+            <div class="col-xs-12 col-sm-6 col-md-6">
+                <div class="separator-left">
+                    <h6 class="head-title">Habari </h6>
+                </div>
+                <div class="row">
+                                                                                                                        
+                                                            <div class="row col-xs-12 col-sm-12 col-md-12"
+                        style="box-shadow: 0 1px 1px 0 rgb(211 211 211 / 75%);min-height: 30px;display: flex;align-items: flex-start;padding-bottom: 30px;"><div class="col-md-6"><a href="https://www.moh.go.tz/news-single/serikali-yaendelea-kuhakikisha-uwepo-wa-vyanzo-vya-uhakika-utekelezaji-wa-bima-ya-afya-kwa-wote"><img src="https://www.moh.go.tz/storage/app/uploads/public/6a7/efe/228/thumb_3277_357_210_0_0_crop.jpg" alt="image description"></a></div><div class="col-md-6"><h6><b><a href="https://www.moh.go.tz/news-single/serikali-yaendelea-kuhakikisha-uwepo-wa-vyanzo-vya-uhakika-utekelezaji-wa-bima-ya-afya-kwa-wote">SERIKALI YAENDELEA KUHAKIKISHA UWEPO WA VYANZO VYA UHAKI...</a></b></h6><a href="https://www.moh.go.tz/news-single/serikali-yaendelea-kuhakikisha-uwepo-wa-vyanzo-vya-uhakika-utekelezaji-wa-bima-ya-afya-kwa-wote" style="color: #666;"><i class="fa fa-calendar"></i><span> Posted on: August 12th, 2026</span></a><p>Na Hassan Kimweri, WAF – Dodoma
+	
+	Serikali inaendelea kuhakikisha uwepo wa vyanzo vya uhakik...<a
+                                    href="https://www.moh.go.tz/news-single/serikali-yaendelea-kuhakikisha-uwepo-wa-vyanzo-vya-uhakika-utekelezaji-wa-bima-ya-afya-kwa-wote"
+                                    style="text-transform: lowercase;">Soma Zaidi</a></p></div></div>                                                            <div class="row col-xs-12 col-sm-12 col-md-12"
+                        style="box-shadow: 0 1px 1px 0 rgb(211 211 211 / 75%);min-height: 20px;display: flex;align-items: flex-start;padding-bottom: 20px;"><div class="col-md-6"><a href="https://www.moh.go.tz/news-single/serikali-yapiga-hatua-kupunguza-vifo-vinavyoweza-kuzuilika-vya-mama-na-watoto"><img src="https://www.moh.go.tz/storage/app/uploads/public/6a7/efd/9eb/thumb_3276_357_210_0_0_crop.jpg" alt="image description"></a></div><div class="col-md-6"><h6><b><a href="https://www.moh.go.tz/news-single/serikali-yapiga-hatua-kupunguza-vifo-vinavyoweza-kuzuilika-vya-mama-na-watoto">SERIKALI YAPIGA HATUA KUPUNGUZA VIFO VINAVYOWEZA KUZ...</a></b></h6><a href="https://www.moh.go.tz/news-single/serikali-yapiga-hatua-kupunguza-vifo-vinavyoweza-kuzuilika-vya-mama-na-watoto" style="color: #666;"><i class="fa fa-calendar"></i><span> Posted on: August 11th, 2026</span></a><p>Na Shaban Juma, WAF - Dodoma
+	
+	Naibu Waziri wa Afya, Dkt. Florence Samizi, kwa n...<a
+                                    href="https://www.moh.go.tz/news-single/serikali-yapiga-hatua-kupunguza-vifo-vinavyoweza-kuzuilika-vya-mama-na-watoto"
+                                    style="text-transform: lowercase;">Soma Zaidi</a></p></div></div>                                                            <div class="row col-xs-12 col-sm-12 col-md-12"
+                        style="box-shadow: 0 1px 1px 0 rgb(211 211 211 / 75%);min-height: 20px;display: flex;align-items: flex-start;padding-bottom: 20px;"><div class="col-md-6"><a href="https://www.moh.go.tz/news-single/wizara-yaongeza-uwekezaji-kupunguza-vifo-vya-mama-na-mtoto"><img src="https://www.moh.go.tz/storage/app/uploads/public/6a7/efc/d54/thumb_3275_357_210_0_0_crop.jpg" alt="image description"></a></div><div class="col-md-6"><h6><b><a href="https://www.moh.go.tz/news-single/wizara-yaongeza-uwekezaji-kupunguza-vifo-vya-mama-na-mtoto">WIZARA YAONGEZA UWEKEZAJI KUPUNGUZA VIFO VYA MAMA NA...</a></b></h6><a href="https://www.moh.go.tz/news-single/wizara-yaongeza-uwekezaji-kupunguza-vifo-vya-mama-na-mtoto" style="color: #666;"><i class="fa fa-calendar"></i><span> Posted on: August 12th, 2026</span></a><p>Na Shaban Juma, WAF - Dodoma
+
+
+	
+
+
+Katibu Mkuu wa Wizara ya Afya, Dkt. Grace ...<a
+                                    href="https://www.moh.go.tz/news-single/wizara-yaongeza-uwekezaji-kupunguza-vifo-vya-mama-na-mtoto"
+                                    style="text-transform: lowercase;">Soma Zaidi</a></p></div></div>                                                            <div class="row col-xs-12 col-sm-12 col-md-12"
+                        style="box-shadow: 0 1px 1px 0 rgb(211 211 211 / 75%);min-height: 20px;display: flex;align-items: flex-start;padding-bottom: 20px;"><div class="col-md-6"><a href="https://www.moh.go.tz/news-single/serikali-wadau-kuendelea-kuelimisha-vijana-na-jamii-nchini-masuala-ya-afya-ya-uzazi"><img src="https://www.moh.go.tz/storage/app/uploads/public/6a7/cce/d81/thumb_3274_357_210_0_0_crop.jpeg" alt="image description"></a></div><div class="col-md-6"><h6><b><a href="https://www.moh.go.tz/news-single/serikali-wadau-kuendelea-kuelimisha-vijana-na-jamii-nchini-masuala-ya-afya-ya-uzazi">SERIKALI, WADAU KUENDELEA KUELIMISHA VIJANA NA JAMII...</a></b></h6><a href="https://www.moh.go.tz/news-single/serikali-wadau-kuendelea-kuelimisha-vijana-na-jamii-nchini-masuala-ya-afya-ya-uzazi" style="color: #666;"><i class="fa fa-calendar"></i><span> Posted on: August 6th, 2026</span></a><p>Na Zakayo Mosha WAF -Morogoro
+
+
+	
+
+
+Wizara ya Afya kupitia Idara ya huduma za...<a
+                                    href="https://www.moh.go.tz/news-single/serikali-wadau-kuendelea-kuelimisha-vijana-na-jamii-nchini-masuala-ya-afya-ya-uzazi"
+                                    style="text-transform: lowercase;">Soma Zaidi</a></p></div></div>                                                            <div class="row col-xs-12 col-sm-12 col-md-12"
+                        style="box-shadow: 0 1px 1px 0 rgb(211 211 211 / 75%);min-height: 20px;display: flex;align-items: flex-start;padding-bottom: 20px;"><div class="col-md-6"><a href="https://www.moh.go.tz/news-single/wizara-ya-afya-yaendelea-kuimarisha-uwezo-wa-watumishi-wa-afya-kukabiliana-na-dharura-ugonjwa-wa-ebola"><img src="https://www.moh.go.tz/storage/app/uploads/public/6a7/cce/13a/thumb_3273_357_210_0_0_crop.jpeg" alt="image description"></a></div><div class="col-md-6"><h6><b><a href="https://www.moh.go.tz/news-single/wizara-ya-afya-yaendelea-kuimarisha-uwezo-wa-watumishi-wa-afya-kukabiliana-na-dharura-ugonjwa-wa-ebola">WIZARA YA AFYA YAENDELEA KUIMARISHA UWEZO WA WATUMIS...</a></b></h6><a href="https://www.moh.go.tz/news-single/wizara-ya-afya-yaendelea-kuimarisha-uwezo-wa-watumishi-wa-afya-kukabiliana-na-dharura-ugonjwa-wa-ebola" style="color: #666;"><i class="fa fa-calendar"></i><span> Posted on: August 6th, 2026</span></a><p>
+	
+
+
+
+	
+
+
+Na Cletus Sanga, WAF – Arusha
+
+
+	
+
+
+Serikali kupitia Wizara...<a
+                                    href="https://www.moh.go.tz/news-single/wizara-ya-afya-yaendelea-kuimarisha-uwezo-wa-watumishi-wa-afya-kukabiliana-na-dharura-ugonjwa-wa-ebola"
+                                    style="text-transform: lowercase;">Soma Zaidi</a></p></div></div>                                                            <div class="row col-xs-12 col-sm-12 col-md-12"
+                        style="box-shadow: 0 1px 1px 0 rgb(211 211 211 / 75%);min-height: 20px;display: flex;align-items: flex-start;padding-bottom: 20px;"><div class="col-md-6"><a href="https://www.moh.go.tz/news-single/tanzania-africa50-waingia-makubaliano-ya-kuboresha-sekta-ya-afya"><img src="https://www.moh.go.tz/storage/app/uploads/public/6a7/ccd/82d/thumb_3272_357_210_0_0_crop.jpeg" alt="image description"></a></div><div class="col-md-6"><h6><b><a href="https://www.moh.go.tz/news-single/tanzania-africa50-waingia-makubaliano-ya-kuboresha-sekta-ya-afya">TANZANIA, AFRICA50 WAINGIA MAKUBALIANO YA KUBORESHA ...</a></b></h6><a href="https://www.moh.go.tz/news-single/tanzania-africa50-waingia-makubaliano-ya-kuboresha-sekta-ya-afya" style="color: #666;"><i class="fa fa-calendar"></i><span> Posted on: August 6th, 2026</span></a><p>Na Hassan Kimweri, WAF – Dar es Salaam
+
+
+	
+
+
+Serikali ya Jamhuri ya Muungano ...<a
+                                    href="https://www.moh.go.tz/news-single/tanzania-africa50-waingia-makubaliano-ya-kuboresha-sekta-ya-afya"
+                                    style="text-transform: lowercase;">Soma Zaidi</a></p></div></div>                                                            <div class="row col-xs-12 col-sm-12 col-md-12"
+                        style="box-shadow: 0 1px 1px 0 rgb(211 211 211 / 75%);min-height: 20px;display: flex;align-items: flex-start;padding-bottom: 20px;"><div class="col-md-6"><a href="https://www.moh.go.tz/news-single/mradi-wa-kupambana-na-athari-za-joto-kwenye-michuano-ya-afcon-kuchochea-uchumi-wa-nchi"><img src="https://www.moh.go.tz/storage/app/uploads/public/6a7/416/570/thumb_3269_357_210_0_0_crop.jpg" alt="image description"></a></div><div class="col-md-6"><h6><b><a href="https://www.moh.go.tz/news-single/mradi-wa-kupambana-na-athari-za-joto-kwenye-michuano-ya-afcon-kuchochea-uchumi-wa-nchi">MRADI WA KUPAMBANA NA ATHARI ZA JOTO KWENYE MICHUANO...</a></b></h6><a href="https://www.moh.go.tz/news-single/mradi-wa-kupambana-na-athari-za-joto-kwenye-michuano-ya-afcon-kuchochea-uchumi-wa-nchi" style="color: #666;"><i class="fa fa-calendar"></i><span> Posted on: August 5th, 2026</span></a><p>Na Emmanuel Maleg, WAF – DSM
+	
+	Uwepo wa mradi wa kupambana na athari za joto kwe...<a
+                                    href="https://www.moh.go.tz/news-single/mradi-wa-kupambana-na-athari-za-joto-kwenye-michuano-ya-afcon-kuchochea-uchumi-wa-nchi"
+                                    style="text-transform: lowercase;">Soma Zaidi</a></p></div></div>                                                            <div class="row col-xs-12 col-sm-12 col-md-12"
+                        style="box-shadow: 0 1px 1px 0 rgb(211 211 211 / 75%);min-height: 20px;display: flex;align-items: flex-start;padding-bottom: 20px;"><div class="col-md-6"><a href="https://www.moh.go.tz/news-single/mafunzo-kwa-vitendo-yaimarisha-uwezo-wa-wahudumu-wa-afya-kukabiliana-na-ebola-same"><img src="https://www.moh.go.tz/storage/app/uploads/public/6a7/415/d8e/thumb_3268_357_210_0_0_crop.jpeg" alt="image description"></a></div><div class="col-md-6"><h6><b><a href="https://www.moh.go.tz/news-single/mafunzo-kwa-vitendo-yaimarisha-uwezo-wa-wahudumu-wa-afya-kukabiliana-na-ebola-same">MAFUNZO KWA VITENDO YAIMARISHA UWEZO WA WAHUDUMU WA ...</a></b></h6><a href="https://www.moh.go.tz/news-single/mafunzo-kwa-vitendo-yaimarisha-uwezo-wa-wahudumu-wa-afya-kukabiliana-na-ebola-same" style="color: #666;"><i class="fa fa-calendar"></i><span> Posted on: August 3rd, 2026</span></a><p>Na Cletus Sanga, WAF – Kilimanjaro
+	
+	Serikali kupitia Wizara ya Afya kwa kushiri...<a
+                                    href="https://www.moh.go.tz/news-single/mafunzo-kwa-vitendo-yaimarisha-uwezo-wa-wahudumu-wa-afya-kukabiliana-na-ebola-same"
+                                    style="text-transform: lowercase;">Soma Zaidi</a></p></div></div>                    
+                </div>
+                <div
+                    style="box-shadow: 0 1px 1px 0 rgb(211 211 211 / 75%);min-height: 20px;display: flex;align-items: flex-start;padding-bottom: 10px;padding-top: 10px;">
+                    <a href="https://www.moh.go.tz/news" style="color:#1987e8;font-size: 16px;font-weight: 600px;">
+                        Tazama Habari zote
+                    </a>
+                </div>
+
+            </div>
+            <div class="col-xs-12 col-sm-6 col-md-3">
+                <div class="row col-xs-12 col-sm-12 col-md-12">
+                    <div class="separator-left">
+                        <h6 class="head-title" style="margin-bottom: 2.3rem;">TAARIFA KWA VYOMBO VYA HABARI </h6>
+                    </div>
+                    
+
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/6a7/88b/b3e/6a788bb3eff67996719061.pdf" style='text-transform: uppercase;text-align: justify;	color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><img src="https://www.moh.go.tz/themes/wazalendo/assets/images/new.gif" style="width: 25px;height: 25px;">
+            TAARIFA KWA UMMA...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: August 9th, 2026</span></a></li></ul></div>
+
+
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/6a7/471/6f1/6a74716f13c36534342558.pdf" style='text-transform: uppercase;text-align: justify;	color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><i class="fa fa-file-pdf-o" aria-hidden="true" style="color: red;"></i>
+            TANGAZO LA UFADHILI WA KUJIENDELEZA KWA WATUMI...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: August 6th, 2026</span></a></li></ul></div>
+
+
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/6a6/f1d/127/6a6f1d127128c578486542.pdf" style='text-transform: uppercase;text-align: justify;	color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><i class="fa fa-file-pdf-o" aria-hidden="true" style="color: red;"></i>
+            TAARIFA KWA UMMA...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: August 1st, 2026</span></a></li></ul></div>
+
+
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/6a5/b38/87a/6a5b3887abb3d009948576.pdf" style='text-transform: uppercase;text-align: justify;	color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><i class="fa fa-file-pdf-o" aria-hidden="true" style="color: red;"></i>
+            TANZANIA PUBLIC HEALTH BULLETIN - JUNE 2026...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: July 17th, 2026</span></a></li></ul></div>
+
+
+                    <div class="panel">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item"><a href="" style='text-transform: uppercase;text-align: justify;	color: #222222;
+                                font-size: 14px;
+                                font-family: "Lato", sans-serif;
+                                font-weight: 400;
+                                -webkit-font-smoothing: antialiased;
+                                text-transform: uppercase;
+                                text-justify: inter-word;'>
+                                    <a href="https://www.moh.go.tz/releases"
+                                        style="color:#1987e8;font-size: 16px;font-weight: 600px;">
+                                        Tazama zote
+                                    </a>
+                            </li>
+
+                        </ul>
+                    </div>
+
+                    <div class="separator-left">
+                        <h6 class="head-title" style="margin-bottom: 2.3rem;">Matangazo </h6>
+                    </div>
+                    
+
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/69c/62e/8aa/69c62e8aabd6d193447385.pdf" style='text-transform: uppercase;text-align: justify;    color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><i class="fa fa-file-pdf-o" aria-hidden="true" style="color: red;"></i>
+            USING NATIONAL VIRTUAL MATERNAL DEATH REVIEWS TO IMPROVE THE QU...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: March 27th, 2026</span></a></li></ul></div>
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/694/6b8/d7b/6946b8d7b1ad4548916568.pdf" style='text-transform: uppercase;text-align: justify;    color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><i class="fa fa-file-pdf-o" aria-hidden="true" style="color: red;"></i>
+            CALL FOR EXPRESSION OF INTEREST (EOI)...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: December 20th, 2025</span></a></li></ul></div>
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/691/320/841/691320841afd9589193926.pdf" style='text-transform: uppercase;text-align: justify;    color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><i class="fa fa-file-pdf-o" aria-hidden="true" style="color: red;"></i>
+            WATUMISHI WALIOPATA UFADHILI WA &quot;SAMIA HEALTH SUPER SPECIALIZAT...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: November 11th, 2025</span></a></li></ul></div>
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/691/1cd/88e/6911cd88eb251748299447.pdf" style='text-transform: uppercase;text-align: justify;    color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><i class="fa fa-file-pdf-o" aria-hidden="true" style="color: red;"></i>
+            ORODHA YA WATAALAM WA AFYA WALIOPATA UFADHILI WA MASOMO NGAZI M...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: November 10th, 2025</span></a></li></ul></div>
+
+                    <div class="panel">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item"><a href="" style='text-transform: uppercase;text-align: justify;	color: #222222;
+                                font-size: 14px;
+                                font-family: "Lato", sans-serif;
+                                font-weight: 400;
+                                -webkit-font-smoothing: antialiased;
+                                text-transform: uppercase;
+                                text-justify: inter-word;'>
+                                    <a href="https://www.moh.go.tz/announcement"
+                                        style="color:#1987e8;font-size: 16px;font-weight: 600px;">
+                                        Tazama zote
+                                    </a>
+                            </li>
+
+                        </ul>
+                    </div>
+
+                    <div class="separator-left">
+                        <h6 class="head-title" style="margin-bottom: 2.3rem;">Kituo cha Rasilimali </h6>
+                    </div>
+
+                    
+
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/6a6/1cb/4f2/6a61cb4f23576783971504.pdf" style='text-transform: uppercase;text-align: justify;	color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><img src="https://www.moh.go.tz/themes/wazalendo/assets/images/new.gif" style="width: 25px;height: 25px;">
+            NATIONAL INFECTION PREVENTION AND CONTROL PROG...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: July 23rd, 2026</span></a></li></ul></div>
+
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/6a5/b39/6c2/6a5b396c25ca3292192749.pdf" style='text-transform: uppercase;text-align: justify;	color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><i class="fa fa-file-pdf-o" aria-hidden="true" style="color: red;"></i>
+            TANZANIA PUBLIC HEALTH BULLETIN - JUNE 2026...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: July 17th, 2026</span></a></li></ul></div>
+
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/6a5/654/680/6a565468068e2907899309.pdf" style='text-transform: uppercase;text-align: justify;	color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><i class="fa fa-file-pdf-o" aria-hidden="true" style="color: red;"></i>
+            FINAL BVD CONTIGENCY PLAN 2026...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: July 14th, 2026</span></a></li></ul></div>
+
+
+<div class="panel"><ul class="list-group list-group-flush"><li class="list-group-item"><a  href="https://www.moh.go.tz/storage/app/uploads/public/6a4/76c/ea6/6a476cea69279728566704.pdf" style='text-transform: uppercase;text-align: justify;	color: #222222;
+            font-size: 14px;
+            font-family: "Lato", sans-serif;
+            font-weight: 500;
+            line-height: 24px;
+            -webkit-font-smoothing: antialiased;
+            text-transform: uppercase;
+            text-justify: inter-word;'><i class="fa fa-file-pdf-o" aria-hidden="true" style="color: red;"></i>
+            MKAKATI WA HUDUMA ZA WAZEE...</a><br><a href="https://www.moh.go.tz" style="color: #666;"><span> Posted on: July 3rd, 2026</span></a></li></ul></div>
+
+
+                    <div class="panel">
+
+                        <ul class="list-group list-group-flush">
+
+                            <li class="list-group-item"><a href="" style='text-transform: uppercase;text-align: justify;	color: #222222;
+
+                                font-size: 14px;
+
+                                font-family: "Lato", sans-serif;
+
+                                font-weight: 400;
+
+                                -webkit-font-smoothing: antialiased;
+
+                                text-transform: uppercase;
+
+                                text-justify: inter-word;'>
+
+                                    <a href="https://www.moh.go.tz/resource-center"
+                                        style="color:#1987e8;font-size: 16px;font-weight: 600px;">
+
+                                        Tazama zote
+
+                                    </a>
+
+                            </li>
+
+
+
+                        </ul>
+
+                    </div>
+
+                </div>
+            </div>
+            <div class="col-xs-12 col-sm-6 col-md-3">
+                <div class="row col-xs-12 col-sm-12 col-md-12"></div>
+                <div class="separator-left">
+                    <h6 class="head-title">Vipeperushi Na Matukio Yajayo </h6>
+                </div>
+
+                                                                <img src="https://www.moh.go.tz/storage/app/uploads/public/6a1/02e/129/6a102e129ad57345104885.jpeg" alt="image description" id="myImg">
+                <div id="myModal" class="modal">
+                    <span class="close">&times;</span>
+                    <img class="modal-content" id="img01">
+                    <div id="caption"></div>
+                </div>
+
+                                <br><br>
+
+                <div class="separator-left">
+                    <h6 class="head-title">Huduma na Mipango </h6>
+                </div>
+                <div class="accordion">
+                    <div class="panel-group" id="accordion1">
+                                                                        <div class="panel panel-default">
+                            <div class="panel-heading" class="accordion-toggle" data-toggle="collapse"
+                                data-parent="#accordion1" href="#collapseTwo1">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1"
+                                    href="#collapseTwo1" style="	color: #222222;
+	font-size: 14px;
+	font-family: 'Lato', sans-serif;
+	font-weight: 500;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+	text-transform: uppercase;">
+                                    Epidemiological Weekly Report
+                                    <i class="fa fa-angle-right pull-right"></i>
+                                </a>
+                            </div>
+                            <div id="collapseTwo1" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <p>Epidemiological Weekly Report</p><a
+                                        href="https://www.moh.go.tz/services/27"
+                                        style="text-transform: lowercase;">readmore</a>
+
+                                </div>
+                            </div>
+                        </div>
+                                                <div class="panel panel-default">
+                            <div class="panel-heading" class="accordion-toggle" data-toggle="collapse"
+                                data-parent="#accordion1" href="#collapseTwo2">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1"
+                                    href="#collapseTwo2" style="	color: #222222;
+	font-size: 14px;
+	font-family: 'Lato', sans-serif;
+	font-weight: 500;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+	text-transform: uppercase;">
+                                    AJIRA PORTAL
+                                    <i class="fa fa-angle-right pull-right"></i>
+                                </a>
+                            </div>
+                            <div id="collapseTwo2" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <h3><img src="https://www.moh.go.tz/storage/app/media/uploaded-files/Screenshot%202022-04-16%20114859.jpg" style="width: 300px;" class="fr-fic fr-dib" data-result="success"></h3>
+
+<h3>Online Job Application Portal for the Ministry of Health</h3>
+
+<p><a href="https://ajira.moh.go.tz/login/"><strong>https://ajira.moh.go.tz/login/</strong></a></p></h><a
+                                        href="https://www.moh.go.tz/services/25"
+                                        style="text-transform: lowercase;">readmore</a>
+
+                                </div>
+                            </div>
+                        </div>
+                                                <div class="panel panel-default">
+                            <div class="panel-heading" class="accordion-toggle" data-toggle="collapse"
+                                data-parent="#accordion1" href="#collapseTwo3">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1"
+                                    href="#collapseTwo3" style="	color: #222222;
+	font-size: 14px;
+	font-family: 'Lato', sans-serif;
+	font-weight: 500;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+	text-transform: uppercase;">
+                                    Maktaba ya Kidigitali ya Wizara ya Afya
+                                    <i class="fa fa-angle-right pull-right"></i>
+                                </a>
+                            </div>
+                            <div id="collapseTwo3" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <p><img src="https://www.moh.go.tz/storage/app/media/uploaded-files/Screenshot%202022-05-31%20115951.jpg" style="width: 819px;" class="fr-fic fr-dib" data-result="success"></p>
+
+<p>Pakua nyaraka mbalimbali za Wizara ya Afya kupitia kiunganishi <a href="http://hidl.afya.go.tz/#/library/dashboard/published-list">http://hidl.afya.go.tz/#/library/dashboard/published-list</a></p></p><a
+                                        href="https://www.moh.go.tz/services/24"
+                                        style="text-transform: lowercase;">readmore</a>
+
+                                </div>
+                            </div>
+                        </div>
+                                                <div class="panel panel-default">
+                            <div class="panel-heading" class="accordion-toggle" data-toggle="collapse"
+                                data-parent="#accordion1" href="#collapseTwo4">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1"
+                                    href="#collapseTwo4" style="	color: #222222;
+	font-size: 14px;
+	font-family: 'Lato', sans-serif;
+	font-weight: 500;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+	text-transform: uppercase;">
+                                    DATA USE PARTNERSHIP (DUP)
+                                    <i class="fa fa-angle-right pull-right"></i>
+                                </a>
+                            </div>
+                            <div id="collapseTwo4" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <p class="oc-text-uppercase"><strong>DUP OVERVIEW</strong></p>
+
+<p class="oc-text-uppercase"><strong><img src="https://www.moh.go.tz/storage/app/media/uploaded-files/DUP.png" style="width: 300px;" class="fr-fic fr-dib" data-result="success"></strong>
+	<br>
+</p>
+
+<p><strong>DATA USE PARTNERSHIP INITIATIVE</strong></p>
+
+<p>The Data Use Partnership (DUP) is a government-led initiative that is improving the national health care system through better use of health information. Under DUP, the government is working with...</p></strong></p><a
+                                        href="https://www.moh.go.tz/services/22"
+                                        style="text-transform: lowercase;">readmore</a>
+
+                                </div>
+                            </div>
+                        </div>
+                                                <div class="panel panel-default">
+                            <div class="panel-heading" class="accordion-toggle" data-toggle="collapse"
+                                data-parent="#accordion1" href="#collapseTwo5">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1"
+                                    href="#collapseTwo5" style="	color: #222222;
+	font-size: 14px;
+	font-family: 'Lato', sans-serif;
+	font-weight: 500;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+	text-transform: uppercase;">
+                                    PMTCT
+                                    <i class="fa fa-angle-right pull-right"></i>
+                                </a>
+                            </div>
+                            <div id="collapseTwo5" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <p>Empowering Mothers. Protecting Children. Ending HIV, Syphilis, and Hepatitis B infections. Welcome to the official website of the Prevention of Mother-to-Child Transmission (PMTCT) Programme in Tanzania. Our mission is to eliminate the transmission of HIV...</p><a
+                                        href="https://www.moh.go.tz/services/20"
+                                        style="text-transform: lowercase;">readmore</a>
+
+                                </div>
+                            </div>
+                        </div>
+                                                <div class="panel panel-default">
+                            <div class="panel-heading" class="accordion-toggle" data-toggle="collapse"
+                                data-parent="#accordion1" href="#collapseTwo6">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1"
+                                    href="#collapseTwo6" style="	color: #222222;
+	font-size: 14px;
+	font-family: 'Lato', sans-serif;
+	font-weight: 500;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+	text-transform: uppercase;">
+                                    RCHS
+                                    <i class="fa fa-angle-right pull-right"></i>
+                                </a>
+                            </div>
+                            <div id="collapseTwo6" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <p>The following are the primary functions of RCHS:</p>
+
+<ol>
+	<li>To formulate standards, policy guidelines and manuals for quality and sustainable maternal, newborn, child, adolescent and community health services, taking into account the gender and rights based ap...</li></ol><a
+                                        href="https://www.moh.go.tz/services/19"
+                                        style="text-transform: lowercase;">readmore</a>
+
+                                </div>
+                            </div>
+                        </div>
+                                                <div class="panel panel-default">
+                            <div class="panel-heading" class="accordion-toggle" data-toggle="collapse"
+                                data-parent="#accordion1" href="#collapseTwo7">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1"
+                                    href="#collapseTwo7" style="	color: #222222;
+	font-size: 14px;
+	font-family: 'Lato', sans-serif;
+	font-weight: 500;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+	text-transform: uppercase;">
+                                    eHealth  Initiative
+                                    <i class="fa fa-angle-right pull-right"></i>
+                                </a>
+                            </div>
+                            <div id="collapseTwo7" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <div itemprop="articleBody">&nbsp; &nbsp; &nbsp; &nbsp;&nbsp;
+
+	<p><strong>TANZANIA DIGITAL HEALTH STRATEGY 2019 - 2024&nbsp;</strong><a href="http://www.moh.go.tz/en/strategic-plans?download=395:digital-health-strategy">Download</a></p>
+
+	<p><strong>TANZANIA eHEALTH STRATEGY 2013 - 2018</strong> <a href="http://www.moh.go.tz/images/eHealth_Initiatives/Tanzania-eHealth-Strategy-2013-18.pdf" rel="noopener noreferrer" target="_blank">Download</a> (Previous)&nbsp;</p>
+
+	<p><strong>GUIDELINES AND STANDARDS FOR INTEGRATED HEALTH FACILITY</strong>&nbsp; <a href="http://www.moh.go.tz/images/eHealth_Initiatives/Guidelines_and_Standards_for_Integrated_Health_Facility_MoH.pdf" rel="noopener noreferrer" target="_blank">Download</a></p>
+
+	<p><strong>INVESTMENT RECOMMENDATION ROAD MAP 2017 - 2023&nbsp;</strong><a href="http://www.moh.go.tz/images/eHealth_Initiatives/TZ_Investment_Recommendations_Roadmap.pdf" rel="noopener noreferrer" target="_blank">Down...</a></p></div><a
+                                        href="https://www.moh.go.tz/services/18"
+                                        style="text-transform: lowercase;">readmore</a>
+
+                                </div>
+                            </div>
+                        </div>
+                                            </div>
+                    <!--/#accordion1-->
+                </div>
+		<a href="https://www.moh.go.tz/tanzania-health-bullettin" style="margin-bottom:20px">
+                    <div style="background-color:#C6DEFF;height: 40px;text-align: center;">
+                        <h2 style="padding-top:4px ;">PUBLIC HEALTH BULLETIN</h2>
+                    </div>
+                </a>
+		 <a href="http://demomoh.eganet.go.tz/healcare" style="margin-top:10px" target="_blank">
+                    <div style="background-color:#C6DEFF;height: 40px;text-align: center;margin-top:20px">
+                        <h2 style="padding-top:4px ;">HEALCARE PROJECT</h2>
+                    </div>
+                </a>
+
+                <!-- <div class="separator-left">
+                    <h6 class="head-title">Kurasa Muhimu </h6>
+                </div>
+                  
+
+        
+        <div class="panel">
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item" style="line-height: 17px;"><a  href="https://pimacovid.moh.go.tz/#/booking" style="font-family: 'Times New Roman', Times, serif;font-size:14px;color:black;" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i>
+
+                    Pima UVIKO-19 / test for covid-19</a></li>
+            </ul>
+        </div>
+        
+        <div class="panel">
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item" style="line-height: 17px;"><a  href="https://melweekconference.co.tz/" style="font-family: 'Times New Roman', Times, serif;font-size:14px;color:black;" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i>
+
+                    4th Tanzania MEL Conference</a></li>
+            </ul>
+        </div>
+        
+        <div class="panel">
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item" style="line-height: 17px;"><a  href="http://www.mnh.or.tz/" style="font-family: 'Times New Roman', Times, serif;font-size:14px;color:black;" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i>
+
+                    Muhimbili National Hospital</a></li>
+            </ul>
+        </div>
+        
+        <div class="panel">
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item" style="line-height: 17px;"><a  href="https://trade.tanzania.go.tz/" style="font-family: 'Times New Roman', Times, serif;font-size:14px;color:black;" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i>
+
+                    Trade Portal</a></li>
+            </ul>
+        </div>
+    
+ -->
+                <div class="separator-left">
+                    <h6 class="head-title">Kurasa za Watumishi </h6>
+                </div>
+
+                
+
+        
+    <div class="panel">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><a  href="https://ess.utumishi.go.tz" style="	color: #222222;
+                font-size: 14px;
+                font-family: 'Lato', sans-serif;
+                font-weight: 500;
+                line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+                text-transform: uppercase;" target="_blank"><i class="fas fa-external-link-alt"></i>
+                Employee Self Service</a></li>
+        </ul>
+    </div>
+        
+    <div class="panel">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><a  href="https://mail.afya.go.tz/" style="	color: #222222;
+                font-size: 14px;
+                font-family: 'Lato', sans-serif;
+                font-weight: 500;
+                line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+                text-transform: uppercase;" target="_blank"><i class="fas fa-external-link-alt"></i>
+                AfyaMail</a></li>
+        </ul>
+    </div>
+        
+    <div class="panel">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><a  href="https://timesheet.moh.go.tz/biotimesheet/login.php" style="	color: #222222;
+                font-size: 14px;
+                font-family: 'Lato', sans-serif;
+                font-weight: 500;
+                line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+                text-transform: uppercase;" target="_blank"><i class="fas fa-external-link-alt"></i>
+                Timesheet</a></li>
+        </ul>
+    </div>
+        
+    <div class="panel">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><a  href="https://salaryslip.mof.go.tz/Account/Login?ReturnUrl=%2F" style="	color: #222222;
+                font-size: 14px;
+                font-family: 'Lato', sans-serif;
+                font-weight: 500;
+                line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+                text-transform: uppercase;" target="_blank"><i class="fas fa-external-link-alt"></i>
+                Salary Slip</a></li>
+        </ul>
+    </div>
+        
+    <div class="panel">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><a  href="https://safari.gov.go.tz/index.php/user/auth/login" style="	color: #222222;
+                font-size: 14px;
+                font-family: 'Lato', sans-serif;
+                font-weight: 500;
+                line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+                text-transform: uppercase;" target="_blank"><i class="fas fa-external-link-alt"></i>
+                Traveling Permit</a></li>
+        </ul>
+    </div>
+        
+    <div class="panel">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><a  href="https://eoffice.gov.go.tz/users/login" style="	color: #222222;
+                font-size: 14px;
+                font-family: 'Lato', sans-serif;
+                font-weight: 500;
+                line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+                text-transform: uppercase;" target="_blank"><i class="fas fa-external-link-alt"></i>
+                e-office</a></li>
+        </ul>
+    </div>
+    
+                <div class="separator-left">
+                    <h6 class="head-title">Elimu ya Afya kwa Umma </h6>
+                </div>
+                <div class="accordion">
+                    <div class="panel-group" id="accordion3">
+
+                                                <div class="panel panel-default">
+                            <div class="panel-heading" class="accordion-toggle" data-toggle="collapse"
+                                data-parent="#accordion3" href="#collapseThree1">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion3"
+                                    href="#collapseThree1" style="	color: #222222;
+                                    font-size: 14px;
+                                    font-family: 'Lato', sans-serif;
+                                    font-weight: 500;
+                                    line-height: 24px;
+                                    -webkit-font-smoothing: antialiased;
+                                    text-transform: uppercase;">
+                                    Ijue Saratani ya Shingo ya Kizazi
+                                    <i class="fa fa-angle-right pull-right"></i>
+                                </a>
+                            </div>
+                            <div id="collapseThree1" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <a
+                                        href="https://www.moh.go.tz/public-health-detailed/1"
+                                        style="text-transform: capitalized;">readmore</a>
+
+                                </div>
+                            </div>
+                        </div>
+                                            </div>
+                    <!--/#accordion1-->
+                </div>
+
+                <div class="accordion">
+                    <div class="panel-group" id="accordion4">
+                        <div class="panel panel-default">
+                            <div class="panel-heading" class="accordion-toggle" data-toggle="collapse"
+                                data-parent="#accordion4" href="#collapsefour">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion4"
+                                    href="#collapsefour" style="	color: #222222;
+                                    font-size: 14px;
+                                    font-family: 'Lato', sans-serif;
+                                    font-weight: 500;
+                                    line-height: 24px;
+                                    -webkit-font-smoothing: antialiased;
+                                    text-transform: uppercase;">
+                                    TOVUTI YA ELIMU YA AFYA
+                                    <i class="fa fa-angle-right pull-right"></i>
+                                </a>
+                            </div>
+                            <div id="collapsefour" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <a href="https://elimuyaafya.moh.go.tz" style="text-transform: capitalized;"
+                                        target="_blank">View Website</a>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <!--/#accordion1-->
+                </div>
+                <div>
+                    <a href="#">
+                        <div>
+                                                                
+                                                        <img src="https://www.moh.go.tz/storage/app/uploads/public/626/161/37c/62616137cb708339291924.jpg" alt="image description" id="myImg"
+                                >
+                            <div id="myModal" class="modal">
+                                <span class="close">&times;</span>
+                                <img class="modal-content" id="img01">
+                                <div id="caption"></div>
+                            </div>
+        
+                                                    </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row links">
+        <div class="col-xs-12 col-sm-6 col-md-3">
+            <div class="footer-heading">
+                <a href="#">
+                    <h6>Ramani</h6>
+                </a>
+
+            </div>
+     
+
+
+
+        </div>
+        <div class="col-xs-12 col-sm-6 col-md-3">
+            <div class="footer-heading">
+                <a href="#">
+                    <h6> Habari za Mtandaoni</h6>
+                </a>
+
+            </div>
+            <div>
+               
+
+
+
+            </div>
+        </div>
+        <!-- <div class="col-xs-12 col-sm-6 col-md-3">
+                <div class="footer-heading">
+                    <a href="#">
+                        <h6> Barua ya Habari</h6>
+                    </a>
+                        
+                </div>
+                <div>
+
+  <label class="form-check-label" for="exampleCheck1" style="	color: #222222;
+	font-size: 15px;
+	font-family: 'Lato', sans-serif;
+	font-weight: 500;
+	text-transform: lowercase;">Accept the Privacy Policy for Ministry of Health,Community Development,Gender,Elderly and Children Website</label>
+  <input type="checkbox" class="form-check-input" id="exampleCheck1" onclick="subscribe()">
+
+<div class="card">
+    <div class="card-content author">
+        <form name="form-subscribe-andradedev" id="form-subscribe-andradedev" data-request="formSubscribe::onAddSubscriber" data-request-update="'formSubscribe::alert': '#result'">
+            <input type="name" class="form-control" name="name" placeholder="* Name" style="background-color:white;color: black;" required >
+            <input type="email" class="form-control" name="email" style="background-color:white;color: black;" placeholder="* Email" required>
+            <input type="hidden" name="latitude" id="latitude">
+            <input type="hidden" name="longitude" id="longitude">
+        </form>
+    </div>
+
+    <div class="card-action">
+        <button class="btn  btn-block" form="form-subscribe-andradedev"  id="text" disabled style="background-color: #1987e8;color: white;">Subscribe</button>
+    </div>
+
+    
+    <div id="result"></div>
+</div>
+
+
+<script>
+    function subscribe() {
+      var checkBox = document.getElementById("exampleCheck1");
+      var text = document.getElementById("text");
+      if (checkBox.checked == true){
+        document.getElementById("text").disabled = false;
+      } else {
+        document.getElementById("text").disabled = true;
+      }
+    }
+    </script></div>
+            </div> -->
+        <div class="col-xs-12 col-sm-6 col-md-3">
+            <div class="footer-heading">
+                <a href="https://www.moh.go.tz/students">
+                    <h6> Mifumo ya Uviko-19</h6>
+                </a>
+
+
+            </div>
+            <a href="https://www.moh.go.tz/students">
+                <div>
+                                        
+                                        <a href="https://www.moh.go.tz/students"> <img src="https://www.moh.go.tz/storage/app/uploads/public/622/e2c/42f/622e2c42f003b690257759.png"
+                            alt="image description" id="myImg" style="height:233px"></a>
+                    <div id="myModal" class="modal">
+                        <span class="close">&times;</span>
+                        <img class="modal-content" id="img01">
+                        <div id="caption"></div>
+                    </div>
+
+                                    </div>
+        </div></a>
+        <div class="col-xs-12 col-sm-6 col-md-3">
+            <div class="footer-heading">
+                <a href="#">
+                    <h6> Video Mpya</h6>
+                </a>
+            </div>
+            
+		
+
+
+        </div>
+    </div>
+    </div>
+</main>
+<!--************************************
+        Main End
+*************************************-->
+        <!-- Footer -->
+            <!--************************************
+				Footer Start
+		*************************************-->
+        <footer id="tg-footer" style="max-width: 1180px;" class="foot container-fluid">
+            <div class="foot container-fluid" >
+                <div class="tg-footermiddlebar">
+                    <div>
+                        <div class="row" >
+                            <div class="col-xs-12 col-sm-6 col-md-3 col-lg-3">
+                                <h6> Anwani</h6>
+                                
+
+
+
+
+  
+
+   
+<ul class="contact-section">
+    <li style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">
+       <i class="fas fa-location-arrow"></i> Wizara ya Afya
+    </li>
+    <li style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">
+        <i class="fas fa-envelope"></i>S.L.P 743, Dodoma
+    </li>
+    <li style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">
+       <i class="fas fa-tty"></i> Simu: +255-26-2323267/5
+    </li>
+    <li style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">
+        <i class="fas fa-phone-alt"></i>Rununu: +255-26-2342000/5
+    </li>
+    <li style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: none;">
+        <i class="fas fa-at"> </i>Barua pepe: ps@afya.go.tz
+    </li>
+
+</ul>
+
+
+                                                              </div>
+                            <div class="col-xs-12 col-sm-6 col-md-3 col-lg-3">
+                                <h6> Tovuti ya Data za Afya</h6>
+                                
+                                
+
+    
+                 <ul class="contact-section">
+                  <li>
+                     <a  href="https://afyass.moh.go.tz/#/login" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalize;">
+
+                        Afya Supportive Supervision(AfyaSS) </a>
+                  </li>
+
+                  </ul>
+    
+    
+                 <ul class="contact-section">
+                  <li>
+                     <a  href="https://elmis.moh.go.tz/public/pages/login.html" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalize;">
+
+                        Electronic Logistics Management IS </a>
+                  </li>
+
+                  </ul>
+    
+    
+                 <ul class="contact-section">
+                  <li>
+                     <a  href="http://41.59.228.157:81/Identity/Account/Login?ReturnUrl=%2F" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalize;">
+
+                        PHSS-Programme Management Tool </a>
+                  </li>
+
+                  </ul>
+    
+    
+                 <ul class="contact-section">
+                  <li>
+                     <a  href="https://dhis.moh.go.tz/dhis-web-commons/security/login.action" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalize;">
+
+                        Tanzania HMIS(DHIS2) </a>
+                  </li>
+
+                  </ul>
+    
+                                
+                            </div>
+
+                            <div class="col-xs-12 col-sm-6 col-md-3 col-lg-3">
+                            <h6> Tovuti Mashuhuri</h6>      
+                               
+                                
+
+                <ul class="contact-section">
+                <li >
+                        <a href="https://www.ikulu.go.tz/" class="list-format" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">President&#039;s Office-State House</a>
+                </li>
+            </ul>
+                <ul class="contact-section">
+                <li >
+                        <a href="https://www.tamisemi.go.tz/" class="list-format" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">President&#039;s Office - Regional Administration and Local Government</a>
+                </li>
+            </ul>
+                <ul class="contact-section">
+                <li >
+                        <a href="https://elearning.moh.go.tz" class="list-format" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">E-learning Platform for Health</a>
+                </li>
+            </ul>
+                <ul class="contact-section">
+                <li >
+                        <a href="https://hfrportal.moh.go.tz/" class="list-format" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">Health Facility Registry(HFR)</a>
+                </li>
+            </ul>
+                                </div>
+
+                            <div class="col-xs-12 col-sm-6 col-md-3 col-lg-3">
+                                <h6> Eneo la Wageni</h6>
+                                    <ul class="list-group">
+      
+    <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #155d9c">
+    Today
+      <span class="badge badge-primary badge-pill" style="background-color: white;color: black;"> </span>
+    </li>
+    <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #155d9c;">
+      Yesterday
+        <span class="badge badge-primary badge-pill" style="background-color: white;color: black;"></span>
+    </li>
+    <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #155d9c;">
+      This Week
+        <span class="badge badge-primary badge-pill" style="background-color: white;color: black;"> </span>
+    </li>
+    <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #155d9c;">
+          <span class="badge badge-primary badge-pill" style="background-color: white;color: black;"> </span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #155d9c;">
+        All Days
+          <span class="badge badge-primary badge-pill" style="background-color: white;color: black;">1389522</span>
+      </li>
+</ul>
+                            
+                            </div>
+                            
+    
+                            </div> 
+                        </div>
+                    </div>
+                </div>
+                <div class="tg-footerbar">
+                    <div>
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12" >
+                                <span class="tg-copyright" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;"> Hakimiliki ©2022 WAF. Haki zote zimehifadhiwa.</span>
+                                <nav class="tg-addnav">
+                                    
+                                                                            <ul>
+            <li><a href="" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">Kanusho</a></li>
+            <li><a href="https://www.moh.go.tz/faq" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">MMM</a></li>
+            <li><a href="https://www.moh.go.tz/sitemap" style="color: white;font-size: 14px;font-family: 'Lato', sans-serif;font-weight: 500;text-transform: capitalized;">Ramani ya Tovuti</a></li>
+    </ul>                                                                        
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        <!--************************************
+                Footer End
+        *************************************-->
+        </div>
+        <!--************************************
+                Wrapper End
+        *************************************-->      </div>
+        <!-- Scripts -->
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/vendor/jquery-library.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/vendor/bootstrap.min.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/mapclustering/data.json"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/mapclustering/markerclusterer.min.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/mapclustering/map.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/owl.carousel.min.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/isotope.pkgd.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/prettyPhoto.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/countdown.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/collapse.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/moment.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/gmap3.js"></script>
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/main.js"></script>
+        <script type="text/javascript" src="https://www.moh.go.tz/themes/wazalendo/assets/js/magnific-popup.min.js"></script>
+
+         <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/cycle2.min.js"></script> 
+        <script src="https://www.moh.go.tz/themes/wazalendo/assets/js/cycle2.tile.js"></script>
+
+        <script src="https://www.moh.go.tz/plugins/gwf/contactus/assets/js/form.js"></script>
+<script src="https://www.moh.go.tz/plugins/jorgeandrade/subscribe/assets/javascript/subscribe-scripts.js"></script>
+
+        <script src="/modules/system/assets/js/framework-min.js"></script>
+
+        <script>
+            jQuery(document).ready(function(){
+                jQuery('.video-content').magnificPopup({
+                    type: 'iframe',
+                    iframe: {
+                        markup: '<div class="mfp-iframe-scaler">' +
+                            '<div class="mfp-close"></div>' +
+                            '<iframe class="mfp-iframe" frameborder="0" allowfullscreen></iframe>' +
+                            '<div class="mfp-title">Some caption</div>' +
+                            '</div>'
+                    },
+                    callbacks: {
+                        markupParse: function(template, values, item) {
+                            values.title = item.el.attr('title');
+                        }
+                    }
+                });
+            });
+        
+            $(document).ready(function() {
+                $('.gallery-item').magnificPopup({
+                    type: 'image',
+                    gallery: {
+                        enabled: true,
+                        preload: [0, 2], // read about this option in next Lazy-loading section
+                        navigateByImgClick: true,
+                    }
+                });
+            });
+       
+            $(".myBox").click(function() {
+                window.location = $(this).attr("href"); 
+                return false;
+            });
+
+var n = document.getElementById("news");
+var c = document.getElementById("con");
+var aw = document.getElementById("awards");
+var sh = document.getElementById("short");
+var an = document.getElementById("anouncement");
+function myFunction() {
+  
+  if (n.style.display = "none") {
+  c.style.display = "none"
+  aw.style.display = "none"
+  sh.style.display = "none"
+  an.style.display = "none"
+    n.style.display = "block";
+  } 
+}
+function myFunction2() {
+  
+  if (c.style.display = "none") {
+  n.style.display = "none"
+  aw.style.display = "none"
+  sh.style.display = "none"
+  an.style.display = "none"
+    c.style.display = "block";
+  } 
+}
+function myFunction3() {
+  
+  if (aw.style.display = "none") {
+  n.style.display = "none"
+  c.style.display = "none"
+  sh.style.display = "none"
+  an.style.display = "none"
+    aw.style.display = "block";
+  } 
+}
+
+function myFunction4() {
+  
+  if (sh.style.display = "none") {
+  n.style.display = "none"
+  c.style.display = "none"
+  aw.style.display = "none"
+  an.style.display = "none"
+    sh.style.display = "block";
+  } 
+}
+
+function myFunction5() {
+  
+  if (an.style.display = "none") {
+  n.style.display = "none"
+  c.style.display = "none"
+  aw.style.display = "none"
+  sh.style.display = "none"
+    an.style.display = "block";
+  } 
+}
+
+
+
+        </script>
+
+
+<script>
+  // Get the modal
+  var modal = document.getElementById("myModal");
+  
+  // Get the image and insert it inside the modal - use its "alt" text as a caption
+  var img = document.getElementById("myImg");
+  var modalImg = document.getElementById("img01");
+  var captionText = document.getElementById("caption");
+  img.onclick = function(){
+    modal.style.display = "block";
+    modalImg.src = this.src;
+    captionText.innerHTML = this.alt;
+  }
+  
+  // Get the <span> element that closes the modal
+  var span = document.getElementsByClassName("close")[0];
+  
+  // When the user clicks on <span> (x), close the modal
+  span.onclick = function() { 
+    modal.style.display = "none";
+  }
+  </script>
+
+<script src="https://www.moh.go.tz/themes/wazalendo/assets/js/jssor.slider-28.0.0.min.js" type="text/javascript"></script> 
+
+<script type="text/javascript">
+  jQuery(document).ready(function ($) {
+
+      var jssor_1_SlideshowTransitions = [
+        {$Duration:1000,x:-0.3,$During:{$Left:[0.3,0.7]},$Easing:{$Left:$Jease$.$InCubic,$Opacity:$Jease$.$Linear},$Opacity:2},
+        {$Duration:1000,x:0.3,$SlideOut:true,$Easing:{$Left:$Jease$.$InCubic,$Opacity:$Jease$.$Linear},$Opacity:2}
+      ];
+
+      var jssor_1_options = {
+        $AutoPlay: 1,
+        $SlideshowOptions: {
+          $Class: $JssorSlideshowRunner$,
+          $Transitions: jssor_1_SlideshowTransitions,
+          $TransitionsOrder: 1
+        },
+        $ArrowNavigatorOptions: {
+          $Class: $JssorArrowNavigator$
+        },
+        $ThumbnailNavigatorOptions: {
+          $Class: $JssorThumbnailNavigator$,
+          $Orientation: 2,
+          $NoDrag: true
+        }
+      };
+
+      var jssor_1_slider = new $JssorSlider$("jssor_1", jssor_1_options);
+
+      /*#region responsive code begin*/
+
+      var MAX_WIDTH = 1920;
+
+      function ScaleSlider() {
+          var containerElement = jssor_1_slider.$Elmt.parentNode;
+          var containerWidth = containerElement.clientWidth;
+
+          if (containerWidth) {
+
+              var expectedWidth = Math.min(MAX_WIDTH || containerWidth, containerWidth);
+
+              jssor_1_slider.$ScaleWidth(expectedWidth);
+          }
+          else {
+              window.setTimeout(ScaleSlider, 100);
+          }
+      }
+
+      ScaleSlider();
+
+      $(window).bind("load", ScaleSlider);
+      $(window).bind("resize", ScaleSlider);
+      $(window).bind("orientationchange", ScaleSlider);
+      /*#endregion responsive code end*/
+  });
+</script>
+  
+    </body>
+</html>

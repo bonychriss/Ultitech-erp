@@ -1,0 +1,153 @@
+/* Warehouses — clean coming soon */
+
+.wh-soon {
+  min-height: min(72vh, 34rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+  color: #0f172a;
+  font-family: var(--erp-font-family, inherit);
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.wh-soon-stage {
+  position: relative;
+  width: 8.5rem;
+  height: 8.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.wh-soon-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1.5px solid rgba(79, 70, 229, 0.28);
+  animation: wh-pulse 2.4s ease-out infinite;
+}
+
+.wh-soon-pulse--2 {
+  inset: 0.7rem;
+  animation-delay: 0.4s;
+  border-color: rgba(99, 102, 241, 0.22);
+}
+
+.wh-soon-pulse--3 {
+  inset: 1.4rem;
+  animation-delay: 0.8s;
+  border-color: rgba(129, 140, 248, 0.18);
+}
+
+.wh-soon-icon-wrap {
+  position: relative;
+  z-index: 1;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  animation: wh-float 2.6s ease-in-out infinite;
+}
+
+.wh-soon-icon {
+  width: 1.85rem;
+  height: 1.85rem;
+}
+
+.wh-soon-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.wh-soon-text {
+  margin: 0;
+  max-width: 22rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.wh-soon-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.wh-soon-dots span {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 9999px;
+  background: #a5b4fc;
+  animation: wh-dot 1.2s ease-in-out infinite;
+}
+
+.wh-soon-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.wh-soon-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes wh-pulse {
+  0% { transform: scale(0.88); opacity: 0.75; }
+  70% { transform: scale(1.12); opacity: 0; }
+  100% { transform: scale(1.12); opacity: 0; }
+}
+
+@keyframes wh-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes wh-dot {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-4px); opacity: 1; }
+}
+
+@media (max-width: 767.98px) {
+  .wh-soon {
+    min-height: min(60vh, 28rem);
+    padding: 2rem 1rem;
+  }
+
+  .wh-soon-stage {
+    width: 7rem;
+    height: 7rem;
+  }
+
+  .wh-soon-icon-wrap {
+    width: 3.35rem;
+    height: 3.35rem;
+  }
+}
+
+html[data-theme="dark"] .wh-soon-title {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .wh-soon-text {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .wh-soon-icon-wrap {
+  background: rgba(99, 102, 241, 0.16);
+  border-color: rgba(129, 140, 248, 0.35);
+  color: #a5b4fc;
+}

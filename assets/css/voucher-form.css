@@ -1,0 +1,2377 @@
+﻿/* Voucher create/edit form styles */
+
+        body.dashboard,
+        body.dashboard button,
+        body.dashboard input,
+        body.dashboard select,
+        body.dashboard textarea {
+            font-family: var(--erp-font-family, 'Poppins', system-ui, -apple-system, sans-serif) !important;
+        }
+
+        /* --- Final voucher form overrides (must stay last) --- */
+        body.dashboard.vf-voucher-form,
+        body.dashboard.vf-voucher-form button,
+        body.dashboard.vf-voucher-form input,
+        body.dashboard.vf-voucher-form select,
+        body.dashboard.vf-voucher-form textarea {
+            font-family: var(--erp-font-family, 'Poppins', system-ui, -apple-system, sans-serif) !important;
+        }
+        body.dashboard.vf-voucher-form {
+            background: #f8fafc !important;
+            color: #1e293b;
+        }
+        body.dashboard.vf-voucher-form .main-content {
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 32px !important;
+        }
+        body.dashboard.vf-voucher-form .cv-page-header,
+        body.dashboard.vf-voucher-form .form-container {
+            max-width: 1000px;
+            margin-left: 0;
+            margin-right: auto;
+        }
+        body.dashboard.vf-voucher-form .cv-page-header {
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            margin-bottom: 32px !important;
+            gap: 18px !important;
+            align-items: center !important;
+        }
+        body.dashboard.vf-voucher-form .cv-page-title {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: 0;
+            line-height: 1.2;
+        }
+        body.dashboard.vf-voucher-form .cv-page-desc {
+            margin: 6px 0 0;
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.45;
+        }
+        body.dashboard.vf-voucher-form .cv-back-link {
+            color: #94a3b8;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        body.dashboard.vf-voucher-form .cv-back-link:hover {
+            color: #475569;
+            text-decoration: none;
+        }
+        body.dashboard.vf-voucher-form .form-container,
+        body.dashboard.vf-voucher-form .voucher-layout,
+        body.dashboard.vf-voucher-form .voucher-main {
+            padding: 0 !important;
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+        }
+        body.dashboard.vf-voucher-form form.voucher-form-layout {
+            display: block;
+        }
+        @media (min-width: 1101px) {
+            body.dashboard.vf-voucher-form form.voucher-form-layout {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 320px;
+                gap: 24px;
+                align-items: start;
+            }
+            body.dashboard.vf-voucher-form form.voucher-form-layout > .voucher-summary {
+                grid-column: 2;
+                grid-row: 1 / -1;
+                align-self: start;
+            }
+            body.dashboard.vf-voucher-form form.voucher-form-layout > :not(.voucher-summary) {
+                grid-column: 1;
+            }
+        }
+        body.dashboard.vf-voucher-form .cv-card,
+        body.dashboard.vf-voucher-form .voucher-summary {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        body.dashboard.vf-voucher-form .cv-card {
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        body.dashboard.vf-voucher-form .cv-card-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            gap: 10px;
+        }
+        body.dashboard.vf-voucher-form .cv-card-body {
+            padding: 32px;
+        }
+        body.dashboard.vf-voucher-form .cv-card .form-row,
+        body.dashboard.vf-voucher-form .cv-split-2,
+        body.dashboard.vf-voucher-form .cv-approvals-row {
+            gap: 24px;
+        }
+        body.dashboard.vf-voucher-form .cv-card .form-group {
+            margin-bottom: 0;
+        }
+        body.dashboard.vf-voucher-form .cv-card .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+        }
+        body.dashboard.vf-voucher-form .cv-card .form-group input,
+        body.dashboard.vf-voucher-form .cv-card .form-group select,
+        body.dashboard.vf-voucher-form .cv-card .form-group textarea,
+        body.dashboard.vf-voucher-form #voucher-items-container input,
+        body.dashboard.vf-voucher-form #voucher-items-container select,
+        body.dashboard.vf-voucher-form #voucher-items-container textarea {
+            width: 100%;
+            min-height: 46px;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px !important;
+            background: #fff;
+            color: #1e293b;
+            font-size: 14px;
+            box-shadow: none;
+        }
+        body.dashboard.vf-voucher-form .cv-card .form-group input:focus,
+        body.dashboard.vf-voucher-form .cv-card .form-group select:focus,
+        body.dashboard.vf-voucher-form .cv-card .form-group textarea:focus,
+        body.dashboard.vf-voucher-form #voucher-items-container input:focus,
+        body.dashboard.vf-voucher-form #voucher-items-container select:focus,
+        body.dashboard.vf-voucher-form #voucher-items-container textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            outline: none;
+        }
+        body.dashboard.vf-voucher-form .help-text {
+            font-size: 12px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+        body.dashboard.vf-voucher-form .cv-payee-row {
+            display: flex;
+            align-items: stretch;
+            gap: 12px;
+        }
+        body.dashboard.vf-voucher-form .cv-payee-row .btn-outline,
+        body.dashboard.vf-voucher-form .cv-btn,
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-primary,
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-submit,
+        body.dashboard.vf-voucher-form .add-item,
+        body.dashboard.vf-voucher-form .btn-official {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.2;
+            min-height: 0;
+            text-decoration: none;
+        }
+        body.dashboard.vf-voucher-form .cv-payee-row .btn-outline,
+        body.dashboard.vf-voucher-form .cv-btn,
+        body.dashboard.vf-voucher-form .btn-official {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            box-shadow: none;
+        }
+        body.dashboard.vf-voucher-form .cv-payee-row .btn-outline:hover,
+        body.dashboard.vf-voucher-form .cv-btn:hover,
+        body.dashboard.vf-voucher-form .btn-official:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            color: #1e293b;
+        }
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-primary,
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-submit,
+        body.dashboard.vf-voucher-form .add-item {
+            background: #3b82f6 !important;
+            border: 1px solid #3b82f6 !important;
+            color: #fff !important;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-primary:hover,
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-submit:hover,
+        body.dashboard.vf-voucher-form .add-item:hover {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+            color: #fff !important;
+        }
+        body.dashboard.vf-voucher-form .voucher-items h3 {
+            font-size: 18px !important;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        body.dashboard.vf-voucher-form .voucher-items-header {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 14px 10px;
+            margin: 16px 0 0;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+        body.dashboard.vf-voucher-form .voucher-item {
+            padding: 14px 10px;
+            margin: 0;
+            border-bottom: 1px solid #eef2f7;
+            background: transparent;
+            align-items: center;
+        }
+        body.dashboard.vf-voucher-form .voucher-item .remove-item {
+            width: 34px !important;
+            height: 34px !important;
+            border-radius: 8px !important;
+            border: 1px solid #fecaca !important;
+            background: #fff !important;
+            color: #ef4444 !important;
+        }
+        body.dashboard.vf-voucher-form .total-amount {
+            margin-top: 16px;
+            padding: 14px 16px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e3a8a;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary {
+            padding: 18px;
+            top: 32px;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary h3 {
+            margin: 0 0 10px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary-row {
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 12px;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary-row .value-total {
+            color: #2563eb;
+            font-weight: 800;
+        }
+        body.dashboard.vf-voucher-form .cv-form-actions--after-approvals {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 0;
+            border-top: 0;
+            flex-wrap: wrap;
+        }
+        @media (max-width: 992px) {
+            body.dashboard.vf-voucher-form .main-content {
+                padding: 16px !important;
+            }
+            body.dashboard.vf-voucher-form .cv-page-header,
+            body.dashboard.vf-voucher-form .form-container {
+                max-width: none;
+            }
+            body.dashboard.vf-voucher-form .cv-page-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                margin-bottom: 24px !important;
+            }
+            body.dashboard.vf-voucher-form .cv-card-body {
+                padding: 20px;
+            }
+            body.dashboard.vf-voucher-form .cv-card .form-row,
+            body.dashboard.vf-voucher-form .cv-split-2,
+            body.dashboard.vf-voucher-form .cv-approvals-row {
+                grid-template-columns: 1fr !important;
+                gap: 20px !important;
+            }
+            body.dashboard.vf-voucher-form .voucher-summary {
+                position: static;
+            }
+            body.dashboard.vf-voucher-form .voucher-items-header {
+                display: none;
+            }
+            body.dashboard.vf-voucher-form .voucher-item {
+                grid-template-columns: 1fr !important;
+                gap: 12px;
+                padding: 14px 0;
+            }
+            body.dashboard.vf-voucher-form .cv-payee-row {
+                flex-direction: column;
+            }
+            body.dashboard.vf-voucher-form .cv-form-actions--after-approvals .cv-btn-form-action,
+            body.dashboard.vf-voucher-form .cv-form-actions--after-approvals .cv-btn {
+                width: 100%;
+            }
+        }
+        /* --- Product add style override for voucher form --- */
+        body.dashboard.vf-voucher-form,
+        body.dashboard.vf-voucher-form button,
+        body.dashboard.vf-voucher-form input,
+        body.dashboard.vf-voucher-form select,
+        body.dashboard.vf-voucher-form textarea {
+            font-family: var(--erp-font-family, 'Poppins', system-ui, -apple-system, sans-serif) !important;
+        }
+        body.dashboard.vf-voucher-form {
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        body.dashboard.vf-voucher-form .main-content {
+            max-width: none;
+            margin: 0;
+            padding: 32px;
+        }
+        body.dashboard.vf-voucher-form .cv-page-header,
+        body.dashboard.vf-voucher-form .form-container {
+            max-width: 1000px;
+            margin-left: 0;
+            margin-right: auto;
+        }
+        body.dashboard.vf-voucher-form .cv-page-header {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            padding: 0;
+            margin-bottom: 32px;
+            gap: 18px;
+            align-items: center;
+        }
+        body.dashboard.vf-voucher-form .cv-page-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: 0;
+            line-height: 1.2;
+        }
+        body.dashboard.vf-voucher-form .cv-page-desc {
+            margin-top: 6px;
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.45;
+        }
+        body.dashboard.vf-voucher-form .cv-actions-right {
+            gap: 12px;
+        }
+        body.dashboard.vf-voucher-form .cv-back-link {
+            color: #94a3b8;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        body.dashboard.vf-voucher-form .cv-back-link:hover {
+            color: #475569;
+            text-decoration: none;
+        }
+        body.dashboard.vf-voucher-form .form-container,
+        body.dashboard.vf-voucher-form .voucher-layout,
+        body.dashboard.vf-voucher-form .voucher-main {
+            padding: 0;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+        }
+        body.dashboard.vf-voucher-form form.voucher-form-layout {
+            display: block;
+        }
+        @media (min-width: 1101px) {
+            body.dashboard.vf-voucher-form form.voucher-form-layout {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 320px;
+                gap: 24px;
+                align-items: start;
+            }
+            body.dashboard.vf-voucher-form form.voucher-form-layout > .voucher-summary {
+                grid-column: 2;
+                grid-row: 1 / -1;
+                align-self: start;
+            }
+            body.dashboard.vf-voucher-form form.voucher-form-layout > :not(.voucher-summary) {
+                grid-column: 1;
+            }
+        }
+        body.dashboard.vf-voucher-form .cv-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        body.dashboard.vf-voucher-form .cv-card-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            gap: 10px;
+        }
+        body.dashboard.vf-voucher-form .cv-card-header .dot,
+        body.dashboard.vf-voucher-form .summary-title-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 999px;
+            font-size: 11px;
+            margin-right: 0;
+        }
+        body.dashboard.vf-voucher-form .cv-card-body {
+            padding: 32px;
+        }
+        body.dashboard.vf-voucher-form .cv-card .form-row,
+        body.dashboard.vf-voucher-form .cv-split-2,
+        body.dashboard.vf-voucher-form .cv-approvals-row {
+            gap: 24px;
+        }
+        body.dashboard.vf-voucher-form .cv-card .form-group {
+            margin-bottom: 0;
+        }
+        body.dashboard.vf-voucher-form .cv-card .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+        }
+        body.dashboard.vf-voucher-form .cv-card .form-group input,
+        body.dashboard.vf-voucher-form .cv-card .form-group select,
+        body.dashboard.vf-voucher-form .cv-card .form-group textarea,
+        body.dashboard.vf-voucher-form #voucher-items-container input,
+        body.dashboard.vf-voucher-form #voucher-items-container select,
+        body.dashboard.vf-voucher-form #voucher-items-container textarea {
+            width: 100%;
+            min-height: 46px;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px !important;
+            background: #fff;
+            color: #1e293b;
+            font-size: 14px;
+            box-shadow: none;
+        }
+        body.dashboard.vf-voucher-form .cv-card .form-group input:focus,
+        body.dashboard.vf-voucher-form .cv-card .form-group select:focus,
+        body.dashboard.vf-voucher-form .cv-card .form-group textarea:focus,
+        body.dashboard.vf-voucher-form #voucher-items-container input:focus,
+        body.dashboard.vf-voucher-form #voucher-items-container select:focus,
+        body.dashboard.vf-voucher-form #voucher-items-container textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            outline: none;
+        }
+        body.dashboard.vf-voucher-form .cv-card .help-text,
+        body.dashboard.vf-voucher-form .help-text {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+        body.dashboard.vf-voucher-form #supporting-docs-card #description {
+            min-height: 220px;
+            padding: 14px 16px;
+            line-height: 1.5;
+        }
+        body.dashboard.vf-voucher-form .cv-payee-row {
+            display: flex;
+            align-items: stretch;
+            gap: 12px;
+        }
+        body.dashboard.vf-voucher-form .cv-payee-row select {
+            flex: 1 1 auto;
+        }
+        body.dashboard.vf-voucher-form .cv-payee-row .btn-outline {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 0 14px;
+            min-height: 46px;
+            box-shadow: none;
+        }
+        body.dashboard.vf-voucher-form .cv-payee-row .btn-outline:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            color: #1e293b;
+        }
+        body.dashboard.vf-voucher-form .voucher-items {
+            margin: 0;
+        }
+        body.dashboard.vf-voucher-form .voucher-items h3 {
+            font-size: 18px !important;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        body.dashboard.vf-voucher-form .voucher-items-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr 40px;
+            gap: 10px;
+            padding: 14px 10px;
+            margin-top: 16px;
+            margin-bottom: 0;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+        body.dashboard.vf-voucher-form .voucher-item {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr 40px;
+            gap: 10px;
+            align-items: center;
+            padding: 14px 10px;
+            margin: 0;
+            border-bottom: 1px solid #eef2f7;
+            background: transparent;
+        }
+        body.dashboard.vf-voucher-form .voucher-item .form-group.no-label {
+            margin-bottom: 0;
+        }
+        body.dashboard.vf-voucher-form .voucher-item .remove-item {
+            width: 34px !important;
+            height: 34px !important;
+            border-radius: 8px !important;
+            border: 1px solid #fecaca !important;
+            background: #fff !important;
+            color: #ef4444 !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            justify-self: center;
+        }
+        body.dashboard.vf-voucher-form .voucher-item .remove-item:hover {
+            background: #fef2f2 !important;
+        }
+        body.dashboard.vf-voucher-form .add-item {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 9px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            background: #3b82f6 !important;
+            border: 1px solid #3b82f6 !important;
+            color: #fff !important;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        body.dashboard.vf-voucher-form .add-item:hover {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+        }
+        body.dashboard.vf-voucher-form .btn-official {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 9px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #334155;
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            margin-left: 8px;
+        }
+        body.dashboard.vf-voucher-form .btn-official:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            color: #1e293b;
+        }
+        body.dashboard.vf-voucher-form .total-amount {
+            margin-top: 16px;
+            padding: 14px 16px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e3a8a;
+        }
+        body.dashboard.vf-voucher-form .cv-upload-box {
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+        body.dashboard.vf-voucher-form .cv-upload-trigger {
+            padding: 20px;
+        }
+        body.dashboard.vf-voucher-form .cv-upload-btn {
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            padding: 18px;
+            top: 32px;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary h3 {
+            margin: 0 0 10px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary-vno {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary-row {
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 12px;
+            gap: 10px;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary-row span:first-child {
+            color: #64748b;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary-row span:last-child {
+            color: #0f172a;
+            font-weight: 600;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary-row .value-total {
+            color: #2563eb;
+            font-weight: 800;
+        }
+        body.dashboard.vf-voucher-form .voucher-summary-row .status-pill {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-color: #bfdbfe;
+        }
+        body.dashboard.vf-voucher-form .cv-form-actions--after-approvals {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        body.dashboard.vf-voucher-form .cv-btn-form-action,
+        body.dashboard.vf-voucher-form .cv-btn,
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-submit,
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-primary {
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            min-height: 0;
+        }
+        body.dashboard.vf-voucher-form .cv-btn {
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #334155;
+        }
+        body.dashboard.vf-voucher-form .cv-btn:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            color: #1e293b;
+        }
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-primary,
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-submit {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-primary:hover,
+        body.dashboard.vf-voucher-form .cv-btn.cv-btn-submit:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+        }
+        @media (max-width: 992px) {
+            body.dashboard.vf-voucher-form .main-content {
+                padding: 16px;
+            }
+            body.dashboard.vf-voucher-form .cv-page-header,
+            body.dashboard.vf-voucher-form .form-container {
+                max-width: none;
+            }
+            body.dashboard.vf-voucher-form .cv-page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                margin-bottom: 24px;
+            }
+            body.dashboard.vf-voucher-form .cv-card-body {
+                padding: 20px;
+            }
+            body.dashboard.vf-voucher-form .cv-card .form-row,
+            body.dashboard.vf-voucher-form .cv-split-2,
+            body.dashboard.vf-voucher-form .cv-approvals-row {
+                grid-template-columns: 1fr !important;
+                gap: 20px;
+            }
+            body.dashboard.vf-voucher-form .voucher-summary {
+                position: static;
+            }
+            body.dashboard.vf-voucher-form .voucher-items-header {
+                display: none;
+            }
+            body.dashboard.vf-voucher-form .voucher-item {
+                grid-template-columns: 1fr !important;
+                gap: 12px;
+                padding: 14px 0;
+            }
+            body.dashboard.vf-voucher-form .btn-official {
+                margin-left: 0;
+                margin-top: 8px;
+            }
+            body.dashboard.vf-voucher-form .cv-payee-row {
+                flex-direction: column;
+            }
+            body.dashboard.vf-voucher-form .cv-form-actions--after-approvals {
+                justify-content: stretch;
+            }
+            body.dashboard.vf-voucher-form .cv-form-actions--after-approvals .cv-btn-form-action,
+            body.dashboard.vf-voucher-form .cv-form-actions--after-approvals .cv-btn {
+                width: 100%;
+            }
+        }
+        /* Compact page-scoped tweaks for Create Voucher */
+        body.dashboard .main-content {
+            padding: 18px 16px;
+        }
+
+
+        body.dashboard .form-container {
+            padding: 18px;
+            border-radius: 0;
+            max-width: 900px;
+            margin: 0 auto;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        body.dashboard .form-container h2 {
+            font-size: 17px;
+            margin-bottom: 12px;
+        }
+
+        /* Form density */
+        body.dashboard .form-row {
+            gap: 14px;
+        }
+
+        body.dashboard .form-group {
+            margin-bottom: 14px;
+        }
+
+        body.dashboard .form-group label {
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        body.dashboard .form-group input,
+        body.dashboard .form-group select,
+        body.dashboard .form-group textarea {
+            padding: 10px 12px;
+            font-size: 14px;
+            border-radius: 10px !important;
+        }
+
+        body.dashboard .form-group textarea {
+            min-height: 110px;
+        }
+
+        /* Items section */
+        body.dashboard .voucher-items {
+            margin: 18px 0;
+        }
+
+        body.dashboard .voucher-items h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        body.dashboard .add-item {
+            padding: 8px 12px;
+            font-size: 13px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #10b981 !important;
+            border: 1px solid #10b981 !important;
+            color: #fff !important;
+        }
+        body.dashboard .add-item:hover {
+            background: #059669 !important;
+            border-color: #059669 !important;
+        }
+
+        body.dashboard .voucher-item {
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr 32px;
+            /* five fields + icon */
+            align-items: start;
+        }
+
+        /* Make remove button an icon-only control */
+        body.dashboard .voucher-item .remove-item {
+            padding: 0 !important;
+            width: 28px !important;
+            height: 28px !important;
+            background: transparent !important;
+            color: inherit;
+            justify-self: end;
+        }
+
+        /* Totals */
+        body.dashboard .total-amount {
+            font-size: 17px;
+            margin: 14px 0;
+            padding: 12px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+        }
+
+        /* Submit button */
+        body.dashboard button.btn[type="submit"] {
+            padding: 10px 16px;
+            font-size: 14px;
+            border-radius: 0;
+        }
+
+        body.dashboard .btn-official {
+            background: transparent;
+            color: #6b7280;
+            border: none;
+            padding: 8px 10px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 5px;
+            box-shadow: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        body.dashboard .btn-official:hover {
+            background: #f3f4f6;
+            color: #111827;
+        }
+
+        /* Slightly smaller company logo in header on this page */
+        body.dashboard .company-logo-img {
+            height: 62px;
+        }
+
+        @media (max-width: 640px) {
+            body.dashboard .form-row {
+                grid-template-columns: 1fr !important;
+                gap: 10px;
+            }
+
+            body.dashboard .voucher-item {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* Step headings and helper text */
+        .step-title {
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .02em;
+            color: #374151;
+            margin: 14px 0 8px;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .voucher-items-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr 32px;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 12px;
+            padding: 4px 12px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 4px;
+        }
+
+        .voucher-item.no-label label {
+            display: none !important;
+        }
+
+        /* Force-hide any legacy labels within voucher item rows */
+        .voucher-items .voucher-item label {
+            display: none !important;
+        }
+        .swal2-container { z-index: 20000 !important; }
+
+        /* Mobile: native bottom sheet for "Confirm submission" (SweetAlert applies strong inline styles â€” custom DOM is reliable) */
+        @media (max-width: 767.98px) {
+            body.voucher-confirm-native-open {
+                overflow: hidden;
+                touch-action: none;
+            }
+        }
+        .voucher-confirm-native-backdrop {
+            display: none;
+        }
+        .voucher-confirm-native-sheet {
+            display: none;
+        }
+        @media (max-width: 767.98px) {
+            .voucher-confirm-native-backdrop {
+                display: block;
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.48);
+                z-index: 21000;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.28s ease, visibility 0.28s ease;
+            }
+            .voucher-confirm-native-backdrop.is-visible {
+                opacity: 1;
+                visibility: visible;
+            }
+            .voucher-confirm-native-sheet {
+                display: block;
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                max-height: min(70vh, 560px);
+                background: #fff;
+                border-radius: 1.25rem 1.25rem 0 0;
+                box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.18);
+                z-index: 21010;
+                transform: translateY(105%);
+                transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+                padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .voucher-confirm-native-sheet.is-visible {
+                transform: translateY(0);
+            }
+            .voucher-confirm-native-handle {
+                width: 40px;
+                height: 5px;
+                background: #d1d5db;
+                border-radius: 999px;
+                margin: 12px auto 8px;
+            }
+            .voucher-confirm-native-icon {
+                width: 3.5rem;
+                height: 3.5rem;
+                margin: 0 auto 0.75rem;
+                border-radius: 50%;
+                background: #e0f2fe;
+                color: #0369a1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+            }
+            .voucher-confirm-native-title {
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: #111827;
+                text-align: center;
+                margin: 0 0 0.35rem;
+            }
+            .voucher-confirm-native-sheet .vcn-summary {
+                background: #f9fafb;
+                padding: 12px;
+                border-radius: 8px;
+                border: 1px solid #e5e7eb;
+                font-size: 14px;
+                text-align: left;
+                margin-top: 0.5rem;
+            }
+            .voucher-confirm-native-btns {
+                display: flex;
+                flex-direction: column-reverse;
+                gap: 0.5rem;
+                margin-top: 1rem;
+            }
+            .voucher-confirm-native-btns button {
+                width: 100%;
+                border-radius: 999px;
+                padding: 0.65rem 1rem;
+                font-weight: 600;
+                border: none;
+                cursor: pointer;
+            }
+            .voucher-confirm-native-btns .vcn-cancel {
+                background: #6b7280;
+                color: #fff;
+            }
+            .voucher-confirm-native-btns .vcn-submit {
+                background: #10b981;
+                color: #fff;
+            }
+        }
+
+        /* Mobile: voucher created success bottom sheet (stock module pattern) */
+        @media (max-width: 767.98px) {
+            body.voucher-create-success-sheet-open {
+                overflow: hidden;
+                touch-action: none;
+            }
+        }
+        .voucher-create-success-sheet-backdrop {
+            display: none;
+        }
+        .voucher-create-success-sheet {
+            display: none;
+        }
+        @media (max-width: 767.98px) {
+            .voucher-create-success-sheet-backdrop {
+                display: block;
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.48);
+                z-index: 1080;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.28s ease, visibility 0.28s ease;
+            }
+            .voucher-create-success-sheet-backdrop.is-visible {
+                opacity: 1;
+                visibility: visible;
+            }
+            .voucher-create-success-sheet {
+                display: block;
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                max-height: min(58vh, 420px);
+                background: #fff;
+                border-radius: 1.25rem 1.25rem 0 0;
+                box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.18);
+                z-index: 1090;
+                transform: translateY(105%);
+                transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+                padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+            }
+            .voucher-create-success-sheet.is-visible {
+                transform: translateY(0);
+            }
+            .voucher-create-success-sheet-handle {
+                width: 40px;
+                height: 5px;
+                background: #d1d5db;
+                border-radius: 999px;
+                margin: 12px auto 8px;
+                flex-shrink: 0;
+            }
+        }
+        .voucher-create-success-btn {
+            background-color: #2563EB !important;
+            color: #fff !important;
+            border-color: #2563EB !important;
+        }
+        .voucher-create-success-btn:hover {
+            background-color: #1D4ED8 !important;
+            border-color: #1D4ED8 !important;
+            color: #fff !important;
+        }
+
+        /* --- Layout refresh (match modern card UI) --- */
+        body.dashboard {
+            background: #f3f5f9;
+        }
+        body.dashboard .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        .cv-page-header {
+            background: #fff;
+            border: 1px solid #e6ebf2;
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+        }
+        .cv-actions-left {
+            flex: 1 1 280px;
+            min-width: 0;
+        }
+        .cv-page-title {
+            margin: 0;
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: -0.02em;
+            line-height: 1.25;
+        }
+        .cv-page-desc {
+            margin: 6px 0 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+            line-height: 1.45;
+            max-width: 42rem;
+        }
+        .cv-actions-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            flex: 0 0 auto;
+            flex-wrap: wrap;
+        }
+        a.cv-btn {
+            text-decoration: none;
+        }
+        .cv-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 10px 16px;
+            border: 1px solid #d1d5db;
+            background: #fff;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            font-family: inherit;
+            line-height: 1.2;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .cv-btn:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+            color: #111827;
+        }
+        .cv-btn.cv-btn-primary {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+        }
+        .cv-btn.cv-btn-primary:hover {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+            color: #fff;
+        }
+        @media (max-width: 768px) {
+            .cv-page-header {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 16px;
+            }
+            .cv-actions-right {
+                width: 100%;
+                justify-content: stretch;
+            }
+            .cv-actions-right .cv-btn {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+        }
+        @media (max-width: 480px) {
+            .cv-actions-right {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .cv-actions-right .cv-btn {
+                width: 100%;
+            }
+        }
+        body.dashboard .form-container {
+            max-width: 100%;
+            padding: 0;
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
+        }
+        .voucher-layout {
+            display: block;
+        }
+        .voucher-main {
+            background: #fff;
+            border: 1px solid #e6ebf2;
+            border-radius: 10px;
+            padding: 16px;
+        }
+        form.voucher-form-layout {
+            display: block;
+        }
+        @media (min-width: 1101px) {
+            form.voucher-form-layout {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 300px;
+                gap: 14px;
+                align-items: start;
+            }
+            form.voucher-form-layout > .voucher-summary {
+                grid-column: 2;
+                grid-row: 1 / -1;
+                align-self: start;
+            }
+            form.voucher-form-layout > :not(.voucher-summary) {
+                grid-column: 1;
+            }
+        }
+        .voucher-main h2 {
+            margin-bottom: 6px;
+        }
+        .voucher-subtitle {
+            margin: 0 0 12px;
+            color: #6b7280;
+            font-size: 12px;
+        }
+        .voucher-summary {
+            background: #fff;
+            border: 1px solid #e6ebf2;
+            border-radius: 10px;
+            padding: 14px;
+            position: sticky;
+            top: 90px;
+        }
+        .voucher-summary h3 {
+            margin: 0 0 10px;
+            font-size: 18px;
+            color: #111827;
+            font-weight: 700;
+        }
+        .voucher-summary-vno {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4b5563;
+            margin: -4px 0 10px;
+            word-break: break-word;
+        }
+        .voucher-summary-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px dashed #edf1f7;
+            font-size: 14px;
+        }
+        .voucher-summary-row:last-child {
+            border-bottom: 0;
+        }
+        .voucher-summary-row span:first-child {
+            color: #64748b;
+        }
+        .voucher-summary-row span:last-child {
+            color: #111827;
+            font-weight: 600;
+            text-align: right;
+        }
+        .voucher-summary-row .value-total {
+            color: #2563eb;
+            font-weight: 700;
+        }
+        .voucher-summary-row .status-pill,
+        .voucher-summary-row-status .status-pill {
+            display: inline-block;
+            background: #fff7ed;
+            color: #b45309;
+            border: 1px solid #fed7aa;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+            text-transform: capitalize;
+            flex-shrink: 0;
+        }
+        .voucher-summary-row-status {
+            align-items: center;
+        }
+        .voucher-summary-row-status .status-pill {
+            text-align: center;
+        }
+        .cv-card {
+            border: 1px solid #e6ebf2;
+            border-radius: 10px;
+            background: #fff;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .cv-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+            padding: 10px 12px;
+            border-bottom: 1px solid #edf1f7;
+            background: #fbfdff;
+        }
+        .cv-card-header .dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #fff;
+            background: #2563eb;
+            border: 1px solid #2563eb;
+        }
+        .cv-card-header .dot.dot-voucher {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+        .cv-card-header .dot.dot-payment {
+            background: #10b981;
+            border-color: #10b981;
+        }
+        .cv-card-header .dot.dot-description {
+            background: #f59e0b;
+            border-color: #f59e0b;
+        }
+        .cv-card-header .dot.dot-docs {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
+        }
+        .cv-card-header .dot.dot-approvals {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+        .summary-title-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #fff;
+            background: #06b6d4;
+            border: 1px solid #06b6d4;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .cv-card-body {
+            padding: 12px;
+        }
+        .cv-card .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 0;
+        }
+        .cv-card .form-group {
+            margin-bottom: 10px;
+        }
+        .cv-card .form-group input,
+        .cv-card .form-group select,
+        .cv-card .form-group textarea {
+            border: 1px solid #dbe3ef;
+            border-radius: 10px !important;
+            background: #fff;
+            min-height: 38px;
+            font-size: 15px;
+        }
+        /* Main voucher description â€” cv-card textarea rule above was collapsing this to ~one line */
+        #supporting-docs-card #description {
+            width: 100%;
+            min-height: 200px;
+            padding: 14px 16px;
+            line-height: 1.45;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        .cv-card .field-filled {
+            border-color: var(--card-accent-soft, rgba(37, 99, 235, 0.22)) !important;
+            box-shadow: 0 0 0 1px var(--card-accent-soft, rgba(37, 99, 235, 0.18));
+        }
+        /* Ensure dynamic voucher item fields are rounded too */
+        #voucher-items-container input,
+        #voucher-items-container select,
+        #voucher-items-container textarea,
+        #supporting_files,
+        #date_created,
+        #currency,
+        #voucher_purpose,
+        #supporting_documents,
+        #payee_select,
+        #applicant,
+        #department_manager,
+        #checked_by {
+            border-radius: 10px !important;
+        }
+        .cv-card .help-text {
+            margin-top: 2px;
+            font-size: 13px;
+        }
+        .cv-split-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+            overflow: visible !important;
+        }
+        .cv-files-drop {
+            border: 1px dashed #93c5fd;
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+            background: #f8fbff;
+            color: #64748b;
+            font-size: 14px;
+        }
+        .cv-upload-box {
+            border: 1px dashed #60a5fa;
+            border-radius: 8px;
+            background: #eff6ff;
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .cv-upload-box.has-files {
+            border-color: #22c55e !important;
+            background: #f0fdf4 !important;
+        }
+        .cv-upload-box.has-files .cv-upload-trigger {
+            color: #166534 !important;
+        }
+        .cv-upload-box.has-files .cv-upload-icon {
+            background: #dcfce7 !important;
+            color: #16a34a !important;
+        }
+        .cv-upload-box.has-files .cv-upload-btn {
+            border-color: #86efac !important;
+            color: #166534 !important;
+            background: #ffffff !important;
+        }
+        .cv-upload-trigger {
+            display: grid;
+            grid-template-columns: 36px 1fr auto;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            margin: 0;
+            cursor: pointer;
+            color: #1e3a8a;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .cv-upload-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #2563eb;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+        }
+        .cv-upload-btn {
+            border: 1px solid #bfdbfe;
+            background: #ffffff;
+            color: #2563eb;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        .cv-upload-input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .cv-files-indicator {
+            display: none;
+            margin-top: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid #86efac;
+            background: #f0fdf4;
+            color: #166534;
+            font-size: 13px;
+            font-weight: 600;
+            width: fit-content;
+        }
+        .cv-files-indicator.is-visible {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .so-picker {
+            position: relative;
+            margin-top: 10px;
+            z-index: 2500;
+        }
+        .so-picker-trigger {
+            width: 100%;
+            border: 1px solid #9db8f0;
+            background: #f8fbff;
+            border-radius: 12px;
+            min-height: 42px;
+            padding: 10px 42px 10px 36px;
+            color: #1f2937;
+            font-size: 14px;
+            line-height: 1.3;
+            cursor: pointer;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .so-picker-trigger::before {
+            content: "\f002";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: #64748b;
+        }
+        .so-picker-trigger .so-caret {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: #334155;
+            transition: transform .2s ease;
+        }
+        .so-picker.open .so-picker-trigger .so-caret {
+            transform: translateY(-50%) rotate(180deg);
+        }
+        .so-picker-dropdown {
+            display: none;
+            position: fixed;
+            z-index: 30000;
+            left: 0;
+            top: 0;
+            width: 320px;
+            margin-top: 0;
+            background: #fff;
+            border: 1px solid #dbe4f2;
+            border-radius: 12px;
+            box-shadow: 0 20px 44px rgba(15, 23, 42, 0.16);
+            overflow: hidden;
+            min-height: 240px;
+            max-height: min(72vh, 560px);
+            transform-origin: top center;
+        }
+        .so-picker-dropdown.is-upward {
+            transform-origin: bottom center;
+        }
+        .so-picker.open .so-picker-dropdown {
+            display: block;
+        }
+        .so-picker-search-wrap {
+            padding: 10px;
+            border-bottom: 1px solid #edf2f7;
+            background: #fbfdff;
+        }
+        .so-picker-search {
+            width: 100%;
+            border: 1px solid #dbe4f2;
+            border-radius: 10px;
+            min-height: 36px;
+            padding: 8px 12px 8px 34px;
+            font-size: 14px;
+            color: #1f2937;
+            background: #fff;
+            background-image: none !important;
+            position: relative;
+            outline: none;
+            box-shadow: none;
+        }
+        .so-picker-search:focus {
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.14);
+        }
+        .so-picker-search-wrap {
+            position: relative;
+        }
+        .so-picker-search-wrap::before {
+            content: "\f002";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            left: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: #94a3b8;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .so-picker-chips {
+            display: flex;
+            gap: 8px;
+            padding: 8px 10px 10px;
+            border-bottom: 1px solid #edf2f7;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            background: #fff;
+        }
+        .so-chip {
+            border: 1px solid #d5deeb;
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 10px;
+            line-height: 1;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .so-chip.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+        }
+        .so-picker-results {
+            max-height: 360px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        .so-picker-results::-webkit-scrollbar {
+            width: 10px;
+        }
+        .so-picker-results::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .so-picker-results::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+            border: 2px solid #f1f5f9;
+        }
+        .so-option {
+            border-bottom: 1px solid #eef2f7;
+            padding: 10px 12px 10px 34px;
+            position: relative;
+            cursor: pointer;
+            background: #fff;
+        }
+        .so-option:hover {
+            background: #f8fbff;
+        }
+        .so-option.is-selected {
+            background: #eef4ff;
+        }
+        .so-option-check {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #2563eb;
+            color: #fff;
+            font-size: 10px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .so-option.is-selected .so-option-check {
+            display: inline-flex;
+        }
+        .so-option-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .so-option-number {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .so-option-customer {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .so-option-subrow {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 8px;
+            margin-top: 2px;
+        }
+        .so-option-salesperson {
+            font-size: 12px;
+            color: #475569;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .so-badge {
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 4px 8px;
+            line-height: 1;
+            white-space: nowrap;
+            border: 1px solid #dbe4f2;
+            color: #475569;
+            background: #f8fafc;
+            text-transform: capitalize;
+        }
+        .so-badge.paid {
+            color: #166534;
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+        }
+        .so-badge.invoiced {
+            color: #1d4ed8;
+            border-color: #bfdbfe;
+            background: #eff6ff;
+        }
+        .so-badge.partial {
+            color: #92400e;
+            border-color: #fde68a;
+            background: #fffbeb;
+        }
+        .so-picker-empty {
+            padding: 18px 12px;
+            font-size: 13px;
+            color: #64748b;
+            text-align: center;
+        }
+        .so-picker-meta {
+            border-top: 1px solid #edf2f7;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #64748b;
+            background: #fbfdff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .so-picker-meta-left {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .so-picker-meta-right {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .so-picker-page-size {
+            min-height: 28px;
+            border: 1px solid #dbe4f2;
+            border-radius: 8px;
+            background: #fff;
+            color: #334155;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+        #supporting-docs-card,
+        #supporting-docs-card .cv-card-body,
+        #supporting-docs-card .form-group {
+            overflow: visible !important;
+        }
+        #supporting-docs-card {
+            position: relative;
+            z-index: 60;
+        }
+        #approvals-card {
+            position: relative;
+            z-index: 5;
+        }
+        .cv-card .form-group label {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .voucher-items h3 {
+            font-size: 20px !important;
+        }
+        .voucher-items-header {
+            font-size: 14px;
+        }
+        .cv-bottom-actions {
+            margin-top: 8px;
+            border: 1px solid #e6ebf2;
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .cv-bottom-actions-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .cv-btn.cv-btn-submit {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+            min-width: 140px;
+        }
+        .cv-btn.cv-btn-submit:hover {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+            color: #fff;
+        }
+        .payee-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 18px;
+        }
+        .payee-modal-card {
+            width: min(760px, 96vw);
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+            overflow: hidden;
+        }
+        .payee-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid #eef2f7;
+            border-top-left-radius: 18px;
+            border-top-right-radius: 18px;
+        }
+        .payee-modal-title-wrap {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .payee-modal-icon {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .payee-modal-title {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.1;
+        }
+        .payee-modal-subtitle {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .payee-modal-close {
+            border: 0;
+            background: transparent;
+            color: #6b7280;
+            font-size: 18px;
+            cursor: pointer;
+            line-height: 1;
+            padding: 4px;
+        }
+        .payee-modal-body {
+            padding: 14px 16px;
+        }
+        .payee-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .payee-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .payee-field.span-2 {
+            grid-column: 1 / -1;
+        }
+        .payee-field label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .payee-field input,
+        .payee-field select,
+        .payee-field textarea {
+            width: 100%;
+            border: 1px solid #dbe3ef;
+            border-radius: 14px;
+            min-height: 40px;
+            padding: 10px 12px;
+            font-size: 14px;
+            color: #111827;
+            background: #fff;
+        }
+        /* Force rounded corners inside Add New Payee modal */
+        #newPayeeModal .payee-field input,
+        #newPayeeModal .payee-field select,
+        #newPayeeModal .payee-field textarea {
+            border-radius: 14px !important;
+            -webkit-border-radius: 14px !important;
+            background-clip: padding-box;
+        }
+        #newPayeeModal .payee-field select {
+            appearance: auto;
+        }
+        .payee-field textarea {
+            min-height: 70px;
+            resize: vertical;
+        }
+        .payee-tip {
+            margin-top: 12px;
+            border: 1px solid #dbeafe;
+            background: #eff6ff;
+            color: #1e40af;
+            border-radius: 12px;
+            padding: 9px 10px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .payee-modal-actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .payee-btn {
+            border-radius: 12px;
+            min-height: 38px;
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .payee-btn-secondary {
+            border: 1px solid #d1d5db;
+            background: #fff;
+            color: #374151;
+        }
+        .payee-btn-primary {
+            border: 1px solid #2563eb;
+            background: #2563eb;
+            color: #fff;
+        }
+        .payee-btn-primary:hover {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+        @media (max-width: 768px) {
+            .payee-grid {
+                grid-template-columns: 1fr;
+            }
+            .payee-field.span-2 {
+                grid-column: auto;
+            }
+        }
+        @media (max-width: 1100px) {
+            .voucher-summary {
+                position: static;
+                margin-top: 12px;
+            }
+            .cv-split-2 {
+                grid-template-columns: 1fr;
+            }
+            .cv-card .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading Overlay Container */
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(16px, 5vw, 40px);
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px) saturate(145%);
+            -webkit-backdrop-filter: blur(12px) saturate(145%);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.4s ease, visibility 0.4s;
+        }
+        #loading-overlay.is-visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        /* ERP Loader Styles */
+        .erp-loader-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 22px;
+            animation: erpFadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        .erp-loader {
+            position: relative;
+            display: inline-block;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            color: #BA2908;
+            transform: rotateZ(45deg);
+            perspective: 1000px;
+        }
+        .erp-loader::before,
+        .erp-loader::after {
+            content: '';
+            display: block;
+            position: absolute;
+            inset: 0;
+            width: inherit;
+            height: inherit;
+            border-radius: 50%;
+            transform: rotateX(70deg);
+            animation: erpSpin 1.4s linear infinite;
+        }
+        .erp-loader::after {
+            color: #2563eb;
+            transform: rotateY(70deg);
+            animation-delay: 0.4s;
+        }
+        .erp-loading-text {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #BA2908;
+            text-transform: uppercase;
+            text-align: center;
+        }
+        @keyframes erpSpin {
+            0%, 100% { box-shadow: 0.3em 0 0 0 currentColor; }
+            12% { box-shadow: 0.3em 0.3em 0 0 currentColor; }
+            25% { box-shadow: 0 0.3em 0 0 currentColor; }
+            37% { box-shadow: -0.3em 0.3em 0 0 currentColor; }
+            50% { box-shadow: -0.3em 0 0 0 currentColor; }
+            62% { box-shadow: -0.3em -0.3em 0 0 currentColor; }
+            75% { box-shadow: 0 -0.3em 0 0 currentColor; }
+            87% { box-shadow: 0.3em -0.3em 0 0 currentColor; }
+        }
+        @keyframes erpFadeUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Payee row (create + edit) */
+        .cv-payee-row {
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .cv-payee-row select {
+            flex: 1 1 180px;
+            min-width: 0;
+        }
+        .cv-approvals-row {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        /* Form actions after Approvals (mobile); header actions on desktop */
+        .cv-form-actions--after-approvals {
+            display: none;
+            margin-top: 14px;
+            padding-top: 16px;
+            border-top: 1px solid #e6ebf2;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+        .cv-form-actions--after-approvals .cv-btn-form-action {
+            width: 100%;
+            justify-content: center;
+            min-height: 46px;
+            font-size: 0.9375rem;
+        }
+        .cv-form-actions--after-approvals .cv-btn-primary,
+        .cv-form-actions--after-approvals .cv-btn-submit {
+            font-weight: 700;
+        }
+
+        @media (min-width: 768px) {
+            body.dashboard.vf-voucher-form .cv-form-actions--after-approvals {
+                display: none !important;
+            }
+        }
+
+        /* --- Mobile: create / edit voucher form --- */
+        @media (max-width: 767.98px) {
+            body.dashboard.vf-voucher-form {
+                overflow-x: hidden;
+            }
+            body.dashboard.vf-voucher-form .main-content {
+                padding: 12px 10px 0;
+                max-width: 100%;
+            }
+            body.dashboard.vf-voucher-form .form-container {
+                max-width: 100%;
+                padding: 0;
+            }
+            body.dashboard.vf-voucher-form .voucher-layout {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            body.dashboard.vf-voucher-form .voucher-summary {
+                position: static;
+                top: auto;
+                margin: 14px 0 0;
+            }
+            body.dashboard.vf-voucher-form .cv-form-actions--after-approvals {
+                margin-top: 14px;
+            }
+            body.dashboard.vf-voucher-form .voucher-summary-row:not(.voucher-summary-row-status) span:last-child {
+                max-width: 58%;
+                word-break: break-word;
+            }
+            body.dashboard.vf-voucher-form .voucher-summary-row-status .status-pill {
+                max-width: none;
+                white-space: nowrap;
+            }
+            body.dashboard.vf-voucher-form .voucher-main {
+                padding: 12px;
+                border-radius: 12px;
+                overflow-x: hidden;
+            }
+            /* Title/actions card removed on mobile — summary + bottom actions cover it */
+            body.dashboard.vf-voucher-form .cv-page-header {
+                display: none !important;
+            }
+            body.dashboard.vf-voucher-form .cv-form-actions--after-approvals {
+                display: flex;
+            }
+            /* Clear fixed mobile footer (Home / Vouchers / … bar) */
+            body.has-mobile-footer.dashboard.vf-voucher-form {
+                padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+            }
+            body.has-mobile-footer.dashboard.vf-voucher-form .main-content {
+                padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+            }
+            body.has-mobile-footer.dashboard.vf-voucher-form .cv-form-actions--after-approvals {
+                margin-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+                scroll-margin-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+            }
+            body.has-mobile-footer.dashboard.vf-voucher-form .voucher-main {
+                padding-bottom: 8px;
+            }
+            body.dashboard.vf-voucher-form #approvals-card .form-row,
+            body.dashboard.vf-voucher-form #approvals-card .form-row > div {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            body.dashboard.vf-voucher-form .cv-card .form-row {
+                grid-template-columns: 1fr !important;
+            }
+            body.dashboard.vf-voucher-form .cv-approvals-row {
+                grid-template-columns: 1fr !important;
+            }
+            body.dashboard.vf-voucher-form .cv-payee-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            body.dashboard.vf-voucher-form .cv-payee-row select,
+            body.dashboard.vf-voucher-form .cv-payee-row .btn {
+                width: 100%;
+                flex: none;
+            }
+            body.dashboard.vf-voucher-form .cv-card .form-group input,
+            body.dashboard.vf-voucher-form .cv-card .form-group select,
+            body.dashboard.vf-voucher-form .cv-card .form-group textarea,
+            body.dashboard.vf-voucher-form #voucher-items-container input,
+            body.dashboard.vf-voucher-form #voucher-items-container select {
+                font-size: 16px;
+                min-height: 44px;
+            }
+            body.dashboard.vf-voucher-form #supporting-docs-card #description {
+                min-height: 140px;
+            }
+            body.dashboard.vf-voucher-form .voucher-items > h3 {
+                display: none;
+            }
+            body.dashboard.vf-voucher-form .voucher-items-header {
+                display: none !important;
+            }
+            body.dashboard.vf-voucher-form .voucher-items .voucher-item {
+                display: flex !important;
+                flex-direction: column;
+                gap: 10px;
+                grid-template-columns: none !important;
+                padding: 14px;
+                margin-bottom: 12px;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                background: #f9fafb;
+            }
+            body.dashboard.vf-voucher-form .voucher-items .voucher-item .form-group.no-label {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                width: 100%;
+            }
+            body.dashboard.vf-voucher-form .voucher-items .voucher-item .form-group.no-label:nth-child(1)::before {
+                content: 'Payment Type';
+            }
+            body.dashboard.vf-voucher-form .voucher-items .voucher-item .form-group.no-label:nth-child(2)::before {
+                content: 'Budget Type';
+            }
+            body.dashboard.vf-voucher-form .voucher-items .voucher-item .form-group.no-label:nth-child(3)::before {
+                content: 'Name';
+            }
+            body.dashboard.vf-voucher-form .voucher-items .voucher-item .form-group.no-label:nth-child(4)::before {
+                content: 'Amount';
+            }
+            body.dashboard.vf-voucher-form .voucher-items .voucher-item .form-group.no-label:nth-child(5)::before {
+                content: 'Item Description';
+            }
+            body.dashboard.vf-voucher-form .voucher-items .voucher-item .form-group.no-label::before {
+                display: block;
+                font-size: 12px;
+                font-weight: 600;
+                color: #374151;
+            }
+            body.dashboard.vf-voucher-form .voucher-items .voucher-item .remove-item {
+                align-self: flex-end;
+                margin-top: 4px;
+            }
+            body.dashboard.vf-voucher-form .voucher-items .add-item,
+            body.dashboard.vf-voucher-form .voucher-items .btn-official {
+                display: flex;
+                width: 100%;
+                justify-content: center;
+                margin-left: 0;
+                margin-bottom: 8px;
+            }
+            body.dashboard.vf-voucher-form .total-amount {
+                font-size: 16px;
+                text-align: left;
+            }
+            body.dashboard.vf-voucher-form .cv-upload-trigger {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 8px;
+            }
+            body.dashboard.vf-voucher-form .cv-upload-btn {
+                justify-self: center;
+            }
+            body.dashboard.vf-voucher-form .so-picker-trigger {
+                width: 100%;
+                text-align: left;
+            }
+            body.dashboard.vf-voucher-form .vf-existing-attachments {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+            body.dashboard.vf-voucher-form .vf-existing-attachments .attachment-item {
+                display: block !important;
+                width: 100%;
+            }
+            body.dashboard.vf-voucher-form .vf-existing-attachments .cv-btn {
+                display: block;
+                width: 100%;
+                text-align: center;
+            }
+            body.dashboard.vf-voucher-form .payee-modal-overlay {
+                padding: 10px;
+                align-items: flex-end;
+            }
+            body.dashboard.vf-voucher-form .payee-modal-card {
+                width: 100%;
+                max-height: 92vh;
+                border-radius: 16px 16px 0 0;
+            }
+        }
+

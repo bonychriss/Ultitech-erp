@@ -1,0 +1,1965 @@
+:root {
+    --wm-purple: #7c3aed;
+    --wm-purple-light: #ede9fe;
+    --wm-purple-dark: #6d28d9;
+    --wm-bg: #f8fafc;
+    --wm-card: #ffffff;
+    --wm-border: #eef0f4;
+    --wm-text: #0f172a;
+    --wm-muted: #64748b;
+    --wm-radius-lg: 16px;
+    --wm-radius-md: 12px;
+    --wm-radius-sm: 8px;
+    --wm-shadow-soft: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --wm-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --wm-content-inset: 28px;
+}
+
+body.wm-page {
+    background: var(--wm-bg) !important;
+    font-family: var(--wm-font) !important;
+    color: var(--wm-text);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Small breathing room between sidebar and main content */
+body.wm-page .layout-main-wrapper {
+    gap: 12px !important;
+}
+
+body.wm-page .layout-main-wrapper > .flex-grow-1 {
+    background: var(--wm-bg) !important;
+}
+
+/* Keep header aligned with page content inset */
+body.wm-page .employee-header .header-content,
+body.wm-page .admin-header .header-content {
+    min-height: 64px;
+    padding-left: var(--wm-content-inset) !important;
+    padding-right: 20px !important;
+}
+
+body.wm-page .employee-header,
+body.wm-page .admin-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid #eef0f4 !important;
+    box-shadow: none !important;
+}
+
+/* Unified top bar: match admin weekly-mission chrome for all roles */
+body.wm-page.dashboard .layout-main-wrapper > .flex-grow-1 {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--wm-bg);
+}
+
+body.wm-page.dashboard .employee-header .header-content {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+body.wm-page.dashboard .employee-header .header-right {
+    margin-left: auto !important;
+}
+
+body.wm-page #chatbotLauncher {
+    display: none !important;
+}
+
+.wm-header-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 560px;
+    background: #f8f9fc;
+    border: 1px solid #eef0f4;
+    border-radius: 999px;
+    padding: 9px 16px;
+    color: var(--wm-muted);
+}
+
+.wm-header-search input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.875rem;
+    color: var(--wm-text);
+    min-width: 0;
+    font-family: inherit;
+}
+
+.wm-header-search kbd {
+    font-size: 0.68rem;
+    padding: 3px 7px;
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid var(--wm-border);
+    color: var(--wm-muted);
+    font-family: inherit;
+}
+
+/* Shell is <main> — sidebar.php zeros main padding; inset lives on .todo-dash */
+body.wm-page main.wm-shell {
+    padding: 0 !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    background: var(--wm-bg);
+    box-sizing: border-box;
+}
+
+body.wm-page main.wm-shell > .todo-dash {
+    padding: 1.5rem 2rem 2.5rem;
+    max-width: 1360px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.wm-page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+.wm-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.02em;
+    color: #111827;
+}
+
+.wm-lead {
+    margin: 8px 0 0;
+    color: var(--wm-muted);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+.wm-week-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.wm-icon-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--wm-border);
+    background: var(--wm-card);
+    border-radius: var(--wm-radius-sm);
+    color: var(--wm-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.wm-icon-btn:hover {
+    color: var(--wm-purple);
+    border-color: #ddd6fe;
+}
+
+.wm-week-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--wm-border);
+    background: var(--wm-card);
+    border-radius: var(--wm-radius-sm);
+    padding: 9px 14px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--wm-text);
+    cursor: default;
+    font-family: inherit;
+}
+
+.wm-btn-outline {
+    border: 1px solid #ddd6fe;
+    background: var(--wm-card);
+    border-radius: var(--wm-radius-sm);
+    padding: 9px 14px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--wm-purple);
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s ease;
+}
+
+.wm-btn-outline:hover {
+    background: var(--wm-purple-light);
+}
+
+/* KPI cards: shared with todo/index via todo-my-tasks.css (.todo-dash .kpi-card) */
+body.wm-page #wmStatsGrid {
+    margin-bottom: 1.25rem !important;
+}
+
+body.wm-page .todo-dash .kpi-card {
+    border-radius: 16px !important;
+}
+
+body.wm-page .todo-dash .kpi-icon {
+    border-radius: 12px !important;
+}
+
+.wm-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.35;
+    margin-bottom: 12px;
+}
+
+.wm-notice i {
+    color: #3b82f6;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.wm-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+.wm-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.wm-rail {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.wm-rail-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.wm-rail-bottom .wm-panel {
+    margin-bottom: 0;
+}
+
+.wm-title-icon {
+    color: #7c3aed;
+    margin-right: 6px;
+    font-size: 0.9rem;
+}
+
+.wm-missions-panel {
+    padding: 18px 20px 14px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.wm-missions-panel .wm-panel-head {
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.wm-missions-panel .wm-table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+    margin: 0 -4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.wm-missions-panel .wm-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--wm-card);
+    box-shadow: 0 1px 0 var(--wm-border);
+}
+
+.wm-missions-panel .wm-table-foot {
+    flex-shrink: 0;
+    padding-top: 10px;
+}
+
+.wm-chart-panel {
+    padding: 14px 12px 12px;
+}
+
+.wm-chart-panel .wm-panel-title {
+    margin-bottom: 8px;
+    font-size: 0.8125rem;
+    line-height: 1.3;
+}
+
+.wm-leaders-panel {
+    padding: 14px 12px 12px;
+}
+
+.wm-leaders-panel .wm-panel-head {
+    margin-bottom: 8px;
+}
+
+.wm-leaders-panel .wm-panel-title {
+    font-size: 0.8125rem;
+}
+
+.wm-leaders-panel .wm-link {
+    font-size: 0.6875rem;
+}
+
+.wm-chart-panel .wm-chart-sm {
+    height: 150px;
+}
+
+.wm-rail-bottom .wm-top-list {
+    gap: 4px;
+}
+
+.wm-rail-bottom .wm-top-item {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    gap: 6px;
+}
+
+.wm-rail-bottom .wm-top-avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 0.5625rem;
+}
+
+.wm-rail-bottom .wm-top-rank {
+    width: 12px;
+    font-size: 0.6875rem;
+}
+
+.wm-rail-bottom .wm-top-name {
+    font-size: 0.75rem;
+}
+
+.wm-rail-bottom .wm-top-pct {
+    font-size: 0.75rem;
+}
+
+.wm-add-panel {
+    margin-bottom: 16px;
+}
+
+@media (max-width: 1100px) {
+    .wm-grid {
+        grid-template-columns: 1fr;
+        align-items: start;
+        gap: 0;
+    }
+
+    .wm-main {
+        display: block;
+    }
+
+    .wm-missions-panel {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 20px;
+    }
+
+    .wm-missions-panel .wm-table-wrap {
+        min-height: 0;
+    }
+
+    .wm-table-empty td {
+        height: auto;
+        padding: 14px 10px !important;
+    }
+
+    .wm-rail-bottom {
+        grid-template-columns: 1fr;
+    }
+}
+
+.wm-panel {
+    background: var(--wm-card);
+    border: 1px solid var(--wm-border);
+    border-radius: var(--wm-radius-lg);
+    padding: 22px 24px;
+    box-shadow: var(--wm-shadow-soft);
+    margin-bottom: 20px;
+}
+
+.wm-panel-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 16px;
+    color: #111827;
+}
+
+.wm-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.wm-add-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: nowrap;
+    align-items: stretch;
+}
+
+.wm-add-row input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid #e8eaef;
+    background: #fafbfc;
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: var(--wm-text);
+}
+
+.wm-add-row input:focus {
+    outline: none;
+    border-color: #c4b5fd;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.wm-btn-add {
+    background: #7c3aed;
+    border: none;
+    color: #fff;
+    padding: 0 20px;
+    min-height: 44px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+    font-family: inherit;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+    box-shadow: none;
+    line-height: 1;
+}
+
+.wm-btn-add:hover {
+    background: #6d28d9;
+    color: #fff;
+}
+
+.wm-btn-add i {
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.wm-btn-primary {
+    background: var(--wm-purple);
+    color: #fff;
+    border: none;
+    border-radius: var(--wm-radius-md);
+    padding: 12px 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    font-family: inherit;
+    transition: background 0.15s ease;
+}
+
+.wm-btn-primary:hover {
+    background: var(--wm-purple-dark);
+}
+
+.wm-btn-sm {
+    padding: 9px 16px;
+    font-size: 0.8125rem;
+}
+
+.wm-table-empty td {
+    padding: 20px 10px !important;
+    text-align: center;
+    color: var(--wm-muted);
+    font-size: 0.8125rem;
+    border-bottom: none !important;
+    background: #fafbfc;
+    border-radius: 8px;
+    height: auto;
+    vertical-align: top;
+}
+
+.wm-missions-panel .wm-table-empty td {
+    min-height: 100px;
+}
+
+.wm-table-wrap {
+    overflow-x: auto;
+    margin: 0 -4px;
+}
+
+.wm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.wm-table th {
+    text-align: left;
+    padding: 10px 12px;
+    color: var(--wm-muted);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.wm-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+
+.wm-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.wm-table tbody tr:hover td {
+    background: #fafbfc;
+}
+
+.wm-missions-panel .wm-table {
+    table-layout: fixed;
+}
+
+.wm-missions-panel .col-check {
+    width: 40px;
+    padding-right: 4px;
+}
+
+.wm-missions-panel .col-mission {
+    width: auto;
+    min-width: 0;
+}
+
+.wm-missions-panel .col-status {
+    width: 108px;
+    text-align: right;
+    padding-left: 8px;
+    padding-right: 12px;
+    white-space: nowrap;
+}
+
+.wm-missions-panel .col-updated {
+    width: 96px;
+    text-align: right;
+    padding-left: 8px;
+    padding-right: 12px;
+    white-space: nowrap;
+}
+
+.wm-missions-panel .col-actions {
+    width: 40px;
+    padding-left: 4px;
+}
+
+.wm-missions-panel .wm-table th.col-status,
+.wm-missions-panel .wm-table th.col-updated {
+    text-align: right;
+}
+
+.wm-missions-panel .wm-mission-title {
+    display: block;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+}
+
+@media (min-width: 769px) {
+    .wm-missions-panel .wm-table tbody td .wm-mission-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.col-check { width: 44px; }
+.col-actions { width: 48px; text-align: right; }
+
+.wm-check {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #d1d5db;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    transition: all 0.15s ease;
+}
+
+.wm-check.done {
+    background: var(--wm-purple);
+    border-color: var(--wm-purple);
+    color: #fff;
+}
+
+.wm-mission-title {
+    font-weight: 500;
+    color: var(--wm-text);
+    line-height: 1.45;
+}
+
+.wm-mission-title.done {
+    text-decoration: line-through;
+    color: var(--wm-muted);
+}
+
+.wm-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.wm-status-completed { background: #ecfdf5 !important; color: #059669 !important; }
+.wm-status-progress { background: #eff6ff !important; color: #2563eb !important; }
+.wm-status-review { background: #fff7ed !important; color: #ea580c !important; }
+.wm-status-notstarted { background: #f1f5f9 !important; color: #64748b !important; }
+
+.wm-menu-btn {
+    border: none;
+    background: transparent;
+    color: var(--wm-muted);
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.wm-menu-btn:hover {
+    background: #f3f4f6;
+    color: var(--wm-text);
+}
+
+.wm-table-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 4px;
+    font-size: 0.8125rem;
+    color: var(--wm-muted);
+}
+
+.wm-link {
+    color: var(--wm-purple);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.8125rem;
+}
+
+.wm-link:hover {
+    text-decoration: underline;
+}
+
+.wm-empty {
+    text-align: center;
+    padding: 36px 16px;
+    color: var(--wm-muted);
+    font-size: 0.875rem;
+}
+
+.wm-muted {
+    color: var(--wm-muted);
+    font-size: 0.8125rem;
+}
+
+.wm-followup-msg {
+    background: #f8f9fc;
+    border-radius: var(--wm-radius-md);
+    padding: 16px;
+    margin-bottom: 14px;
+    font-size: 0.875rem;
+    line-height: 1.55;
+}
+
+.wm-followup-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.wm-admin-tag {
+    display: inline-block;
+    background: var(--wm-purple-light);
+    color: var(--wm-purple-dark);
+    font-size: 0.625rem;
+    font-weight: 800;
+    padding: 3px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+}
+
+.wm-followup-text {
+    margin: 0 0 10px;
+    color: #334155;
+}
+
+.wm-followup-time {
+    font-size: 0.75rem;
+    color: var(--wm-muted);
+}
+
+.wm-reply-box {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    margin-top: 4px;
+}
+
+.wm-reply-box textarea {
+    flex: 1;
+    border: 1px solid #e8eaef;
+    background: #fafbfc;
+    border-radius: var(--wm-radius-md);
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+    resize: none;
+    min-height: 42px;
+    font-family: inherit;
+}
+
+.wm-reply-box textarea:focus {
+    outline: none;
+    border-color: #c4b5fd;
+    background: #fff;
+}
+
+.wm-award-panel {
+    border: 1px solid #e5e7eb;
+    padding: 18px 20px;
+}
+
+.wm-award-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.wm-award-head-icon {
+    color: #f59e0b;
+    font-size: 0.875rem;
+}
+
+.wm-award-head-title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.wm-award-body {
+    display: flex;
+    align-items: center;
+}
+
+.wm-award-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    padding-right: 16px;
+}
+
+.wm-award-medal {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #ede9fe;
+    color: #7c3aed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+}
+
+.wm-award-copy strong {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.3;
+}
+
+.wm-award-copy small {
+    display: block;
+    margin-top: 2px;
+    color: #94a3b8;
+    font-size: 0.75rem;
+}
+
+.wm-award-divider {
+    width: 1px;
+    align-self: stretch;
+    min-height: 56px;
+    background: #e5e7eb;
+    flex-shrink: 0;
+}
+
+.wm-award-right {
+    flex: 1;
+    min-width: 0;
+    padding-left: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.wm-award-period {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-bottom: 2px;
+}
+
+.wm-award-pct {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.15;
+}
+
+.wm-award-pct-label {
+    display: block;
+    font-size: 0.6875rem;
+    color: #94a3b8;
+    margin-top: 2px;
+    margin-bottom: 6px;
+}
+
+.wm-award-right .wm-delta-up,
+.wm-award-right .wm-delta-down {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.wm-delta-up {
+    color: #059669;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.wm-delta-down {
+    color: #dc2626;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+@media (max-width: 480px) {
+    .wm-award-body {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .wm-award-divider {
+        width: 100%;
+        height: 1px;
+        min-height: 0;
+    }
+
+    .wm-award-left,
+    .wm-award-right {
+        padding: 0;
+    }
+}
+
+.wm-insights-panel {
+    padding: 18px 20px;
+    margin-bottom: 16px;
+}
+
+.wm-insights-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+}
+
+.wm-insights-chart-col {
+    flex: 1;
+    min-width: 0;
+    padding-right: 20px;
+}
+
+.wm-insights-chart-col .wm-panel-title {
+    margin-bottom: 12px;
+}
+
+.wm-insights-divider {
+    width: 1px;
+    background: #e5e7eb;
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+.wm-insights-leaders-col {
+    width: 320px;
+    flex-shrink: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.wm-insights-leaders-col .wm-panel-head {
+    margin-bottom: 10px;
+}
+
+.wm-insights-leaders-col .wm-link {
+    font-size: 0.75rem;
+}
+
+.wm-chart-sm {
+    height: 180px;
+    position: relative;
+}
+
+.wm-top-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.wm-top-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid #f0f2f5;
+    border-radius: 10px;
+    font-size: 0.8125rem;
+    background: #fff;
+}
+
+.wm-top-item:last-child {
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.wm-top-item.is-you {
+    background: var(--wm-purple-light);
+    border-color: #ddd6fe;
+    padding: 8px 10px;
+    border-radius: 10px;
+}
+
+.wm-top-rank {
+    width: 14px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: var(--wm-muted);
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.wm-top-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.wm-top-avatar.rank-1 { background: #7c3aed; }
+.wm-top-avatar.rank-2 { background: #f59e0b; }
+.wm-top-avatar.rank-3 { background: #10b981; }
+.wm-top-avatar.rank-4 { background: #3b82f6; }
+.wm-top-avatar.rank-5 { background: #94a3b8; }
+
+.wm-top-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 500;
+    color: #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wm-top-pct {
+    font-weight: 700;
+    color: var(--wm-purple);
+    font-size: 0.8125rem;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+@media (max-width: 900px) {
+    .wm-insights-row {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .wm-insights-divider {
+        width: 100%;
+        height: 1px;
+    }
+
+    .wm-insights-chart-col,
+    .wm-insights-leaders-col {
+        width: 100%;
+        padding: 0;
+    }
+
+    .wm-insights-leaders-col {
+        width: 100%;
+    }
+}
+
+.wm-footer {
+    text-align: center;
+    color: var(--wm-muted);
+    font-size: 0.8125rem;
+    margin-top: 32px;
+    padding-top: 16px;
+}
+
+.wm-help-fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--wm-purple);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+    text-decoration: none;
+    z-index: 100;
+    font-size: 1.125rem;
+    font-weight: 700;
+    transition: transform 0.15s ease;
+}
+
+.wm-help-fab:hover {
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.wm-loading {
+    cursor: wait;
+}
+
+.wm-dropdown-menu {
+    min-width: 160px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    border: 1px solid #eef0f4;
+}
+
+/* Tablet / mobile: sidebar is off-canvas — main column uses full width */
+@media (max-width: 992px) {
+    body.wm-page {
+        overflow-x: hidden;
+    }
+
+    body.wm-page .layout-main-wrapper {
+        gap: 0 !important;
+    }
+
+    body.wm-page .layout-main-wrapper > .flex-grow-1 {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    body.wm-page #native-sidebar {
+        box-shadow: 4px 0 24px rgba(15, 23, 42, 0.12);
+    }
+
+    body.wm-page #sidebar-overlay.show {
+        z-index: 1035;
+    }
+
+    body.wm-page #native-sidebar.show {
+        z-index: 1040;
+    }
+}
+
+@media (max-width: 768px) {
+    body.wm-page {
+        --wm-content-inset: 16px;
+        overflow-x: hidden;
+    }
+
+    body.wm-page main.wm-shell,
+    body.wm-page main.wm-shell > .todo-dash,
+    body.wm-page .wm-main,
+    body.wm-page .wm-grid,
+    body.wm-page .wm-panel,
+    body.wm-page .wm-missions-panel,
+    body.wm-page .wm-table-wrap {
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    body.wm-page .wm-mission-title,
+    body.wm-page .wm-missions-panel .wm-mission-title,
+    body.wm-page .wm-notice,
+    body.wm-page .wm-panel-title,
+    body.wm-page .wm-lead,
+    body.wm-page .wm-title,
+    body.wm-page #wmFollowUp,
+    body.wm-page #wmFollowUp p,
+    body.wm-page .wm-table-foot,
+    body.wm-page .wm-table-foot span {
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+        text-overflow: unset !important;
+        overflow: visible !important;
+        max-width: 100%;
+    }
+
+    body.wm-page .layout-main-wrapper {
+        gap: 0 !important;
+    }
+
+    body.wm-page .employee-header-center-slot {
+        display: none !important;
+    }
+
+    body.wm-page .employee-header .header-content,
+    body.wm-page .admin-header .header-content {
+        min-height: 52px;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    body.wm-page.has-mobile-footer main.wm-shell > .todo-dash {
+        padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0));
+    }
+
+    body.wm-page main.wm-shell > .todo-dash {
+        padding: 1rem 1.125rem 3rem;
+        overflow-x: hidden;
+    }
+
+    .wm-page-head {
+        flex-direction: column;
+        gap: 14px;
+        margin-bottom: 16px;
+    }
+
+    .wm-title {
+        font-size: 1.375rem;
+        line-height: 1.25;
+    }
+
+    .wm-lead {
+        font-size: 0.875rem;
+        margin-top: 6px;
+        line-height: 1.45;
+    }
+
+    .wm-week-tools {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr) 40px;
+        grid-template-rows: auto auto;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .wm-week-tools .wm-btn-outline {
+        grid-column: 1 / -1;
+        justify-self: stretch;
+        text-align: center;
+    }
+
+    .wm-week-pill {
+        justify-content: center;
+        min-width: 0;
+        padding: 9px 10px;
+        font-size: 0.75rem;
+    }
+
+    .wm-week-pill span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .wm-btn-outline {
+        padding: 9px 12px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+
+    body.wm-page .todo-dash .kpi-card {
+        padding: 1rem 1.125rem;
+    }
+
+    body.wm-page .todo-dash .kpi-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    body.wm-page .todo-dash .kpi-value {
+        font-size: 1.5rem;
+    }
+
+    .wm-notice {
+        margin-bottom: 14px;
+        padding: 10px 12px;
+        font-size: 0.8125rem;
+        align-items: flex-start;
+    }
+
+    .wm-panel {
+        padding: 16px;
+        margin-bottom: 14px;
+        border-radius: var(--wm-radius-md);
+    }
+
+    .wm-panel-title {
+        font-size: 0.9375rem;
+        margin-bottom: 12px;
+        line-height: 1.35;
+    }
+
+    .wm-grid {
+        gap: 14px;
+    }
+
+    .wm-rail {
+        gap: 0;
+    }
+
+    .wm-missions-panel {
+        display: flex;
+        flex-direction: column;
+        max-height: none;
+        margin-bottom: 14px;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .wm-missions-panel .wm-table-wrap {
+        overflow-x: hidden;
+        max-width: 100%;
+        margin: 0;
+    }
+
+    .wm-missions-panel .wm-table,
+    .wm-missions-panel .wm-table tbody {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .wm-missions-panel .wm-table {
+        table-layout: fixed;
+    }
+
+    .wm-missions-panel .wm-table thead {
+        display: none;
+    }
+
+    /* Mission cards: vertical stack — checkbox/menu row, then title, then status */
+    .wm-missions-panel .wm-table tbody tr {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas:
+            "check . actions"
+            "title title title"
+            "status status status";
+        gap: 10px 8px;
+        align-items: start;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 12px 14px;
+        margin-bottom: 10px;
+        border: 1px solid var(--wm-border);
+        border-radius: var(--wm-radius-md);
+        background: #fff;
+        box-shadow: var(--wm-shadow-soft);
+        overflow: hidden;
+    }
+
+    .wm-missions-panel .wm-table tbody tr:last-child {
+        margin-bottom: 0;
+    }
+
+    .wm-missions-panel .wm-table tbody tr:hover td {
+        background: transparent;
+    }
+
+    .wm-missions-panel .wm-table tbody td {
+        display: block;
+        padding: 0;
+        border: none;
+        width: 100% !important;
+        max-width: 100%;
+        box-sizing: border-box;
+        min-width: 0;
+    }
+
+    .wm-missions-panel .wm-table tbody td.col-check {
+        grid-area: check;
+        width: auto !important;
+        justify-self: start;
+    }
+
+    .wm-missions-panel .wm-table tbody td:nth-child(2) {
+        grid-area: title;
+        width: 100% !important;
+        min-width: 0;
+    }
+
+    .wm-missions-panel .wm-table tbody td.col-actions {
+        grid-area: actions;
+        width: auto !important;
+        justify-self: end;
+        text-align: right;
+    }
+
+    .wm-missions-panel .wm-table tbody td.col-status {
+        grid-area: status;
+        width: 100% !important;
+        text-align: left;
+        padding-top: 0;
+    }
+
+    .wm-missions-panel .col-updated,
+    .wm-missions-panel .wm-table th.col-updated,
+    .wm-missions-panel .wm-table tbody td.col-updated {
+        display: none !important;
+    }
+
+    .wm-missions-panel .wm-mission-title {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+        hyphens: auto;
+        line-height: 1.45;
+        font-size: 0.9375rem;
+    }
+
+    .wm-missions-panel .wm-table tbody td:nth-child(2) {
+        overflow: visible;
+    }
+
+    .wm-missions-panel .wm-table tbody tr.wm-table-empty {
+        display: block;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+        background: transparent;
+        margin-bottom: 0;
+    }
+
+    .wm-missions-panel .wm-table tbody tr.wm-table-empty td {
+        display: block;
+        width: 100% !important;
+        padding: 20px 12px !important;
+        text-align: center;
+    }
+
+    .wm-table-foot {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        margin-top: 10px;
+    }
+
+    .wm-add-row {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .wm-add-row .wm-btn-add {
+        width: 100%;
+        min-height: 42px;
+    }
+
+    .wm-reply-box {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .wm-reply-box .wm-btn-sm {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .wm-rail-bottom {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .wm-chart-panel .wm-chart-sm {
+        height: 200px;
+    }
+
+    .wm-footer {
+        display: none;
+    }
+
+    .wm-help-fab {
+        bottom: calc(76px + env(safe-area-inset-bottom, 0));
+        right: 16px;
+        width: 44px;
+        height: 44px;
+        font-size: 1rem;
+    }
+
+    body.wm-page .mobile-footer.mf-modern a.mf-item.is-active .icon,
+    body.wm-page .mobile-footer.mf-modern a.mf-item.is-active .label {
+        color: var(--wm-purple);
+    }
+
+    body.wm-page .mobile-footer.mf-modern a.mf-item.is-active::after {
+        background: var(--wm-purple);
+    }
+}
+
+@media (max-width: 480px) {
+    body.wm-page {
+        --wm-content-inset: 12px;
+    }
+
+    body.wm-page main.wm-shell > .todo-dash {
+        padding: 1rem 1rem 2.75rem;
+    }
+
+    .wm-title {
+        font-size: 1.25rem;
+    }
+
+    body.wm-page .todo-dash .kpi-card {
+        padding: 0.875rem 1rem;
+    }
+
+    body.wm-page .todo-dash .kpi-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 0.95rem;
+        margin-bottom: 0.625rem;
+        border-radius: 10px !important;
+    }
+
+    body.wm-page .todo-dash .kpi-value {
+        font-size: 1.375rem;
+    }
+
+    .wm-icon-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .wm-week-tools {
+        grid-template-columns: 36px minmax(0, 1fr) 36px;
+    }
+
+    .wm-missions-panel .wm-table tbody tr {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .wm-missions-panel .wm-mission-title {
+        font-size: 0.875rem;
+    }
+
+    .wm-award-head-title {
+        font-size: 0.875rem;
+    }
+
+    .wm-top-item {
+        padding: 10px;
+    }
+}
+
+/* Sidebar and Branding overrides for Weekly Mission page to match screenshot */
+body.wm-page #native-sidebar {
+    background: #ffffff !important;
+    border-right: 1px solid #eef0f4 !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+body.wm-page #native-sidebar hr {
+    border-color: #eef0f4 !important;
+    opacity: 1 !important;
+}
+
+body.wm-page #native-sidebar .sidebar-header {
+    padding: 12px 14px !important;
+}
+
+body.wm-page #native-sidebar .nav-link {
+    color: #4b5563 !important;
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+    padding: 10px 14px !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    transition: all 0.15s ease !important;
+}
+
+body.wm-page #native-sidebar .nav-link i {
+    color: #9ca3af !important;
+    font-size: 1.1rem !important;
+}
+
+/* Active item styling */
+body.wm-page #native-sidebar .nav-link.active {
+    background-color: #f5f3ff !important;
+    color: #7c3aed !important;
+    font-weight: 600 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+body.wm-page #native-sidebar .nav-link.active i {
+    color: #7c3aed !important;
+}
+
+/* Hover item styling */
+body.wm-page #native-sidebar .nav-link:not(.active):hover {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+    padding-left: 14px !important;
+}
+
+body.wm-page #native-sidebar .nav-link:not(.active):hover i {
+    color: #7c3aed !important;
+    transform: none !important;
+}
+
+/* User profile section styling in sidebar */
+body.wm-page #native-sidebar .user-profile-link {
+    padding: 12px 14px !important;
+    border-radius: 8px !important;
+}
+
+body.wm-page #native-sidebar .user-profile-link:hover {
+    background-color: #f8fafc !important;
+}
+
+body.wm-page #native-sidebar .sidebar-text div {
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* FAB override to match standard layout */
+body.wm-page .wm-help-fab {
+    background: #3b82f6 !important;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35) !important;
+}
+
+/* Custom layout alignments */
+body.wm-page .wm-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+/* ==========================================
+   FORCE MODERN INTER TYPOGRAPHY AND ROUNDED CORNERS
+   ========================================== */
+
+/* Force Inter font family on everything to override style.css and header font injections */
+body.wm-page,
+body.wm-page *,
+body.wm-page h1,
+body.wm-page h2,
+body.wm-page h3,
+body.wm-page h4,
+body.wm-page h5,
+body.wm-page h6,
+body.wm-page p,
+body.wm-page span,
+body.wm-page div,
+body.wm-page a,
+body.wm-page button,
+body.wm-page input,
+body.wm-page textarea,
+body.wm-page select,
+body.wm-page label {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* Force rounded corners on all buttons, inputs, fill boxes, and pills */
+body.wm-page button,
+body.wm-page input,
+body.wm-page textarea,
+body.wm-page select,
+body.wm-page .btn,
+body.wm-page .wm-btn-primary,
+body.wm-page .wm-btn-outline,
+body.wm-page .wm-icon-btn,
+body.wm-page .wm-week-pill,
+body.wm-page .wm-reply-box,
+body.wm-page .wm-add-row input,
+body.wm-page .wm-add-row button,
+body.wm-page .wm-reply-box textarea,
+body.wm-page .wm-reply-box button,
+body.wm-page .wm-panel,
+body.wm-page .wm-notice {
+    border-radius: 12px !important;
+}
+
+/* Checkboxes should have slightly smaller, matching rounded corners */
+body.wm-page .wm-check {
+    border-radius: 6px !important;
+}
+
+/* Status pills should remain fully circular/rounded */
+body.wm-page .wm-status {
+    border-radius: 9999px !important;
+}
+
+/* Special alignment to make sure elements inside containers are clean */
+body.wm-page .wm-reply-box textarea {
+    border-radius: 0 !important; /* Keep flat inside the already rounded container row */
+}
+
+/* Admin team review */
+.wm-admin-filters {
+    padding-bottom: 12px;
+}
+
+.wm-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+}
+
+.wm-filter-label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 160px;
+    flex: 1;
+    max-width: 240px;
+}
+
+.wm-filter-label > span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--wm-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.wm-filter-select {
+    border: 1px solid var(--wm-border);
+    border-radius: var(--wm-radius-sm);
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    color: var(--wm-text);
+    background: #fff;
+    font-family: inherit;
+}
+
+/* Admin team review — user cards */
+.wm-admin-grid-panel,
+.wm-admin-detail-panel {
+    padding: 18px 20px 14px;
+}
+
+.wm-user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.wm-user-card {
+    background: #fff;
+    border: 1px solid var(--wm-border);
+    border-radius: var(--wm-radius-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.wm-user-card:hover {
+    border-color: #ddd6fe;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.08);
+}
+
+.wm-user-card.is-empty {
+    opacity: 0.92;
+}
+
+.wm-user-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.wm-user-card-head .wm-top-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.wm-user-card-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.wm-user-card-name {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--wm-text);
+    line-height: 1.3;
+}
+
+.wm-user-card-dept {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--wm-muted);
+    margin-top: 2px;
+}
+
+.wm-user-card-badge {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #6d28d9;
+    background: #ede9fe;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.wm-user-card-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8125rem;
+    color: var(--wm-muted);
+}
+
+.wm-user-card-stats strong {
+    color: var(--wm-purple-dark);
+    font-size: 0.875rem;
+}
+
+.wm-user-card-progress {
+    height: 6px;
+    background: #f1f5f9;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.wm-user-card-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7c3aed, #6366f1);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.wm-user-card-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+.wm-admin-detail-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.wm-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wm-admin-detail-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.wm-admin-detail-user .wm-top-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 14px;
+}
+
+.wm-admin-detail-user .wm-user-card-dept {
+    margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+    .wm-user-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Admin: stack chart + leaderboard vertically to free card column width */
+body.wm-admin-layout .wm-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 280px);
+    align-items: start;
+}
+
+body.wm-admin-layout .wm-rail {
+    position: sticky;
+    top: 12px;
+}
+
+body.wm-admin-layout .wm-rail-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+body.wm-admin-layout .wm-chart-panel .wm-chart-sm {
+    height: 140px;
+}
+
+body.wm-admin-layout .wm-leaders-panel {
+    margin-bottom: 0;
+}
+
+body.wm-admin-layout .wm-user-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.wm-admin-detail-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.wm-admin-remark-input {
+    width: 100%;
+    min-width: 180px;
+    max-width: 320px;
+    border: 1px solid var(--wm-border);
+    border-radius: var(--wm-radius-sm);
+    padding: 8px 10px;
+    font-size: 0.8125rem;
+    font-family: inherit;
+    color: var(--wm-text);
+    resize: vertical;
+    min-height: 56px;
+    line-height: 1.45;
+    background: #fff;
+}
+
+.wm-admin-remark-input:focus {
+    outline: none;
+    border-color: #c4b5fd;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.wm-admin-remark-input::placeholder {
+    color: #94a3b8;
+}
+
+.wm-admin-remark-reply {
+    margin: 6px 0 0;
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    color: #475569;
+    background: #f8fafc;
+    border-left: 3px solid #7c3aed;
+    border-radius: 0 var(--wm-radius-sm) var(--wm-radius-sm) 0;
+    line-height: 1.4;
+}
+
+.wm-table .col-remarks {
+    min-width: 200px;
+    max-width: 340px;
+}
+
+@media (max-width: 1100px) {
+    body.wm-admin-layout .wm-grid {
+        grid-template-columns: 1fr;
+    }
+
+    body.wm-admin-layout .wm-rail {
+        position: static;
+    }
+
+    body.wm-admin-layout .wm-user-grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+}
+

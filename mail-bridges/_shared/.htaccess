@@ -1,0 +1,13 @@
+# Deny direct access to config and source
+<FilesMatch "^(config\.php|config\.sample\.php)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^src/ - [F,L]
+</IfModule>
+
+# Optional: force HTTPS if available
+# RewriteCond %{HTTPS} !=on
+# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

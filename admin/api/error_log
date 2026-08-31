@@ -1,0 +1,60 @@
+[29-Apr-2026 22:55:12 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/admin/api/data_sync.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 84
+[29-Apr-2026 22:56:09 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect string value: '\xFDnalma...' for column `ultimate_trading_voucher`.`module_emails`.`body` at row 1 in /home/ultimate/public_html/staff/admin/api/data_sync.php:84
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(84): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 84
+[29-Apr-2026 22:56:53 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'recipient_email' doesn't have a default value in /home/ultimate/public_html/staff/admin/api/data_sync.php:40
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(40): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 40
+[29-Apr-2026 22:57:16 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'recipient_email' doesn't have a default value in /home/ultimate/public_html/staff/admin/api/data_sync.php:40
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(40): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 40
+[29-Apr-2026 22:57:51 Africa/Dar_es_Salaam] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'recipient_email' doesn't have a default value in /home/ultimate/public_html/staff/admin/api/data_sync.php:40
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(40): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 40
+[29-Apr-2026 22:58:52 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'recipient_email' doesn't have a default value in /home/ultimate/public_html/staff/admin/api/data_sync.php:47
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(47): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 47
+[29-Apr-2026 22:58:58 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'recipient_email' doesn't have a default value in /home/ultimate/public_html/staff/admin/api/data_sync.php:47
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(47): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 47
+[29-Apr-2026 23:00:01 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'recipient_email' doesn't have a default value in /home/ultimate/public_html/staff/admin/api/data_sync.php:47
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(47): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 47
+[29-Apr-2026 23:00:30 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'recipient_email' doesn't have a default value in /home/ultimate/public_html/staff/admin/api/data_sync.php:47
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(47): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 47
+[29-Apr-2026 23:00:55 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'recipient_email' doesn't have a default value in /home/ultimate/public_html/staff/admin/api/data_sync.php:47
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(47): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 47
+[29-Apr-2026 23:01:55 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'recipient_email' doesn't have a default value in /home/ultimate/public_html/staff/admin/api/data_sync.php:47
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(47): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 47
+[29-Apr-2026 23:02:55 Africa/Kampala] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY000]: General error: 1364 Field 'recipient_email' doesn't have a default value in /home/ultimate/public_html/staff/admin/api/data_sync.php:47
+Stack trace:
+#0 /home/ultimate/public_html/staff/admin/api/data_sync.php(47): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ultimate/public_html/staff/admin/api/data_sync.php on line 47

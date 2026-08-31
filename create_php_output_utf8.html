@@ -1,0 +1,1670 @@
+﻿    <!DOCTYPE html>
+    <html lang="en">
+
+    <head><script id="erp-theme-init">(function(){try{var t=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();</script>
+
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Quotations | Sales</title>
+        <script>
+            // Safe set for in-browser Tailwind CDN: avoid ReferenceError if `tailwind` isn't loaded yet
+            window.tailwind = window.tailwind || {};
+            window.tailwind.config = { corePlugins: { preflight: false } };
+        </script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link href="/public_html/assets/css/style.css" rel="stylesheet">
+        <link href="/public_html/assets/css/sales-mobile.css" rel="stylesheet">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+        
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            /* Match shell + flex column so no white strip at gap or viewport edge */
+            html:has(body.page-sales-quotations),
+            body.page-sales-quotations {
+                background-color: #f8f9fc !important;
+            }
+            body.page-sales-quotations {
+                font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+                color: #374151;
+                min-height: 100vh;
+            }
+            body.page-sales-quotations .layout-main-wrapper {
+                background-color: #f8f9fc;
+                width: 100%;
+                max-width: 100%;
+            }
+            body.page-sales-quotations .layout-main-wrapper > .flex-grow-1 {
+                flex: 1 1 0%;
+                min-width: 0;
+                max-width: none;
+                width: 100%;
+                background-color: #f8f9fc;
+            }
+            body.page-sales-quotations header.employee-header {
+                background: #f8f9fc !important;
+                box-shadow: none !important;
+                border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+            }
+            body.page-sales-quotations .employee-header .header-content {
+                background: transparent;
+            }
+            body.page-sales-quotations #native-sidebar {
+                background: var(--sidebar-bg) !important;
+                border-right: 1px solid var(--sidebar-border) !important;
+                color: var(--sidebar-text) !important;
+            }
+            .main-content {
+                padding: 0;
+                max-width: 100%;
+                margin: 0 auto;
+                min-height: calc(100vh - 64px);
+            }
+            /* Inset past sidebar seam (global sidebar forces main-content padding-left: 0 !important) */
+            html body .main-content.sales-quotations-shell {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+                box-sizing: border-box !important;
+                flex: 1 1 auto;
+                width: 100% !important;
+                max-width: none !important;
+                min-width: 0;
+                background-color: #f8f9fc;
+            }
+            body.page-sales-quotations #react-root {
+                width: 100%;
+                min-width: 0;
+            }
+            @media (min-width: 993px) {
+                html body .main-content.sales-quotations-shell {
+                    padding-left: 1.75rem !important;
+                    padding-right: 1.5rem !important;
+                }
+            }
+            .q-btn-primary {
+                background-color: #2563EB;
+                color: #fff;
+                border: 1px solid #2563EB;
+            }
+            .q-btn-primary:hover {
+                background-color: #1D4ED8;
+                border-color: #1D4ED8;
+            }
+            .q-checkbox {
+                appearance: none;
+                width: 1rem;
+                height: 1rem;
+                border: 1px solid #D1D5DB;
+                border-radius: 0.125rem;
+                background: #fff;
+                cursor: pointer;
+                position: relative;
+            }
+            .q-checkbox:checked {
+                background-color: #2563EB;
+                border-color: #2563EB;
+            }
+            .q-checkbox:checked::after {
+                content: '\2713';
+                color: #fff;
+                position: absolute;
+                font-size: 11px;
+                font-weight: bold;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(5px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+            ::-webkit-scrollbar { width: 6px; height: 6px; }
+            ::-webkit-scrollbar-track { background: #f1f5f9; }
+            ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+            .no-scrollbar::-webkit-scrollbar { display: none; }
+            .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+            /* Bootstrap (sidebar) can flatten button radius */
+            button.quotations-create-primary-btn,
+            a.quotations-create-primary-btn {
+                border-radius: 9999px !important;
+            }
+        </style>
+    </head>
+
+    <body class="page-sales-quotations">
+        <script>
+(function() {
+    var t = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", t);
+})();
+</script><link rel="stylesheet" href="/public_html/assets/css/style.css?v=1781682876">
+<link rel="stylesheet" id="erp-dark-theme" href="/public_html/assets/css/dark-theme.css?v=1781682876">
+<link rel="stylesheet" id="erp-system-font" href="/public_html/assets/css/erp-system-font.css.php?v=3e8080116b79">
+<style id="erp-system-font-live">
+@import url("/public_html/assets/css/arima-local.css");
+@import url("https://fonts.googleapis.com/css2?family=Arima:wght@400;500;600;700&display=swap");
+:root{--erp-font-family:'Arima', Arial, 'Helvetica Neue', Helvetica, sans-serif;}
+html{font-family:var(--erp-font-family)!important;}
+html body,html body[class],
+html body *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html body input,html body select,html body textarea,html body button,html body label,
+html body .form-control,html body .form-input,html body .btn,html body .table,
+html body .sidebar,html body .layout-main-wrapper,html body .main-content,
+html body .settings-shell,html body .editor-shell,html body .page-shell,
+html body .modal,html body .modal-content,html body .dropdown-menu,
+html body .app-label,html body .app-desc,html body .top-bar,
+html body .po-shell,html body .pay-shell,html body .desk-pay-modal{font-family:var(--erp-font-family)!important;}
+html body.dashboard,html body.dashboard *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.dashboard button,html body.dashboard input,html body.dashboard select,html body.dashboard textarea,
+html body.dashboard.vf-voucher-form,html body.dashboard.vf-voucher-form *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.dashboard.vf-voucher-form button,html body.dashboard.vf-voucher-form input,
+html body.dashboard.vf-voucher-form select,html body.dashboard.vf-voucher-form textarea{font-family:var(--erp-font-family)!important;}
+html #native-sidebar,html #native-sidebar *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html .po-shell,html .po-shell *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .pay-shell,html .pay-shell *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html body .fa,html body .fas,html body .far,html body .fab,html body .fal,html body .fad,
+html body .fa-solid,html body .fa-regular,html body .fa-brands,
+html body i[class*="fa-"]{font-family:"Font Awesome 6 Free","Font Awesome 5 Free",FontAwesome!important;font-style:normal!important;}
+html body .fab,html body .fa-brands,html body i.fab{font-family:"Font Awesome 6 Brands","Font Awesome 5 Brands"!important;}
+html body .fas,html body .fa-solid,html body i.fas,html body i.fa-solid{font-weight:900!important;}
+html body .far,html body .fa-regular,html body i.far,html body i.fa-regular{font-weight:400!important;}
+html body .bi,html body [class^="bi-"],html body [class*=" bi-"]{font-family:bootstrap-icons!important;}
+</style>
+<div class="d-flex w-100 min-vh-100 layout-main-wrapper">
+    
+<!-- Bootstrap 5 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Theme Styles -->
+<link href="/public_html/assets/css/sidebar_themes.css" rel="stylesheet">
+
+<!-- Bootstrap 5 Sidebar CSS -->
+<style>
+    :root {
+        --sidebar-width: 265px;
+        --sidebar-collapsed-width: 70px;
+         /* Fallbacks if theme CSS fails to load */
+        --sidebar-bg: transparent;
+        --sidebar-text: #212529;
+        --sidebar-nav-purple: #7c3aed;
+    }
+
+    /* Global Reset for Flex Layout */
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow-x: hidden;
+    }
+
+    /* Flex Layout Core */
+    .layout-main-wrapper {
+        display: flex !important;
+        justify-content: flex-start !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        gap: 4px !important; /* Added gap between sidebar and content */
+        min-height: 100vh;
+    }
+
+    /* Sidebar uses system font from Settings */
+    #native-sidebar {
+        font-family: var(--erp-font-family, 'Poppins', sans-serif);
+    }
+
+    /* 1. MASTER WRAPPERS - Remove legacy offsets & Force Left */
+    html body .main-content, 
+    html body .content-wrapper, 
+    html body main,
+    html body .header,
+    html body .admin-header,
+    html body .employee-header {
+        margin-left: 0 !important;
+        margin-right: 0px !important;
+        padding-left: 0px !important;
+        padding-right: 0px !important;
+        width: 100% !important;
+        max-width: none !important;
+        position: relative !important;
+        transition: none !important;
+        box-sizing: border-box !important;
+        display: block; /* Removed !important to allow modals/hidden elements to work */
+    }
+
+    /* Ensure modals don't take up space when closed */
+    .modal:not(.show) {
+        display: none !important;
+    }
+    
+    /* 2. INNER CONTAINERS - Force full width and left alignment */
+    html body .container,
+    html body .main-container,
+    html body .header-content,
+    html body .header-inner,
+    html body .footer-content,
+    html body .container-fluid,
+    html body .form-container {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        max-width: none !important;
+        width: 100% !important;
+        padding-left: 20px !important; /* Standard breathing room */
+        padding-right: 20px !important;
+        box-sizing: border-box !important;
+        display: block !important; /* Override flex if it was centering */
+    }
+
+    /* Collapsed State Overrides */
+    body.sidebar-collapsed .main-content, 
+    body.sidebar-collapsed .content-wrapper, 
+    body.sidebar-collapsed main,
+    body.sidebar-collapsed .header,
+    body.sidebar-collapsed .admin-header,
+    body.sidebar-collapsed .employee-header,
+    body.sidebar-collapsed.dashboard .main-content {
+        margin-left: 0 !important;
+    }
+
+    @media (max-width: 992px) {
+        /* Mobile Reset */
+        html body .main-content, 
+        html body .content-wrapper, 
+        html body main, 
+        html body .header, 
+        html body .admin-header, 
+        html body .employee-header {
+            margin-left: 0 !important;
+        }
+        html body .container, 
+        html body .main-container, 
+        html body .header-content {
+             padding-left: 10px !important;
+        }
+    }
+
+    /* Overlay for Mobile */
+    #sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.4);
+        z-index: 1035;
+        display: none;
+    }
+    
+    #sidebar-overlay.show {
+        display: block;
+    }
+
+    /* The Sidebar Itself */
+    #native-sidebar {
+        width: var(--sidebar-width);
+        height: 100vh; /* Changed from min-height to height to enforce viewport constraints */
+        position: sticky;
+        top: 0;
+        z-index: 1040;
+        /* Background and colors controlled by sidebar_themes.css */
+        display: flex;
+        flex-direction: column;
+        padding: 1rem 0.75rem; /* Better breathing room */
+        transition: width 0.3s ease;
+        overflow-y: auto; /* Scroll internally if menu is long */
+        overflow-x: hidden;
+        flex-shrink: 0; /* Prevent shrinking in flex container */
+        scrollbar-width: none; /* Firefox: hide scrollbar, keep scroll */
+        -ms-overflow-style: none; /* IE/legacy Edge */
+    }
+    #native-sidebar::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+    }
+    
+    /* Collapsed Sidebar (Driven by Body Class) */
+    body.sidebar-collapsed #native-sidebar {
+        width: var(--sidebar-collapsed-width);
+    }
+    
+    body.sidebar-collapsed #native-sidebar .sidebar-text,
+    body.sidebar-collapsed #native-sidebar .text-muted, 
+    body.sidebar-collapsed #native-sidebar .badge {
+        display: none !important;
+    }
+    
+    body.sidebar-collapsed #native-sidebar .nav-link {
+        justify-content: center;
+        padding-left: 0 !important;
+    }
+    
+    body.sidebar-collapsed #native-sidebar .nav-link i {
+        margin-right: 0 !important;
+        font-size: 1.5rem;
+    }
+    
+    /* Mobile offcanvas behavior */
+    @media (max-width: 992px) {
+        #native-sidebar {
+            position: fixed;
+            height: 100vh;
+            transform: translateX(-100%);
+            width: 260px;
+            transition: transform 0.3s ease-in-out;
+        }
+        #native-sidebar.show {
+            transform: translateX(0);
+        }
+        /* Force sidebar text visibility on mobile even if collapsed on desktop */
+        #native-sidebar.show .sidebar-text,
+        #native-sidebar.show .text-muted,
+        #native-sidebar.show .badge {
+            display: inline-block !important;
+        }
+    }
+
+    /* Links */
+    .nav-pills .nav-link {
+        color: var(--sidebar-text);
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 500;
+        white-space: nowrap; /* Prevent wrapping */
+        font-size: 0.95rem;
+    }
+    
+    /* Sidebar edge — border from Appearance theme (sidebar_themes.css variables) */
+    #native-sidebar {
+        border-right: 1px solid var(--sidebar-border, rgba(0, 0, 0, 0.1));
+        box-shadow: none;
+    }
+    
+    .nav-pills .nav-link:not(.text-danger):hover {
+        background-color: transparent !important;
+        color: var(--sidebar-nav-purple, #7c3aed) !important;
+        box-shadow: none !important;
+    }
+    .nav-pills .nav-link:not(.text-danger):hover i {
+        color: var(--sidebar-nav-purple, #7c3aed) !important;
+    }
+    .nav-pills .nav-link.active:not(.text-danger) {
+        background-color: transparent !important;
+        color: var(--sidebar-nav-purple, #7c3aed) !important;
+        box-shadow: none !important;
+    }
+    .nav-pills .nav-link.active:not(.text-danger) i {
+        color: var(--sidebar-nav-purple, #7c3aed) !important;
+    }
+    .sidebar-parent-toggle.is-open {
+        color: var(--sidebar-nav-purple, #7c3aed) !important;
+    }
+    .sidebar-parent-toggle.is-open i {
+        color: var(--sidebar-nav-purple, #7c3aed) !important;
+    }
+    .nav-pills .nav-link i {
+        font-size: 1.1rem;
+        min-width: 24px; /* Ensure icon stability */
+        text-align: center;
+    }
+    .sidebar-submenu {
+        list-style: none;
+        margin: 0.2rem 0 0.45rem;
+        padding: 0 0 0 1.7rem;
+    }
+    .sidebar-submenu.is-collapsed { display: none; }
+    .sidebar-submenu .nav-link {
+        font-size: 0.95rem;
+        padding-top: 0.4rem;
+        padding-bottom: 0.4rem;
+        opacity: 0.94;
+    }
+    .sidebar-submenu .nav-link i {
+        font-size: 1rem;
+        min-width: 20px;
+    }
+    .sidebar-nested-group {
+        margin-bottom: 0.15rem;
+    }
+    .sidebar-submenu-nested {
+        list-style: none;
+        margin: 0.15rem 0 0.4rem 1.65rem;
+        padding: 0.2rem 0 0.2rem 0.65rem;
+        border-left: 2px solid rgba(124, 58, 237, 0.22);
+    }
+    .sidebar-submenu-nested.is-collapsed {
+        display: none;
+    }
+    .sidebar-child-parent-toggle {
+        cursor: pointer;
+    }
+    .sidebar-child-parent-toggle .submenu-chevron {
+        margin-left: auto;
+        font-size: 0.8rem;
+        transition: transform 0.2s ease;
+    }
+    .sidebar-child-parent-toggle.is-open .submenu-chevron {
+        transform: rotate(90deg);
+    }
+    .sidebar-submenu-nested .nav-link.sidebar-nested-under-category {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        padding: 0.38rem 0.35rem 0.38rem 0;
+        color: #64748b !important;
+        opacity: 1;
+        line-height: 1.3;
+    }
+    .sidebar-submenu-nested .nav-link.sidebar-nested-under-category:hover {
+        color: #7c3aed !important;
+        background: rgba(124, 58, 237, 0.06) !important;
+        border-radius: 6px;
+    }
+    .sidebar-submenu-nested .nav-link.sidebar-nested-under-category.active {
+        color: #7c3aed !important;
+        font-weight: 600;
+        background: rgba(124, 58, 237, 0.08) !important;
+        border-radius: 6px;
+    }
+    .sidebar-nested-dot {
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #7c3aed;
+        flex-shrink: 0;
+        opacity: 0.75;
+    }
+    .sidebar-submenu-nested .nav-link.sidebar-nested-under-category:hover .sidebar-nested-dot,
+    .sidebar-submenu-nested .nav-link.sidebar-nested-under-category.active .sidebar-nested-dot {
+        opacity: 1;
+    }
+    .sidebar-submenu-nested .nav-link i {
+        display: none;
+    }
+    .sidebar-parent-toggle .submenu-chevron {
+        margin-left: auto;
+        font-size: 0.8rem;
+        transition: transform 0.2s ease;
+    }
+    .sidebar-parent-toggle.is-open .submenu-chevron {
+        transform: rotate(90deg);
+    }
+    
+
+    /* Sidebar header: logo only (no company name label beside it) */
+    .sidebar-header .logo-container > .sidebar-text {
+        display: none !important;
+    }
+
+    /* Header Collapse Logic */
+    body.sidebar-collapsed .sidebar-header .logo-container {
+        display: none !important;
+    }
+    
+    body.sidebar-collapsed .sidebar-toggle-icon {
+        display: block !important;
+        margin: 0 auto;
+        text-align: center;
+        width: 100%;
+        font-size: 1.8rem !important;
+    }
+    
+    body.sidebar-collapsed .sidebar-collapse-btn {
+        display: none !important;
+    }
+    
+    body.sidebar-collapsed .sidebar-header {
+        justify-content: center !important;
+        padding: 0 !important;
+        margin-bottom: 1rem !important;
+    }
+
+    /* Primary Download Button Style */
+    .nav-pills .nav-link.btn-download-special {
+        margin-top: 10px;
+        transition: all 0.3s ease;
+    }
+    .nav-pills .nav-link.btn-download-special:hover {
+        background-color: transparent !important;
+        color: var(--sidebar-nav-purple, #7c3aed) !important;
+        box-shadow: none !important;
+    }
+    .nav-pills .nav-link.btn-download-special.active {
+        background-color: transparent !important;
+        color: var(--sidebar-nav-purple, #7c3aed) !important;
+        box-shadow: none !important;
+    }
+
+    /* Mobile: move Logout under Appearance */
+    .sidebar-logout-mobile { display: none; }
+    @media (max-width: 992px) {
+        .sidebar-logout-mobile { display: block; }
+        .sidebar-logout-footer { display: none; }
+    }
+</style>
+
+<!-- Load Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<!-- Sidebar HTML -->
+<div id="sidebar-overlay" onclick="toggleNativeSidebar()"></div>
+
+<nav id="native-sidebar" class="theme-minimal">
+    <!-- Header with Shrink Toggle -->
+    <div class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none justify-content-between w-100 sidebar-header">
+        <div class="d-flex align-items-center logo-container" style="gap: 10px;">
+                            <div style="max-height: 50px; max-width: 180px; display: flex; align-items: center; justify-content: flex-start; overflow: hidden; flex-shrink: 0;">
+                    <img src="/public_html/assets/images/company_logos/1/logo_20260509_091329_5df49074.png" alt="Company Logo" style="max-height: 45px; max-width: 100%; object-fit: contain;">
+                </div>
+                    </div>
+        <!-- Hamburger Icon for Collapsed State -->
+        <i class="bi bi-list fs-4 cursor-pointer sidebar-toggle-icon" onclick="toggleSidebarCollapse()" style="color: var(--sidebar-text); cursor: pointer; display: none;"></i>
+        
+        <!-- Standard Toggle Button (Hidden in collapsed) -->
+        <button class="btn btn-sm btn-link text-white d-none d-lg-block p-0 sidebar-collapse-btn" onclick="toggleSidebarCollapse()">
+            <i class="bi bi-list fs-4" style="color: var(--sidebar-text)"></i>
+        </button>
+    </div>
+    <hr style="border-color: var(--sidebar-border)">
+    
+    <!-- User Info (Clickable) -->
+        <a href="/public_html/employee/account.php?module=sales" class="d-flex align-items-center mb-3 px-2 text-decoration-none user-profile-link" style="color: inherit; gap: 12px;">
+        <div style="background: #e2e8f0; color: #475569; width: 36px !important; height: 36px !important; min-width: 36px !important; min-height: 36px !important; max-width: 36px !important; max-height: 36px !important; border-radius: 50% !important; aspect-ratio: 1/1 !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 18px; border: 1.5px solid var(--sidebar-border, rgba(0, 0, 0, 0.1)) !important; flex-shrink: 0 !important; position: relative !important; overflow: hidden !important;">
+            <i class="bi bi-person-fill"></i>
+                            <img src="/public_html/assets/uploads/profiles/profile_1_1765119872.png" alt="Profile" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50% !important;" onerror="this.remove();">
+                    </div>
+        <div class="sidebar-text">
+             <div style="font-weight: 700; font-size: 13px; color: #1e293b; line-height: 1.2;">User</div>
+             <div style="font-size: 11px; font-weight: 500; color: #5c59f0;">Staff</div>
+        </div>
+    </a>
+    <style>
+        .user-profile-link:hover {
+            background-color: transparent;
+            border-radius: 8px;
+        }
+    </style>
+    
+    <!-- MAIN Section Label -->
+        <div class="px-3 mb-2 small fw-bold text-muted sidebar-text" style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5;">
+        Main    </div>
+
+    <ul class="nav nav-pills flex-column mb-auto">
+                    <li class="nav-item">
+                <a href="/public_html/select-module" class="nav-link d-flex align-items-center w-100   "  title="All Modules">
+                    <i class="bi bi-grid"></i>
+                    <span class="sidebar-text flex-grow-1 text-start">All Modules</span>
+                                    </a>
+                            </li>
+                    <li class="nav-item">
+                <a href="/public_html/employee/ai_assistant.php?module=sales" class="nav-link d-flex align-items-center w-100   "  title="AI Assistant">
+                    <i class="bi bi-stars"></i>
+                    <span class="sidebar-text flex-grow-1 text-start">AI Assistant</span>
+                                    </a>
+                            </li>
+                    <li class="nav-item">
+                <a href="/public_html/modules/sales/dashboard/index.php?module=sales" class="nav-link d-flex align-items-center w-100   "  title="Dashboard">
+                    <i class="bi bi-bar-chart"></i>
+                    <span class="sidebar-text flex-grow-1 text-start">Dashboard</span>
+                                    </a>
+                            </li>
+                    <li class="nav-item">
+                <a href="/public_html/modules/sales/pricelist.php?module=sales" class="nav-link d-flex align-items-center w-100   "  title="Pricelist">
+                    <i class="bi bi-tags"></i>
+                    <span class="sidebar-text flex-grow-1 text-start">Pricelist</span>
+                                    </a>
+                            </li>
+                    <li class="nav-item">
+                <a href="/public_html/modules/sales/customers/index.php?module=sales" class="nav-link d-flex align-items-center w-100   "  title="Customers">
+                    <i class="bi bi-people"></i>
+                    <span class="sidebar-text flex-grow-1 text-start">Customers</span>
+                                    </a>
+                            </li>
+                    <li class="nav-item">
+                <a href="/public_html/customer_statement/index.php?module=sales" class="nav-link d-flex align-items-center w-100   "  title="Customer Statement">
+                    <i class="bi bi-file-text"></i>
+                    <span class="sidebar-text flex-grow-1 text-start">Customer Statement</span>
+                                    </a>
+                            </li>
+                    <li class="nav-item">
+                <a href="/public_html/modules/sales/orders/create.php?module=sales" class="nav-link d-flex align-items-center w-100 active  "  title="Quotation">
+                    <i class="bi bi-file-earmark-plus"></i>
+                    <span class="sidebar-text flex-grow-1 text-start">Quotation</span>
+                                    </a>
+                            </li>
+                    <li class="nav-item">
+                <a href="/public_html/modules/sales/orders/index.php?module=sales" class="nav-link d-flex align-items-center w-100   "  title="Sales Orders">
+                    <i class="bi bi-bag"></i>
+                    <span class="sidebar-text flex-grow-1 text-start">Sales Orders</span>
+                                    </a>
+                            </li>
+                    <li class="nav-item">
+                <a href="/public_html/modules/sales/invoices/index.php?module=sales" class="nav-link d-flex align-items-center w-100   "  title="Invoices">
+                    <i class="bi bi-receipt"></i>
+                    <span class="sidebar-text flex-grow-1 text-start">Invoices</span>
+                                    </a>
+                            </li>
+                <li class="nav-item">
+             <a href="/public_html/employee/user-manual.php" class="nav-link" title="User Manual">
+                <i class="bi bi-book"></i>
+                <span class="sidebar-text">User Manual</span>
+            </a>
+        </li>
+    </ul>
+
+    
+    <div class="px-3 mb-2 mt-4 small fw-bold text-muted sidebar-text" style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5;">
+        Account
+    </div>
+    
+    <ul class="nav nav-pills flex-column">
+        <li class="nav-item">
+             <a href="/public_html/employee/account.php?module=sales" class="nav-link" title="Profile Settings">
+                <i class="bi bi-person"></i>
+                <span class="sidebar-text">Profile Settings</span>
+            </a>
+        </li>
+        <li class="nav-item">
+             <a href="#" class="nav-link" onclick="openThemeModal(); return false;" title="Appearance">
+                <i class="bi bi-palette"></i>
+                <span class="sidebar-text">Appearance</span>
+            </a>
+        </li>
+        <li class="nav-item sidebar-logout-mobile">
+            <a href="/public_html/logout.php" class="nav-link text-danger" title="Logout">
+                <i class="bi bi-box-arrow-right"></i>
+                <span class="sidebar-text">Logout</span>
+            </a>
+        </li>
+    </ul>
+    
+    <!-- Secondary / Footer items -->
+    <div class="mt-auto">
+        <ul class="nav nav-pills flex-column">
+             <li class="nav-item sidebar-logout-footer">
+                <a href="/public_html/logout.php" class="nav-link text-danger" style="font-weight: 600;">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="sidebar-text">Logout</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Theme Switcher Modal -->
+<div class="modal fade" id="themeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Select Theme</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-grid gap-2">
+                        <a href="?module=sales&set_theme=default" class="btn btn-primary d-flex justify-content-between align-items-center">
+                <span>Trust Blue</span>
+                            </a>
+            <a href="?module=sales&set_theme=theme-minimal" class="btn border d-flex justify-content-between align-items-center" style="background-color: #ffffff; color: #334155;">
+                <span>Minimal (Default)</span>
+                 <i class="bi bi-check-circle-fill"></i>            </a>
+            <a href="?module=sales&set_theme=theme-deep-ocean" class="btn btn-dark d-flex justify-content-between align-items-center" style="background-color: #001f2f; border-color: #00364d;">
+                <span>Deep Ocean</span>
+                             </a>
+            <a href="?module=sales&set_theme=theme-clean-white" class="btn btn-light d-flex justify-content-between align-items-center border">
+                <span>Clean White</span>
+                             </a>
+            <a href="?module=sales&set_theme=theme-night-mode" class="btn btn-dark d-flex justify-content-between align-items-center">
+                <span>Night Mode</span>
+                             </a>
+            <a href="?module=sales&set_theme=theme-royal-purple" class="btn text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(180deg, #4a148c, #311b92);">
+                <span>Royal Purple</span>
+                             </a>
+            <a href="?module=sales&set_theme=theme-professional" class="btn text-white d-flex justify-content-between align-items-center" style="background-color: #1e40af;">
+                <span>Professional</span>
+                             </a>
+            <a href="?module=sales&set_theme=theme-dark-mode-v2" class="btn text-white d-flex justify-content-between align-items-center" style="background-color: #0f172a;">
+                <span>Dark Mode V2</span>
+                             </a>
+            <a href="?module=sales&set_theme=theme-cool" class="btn d-flex justify-content-between align-items-center" style="background-color: #ecfeff; color: #155e75;">
+                <span>Cool</span>
+                             </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+    function toggleSidebarSubmenu(trigger) {
+        var submenu = trigger.nextElementSibling;
+        if (!submenu) {
+            return;
+        }
+        var isSubmenu = submenu.classList.contains('sidebar-submenu')
+            || submenu.classList.contains('sidebar-submenu-nested');
+        if (!isSubmenu) {
+            return;
+        }
+        var isCollapsed = submenu.classList.contains('is-collapsed');
+        submenu.classList.toggle('is-collapsed');
+        trigger.classList.toggle('is-open', isCollapsed);
+    }
+
+    function toggleNativeSidebar() {
+        document.getElementById('native-sidebar').classList.toggle('show');
+        document.getElementById('sidebar-overlay').classList.toggle('show');
+    }
+    
+    function openThemeModal() {
+        var myModal = new bootstrap.Modal(document.getElementById('themeModal'));
+        myModal.show();
+    }
+    
+    function toggleSidebarCollapse() {
+        var sidebar = document.getElementById('native-sidebar');
+        var body = document.body;
+        sidebar.classList.toggle('collapsed');
+        body.classList.toggle('sidebar-collapsed');
+        
+        // Save state
+        var isCollapsed = sidebar.classList.contains('collapsed');
+        localStorage.setItem('sidebar_collapsed_state', isCollapsed ? '1' : '0');
+    }
+    
+    // Initialize Collapse State
+    (function() {
+        var savedState = localStorage.getItem('sidebar_collapsed_state');
+        if (savedState === '1') {
+            document.getElementById('native-sidebar').classList.add('collapsed');
+            document.body.classList.add('sidebar-collapsed');
+        }
+    })();
+</script>
+
+<!-- Included SweetAlert2 Logic from legacy file (Persisted) -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    if (!window.Toast) {
+        window.Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+    }
+
+    function showToast(type, message) {
+        window.Toast.fire({
+            icon: type,
+            title: message
+        });
+    }
+
+    </script>
+
+<!-- Ensure Bootstrap 5 JS is loaded for Modem (Required if parent page doesn't have it) -->
+<script>
+    if (typeof bootstrap === 'undefined') {
+        let script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+        script.onload = function() {
+            // Re-initialize modal trigger if needed, or simply let onclick work now
+        };
+        document.head.appendChild(script);
+    }
+</script>
+
+    <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;">
+        <header class="header employee-header" >
+    <div class="header-content">
+        <div class="header-left" style="display: flex; align-items: center; gap: 16px;">
+            <!-- Mobile Toggle Button -->
+            <button type="button" class="btn btn-link d-lg-none p-0 me-2 employee-header-menu-btn" onclick="toggleNativeSidebar()" style="color: #333; text-decoration: none;" aria-label="Open menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="4" y1="6" x2="20" y2="6"/>
+                    <line x1="4" y1="12" x2="20" y2="12"/>
+                    <line x1="4" y1="18" x2="20" y2="18"/>
+                </svg>
+            </button>
+        </div>
+
+        
+        
+        <div class="header-right header-actions-tray" style="margin-left:auto; display:flex; align-items:center; justify-content:flex-end; gap:16px;">
+                        <div class="d-none d-md-flex align-items-center gap-2 text-muted small" title="Ultimate General Trading">
+                                    <img src="/public_html/assets/images/company_logos/1/logo_20260509_091329_5df49074.png" alt="" width="20" height="20" style="width:20px;height:20px;border-radius:50%;object-fit:cover;">
+                                <span>Ultimate General Trading</span>
+                            </div>
+                        <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
+                <i class="fas fa-moon" id="themeToggleIcon"></i>
+            </button>
+            <link rel="stylesheet" href="/public_html/assets/css/notifications-centre.css?v=1781683266">
+<style>
+.notif-dropdown { display: none; }
+.notif-dropdown.open { display: flex; flex-direction: column; }
+.header-notif-bell-btn {
+    position: relative;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
+    margin: 0;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #111827 !important;
+    cursor: pointer;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.header-notif-bell-btn:hover {
+    opacity: 0.8;
+    background: transparent !important;
+}
+.header-notif-bell-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+}
+.header-notif-bell-svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+    flex-shrink: 0;
+    stroke: #111827;
+    color: #111827;
+}
+.header-notif-dot {
+    position: absolute;
+    top: 7px;
+    right: 9px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #7c3aed;
+    border: 2px solid #fff;
+    box-sizing: content-box;
+    pointer-events: none;
+    z-index: 1;
+}
+</style>
+<div class="notif" style="display:flex;align-items:center;">
+    <button type="button" class="header-notif-bell-btn" data-notifications-url="/public_html/notifications" onclick="toggleNotif(event)" aria-label="Notifications" title="Notifications" aria-expanded="false" aria-controls="notif-dd">
+        <span class="header-notif-bell-inner" aria-hidden="true">
+            <svg class="header-notif-bell-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+        </span>
+            </button>
+    <div id="notif-dd" class="notif-dropdown notif-dropdown--v2" onclick="event.stopPropagation();" role="dialog" aria-label="Notifications" aria-hidden="true">
+        <header class="nc-page-header">
+            <h2 class="nc-page-title">Notifications</h2>
+                            <form class="m-0" method="post" action="/public_html/includes/notifications_api.php" onsubmit="fetch(this.action,{method:'POST',body:new URLSearchParams({action:'mark_all_read'}),credentials:'same-origin'}).then(function(){location.reload();}); return false;">
+                    <button type="submit" class="nc-mark-all">Mark all as read</button>
+                </form>
+                    </header>
+
+        <nav class="nc-tabs nc-tabs--dropdown" aria-label="Filter notifications" data-nc-tabs>
+            <div class="nc-tabs-inner">
+                <button type="button" class="nc-tab is-active" data-nc-filter="all">
+                    All <span class="nc-tab-badge">4</span>
+                </button>
+                <button type="button" class="nc-tab" data-nc-filter="unread">
+                    Unread <span class="nc-tab-badge">1</span>
+                </button>
+                <button type="button" class="nc-tab" data-nc-filter="mentions">
+                    Mentions <span class="nc-tab-badge">0</span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="nc-list" id="notif-dd-list">
+                <a href="/public_html/employee/view-voucher.php?id=438"
+        class="nc-card nc-card--info is-unread"
+        data-notif-id="c1813"
+        onclick="if (typeof headerNotifItemClick === 'function') { headerNotifItemClick(event, this); }">
+            <span class="nc-card-accent" aria-hidden="true"></span>
+        <span class="nc-card-icon nc-card-icon--amber" aria-hidden="true"><i class="fas fa-file-alt"></i></span>
+        <div class="nc-card-body">
+                            <span class="nc-card-unread-dot" aria-hidden="true"></span>
+                        <h3 class="nc-card-title">Voucher requires checking</h3>
+                            <p class="nc-card-message">You were chosen to check voucher <span class="nc-msg-highlight">PV/UGT/2026/001</span>. Please visit the voucher to confirm.</p>
+                        <div class="nc-card-meta">
+                                    <span class="nc-card-meta-date"><i class="far fa-calendar" aria-hidden="true"></i>May 21 &bull; 12:44 AM</span>
+                                <span class="nc-card-tag">GENERAL</span>
+            </div>
+        </div>
+        <div class="nc-card-aside">
+            <span class="nc-card-chevron" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+        </div>
+    </a>    <a href="/public_html/employee/view-voucher.php?id=314"
+        class="nc-card nc-card--info"
+        data-notif-id="c1260"
+        onclick="if (typeof headerNotifItemClick === 'function') { headerNotifItemClick(event, this); }">
+            <span class="nc-card-accent" aria-hidden="true"></span>
+        <span class="nc-card-icon nc-card-icon--rose nc-card-icon--read" aria-hidden="true"><i class="fas fa-file-alt"></i></span>
+        <div class="nc-card-body">
+                        <h3 class="nc-card-title">Voucher PAID</h3>
+                            <p class="nc-card-message">Your voucher <span class="nc-msg-highlight">PV/UGC/2026/232</span> has been paid.</p>
+                        <div class="nc-card-meta">
+                                    <span class="nc-card-meta-date"><i class="far fa-calendar" aria-hidden="true"></i>Mar 30 &bull; 1:51 AM</span>
+                                <span class="nc-card-tag">GENERAL</span>
+            </div>
+        </div>
+        <div class="nc-card-aside">
+            <span class="nc-card-chevron" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+        </div>
+    </a>    <a href="/public_html/employee/view-voucher.php?id=314"
+        class="nc-card nc-card--info"
+        data-notif-id="c1259"
+        onclick="if (typeof headerNotifItemClick === 'function') { headerNotifItemClick(event, this); }">
+            <span class="nc-card-accent" aria-hidden="true"></span>
+        <span class="nc-card-icon nc-card-icon--rose nc-card-icon--read" aria-hidden="true"><i class="fas fa-file-alt"></i></span>
+        <div class="nc-card-body">
+                        <h3 class="nc-card-title">Voucher APPROVED</h3>
+                            <p class="nc-card-message">Your voucher <span class="nc-msg-highlight">PV/UGC/2026/232</span> has been approved.</p>
+                        <div class="nc-card-meta">
+                                    <span class="nc-card-meta-date"><i class="far fa-calendar" aria-hidden="true"></i>Mar 30 &bull; 1:51 AM</span>
+                                <span class="nc-card-tag">GENERAL</span>
+            </div>
+        </div>
+        <div class="nc-card-aside">
+            <span class="nc-card-chevron" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+        </div>
+    </a>    <a href="/public_html/employee/view-voucher.php?id=314"
+        class="nc-card nc-card--info"
+        data-notif-id="c1258"
+        onclick="if (typeof headerNotifItemClick === 'function') { headerNotifItemClick(event, this); }">
+            <span class="nc-card-accent" aria-hidden="true"></span>
+        <span class="nc-card-icon nc-card-icon--purple nc-card-icon--read" aria-hidden="true"><i class="fas fa-file-alt"></i></span>
+        <div class="nc-card-body">
+                        <h3 class="nc-card-title">Voucher requires checking</h3>
+                            <p class="nc-card-message">You were chosen to check voucher <span class="nc-msg-highlight">PV/UGC/2026/232</span>. Please visit the voucher to confirm.</p>
+                        <div class="nc-card-meta">
+                                    <span class="nc-card-meta-date"><i class="far fa-calendar" aria-hidden="true"></i>Mar 30 &bull; 1:51 AM</span>
+                                <span class="nc-card-tag">GENERAL</span>
+            </div>
+        </div>
+        <div class="nc-card-aside">
+            <span class="nc-card-chevron" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+        </div>
+    </a>        </div>
+
+        <p class="nc-view-all-footer mb-0">
+            <a href="/public_html/notifications" class="nc-mark-all">View all notifications</a>
+        </p>
+    </div>
+</div>
+<script>
+function headerNotifItemClick(ev, el) {
+    if (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+    }
+    var id = el.getAttribute('data-notif-id');
+    var href = (el.getAttribute('href') || '').trim();
+    if (id) {
+        var api = "/public_html/api/get_notifications.php" + '?action=read&id=' + encodeURIComponent(id);
+        fetch(api, { credentials: 'same-origin' }).catch(function(){});
+    }
+    if (!href || href === '#') {
+        el.classList.remove('is-unread');
+        var dot = el.querySelector('.nc-card-unread-dot');
+        if (dot) dot.remove();
+        var icon = el.querySelector('.nc-card-icon');
+        if (icon) icon.classList.add('nc-card-icon--read');
+        return;
+    }
+    if (typeof closeNotif === 'function') {
+        closeNotif();
+    }
+    window.location.assign(href);
+}
+
+(function () {
+    var list = document.getElementById('notif-dd-list');
+    if (!list) return;
+    var cards = list.querySelectorAll('.nc-card');
+    var tabs = document.querySelectorAll('[data-nc-tabs] [data-nc-filter]');
+    if (!tabs.length) return;
+
+    function cardMatches(card, filter) {
+        if (filter === 'all') return true;
+        if (filter === 'unread') return card.classList.contains('is-unread');
+        if (filter === 'mentions') {
+            var t = (card.textContent || '').toLowerCase();
+            return t.indexOf('@') !== -1 || t.indexOf('mention') !== -1;
+        }
+        return true;
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            var filter = tab.getAttribute('data-nc-filter') || 'all';
+            tabs.forEach(function (t) { t.classList.toggle('is-active', t === tab); });
+            cards.forEach(function (card) {
+                card.style.display = cardMatches(card, filter) ? '' : 'none';
+            });
+        });
+    });
+})();
+</script>
+                    </div>
+    </div>
+</header>
+
+<div id="notif-backdrop" class="notif-backdrop" onclick="closeNotif()" style="background: transparent; cursor: default;"></div>
+<script>
+    // Unified Sidebar Toggle
+    function toggleHeaderMenu(){
+        // Check if mobile (using same breakpoint as CSS media query usually, or just check window width)
+        // CSS says min-width: 1024px is desktop. So < 1024 is mobile.
+        if (window.innerWidth < 1024) { 
+            document.body.classList.toggle('sidebar-mobile-open');
+        } else {
+            var collapsed = document.body.classList.toggle('sidebar-collapsed');
+            try{ localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0'); }catch(e){}
+        }
+    }
+
+    // Initialize collapse state from storage
+    (function(){
+        try{
+            var saved = localStorage.getItem('sidebarCollapsed');
+            if(saved === '1' && window.innerWidth >= 1024){ document.body.classList.add('sidebar-collapsed'); }
+        }catch(e){}
+    })();
+
+    // Auto-close mobile menu when resizing to desktop
+    window.addEventListener('resize', function() {
+        if (window.innerWidth >= 1024) {
+            document.body.classList.remove('sidebar-mobile-open');
+        }
+    });
+    
+    // Header Search functionality
+    function toggleHeaderSearch(e) {
+        if(e) e.stopPropagation();
+        var container = document.getElementById('headerSearchContainer');
+        var input = document.getElementById('headerSearchInput');
+        if(!container) return;
+        
+        var isOpen = container.classList.contains('show');
+        if(isOpen) {
+            container.classList.remove('show');
+        } else {
+            container.classList.add('show');
+            setTimeout(function() { if(input) input.focus(); }, 100);
+        }
+    }
+    
+    function handleHeaderSearch(value) {
+        var pageSearchInput = document.getElementById('searchInput');
+        if(pageSearchInput) {
+            pageSearchInput.value = value;
+            if(typeof performAdvancedSearch === 'function') performAdvancedSearch();
+            if(typeof updateActiveFiltersCount === 'function') updateActiveFiltersCount();
+        } else {
+            // If not on my-vouchers page, redirect to it with search query
+            if(value.trim() !== '') {
+                var currentPath = window.location.pathname;
+                if(currentPath.indexOf('/employee/my-vouchers.php') === -1) {
+                    // Could redirect or store for later
+                    // For now, just show in header search
+                }
+            }
+        }
+    }
+    
+    document.addEventListener('click', function(e) {
+        var container = document.getElementById('headerSearchContainer');
+        var searchBtn = e.target.closest('.header-search-btn');
+        if(container && !container.contains(e.target) && !searchBtn) {
+            container.classList.remove('show');
+        }
+    });
+    
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if(e.key === 'Escape') {
+            var container = document.getElementById('headerSearchContainer');
+            if(container && container.classList.contains('show')) {
+                container.classList.remove('show');
+            }
+            var nd = document.getElementById('notif-dd');
+            if(nd && nd.classList.contains('open')) { nd.classList.remove('open'); }
+        }
+    });
+
+
+    // Clock Function Removed
+    function positionMobileNotifDropdown() {
+        var dd = document.getElementById('notif-dd');
+        var btn = document.querySelector('.header-notif-bell-btn');
+        if (!dd || !btn || !window.matchMedia('(max-width: 767.98px)').matches) {
+            if (dd) { dd.style.top = ''; dd.style.right = ''; }
+            return;
+        }
+        var r = btn.getBoundingClientRect();
+        dd.style.top = Math.round(r.bottom + 8) + 'px';
+        dd.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
+    }
+
+    function syncNotifBackdrop(isOpen) {
+        var bd = document.getElementById('notif-backdrop');
+        if (!bd) return;
+        if (isOpen && window.matchMedia('(max-width: 767.98px)').matches) {
+            bd.classList.add('is-open');
+        } else {
+            bd.classList.remove('is-open');
+        }
+    }
+
+    function toggleNotif(e){
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        var dd=document.getElementById('notif-dd');
+        var btn = e && e.currentTarget ? e.currentTarget : document.querySelector('.header-notif-bell-btn');
+        if(!dd) return;
+        var willOpen = !dd.classList.contains('open');
+        dd.classList.toggle('open');
+        dd.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
+        if (btn) btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        if (willOpen && !dd.classList.contains('notif-dropdown--v2')) {
+            positionMobileNotifDropdown();
+        } else {
+            dd.style.top = '';
+            dd.style.right = '';
+        }
+        syncNotifBackdrop(dd.classList.contains('open'));
+        if (willOpen) document.body.classList.add('notif-panel-open');
+        else document.body.classList.remove('notif-panel-open');
+    }
+    function closeNotif(){
+        var dd=document.getElementById('notif-dd');
+        var btn = document.querySelector('.header-notif-bell-btn');
+        if(dd) {
+            dd.classList.remove('open');
+            dd.setAttribute('aria-hidden', 'true');
+            dd.style.top = '';
+            dd.style.right = '';
+        }
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+        syncNotifBackdrop(false);
+        document.body.classList.remove('notif-panel-open');
+    }
+
+    window.addEventListener('resize', function () {
+        var dd = document.getElementById('notif-dd');
+        if (dd && dd.classList.contains('open')) {
+            positionMobileNotifDropdown();
+        }
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        var dd = document.getElementById('notif-dd');
+        var btn = e.target.closest('.header-notif-bell-btn, .notif .icon-btn');
+        
+        // If dropdown is open and click is outside dropdown AND outside toggle button
+        if (dd && dd.classList.contains('open') && !dd.contains(e.target) && !btn) {
+            closeNotif();
+        }
+    });
+    
+    // Header Search functionality
+    function toggleHeaderSearch(e) {
+        if(e) e.stopPropagation();
+        var container = document.getElementById('headerSearchContainer');
+        var input = document.getElementById('headerSearchInput');
+        if(!container) return;
+        
+        var isOpen = container.classList.contains('show');
+        if(isOpen) {
+            container.classList.remove('show');
+        } else {
+            container.classList.add('show');
+            // Focus input after animation
+            setTimeout(function() {
+                if(input) input.focus();
+            }, 100);
+        }
+    }
+    
+    function handleHeaderSearch(value) {
+        // Sync with page search if it exists (for my-vouchers.php)
+        var pageSearchInput = document.getElementById('searchInput');
+        if(pageSearchInput) {
+            pageSearchInput.value = value;
+            // Trigger search if function exists
+            if(typeof performAdvancedSearch === 'function') {
+                performAdvancedSearch();
+            }
+            if(typeof updateActiveFiltersCount === 'function') {
+                updateActiveFiltersCount();
+            }
+        } else {
+            // If not on my-vouchers page, redirect to it with search query
+            if(value.trim() !== '') {
+                var currentPath = window.location.pathname;
+                if(currentPath.indexOf('/employee/my-vouchers.php') === -1) {
+                    // Could redirect or store for later
+                    // For now, just show in header search
+                }
+            }
+        }
+    }
+    
+    // Close header search when clicking outside
+    document.addEventListener('click', function(e) {
+        var container = document.getElementById('headerSearchContainer');
+        var searchBtn = e.target.closest('.header-search-btn');
+        if(container && !container.contains(e.target) && !searchBtn) {
+            container.classList.remove('show');
+        }
+    });
+    
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if(e.key === 'Escape') {
+            var container = document.getElementById('headerSearchContainer');
+            if(container && container.classList.contains('show')) {
+                container.classList.remove('show');
+            }
+            var nd = document.getElementById('notif-dd');
+            if(nd && nd.classList.contains('open')) { nd.classList.remove('open'); }
+        }
+    });
+</script>
+
+<script src="/public_html/assets/js/responsive-table.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" crossorigin="anonymous">
+<style>
+@media (max-width: 767.98px) {
+  .mobile-footer.mf-floating-instagram {
+    position: fixed;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10120;
+    width: max-content;
+    min-width: 290px;
+    max-width: calc(100% - 32px);
+    height: 54px;
+    padding: 0 4px;
+    background: rgba(255, 255, 255, 0.88); /* White in white theme */
+    backdrop-filter: blur(20px) saturate(190%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%);
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.08); /* Darker border for white theme */
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.12); /* Softer shadow */
+    display: block;
+    overflow: visible;
+    transition: background 0.3s, border 0.3s, box-shadow 0.3s;
+  }
+  .mobile-footer.mf-floating-instagram .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    gap: 6px;
+    padding: 0 6px;
+    margin: 0;
+  }
+  .mobile-footer.mf-floating-instagram a.mf-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    height: 44px;
+    min-width: 48px;
+    border-radius: 999px;
+    color: rgba(0, 0, 0, 0.55); /* Dark icons in light theme */
+    position: relative;
+    z-index: 1;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .mobile-footer.mf-floating-instagram a.mf-item:active {
+    background: rgba(0, 0, 0, 0.04);
+  }
+  .mobile-footer.mf-floating-instagram a.mf-item.is-active {
+    background: rgba(0, 0, 0, 0.08); /* Grey capsule in white theme */
+    color: #000000 !important;
+    min-width: 56px;
+  }
+  .mobile-footer.mf-floating-instagram .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+    line-height: 1;
+  }
+  .mobile-footer.mf-floating-instagram .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+  .mobile-footer.mf-floating-instagram .mf-avatar {
+    width: 26px !important;
+    height: 26px !important;
+    max-width: 26px !important;
+    max-height: 26px !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    border: 1.5px solid rgba(0, 0, 0, 0.35) !important; /* Darker border for light theme */
+    object-fit: cover !important;
+    transition: border-color 0.2s;
+  }
+  .mobile-footer.mf-floating-instagram .mf-avatar.is-active {
+    border-color: #000000 !important;
+  }
+  .mobile-footer.mf-floating-instagram .mf-avatar-fallback {
+    width: 26px !important;
+    height: 26px !important;
+    max-width: 26px !important;
+    max-height: 26px !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    border: 1.5px solid rgba(0, 0, 0, 0.35) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 10px !important;
+    font-weight: bold !important;
+    background: rgba(0, 0, 0, 0.05) !important;
+    color: #000000 !important;
+  }
+  .mobile-footer.mf-floating-instagram .mf-avatar-fallback.is-active {
+    border-color: #000000 !important;
+    background: rgba(0, 0, 0, 0.12) !important;
+  }
+  .mobile-footer.mf-floating-instagram .mf-dot {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    width: 6px;
+    height: 6px;
+    background-color: #ef4444;
+    border-radius: 50%;
+    border: 1px solid #ffffff;
+  }
+  body.has-mobile-footer {
+    padding-bottom: calc(86px + env(safe-area-inset-bottom, 0));
+  }
+
+  /* Dark theme overrides */
+  html[data-theme="dark"] .mobile-footer.mf-floating-instagram {
+    background: rgba(18, 18, 18, 0.85); /* Dark in dark theme */
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+  html[data-theme="dark"] .mobile-footer.mf-floating-instagram a.mf-item {
+    color: rgba(255, 255, 255, 0.55);
+  }
+  html[data-theme="dark"] .mobile-footer.mf-floating-instagram a.mf-item:active {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  html[data-theme="dark"] .mobile-footer.mf-floating-instagram a.mf-item.is-active {
+    background: rgba(255, 255, 255, 0.15); /* Capsule highlight in dark theme */
+    color: #ffffff !important;
+  }
+  html[data-theme="dark"] .mobile-footer.mf-floating-instagram .mf-avatar {
+    border: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+  }
+  html[data-theme="dark"] .mobile-footer.mf-floating-instagram .mf-avatar.is-active {
+    border-color: #ffffff !important;
+  }
+  html[data-theme="dark"] .mobile-footer.mf-floating-instagram .mf-avatar-fallback {
+    border: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+  }
+  html[data-theme="dark"] .mobile-footer.mf-floating-instagram .mf-avatar-fallback.is-active {
+    border-color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.25) !important;
+  }
+  html[data-theme="dark"] .mobile-footer.mf-floating-instagram .mf-dot {
+    border: 1px solid #121212;
+  }
+}
+@media (min-width: 768px) { .mobile-footer { display: none; } }
+@media print { .mobile-footer { display: none !important; } }
+</style>
+<nav class="mobile-footer mf-floating-instagram" role="navigation" aria-label="Mobile navigation">
+  <div class="bar">
+                <a class="mf-item" href="/public_html/modules/sales/dashboard/index.php?module=sales" title="Home" aria-label="Home">
+        <span class="icon" aria-hidden="true">
+                      <i class="bi bi-bar-chart"></i>
+                  </span>
+                <span class="label">Home</span>
+      </a>
+                <a class="mf-item" href="/public_html/modules/sales/orders/index.php?module=sales" title="Orders" aria-label="Orders">
+        <span class="icon" aria-hidden="true">
+                      <i class="bi bi-bag"></i>
+                  </span>
+                <span class="label">Orders</span>
+      </a>
+                <a class="mf-item" href="/public_html/select-module.php" title="Modules" aria-label="Modules">
+        <span class="icon" aria-hidden="true">
+                      <i class="bi bi-grid"></i>
+                  </span>
+                <span class="label">Modules</span>
+      </a>
+                <a class="mf-item" href="/public_html/employee/account.php?module=sales" title="Account" aria-label="Account">
+        <span class="icon" aria-hidden="true">
+                      <span class="mf-avatar-fallback" style="display: flex !important; align-items: center !important; justify-content: center !important; position: relative !important; overflow: hidden !important; width: 26px !important; height: 26px !important; min-width: 26px !important; min-height: 26px !important; max-width: 26px !important; max-height: 26px !important; flex-shrink: 0 !important; aspect-ratio: 1/1 !important; border-radius: 50% !important;">
+              <i class="bi bi-person" style="font-size: 14px !important; line-height: 1 !important;"></i>
+                              <img src="/public_html/assets/uploads/profiles/profile_1_1765119872.png" class="mf-avatar" alt="Profile" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50% !important;" onerror="this.remove();">
+                          </span>
+                  </span>
+                <span class="label">Account</span>
+      </a>
+                <a class="mf-item is-active" href="/public_html/modules/sales/orders/create.php?module=sales" title="Quote" aria-label="Quote" aria-current="page">
+        <span class="icon" aria-hidden="true">
+                      <i class="bi bi-file-earmark-plus-fill"></i>
+                  </span>
+                <span class="label">Quote</span>
+      </a>
+      </div>
+</nav>
+<script>
+  (function(){
+    function applyFooterPadding(){
+      if (window.matchMedia && window.matchMedia('(max-width: 767.98px)').matches) {
+        document.body.classList.add('has-mobile-footer');
+      } else {
+        document.body.classList.remove('has-mobile-footer');
+      }
+    }
+    function mountFooterNav(){
+      var nav = document.querySelector('nav.mobile-footer');
+      if (nav && nav.parentElement !== document.body) {
+        document.body.appendChild(nav);
+      }
+    }
+    applyFooterPadding();
+    mountFooterNav();
+    window.addEventListener('resize', function(){
+      clearTimeout(window.__mfResizeTimer);
+      window.__mfResizeTimer = setTimeout(function(){
+        applyFooterPadding();
+        mountFooterNav();
+      }, 120);
+    });
+  })();
+</script>
+
+<!-- Floating Chatbot Assets (Employee) -->
+<style>
+/* Fallback style so the launcher is at bottom-right even if external CSS is cached/blocked */
+.chatbot-launcher{position:fixed;bottom:18px;right:18px;z-index:1500;background:#ffffff;color:#111827;border:2px solid #111827;border-radius:9999px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer;font-size:18px;line-height:1}
+.chatbot-launcher:hover{background:#111827;color:#fff}
+</style>
+<link rel="stylesheet" href="/public_html/assets/css/chatbot.css?v=3" />
+<script src="/public_html/assets/js/chatbot.js?v=3" defer></script>
+<script src="/public_html/assets/js/chatbot-bootstrap.js?v=3" defer></script>
+<!-- Ensure launcher exists even if JS loads late -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // Notification Poller
+    (function(){
+        // Only poll if window is active to save resources
+        let pollInterval = setInterval(checkNotifications, 10000); // 10 seconds
+        
+        async function checkNotifications() {
+            if(document.hidden) return;
+            try {
+                // Adjust path based on location (header logic handles logoBase, assume api is at ../api or ./api)
+                // Since this is included, we can try absolute path or relative from root
+                const runPath = '../../api/get_notifications.php?action=poll';
+                const response = await fetch(runPath);
+                const data = await response.json();
+                
+                if(data.success && data.notifications && data.notifications.length > 0) {
+                    data.notifications.forEach(notif => {
+                        // Show Toast
+                        Swal.fire({
+                            icon: notif.type || 'info',
+                            title: notif.title,
+                            text: notif.message,
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 5000,
+                            timerProgressBar: true,
+                            didOpen: (toast) => {
+                                toast.addEventListener('mouseenter', Swal.stopTimer)
+                                toast.addEventListener('mouseleave', Swal.resumeTimer)
+                                if(notif.link) {
+                                    toast.addEventListener('click', () => window.location.href = notif.link);
+                                    toast.style.cursor = 'pointer';
+                                }
+                            }
+                        });
+                        
+                        // Mark as read immediately
+                        fetch('../../api/get_notifications.php?action=read&id=' + encodeURIComponent(notif.id));
+                    });
+                }
+            } catch(e) {
+                console.error('Notification poll error', e);
+            }
+        }
+    })();
+</script>
+<script>
+(function() {
+    var btn = document.getElementById('themeToggleBtn');
+    var icon = document.getElementById('themeToggleIcon');
+    if (!btn || !icon) return;
+
+    function updateIcon(theme) {
+        if (theme === 'dark') {
+            icon.className = 'fas fa-sun';
+        } else {
+            icon.className = 'fas fa-moon';
+        }
+    }
+
+    function showToast(message) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: message,
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            });
+        } else {
+            var toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.position = 'fixed';
+            toast.style.top = '20px';
+            toast.style.right = '20px';
+            toast.style.backgroundColor = '#10b981';
+            toast.style.color = '#fff';
+            toast.style.padding = '12px 24px';
+            toast.style.borderRadius = '8px';
+            toast.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)';
+            toast.style.zIndex = '99999';
+            toast.style.fontFamily = 'sans-serif';
+            toast.style.fontSize = '14px';
+            toast.style.fontWeight = '600';
+            toast.style.transition = 'opacity 0.3s ease';
+            document.body.appendChild(toast);
+            setTimeout(function() {
+                toast.style.opacity = '0';
+                setTimeout(function() {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 2000);
+        }
+    }
+
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    updateIcon(currentTheme);
+
+    btn.addEventListener('click', function() {
+        var activeTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        var newTheme = activeTheme === 'dark' ? 'light' : 'dark';
+        
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateIcon(newTheme);
+        
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: newTheme } }));
+        showToast(newTheme === 'dark' ? 'Dark theme activated' : 'Light theme activated');
+    });
+})();
+</script>
+<button id="chatbotLauncher" class="chatbot-launcher" type="button" aria-label="Help Assistant" title="Help">?</button>
+
+        <div class="main-content sales-quotations-shell" id="react-root">
+            <p class="p-6 text-gray-500 text-base">Loading quotations…</p>
+        </div>
+
+        <script>
+            window.APP_DATA = {
+                quotations: <br />
+<b>Fatal error</b>:  Uncaught Error: Call to undefined function sales_json_script() in C:\xampp\htdocs\public_html\modules\sales\orders\create.php:302
+Stack trace:
+#0 {main}
+  thrown in <b>C:\xampp\htdocs\public_html\modules\sales\orders\create.php</b> on line <b>302</b><br />
+
+    </div> <!-- /content-wrapper -->
+</div> <!-- /main-flex-wrapper -->
+

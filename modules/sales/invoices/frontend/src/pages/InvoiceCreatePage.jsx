@@ -739,11 +739,15 @@ export default function InvoiceCreatePage() {
                         </td>
                         <td className="inv-line-col-qty">
                           <input
-                            type="number"
-                            min="1"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             className="inv-line-qty-input"
                             value={item.quantity}
-                            onChange={(e) => updateItem(index, { quantity: Math.max(1, parseFloat(e.target.value) || 1) })}
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(/[^\d]/g, '');
+                              updateItem(index, { quantity: Math.max(1, parseInt(raw, 10) || 1) });
+                            }}
                           />
                         </td>
                         <td>

@@ -138,6 +138,22 @@ html[data-theme="dark"] body.page-inv-desk .employee-header--inv-desk .employee-
 html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-header-page-title {
     color: #f8fafc !important;
 }
+/* Line-item qty: beat global ERP input styles loaded from header/sidebar */
+body.page-inv-desk .inv-line-table-wrap { overflow-x: auto; }
+body.page-inv-desk .inv-line-table { table-layout: auto !important; min-width: 960px; }
+body.page-inv-desk .inv-line-table th.inv-line-col-qty,
+body.page-inv-desk .inv-line-table td.inv-line-col-qty {
+    width: auto !important;
+    min-width: 8rem !important;
+    max-width: none !important;
+}
+body.page-inv-desk .inv-line-table input.inv-line-qty-input {
+    font-weight: 400 !important;
+    font-size: 12px !important;
+    min-width: 7ch !important;
+    width: 100% !important;
+    text-align: center;
+}
 </style>
 
 <main class="main-content <?= htmlspecialchars($mainRootClass, ENT_QUOTES, 'UTF-8') ?>">

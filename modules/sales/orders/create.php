@@ -2156,7 +2156,7 @@ function CreateOrderApp() {
 .li-item-change:hover { text-decoration:underline }
 .li-search-input { width:100%; max-width:100%; min-width:0; height:38px; border:1px solid #cbd5e1; border-radius:8px; padding:0 10px; font-size:12px; box-sizing:border-box }
 .li-desc-input { width:100%; max-width:100%; min-width:0; height:38px; border:1px solid #e2e8f0; border-radius:8px; padding:0 10px; font-size:12px; color:#334155; background:#fafafa; box-sizing:border-box }
-.li-qty-input { width:100%; max-width:100%; min-width:0; height:38px; border:1px solid #e2e8f0; border-radius:8px; padding:0 10px; font-size:13px; font-weight:700; text-align:center; color:#0f172a; background:#fff; box-sizing:border-box }
+.li-qty-input { width:100%; max-width:100%; min-width:0; height:38px; border:1px solid #e2e8f0; border-radius:8px; padding:0 10px; font-size:12px; font-weight:400; text-align:center; color:#0f172a; background:#fff; box-sizing:border-box; font-variant-numeric:tabular-nums }
 .li-qty-input::-webkit-outer-spin-button,
 .li-qty-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0 }
 .li-qty-input[type=number] { -moz-appearance:textfield; appearance:textfield }

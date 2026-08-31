@@ -872,19 +872,26 @@ body.page-inv-desk button.inv-line-btn--rounded {
   border: none;
   color: #dc2626;
 }
-.inv-line-table-wrap { overflow: visible; border: 1px solid #e2e8f0; border-radius: 12px; }
+.inv-line-table-wrap { overflow-x: auto; overflow-y: visible; border: 1px solid #e2e8f0; border-radius: 12px; }
 .inv-line-table {
   width: 100%;
-  table-layout: fixed;
+  min-width: 960px;
+  table-layout: auto;
   border-collapse: collapse;
   font-size: 13px;
 }
 .inv-line-col-image { width: 52px; text-align: center; padding: 10px 6px !important; }
 .inv-line-table th:nth-child(1),
 .inv-line-table td:nth-child(1) { width: 2.25rem; text-align: center; }
-.inv-line-col-qty { width: 9rem; min-width: 9rem; }
+.inv-line-col-qty { width: auto; min-width: 8rem; }
 .inv-line-table th.inv-line-col-qty,
-.inv-line-table td.inv-line-col-qty { width: 9rem; min-width: 9rem; }
+.inv-line-table td.inv-line-col-qty {
+  width: auto;
+  min-width: 8rem;
+  max-width: none;
+  overflow: visible;
+  white-space: nowrap;
+}
 .inv-line-table th:nth-child(5),
 .inv-line-table td:nth-child(5) { width: 6.25rem; }
 .inv-line-table th:nth-child(6),
@@ -924,10 +931,21 @@ body.page-inv-desk button.inv-line-btn--rounded {
   box-sizing: border-box;
 }
 .inv-line-table .inv-line-qty-input {
+  width: 100%;
+  min-width: 7ch;
+  max-width: none;
   text-align: center;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 400;
+  font-synthesis: none;
   padding: 0 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: normal;
+}
+body.page-inv-desk .inv-line-table input.inv-line-qty-input,
+body.page-inv-desk.dashboard .inv-line-table input.inv-line-qty-input {
+  font-weight: 400 !important;
+  min-width: 7ch !important;
 }
 .inv-line-table .inv-line-qty-input::-webkit-outer-spin-button,
 .inv-line-table .inv-line-qty-input::-webkit-inner-spin-button {

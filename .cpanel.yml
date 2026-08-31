@@ -1,7 +1,7 @@
 ---
 # UltiTech ERP ù cPanel Git deployment (GitHub ? public_html)
 # Configure in cPanel: Git Version Control ? Manage ? Deploy HEAD Commit
-# Set deployment path to: /home/CPANEL_USERNAME/public_html/
+# Set deployment path to public_html/ in cPanel Git UI ($DEPLOYPATH is provided automatically).
 #
 # Uses rsync WITHOUT --delete so server-only files survive deploy:
 #   env.php, vendor/, uploads/, storage/, logs/, desktop .exe installer

@@ -1,6 +1,11 @@
-const { app, BrowserWindow, shell, session, dialog } = require('electron');
+const { app, BrowserWindow, shell, session, dialog, Menu, ipcMain } = require('electron');
 const path = require('node:path');
 const { loadConfig, isAllowedNavigation, isErpOrigin } = require('./load-config.cjs');
+const {
+  setupAutoUpdater,
+  scheduleBackgroundUpdateCheck,
+  checkForUpdatesManual,
+} = require('./auto-update.cjs');
 
 const SESSION_PARTITION = 'persist:ultitech-erp';
 const ERP_PERMISSIONS = new Set(['media', 'geolocation', 'fullscreen', 'clipboard-read']);
@@ -276,9 +281,49 @@ async function createWindow() {
 
   mainWindow.show();
   mainWindow.focus();
+  scheduleBackgroundUpdateCheck();
+}
+
+function buildApplicationMenu() {
+  const template = [
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Check for updates',
+          click: () => {
+            checkForUpdatesManual().catch(() => {
+              /* dialog shown in auto-update module */
+            });
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'About UltiTech ERP',
+          click: async () => {
+            const win = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+            await dialog.showMessageBox(win, {
+              type: 'info',
+              title: 'UltiTech ERP',
+              message: 'UltiTech ERP Desktop',
+              detail: `Version ${app.getVersion()}\n\nLoads the hosted ERP from ultitech.io.`,
+              buttons: ['OK'],
+            });
+          },
+        },
+      ],
+    },
+  ];
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 app.whenReady().then(() => {
+  appConfig = loadConfig();
+  setupAutoUpdater(() => mainWindow);
+  buildApplicationMenu();
+  ipcMain.handle('ultitech:check-for-updates', () => checkForUpdatesManual());
+
   createWindow();
 
   app.on('activate', () => {

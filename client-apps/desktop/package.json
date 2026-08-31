@@ -1,7 +1,8 @@
 {
   "name": "ultitech-erp-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "UltiTech ERP desktop client (Electron shell for the hosted web app)",
+  "author": "UltiTech",
   "main": "electron-main.cjs",
   "private": true,
   "scripts": {
@@ -9,7 +10,10 @@
     "start:local": "cross-env ULTITECH_USE_LOCAL_DEV=true electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "dist:win": "electron-builder --win"
+    "dist:win": "electron-builder --win --config.directories.output=dist-build"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
   },
   "build": {
     "appId": "io.ultitech.erp.desktop",
@@ -17,13 +21,19 @@
     "directories": {
       "output": "dist"
     },
+    "publish": {
+      "provider": "generic",
+      "url": "https://ultitech.io/client-apps/desktop/updates/"
+    },
     "files": [
       "electron-main.cjs",
+      "auto-update.cjs",
       "load-config.cjs",
       "preload.cjs",
       "config.json",
       "splash.html",
-      "assets/**/*",
+      "assets/logo.png",
+      "assets/logo.svg",
       "../shared/**/*"
     ],
     "extraResources": [

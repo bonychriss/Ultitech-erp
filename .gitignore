@@ -65,6 +65,7 @@ Thumbs.db
 
 # Native client wrappers (Electron / Capacitor build output)
 client-apps/desktop/dist/
+client-apps/desktop/dist-build/
 client-apps/desktop/assets/logo-options/
 client-apps/android/android/app/build/
 client-apps/android/android/.gradle/

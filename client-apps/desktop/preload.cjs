@@ -1,6 +1,8 @@
-const { contextBridge } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
+const pkg = require('./package.json');
 
 contextBridge.exposeInMainWorld('ultitechClient', {
   platform: 'desktop',
-  version: '1.0.0'
+  version: pkg.version,
+  checkForUpdates: () => ipcRenderer.invoke('ultitech:check-for-updates'),
 });

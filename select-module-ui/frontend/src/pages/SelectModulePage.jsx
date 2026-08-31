@@ -413,7 +413,6 @@ export default function SelectModulePage() {
           href={desktopAppDownloadUrl}
           className="sm-desktop-download"
           title="Download UltiTech ERP for Windows"
-          download
         >
           <Monitor className="sm-desktop-download-icon" strokeWidth={1.75} aria-hidden="true" />
           <span className="sm-desktop-download-text">Desktop app</span>

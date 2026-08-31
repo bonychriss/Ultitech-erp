@@ -3871,7 +3871,7 @@ if (!function_exists('ultitechReservedPathSegments')) {
     {
         return [
             'admin', 'api', 'assets', 'attendance', 'company', 'css', 'deliveries', 'dispatch',
-            'employee', 'erp', 'home', 'includes', 'js', 'logs', 'modules', 'public_html', 'public-html',
+            'employee', 'erp', 'home', 'includes', 'js', 'logs', 'modules', 'client-apps', 'public_html', 'public-html',
             'sites', 'stock', 'storage', 'uploads', 'vouchers', 'store-management-system', 'logout.php', 'login.php', 'select-module.php',
             'index.php', 'my-account.php', 'debug_login.php', 'debug_db_connections.php', 'debug_online.php',
             'debug_system_full.php', 'debug_create_voucher.php', 'debug_voucher_applicant.php', 'debug_todo_index.php', 'hc.php', 'ping.php',

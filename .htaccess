@@ -5,6 +5,7 @@ RewriteCond %{REQUEST_URI} ^/home/sites/ [NC]
 RewriteRule ^home/sites/.*/public_html/(.*)$ /$1 [R=302,L,QSD]
 
 RewriteRule ^assets/ - [L]
+RewriteRule ^client-apps/ - [L]
 # Do not force RewriteBase; let Apache resolve relative to this directory
 
 # Hosting panel paths: never apply tenant slug rules

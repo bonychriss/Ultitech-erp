@@ -4,6 +4,7 @@ import {
   deskPageUrl,
   fetchCreateInit,
   fetchExchangeRate,
+  goRevenueList,
   submitCreateEntry,
 } from '../api/revenueDesk';
 
@@ -233,7 +234,7 @@ export default function RevenueCreatePage() {
   }
 
   function handleCancel() {
-    window.location.href = init?.list_url || deskPageUrl('revenue_entries.php');
+    goRevenueList(init?.list_url || deskPageUrl('revenue_entries.php'));
   }
 
   const depositHelp = paymentMode === 'Bank'
@@ -267,7 +268,14 @@ export default function RevenueCreatePage() {
     <div className="rev-create-shell">
       <div className="rev-create-topbar">
         <h1>create Revenue</h1>
-        <a href={init.list_url || deskPageUrl('revenue_entries.php')} className="rev-create-back">
+        <a
+          href={init.list_url || deskPageUrl('revenue_entries.php')}
+          className="rev-create-back"
+          onClick={(event) => {
+            event.preventDefault();
+            goRevenueList(init.list_url || deskPageUrl('revenue_entries.php'));
+          }}
+        >
           Back to Revenues
         </a>
       </div>

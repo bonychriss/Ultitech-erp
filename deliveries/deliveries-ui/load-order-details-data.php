@@ -136,6 +136,7 @@ function deliveries_load_order_details_payload(PDO $pdo, array $query): array
             'evidence' => $evidence,
             'csrfToken' => function_exists('csrf_token') ? csrf_token() : '',
             'urls' => [
+                'dashboard' => deliveries_module_url('deliveries/index'),
                 'myDeliveries' => deliveries_module_url('deliveries/my_deliveries.php'),
                 'viewTrip' => deliveries_module_url('deliveries/view_trip.php'),
                 'orderDetails' => deliveries_module_url('deliveries/order_details.php'),

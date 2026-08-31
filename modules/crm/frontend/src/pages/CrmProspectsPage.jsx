@@ -186,7 +186,17 @@ export default function CrmProspectsPage() {
           </div>
         </form>
         <div className="crm-desk-page-header-actions">
-          <a className="crm-desk-btn crm-desk-btn-secondary" href={customersUrl}>
+          <a
+            className="crm-desk-btn crm-desk-btn-secondary"
+            href={customersUrl}
+            onClick={(e) => {
+              e.preventDefault();
+              if (window.erpNavBack && typeof window.erpNavBack.go === 'function') {
+                if (window.erpNavBack.go(customersUrl)) return;
+              }
+              window.location.href = customersUrl;
+            }}
+          >
             Back to customers
           </a>
         </div>

@@ -45,6 +45,8 @@
   width: 100%;
   min-width: 0;
   justify-self: center;
+  position: relative;
+  z-index: 40;
 }
 
 .rev-desk-page-header-actions {
@@ -84,6 +86,81 @@
   background: #fff;
   border: 1px solid #d1d5db;
   overflow: hidden;
+}
+
+.rev-desk-search-field--suggest {
+  overflow: visible;
+}
+
+.rev-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  z-index: 80;
+  text-align: left;
+}
+
+.rev-suggest-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.rev-suggest-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.rev-suggest-card + .rev-suggest-card {
+  margin-top: 2px;
+}
+
+.rev-suggest-card:hover {
+  background: #f1f5f9;
+}
+
+.rev-suggest-card.is-selected {
+  background: #c9d3df;
+}
+
+.rev-suggest-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.rev-suggest-ref {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.rev-suggest-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
 }
 
 .rev-desk-search-field:focus-within {
@@ -908,6 +985,16 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
 
 .rev-desk-row-clickable {
   cursor: pointer;
+}
+
+.rev-desk-table tbody tr.rev-desk-row-clickable.is-selected,
+.rev-desk-table tbody tr.rev-desk-row-clickable.is-selected td {
+  background: #c9d3df !important;
+}
+
+.rev-desk-table tbody tr.rev-desk-row-clickable.is-selected:hover,
+.rev-desk-table tbody tr.rev-desk-row-clickable.is-selected:hover td {
+  background: #b8c4d2 !important;
 }
 
 .rev-desk-row-clickable:focus-visible {

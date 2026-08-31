@@ -301,6 +301,9 @@ function pettyCashRenderReactPage(string $reactPage, string $pageTitle, array $c
         . "\n" . '<script>window.__PETTY_CASH_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
         . 'window.__PETTY_CASH_PAGE__ = ' . json_encode($reactPage, JSON_UNESCAPED_SLASHES) . ';'
         . 'window.__PETTY_CASH_CFG__ = ' . json_encode($windowCfg, JSON_UNESCAPED_SLASHES) . ';</script>';
+    ob_start();
+    require dirname(__DIR__, 3) . '/includes/nav-back-script.php';
+    $pettyCashHeadMarkup .= "\n" . (string) ob_get_clean();
 
     require dirname(__DIR__) . '/includes/petty-cash-react-shell.php';
     exit;

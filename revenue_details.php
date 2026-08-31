@@ -11,9 +11,13 @@ if (!isFinance() && !isAdmin()) {
     exit();
 }
 
+$revenueListUrl = function_exists('company_url')
+    ? company_url('revenue_entries.php') . '?module=revenue'
+    : 'revenue_entries.php?module=revenue';
+
 $entryId = (int)($_GET['id'] ?? 0);
 if ($entryId <= 0) {
-    header('Location: revenue_entries.php?error=invalid_id');
+    header('Location: ' . $revenueListUrl . '&error=invalid_id');
     exit();
 }
 
@@ -36,7 +40,7 @@ $stmt->execute([$entryId]);
 $entry = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$entry) {
-    header('Location: revenue_entries.php?error=not_found');
+    header('Location: ' . $revenueListUrl . '&error=not_found');
     exit();
 }
 
@@ -412,6 +416,7 @@ if (!empty($entry['updated_at'])) {
             .rd-detail-grid { grid-template-columns: 1fr; }
         }
     </style>
+    <?php require __DIR__ . '/includes/nav-back-script.php'; ?>
 </head>
 <body class="dashboard rev-det-page">
 <?php require __DIR__ . '/includes/header_employee.php'; ?>
@@ -426,7 +431,7 @@ if (!empty($entry['updated_at'])) {
 
 <div class="rd-page-header">
     <div class="rd-title-wrap">
-        <div class="rd-breadcrumb"><a href="revenue_entries.php">Revenue Entries</a> <i class="fas fa-chevron-right mx-1"></i> <?= h($voucherId) ?></div>
+        <div class="rd-breadcrumb"><a href="<?= htmlspecialchars($revenueListUrl) ?>" class="erp-nav-back-link">Revenue Entries</a> <i class="fas fa-chevron-right mx-1"></i> <?= h($voucherId) ?></div>
         <h1>Revenue Entry Details <span class="<?= h($titleStatusClass) ?>"><?= h($titleStatusLabel) ?></span></h1>
         <p class="rd-subtitle">View and manage the details of this revenue entry</p>
     </div>
@@ -621,7 +626,7 @@ if (!empty($entry['updated_at'])) {
         <a href="revenue_record_payment.php?id=<?= (int) $entryId ?>" class="rd-btn rd-btn-success"><i class="fas fa-wallet"></i> Record Payment</a>
     </div>
 </div>
-<a href="revenue_entries.php" class="rd-back-link"><i class="fas fa-arrow-left me-2"></i>Back to Revenue Entries</a>
+<a href="<?= htmlspecialchars($revenueListUrl) ?>" class="rd-back-link erp-nav-back-link"><i class="fas fa-arrow-left me-2"></i>Back to Revenue Entries</a>
 
 </div>
 </div>

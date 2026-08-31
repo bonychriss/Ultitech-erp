@@ -149,8 +149,20 @@ export default function PettyCashVoucherViewPage() {
         </a>
         <div className="pc-voucher-view__topbar-right">
           <PettyCashStatusBadge status={v.status} isPosted={v.is_posted} />
-          <a href={deskPageUrl('index.php')} className="exp-desk-action-link" style={{ fontSize: '0.8125rem' }}>
-            Dashboard
+          <a
+            href={deskPageUrl('index.php')}
+            className="exp-desk-action-link"
+            style={{ fontSize: '0.8125rem' }}
+            onClick={(e) => {
+              e.preventDefault();
+              const href = deskPageUrl('index.php');
+              if (window.erpNavBack && typeof window.erpNavBack.go === 'function') {
+                if (window.erpNavBack.go(href)) return;
+              }
+              window.location.href = href;
+            }}
+          >
+            Back
           </a>
         </div>
       </div>

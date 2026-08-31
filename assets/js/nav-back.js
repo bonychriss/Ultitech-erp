@@ -131,7 +131,9 @@
 
   if (global.document) {
     global.document.addEventListener('click', function (e) {
-      var a = e.target && e.target.closest ? e.target.closest('a.vv-breadcrumb-link') : null;
+      var a = e.target && e.target.closest
+        ? e.target.closest('a.vv-breadcrumb-link, a.erp-nav-back-link')
+        : null;
       if (!a || e.defaultPrevented || e.button !== 0) return;
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       if (!global.erpNavBack) return;

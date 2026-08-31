@@ -65,6 +65,7 @@ $GLOBALS['_erp_header_style_linked'] = false;
     <script>
         window.__DELIVERIES_CFG__ = <?= json_encode($dlvConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     </script>
+    <?php require dirname($deliveriesRoot) . '/includes/nav-back-script.php'; ?>
 </head>
 <body class="dashboard page-dlv-dashboard">
 <?php
@@ -216,6 +217,7 @@ body.page-dlv-dashboard .employee-header--deliveries .header-notif-bell-btn {
     }
     body.page-dlv-dashboard .employee-header--deliveries .dlv-header-search-mount {
         width: 100%;
+        overflow: visible;
     }
     body.page-dlv-dashboard .employee-header--deliveries .dlv-header-search-mount .dlv-search-field {
         position: relative;
@@ -225,7 +227,7 @@ body.page-dlv-dashboard .employee-header--deliveries .header-notif-bell-btn {
         border-radius: 9999px;
         background: #fff;
         border: 1px solid #e2e8f0;
-        overflow: hidden;
+        overflow: visible;
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
     body.page-dlv-dashboard .employee-header--deliveries .dlv-header-search-mount .dlv-search-field:focus-within {

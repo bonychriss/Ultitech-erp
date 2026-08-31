@@ -335,9 +335,11 @@ function revenue_payment_process(PDO $pdo, array $post, ?array $files = null): a
 
         $pdo->commit();
 
-        $listUrl = function_exists('app_url')
-            ? app_url('/revenue_entries.php?module=revenue&success=' . urlencode('Payment recorded successfully'))
-            : '/revenue_entries.php?module=revenue&success=' . urlencode('Payment recorded successfully');
+        $listUrl = function_exists('revenue_desk_list_url')
+            ? revenue_desk_list_url(['success' => 'Payment recorded successfully'])
+            : (function_exists('company_url')
+                ? company_url('revenue_entries.php') . '?module=revenue&success=' . urlencode('Payment recorded successfully')
+                : '/revenue_entries.php?module=revenue&success=' . urlencode('Payment recorded successfully'));
 
         return [
             'ok' => true,

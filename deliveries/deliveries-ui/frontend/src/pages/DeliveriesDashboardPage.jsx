@@ -102,6 +102,10 @@ const MONTH_LABELS = {
   '09': 'September', '10': 'October', '11': 'November', '12': 'December',
 }
 
+function sameId(a, b) {
+  return Number(a) > 0 && Number(a) === Number(b)
+}
+
 function hasAdvancedFilters(f) {
   if (f.status && f.status !== 'all') return true
   if (f.from_date) return true
@@ -110,21 +114,96 @@ function hasAdvancedFilters(f) {
   return false
 }
 
+function readListStateFromUrl() {
+  if (typeof window === 'undefined') {
+    return { search: '', selectedId: 0, filters: { ...EMPTY_FILTERS } }
+  }
+  const p = new URLSearchParams(window.location.search)
+  return {
+    search: p.get('q') || '',
+    selectedId: Number(p.get('sel') || 0) || 0,
+    filters: {
+      status: p.get('status') || 'all',
+      from_date: p.get('from_date') || '',
+      to_date: p.get('to_date') || '',
+      month: p.get('month') || 'all',
+    },
+  }
+}
+
+function writeListStateToUrl(search, filters, selectedId) {
+  if (typeof window === 'undefined' || !window.history || typeof window.history.replaceState !== 'function') return
+  const url = new URL(window.location.href)
+  const setOrDel = (key, value) => {
+    const v = String(value || '').trim()
+    if (v && v !== 'all') url.searchParams.set(key, v)
+    else url.searchParams.delete(key)
+  }
+  setOrDel('q', search)
+  setOrDel('status', filters && filters.status)
+  setOrDel('from_date', filters && filters.from_date)
+  setOrDel('to_date', filters && filters.to_date)
+  setOrDel('month', filters && filters.month)
+  setOrDel('sel', selectedId ? String(selectedId) : '')
+  const next = url.pathname + url.search + url.hash
+  const cur = window.location.pathname + window.location.search + window.location.hash
+  if (next !== cur) {
+    window.history.replaceState(window.history.state, '', next)
+  }
+}
+
+let consumedRestore
+function takeRestoredListState() {
+  if (consumedRestore !== undefined) return consumedRestore
+  consumedRestore = null
+  if (typeof window === 'undefined' || !window.erpNavBack || typeof window.erpNavBack.consumeRestore !== 'function') {
+    return null
+  }
+  const restored = window.erpNavBack.consumeRestore()
+  consumedRestore = restored && restored.state ? restored.state : null
+  return consumedRestore
+}
+
 export default function DeliveriesDashboardPage() {
   const initial = CFG.data || {}
+  const restoredList = takeRestoredListState()
+  const urlList = readListStateFromUrl()
   const [data, setData] = useState(initial)
   const [loading, setLoading] = useState(!initial.stats)
   const [flash, setFlash] = useState(initial.flash || null)
   const [toast, setToast] = useState(null)
-  const [searchInput, setSearchInput] = useState('')
+  const [searchInput, setSearchInput] = useState(() => (
+    restoredList && typeof restoredList.search === 'string' ? restoredList.search : urlList.search
+  ))
   const [aiLoading, setAiLoading] = useState(false)
-  const [aiNote, setAiNote] = useState('')
+  const [aiNote, setAiNote] = useState(() => (
+    restoredList && typeof restoredList.note === 'string' ? restoredList.note : ''
+  ))
   const [activeKpiTrace, setActiveKpiTrace] = useState(null)
-  const [filters, setFilters] = useState(EMPTY_FILTERS)
-  const [draftFilters, setDraftFilters] = useState(EMPTY_FILTERS)
+  const [filters, setFilters] = useState(() => (
+    restoredList && restoredList.filters
+      ? { ...EMPTY_FILTERS, ...restoredList.filters }
+      : { ...EMPTY_FILTERS, ...urlList.filters }
+  ))
+  const [draftFilters, setDraftFilters] = useState(() => (
+    restoredList && restoredList.filters
+      ? { ...EMPTY_FILTERS, ...restoredList.filters }
+      : { ...EMPTY_FILTERS, ...urlList.filters }
+  ))
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [filterPanelStyle, setFilterPanelStyle] = useState(null)
   const [suggestOpen, setSuggestOpen] = useState(false)
+  const [highlightedId, setHighlightedId] = useState(() => {
+    const fromRestore = restoredList && restoredList.selectedId
+    const fromUrl = urlList.selectedId
+    let fromStore = 0
+    try {
+      fromStore = Number(sessionStorage.getItem('dlv.lastSelectedId') || 0) || 0
+    } catch {
+      fromStore = 0
+    }
+    return Number(fromRestore || fromUrl || fromStore || 0) || 0
+  })
   const [searchOpen, setSearchOpen] = useState(false)
   const [headerSearchMount, setHeaderSearchMount] = useState(null)
   const toastTimer = useRef(null)
@@ -173,6 +252,38 @@ export default function DeliveriesDashboardPage() {
 
   useEffect(() => {
     setHeaderSearchMount(document.getElementById('dlv-header-search-mount'))
+  }, [])
+
+  useEffect(() => {
+    writeListStateToUrl(searchInput, filters, highlightedId)
+  }, [searchInput, filters, highlightedId])
+
+  useEffect(() => {
+    if (!highlightedId) return undefined
+    const timer = window.setTimeout(() => {
+      const el = document.querySelector(`[data-delivery-id="${highlightedId}"]`)
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
+    }, 80)
+    return () => window.clearTimeout(timer)
+  }, [highlightedId, data])
+
+  useEffect(() => {
+    function syncSelected() {
+      const fromUrl = readListStateFromUrl().selectedId
+      let fromStore = 0
+      try {
+        fromStore = Number(sessionStorage.getItem('dlv.lastSelectedId') || 0) || 0
+      } catch {
+        fromStore = 0
+      }
+      const next = Number(fromUrl || fromStore || 0) || 0
+      if (next) setHighlightedId(next)
+    }
+    window.addEventListener('pageshow', syncSelected)
+    syncSelected()
+    return () => window.removeEventListener('pageshow', syncSelected)
   }, [])
 
   useEffect(() => {
@@ -413,11 +524,11 @@ export default function DeliveriesDashboardPage() {
           value={searchInput}
           autoComplete="off"
           onChange={(e) => onSearchChange(e.target.value)}
-          onFocus={() => showSuggestions && suggestions.length > 0 && searchInput.trim() !== '' && setSuggestOpen(true)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
-              runAiSearch()
+              setSuggestOpen(false)
+              e.currentTarget.blur()
             }
           }}
           aria-label="Search deliveries"
@@ -443,8 +554,9 @@ export default function DeliveriesDashboardPage() {
                   <a
                     key={order.id}
                     href={`${urls.orderDetails || 'order_details.php'}&order_id=${order.id}`}
-                    className="dlv-suggest-card"
-                    onMouseDown={(e) => e.preventDefault()}
+                    data-delivery-id={order.id}
+                    className={`dlv-suggest-card${sameId(highlightedId, order.id) ? ' is-selected' : ''}`}
+                    onMouseDown={(e) => { e.preventDefault(); openOrder(order.id) }}
                   >
                     <div className="dlv-suggest-top">
                       <span className="dlv-suggest-ref">{order.delivery_number || '-'}</span>
@@ -468,17 +580,46 @@ export default function DeliveriesDashboardPage() {
   function onSearchChange(value) {
     setSearchInput(value)
     setSuggestOpen(value.trim() !== '')
+    setHighlightedId(0)
+    try { sessionStorage.removeItem('dlv.lastSelectedId') } catch { /* ignore */ }
     if (aiNote) setAiNote('')
+  }
+
+  function openOrder(id) {
+    const selected = Number(id) || 0
+    setHighlightedId(selected)
+    const state = {
+      search: searchInput,
+      filters,
+      note: aiNote,
+      selectedId: selected,
+    }
+    writeListStateToUrl(searchInput, filters, selected)
+    try {
+      sessionStorage.setItem('dlv.lastSelectedId', String(selected))
+    } catch { /* ignore */ }
+    if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.push === 'function') {
+      window.erpNavBack.push({
+        href: window.location.href,
+        state,
+      })
+    }
+    const base = urls.orderDetails || 'order_details.php'
+    const dest = new URL(base, window.location.href)
+    dest.searchParams.set('order_id', String(id))
+    window.location.href = dest.href
   }
 
   async function runAiSearch() {
     const query = searchInput.trim()
     if (aiLoading) return
+    setSuggestOpen(false)
+    const searchEl = searchWrapRef.current?.querySelector('.dlv-search-input')
+    if (searchEl && typeof searchEl.blur === 'function') searchEl.blur()
     if (query === '') {
       setAiNote('Type what you are looking for, then click the sparkle icon.')
       return
     }
-    setSuggestOpen(false)
     setAiLoading(true)
     setAiNote('')
     try {
@@ -718,12 +859,12 @@ export default function DeliveriesDashboardPage() {
                 {filteredOrders.map((order, idx) => {
                   const pill = statusPill(order.status)
                   const type = typePill(order.delivery_type)
-                  const detailsUrl = `${urls.orderDetails || 'order_details.php'}&order_id=${order.id}`
                   return (
                     <tr
                       key={order.id}
-                      className="dlv-row"
-                      onClick={() => { window.location.href = detailsUrl }}
+                      data-delivery-id={order.id}
+                      className={`dlv-row${sameId(highlightedId, order.id) ? ' is-selected' : ''}`}
+                      onClick={() => openOrder(order.id)}
                     >
                       <td className="dlv-sn">{idx + 1}</td>
                       <td className="dlv-ref">{order.delivery_number || '-'}</td>

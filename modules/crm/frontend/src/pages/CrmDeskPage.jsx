@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import CustomerContactForm from '../components/CustomerContactForm.jsx';
 import '../components/customer-form.css';
 import { useBottomSheet } from '../hooks/useBottomSheet.js';
@@ -134,7 +134,74 @@ function IconInbox() {
   );
 }
 
-function KpiCard({ label, value, icon: Icon, tone, helper, href }) {
+function sameId(a, b) {
+  return Number(a) > 0 && Number(a) === Number(b);
+}
+
+function contactSearchText(row) {
+  return [
+    row.id,
+    row.organization,
+    row.name,
+    row.email,
+    row.phone,
+    row.source,
+    row.status,
+    statusLabel(row.status),
+  ].join(' ').toLowerCase();
+}
+
+function matchesSearch(row, query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (q === '') return true;
+  const text = contactSearchText(row);
+  return q.split(/\s+/).every((term) => text.includes(term));
+}
+
+function readListStateFromUrl() {
+  if (typeof window === 'undefined') {
+    return { search: '', selectedId: 0, status: 'all' };
+  }
+  const p = new URLSearchParams(window.location.search);
+  return {
+    search: p.get('q') || '',
+    selectedId: Number(p.get('sel') || 0) || 0,
+    status: p.get('status') || 'all',
+  };
+}
+
+function writeListStateToUrl(search, status, selectedId) {
+  if (typeof window === 'undefined' || !window.history || typeof window.history.replaceState !== 'function') return;
+  const url = new URL(window.location.href);
+  const setOrDel = (key, value) => {
+    const v = String(value || '').trim();
+    if (v) url.searchParams.set(key, v);
+    else url.searchParams.delete(key);
+  };
+  setOrDel('q', search);
+  if (status && status !== 'all') url.searchParams.set('status', status);
+  else url.searchParams.delete('status');
+  setOrDel('sel', selectedId ? String(selectedId) : '');
+  const next = url.pathname + url.search + url.hash;
+  const cur = window.location.pathname + window.location.search + window.location.hash;
+  if (next !== cur) {
+    window.history.replaceState(window.history.state, '', next);
+  }
+}
+
+let consumedRestore;
+function takeRestoredListState() {
+  if (consumedRestore !== undefined) return consumedRestore;
+  consumedRestore = null;
+  if (typeof window === 'undefined' || !window.erpNavBack || typeof window.erpNavBack.consumeRestore !== 'function') {
+    return null;
+  }
+  const restored = window.erpNavBack.consumeRestore();
+  consumedRestore = restored && restored.state ? restored.state : null;
+  return consumedRestore;
+}
+
+function KpiCard({ label, value, icon: Icon, tone, helper, href, onClick }) {
   const inner = (
     <>
       <div className={`crm-desk-kpi-icon crm-desk-kpi-icon--${tone}`}>
@@ -149,7 +216,7 @@ function KpiCard({ label, value, icon: Icon, tone, helper, href }) {
   );
   if (href) {
     return (
-      <a className="crm-desk-kpi-card crm-desk-kpi-card--link" href={href}>
+      <a className="crm-desk-kpi-card crm-desk-kpi-card--link" href={href} onClick={onClick}>
         {inner}
       </a>
     );
@@ -260,15 +327,35 @@ function ContactModal({
 
 export default function CrmDeskPage() {
   const boot = getBootData();
+  const restoredList = takeRestoredListState();
+  const urlList = readListStateFromUrl();
+  const initialSearch = restoredList && typeof restoredList.search === 'string'
+    ? restoredList.search
+    : urlList.search;
+  const initialStatus = (restoredList && restoredList.filters && restoredList.filters.status)
+    || urlList.status
+    || 'all';
   const [contacts, setContacts] = useState(() => boot.contacts || []);
   const [stats, setStats] = useState(() => boot.stats || {});
   const [links] = useState(() => boot.links || {});
   const [options] = useState(() => boot.options || {});
   const [statuses] = useState(() => boot.statuses || []);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [draftStatusFilter, setDraftStatusFilter] = useState('all');
+  const [search, setSearch] = useState(initialSearch);
+  const [draftSearch, setDraftSearch] = useState(initialSearch);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [draftStatusFilter, setDraftStatusFilter] = useState(initialStatus);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [highlightedId, setHighlightedId] = useState(() => {
+    const fromRestore = restoredList && restoredList.selectedId;
+    let fromStore = 0;
+    try {
+      fromStore = Number(sessionStorage.getItem('crm.lastSelectedId') || 0) || 0;
+    } catch {
+      fromStore = 0;
+    }
+    return Number(fromRestore || urlList.selectedId || fromStore || 0) || 0;
+  });
   const filterWrapRef = useRef(null);
   const [form, setForm] = useState(() => emptyFormFromBoot(boot));
   const [modalOpen, setModalOpen] = useState(false);
@@ -319,13 +406,84 @@ export default function CrmDeskPage() {
   }, [search, statusFilter]);
 
   useEffect(() => {
+    const next = draftSearch.trim();
+    if (next === search.trim()) return undefined;
+    const timer = setTimeout(() => setSearch(next), 280);
+    return () => clearTimeout(timer);
+  }, [draftSearch, search]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       loadContacts(search, statusFilter);
-    }, 250);
+    }, 50);
     return () => clearTimeout(timer);
   }, [search, statusFilter, loadContacts]);
 
+  useEffect(() => {
+    writeListStateToUrl(draftSearch || search, statusFilter, highlightedId);
+  }, [draftSearch, search, statusFilter, highlightedId]);
+
+  useEffect(() => {
+    if (!suggestOpen) return undefined;
+    function onClick(e) {
+      if (!e.target.closest?.('.crm-desk-search-field')) setSuggestOpen(false);
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [suggestOpen]);
+
+  useEffect(() => {
+    if (!highlightedId) return undefined;
+    const timer = window.setTimeout(() => {
+      const el = document.querySelector(`[data-crm-contact-id="${highlightedId}"]`);
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [highlightedId, contacts]);
+
   const filtersActive = statusFilter !== 'all';
+
+  function rememberList(id) {
+    const selected = Number(id) || 0;
+    setHighlightedId(selected);
+    writeListStateToUrl(draftSearch || search, statusFilter, selected);
+    try {
+      sessionStorage.setItem('crm.lastSelectedId', String(selected));
+    } catch { /* ignore */ }
+    if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.push === 'function') {
+      window.erpNavBack.push({
+        href: window.location.href,
+        state: {
+          search: draftSearch || search,
+          filters: { status: statusFilter },
+          selectedId: selected,
+        },
+      });
+    }
+  }
+
+  function applySearch() {
+    const next = draftSearch.trim();
+    setSearch(next);
+    setSuggestOpen(false);
+  }
+
+  function onSearchChange(value) {
+    setDraftSearch(value);
+    setSuggestOpen(value.trim() !== '');
+    setHighlightedId(0);
+    try { sessionStorage.removeItem('crm.lastSelectedId'); } catch { /* ignore */ }
+  }
+
+  function clearSearch() {
+    setDraftSearch('');
+    setSearch('');
+    setSuggestOpen(false);
+    setHighlightedId(0);
+    try { sessionStorage.removeItem('crm.lastSelectedId'); } catch { /* ignore */ }
+  }
 
   function applyFilters() {
     setStatusFilter(draftStatusFilter);
@@ -340,7 +498,7 @@ export default function CrmDeskPage() {
 
   function submitSearch(e) {
     e.preventDefault();
-    loadContacts(search, statusFilter);
+    applySearch();
   }
 
   function closeModal() {
@@ -358,6 +516,7 @@ export default function CrmDeskPage() {
   }
 
   function goToContactView(contact) {
+    rememberList(contact.id);
     window.location.href = buildContactViewUrl(contact.id, links);
   }
 
@@ -392,6 +551,12 @@ export default function CrmDeskPage() {
     }
   }
 
+  const visibleContacts = useMemo(
+    () => contacts.filter((row) => matchesSearch(row, draftSearch)),
+    [contacts, draftSearch],
+  );
+  const suggestions = useMemo(() => visibleContacts.slice(0, 6), [visibleContacts]);
+
   return (
     <div className="crm-desk-page">
       <div className="crm-desk-page-header">
@@ -402,10 +567,59 @@ export default function CrmDeskPage() {
               type="search"
               className="crm-desk-search-input"
               placeholder="Search name, company, email, phone..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={draftSearch}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  applySearch();
+                  e.currentTarget.blur();
+                }
+                if (e.key === 'Escape') clearSearch();
+              }}
               aria-label="Search customers"
+              autoComplete="off"
             />
+            {draftSearch.trim() !== '' ? (
+              <button
+                type="button"
+                className="crm-desk-search-clear"
+                onClick={clearSearch}
+                aria-label="Clear search"
+              >
+                <IconClose />
+              </button>
+            ) : null}
+            {suggestOpen && draftSearch.trim() !== '' ? (
+              <div className="crm-suggestions">
+                {suggestions.length === 0 ? (
+                  <div className="crm-suggest-empty">No matching customers</div>
+                ) : (
+                  suggestions.map((row) => (
+                    <button
+                      key={row.id}
+                      type="button"
+                      data-crm-contact-id={row.id}
+                      className={`crm-suggest-card${sameId(highlightedId, row.id) ? ' is-selected' : ''}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setSuggestOpen(false);
+                        goToContactView(row);
+                      }}
+                    >
+                      <div className="crm-suggest-top">
+                        <span className="crm-suggest-ref">{row.organization || row.name || `#${row.id}`}</span>
+                        <span className={statusBadgeClass(row.status)}>{statusLabel(row.status)}</span>
+                      </div>
+                      <div className="crm-suggest-meta">
+                        <span>{row.name || row.email || '—'}</span>
+                        <span>{row.phone || ''}</span>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
           </div>
         </form>
 
@@ -475,10 +689,11 @@ export default function CrmDeskPage() {
           icon={IconTarget}
           tone="indigo"
           href={links.prospectsList || '?module=crm&tab=prospects'}
+          onClick={() => rememberList(highlightedId)}
         />
         <KpiCard
           label="listed now"
-          value={contacts.length}
+          value={visibleContacts.length}
           icon={IconUserCheck}
           tone="teal"
           helper={loading ? 'loading...' : 'matching current filters'}
@@ -488,13 +703,21 @@ export default function CrmDeskPage() {
       <section className="crm-desk-results" id="my-clients">
         <div className="crm-desk-results-head">
           <span className="crm-desk-results-count">
-            {contacts.length} {contacts.length === 1 ? 'result' : 'results'}
+            {visibleContacts.length} {visibleContacts.length === 1 ? 'result' : 'results'}
           </span>
         </div>
 
-        {contacts.length === 0 && !loading ? (
+        {visibleContacts.length === 0 && !loading ? (
+          draftSearch.trim() !== '' ? (
+            <div className="crm-desk-empty">
+              <IconInbox />
+              <p className="crm-desk-empty-title">No matching customers</p>
+              <p className="crm-desk-empty-sub">Try a different search or clear filters.</p>
+            </div>
+          ) : (
           <ContactsEmptyState onAddContact={startNewContact} />
-        ) : contacts.length === 0 ? (
+          )
+        ) : visibleContacts.length === 0 ? (
           <div className="crm-desk-empty">
             <IconInbox />
             <p className="crm-desk-empty-title">Loading customers...</p>
@@ -521,10 +744,19 @@ export default function CrmDeskPage() {
                 </tr>
               </thead>
               <tbody>
-                {contacts.map((contact) => (
+                {visibleContacts.map((contact) => (
                   <tr
                     key={contact.id}
+                    data-crm-contact-id={contact.id}
+                    className={sameId(highlightedId, contact.id) ? 'is-selected' : ''}
+                    tabIndex={0}
                     onClick={() => goToContactView(contact)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        goToContactView(contact);
+                      }
+                    }}
                   >
                     <td className="crm-desk-col-company">
                       <span className="crm-desk-name crm-desk-cell-text">

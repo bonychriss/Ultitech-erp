@@ -49,8 +49,12 @@ body.page-exp-desk textarea {
     pointer-events: none;
   }
 
+  .exp-desk-page > .exp-desk-page-header .exp-desk-page-header-search--desktop {
+    z-index: 30;
+  }
   .exp-desk-page > .exp-desk-page-header .exp-desk-page-header-search--desktop .exp-desk-search-field {
     pointer-events: auto;
+    overflow: visible;
   }
 
   .exp-desk-page > .exp-desk-page-header .exp-desk-page-header-actions {
@@ -136,6 +140,90 @@ body.page-exp-desk textarea {
   font-size: 0.7rem;
   font-weight: 600;
   color: #64748b;
+}
+
+.exp-desk-search-field--suggest {
+  overflow: visible !important;
+}
+
+.pc-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  z-index: 80;
+  text-align: left;
+}
+
+.pc-suggest-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.pc-suggest-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+  color: inherit;
+}
+
+.pc-suggest-card + .pc-suggest-card {
+  margin-top: 2px;
+}
+
+.pc-suggest-card:hover {
+  background: #f1f5f9;
+}
+
+.pc-suggest-card.is-selected {
+  background: #c9d3df;
+}
+
+.pc-suggest-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.pc-suggest-ref {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.pc-suggest-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.exp-desk-table tbody tr.exp-desk-row-clickable.is-selected {
+  background: #c9d3df !important;
+}
+
+.exp-desk-table tbody tr.exp-desk-row-clickable.is-selected:hover {
+  background: #b8c4d2 !important;
 }
 
 a.pc-voucher-card__btn,

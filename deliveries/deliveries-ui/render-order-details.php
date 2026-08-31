@@ -97,6 +97,7 @@ $GLOBALS['_erp_header_style_linked'] = false;
             box-shadow: none !important;
         }
     </style>
+    <?php require dirname($deliveriesRoot) . '/includes/nav-back-script.php'; ?>
 </head>
 <body class="dashboard">
 <?php

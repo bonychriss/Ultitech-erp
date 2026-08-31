@@ -92,5 +92,22 @@ function revenueDeskShellHeadExtras(): string
         }
     }
 
+    ob_start();
+    require dirname(__DIR__, 3) . '/includes/nav-back-script.php';
+    $parts[] = trim((string) ob_get_clean());
+
     return implode("\n    ", $parts);
+}
+
+function revenue_desk_list_url(array $query = []): string
+{
+    $params = array_merge(['module' => 'revenue'], $query);
+    $qs = http_build_query($params);
+    if (function_exists('company_url')) {
+        return rtrim(company_url('revenue_entries.php'), '/') . '?' . $qs;
+    }
+    if (function_exists('app_url')) {
+        return app_url('/revenue_entries.php?' . $qs);
+    }
+    return 'revenue_entries.php?' . $qs;
 }

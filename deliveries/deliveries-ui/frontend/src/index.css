@@ -451,6 +451,9 @@
 }
 .dlv-suggest-card + .dlv-suggest-card { margin-top: 2px; }
 .dlv-suggest-card:hover { background: #f1f5f9; }
+.dlv-suggest-card.is-selected {
+  background: #c9d3df;
+}
 .dlv-suggest-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
 .dlv-suggest-ref { font-size: 13px; font-weight: 700; color: #1e293b; }
 .dlv-suggest-driver { font-size: 13px; color: #334155; margin-bottom: 3px; }
@@ -780,6 +783,12 @@
 .dlv-table tbody tr:nth-child(even) td { background: #f1f5f9; }
 .dlv-table tbody tr.dlv-row { cursor: pointer; }
 .dlv-table tbody tr.dlv-row:hover td { background: #e2e8f0 !important; }
+.dlv-table tbody tr.dlv-row.is-selected td {
+  background: #c9d3df !important;
+}
+.dlv-table tbody tr.dlv-row.is-selected:hover td {
+  background: #b8c4d2 !important;
+}
 .dlv-table tbody tr.dlv-row--highlight td {
   background: #ecfdf5 !important;
   box-shadow: inset 3px 0 0 #10b981;

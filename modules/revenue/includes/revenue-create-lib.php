@@ -405,9 +405,11 @@ function revenue_build_create_init(PDO $pdo): array
         }
     }
 
-    $listUrl = function_exists('app_url')
-        ? app_url('/revenue_entries.php?module=revenue')
-        : '/revenue_entries.php?module=revenue';
+    $listUrl = function_exists('revenue_desk_list_url')
+        ? revenue_desk_list_url()
+        : (function_exists('company_url')
+            ? company_url('revenue_entries.php') . '?module=revenue'
+            : '/revenue_entries.php?module=revenue');
     $createCustomerUrl = function_exists('app_url')
         ? app_url('/revenue_customer_create.php?module=revenue')
         : '/revenue_customer_create.php?module=revenue';
@@ -667,10 +669,13 @@ function revenue_process_create_entry(PDO $pdo, array $post, ?array $file = null
 
         $pdo->commit();
 
-        $listUrl = function_exists('app_url')
-            ? app_url('/revenue_entries.php?module=revenue')
-            : '/revenue_entries.php?module=revenue';
-        $redirect = $listUrl . '&success=' . rawurlencode('Entry created successfully (' . $voucherNumber . ')');
+        $listUrl = function_exists('revenue_desk_list_url')
+            ? revenue_desk_list_url()
+            : (function_exists('company_url')
+                ? company_url('revenue_entries.php') . '?module=revenue'
+                : '/revenue_entries.php?module=revenue');
+        $redirect = $listUrl . (strpos($listUrl, '?') !== false ? '&' : '?')
+            . 'success=' . rawurlencode('Entry created successfully (' . $voucherNumber . ')');
 
         return [
             'ok' => true,

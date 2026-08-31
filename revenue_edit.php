@@ -6,10 +6,14 @@ if (!isFinance() && !isAdmin()) {
     exit();
 }
 
+$revenueListUrl = function_exists('company_url')
+    ? company_url('revenue_entries.php') . '?module=revenue'
+    : 'revenue_entries.php?module=revenue';
+
 // Get ID
 $id = $_GET['id'] ?? 0;
 if (!$id) {
-    header("Location: revenue_entries.php?module=revenue&error=Invalid ID");
+    header("Location: " . $revenueListUrl . "&error=" . urlencode('Invalid ID'));
     exit;
 }
 
@@ -20,12 +24,12 @@ try {
     $entry = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$entry) {
-        header("Location: revenue_entries.php?module=revenue&error=Entry not found");
+        header("Location: " . $revenueListUrl . "&error=" . urlencode('Entry not found'));
         exit;
     }
 
     if (!empty($entry['source_invoice_id']) && (int) $entry['source_invoice_id'] > 0) {
-        header('Location: revenue_entries.php?module=revenue&error=' . urlencode('Sales invoices cannot be edited here. Update them from Sales.'));
+        header('Location: ' . $revenueListUrl . '&error=' . urlencode('Sales invoices cannot be edited here. Update them from Sales.'));
         exit;
     }
 
@@ -33,7 +37,7 @@ try {
     $isRatified = ($entry['approval_status'] === 'Ratified' || $entry['approval_status'] === 'Approved');
     
     if ($isRatified && !isAdmin()) {
-        header("Location: revenue_entries.php?module=revenue&error=This entry is locked and can only be edited by an Admin.");
+        header("Location: " . $revenueListUrl . "&error=" . urlencode('This entry is locked and can only be edited by an Admin.'));
         exit;
     }
 
@@ -208,6 +212,7 @@ $pageTitle = "Edit Revenue Entry";
             }
         }
     </style>
+    <?php require __DIR__ . '/includes/nav-back-script.php'; ?>
 </head>
 <body class="revenue-page">
 
@@ -224,7 +229,7 @@ $pageTitle = "Edit Revenue Entry";
             <?php endif; ?>
         </h1>
         <p style="margin:0.25rem 0 0 0; color:#64748b; font-size:0.9rem;">
-            <a href="revenue_entries.php?module=revenue" style="color:#2563eb; text-decoration:none; display:inline-flex; align-items:center; gap:0.5rem; font-weight: 500;">
+            <a href="<?= htmlspecialchars($revenueListUrl) ?>" class="erp-nav-back-link" style="color:#2563eb; text-decoration:none; display:inline-flex; align-items:center; gap:0.5rem; font-weight: 500;">
                 <i class="fas fa-arrow-left" style="font-size: 0.8rem;"></i> Back to Dashboard
             </a>
         </p>
@@ -299,7 +304,7 @@ $pageTitle = "Edit Revenue Entry";
                 </div>
                 
                 <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:2rem;">
-                    <a href="revenue_entries.php?module=revenue" class="rev-btn rev-btn-outline" style="min-width: 120px;">Cancel</a>
+                    <a href="<?= htmlspecialchars($revenueListUrl) ?>" class="rev-btn rev-btn-outline erp-nav-back-link" style="min-width: 120px;">Cancel</a>
                     <button type="submit" class="rev-btn rev-btn-primary" style="min-width: 160px; background: #059669;">
                         <i class="fas fa-save"></i> Update Entry
                     </button>

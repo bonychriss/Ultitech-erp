@@ -25,6 +25,8 @@
   width: 100%;
   min-width: 0;
   justify-self: center;
+  position: relative;
+  z-index: 40;
 }
 
 .crm-desk-page-header-actions {
@@ -60,7 +62,7 @@
 
 .crm-desk-search-input {
   width: 100%;
-  padding: 0.55rem 1rem 0.55rem 2.4rem;
+  padding: 0.55rem 2.5rem 0.55rem 2.4rem;
   font-size: 0.875rem;
   font-family: inherit;
   border: none !important;
@@ -75,6 +77,100 @@
   -webkit-appearance: none;
   appearance: none;
   display: none;
+}
+
+.crm-desk-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.crm-desk-search-clear:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.crm-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  z-index: 80;
+  text-align: left;
+}
+
+.crm-suggest-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.crm-suggest-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.crm-suggest-card + .crm-suggest-card {
+  margin-top: 2px;
+}
+
+.crm-suggest-card:hover {
+  background: #f1f5f9;
+}
+
+.crm-suggest-card.is-selected {
+  background: #c9d3df;
+}
+
+.crm-suggest-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.crm-suggest-ref {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.crm-suggest-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
 }
 
 .crm-desk-btn {
@@ -612,6 +708,16 @@
 
 .crm-desk-table tbody tr:hover {
   background: #fafafa;
+}
+
+.crm-desk-results .crm-desk-table tbody tr.is-selected,
+.crm-desk-results .crm-desk-table tbody tr.is-selected td {
+  background: #c9d3df !important;
+}
+
+.crm-desk-results .crm-desk-table tbody tr.is-selected:hover,
+.crm-desk-results .crm-desk-table tbody tr.is-selected:hover td {
+  background: #b8c4d2 !important;
 }
 
 .crm-desk-table tbody tr:last-child td {
@@ -2696,6 +2802,26 @@ html[data-theme="dark"] .crm-desk-filter-btn {
 }
 
 html[data-theme="dark"] .crm-desk-table tbody tr:hover {
+  background: #334155;
+}
+
+html[data-theme="dark"] .crm-desk-results .crm-desk-table tbody tr.is-selected,
+html[data-theme="dark"] .crm-desk-results .crm-desk-table tbody tr.is-selected td {
+  background: #475569 !important;
+}
+
+html[data-theme="dark"] .crm-desk-results .crm-desk-table tbody tr.is-selected:hover,
+html[data-theme="dark"] .crm-desk-results .crm-desk-table tbody tr.is-selected:hover td {
+  background: #64748b !important;
+}
+
+html[data-theme="dark"] .crm-suggestions {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .crm-suggest-card:hover,
+html[data-theme="dark"] .crm-suggest-card.is-selected {
   background: #334155;
 }
 

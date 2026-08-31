@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
@@ -46,6 +46,88 @@ function hasAdvancedFilters(activeFilters, defaults) {
   if ((activeFilters.date_from || '') !== (d.date_from || '')) return true;
   if ((activeFilters.date_to || '') !== (d.date_to || '')) return true;
   return false;
+}
+
+function sameId(a, b) {
+  return Number(a) > 0 && Number(a) === Number(b);
+}
+
+function entrySearchText(row) {
+  return [
+    row.id,
+    row.voucher_number,
+    row.customer_display,
+    row.customer_name,
+    row.customer_code_display,
+    row.type_label,
+    row.status_label,
+    row.description,
+    row.narration,
+    row.linked_invoice_number,
+  ].join(' ').toLowerCase();
+}
+
+function matchesSearch(row, query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (q === '') return true;
+  const text = entrySearchText(row);
+  return q.split(/\s+/).every((term) => text.includes(term));
+}
+
+function readListStateFromUrl() {
+  if (typeof window === 'undefined') {
+    return { search: '', selectedId: 0, filters: { ...emptyAdvancedFilters } };
+  }
+  const p = new URLSearchParams(window.location.search);
+  return {
+    search: p.get('q') || '',
+    selectedId: Number(p.get('sel') || 0) || 0,
+    filters: {
+      date_from: p.get('date_from') || '',
+      date_to: p.get('date_to') || '',
+      customer_id: p.get('customer_id') || '',
+      type: p.get('type') || '',
+      status: p.get('status') || '',
+      payment: p.get('payment') || '',
+    },
+  };
+}
+
+function writeListStateToUrl(search, filters, selectedId) {
+  if (typeof window === 'undefined' || !window.history || typeof window.history.replaceState !== 'function') return;
+  const url = new URL(window.location.href);
+  const setOrDel = (key, value) => {
+    const v = String(value || '').trim();
+    if (v) url.searchParams.set(key, v);
+    else url.searchParams.delete(key);
+  };
+  setOrDel('q', search);
+  setOrDel('status', filters && filters.status);
+  setOrDel('payment', filters && filters.payment);
+  setOrDel('type', filters && filters.type);
+  setOrDel('customer_id', filters && filters.customer_id);
+  setOrDel('date_from', filters && filters.date_from);
+  setOrDel('date_to', filters && filters.date_to);
+  setOrDel('sel', selectedId ? String(selectedId) : '');
+  url.searchParams.delete('success');
+  url.searchParams.delete('open_export');
+  const next = url.pathname + url.search + url.hash;
+  const cur = window.location.pathname + window.location.search + window.location.hash;
+  if (next !== cur) {
+    window.history.replaceState(window.history.state, '', next);
+  }
+}
+
+let consumedRestore;
+function takeRestoredListState() {
+  if (consumedRestore !== undefined) return consumedRestore;
+  consumedRestore = null;
+  if (typeof window === 'undefined' || !window.erpNavBack || typeof window.erpNavBack.consumeRestore !== 'function') {
+    return null;
+  }
+  const restored = window.erpNavBack.consumeRestore();
+  consumedRestore = restored && restored.state ? restored.state : null;
+  return consumedRestore;
 }
 
 function toInputDate(date) {
@@ -114,7 +196,7 @@ function isRowActionTarget(target) {
   );
 }
 
-function RevenueRowActionsMenu({ menu, onClose, onPay }) {
+function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember }) {
   if (!menu || typeof document === 'undefined') return null;
 
   const style = {
@@ -130,7 +212,10 @@ function RevenueRowActionsMenu({ menu, onClose, onPay }) {
         <a
           role="menuitem"
           href={deskPageUrl('revenue_edit.php', { id: menu.id })}
-          onClick={onClose}
+          onClick={() => {
+            onRemember?.(menu.id);
+            onClose();
+          }}
         >
           Edit
         </a>
@@ -155,12 +240,27 @@ function RevenueRowActionsMenu({ menu, onClose, onPay }) {
 }
 
 export default function RevenueDeskPage() {
+  const restoredList = takeRestoredListState();
+  const urlList = readListStateFromUrl();
   const [init, setInit] = useState(null);
   const [desk, setDesk] = useState(null);
   const [filters, setFilters] = useState(emptyFilters);
   const [draftFilters, setDraftFilters] = useState({ ...emptyAdvancedFilters });
-  const [draftSearch, setDraftSearch] = useState('');
+  const [draftSearch, setDraftSearch] = useState(() => (
+    restoredList && typeof restoredList.search === 'string' ? restoredList.search : urlList.search
+  ));
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [highlightedId, setHighlightedId] = useState(() => {
+    const fromRestore = restoredList && restoredList.selectedId;
+    let fromStore = 0;
+    try {
+      fromStore = Number(sessionStorage.getItem('rev.lastSelectedId') || 0) || 0;
+    } catch {
+      fromStore = 0;
+    }
+    return Number(fromRestore || urlList.selectedId || fromStore || 0) || 0;
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const skipFilterFetch = useRef(true);
@@ -201,7 +301,34 @@ export default function RevenueDeskPage() {
 
   function handleEntryRowClick(event, row) {
     if (isRowActionTarget(event.target)) return;
+    rememberList(row.id);
     setPreviewEntry(row);
+  }
+
+  function rememberList(id) {
+    const selected = Number(id) || 0;
+    setHighlightedId(selected);
+    writeListStateToUrl(draftSearch || filters.search, filters, selected);
+    try {
+      sessionStorage.setItem('rev.lastSelectedId', String(selected));
+    } catch { /* ignore */ }
+    if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.push === 'function') {
+      window.erpNavBack.push({
+        href: window.location.href,
+        state: {
+          search: draftSearch || filters.search,
+          filters: {
+            date_from: filters.date_from,
+            date_to: filters.date_to,
+            customer_id: filters.customer_id,
+            type: filters.type,
+            status: filters.status,
+            payment: filters.payment,
+          },
+          selectedId: selected,
+        },
+      });
+    }
   }
 
   function openKpiTrace(key) {
@@ -254,14 +381,20 @@ export default function RevenueDeskPage() {
         const urlStatus = urlParams?.get('status') || '';
         const urlPayment = urlParams?.get('payment') || '';
         const urlType = urlParams?.get('type') || '';
+        const urlQ = urlParams?.get('q') || (restoredList && typeof restoredList.search === 'string' ? restoredList.search : '') || '';
+        const restoredFilters = restoredList && restoredList.filters ? restoredList.filters : {};
         const initial = {
           ...emptyFilters,
-          date_from: defaults.date_from || '',
-          date_to: defaults.date_to || '',
-          status: urlStatus,
-          payment: urlPayment,
-          type: urlType,
+          date_from: urlParams?.get('date_from') || restoredFilters.date_from || defaults.date_from || '',
+          date_to: urlParams?.get('date_to') || restoredFilters.date_to || defaults.date_to || '',
+          status: urlStatus || restoredFilters.status || '',
+          payment: urlPayment || restoredFilters.payment || '',
+          type: urlType || restoredFilters.type || '',
+          customer_id: urlParams?.get('customer_id') || restoredFilters.customer_id || '',
+          search: urlQ,
         };
+        setDraftSearch(urlQ);
+        appliedSearchRef.current = urlQ.trim();
         setFilters(initial);
         setDraftFilters({
           date_from: initial.date_from,
@@ -399,6 +532,30 @@ export default function RevenueDeskPage() {
   }, [searchOpen, draftSearch, filters.search]);
 
   useEffect(() => {
+    writeListStateToUrl(draftSearch || filters.search, filters, highlightedId);
+  }, [draftSearch, filters, highlightedId]);
+
+  useEffect(() => {
+    if (!highlightedId) return undefined;
+    const timer = window.setTimeout(() => {
+      const el = document.querySelector(`[data-rev-entry-id="${highlightedId}"]`);
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [highlightedId, desk]);
+
+  useEffect(() => {
+    if (!suggestOpen) return undefined;
+    function onClick(e) {
+      if (!e.target.closest('.rev-desk-search-field')) setSuggestOpen(false);
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [suggestOpen]);
+
+  useEffect(() => {
     const next = draftSearch.trim();
     if (next === appliedSearchRef.current) return undefined;
     const timer = window.setTimeout(() => {
@@ -413,14 +570,25 @@ export default function RevenueDeskPage() {
   function applySearch() {
     const next = draftSearch.trim();
     appliedSearchRef.current = next;
+    setSuggestOpen(false);
     setFilters((current) => (
       current.search === next ? current : { ...current, search: next }
     ));
   }
 
+  function onSearchChange(value) {
+    setDraftSearch(value);
+    setSuggestOpen(value.trim() !== '');
+    setHighlightedId(0);
+    try { sessionStorage.removeItem('rev.lastSelectedId'); } catch { /* ignore */ }
+  }
+
   function clearSearch(inputRef) {
     appliedSearchRef.current = '';
     setDraftSearch('');
+    setSuggestOpen(false);
+    setHighlightedId(0);
+    try { sessionStorage.removeItem('rev.lastSelectedId'); } catch { /* ignore */ }
     setFilters((current) => (
       current.search === '' ? current : { ...current, search: '' }
     ));
@@ -436,7 +604,7 @@ export default function RevenueDeskPage() {
 
   function renderSearchField(inputRef, id = 'rev-desk-search') {
     return (
-      <div className="rev-desk-search-field">
+      <div className="rev-desk-search-field rev-desk-search-field--suggest">
         <Search className="rev-desk-search-icon" aria-hidden="true" />
         <input
           ref={inputRef}
@@ -446,9 +614,13 @@ export default function RevenueDeskPage() {
           className="rev-desk-search-input"
           placeholder="Search voucher, customer, narration"
           value={draftSearch}
-          onChange={(e) => setDraftSearch(e.target.value)}
+          onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') applySearch();
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              applySearch();
+              e.currentTarget.blur();
+            }
             if (e.key === 'Escape') clearSearch(inputRef);
           }}
           aria-label="Search revenues"
@@ -463,6 +635,37 @@ export default function RevenueDeskPage() {
           >
             <X size={16} aria-hidden="true" />
           </button>
+        )}
+        {suggestOpen && draftSearch.trim() !== '' && (
+          <div className="rev-suggestions">
+            {suggestions.length === 0 ? (
+              <div className="rev-suggest-empty">No matching entries</div>
+            ) : (
+              suggestions.map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  data-rev-entry-id={row.id}
+                  className={`rev-suggest-card${sameId(highlightedId, row.id) ? ' is-selected' : ''}`}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setSuggestOpen(false);
+                    rememberList(row.id);
+                    setPreviewEntry(row);
+                  }}
+                >
+                  <div className="rev-suggest-top">
+                    <span className="rev-suggest-ref">{row.voucher_number || `#${row.id}`}</span>
+                    <span className={`rev-status rev-status--${row.status_class || 'unpaid'}`}>{row.status_label}</span>
+                  </div>
+                  <div className="rev-suggest-meta">
+                    <span>{row.customer_display || row.customer_name || '—'}</span>
+                    <span>{formatDate(row.entry_date)}</span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
         )}
       </div>
     );
@@ -750,6 +953,11 @@ export default function RevenueDeskPage() {
   }
 
   const entries = desk?.data ?? [];
+  const visibleEntries = useMemo(
+    () => entries.filter((row) => matchesSearch(row, draftSearch)),
+    [entries, draftSearch],
+  );
+  const suggestions = useMemo(() => visibleEntries.slice(0, 6), [visibleEntries]);
   const kpi = desk?.kpi ?? {};
   const invoiceKpi = desk?.invoice_kpi ?? {};
   const customers = init?.customers ?? [];
@@ -824,6 +1032,7 @@ export default function RevenueDeskPage() {
               href={deskPageUrl('revenue_create.php')}
               className="rev-desk-btn rev-desk-btn-primary rev-desk-btn-create"
               aria-label="New revenue"
+              onClick={() => rememberList(highlightedId)}
             >
               <Plus size={16} aria-hidden="true" />
               <span className="rev-desk-btn-label-desktop">New revenue</span>
@@ -903,7 +1112,7 @@ export default function RevenueDeskPage() {
       <section className="rev-desk-results" aria-label="Revenue entries">
         <div className="rev-desk-results-head">
           <span className="rev-desk-results-count">
-            {desk?.total ?? entries.length} {(desk?.total ?? entries.length) === 1 ? 'entry' : 'entries'}
+            {desk?.total ?? visibleEntries.length} {(desk?.total ?? visibleEntries.length) === 1 ? 'entry' : 'entries'}
           </span>
         </div>
 
@@ -948,21 +1157,23 @@ export default function RevenueDeskPage() {
             </tr>
           </thead>
           <tbody>
-            {entries.length === 0 ? (
+            {visibleEntries.length === 0 ? (
               <tr>
                 <td colSpan={9}>
                   <div className="rev-desk-empty">No revenue entries match your filters.</div>
                 </td>
               </tr>
-            ) : entries.map((row) => (
+            ) : visibleEntries.map((row) => (
               <tr
                 key={row.id}
-                className="rev-desk-row-clickable"
+                data-rev-entry-id={row.id}
+                className={`rev-desk-row-clickable${sameId(highlightedId, row.id) ? ' is-selected' : ''}`}
                 tabIndex={0}
                 onClick={(event) => handleEntryRowClick(event, row)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
+                    rememberList(row.id);
                     setPreviewEntry(row);
                   }
                 }}
@@ -1055,6 +1266,7 @@ export default function RevenueDeskPage() {
           menu={rowMenu}
           onClose={closeRowMenu}
           onPay={(entryId) => setPayEntryId(entryId)}
+          onRemember={rememberList}
         />
       ) : null}
 
@@ -1081,6 +1293,7 @@ export default function RevenueDeskPage() {
           entry={previewEntry}
           onClose={() => setPreviewEntry(null)}
           onPay={(entryId) => setPayEntryId(entryId)}
+          onRemember={rememberList}
         />
       ) : null}
 

@@ -33,6 +33,7 @@ export default function RevenueQuickViewModal({
   entry,
   onClose,
   onPay,
+  onRemember,
 }) {
   const vatAmount = Number(entry.vat_amount) || 0;
   const balanceDue = Number(entry.balance_due) || 0;
@@ -99,6 +100,7 @@ export default function RevenueQuickViewModal({
               <a
                 href={deskPageUrl('revenue_edit.php', { id: entry.id })}
                 className="rev-desk-btn rev-desk-btn-ghost rev-desk-quick-action-btn"
+                onClick={() => onRemember?.(entry.id)}
               >
                 <Pencil size={16} aria-hidden="true" />
                 Edit

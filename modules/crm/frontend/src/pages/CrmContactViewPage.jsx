@@ -60,7 +60,17 @@ export default function CrmContactViewPage() {
   return (
     <div className="crm-page crm-page--view">
       <div className="crm-view-actions">
-        <a className="crm-link-back crm-view-back" href={customersListUrl}>
+        <a
+          className="crm-link-back crm-view-back"
+          href={customersListUrl}
+          onClick={(e) => {
+            e.preventDefault();
+            if (window.erpNavBack && typeof window.erpNavBack.go === 'function') {
+              if (window.erpNavBack.go(customersListUrl)) return;
+            }
+            window.location.href = customersListUrl;
+          }}
+        >
           <IconBack />
           Back to customers
         </a>

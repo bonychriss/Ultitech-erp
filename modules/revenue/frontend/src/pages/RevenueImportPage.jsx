@@ -15,6 +15,7 @@ import {
   commitImportRows,
   deskPageUrl,
   fetchImportInit,
+  goRevenueList,
   importTemplateUrl,
   previewImportFile,
 } from '../api/revenueDesk';
@@ -426,7 +427,14 @@ export default function RevenueImportPage() {
     <div className="rev-imp">
       <div className="rev-imp-head">
         <div>
-          <a href={init?.list_url || deskPageUrl('revenue_entries.php')} className="rev-imp-back">
+          <a
+            href={init?.list_url || deskPageUrl('revenue_entries.php')}
+            className="rev-imp-back"
+            onClick={(event) => {
+              event.preventDefault();
+              goRevenueList(init?.list_url || deskPageUrl('revenue_entries.php'));
+            }}
+          >
             <ArrowLeft size={14} /> Back to revenue
           </a>
           <h1 className="rev-imp-title">Import revenue</h1>

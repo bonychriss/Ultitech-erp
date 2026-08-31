@@ -39,6 +39,10 @@ function crmDeskWebBasePath(): string
         return rtrim($m[1], '/');
     }
 
+    if (function_exists('company_url')) {
+        return rtrim((string) company_url('modules/crm'), '/');
+    }
+
     if (function_exists('app_url')) {
         return rtrim((string) app_url('/modules/crm'), '/');
     }
@@ -169,6 +173,10 @@ function crmDeskShellHeadExtras(): string
             : '/modules/sales/dashboard/dashboard.css?v=' . $dashCssVer;
         $parts[] = '<link rel="stylesheet" href="' . htmlspecialchars($dashCssUrl, ENT_QUOTES, 'UTF-8') . '">';
     }
+
+    ob_start();
+    require dirname(__DIR__, 3) . '/includes/nav-back-script.php';
+    $parts[] = trim((string) ob_get_clean());
 
     return implode("\n    ", $parts);
 }

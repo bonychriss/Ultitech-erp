@@ -17,9 +17,11 @@ try {
     }
 
     $createInit = revenue_build_create_init($pdo);
-    $listUrl = function_exists('app_url')
-        ? app_url('/revenue_entries.php?module=revenue')
-        : '/revenue_entries.php?module=revenue';
+    $listUrl = function_exists('revenue_desk_list_url')
+        ? revenue_desk_list_url()
+        : (function_exists('company_url')
+            ? company_url('revenue_entries.php') . '?module=revenue'
+            : '/revenue_entries.php?module=revenue');
 
     $payload = [
         'csrf_token' => function_exists('csrf_token') ? csrf_token() : '',

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, Inbox, Loader2, Search, SlidersHorizontal, X } from 'lucide-react';
 import PettyCashStatusBadge from '../components/PettyCashStatusBadge.jsx';
@@ -30,6 +30,78 @@ const STATUS_LABELS = {
 
 function hasAdvancedFilters(filters) {
   return Object.keys(emptyAdvancedFilters).some((key) => String(filters[key] ?? '').trim() !== '');
+}
+
+function sameId(a, b) {
+  return Number(a) > 0 && Number(a) === Number(b);
+}
+
+function voucherSearchText(row) {
+  return [
+    row.id,
+    row.voucher_number,
+    row.category,
+    row.description,
+    row.custodian_name,
+    row.status,
+  ].join(' ').toLowerCase();
+}
+
+function matchesSearch(row, query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (q === '') return true;
+  const text = voucherSearchText(row);
+  return q.split(/\s+/).every((term) => text.includes(term));
+}
+
+function readListStateFromUrl() {
+  if (typeof window === 'undefined') {
+    return { search: '', selectedId: 0, filters: { ...emptyAdvancedFilters } };
+  }
+  const p = new URLSearchParams(window.location.search);
+  return {
+    search: p.get('q') || '',
+    selectedId: Number(p.get('sel') || 0) || 0,
+    filters: {
+      status: p.get('status') || '',
+      category: p.get('category') || '',
+      date_from: p.get('date_from') || '',
+      date_to: p.get('date_to') || '',
+    },
+  };
+}
+
+function writeListStateToUrl(search, filters, selectedId) {
+  if (typeof window === 'undefined' || !window.history || typeof window.history.replaceState !== 'function') return;
+  const url = new URL(window.location.href);
+  const setOrDel = (key, value) => {
+    const v = String(value || '').trim();
+    if (v) url.searchParams.set(key, v);
+    else url.searchParams.delete(key);
+  };
+  setOrDel('q', search);
+  setOrDel('status', filters && filters.status);
+  setOrDel('category', filters && filters.category);
+  setOrDel('date_from', filters && filters.date_from);
+  setOrDel('date_to', filters && filters.date_to);
+  setOrDel('sel', selectedId ? String(selectedId) : '');
+  const next = url.pathname + url.search + url.hash;
+  const cur = window.location.pathname + window.location.search + window.location.hash;
+  if (next !== cur) {
+    window.history.replaceState(window.history.state, '', next);
+  }
+}
+
+let consumedRestore;
+function takeRestoredListState() {
+  if (consumedRestore !== undefined) return consumedRestore;
+  consumedRestore = null;
+  if (typeof window === 'undefined' || !window.erpNavBack || typeof window.erpNavBack.consumeRestore !== 'function') {
+    return null;
+  }
+  const restored = window.erpNavBack.consumeRestore();
+  consumedRestore = restored && restored.state ? restored.state : null;
+  return consumedRestore;
 }
 
 function toInputDate(date) {
@@ -95,14 +167,38 @@ function isRowActionTarget(target) {
 }
 
 export default function PettyCashDeskPage({ fullList = false }) {
+  const restoredList = takeRestoredListState();
+  const urlList = readListStateFromUrl();
   const [init, setInit] = useState(null);
   const [vouchers, setVouchers] = useState([]);
   const [replenishments, setReplenishments] = useState([]);
-  const [filters, setFilters] = useState(emptyFilters);
-  const [draftFilters, setDraftFilters] = useState(emptyFilters);
+  const [filters, setFilters] = useState(() => {
+    const restoredFilters = restoredList && restoredList.filters ? restoredList.filters : urlList.filters;
+    const search = restoredList && typeof restoredList.search === 'string' ? restoredList.search : urlList.search;
+    return { ...emptyFilters, ...restoredFilters, search };
+  });
+  const [draftFilters, setDraftFilters] = useState(() => {
+    const restoredFilters = restoredList && restoredList.filters ? restoredList.filters : urlList.filters;
+    const search = restoredList && typeof restoredList.search === 'string' ? restoredList.search : urlList.search;
+    return { ...emptyFilters, ...restoredFilters, search };
+  });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [draftSearch, setDraftSearch] = useState('');
+  const [draftSearch, setDraftSearch] = useState(() => {
+    if (restoredList && typeof restoredList.search === 'string') return restoredList.search;
+    return urlList.search;
+  });
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [highlightedId, setHighlightedId] = useState(() => {
+    const fromRestore = restoredList && restoredList.selectedId;
+    let fromStore = 0;
+    try {
+      fromStore = Number(sessionStorage.getItem('pc.lastSelectedId') || 0) || 0;
+    } catch {
+      fromStore = 0;
+    }
+    return Number(fromRestore || urlList.selectedId || fromStore || 0) || 0;
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(0);
@@ -115,6 +211,7 @@ export default function PettyCashDeskPage({ fullList = false }) {
   const searchExpandRef = useRef(null);
   const searchInputRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
+  const searchWrapRef = useRef(null);
 
   const loadData = useCallback(async (activeFilters, silent = false) => {
     if (!silent) setLoading(true);
@@ -142,6 +239,47 @@ export default function PettyCashDeskPage({ fullList = false }) {
   useEffect(() => {
     loadData(filters);
   }, [filters, loadData]);
+
+  useEffect(() => {
+    writeListStateToUrl(draftSearch || filters.search, filters, highlightedId);
+  }, [draftSearch, filters, highlightedId]);
+
+  useEffect(() => {
+    if (!highlightedId) return undefined;
+    const timer = window.setTimeout(() => {
+      const el = document.querySelector(`[data-pc-voucher-id="${highlightedId}"]`);
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [highlightedId, vouchers]);
+
+  useEffect(() => {
+    function syncSelected() {
+      const fromUrl = readListStateFromUrl().selectedId;
+      let fromStore = 0;
+      try {
+        fromStore = Number(sessionStorage.getItem('pc.lastSelectedId') || 0) || 0;
+      } catch {
+        fromStore = 0;
+      }
+      const next = Number(fromUrl || fromStore || 0) || 0;
+      if (next) setHighlightedId(next);
+    }
+    window.addEventListener('pageshow', syncSelected);
+    syncSelected();
+    return () => window.removeEventListener('pageshow', syncSelected);
+  }, []);
+
+  useEffect(() => {
+    if (!suggestOpen) return undefined;
+    function onClick(e) {
+      if (!e.target.closest('.exp-desk-search-field')) setSuggestOpen(false);
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [suggestOpen]);
 
   useEffect(() => {
     if (!filtersOpen) return undefined;
@@ -270,13 +408,56 @@ export default function PettyCashDeskPage({ fullList = false }) {
   const activeFilterChips = buildActiveFilterChips(filters, categories);
   const activeFilterCount = activeFilterChips.length;
   const hasSearchValue = filters.search.trim() !== '' || draftSearch.trim() !== '';
+  const visibleVouchers = useMemo(
+    () => vouchers.filter((row) => matchesSearch(row, draftSearch)),
+    [vouchers, draftSearch],
+  );
+  const suggestions = useMemo(() => visibleVouchers.slice(0, 6), [visibleVouchers]);
 
   function applySearch() {
+    setSuggestOpen(false);
     setFilters((current) => ({ ...current, search: draftSearch.trim() }));
+    const searchEl = searchWrapRef.current?.querySelector('.exp-desk-search-input');
+    if (searchEl && typeof searchEl.blur === 'function') searchEl.blur();
+  }
+
+  function onSearchChange(value) {
+    setDraftSearch(value);
+    setSuggestOpen(value.trim() !== '');
+    setHighlightedId(0);
+    try { sessionStorage.removeItem('pc.lastSelectedId'); } catch { /* ignore */ }
+  }
+
+  function openVoucher(id, viewUrl) {
+    const selected = Number(id) || 0;
+    setHighlightedId(selected);
+    writeListStateToUrl(draftSearch || filters.search, filters, selected);
+    try {
+      sessionStorage.setItem('pc.lastSelectedId', String(selected));
+    } catch { /* ignore */ }
+    if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.push === 'function') {
+      window.erpNavBack.push({
+        href: window.location.href,
+        state: {
+          search: draftSearch || filters.search,
+          filters: {
+            status: filters.status,
+            category: filters.category,
+            date_from: filters.date_from,
+            date_to: filters.date_to,
+          },
+          selectedId: selected,
+        },
+      });
+    }
+    if (viewUrl) window.location.href = viewUrl;
   }
 
   function clearSearch() {
     setDraftSearch('');
+    setSuggestOpen(false);
+    setHighlightedId(0);
+    try { sessionStorage.removeItem('pc.lastSelectedId'); } catch { /* ignore */ }
     setFilters((current) => ({ ...current, search: '' }));
     setSearchOpen(false);
   }
@@ -287,7 +468,7 @@ export default function PettyCashDeskPage({ fullList = false }) {
 
   function renderSearchField(inputRef, id = 'pc-desk-search') {
     return (
-      <div className="exp-desk-search-field">
+      <div className="exp-desk-search-field exp-desk-search-field--suggest" ref={searchWrapRef}>
         <Search className="exp-desk-search-icon" aria-hidden="true" />
         <input
           ref={inputRef}
@@ -296,9 +477,13 @@ export default function PettyCashDeskPage({ fullList = false }) {
           className="exp-desk-search-input"
           placeholder="Search voucher #, category, description"
           value={draftSearch}
-          onChange={(e) => setDraftSearch(e.target.value)}
+          autoComplete="off"
+          onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') applySearch();
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              applySearch();
+            }
           }}
           aria-label="Search vouchers"
         />
@@ -311,6 +496,35 @@ export default function PettyCashDeskPage({ fullList = false }) {
           >
             <X className="w-4 h-4" />
           </button>
+        )}
+        {suggestOpen && draftSearch.trim() !== '' && (
+          <div className="pc-suggestions">
+            {suggestions.length === 0 ? (
+              <div className="pc-suggest-empty">No matching vouchers</div>
+            ) : (
+              suggestions.map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  data-pc-voucher-id={row.id}
+                  className={`pc-suggest-card${sameId(highlightedId, row.id) ? ' is-selected' : ''}`}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (row.view_url) openVoucher(row.id, row.view_url);
+                  }}
+                >
+                  <div className="pc-suggest-top">
+                    <span className="pc-suggest-ref">{row.voucher_number || `#${row.id}`}</span>
+                    <PettyCashStatusBadge status={row.status} isPosted={row.is_posted} />
+                  </div>
+                  <div className="pc-suggest-meta">
+                    <span>{row.category || row.custodian_name || '—'}</span>
+                    <span>{formatDate(row.date)}</span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
         )}
       </div>
     );
@@ -720,7 +934,7 @@ export default function PettyCashDeskPage({ fullList = false }) {
       <section className="exp-desk-results">
         <div className="exp-desk-results-head">
           <span className="exp-desk-results-count">
-            {vouchers.length} {vouchers.length === 1 ? 'voucher' : 'vouchers'}
+            {visibleVouchers.length} {visibleVouchers.length === 1 ? 'voucher' : 'vouchers'}
           </span>
           {!fullList ? (
             <a href={deskPageUrl('vouchers/index.php')} className="exp-desk-action-link">View all</a>
@@ -734,7 +948,7 @@ export default function PettyCashDeskPage({ fullList = false }) {
           </div>
         ) : null}
 
-        {!loading && vouchers.length === 0 ? (
+        {!loading && visibleVouchers.length === 0 ? (
           <div className="exp-desk-empty">
             <Inbox className="exp-desk-empty-icon" aria-hidden="true" />
             <p className="exp-desk-empty-title">No vouchers found</p>
@@ -755,24 +969,32 @@ export default function PettyCashDeskPage({ fullList = false }) {
                 </tr>
               </thead>
               <tbody>
-                {vouchers.map((row) => (
+                {visibleVouchers.map((row) => (
                   <tr
                     key={row.id}
-                    className="exp-desk-row-clickable"
+                    data-pc-voucher-id={row.id}
+                    className={`exp-desk-row-clickable${sameId(highlightedId, row.id) ? ' is-selected' : ''}`}
                     tabIndex={0}
                     onClick={(event) => {
                       if (isRowActionTarget(event.target)) return;
-                      if (row.view_url) window.location.href = row.view_url;
+                      if (row.view_url) openVoucher(row.id, row.view_url);
                     }}
                     onKeyDown={(event) => {
                       if (event.key !== 'Enter' && event.key !== ' ') return;
                       if (isRowActionTarget(event.target)) return;
                       event.preventDefault();
-                      if (row.view_url) window.location.href = row.view_url;
+                      if (row.view_url) openVoucher(row.id, row.view_url);
                     }}
                   >
                     <td>
-                      <a href={row.view_url} className="exp-desk-ref">
+                      <a
+                        href={row.view_url}
+                        className="exp-desk-ref"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (row.view_url) openVoucher(row.id, row.view_url);
+                        }}
+                      >
                         {row.voucher_number || `#${row.id}`}
                       </a>
                       {row.description ? (

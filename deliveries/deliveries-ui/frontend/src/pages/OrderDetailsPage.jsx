@@ -19,6 +19,15 @@ function statusLabel(status) {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+function goListBack(e, fallback) {
+  if (e) e.preventDefault()
+  const dest = fallback || 'my_deliveries.php'
+  if (window.erpNavBack && typeof window.erpNavBack.go === 'function') {
+    if (window.erpNavBack.go(dest)) return
+  }
+  window.location.href = dest
+}
+
 export default function OrderDetailsPage() {
   const initial = CFG.data || {}
   const [data, setData] = useState(initial)
@@ -114,7 +123,10 @@ export default function OrderDetailsPage() {
           <AlertCircle size={40} color="#ef4444" aria-hidden="true" />
           <h2 style={{ color: '#991b1b' }}>Order not found</h2>
           <div className="cv-success-links">
-            <a href={urls.myDeliveries || 'my_deliveries.php'}>&larr; Back to My Deliveries</a>
+            <a
+              href={urls.dashboard || urls.myDeliveries || 'index'}
+              onClick={(e) => goListBack(e, urls.dashboard || urls.myDeliveries || 'index')}
+            >&larr; Back</a>
           </div>
         </div>
       </div>
@@ -129,8 +141,12 @@ export default function OrderDetailsPage() {
         <div>
           <h1>{title}</h1>
         </div>
-        <a href={urls.myDeliveries || 'my_deliveries.php'} className="cv-link-back">
-          &larr; Back to My Deliveries
+        <a
+          href={urls.dashboard || urls.myDeliveries || 'index'}
+          className="cv-link-back"
+          onClick={(e) => goListBack(e, urls.dashboard || urls.myDeliveries || 'index')}
+        >
+          &larr; Back
         </a>
       </div>
 
@@ -229,8 +245,12 @@ export default function OrderDetailsPage() {
           </section>
 
           <div className="cv-actions">
-            <a href={urls.myDeliveries || 'my_deliveries.php'} className="cv-btn-cancel">
-              Back to My Deliveries
+            <a
+              href={urls.dashboard || urls.myDeliveries || 'index'}
+              className="cv-btn-cancel"
+              onClick={(e) => goListBack(e, urls.dashboard || urls.myDeliveries || 'index')}
+            >
+              Back
             </a>
             {order.trip_id > 0 && (
               <a href={`${urls.viewTrip || 'view_trip.php'}&trip_id=${order.trip_id}`} className="cv-btn-ghost">

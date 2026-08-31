@@ -126,6 +126,14 @@ export function deskPageUrl(file, extraParams = {}) {
   return `./${file}?${params.toString()}`;
 }
 
+export function goRevenueList(href) {
+  const dest = href || deskPageUrl('revenue_entries.php');
+  if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.go === 'function') {
+    if (window.erpNavBack.go(dest)) return;
+  }
+  window.location.href = dest;
+}
+
 export function exportUrl(filters = {}) {
   const params = new URLSearchParams({ module: 'revenue', export: 'csv' });
   Object.entries(filters).forEach(([key, value]) => {

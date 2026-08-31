@@ -524,10 +524,7 @@ export default function DashboardPage() {
           to_date: urlList.filters.to_date || '',
         }
   ))
-  const [suggestOpen, setSuggestOpen] = useState(() => {
-    const q = restoredList && typeof restoredList.search === 'string' ? restoredList.search : urlList.search
-    return String(q || '').trim() !== ''
-  })
+  const [suggestOpen, setSuggestOpen] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiNote, setAiNote] = useState(() => (
     restoredList && typeof restoredList.note === 'string' ? restoredList.note : ''
@@ -581,6 +578,9 @@ export default function DashboardPage() {
   async function runAiSearch() {
     const q = searchInput.trim()
     if (q === '' || aiLoading) return
+    setSuggestOpen(false)
+    const searchEl = searchWrapRef.current?.querySelector('.ed-search-input')
+    if (searchEl && typeof searchEl.blur === 'function') searchEl.blur()
     setAiLoading(true)
     setAiNote('')
     try {
@@ -593,7 +593,6 @@ export default function DashboardPage() {
         })
         if (typeof res.filters.search === 'string') setSearchInput(res.filters.search)
         setAiNote(res.note || 'Showing AI-filtered results.')
-        setSuggestOpen(false)
       } else {
         setAiNote(res?.error || 'Could not interpret that. Using standard search.')
       }
@@ -738,9 +737,12 @@ export default function DashboardPage() {
           value={searchInput}
           autoComplete="off"
           onChange={(e) => onSearchChange(e.target.value)}
-          onFocus={() => suggestions.length > 0 && searchInput.trim() !== '' && setSuggestOpen(true)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') { e.preventDefault(); setSuggestOpen(false) }
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              setSuggestOpen(false)
+              e.currentTarget.blur()
+            }
           }}
         />
         <button

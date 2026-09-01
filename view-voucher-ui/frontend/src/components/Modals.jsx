@@ -264,8 +264,19 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
       }
     }
     try {
-      const approveUrl = new URL(data.actions.approveUrl, window.location.origin).toString()
-      const res = await fetch(approveUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+      const approveUrl = new URL(data.actions.approveUrl || 'approve_voucher.php', window.location.href)
+      const here = window.location.pathname.split('/').filter(Boolean)
+      const there = approveUrl.pathname.split('/').filter(Boolean)
+      if (here[0] && there[0] && here[0] !== there[0]) {
+        there[0] = here[0]
+        approveUrl.pathname = `/${there.join('/')}`
+      }
+      const res = await fetch(`${approveUrl.pathname}${approveUrl.search}`, {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
       let j = null
       try {
         j = await res.json()
@@ -332,7 +343,11 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
         </div>
         <div className="warning-alert-clean">
           <div className="warning-alert-clean__title">Warning</div>
-          <p>Approving will record your signature and cannot be reversed.</p>
+          <p>
+            {String(rolesStr || '').toLowerCase().includes('applicant') && String(rolesStr || '').toLowerCase().includes('department')
+              ? 'This one signature will be applied as both Applicant and Department Manager, and cannot be reversed.'
+              : 'Approving will record your signature and cannot be reversed.'}
+          </p>
         </div>
         <label className="checkbox-confirm-clean">
           <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />

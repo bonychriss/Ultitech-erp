@@ -150,8 +150,21 @@ try {
         }
     }
 
+    if (function_exists('expandSamePersonApplicantDeptManagerApprovalIds')) {
+        $approvalIds = expandSamePersonApplicantDeptManagerApprovalIds(
+            $voucherAssignees,
+            $rolesToApprove,
+            $approvalIds
+        );
+    }
+
     $finalizeAsGm = false;
+    $approvalIdSet = array_fill_keys($approvalIds, true);
     foreach ($rolesToApprove as $roleRow) {
+        $roleId = (int) ($roleRow['id'] ?? 0);
+        if ($roleId > 0 && empty($approvalIdSet[$roleId])) {
+            continue;
+        }
         $roleKey = function_exists('normalizeVoucherApprovalRoleKey')
             ? normalizeVoucherApprovalRoleKey($roleRow['role_key'] ?? $roleRow['role'] ?? '')
             : strtolower(trim((string) ($roleRow['role'] ?? '')));

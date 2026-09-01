@@ -511,7 +511,9 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 'backUrl' => $backLink,
                 'editHref' => $editHref,
                 'markPaidUrl' => app_url(isAdmin() ? '/mark-paid.php' : '/employee/mark-paid.php'),
-                'approveUrl' => app_url('/employee/approve_voucher.php'),
+                'approveUrl' => (strpos(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '') . (string) ($_SERVER['REQUEST_URI'] ?? '')), '/employee/') !== false)
+                    ? 'approve_voucher.php'
+                    : (function_exists('company_url') ? company_url('employee/approve_voucher.php') : app_url('/employee/approve_voucher.php')),
                 'deleteAttachmentUrl' => app_url('/delete_attachment.php'),
                 'viewVoucherPostUrl' => 'view-voucher.php?id=' . $voucherId,
                 'returnFinance' => $returnFinance,

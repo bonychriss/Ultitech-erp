@@ -38,7 +38,15 @@ export default function VoucherActions({
   }, [dlState, voucher.voucher_no])
 
   const mainApproval = userPendingApprovals[0]
-  const rolesStr = userPendingApprovals.map((u) => u.role).join(', ')
+  const pairKeys = ['applicant', 'department manager']
+  const pairPending = userPendingApprovals.filter((u) => {
+    const key = String(u.role_key || u.role || '').toLowerCase().trim()
+    return pairKeys.includes(key)
+  })
+  const signingApplicantAndDept = pairPending.length >= 2 && pairKeys.includes(String(mainApproval?.role_key || mainApproval?.role || '').toLowerCase().trim())
+  const rolesStr = signingApplicantAndDept
+    ? 'Applicant & Department Manager'
+    : userPendingApprovals.map((u) => u.role).join(', ')
   const isGmFinalApproval = !!mainApproval?.is_final_approval
 
   return (
@@ -120,7 +128,9 @@ export default function VoucherActions({
               <i className="fas fa-thumbs-up" aria-hidden="true" />
               {isGmFinalApproval
                 ? 'Approve as General Manager'
-                : `Approve ${userPendingApprovals.length > 1 ? 'All Roles' : ''}`}
+                : signingApplicantAndDept
+                  ? 'Approve as Applicant & Department Manager'
+                  : `Approve ${userPendingApprovals.length > 1 ? 'All Roles' : ''}`}
             </button>
           )}
 

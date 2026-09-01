@@ -2238,6 +2238,75 @@ function userIsVoucherApprovalRoleAssignee(array $voucher, $roleKey, $userName, 
 }
 
 /**
+ * True when Applicant and Department Manager on the voucher are the same person.
+ */
+function voucherApplicantMatchesDepartmentManager(array $voucher): bool
+{
+    $applicant = trim((string) ($voucher['applicant'] ?? ''));
+    $deptMgr = trim((string) ($voucher['department_manager'] ?? ''));
+    if ($applicant === '' || $deptMgr === '') {
+        return false;
+    }
+    if (strcasecmp($applicant, $deptMgr) === 0) {
+        return true;
+    }
+    if (function_exists('normalizePersonNameKey')) {
+        return normalizePersonNameKey($applicant) === normalizePersonNameKey($deptMgr);
+    }
+
+    return false;
+}
+
+/**
+ * When the signer is both Applicant and Department Manager, one signature
+ * should complete both pending approval rows.
+ *
+ * @param list<array<string, mixed>> $pendingForUser
+ * @param list<int> $approvalIds
+ * @return list<int>
+ */
+function expandSamePersonApplicantDeptManagerApprovalIds(array $voucher, array $pendingForUser, array $approvalIds): array
+{
+    $approvalIds = array_values(array_unique(array_filter(array_map('intval', $approvalIds), static function ($id) {
+        return $id > 0;
+    })));
+    if ($approvalIds === [] || !voucherApplicantMatchesDepartmentManager($voucher)) {
+        return $approvalIds;
+    }
+
+    $pairIds = array();
+    $requestedIsPair = false;
+    foreach ($pendingForUser as $row) {
+        $roleKey = function_exists('normalizeVoucherApprovalRoleKey')
+            ? normalizeVoucherApprovalRoleKey($row['role_key'] ?? $row['role'] ?? '')
+            : strtolower(trim((string) ($row['role'] ?? '')));
+        if ($roleKey !== 'applicant' && $roleKey !== 'department manager') {
+            continue;
+        }
+        $id = (int) ($row['id'] ?? 0);
+        if ($id <= 0) {
+            continue;
+        }
+        $pairIds[] = $id;
+        if (in_array($id, $approvalIds, true)) {
+            $requestedIsPair = true;
+        }
+    }
+
+    if (!$requestedIsPair || count($pairIds) < 2) {
+        return $approvalIds;
+    }
+
+    foreach ($pairIds as $id) {
+        if (!in_array($id, $approvalIds, true)) {
+            $approvalIds[] = $id;
+        }
+    }
+
+    return $approvalIds;
+}
+
+/**
  * Employee approval roles that must be completed before GM final approval.
  *
  * @return list<string>
@@ -11450,9 +11519,15 @@ function getVoucherNotificationTarget($voucher, $currentUserFullName)
         $targetRole = 'Applicant';
     }
     // 2. If I am Applicant (or Prepared By acting for Applicant), notify Dept Manager
+    //    (skip Dept Manager when they are the same person — one signature covers both)
     else if ($me === $applicant || ($me === $preparedBy && $preparedBy === $applicant)) {
-        $targetName = $voucher['department_manager'];
-        $targetRole = 'Department Manager';
+        if ($applicant !== '' && $applicant === $deptMgr) {
+            $targetName = $voucher['checked_by'];
+            $targetRole = 'Checked By';
+        } else {
+            $targetName = $voucher['department_manager'];
+            $targetRole = 'Department Manager';
+        }
     }
     // 3. If I am Dept Manager, notify Checked By
     else if ($me === $deptMgr) {

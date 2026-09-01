@@ -984,3 +984,83 @@ html[data-theme="dark"] .page-sales-dashboard-desk .dash-desk-panel--fan .dash-d
 html[data-theme="dark"] .page-sales-dashboard-desk .dash-desk-list a:hover {
   background: #1e293b;
 }
+
+/* Roadmaster split outgoing panels */
+.page-sales-dashboard-desk .sd-roadmaster-outgoing {
+  width: 100%;
+  min-width: 0;
+}
+
+.page-sales-dashboard-desk .sd-roadmaster-outgoing > .row {
+  margin: 0;
+}
+
+.page-sales-dashboard-desk .sd-roadmaster-outgoing > .row > [class*='col-'] {
+  min-width: 0;
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-card-fan {
+  min-height: 9.25rem;
+  padding: 0.85rem 0.35rem 0.2rem;
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-fan-card {
+  width: 4.25rem;
+  margin-left: -2.125rem;
+  bottom: 0.65rem;
+  transform:
+    translateX(calc(var(--fan-offset) * 1.35rem))
+    rotate(calc(var(--fan-offset) * 8deg));
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-fan-card:hover {
+  transform:
+    translateX(calc(var(--fan-offset) * 1.42rem))
+    rotate(calc(var(--fan-offset) * 8deg))
+    translateY(-0.35rem)
+    scale(1.04);
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-fan-card-media {
+  width: 4.25rem;
+  height: 5.35rem;
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-fan-card-fallback {
+  font-size: 1.2rem;
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-fan-card-caption {
+  max-width: 4.75rem;
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-panel-head {
+  padding: 0.75rem 0.85rem;
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-panel-head h2 {
+  font-size: 0.82rem;
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-list a {
+  padding-left: 0.85rem;
+  padding-right: 0.85rem;
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-list-title {
+  font-size: 0.78rem;
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-list-meta {
+  font-size: 0.68rem;
+}
+
+.page-sales-dashboard-desk .sd-outgoing-panel--compact .dash-desk-list-amount {
+  font-size: 0.74rem;
+}
+
+@media (max-width: 767.98px) {
+  .page-sales-dashboard-desk .sd-roadmaster-outgoing > .row > [class*='col-'] + [class*='col-'] {
+    margin-top: 0.75rem;
+  }
+}

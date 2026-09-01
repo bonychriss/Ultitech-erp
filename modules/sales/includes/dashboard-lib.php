@@ -180,6 +180,37 @@ function dashboardDeskNormalizeProducts(array $products, string $placeholderIcon
 }
 
 /**
+ * Merge truck and spare outgoing rows for a single Roadmaster showcase.
+ *
+ * @param list<array<string, mixed>> $trucks
+ * @param list<array<string, mixed>> $spares
+ * @return list<array<string, mixed>>
+ */
+function dashboardDeskMergeOutgoingProducts(array $trucks, array $spares, int $limit = 7): array
+{
+    $merged = [];
+    foreach (dashboardDeskNormalizeProducts($trucks, 'fa-truck') as $row) {
+        $row['outgoing_kind'] = 'Truck';
+        $merged[] = $row;
+    }
+    foreach (dashboardDeskNormalizeProducts($spares, 'fa-cog') as $row) {
+        $row['outgoing_kind'] = 'Spare';
+        $merged[] = $row;
+    }
+
+    usort($merged, static function (array $a, array $b): int {
+        $byOrders = ($b['outgoing_count'] ?? 0) <=> ($a['outgoing_count'] ?? 0);
+        if ($byOrders !== 0) {
+            return $byOrders;
+        }
+
+        return ($b['total_qty'] ?? 0) <=> ($a['total_qty'] ?? 0);
+    });
+
+    return array_slice($merged, 0, max(1, $limit));
+}
+
+/**
  * @param list<array<string, mixed>> $rows
  * @return list<array<string, mixed>>
  */
@@ -531,8 +562,8 @@ function dashboardInitData(): array
 
     try {
         if ($isRoadmasterDashboard) {
-            $mostSoldTrucks = getMostOutgoingProducts(6, $mostSoldLookbackDays, 'truck') ?: [];
-            $mostSoldSpares = getMostOutgoingProducts(6, $mostSoldLookbackDays, 'spare') ?: [];
+            $mostSoldTrucks = getMostOutgoingProducts(7, $mostSoldLookbackDays, 'truck') ?: [];
+            $mostSoldSpares = getMostOutgoingProducts(7, $mostSoldLookbackDays, 'spare') ?: [];
         } else {
             $mostOutgoingProducts = getMostOutgoingProducts(20, $mostSoldLookbackDays) ?: [];
         }
@@ -635,7 +666,9 @@ function dashboardInitData(): array
         'most_sold_lookback_days' => $mostSoldLookbackDays,
         'most_sold_trucks' => dashboardDeskNormalizeProducts($mostSoldTrucks, 'fa-truck'),
         'most_sold_spares' => dashboardDeskNormalizeProducts($mostSoldSpares, 'fa-cog'),
-        'most_outgoing_products' => dashboardDeskNormalizeProducts(array_slice($mostOutgoingProducts, 0, 7), 'fa-box'),
+        'most_outgoing_products' => $isRoadmasterDashboard
+            ? dashboardDeskMergeOutgoingProducts($mostSoldTrucks, $mostSoldSpares, 7)
+            : dashboardDeskNormalizeProducts(array_slice($mostOutgoingProducts, 0, 7), 'fa-box'),
         'kpi_summaries' => dashboardDeskBuildKpiSummaries(
             $module,
             $userId,

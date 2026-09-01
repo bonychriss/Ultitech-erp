@@ -21,13 +21,19 @@ export default function OutgoingProductsShowcase({
   placeholderIcon = 'fa-box',
   viewAllUrl = '',
   productViewUrl = '',
+  compact = false,
+  maxFanProducts,
+  maxListProducts,
 }) {
-  const fanProducts = products.slice(0, 7);
-  const listProducts = products.slice(0, 3);
+  const fanLimit = maxFanProducts ?? (compact ? 5 : 7);
+  const listLimit = maxListProducts ?? (compact ? 2 : 3);
+  const fanProducts = products.slice(0, fanLimit);
+  const listProducts = products.slice(0, listLimit);
+  const panelClass = `dash-desk-panel dash-desk-panel--fan sd-outgoing-panel${compact ? ' sd-outgoing-panel--compact' : ''}`;
 
   if (!products.length) {
     return (
-      <div className="dash-desk-panel dash-desk-panel--fan sd-outgoing-panel">
+      <div className={panelClass}>
         <div className="dash-desk-panel-head">
           <h2>{title}</h2>
         </div>
@@ -39,10 +45,10 @@ export default function OutgoingProductsShowcase({
   }
 
   return (
-    <div className="dash-desk-panel dash-desk-panel--fan sd-outgoing-panel">
+    <div className={panelClass}>
       <div className="dash-desk-panel-head">
         <h2>{title}</h2>
-        {viewAllUrl ? (
+        {!compact && viewAllUrl ? (
           <a href={viewAllUrl}>View all</a>
         ) : null}
       </div>
@@ -95,11 +101,15 @@ export default function OutgoingProductsShowcase({
           const href = product.product_id > 0 && productViewUrl
             ? `${productViewUrl}${product.product_id}`
             : viewAllUrl || '#';
-          const metaLine = [
+          const metaParts = [
             customer,
             `${lookbackDays}d`,
             `${orders} ${orders === 1 ? 'order' : 'orders'}`,
-          ].join(` ${META_SEP} `);
+          ];
+          if (product.outgoing_kind) {
+            metaParts.push(product.outgoing_kind);
+          }
+          const metaLine = metaParts.join(` ${META_SEP} `);
 
           return (
             <li key={`${product.product_id}-${index}`}>

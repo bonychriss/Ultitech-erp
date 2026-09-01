@@ -8,8 +8,6 @@ import {
   Handshake,
   Loader2,
   Trophy,
-  Truck,
-  Cog,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { fetchDashboardInit } from '../api/dashboardDesk.js';
@@ -19,7 +17,6 @@ import {
   formatPercent,
   timeAgo,
 } from '../utils/dashboardFormat.js';
-import MostSoldProductsList from '../components/MostSoldProductsList.jsx';
 import OutgoingProductsShowcase from '../components/OutgoingProductsShowcase.jsx';
 import KpiSummaryModal from '../components/KpiSummaryModal.jsx';
 import AlternatingGrowthCharts from '../components/AlternatingGrowthCharts.jsx';
@@ -395,56 +392,15 @@ export default function DashboardPage() {
 
       <div className="row g-3 sd-dashboard-bottom-row align-items-start">
         <div className="col-xl-6 col-lg-6">
-          {data.is_roadmaster ? (
-            <div className="dash-card sd-outgoing-card">
-              <h3 className="dash-card-title">Most Outgoing Trucks &amp; Spares</h3>
-              <p className="most-sold-subtitle">
-                Most frequently outgoing in the last
-                {' '}
-                {data.most_sold_lookback_days}
-                {' '}
-                days
-              </p>
-              <div className="row g-3 most-sold-split">
-                <div className="col-md-6">
-                  <div className="most-sold-panel most-sold-panel--truck">
-                    <div className="most-sold-panel-heading">
-                      <span className="most-sold-panel-icon"><Truck size={14} /></span>
-                      <span>Most Outgoing Trucks</span>
-                    </div>
-                    <MostSoldProductsList
-                      products={data.most_sold_trucks}
-                      emptyMessage="No truck sales yet"
-                      placeholderIcon="fa-truck"
-                    />
-                  </div>
-                </div>
-                <div className="col-md-6">
-                  <div className="most-sold-panel most-sold-panel--spare">
-                    <div className="most-sold-panel-heading">
-                      <span className="most-sold-panel-icon"><Cog size={14} /></span>
-                      <span>Most Outgoing Spares</span>
-                    </div>
-                    <MostSoldProductsList
-                      products={data.most_sold_spares}
-                      emptyMessage="No spare part sales yet"
-                      placeholderIcon="fa-cog"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <OutgoingProductsShowcase
-              products={data.most_outgoing_products}
-              title="Most Outgoing Products"
-              lookbackDays={data.most_sold_lookback_days}
-              emptyMessage="No product data yet"
-              placeholderIcon="fa-box"
-              viewAllUrl={data.urls?.catalogue || ''}
-              productViewUrl={data.urls?.product_view || ''}
-            />
-          )}
+          <OutgoingProductsShowcase
+            products={data.most_outgoing_products}
+            title={data.is_roadmaster ? 'Most Outgoing Trucks & Spares' : 'Most Outgoing Products'}
+            lookbackDays={data.most_sold_lookback_days}
+            emptyMessage={data.is_roadmaster ? 'No truck or spare sales yet' : 'No product data yet'}
+            placeholderIcon="fa-box"
+            viewAllUrl={data.urls?.catalogue || ''}
+            productViewUrl={data.urls?.product_view || ''}
+          />
         </div>
         <div className="col-xl-6 col-lg-6">
           <div className="sd-sidebar-cards d-flex flex-column gap-3">

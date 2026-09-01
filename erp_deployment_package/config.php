@@ -1,5 +1,5 @@
 <?php
-// Simple environment awareness for dual setup (Local + InfinityFree Production)
+// Environment: local dev vs production (includes/env.php overrides auto-detect)
 // Order of precedence: includes/env.php (if present) > auto-detect > defaults
 
 // Auto-detect environment and base path

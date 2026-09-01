@@ -655,7 +655,7 @@ dsys_end_section();
 // ---------------------------------------------------------------------------
 echo '<h2>10. Common fixes for HTTP 500</h2>';
 echo '<div class="warnbox" style="max-width:1200px"><ol style="margin:8px 0 0 18px;padding:0">';
-echo '<li>Upload <code>env.php</code> to the server root with correct <code>DB_HOST</code>, <code>DB_NAME</code>, <code>DB_USER</code>, <code>DB_PASS</code> (StackCP / InfinityFree values).</li>';
+echo '<li>Upload <code>env.php</code> to the server root with correct <code>DB_HOST</code>, <code>DB_NAME</code>, <code>DB_USER</code>, <code>DB_PASS</code> (StackCP / cPanel values).</li>';
 echo '<li>Ensure <code>DATA_DB_NAME</code> points to the tenant DB that has vouchers/sales data if control DB is metadata-only.</li>';
 echo '<li>Fix any <strong>FAIL</strong> on <code>includes/functions.php</code> syntax or bootstrap ù that file runs on every page.</li>';
 echo '<li>Grant MySQL user ALL PRIVILEGES on control + each <code>companies.db_name</code> database.</li>';

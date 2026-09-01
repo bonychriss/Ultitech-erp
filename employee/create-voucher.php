@@ -15,7 +15,7 @@ if (isset($_GET['debug']) && (string) $_GET['debug'] === '1') {
     });
 }
 
-// Force no-cache to avoid stale HTML/JS on hosts with aggressive caching (InfinityFree)
+// Force no-cache to avoid stale HTML/JS on hosts with aggressive caching
 if (!headers_sent()) {
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Cache-Control: post-check=0, pre-check=0', false);

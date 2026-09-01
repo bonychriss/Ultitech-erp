@@ -18,7 +18,7 @@ if (PHP_VERSION_ID < 70100) {
     $GLOBALS['ultitech_php_too_old'] = true;
 }
 
-// Simple environment awareness for dual setup (Local + InfinityFree Production)
+// Environment: local dev vs production (includes/env.php overrides auto-detect)
 // Order of precedence: includes/env.php (if present) > auto-detect > defaults
 
 if (!function_exists('ultitech_is_local_dev_host')) {

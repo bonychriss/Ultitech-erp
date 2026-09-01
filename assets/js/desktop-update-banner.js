@@ -16,7 +16,12 @@
   var cfg = window.__ERP_DESKTOP_UPDATE__ || {};
   var latestVersion = String(cfg.latestVersion || '').trim();
   var downloadUrl = String(cfg.downloadUrl || '').trim();
-  var client = window.ultitechClient && window.ultitechClient.platform === 'desktop' ? window.ultitechClient : null;
+
+  function getClient() {
+    return window.ultitechClient && window.ultitechClient.platform === 'desktop'
+      ? window.ultitechClient
+      : null;
+  }
 
   var state = null;
   var version = null;
@@ -70,7 +75,7 @@
 
   function messageForState() {
     if (state === 'downloading') {
-      return 'Downloading updateÖ';
+      return 'Downloading updateù';
     }
     if (state === 'ready') {
       return version ? 'Update ' + version + ' ready to install' : 'Update ready to install';
@@ -83,7 +88,7 @@
       return 'Install Now';
     }
     if (state === 'downloading') {
-      return 'DownloadingÖ';
+      return 'Downloadingù';
     }
     return 'Download';
   }
@@ -121,6 +126,7 @@
     laterBtn.addEventListener('click', function () {
       writeDismissed(version || latestVersion);
       removeBanner();
+      var client = getClient();
       if (client && client.dismissUpdate) {
         client.dismissUpdate();
       }
@@ -128,6 +134,7 @@
 
     primaryBtn.disabled = state === 'downloading';
     primaryBtn.addEventListener('click', function () {
+      var client = getClient();
       if (client) {
         if (state === 'ready') {
           client.installUpdate && client.installUpdate();
@@ -147,6 +154,7 @@
   }
 
   function showAvailable(ver) {
+    var client = getClient();
     version = ver || latestVersion || null;
     if (!version && !client) {
       return;
@@ -189,7 +197,7 @@
       if (typeof detail.percent === 'number') {
         var text = document.querySelector('#' + BANNER_ID + ' .ultitech-update-text');
         if (text) {
-          text.textContent = 'Downloading updateÖ ' + Math.round(detail.percent) + '%';
+          text.textContent = 'Downloading updateù ' + Math.round(detail.percent) + '%';
         }
       }
       return;
@@ -230,22 +238,33 @@
 
   window.addEventListener('ultitech:desktop-update', onDesktopEvent);
 
-  function boot() {
+  function boot(attempt) {
     if (/select-module/i.test(window.location.pathname || '')) {
       return;
     }
 
-    if (client && latestVersion) {
-      var installed = client.version || '0';
-      if (compareVersions(installed, latestVersion) < 0 && !isDismissed(latestVersion)) {
-        showAvailable(latestVersion);
+    var client = getClient();
+    if (!client) {
+      if ((attempt || 0) < 30) {
+        window.setTimeout(function () {
+          boot((attempt || 0) + 1);
+        }, 100);
       }
       return;
     }
 
-    if (!client && latestVersion && downloadUrl && !isDismissed(latestVersion)) {
-      showAvailable(latestVersion);
+    if (!latestVersion) {
+      client.checkForUpdates && client.checkForUpdates();
+      return;
     }
+
+    var installed = client.version || '0';
+    if (compareVersions(installed, latestVersion) < 0 && !isDismissed(latestVersion)) {
+      showAvailable(latestVersion);
+      return;
+    }
+
+    client.checkForUpdates && client.checkForUpdates();
   }
 
   if (document.readyState === 'loading') {

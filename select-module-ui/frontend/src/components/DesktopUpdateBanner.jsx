@@ -21,11 +21,16 @@ function writeDismissed(version) {
   }
 }
 
+export function isDesktopErpClient() {
+  return Boolean(
+    typeof window !== 'undefined' &&
+      window.ultitechClient &&
+      window.ultitechClient.platform === 'desktop'
+  )
+}
+
 function getDesktopClient() {
-  if (typeof window !== 'undefined' && window.ultitechClient && window.ultitechClient.platform === 'desktop') {
-    return window.ultitechClient
-  }
-  return null
+  return isDesktopErpClient() ? window.ultitechClient : null
 }
 
 function compareVersions(a, b) {
@@ -41,15 +46,42 @@ function compareVersions(a, b) {
   return 0
 }
 
-export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadUrl }) {
+export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadUrl, onVisibilityChange }) {
   const latestVersion = desktopUpdate?.latestVersion || ''
   const downloadUrl = desktopUpdate?.downloadUrl || desktopAppDownloadUrl || ''
-  const client = getDesktopClient()
+  const [client, setClient] = useState(null)
 
   /** @type {['hidden' | 'available' | 'downloading' | 'ready' | 'uptodate', function]} */
   const [phase, setPhase] = useState('hidden')
   const [version, setVersion] = useState(latestVersion)
   const [percent, setPercent] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    let attempts = 0
+
+    const detectClient = () => {
+      if (cancelled) return
+      const detected = getDesktopClient()
+      if (detected) {
+        setClient(detected)
+        return
+      }
+      attempts += 1
+      if (attempts < 30) {
+        window.setTimeout(detectClient, 100)
+      }
+    }
+
+    detectClient()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    onVisibilityChange?.(phase !== 'hidden' && phase !== 'uptodate')
+  }, [phase, onVisibilityChange])
 
   useEffect(() => {
     const onDesktopEvent = (event) => {
@@ -85,25 +117,28 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
     }
 
     window.addEventListener('ultitech:desktop-update', onDesktopEvent)
+    return () => window.removeEventListener('ultitech:desktop-update', onDesktopEvent)
+  }, [latestVersion, version])
 
-    if (client) {
-      client.checkForUpdates?.().catch(() => {
-        /* silent; banner also driven by server version + IPC events */
-      })
-      if (latestVersion && !readDismissed(latestVersion)) {
-        const installed = client.version || '0'
-        if (compareVersions(installed, latestVersion) < 0) {
-          setVersion(latestVersion)
-          setPhase('available')
-        }
-      }
-    } else if (latestVersion && downloadUrl && !readDismissed(latestVersion)) {
+  useEffect(() => {
+    if (!client) {
+      return
+    }
+
+    client.checkForUpdates?.().catch(() => {
+      /* silent; banner also driven by server version + IPC events */
+    })
+
+    if (!latestVersion || readDismissed(latestVersion)) {
+      return
+    }
+
+    const installed = client.version || '0'
+    if (compareVersions(installed, latestVersion) < 0) {
       setVersion(latestVersion)
       setPhase('available')
     }
-
-    return () => window.removeEventListener('ultitech:desktop-update', onDesktopEvent)
-  }, [client, latestVersion, downloadUrl])
+  }, [client, latestVersion])
 
   useEffect(() => {
     if (!client || !latestVersion || phase === 'hidden') {
@@ -114,6 +149,10 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
       setPhase('hidden')
     }
   }, [client, latestVersion, phase])
+
+  if (!client) {
+    return null
+  }
 
   if (phase === 'hidden' || phase === 'uptodate') {
     if (phase === 'uptodate') {
@@ -131,7 +170,7 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
 
   const message = (() => {
     if (phase === 'downloading') {
-      return `Downloading update${percent > 0 ? `  ${Math.round(percent)}%` : ''}`
+      return `Downloading update${percent > 0 ? ` — ${Math.round(percent)}%` : '…'}`
     }
     if (phase === 'ready') {
       return version ? `Update ${version} ready to install` : 'Update ready to install'
@@ -141,7 +180,7 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
   })()
 
   const primaryLabel = (() => {
-    if (phase === 'downloading') return 'Downloading'
+    if (phase === 'downloading') return 'Downloading…'
     if (phase === 'ready') return 'Install Now'
     return 'Download'
   })()
@@ -153,19 +192,13 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
   }
 
   const onPrimary = () => {
-    if (client) {
-      if (phase === 'ready') {
-        client.installUpdate?.()
-        return
-      }
-      if (phase === 'available') {
-        setPhase('downloading')
-        client.downloadUpdate?.()
-      }
+    if (phase === 'ready') {
+      client.installUpdate?.()
       return
     }
-    if (downloadUrl) {
-      window.location.href = downloadUrl
+    if (phase === 'available') {
+      setPhase('downloading')
+      client.downloadUpdate?.()
     }
   }
 
@@ -179,16 +212,14 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
         <button type="button" className="sm-desktop-update-later" onClick={onLater}>
           Later
         </button>
-        {client || downloadUrl ? (
-          <button
-            type="button"
-            className="sm-desktop-update-primary"
-            onClick={onPrimary}
-            disabled={phase === 'downloading'}
-          >
-            {primaryLabel}
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className="sm-desktop-update-primary"
+          onClick={onPrimary}
+          disabled={phase === 'downloading'}
+        >
+          {primaryLabel}
+        </button>
       </div>
     </div>
   )

@@ -272,6 +272,7 @@ export default function SelectModulePage() {
   const showDesktopAppDownload = Boolean(cfg.showDesktopAppDownload && desktopAppDownloadUrl)
   const desktopUpdate = cfg.desktopUpdate && typeof cfg.desktopUpdate === 'object' ? cfg.desktopUpdate : null
   const showDesktopUpdateBanner = Boolean(desktopUpdate?.latestVersion)
+  const [desktopBannerVisible, setDesktopBannerVisible] = useState(false)
   const enabledPreview = enabledLabels.slice(0, 4).join(', ')
   const enabledMore = enabledLabels.length > 4
 
@@ -335,7 +336,7 @@ export default function SelectModulePage() {
   }
 
   return (
-    <div className={`sm-page${showDesktopUpdateBanner ? ' sm-page--update-banner' : ''}`}>
+    <div className={`sm-page${desktopBannerVisible ? ' sm-page--update-banner' : ''}`}>
       <header className="sm-topbar">
         <a href={homeUrl} className="sm-logo-link" title={companyName}>
           {logoUrl ? (
@@ -427,6 +428,7 @@ export default function SelectModulePage() {
         <DesktopUpdateBanner
           desktopUpdate={desktopUpdate}
           desktopAppDownloadUrl={desktopAppDownloadUrl}
+          onVisibilityChange={setDesktopBannerVisible}
         />
       ) : null}
     </div>

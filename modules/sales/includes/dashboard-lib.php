@@ -101,6 +101,24 @@ function dashboardDeskShellHeadExtras(): string
     return implode("\n    ", $parts);
 }
 
+function dashboardDeskStockProductViewUrl(): string
+{
+    $slug = '';
+    if (function_exists('getRequestedCompanySlug')) {
+        $slug = strtolower(trim((string) getRequestedCompanySlug()));
+    }
+    if ($slug === '' && !empty($_SESSION['company_slug'])) {
+        $slug = strtolower(trim((string) $_SESSION['company_slug']));
+    }
+
+    $path = 'stock/modules/products/view.php?id=';
+    if ($slug !== '' && function_exists('company_url')) {
+        return company_url($path);
+    }
+
+    return sales_app_url($path);
+}
+
 /**
  * @param array<string, mixed> $product
  * @return array<string, mixed>
@@ -134,6 +152,7 @@ function dashboardDeskNormalizeProductRow(array $product, string $placeholderIco
     return [
         'product_id' => $productId,
         'product_name' => (string) ($product['product_name'] ?? 'Product'),
+        'product_code' => $productId > 0 ? 'PRD-' . str_pad((string) $productId, 6, '0', STR_PAD_LEFT) : '',
         'outgoing_count' => (int) ($product['outgoing_count'] ?? 0),
         'total_qty' => (float) ($product['total_qty'] ?? 0),
         'top_customer_name' => (string) ($product['top_customer_name'] ?? ''),
@@ -616,7 +635,7 @@ function dashboardInitData(): array
         'most_sold_lookback_days' => $mostSoldLookbackDays,
         'most_sold_trucks' => dashboardDeskNormalizeProducts($mostSoldTrucks, 'fa-truck'),
         'most_sold_spares' => dashboardDeskNormalizeProducts($mostSoldSpares, 'fa-cog'),
-        'most_outgoing_products' => dashboardDeskNormalizeProducts(array_slice($mostOutgoingProducts, 0, 6), 'fa-box'),
+        'most_outgoing_products' => dashboardDeskNormalizeProducts(array_slice($mostOutgoingProducts, 0, 7), 'fa-box'),
         'kpi_summaries' => dashboardDeskBuildKpiSummaries(
             $module,
             $userId,
@@ -634,6 +653,8 @@ function dashboardInitData(): array
         ),
         'urls' => [
             'new_quote' => sales_module_url('orders/create.php', ['module' => $module]),
+            'catalogue' => function_exists('sales_catalogue_url') ? sales_catalogue_url('quote') : '',
+            'product_view' => dashboardDeskStockProductViewUrl(),
         ],
     ];
 }

@@ -25,6 +25,7 @@
 }
 
 .page-sales-dashboard-desk .sd-outgoing-card,
+.page-sales-dashboard-desk .sd-outgoing-panel,
 .page-sales-dashboard-desk .sd-leaderboard-card,
 .page-sales-dashboard-desk .sd-sidebar-cards .dash-card {
   width: 100%;
@@ -720,4 +721,266 @@ html[data-theme="dark"] .growth-chart__tooltip {
 
 html[data-theme="dark"] .growth-chart__tooltip-value {
   color: #f8fafc;
+}
+
+/* Outgoing products fan panel (matches stock dashboard Recent purchases) */
+.page-sales-dashboard-desk {
+  --dash-ink: #0f172a;
+  --dash-muted: #64748b;
+  --dash-line: #e2e8f0;
+  --dash-accent: #0f766e;
+}
+
+.page-sales-dashboard-desk .dash-desk-panel {
+  background: #fff;
+  border: 1px solid var(--dash-line);
+  border-radius: 16px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.page-sales-dashboard-desk .dash-desk-panel--fan {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.page-sales-dashboard-desk .dash-desk-card-fan {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: 11.5rem;
+  padding: 1.25rem 1rem 0.35rem;
+  overflow: visible;
+}
+
+.page-sales-dashboard-desk .dash-desk-fan-card {
+  --fan-offset: 0;
+  position: absolute;
+  left: 50%;
+  bottom: 0.85rem;
+  width: 5.6rem;
+  margin-left: -2.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-decoration: none;
+  color: inherit;
+  transform:
+    translateX(calc(var(--fan-offset) * 2.05rem))
+    rotate(calc(var(--fan-offset) * 9deg));
+  transform-origin: 50% 115%;
+  transition: transform 0.2s ease, filter 0.2s ease;
+  filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.14));
+}
+
+.page-sales-dashboard-desk .dash-desk-fan-card:hover {
+  transform:
+    translateX(calc(var(--fan-offset) * 2.15rem))
+    rotate(calc(var(--fan-offset) * 9deg))
+    translateY(-0.45rem)
+    scale(1.04);
+  z-index: 40 !important;
+  filter: drop-shadow(0 14px 22px rgba(15, 23, 42, 0.2));
+}
+
+.page-sales-dashboard-desk .dash-desk-fan-card-media {
+  display: block;
+  width: 5.6rem;
+  height: 7.1rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.page-sales-dashboard-desk .dash-desk-fan-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.page-sales-dashboard-desk .dash-desk-fan-card-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #f0fdfa 0%, #e2e8f0 100%);
+  color: var(--dash-accent);
+  font-size: 1.6rem;
+}
+
+.page-sales-dashboard-desk .dash-desk-fan-card-caption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+  text-align: center;
+  max-width: 6.2rem;
+}
+
+.page-sales-dashboard-desk .dash-desk-fan-card:hover .dash-desk-fan-card-caption {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-sales-dashboard-desk .dash-desk-fan-card-name {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--dash-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.page-sales-dashboard-desk .dash-desk-fan-card-code {
+  font-size: 0.62rem;
+  color: #94a3b8;
+}
+
+.page-sales-dashboard-desk .dash-desk-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1.05rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.page-sales-dashboard-desk .dash-desk-panel-head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.page-sales-dashboard-desk .dash-desk-panel-head a {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--dash-accent);
+  text-decoration: none;
+}
+
+.page-sales-dashboard-desk .dash-desk-panel-head a:hover {
+  text-decoration: underline;
+}
+
+.page-sales-dashboard-desk .dash-desk-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.45rem;
+  padding: 2rem 1.25rem;
+  color: var(--dash-muted);
+}
+
+.page-sales-dashboard-desk .dash-desk-panel-empty p {
+  margin: 0;
+  font-size: 0.88rem;
+  max-width: 16rem;
+  line-height: 1.45;
+}
+
+.page-sales-dashboard-desk .dash-desk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.page-sales-dashboard-desk .dash-desk-list li + li {
+  border-top: 1px solid #f8fafc;
+}
+
+.page-sales-dashboard-desk .dash-desk-list a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1.05rem;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+  transition: background 0.12s ease;
+}
+
+.page-sales-dashboard-desk .dash-desk-list a:hover {
+  background: #f8fafc;
+}
+
+.page-sales-dashboard-desk .dash-desk-list-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.page-sales-dashboard-desk .dash-desk-list-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--dash-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-sales-dashboard-desk .dash-desk-list-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-sales-dashboard-desk .dash-desk-list-amount {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--dash-ink);
+  flex-shrink: 0;
+}
+
+.page-sales-dashboard-desk .dash-desk-list--compact a {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.page-sales-dashboard-desk .dash-desk-panel--fan .dash-desk-list--compact {
+  border-top: 1px solid #f1f5f9;
+}
+
+html[data-theme="dark"] .page-sales-dashboard-desk {
+  --dash-ink: #f8fafc;
+  --dash-muted: #94a3b8;
+  --dash-line: #334155;
+}
+
+html[data-theme="dark"] .page-sales-dashboard-desk .dash-desk-panel {
+  background: #111827;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .page-sales-dashboard-desk .dash-desk-fan-card-media {
+  border-color: #1e293b;
+  box-shadow: 0 0 0 1px #334155;
+}
+
+html[data-theme="dark"] .page-sales-dashboard-desk .dash-desk-fan-card-fallback {
+  background: linear-gradient(160deg, #134e4a 0%, #1e293b 100%);
+  color: #5eead4;
+}
+
+html[data-theme="dark"] .page-sales-dashboard-desk .dash-desk-panel-head,
+html[data-theme="dark"] .page-sales-dashboard-desk .dash-desk-panel--fan .dash-desk-list--compact {
+  border-color: #1e293b;
+}
+
+html[data-theme="dark"] .page-sales-dashboard-desk .dash-desk-list a:hover {
+  background: #1e293b;
 }

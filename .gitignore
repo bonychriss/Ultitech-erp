@@ -18,6 +18,7 @@ scripts/deploy.config.php
 scripts/ftp-deploy.local.cmd
 scripts/ftp-password.txt
 *.sql
+scripts/deploy/roadmaster-enerpize-bundle/
 
 # User uploads and generated assets
 assets/uploads/

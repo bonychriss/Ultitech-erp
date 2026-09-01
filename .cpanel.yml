@@ -1,9 +1,9 @@
 ---
 # UltiTech ERP  StackCP/cPanel Git deployment
-# Repo: .../repositories/ultitech-erp  ?  live site: .../public_html/
+# Repo: .../repositories/ultitech-erp  ?  live site: .../public_html/ (NOT repositories/public_html/)
 # Uses rsync WITHOUT --delete (preserves env.php, uploads, vendor/, desktop .exe)
 
 deployment:
   tasks:
-    - /bin/rsync -rlptgoD --checksum --exclude=.git --exclude=.github --exclude=.cursor --exclude=node_modules --exclude=vendor --exclude='*.md' --exclude='*.sql' --exclude=scripts/deploy.config.php --exclude=env.php --exclude=includes/env.php --exclude=env.local.php --exclude=env.production.php --exclude=env.old.php --exclude=env.production.backup.php --exclude=config_mail.php --exclude=mail-bridges/ultimate/config.php --exclude=mail-bridges/roadmaster/config.php --exclude=assets/uploads --exclude=assets/signatures --exclude=uploads --exclude=storage --exclude=logs --exclude=backups --exclude=tmp --exclude=client-apps/desktop/dist --exclude=erp_deployment_package --exclude=deploy --exclude=cloud_erp --exclude=sales_update_pkg --exclude=upload_pkg ./ ../public_html/
-    - cd ../public_html && (/usr/local/bin/composer install --no-dev --optimize-autoloader 2>/dev/null || /usr/bin/composer install --no-dev --optimize-autoloader 2>/dev/null || true)
+    - /bin/rsync -rlptgoD --checksum --exclude=.git --exclude=.github --exclude=.cursor --exclude=node_modules --exclude=vendor --exclude='*.md' --exclude='*.sql' --exclude=scripts/deploy.config.php --exclude=env.php --exclude=includes/env.php --exclude=env.local.php --exclude=env.production.php --exclude=env.old.php --exclude=env.production.backup.php --exclude=config_mail.php --exclude=mail-bridges/ultimate/config.php --exclude=mail-bridges/roadmaster/config.php --exclude=assets/uploads --exclude=assets/signatures --exclude=uploads --exclude=storage --exclude=logs --exclude=backups --exclude=tmp --exclude=client-apps/desktop/dist --exclude=erp_deployment_package --exclude=deploy --exclude=cloud_erp --exclude=sales_update_pkg --exclude=upload_pkg ./ ../../public_html/
+    - cd ../../public_html && (/usr/local/bin/composer install --no-dev --optimize-autoloader 2>/dev/null || /usr/bin/composer install --no-dev --optimize-autoloader 2>/dev/null || true)

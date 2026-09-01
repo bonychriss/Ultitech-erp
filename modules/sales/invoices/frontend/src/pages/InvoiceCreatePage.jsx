@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ImageOff, Loader2, Trash2, X } from 'lucide-react';
-import { fetchCreateInit, fetchExchangeRate, submitCreateInvoice, submitCreateQuote } from '../api/invoicesDesk';
+import { fetchCreateInit, fetchExchangeRate, fetchQuoteEditInit, submitCreateInvoice, submitCreateQuote, submitQuoteEdit } from '../api/invoicesDesk';
 
 const FLAG_BASE = 'https://flagcdn.com/w40/';
 
@@ -111,7 +111,8 @@ function MoneySavingOverlay({ src, label = 'Creating invoice...' }) {
   );
 }
 
-export default function InvoiceCreatePage() {
+export default function InvoiceCreatePage({ mode = 'create' }) {
+  const isEditMode = mode === 'edit';
   const [init, setInit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -136,6 +137,7 @@ export default function InvoiceCreatePage() {
   const [primaryCurrency, setPrimaryCurrencyState] = useState('');
   const [exchangeRates, setExchangeRates] = useState({ TZS: '1.0000' });
   const [items, setItems] = useState([emptyLine()]);
+  const [createdBy, setCreatedBy] = useState('');
 
   const closeAllProductDropdowns = useCallback(() => {
     setItems((prev) => prev.map((item) => (
@@ -168,9 +170,49 @@ export default function InvoiceCreatePage() {
   const loadInit = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchCreateInit();
+      const data = isEditMode ? await fetchQuoteEditInit() : await fetchCreateInit();
       setInit(data);
       const supportsTruck = !!data.supports_truck_invoices;
+
+      if (isEditMode && data.order) {
+        const order = data.order;
+        setOrderType(supportsTruck ? (order.order_type || 'spare') : 'spare');
+        setExchangeRates({ TZS: '1.0000', ...(order.currency_rates || data.initial_exchange_rates || {}) });
+        setCustomerId(order.customer_id ? String(order.customer_id) : '');
+        setInvoiceDate(order.quote_date || todayIso());
+        setValidUntil(order.valid_until || validUntilIso());
+        setLeadTime(order.lead_time || '');
+        setDiscountAmount(Number(order.discount_amount) || 0);
+        setTaxPercentage(Number(order.tax_percentage) || 18);
+        setShippingCharges(Number(order.shipping_charges) || 0);
+        setCreatedBy(order.created_by ? String(order.created_by) : String(data.current_user_id || ''));
+
+        const displayCodes = Array.isArray(order.display_currencies) ? order.display_currencies : [];
+        const primary = String(order.currency || displayCodes[0] || data.default_currency || 'TZS').toUpperCase();
+        if (supportsTruck && order.order_type === 'truck') {
+          setCurrencies(displayCodes);
+          setPrimaryCurrencyState(primary);
+        } else {
+          setCurrencies(displayCodes.length ? displayCodes : [primary]);
+          setPrimaryCurrencyState(primary);
+        }
+
+        const mappedItems = (data.order_items || []).map((row) => {
+          const line = emptyLine(Number(row.tax_percent) || Number(order.tax_percentage) || 18);
+          line.product_id = row.product_id;
+          line.searchQuery = row.product_name || '';
+          line.unit_price = Number(row.unit_price) || 0;
+          line.description = row.description || '';
+          line.image = row.image_url || '';
+          line.quantity = Number(row.quantity) || 1;
+          line.discount = Number(row.discount) || 0;
+          line.line_total = recalcLineTotal(line);
+          return line;
+        });
+        setItems(mappedItems.length ? mappedItems : [emptyLine()]);
+        return;
+      }
+
       setOrderType(supportsTruck ? (data.predefined_type || 'spare') : 'spare');
       setExchangeRates({ TZS: '1.0000', ...(data.initial_exchange_rates || {}) });
       const isTruckMode = supportsTruck && data.predefined_type === 'truck';
@@ -247,7 +289,7 @@ export default function InvoiceCreatePage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isEditMode]);
 
   useEffect(() => { loadInit(); }, [loadInit]);
 
@@ -415,12 +457,18 @@ export default function InvoiceCreatePage() {
 
   function buildFormData() {
     const formData = new FormData();
+    if (isEditMode) {
+      formData.append('order_id', String(init?.order_id || init?.order?.id || ''));
+      formData.append('status', String(init?.order?.status || 'quotation'));
+    }
     formData.append('customer_id', customerId);
     if (isQuote) {
       formData.append('quote_date', invoiceDate);
       formData.append('valid_until', validUntil);
-      formData.append('status', 'quotation');
-      formData.append('created_by', String(init?.current_user_id || ''));
+      if (!isEditMode) {
+        formData.append('status', 'quotation');
+      }
+      formData.append('created_by', String(createdBy || init?.current_user_id || ''));
     } else {
       formData.append('invoice_date', invoiceDate);
       formData.append('due_date', dueDate);
@@ -461,12 +509,14 @@ export default function InvoiceCreatePage() {
     setSaving(true);
     setErrors([]);
     try {
-      const result = isQuote
-        ? await submitCreateQuote(buildFormData())
-        : await submitCreateInvoice(buildFormData());
+      const result = isEditMode
+        ? await submitQuoteEdit(buildFormData())
+        : (isQuote
+          ? await submitCreateQuote(buildFormData())
+          : await submitCreateInvoice(buildFormData()));
       window.location.href = result.redirect || indexUrl;
     } catch (err) {
-      setErrors([err instanceof Error ? err.message : `Failed to create ${isQuote ? 'quotation' : 'invoice'}.`]);
+      setErrors([err instanceof Error ? err.message : `Failed to ${isEditMode ? 'update' : 'create'} ${isQuote ? 'quotation' : 'invoice'}.`]);
       setSaving(false);
     }
   }
@@ -512,6 +562,15 @@ export default function InvoiceCreatePage() {
               <div>
                 <input type="text" readOnly className="exp-create-input exp-create-input--readonly" value={init.next_invoice_number || '-'} />
                 <div className="exp-create-help">Generated automatically when the invoice is saved.</div>
+              </div>
+            </div>
+            )}
+
+            {isQuote && isEditMode && (
+            <div className="exp-create-row">
+              <label className="exp-create-label">Quotation Number</label>
+              <div>
+                <input type="text" readOnly className="exp-create-input exp-create-input--readonly" value={init.order?.order_number || '-'} />
               </div>
             </div>
             )}

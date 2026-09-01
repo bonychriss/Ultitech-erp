@@ -3,10 +3,24 @@ require_once '../../../includes/config.php';
 require_once '../../../includes/functions.php';
 require_once '../functions.php';
 
-if (session_status() == PHP_SESSION_NONE) session_start();
-if (!isset($_SESSION['user_id'])) $_SESSION['user_id'] = 1;
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['user_id'] = 1;
+}
 
-$id = $_GET['id'] ?? 0;
+$id = (int) ($_GET['id'] ?? 0);
+if ($id <= 0) {
+    header('Location: ' . (function_exists('sales_module_url') ? sales_module_url('orders/create.php', ['module' => 'sales']) : 'create.php?module=sales'));
+    exit;
+}
+
+if (function_exists('salesQuoteCreateUsesReactShell') && salesQuoteCreateUsesReactShell()) {
+    require_once __DIR__ . '/includes/order-edit-lib.php';
+    salesOrderEditRenderReactShell($id);
+}
+
 $salesDb = function_exists('sales_pdo') ? sales_pdo() : $pdo;
 
 // Fetch Order

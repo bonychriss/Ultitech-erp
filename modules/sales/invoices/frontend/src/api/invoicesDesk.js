@@ -70,3 +70,29 @@ export async function submitCreateInvoice(formData) {
   }
   return data;
 }
+
+export async function fetchQuoteEditInit() {
+  const params = new URLSearchParams(window.location.search);
+  const qs = params.toString();
+  const res = await fetch(`${getApiBase()}/quote-edit-init.php${qs ? `?${qs}` : ''}`, { credentials: 'same-origin' });
+  const data = await parseJson(res);
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+export async function submitQuoteEdit(formData) {
+  formData.append('_api', '1');
+  const res = await fetch(`${getApiBase()}/quote-edit-save.php`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+  const data = await parseJson(res);
+  if (!res.ok || data.error || data.ok === false) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}

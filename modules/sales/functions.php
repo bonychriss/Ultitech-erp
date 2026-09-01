@@ -1906,6 +1906,226 @@ function getSalesFunnelStats($month) {
     ];
 }
 
+/**
+ * Revenue totals grouped by calendar day for dashboard charts.
+ *
+ * @return array<string, float> Y-m-d => amount
+ */
+function salesRevenueTotalsByDay(DateTimeInterface $start, DateTimeInterface $end): array
+{
+    $pdo = sales_pdo();
+    $sql = "
+        SELECT DATE(created_at) AS sale_day, SUM(total_amount) AS total
+        FROM invoices
+        WHERE status != 'cancelled'
+          AND created_at >= ?
+          AND created_at < ?
+    ";
+    $params = [
+        $start->format('Y-m-d 00:00:00'),
+        $end->format('Y-m-d 00:00:00'),
+    ];
+    salesAppendCompanyScope($sql, $params, 'invoices');
+    $sql .= ' GROUP BY DATE(created_at)';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $out = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+        $day = (string) ($row['sale_day'] ?? '');
+        if ($day !== '') {
+            $out[$day] = (float) ($row['total'] ?? 0);
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * Quotation totals grouped by calendar day for dashboard charts.
+ *
+ * @return array<string, float> Y-m-d => amount
+ */
+function salesQuoteTotalsByDay(DateTimeInterface $start, DateTimeInterface $end): array
+{
+    $pdo = sales_pdo();
+    $sql = "
+        SELECT DATE(created_at) AS quote_day, SUM(total_amount) AS total
+        FROM sales_orders
+        WHERE status IN ('draft', 'quotation')
+          AND created_at >= ?
+          AND created_at < ?
+    ";
+    $params = [
+        $start->format('Y-m-d 00:00:00'),
+        $end->format('Y-m-d 00:00:00'),
+    ];
+    salesAppendCompanyScope($sql, $params, 'sales_orders');
+    $sql .= ' GROUP BY DATE(created_at)';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $out = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+        $day = (string) ($row['quote_day'] ?? '');
+        if ($day !== '') {
+            $out[$day] = (float) ($row['total'] ?? 0);
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * @param callable(DateTimeInterface, DateTimeInterface): array<string, float> $totalsFn
+ * @return array{day:list<array{label:string,value:float}>,weekly:list<array{label:string,value:float}>,monthly:list<array{label:string,value:float}>}
+ */
+function salesBuildGrowthSeries(callable $totalsFn, callable $monthlyTotalsFn): array
+{
+    $today = new DateTimeImmutable('today');
+
+    $dayStart = $today->modify('-6 days');
+    $dayEnd = $today->modify('+1 day');
+    $dayTotals = $totalsFn($dayStart, $dayEnd);
+    $daySeries = [];
+    for ($i = 0; $i < 7; $i++) {
+        $date = $dayStart->modify("+{$i} days");
+        $key = $date->format('Y-m-d');
+        $daySeries[] = [
+            'label' => $date->format('D'),
+            'value' => (float) ($dayTotals[$key] ?? 0),
+        ];
+    }
+
+    $dow = (int) $today->format('w');
+    $weekStart = $today->modify('-' . $dow . ' days');
+    $weekEnd = $weekStart->modify('+7 days');
+    $weekTotals = $totalsFn($weekStart, $weekEnd);
+    $weekLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    $weeklySeries = [];
+    for ($i = 0; $i < 7; $i++) {
+        $date = $weekStart->modify("+{$i} days");
+        $key = $date->format('Y-m-d');
+        $weeklySeries[] = [
+            'label' => $weekLabels[$i],
+            'value' => (float) ($weekTotals[$key] ?? 0),
+        ];
+    }
+
+    $monthStart = $today->modify('first day of this month')->modify('-5 months');
+    $monthEnd = $today->modify('first day of next month');
+    $monthTotals = $monthlyTotalsFn($monthStart, $monthEnd);
+    $monthlySeries = [];
+    for ($i = 0; $i < 6; $i++) {
+        $date = $monthStart->modify("+{$i} months");
+        $key = $date->format('Y-m');
+        $monthlySeries[] = [
+            'label' => $date->format('M'),
+            'value' => (float) ($monthTotals[$key] ?? 0),
+        ];
+    }
+
+    return [
+        'day' => $daySeries,
+        'weekly' => $weeklySeries,
+        'monthly' => $monthlySeries,
+    ];
+}
+
+/**
+ * Monthly totals helper for invoice revenue.
+ *
+ * @return array<string, float>
+ */
+function salesRevenueTotalsByMonth(DateTimeInterface $start, DateTimeInterface $end): array
+{
+    $pdo = sales_pdo();
+    $sql = "
+        SELECT DATE_FORMAT(created_at, '%Y-%m') AS sale_month, SUM(total_amount) AS total
+        FROM invoices
+        WHERE status != 'cancelled'
+          AND created_at >= ?
+          AND created_at < ?
+    ";
+    $params = [
+        $start->format('Y-m-d 00:00:00'),
+        $end->format('Y-m-d 00:00:00'),
+    ];
+    salesAppendCompanyScope($sql, $params, 'invoices');
+    $sql .= ' GROUP BY DATE_FORMAT(created_at, \'%Y-%m\')';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $out = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+        $out[(string) ($row['sale_month'] ?? '')] = (float) ($row['total'] ?? 0);
+    }
+
+    return $out;
+}
+
+/**
+ * Monthly totals helper for quotations.
+ *
+ * @return array<string, float>
+ */
+function salesQuoteTotalsByMonth(DateTimeInterface $start, DateTimeInterface $end): array
+{
+    $pdo = sales_pdo();
+    $sql = "
+        SELECT DATE_FORMAT(created_at, '%Y-%m') AS quote_month, SUM(total_amount) AS total
+        FROM sales_orders
+        WHERE status IN ('draft', 'quotation')
+          AND created_at >= ?
+          AND created_at < ?
+    ";
+    $params = [
+        $start->format('Y-m-d 00:00:00'),
+        $end->format('Y-m-d 00:00:00'),
+    ];
+    salesAppendCompanyScope($sql, $params, 'sales_orders');
+    $sql .= ' GROUP BY DATE_FORMAT(created_at, \'%Y-%m\')';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $out = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+        $out[(string) ($row['quote_month'] ?? '')] = (float) ($row['total'] ?? 0);
+    }
+
+    return $out;
+}
+
+/**
+ * Build revenue growth series for dashboard (day / weekly / monthly toggles).
+ *
+ * @return array{day:list<array{label:string,value:float}>,weekly:list<array{label:string,value:float}>,monthly:list<array{label:string,value:float}>}
+ */
+function getRevenueGrowthSeries(): array
+{
+    return salesBuildGrowthSeries(
+        'salesRevenueTotalsByDay',
+        'salesRevenueTotalsByMonth'
+    );
+}
+
+/**
+ * Build quotation growth series for dashboard (day / weekly / monthly toggles).
+ *
+ * @return array{day:list<array{label:string,value:float}>,weekly:list<array{label:string,value:float}>,monthly:list<array{label:string,value:float}>}
+ */
+function getQuoteGrowthSeries(): array
+{
+    return salesBuildGrowthSeries(
+        'salesQuoteTotalsByDay',
+        'salesQuoteTotalsByMonth'
+    );
+}
+
 function getRecentActivities($limit = 10) {
     $pdo = sales_pdo();
     $scopeNamedSo = salesCompanyScopeNamed('sales_orders', 'so', 'cid_so');

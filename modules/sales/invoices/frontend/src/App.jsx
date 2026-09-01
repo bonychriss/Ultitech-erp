@@ -22,6 +22,12 @@ export default function App() {
 
   }
 
+  if (page === 'quote_edit') {
+
+    return <InvoiceCreatePage mode="edit" />;
+
+  }
+
   return <InvoiceCreatePage />;
 
 }

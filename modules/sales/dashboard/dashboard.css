@@ -938,8 +938,191 @@ body.page-sales-dashboard-desk .dash-card {
     .leaderboard-progress-fill--complete,
     .leaderboard-avatar--target-hit,
     .leaderboard-congrats-badge,
-    .leaderboard-congrats-spark {
+    .leaderboard-congrats-spark,
+    .sd-yearly-card--target-hit,
+    .yearly-progress-bar--complete,
+    .yearly-congrats-badge,
+    .yearly-congrats-spark {
         animation: none;
+    }
+}
+
+.sd-yearly-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.sd-yearly-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.sd-yearly-card-head .dash-card-title {
+    margin-bottom: 0.5rem;
+}
+
+.sd-yearly-card--target-hit {
+    background: linear-gradient(
+        120deg,
+        rgba(16, 185, 129, 0.1) 0%,
+        rgba(250, 204, 21, 0.16) 48%,
+        rgba(16, 185, 129, 0.1) 100%
+    );
+    background-size: 220% 100%;
+    animation:
+        yearlyTargetCardShimmer 3.4s ease-in-out infinite,
+        yearlyTargetCardPop 0.7s ease-out;
+    box-shadow:
+        0 0 0 1px rgba(16, 185, 129, 0.24),
+        0 10px 24px rgba(16, 185, 129, 0.1);
+}
+
+.yearly-congrats-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #047857;
+    background: rgba(16, 185, 129, 0.16);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    animation: yearlyTargetBadgePop 0.75s ease-out;
+    white-space: nowrap;
+}
+
+.yearly-achieved-value {
+    color: #059669 !important;
+    animation: yearlyTargetValuePulse 2.5s ease-in-out infinite;
+}
+
+.yearly-progress--complete {
+    background-color: rgba(16, 185, 129, 0.18);
+}
+
+.yearly-progress-bar--complete {
+    background: linear-gradient(90deg, #10b981 0%, #fbbf24 50%, #10b981 100%);
+    background-size: 200% 100%;
+    animation: yearlyTargetBarShimmer 2.4s linear infinite;
+}
+
+.yearly-complete-text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    width: 100%;
+    color: #047857;
+    font-weight: 700;
+    animation: yearlyTargetBadgePop 0.8s ease-out;
+}
+
+.yearly-congrats-spark {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    animation: yearlyTargetSpark 3s ease-in-out infinite;
+}
+
+.yearly-congrats-spark--1 {
+    top: 0.75rem;
+    right: 1rem;
+    background: #fbbf24;
+}
+
+.yearly-congrats-spark--2 {
+    top: 2.2rem;
+    right: 2.2rem;
+    background: #34d399;
+    animation-delay: 0.5s;
+}
+
+.yearly-congrats-spark--3 {
+    top: 1.4rem;
+    right: 0.4rem;
+    background: #60a5fa;
+    animation-delay: 1s;
+}
+
+@keyframes yearlyTargetCardPop {
+    0% {
+        transform: scale(0.98);
+        opacity: 0.8;
+    }
+    60% {
+        transform: scale(1.01);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes yearlyTargetCardShimmer {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+@keyframes yearlyTargetBarShimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 200% 50%;
+    }
+}
+
+@keyframes yearlyTargetBadgePop {
+    0% {
+        transform: scale(0.75);
+        opacity: 0;
+    }
+    70% {
+        transform: scale(1.06);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes yearlyTargetValuePulse {
+    0%, 100% {
+        text-shadow: 0 0 0 rgba(5, 150, 105, 0);
+    }
+    50% {
+        text-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+    }
+}
+
+@keyframes yearlyTargetSpark {
+    0%, 100% {
+        opacity: 0;
+        transform: translateY(0) scale(0.6);
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1);
+    }
+    55% {
+        opacity: 0.85;
+        transform: translateY(-10px) scale(0.9);
+    }
+    80% {
+        opacity: 0;
+        transform: translateY(-14px) scale(0.5);
     }
 }
 

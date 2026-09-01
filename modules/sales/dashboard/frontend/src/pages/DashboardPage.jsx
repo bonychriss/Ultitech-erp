@@ -3,13 +3,10 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
-  CheckCircle2,
   Clock,
   DollarSign,
-  FileText,
   Handshake,
   Loader2,
-  MessageSquare,
   Trophy,
   Truck,
   Cog,
@@ -20,11 +17,11 @@ import {
   formatMoney,
   formatNumber,
   formatPercent,
-  starRatingParts,
   timeAgo,
 } from '../utils/dashboardFormat.js';
 import MostSoldProductsList from '../components/MostSoldProductsList.jsx';
 import KpiSummaryModal from '../components/KpiSummaryModal.jsx';
+import AlternatingGrowthCharts from '../components/AlternatingGrowthCharts.jsx';
 
 function FlashAlerts({ flash }) {
   if (!flash?.success && !flash?.error) return null;
@@ -83,38 +80,6 @@ function KpiCard({
         ) : null}
       </div>
       {subtext ? <div className="kpi-card-subtext">{subtext}</div> : null}
-    </div>
-  );
-}
-
-function SalesPipeline({ funnel }) {
-  const stages = [
-    { key: 'draft', label: 'Draft', count: funnel.drafts, pct: funnel.progress_percent?.draft, icon: <FileText size={16} /> },
-    { key: 'quote', label: 'Quote', count: funnel.quotes, pct: funnel.progress_percent?.quote, icon: <MessageSquare size={16} /> },
-    { key: 'confirmed', label: 'Confirmed', count: funnel.confirmed, pct: funnel.progress_percent?.confirmed, icon: <CheckCircle2 size={16} /> },
-    { key: 'invoiced', label: 'Invoiced', count: funnel.invoiced, pct: funnel.progress_percent?.invoiced, icon: <DollarSign size={16} /> },
-  ];
-
-  return (
-    <div className="pipeline-flow">
-      {stages.map((stage, idx) => (
-        <span key={stage.key} style={{ display: 'contents' }}>
-          {idx > 0 ? <span className="pipeline-arrow">-&gt;</span> : null}
-          <div className={`pipeline-stage ${stage.key}`}>
-            <div className="pipeline-stage-icon">{stage.icon}</div>
-            <div className="pipeline-stage-text">
-              {stage.label}
-              {' '}
-              (
-              {formatNumber(stage.count)}
-              )
-            </div>
-            <div className="pipeline-progress">
-              <div className="pipeline-progress-fill" style={{ width: `${stage.pct ?? 0}%` }} />
-            </div>
-          </div>
-        </span>
-      ))}
     </div>
   );
 }
@@ -232,29 +197,60 @@ function LeaderboardAvatar({ rep, hitTarget = false }) {
 }
 
 function YearlyTarget({ yearly }) {
+  const target = Number(yearly?.target || 0);
+  const sales = Number(yearly?.sales || 0);
+  const percent = Number(yearly?.percent || 0);
+  const hitTarget = target > 0 && sales >= target;
+
   return (
-    <div className="dash-card flex-shrink-0 sd-yearly-card">
-      <h3 className="dash-card-title mb-2">Yearly Target</h3>
+    <div className={`dash-card flex-shrink-0 sd-yearly-card${hitTarget ? ' sd-yearly-card--target-hit' : ''}`}>
+      {hitTarget ? (
+        <>
+          <span className="yearly-congrats-spark yearly-congrats-spark--1" aria-hidden="true" />
+          <span className="yearly-congrats-spark yearly-congrats-spark--2" aria-hidden="true" />
+          <span className="yearly-congrats-spark yearly-congrats-spark--3" aria-hidden="true" />
+        </>
+      ) : null}
+      <div className="sd-yearly-card-head">
+        <h3 className="dash-card-title mb-2">Yearly Target</h3>
+        {hitTarget ? (
+          <span className="yearly-congrats-badge">
+            <Trophy size={13} strokeWidth={2.5} aria-hidden="true" />
+            Target reached!
+          </span>
+        ) : null}
+      </div>
       <div className="d-flex justify-content-between align-items-end mb-1">
         <div>
           <div className="text-muted small">Achieved</div>
-          <div className="fw-bold text-primary">{formatMoney(yearly.sales)}</div>
+          <div className={`fw-bold${hitTarget ? ' yearly-achieved-value' : ' text-primary'}`}>
+            {formatMoney(sales)}
+          </div>
         </div>
         <div className="text-end">
           <div className="text-muted small">Target</div>
-          <div className="fw-bold">{formatMoney(yearly.target)}</div>
+          <div className="fw-bold">{formatMoney(target)}</div>
         </div>
       </div>
-      <div className="progress" style={{ height: '8px' }}>
+      <div className={`progress yearly-progress${hitTarget ? ' yearly-progress--complete' : ''}`} style={{ height: '8px' }}>
         <div
-          className="progress-bar bg-primary"
+          className={`progress-bar${hitTarget ? ' yearly-progress-bar--complete' : ' bg-primary'}`}
           role="progressbar"
-          style={{ width: `${yearly.percent}%` }}
+          style={{ width: `${percent}%` }}
         />
       </div>
-      <div className="text-center mt-2 small text-muted">
-        {formatPercent(yearly.percent)}
-        % Completed
+      <div className={`text-center mt-2 small${hitTarget ? ' yearly-complete-text' : ' text-muted'}`}>
+        {hitTarget ? (
+          <>
+            <Trophy size={14} strokeWidth={2.5} className="me-1" aria-hidden="true" />
+            Congratulations! Annual target achieved.
+          </>
+        ) : (
+          <>
+            {formatPercent(percent)}
+            % Completed
+          </>
+        )}
       </div>
     </div>
   );
@@ -381,9 +377,11 @@ export default function DashboardPage() {
 
       <div className="row g-3 mb-3">
         <div className="col-xl-8 col-lg-7">
-          <div className="dash-card">
-            <h3 className="dash-card-title">Sales Pipeline</h3>
-            <SalesPipeline funnel={data.funnel || {}} />
+          <div className="dash-card sd-revenue-growth-card">
+            <AlternatingGrowthCharts
+              revenueSeries={data.revenue_growth || {}}
+              quoteSeries={data.quote_growth || {}}
+            />
           </div>
         </div>
         <div className="col-xl-4 col-lg-5">

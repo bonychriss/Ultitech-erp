@@ -198,6 +198,19 @@
   font-size: 0.6875rem;
 }
 
+.page-sales-dashboard-desk .sd-yearly-card--target-hit {
+  padding: 0.85rem 0.75rem;
+}
+
+.page-sales-dashboard-desk .yearly-congrats-badge {
+  font-size: 0.5625rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.page-sales-dashboard-desk .yearly-complete-text {
+  font-size: 0.625rem;
+}
+
 @media (max-width: 991.98px) {
   .page-sales-dashboard-desk .sd-outgoing-card .products-list,
   .page-sales-dashboard-desk .sd-leaderboard-card {
@@ -410,4 +423,301 @@ html[data-theme="dark"] .sd-kpi-modal-item-ref {
 
 html[data-theme="dark"] .sd-kpi-modal-stat {
   background: #0f172a;
+}
+
+/* Growth charts + alternating carousel */
+.sd-revenue-growth-card {
+  padding: 1.25rem 1.35rem 1rem;
+}
+
+.chart-carousel {
+  position: relative;
+}
+
+.chart-carousel__stage {
+  position: relative;
+  min-height: 318px;
+  overflow: hidden;
+}
+
+.chart-carousel__slide {
+  transition: opacity 0.48s ease, transform 0.48s ease;
+  will-change: opacity, transform;
+}
+
+.chart-carousel__slide--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chart-carousel__slide--exit {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.chart-carousel__slide--enter {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.chart-carousel__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.chart-carousel__shifter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-carousel__shift-seg {
+  display: block;
+  width: 8px;
+  height: 4px;
+  border: 0;
+  border-radius: 4px;
+  background: #e2e8f0;
+  cursor: pointer;
+  padding: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease, opacity 0.3s ease;
+}
+
+.chart-carousel__shift-seg:hover {
+  background: #cbd5e1;
+}
+
+.chart-carousel__shift-seg.is-active {
+  width: 32px;
+  background: #3b82f6;
+}
+
+.chart-carousel__shift-seg.is-active:hover {
+  background: #2563eb;
+}
+
+html[data-theme="dark"] .chart-carousel__shift-seg {
+  background: #334155;
+}
+
+html[data-theme="dark"] .chart-carousel__shift-seg:hover {
+  background: #475569;
+}
+
+html[data-theme="dark"] .chart-carousel__shift-seg.is-active {
+  background: #3b82f6;
+}
+
+.growth-chart__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.growth-chart__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.growth-chart__period {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.growth-chart__period-item-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.growth-chart__period-sep {
+  width: 4px;
+  height: 4px;
+  margin: 0 0.75rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.growth-chart__period-item {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 0.35s ease, font-weight 0.35s ease;
+}
+
+.growth-chart__period-item:hover {
+  color: #64748b;
+}
+
+.growth-chart__period-item.is-active {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.growth-chart--quote .growth-chart__period-item.is-active {
+  color: #0369a1;
+}
+
+.growth-chart--revenue .growth-chart__period-item.is-active {
+  color: #7c3aed;
+}
+
+.growth-chart__period--autocycle .growth-chart__period-item.is-active {
+  transition: color 0.45s ease;
+}
+
+.growth-chart__canvas-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.growth-chart__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.growth-chart--revenue {
+  --growth-bar: #8b5cf6;
+  --growth-line: #ef4444;
+}
+
+.growth-chart--quote {
+  --growth-bar: #3b82f6;
+  --growth-line: #06b6d4;
+}
+
+.growth-chart__grid {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+}
+
+.growth-chart__y-label,
+.growth-chart__x-label {
+  fill: #94a3b8;
+  font-size: 11px;
+  text-anchor: end;
+}
+
+.growth-chart__x-label {
+  text-anchor: middle;
+}
+
+.growth-chart__bar {
+  fill: var(--growth-bar);
+  opacity: 0.95;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  transform-origin: center bottom;
+  animation: growth-bar-rise 0.65s ease backwards;
+}
+
+@keyframes growth-bar-rise {
+  from {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+  to {
+    opacity: 0.95;
+    transform: scaleY(1);
+  }
+}
+
+.growth-chart__bar:hover {
+  opacity: 1;
+}
+
+.growth-chart__line {
+  stroke: var(--growth-line);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.growth-chart__dot {
+  fill: var(--growth-line);
+  stroke: #fff;
+  stroke-width: 2;
+  cursor: pointer;
+  transition: r 0.15s ease;
+}
+
+.growth-chart__tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 14px));
+  min-width: 148px;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.growth-chart__tooltip-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-bottom: 0.15rem;
+}
+
+.growth-chart__tooltip-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+html[data-theme="dark"] .growth-chart__title {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .growth-chart__period-item {
+  color: #64748b;
+}
+
+html[data-theme="dark"] .growth-chart__period-item:hover {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .growth-chart__period-item.is-active {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .growth-chart--quote .growth-chart__period-item.is-active {
+  color: #38bdf8;
+}
+
+html[data-theme="dark"] .growth-chart--revenue .growth-chart__period-item.is-active {
+  color: #a78bfa;
+}
+
+html[data-theme="dark"] .growth-chart__period-sep {
+  background: #334155;
+}
+
+html[data-theme="dark"] .growth-chart__grid {
+  stroke: #334155;
+}
+
+html[data-theme="dark"] .growth-chart__tooltip {
+  background: #1e293b;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .growth-chart__tooltip-value {
+  color: #f8fafc;
 }

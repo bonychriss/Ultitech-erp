@@ -39,6 +39,24 @@ export function formatPercent(value, digits = 1) {
   return n.toFixed(digits);
 }
 
+/** Compact axis labels for TZS-scale charts (e.g. 2.5M, 450K). */
+export function formatCompactAxis(value) {
+  const n = Math.abs(Number(value) || 0);
+  if (n >= 1_000_000_000) {
+    const v = n / 1_000_000_000;
+    return `${v >= 10 ? Math.round(v) : v.toFixed(1).replace(/\.0$/, '')}B`;
+  }
+  if (n >= 1_000_000) {
+    const v = n / 1_000_000;
+    return `${v >= 10 ? Math.round(v) : v.toFixed(1).replace(/\.0$/, '')}M`;
+  }
+  if (n >= 1_000) {
+    const v = n / 1_000;
+    return `${v >= 10 ? Math.round(v) : v.toFixed(1).replace(/\.0$/, '')}K`;
+  }
+  return String(Math.round(n));
+}
+
 export function formatSignedMoney(value, currency = 'TZS') {
   const n = Number(value);
   if (!Number.isFinite(n)) return `${currency} 0`;

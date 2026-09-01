@@ -490,6 +490,8 @@ function dashboardInitData(): array
     $recentActivities = [];
     $funnelStats = ['drafts' => 0, 'quotes' => 0, 'confirmed' => 0, 'invoiced' => 0];
     $salesTrend = 0;
+    $revenueGrowth = ['day' => [], 'weekly' => [], 'monthly' => []];
+    $quoteGrowth = ['day' => [], 'weekly' => [], 'monthly' => []];
 
     try {
         $salesTotal = (float) (getGlobalSalesTotal($month) ?: 0);
@@ -529,6 +531,13 @@ function dashboardInitData(): array
         if (isset($_GET['debug']) && $_GET['debug'] === '1' && $error === '') {
             $error = 'Dashboard chart error: ' . $e->getMessage();
         }
+    }
+
+    try {
+        $revenueGrowth = getRevenueGrowthSeries();
+        $quoteGrowth = getQuoteGrowthSeries();
+    } catch (Throwable $e) {
+        error_log('sales dashboard revenue growth: ' . $e->getMessage());
     }
 
     $lastMonth = date('Y-m', strtotime('-1 month'));
@@ -591,6 +600,8 @@ function dashboardInitData(): array
             'invoiced' => (int) ($funnelStats['invoiced'] ?? 0),
             'progress_percent' => $pipelinePct,
         ],
+        'revenue_growth' => $revenueGrowth,
+        'quote_growth' => $quoteGrowth,
         'recent_activities' => dashboardDeskNormalizeActivities(array_slice($recentActivities, 0, 6), $module),
         'leaderboard' => dashboardDeskNormalizeLeaderboard(array_slice($salesLeaderboard, 0, 8), $leaderboardTarget),
         'leaderboard_target' => $leaderboardTarget,

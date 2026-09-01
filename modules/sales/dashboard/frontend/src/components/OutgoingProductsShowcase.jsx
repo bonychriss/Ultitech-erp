@@ -11,6 +11,8 @@ function formatQty(n) {
   return v.toLocaleString('en', { maximumFractionDigits: 0 });
 }
 
+const META_SEP = '\u00b7';
+
 export default function OutgoingProductsShowcase({
   products = [],
   title = 'Most Outgoing Products',
@@ -93,6 +95,11 @@ export default function OutgoingProductsShowcase({
           const href = product.product_id > 0 && productViewUrl
             ? `${productViewUrl}${product.product_id}`
             : viewAllUrl || '#';
+          const metaLine = [
+            customer,
+            `${lookbackDays}d`,
+            `${orders} ${orders === 1 ? 'order' : 'orders'}`,
+          ].join(` ${META_SEP} `);
 
           return (
             <li key={`${product.product_id}-${index}`}>
@@ -101,19 +108,10 @@ export default function OutgoingProductsShowcase({
                   <span className="dash-desk-list-title">
                     {product.product_name}
                   </span>
-                  <span className="dash-desk-list-meta">
-                    {customer}
-                    {' · '}
-                    {lookbackDays}
-                    d
-                    {' · '}
-                    {orders}
-                    {' '}
-                    {orders === 1 ? 'order' : 'orders'}
-                  </span>
+                  <span className="dash-desk-list-meta">{metaLine}</span>
                 </span>
                 <span className="dash-desk-list-amount">
-                  {qty > 0 ? `${formatQty(qty)} units` : `${orders}×`}
+                  {qty > 0 ? `${formatQty(qty)} units` : `${orders}\u00d7`}
                 </span>
               </a>
             </li>

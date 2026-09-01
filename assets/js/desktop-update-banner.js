@@ -183,6 +183,9 @@
         removeBanner();
         return;
       }
+      if (!getClient()) {
+        return;
+      }
       state = 'available';
       renderBanner();
       return;
@@ -238,11 +241,18 @@
 
   window.addEventListener('ultitech:desktop-update', onDesktopEvent);
 
-  function boot(attempt) {
-    if (/select-module/i.test(window.location.pathname || '')) {
-      return;
+  function replayPendingEvent() {
+    try {
+      var pending = window.__ULTITECH_DESKTOP_UPDATE_PENDING__;
+      if (pending && pending.type) {
+        onDesktopEvent({ detail: pending });
+      }
+    } catch (e) {
+      /* ignore */
     }
+  }
 
+  function boot(attempt) {
     var client = getClient();
     if (!client) {
       if ((attempt || 0) < 30) {
@@ -252,6 +262,8 @@
       }
       return;
     }
+
+    replayPendingEvent();
 
     if (!latestVersion) {
       client.checkForUpdates && client.checkForUpdates();

@@ -2,6 +2,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 const pkg = require('./package.json');
 const { setupUpdateBanner } = require('./update-banner.cjs');
 
+// Register IPC → page event bridge before any page script runs.
+setupUpdateBanner(ipcRenderer);
+
 contextBridge.exposeInMainWorld('ultitechClient', {
   platform: 'desktop',
   version: pkg.version,
@@ -10,13 +13,3 @@ contextBridge.exposeInMainWorld('ultitechClient', {
   installUpdate: () => ipcRenderer.send('ultitech:update-install'),
   dismissUpdate: () => ipcRenderer.send('ultitech:update-dismiss'),
 });
-
-function initWhenDomReady() {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setupUpdateBanner(ipcRenderer), { once: true });
-  } else {
-    setupUpdateBanner(ipcRenderer);
-  }
-}
-
-initWhenDomReady();

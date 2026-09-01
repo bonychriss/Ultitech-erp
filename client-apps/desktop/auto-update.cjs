@@ -118,7 +118,7 @@ function scheduleBackgroundUpdateCheck() {
     autoUpdater.checkForUpdates().catch(() => {
       /* silent background check */
     });
-  }, 8000);
+  }, 2000);
 }
 
 async function checkForUpdatesManual() {

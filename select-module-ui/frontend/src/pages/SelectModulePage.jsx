@@ -27,7 +27,6 @@ import {
   Banknote,
   Star,
 } from 'lucide-react'
-import DesktopUpdateBanner from '../components/DesktopUpdateBanner.jsx'
 
 function getConfig() {
   if (typeof window !== 'undefined' && window.__SELECT_MODULE_CFG__ && typeof window.__SELECT_MODULE_CFG__ === 'object') {
@@ -270,9 +269,6 @@ export default function SelectModulePage() {
   const mailUpdate = cfg.mailUpdate && typeof cfg.mailUpdate === 'object' ? cfg.mailUpdate : null
   const desktopAppDownloadUrl = cfg.desktopAppDownloadUrl || ''
   const showDesktopAppDownload = Boolean(cfg.showDesktopAppDownload && desktopAppDownloadUrl)
-  const desktopUpdate = cfg.desktopUpdate && typeof cfg.desktopUpdate === 'object' ? cfg.desktopUpdate : null
-  const showDesktopUpdateBanner = Boolean(desktopUpdate?.latestVersion)
-  const [desktopBannerVisible, setDesktopBannerVisible] = useState(false)
   const enabledPreview = enabledLabels.slice(0, 4).join(', ')
   const enabledMore = enabledLabels.length > 4
 
@@ -336,7 +332,7 @@ export default function SelectModulePage() {
   }
 
   return (
-    <div className={`sm-page${desktopBannerVisible ? ' sm-page--update-banner' : ''}`}>
+    <div className="sm-page">
       <header className="sm-topbar">
         <a href={homeUrl} className="sm-logo-link" title={companyName}>
           {logoUrl ? (
@@ -422,14 +418,6 @@ export default function SelectModulePage() {
           <span className="sm-desktop-download-text">Desktop app</span>
           <Download className="sm-desktop-download-arrow" strokeWidth={2} aria-hidden="true" />
         </a>
-      ) : null}
-
-      {showDesktopUpdateBanner ? (
-        <DesktopUpdateBanner
-          desktopUpdate={desktopUpdate}
-          desktopAppDownloadUrl={desktopAppDownloadUrl}
-          onVisibilityChange={setDesktopBannerVisible}
-        />
       ) : null}
     </div>
   )

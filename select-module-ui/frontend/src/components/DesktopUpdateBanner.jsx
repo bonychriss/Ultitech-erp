@@ -89,6 +89,9 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
       const type = detail.type
 
       if (type === 'available') {
+        if (!getDesktopClient()) {
+          return
+        }
         setVersion(detail.version || latestVersion)
         setPhase('available')
         return
@@ -125,6 +128,20 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
       return
     }
 
+    const replayPending = () => {
+      try {
+        const pending = window.__ULTITECH_DESKTOP_UPDATE_PENDING__
+        if (pending?.type === 'available' && !readDismissed(pending.version || latestVersion)) {
+          setVersion(pending.version || latestVersion)
+          setPhase('available')
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    replayPending()
+
     client.checkForUpdates?.().catch(() => {
       /* silent; banner also driven by server version + IPC events */
     })
@@ -141,11 +158,11 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
   }, [client, latestVersion])
 
   useEffect(() => {
-    if (!client || !latestVersion || phase === 'hidden') {
+    if (!client || !latestVersion || phase !== 'available') {
       return
     }
     const installed = client.version || '0'
-    if (compareVersions(installed, latestVersion) >= 0 && phase === 'available') {
+    if (compareVersions(installed, latestVersion) >= 0) {
       setPhase('hidden')
     }
   }, [client, latestVersion, phase])
@@ -170,7 +187,7 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
 
   const message = (() => {
     if (phase === 'downloading') {
-      return `Downloading update${percent > 0 ? ` — ${Math.round(percent)}%` : '…'}`
+      return `Downloading update${percent > 0 ? `  ${Math.round(percent)}%` : ''}`
     }
     if (phase === 'ready') {
       return version ? `Update ${version} ready to install` : 'Update ready to install'
@@ -180,7 +197,7 @@ export default function DesktopUpdateBanner({ desktopUpdate, desktopAppDownloadU
   })()
 
   const primaryLabel = (() => {
-    if (phase === 'downloading') return 'Downloading…'
+    if (phase === 'downloading') return 'Downloading'
     if (phase === 'ready') return 'Install Now'
     return 'Download'
   })()

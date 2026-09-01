@@ -371,6 +371,21 @@ $selectModuleConfig = [
         renderSystemFontHeadMarkup();
     } ?>
     <link rel="stylesheet" crossorigin href="<?= htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') ?>">
+    <?php if ($desktopLatestVersion !== null):
+        $desktopBannerCss = __DIR__ . '/assets/css/desktop-update-banner.css';
+        $desktopBannerJs = __DIR__ . '/assets/js/desktop-update-banner.js';
+        $desktopBannerCssVer = is_file($desktopBannerCss) ? (int) filemtime($desktopBannerCss) : time();
+        $desktopBannerJsVer = is_file($desktopBannerJs) ? (int) filemtime($desktopBannerJs) : time();
+    ?>
+    <link rel="stylesheet" href="<?= htmlspecialchars(function_exists('app_url') ? app_url('/assets/css/desktop-update-banner.css') : '/assets/css/desktop-update-banner.css') ?>?v=<?= $desktopBannerCssVer ?>">
+    <script>
+    window.__ERP_DESKTOP_UPDATE__ = <?= json_encode([
+        'latestVersion' => $desktopLatestVersion,
+        'downloadUrl' => $desktopAppDownloadUrl,
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+    </script>
+    <script src="<?= htmlspecialchars(function_exists('app_url') ? app_url('/assets/js/desktop-update-banner.js') : '/assets/js/desktop-update-banner.js') ?>?v=<?= $desktopBannerJsVer ?>" defer></script>
+    <?php endif; ?>
     <script>
         window.__SELECT_MODULE_CFG__ = <?= json_encode($selectModuleConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     </script>

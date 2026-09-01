@@ -1,14 +1,20 @@
 /**
  * Forwards Electron auto-updater IPC events to the hosted ERP page.
- * UI is rendered by assets/js/desktop-update-banner.js (loaded from ERP header).
+ * Queues events until the page is ready so early update checks are not lost.
  * @param {typeof import('electron').ipcRenderer} ipcRenderer
  */
 function setupUpdateBanner(ipcRenderer) {
+  /** @type {{ type: string, payload?: Record<string, unknown> } | null} */
+  let pending = null;
+
   function notifyPage(type, payload) {
+    const detail = { type, ...(payload || {}) };
+    pending = detail;
+
     try {
       window.dispatchEvent(
         new CustomEvent('ultitech:desktop-update', {
-          detail: { type, ...(payload || {}) },
+          detail,
         })
       );
     } catch {
@@ -44,6 +50,17 @@ function setupUpdateBanner(ipcRenderer) {
       version: payload?.version || null,
     });
   });
+
+  try {
+    Object.defineProperty(window, '__ULTITECH_DESKTOP_UPDATE_PENDING__', {
+      configurable: true,
+      get() {
+        return pending;
+      },
+    });
+  } catch {
+    /* ignore */
+  }
 }
 
 module.exports = { setupUpdateBanner };

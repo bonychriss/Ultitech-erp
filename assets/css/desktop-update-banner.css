@@ -90,6 +90,10 @@ body.ultitech-update-banner-open {
   padding-bottom: 48px;
 }
 
+body.ultitech-update-banner-open .sm-desktop-download {
+  bottom: 64px;
+}
+
 @media (max-width: 640px) {
   #ultitech-update-banner {
     flex-wrap: wrap;

@@ -171,6 +171,20 @@
   font-size: 0.6875rem;
 }
 
+.page-sales-dashboard-desk .leaderboard-name-row {
+  margin-bottom: 0.15rem;
+}
+
+.page-sales-dashboard-desk .leaderboard-congrats-badge {
+  font-size: 0.5rem;
+  padding: 0.05rem 0.3rem;
+}
+
+.page-sales-dashboard-desk .leaderboard-item--target-hit {
+  padding: 0.5rem 0.35rem;
+  margin: 0 -0.35rem;
+}
+
 .page-sales-dashboard-desk .sd-sidebar-cards .dash-card-title {
   font-size: 0.875rem;
   margin-bottom: 0.75rem;

@@ -758,6 +758,191 @@ body.page-sales-dashboard-desk .dash-card {
     line-height: 1.2;
 }
 
+.leaderboard-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    margin-bottom: 0.25rem;
+}
+
+.leaderboard-name-row .leaderboard-name {
+    margin-bottom: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.leaderboard-congrats-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    flex-shrink: 0;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #047857;
+    background: rgba(16, 185, 129, 0.14);
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    animation: leaderboardCongratsBadgePop 0.7s ease-out;
+    white-space: nowrap;
+}
+
+.leaderboard-item--target-hit {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    padding: 0.625rem 0.5rem;
+    margin: 0 -0.5rem;
+    border-bottom-color: transparent;
+    background: linear-gradient(
+        105deg,
+        rgba(16, 185, 129, 0.08) 0%,
+        rgba(250, 204, 21, 0.14) 45%,
+        rgba(16, 185, 129, 0.08) 100%
+    );
+    background-size: 220% 100%;
+    animation:
+        leaderboardCongratsRowShimmer 3.2s ease-in-out infinite,
+        leaderboardCongratsRowPop 0.65s ease-out;
+    box-shadow:
+        0 0 0 1px rgba(16, 185, 129, 0.22),
+        0 8px 18px rgba(16, 185, 129, 0.08);
+}
+
+.leaderboard-item--target-hit .leaderboard-rank {
+    color: #059669;
+}
+
+.leaderboard-avatar--target-hit {
+    background: linear-gradient(135deg, #10b981 0%, #fbbf24 100%);
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+    animation: leaderboardCongratsAvatarPulse 2.4s ease-in-out infinite;
+}
+
+.leaderboard-progress-fill--complete {
+    background: linear-gradient(90deg, #10b981 0%, #fbbf24 50%, #10b981 100%);
+    background-size: 200% 100%;
+    animation: leaderboardCongratsBarShimmer 2.2s linear infinite;
+}
+
+.leaderboard-congrats-spark {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    animation: leaderboardCongratsSpark 2.8s ease-in-out infinite;
+}
+
+.leaderboard-congrats-spark--1 {
+    top: 0.45rem;
+    right: 1.2rem;
+    background: #fbbf24;
+    animation-delay: 0s;
+}
+
+.leaderboard-congrats-spark--2 {
+    top: 1.1rem;
+    right: 2.4rem;
+    background: #34d399;
+    animation-delay: 0.45s;
+}
+
+.leaderboard-congrats-spark--3 {
+    top: 0.7rem;
+    right: 0.35rem;
+    background: #60a5fa;
+    animation-delay: 0.9s;
+}
+
+@keyframes leaderboardCongratsRowPop {
+    0% {
+        transform: scale(0.98);
+        opacity: 0.75;
+    }
+    60% {
+        transform: scale(1.01);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes leaderboardCongratsRowShimmer {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+@keyframes leaderboardCongratsBarShimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 200% 50%;
+    }
+}
+
+@keyframes leaderboardCongratsBadgePop {
+    0% {
+        transform: scale(0.7);
+        opacity: 0;
+    }
+    70% {
+        transform: scale(1.08);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes leaderboardCongratsAvatarPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.28);
+    }
+}
+
+@keyframes leaderboardCongratsSpark {
+    0%, 100% {
+        opacity: 0;
+        transform: translateY(0) scale(0.6);
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1);
+    }
+    55% {
+        opacity: 0.85;
+        transform: translateY(-8px) scale(0.9);
+    }
+    80% {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.5);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .leaderboard-item--target-hit,
+    .leaderboard-progress-fill--complete,
+    .leaderboard-avatar--target-hit,
+    .leaderboard-congrats-badge,
+    .leaderboard-congrats-spark {
+        animation: none;
+    }
+}
+
 .leaderboard-sales {
     font-size: 0.75rem;
     font-weight: 700;

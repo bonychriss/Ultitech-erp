@@ -10,6 +10,7 @@ import {
   Handshake,
   Loader2,
   MessageSquare,
+  Trophy,
   Truck,
   Cog,
 } from 'lucide-react';
@@ -159,41 +160,62 @@ function Leaderboard({ rows, target }) {
 
   return (
     <>
-      {rows.map((rep, index) => (
-        <div className="leaderboard-item" key={`${rep.username}-${index}`}>
-          <span className="leaderboard-rank">{index + 1}</span>
-          <LeaderboardAvatar rep={rep} />
-          <div className="leaderboard-info">
-            <div className="leaderboard-name">{rep.username}</div>
-            <div className="leaderboard-progress-wrapper">
-              <div className="leaderboard-progress-bar">
-                <div
-                  className="leaderboard-progress-fill"
-                  style={{ width: `${rep.progress_percent}%` }}
-                />
+      {rows.map((rep, index) => {
+        const hitTarget = target > 0 && rep.total_sold >= target;
+        return (
+          <div
+            className={`leaderboard-item${hitTarget ? ' leaderboard-item--target-hit' : ''}`}
+            key={`${rep.username}-${index}`}
+          >
+            {hitTarget ? (
+              <>
+                <span className="leaderboard-congrats-spark leaderboard-congrats-spark--1" aria-hidden="true" />
+                <span className="leaderboard-congrats-spark leaderboard-congrats-spark--2" aria-hidden="true" />
+                <span className="leaderboard-congrats-spark leaderboard-congrats-spark--3" aria-hidden="true" />
+              </>
+            ) : null}
+            <span className="leaderboard-rank">{index + 1}</span>
+            <LeaderboardAvatar rep={rep} hitTarget={hitTarget} />
+            <div className="leaderboard-info">
+              <div className="leaderboard-name-row">
+                <div className="leaderboard-name">{rep.username}</div>
+                {hitTarget ? (
+                  <span className="leaderboard-congrats-badge">
+                    <Trophy size={12} strokeWidth={2.5} aria-hidden="true" />
+                    Target reached!
+                  </span>
+                ) : null}
               </div>
-              <div className="leaderboard-progress-text">
-                <span className="text-muted small">{formatPercent(rep.progress_percent)}%</span>
-                <span className="text-muted small ms-2">
-                  of
-                  {' '}
-                  {targetLabel}
-                </span>
+              <div className="leaderboard-progress-wrapper">
+                <div className="leaderboard-progress-bar">
+                  <div
+                    className={`leaderboard-progress-fill${hitTarget ? ' leaderboard-progress-fill--complete' : ''}`}
+                    style={{ width: `${rep.progress_percent}%` }}
+                  />
+                </div>
+                <div className="leaderboard-progress-text">
+                  <span className="text-muted small">{formatPercent(rep.progress_percent)}%</span>
+                  <span className="text-muted small ms-2">
+                    of
+                    {' '}
+                    {targetLabel}
+                  </span>
+                </div>
               </div>
             </div>
+            <div className="leaderboard-sales">{formatMoney(rep.total_sold)}</div>
           </div>
-          <div className="leaderboard-sales">{formatMoney(rep.total_sold)}</div>
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }
 
-function LeaderboardAvatar({ rep }) {
+function LeaderboardAvatar({ rep, hitTarget = false }) {
   const [failed, setFailed] = useState(false);
   if (rep.avatar_url && !failed) {
     return (
-      <div className="leaderboard-avatar">
+      <div className={`leaderboard-avatar${hitTarget ? ' leaderboard-avatar--target-hit' : ''}`}>
         <img
           src={rep.avatar_url}
           alt=""
@@ -202,7 +224,11 @@ function LeaderboardAvatar({ rep }) {
       </div>
     );
   }
-  return <div className="leaderboard-avatar">{rep.initial}</div>;
+  return (
+    <div className={`leaderboard-avatar${hitTarget ? ' leaderboard-avatar--target-hit' : ''}`}>
+      {rep.initial}
+    </div>
+  );
 }
 
 function YearlyTarget({ yearly }) {

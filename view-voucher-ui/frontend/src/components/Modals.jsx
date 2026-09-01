@@ -264,8 +264,14 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
       }
     }
     try {
-      const res = await fetch(data.actions.approveUrl, { method: 'POST', body: fd })
-      const j = await res.json()
+      const approveUrl = new URL(data.actions.approveUrl, window.location.origin).toString()
+      const res = await fetch(approveUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+      let j = null
+      try {
+        j = await res.json()
+      } catch {
+        throw new Error(res.ok ? 'Invalid server response' : `Request failed (${res.status})`)
+      }
       if (j && j.success) {
         onSuccess()
       } else {
@@ -277,8 +283,13 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
         }
         setSaving(false)
       }
-    } catch {
-      alert('Network error')
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : 'Network error'
+      if (typeof window.Swal !== 'undefined') {
+        window.Swal.fire({ icon: 'error', title: 'Approval failed', text: msg, confirmButtonColor: '#dc3545' })
+      } else {
+        alert(msg)
+      }
       setSaving(false)
     }
   }

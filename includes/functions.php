@@ -799,18 +799,22 @@ function documentSequencesPdo($fallbackPdo = null): ?PDO
 {
     global $pdo, $control_pdo;
     $candidates = [];
-    if ($control_pdo instanceof PDO) {
-        $candidates[] = $control_pdo;
-    }
+    // Prefer the active tenant/operational connection so each company uses its own sequences table.
     if ($fallbackPdo instanceof PDO) {
         $candidates[] = $fallbackPdo;
     } elseif ($pdo instanceof PDO) {
         $candidates[] = $pdo;
     }
+    if (!(defined('IS_TENANT_DB') && IS_TENANT_DB) && $control_pdo instanceof PDO) {
+        $candidates[] = $control_pdo;
+    }
     foreach ($candidates as $conn) {
         if (tableExists('document_sequences', $conn)) {
             return $conn;
         }
+    }
+    if ($control_pdo instanceof PDO && tableExists('document_sequences', $control_pdo)) {
+        return $control_pdo;
     }
     return null;
 }
@@ -1620,6 +1624,17 @@ function erp_data_pdo()
     }
 
     global $pdo, $control_pdo;
+    if (defined('IS_TENANT_DB') && IS_TENANT_DB && $pdo instanceof PDO) {
+        if (function_exists('ensurePayeesTableSchema')) {
+            ensurePayeesTableSchema($pdo);
+        }
+        $resolved = $pdo;
+        try {
+            $GLOBALS['erp_data_database_name'] = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+        } catch (Throwable $e) {
+        }
+        return $resolved;
+    }
 
     foreach (array($pdo, $control_pdo) as $conn) {
         if ($conn instanceof PDO && erp_connection_has_table($conn, 'payees')) {
@@ -1720,6 +1735,14 @@ function voucher_operational_pdo()
     }
 
     global $pdo, $control_pdo;
+    if (defined('IS_TENANT_DB') && IS_TENANT_DB && $pdo instanceof PDO) {
+        if (function_exists('ensurePayeesTableSchema')) {
+            ensurePayeesTableSchema($pdo);
+        }
+        $resolved = $pdo;
+        return $resolved;
+    }
+
     $candidates = array();
     if ($pdo instanceof PDO) {
         $candidates[] = $pdo;
@@ -1752,6 +1775,12 @@ function voucher_operational_pdo()
 function erp_bootstrap_active_pdo()
 {
     global $pdo;
+    if (defined('IS_TENANT_DB') && IS_TENANT_DB && $pdo instanceof PDO) {
+        if (function_exists('ensurePayeesTableSchema')) {
+            ensurePayeesTableSchema($pdo);
+        }
+        return;
+    }
     if (!function_exists('erp_data_pdo')) {
         return;
     }
@@ -1790,6 +1819,18 @@ function erp_bootstrap_active_pdo()
 function voucher_bootstrap_operational_pdo()
 {
     global $pdo;
+    if (defined('IS_TENANT_DB') && IS_TENANT_DB && $pdo instanceof PDO) {
+        if (function_exists('ensurePaymentVouchersCoreSchema')) {
+            ensurePaymentVouchersCoreSchema($pdo);
+        }
+        if (function_exists('ensurePayeesTableSchema')) {
+            ensurePayeesTableSchema($pdo);
+        }
+        if (function_exists('ensureApprovalsTableSchema')) {
+            ensureApprovalsTableSchema();
+        }
+        return;
+    }
     if (!function_exists('voucher_operational_pdo')) {
         return;
     }
@@ -2054,6 +2095,86 @@ function syncVoucherApprovalAssignees(PDO $pdo, $voucherId, array $roleNames)
         }
     } catch (Throwable $e) {
         error_log('syncVoucherApprovalAssignees voucher ' . $voucherId . ': ' . $e->getMessage());
+    }
+}
+
+/**
+ * Ensure payees table exists in the active voucher database (required for create-voucher).
+ */
+function ensurePayeesTableSchema($explicitPdo = null)
+{
+    global $pdo;
+    $usePdo = $explicitPdo ?? $pdo;
+    if (!($usePdo instanceof PDO)) {
+        return false;
+    }
+    static $completed = array();
+    $token = pdoInstanceToken($usePdo);
+    if (isset($completed[$token])) {
+        return true;
+    }
+    try {
+        if (!tableExists('payees', $usePdo)) {
+            $usePdo->exec("
+                CREATE TABLE IF NOT EXISTS payees (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    type VARCHAR(50) DEFAULT 'Other',
+                    tin VARCHAR(50) NULL,
+                    contact_details TEXT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    is_active TINYINT(1) DEFAULT 1,
+                    UNIQUE KEY unique_name (name)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+        }
+        $completed[$token] = true;
+        return true;
+    } catch (Throwable $e) {
+        error_log('ensurePayeesTableSchema: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Backfill missing approvals rows from payment_vouchers assignee fields.
+ */
+function repairMissingVoucherApprovalRows(PDO $pdo, $limit = 25)
+{
+    if (!($pdo instanceof PDO) || !erp_connection_has_table($pdo, 'payment_vouchers') || !erp_connection_has_table($pdo, 'approvals')) {
+        return 0;
+    }
+    if (!function_exists('syncVoucherApprovalAssignees')) {
+        return 0;
+    }
+    $limit = max(1, min(100, (int) $limit));
+    try {
+        $sql = "SELECT id, applicant, department_manager, checked_by
+                FROM payment_vouchers pv
+                WHERE pv.status IN ('pending', 'confirming', 'approved')
+                  AND COALESCE(pv.applicant, '') <> ''
+                  AND NOT EXISTS (SELECT 1 FROM approvals a WHERE a.voucher_id = pv.id)
+                ORDER BY pv.id DESC
+                LIMIT {$limit}";
+        $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: array();
+        $repaired = 0;
+        foreach ($rows as $row) {
+            $vid = (int) ($row['id'] ?? 0);
+            if ($vid <= 0) {
+                continue;
+            }
+            syncVoucherApprovalAssignees($pdo, $vid, array(
+                'Applicant' => trim((string) ($row['applicant'] ?? '')),
+                'Department Manager' => trim((string) ($row['department_manager'] ?? '')),
+                'Checked By' => trim((string) ($row['checked_by'] ?? '')),
+            ));
+            $repaired++;
+        }
+        return $repaired;
+    } catch (Throwable $e) {
+        error_log('repairMissingVoucherApprovalRows: ' . $e->getMessage());
+        return 0;
     }
 }
 
@@ -8890,6 +9011,9 @@ function ensurePaymentVouchersCoreSchema($explicitPdo = null)
         }
 
         $completed[$token] = true;
+        if (function_exists('ensurePayeesTableSchema')) {
+            ensurePayeesTableSchema($usePdo);
+        }
         return true;
     } catch (Throwable $e) {
         error_log('ensurePaymentVouchersCoreSchema: ' . $e->getMessage());

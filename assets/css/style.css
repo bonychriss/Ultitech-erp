@@ -2648,6 +2648,90 @@ body.sidebar-collapsed .menu-chevron {
     align-items: center;
 }
 
+/* Collapse empty employee header (theme/notifications moved to sidebar) */
+@media (min-width: 992px) {
+    .employee-header.employee-header--empty {
+        height: 0 !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: hidden;
+        position: relative !important;
+    }
+
+    .employee-header.employee-header--empty .header-content {
+        min-height: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .employee-header.employee-header--empty {
+        height: 52px !important;
+        min-height: 52px !important;
+        background: #ffffff;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .employee-header.employee-header--empty .header-content {
+        min-height: 52px;
+        padding: 0 12px !important;
+    }
+}
+
+.employee-header.employee-header--page-context {
+    height: auto;
+    min-height: 0;
+    padding-top: 0.75rem;
+    padding-bottom: 0.5rem;
+}
+
+/* Collapse empty admin header (theme/notifications moved to sidebar) */
+@media (min-width: 992px) {
+    .admin-header.admin-header--empty {
+        height: 0 !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: hidden;
+        position: relative !important;
+    }
+
+    .admin-header.admin-header--empty .header-content {
+        min-height: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .admin-header.admin-header--empty {
+        height: 52px !important;
+        min-height: 52px !important;
+        background: #ffffff;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .admin-header.admin-header--empty .header-content {
+        min-height: 52px;
+        padding: 0 12px !important;
+    }
+}
+
+.admin-header.admin-header--page-context {
+    height: auto;
+    min-height: 0;
+    padding-top: 0.75rem;
+    padding-bottom: 0.5rem;
+}
+
 .header-content {
     width: 100%;
     display: flex;
@@ -2920,6 +3004,13 @@ body.sidebar-mobile-open .mobile-backdrop {
 .admin-header,
 .employee-header {
     height: 72px;
+}
+
+.employee-header.employee-header--page-context,
+.employee-header.employee-header--empty,
+.admin-header.admin-header--page-context,
+.admin-header.admin-header--empty {
+    height: auto;
 }
 
 @media (max-width: 640px) {
@@ -3933,7 +4024,7 @@ html[data-theme="dark"] body.dashboard .main-content {
 /* Unread Badge Dot background and border adjustments */
 html[data-theme="dark"] .header-notif-dot {
     border-color: #1e293b !important;
-    background: #a78bfa !important;
+    background: #22c55e !important;
 }
 
 /* Refine Theme Toggle Switch Button Colors */

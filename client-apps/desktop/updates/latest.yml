@@ -1,8 +1,8 @@
 version: 1.0.4
 files:
   - url: UltiTech-ERP-Setup-1.0.4.exe
-    sha512: 4o1u08cl4RnoxEbFu6GMxq33I7qSRBcHspcHxJX5Ay7kX2vpWa76aFvcHJkFOboSJNVcfl3wsBf6iCZEqoukQQ==
-    size: 83405700
+    sha512: E1rf1g13KcdYpvzg2kpjVZY6Isc8x9uWyMRs6IOST3V9HqOmvZNZ8mwd7Oldtx6NdJNn+JpZWtz/JL8PZEbHEQ==
+    size: 83404608
 path: UltiTech-ERP-Setup-1.0.4.exe
-sha512: 4o1u08cl4RnoxEbFu6GMxq33I7qSRBcHspcHxJX5Ay7kX2vpWa76aFvcHJkFOboSJNVcfl3wsBf6iCZEqoukQQ==
-releaseDate: '2026-08-31T12:52:42.923Z'
+sha512: E1rf1g13KcdYpvzg2kpjVZY6Isc8x9uWyMRs6IOST3V9HqOmvZNZ8mwd7Oldtx6NdJNn+JpZWtz/JL8PZEbHEQ==
+releaseDate: '2026-09-01T07:14:08.726Z'

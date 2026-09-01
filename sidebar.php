@@ -18,6 +18,11 @@ if (isset($_GET['module'])) {
 // Default to 'dashboard' (or 'none') if not set
 $active_module = $active_module ?? ($_SESSION['active_module'] ?? 'dashboard');
 
+// Theme toggle + notifications render in the sidebar; hide duplicate header controls.
+if (!isset($hideHeaderThemeAndNotifications)) {
+    $hideHeaderThemeAndNotifications = true;
+}
+
 // Auto-detect Stocks module based on path
 $path_to_check = $script_name . ($_SERVER['PHP_SELF'] ?? '') . ($_SERVER['REQUEST_URI'] ?? '');
 $industry = getCompanyType();
@@ -1679,6 +1684,36 @@ if (!isset($_GET['print'])) {
         box-shadow: none !important;
     }
 
+    #native-sidebar .sidebar-header-tools {
+        margin-bottom: 0.25rem;
+    }
+
+    #native-sidebar .sidebar-theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.55rem 1rem;
+        color: inherit;
+        font-weight: 500;
+        font-size: 0.95rem;
+        cursor: pointer;
+    }
+
+    #native-sidebar .sidebar-theme-toggle:hover,
+    #native-sidebar .sidebar-notif-trigger:hover {
+        opacity: 0.85;
+    }
+
+    #native-sidebar .sidebar-theme-toggle i {
+        width: 1.25rem;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    body.sidebar-collapsed #native-sidebar .sidebar-theme-toggle .sidebar-text {
+        display: none;
+    }
+
     /* Mobile: move Logout under Appearance */
     .sidebar-logout-mobile { display: none; }
     @media (max-width: 992px) {
@@ -1974,7 +2009,7 @@ if (!isset($_GET['print'])) {
         }
     endif; ?>
 
-    <?php if (in_array($active_module, ['warehouses', 'store-management'], true)): ?>
+    <?php if ($active_module !== 'analytics'): ?>
     <div class="px-3 mb-2 mt-3 small fw-bold text-muted sidebar-text" style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5;">
         Quick
     </div>

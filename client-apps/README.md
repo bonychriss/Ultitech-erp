@@ -1,4 +1,4 @@
-# UltiTech ERP ó Desktop & Android Clients
+# UltiTech ERP ù Desktop & Android Clients
 
 Thin native wrappers around the **existing hosted PHP ERP**. They load your live server in a WebView and do **not** modify PHP modules, React builds, or Apache routing.
 
@@ -25,7 +25,16 @@ Local XAMPP URL: `http://localhost/public_html/login.php`
 
 ---
 
-## Quick start ó Desktop
+## Quick start ù Desktop
+
+**One-click dev (no installer rebuild):**
+
+| Launcher | Use when |
+|----------|----------|
+| `start-dev-local.bat` or Desktop **UltiTech ERP Dev (Local)** | Testing against XAMPP (`localhost`) |
+| `start-dev.bat` or Desktop **UltiTech ERP Dev (Live)** | Testing against production `ultitech.io` |
+
+In Cursor/VS Code: **Terminal ? Run Task ? Desktop: Dev (local XAMPP)** or **Desktop: Dev (ultitech.io)**.
 
 ```powershell
 cd client-apps\desktop
@@ -49,7 +58,7 @@ Installer output: `client-apps\desktop\dist\`
 
 ---
 
-## Quick start ó Android APK
+## Quick start ù Android APK
 
 1. Edit `client-apps\android\config.json` if needed (production URL is preconfigured).
 
@@ -114,7 +123,7 @@ The wrappers only provide a dedicated window (desktop) or installed app icon (An
 
 ## Icons & signing (optional)
 
-- **Desktop:** add `client-apps/desktop/build/icon.ico` (256◊256) and reference it in `package.json` ? `build.win.icon`
+- **Desktop:** add `client-apps/desktop/build/icon.ico` (256ù256) and reference it in `package.json` ? `build.win.icon`
 - **Android:** replace launcher icons in `android/app/src/main/res/mipmap-*` after `cap add android`
 - **Release APK:** configure signing in Android Studio (Build ? Generate Signed Bundle / APK)
 

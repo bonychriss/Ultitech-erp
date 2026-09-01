@@ -85,10 +85,16 @@ if (!isset($hideHeaderCompanyBranding)) {
     );
 }
 if (!isset($hideHeaderThemeAndNotifications)) {
-    $hideHeaderThemeAndNotifications = false;
+    $hideHeaderThemeAndNotifications = true;
 }
 $__employeeHeaderShowHeading = ($employeeHeaderTitle !== null && $employeeHeaderTitle !== '');
 $__employeeHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCenterHtml !== '');
+$__employeeHeaderHasTray = (
+    (empty($hideHeaderCompanyBranding) && ($headerCompanyName !== '' || $headerCompanyLogoSrc !== '' || !empty($headerEnabledModules)))
+    || ($employeeHeaderRightHtml !== null && $employeeHeaderRightHtml !== '')
+    || empty($hideHeaderThemeAndNotifications)
+);
+$__employeeHeaderIsEmpty = !$__employeeHeaderShowHeading && !$__employeeHeaderCenter && !$__employeeHeaderHasTray;
 
 if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     $GLOBALS['_erp_header_style_linked'] = true;
@@ -116,7 +122,7 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     }
     ?>
     <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;">
-        <header class="header employee-header<?= $__employeeHeaderShowHeading ? ' employee-header--page-context' : '' ?><?= $__employeeHeaderCenter ? ' employee-header--has-center-slot' : '' ?><?= $employeeHeaderExtraClass !== '' ? ' ' . htmlspecialchars((string) $employeeHeaderExtraClass, ENT_QUOTES, 'UTF-8') : '' ?>" <?= $__employeeHeaderShowHeading ? 'style="background: transparent; border: none; box-shadow: none; padding-bottom: 0;"' : '' ?>>
+        <header class="header employee-header<?= $__employeeHeaderShowHeading ? ' employee-header--page-context' : '' ?><?= $__employeeHeaderCenter ? ' employee-header--has-center-slot' : '' ?><?= $__employeeHeaderIsEmpty ? ' employee-header--empty' : '' ?><?= $employeeHeaderExtraClass !== '' ? ' ' . htmlspecialchars((string) $employeeHeaderExtraClass, ENT_QUOTES, 'UTF-8') : '' ?>" <?= $__employeeHeaderShowHeading ? 'style="background: transparent; border: none; box-shadow: none; padding-bottom: 0;"' : '' ?>>
     <div class="header-content">
         <div class="header-left" style="display: flex; align-items: center; gap: 16px;">
             <!-- Mobile Toggle Button -->

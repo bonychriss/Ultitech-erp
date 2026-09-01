@@ -510,8 +510,8 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             'actions' => [
                 'backUrl' => $backLink,
                 'editHref' => $editHref,
-                'markPaidUrl' => isAdmin() ? 'mark-paid.php' : 'employee/mark-paid.php',
-                'approveUrl' => 'employee/approve_voucher.php',
+                'markPaidUrl' => app_url(isAdmin() ? '/mark-paid.php' : '/employee/mark-paid.php'),
+                'approveUrl' => app_url('/employee/approve_voucher.php'),
                 'deleteAttachmentUrl' => app_url('/delete_attachment.php'),
                 'viewVoucherPostUrl' => 'view-voucher.php?id=' . $voucherId,
                 'returnFinance' => $returnFinance,

@@ -52,7 +52,23 @@ if (!isset($employeeHeaderAfterThemeHtml)) {
 if (!isset($employeeHeaderCenterHtml)) {
     $employeeHeaderCenterHtml = null;
 }
+if (!isset($employeeHeaderTitle)) {
+    $employeeHeaderTitle = null;
+}
+if (!isset($employeeHeaderSubtitle)) {
+    $employeeHeaderSubtitle = null;
+}
+if (!isset($hideHeaderThemeAndNotifications)) {
+    $hideHeaderThemeAndNotifications = true;
+}
+$__adminHeaderShowHeading = ($employeeHeaderTitle !== null && $employeeHeaderTitle !== '');
 $__adminHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCenterHtml !== '');
+$__adminHeaderHasTray = (
+    ($employeeHeaderRightHtml !== null && $employeeHeaderRightHtml !== '')
+    || ($employeeHeaderAfterThemeHtml !== null && $employeeHeaderAfterThemeHtml !== '')
+    || empty($hideHeaderThemeAndNotifications)
+);
+$__adminHeaderIsEmpty = !$__adminHeaderShowHeading && !$__adminHeaderCenter && !$__adminHeaderHasTray;
 ?>
 <div class="d-flex w-100 min-vh-100 layout-main-wrapper">
     <?php 
@@ -61,7 +77,7 @@ $__adminHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCen
     }
     ?>
     <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;">
-        <header class="header admin-header<?= isset($employeeHeaderTitle) && $employeeHeaderTitle !== '' ? ' admin-header--page-context' : '' ?><?= $__adminHeaderCenter ? ' admin-header--has-center-slot' : '' ?>" <?= isset($employeeHeaderTitle) && $employeeHeaderTitle !== '' ? 'style="background: transparent; border: none; box-shadow: none; padding-bottom: 0;"' : '' ?>>
+        <header class="header admin-header<?= $__adminHeaderShowHeading ? ' admin-header--page-context' : '' ?><?= $__adminHeaderCenter ? ' admin-header--has-center-slot' : '' ?><?= $__adminHeaderIsEmpty ? ' admin-header--empty' : '' ?>" <?= $__adminHeaderShowHeading ? 'style="background: transparent; border: none; box-shadow: none; padding-bottom: 0;"' : '' ?>>
     <div class="header-content">
         <div class="header-left" style="display: flex; align-items: center; gap: 16px;">
             <!-- Mobile Toggle Button -->
@@ -70,10 +86,10 @@ $__adminHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCen
             </button>
         </div>
 
-        <?php if (isset($employeeHeaderTitle) && $employeeHeaderTitle !== ''): ?>
+        <?php if ($__adminHeaderShowHeading): ?>
         <div class="employee-header-page-heading px-1 px-md-2 text-start <?= $__adminHeaderCenter ? 'flex-shrink-0' : 'flex-grow-1' ?>" style="margin-left: 10px; display: flex; flex-direction: column; gap: 4px;">
             <h1 class="employee-header-page-title mb-0" style="font-size: 22px; font-weight: 700; color: #111827; letter-spacing: -0.01em; line-height: 1.2;"><?= htmlspecialchars((string) $employeeHeaderTitle) ?></h1>
-            <?php if (isset($employeeHeaderSubtitle) && $employeeHeaderSubtitle !== ''): ?>
+            <?php if ($employeeHeaderSubtitle !== null && $employeeHeaderSubtitle !== ''): ?>
                 <p class="employee-header-page-subtitle mb-0" style="font-size: 13px; color: #9ca3af; display: flex; gap: 8px; align-items: center; line-height: 1;">
                     <?= $employeeHeaderSubtitle ?>
                 </p>
@@ -88,13 +104,17 @@ $__adminHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCen
         <?php endif; ?>
         
         <div class="header-right header-actions-tray" style="margin-left:auto; display:flex; align-items:center; justify-content:flex-end; gap:16px;">
+            <?php if (empty($hideHeaderThemeAndNotifications)): ?>
             <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
                 <i class="fas fa-moon" id="themeToggleIcon"></i>
             </button>
+            <?php endif; ?>
             <?php if (!empty($employeeHeaderAfterThemeHtml)): ?>
                 <?= $employeeHeaderAfterThemeHtml ?>
             <?php endif; ?>
+            <?php if (empty($hideHeaderThemeAndNotifications)): ?>
             <?php require __DIR__ . '/partials/header_notifications.php'; ?>
+            <?php endif; ?>
             <?php if (!empty($employeeHeaderRightHtml)): ?>
                 <?= $employeeHeaderRightHtml ?>
             <?php endif; ?>
@@ -131,14 +151,37 @@ $__adminHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCen
     
     function positionMobileNotifDropdown() {
         var dd = document.getElementById('notif-dd');
-        var btn = document.querySelector('.header-notif-bell-btn');
-        if (!dd || !btn || !window.matchMedia('(max-width: 767.98px)').matches) {
-            if (dd) { dd.style.top = ''; dd.style.right = ''; }
+        var sidebarBtn = document.querySelector('.sidebar-notif-trigger');
+        var btn = sidebarBtn || document.querySelector('.header-notif-bell-btn');
+        if (!dd || !btn) {
+            if (dd) { dd.style.top = ''; dd.style.right = ''; dd.style.left = ''; }
             return;
         }
-        var r = btn.getBoundingClientRect();
-        dd.style.top = Math.round(r.bottom + 8) + 'px';
-        dd.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
+        if (window.matchMedia('(max-width: 767.98px)').matches) {
+            if (sidebarBtn) {
+                dd.style.top = '';
+                dd.style.right = '';
+                dd.style.left = '';
+                return;
+            }
+            var r = btn.getBoundingClientRect();
+            dd.style.top = Math.round(r.bottom + 8) + 'px';
+            dd.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
+            dd.style.left = '';
+            return;
+        }
+        if (sidebarBtn) {
+            var rect = sidebarBtn.getBoundingClientRect();
+            dd.style.position = 'fixed';
+            dd.style.top = Math.round(rect.top) + 'px';
+            dd.style.left = Math.round(rect.right + 8) + 'px';
+            dd.style.right = 'auto';
+            return;
+        }
+        dd.style.position = '';
+        dd.style.top = '';
+        dd.style.right = '';
+        dd.style.left = '';
     }
 
     function syncNotifBackdrop(isOpen) {
@@ -154,7 +197,7 @@ $__adminHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCen
     function toggleNotif(e){
         if (e) { e.preventDefault(); e.stopPropagation(); }
         var dd=document.getElementById('notif-dd');
-        var btn = e && e.currentTarget ? e.currentTarget : document.querySelector('.header-notif-bell-btn');
+        var btn = e && e.currentTarget ? e.currentTarget : (document.querySelector('.sidebar-notif-trigger') || document.querySelector('.header-notif-bell-btn'));
         if(!dd) return;
         var willOpen = !dd.classList.contains('open');
         dd.classList.toggle('open');
@@ -162,9 +205,13 @@ $__adminHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCen
         if (btn) btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
         if (willOpen && !dd.classList.contains('notif-dropdown--v2')) {
             positionMobileNotifDropdown();
+        } else if (willOpen && document.querySelector('.sidebar-notif-trigger')) {
+            positionMobileNotifDropdown();
         } else {
             dd.style.top = '';
             dd.style.right = '';
+            dd.style.left = '';
+            dd.style.position = '';
         }
         syncNotifBackdrop(dd.classList.contains('open'));
         if (willOpen) document.body.classList.add('notif-panel-open');
@@ -172,12 +219,14 @@ $__adminHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCen
     }
     function closeNotif(){
         var dd=document.getElementById('notif-dd');
-        var btn = document.querySelector('.header-notif-bell-btn');
+        var btn = document.querySelector('.sidebar-notif-trigger') || document.querySelector('.header-notif-bell-btn');
         if(dd) {
             dd.classList.remove('open');
             dd.setAttribute('aria-hidden', 'true');
             dd.style.top = '';
             dd.style.right = '';
+            dd.style.left = '';
+            dd.style.position = '';
         }
         if (btn) btn.setAttribute('aria-expanded', 'false');
         syncNotifBackdrop(false);

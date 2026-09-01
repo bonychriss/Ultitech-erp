@@ -20,6 +20,9 @@ if (function_exists('ensurePostedColumnsOnPaymentVouchers')) ensurePostedColumns
 if (function_exists('ensureVoucherAttachmentsSchema')) ensureVoucherAttachmentsSchema();
 if (function_exists('ensureApprovalsTableSchema')) ensureApprovalsTableSchema();
 if (function_exists('ensureVoucherReferenceColumn')) ensureVoucherReferenceColumn();
+if (function_exists('repairMissingVoucherApprovalRows')) {
+    repairMissingVoucherApprovalRows($pdo, 50);
+}
 
 try {
     if (!function_exists('tableExists') || !tableExists('payment_vouchers', $pdo)) {
@@ -163,6 +166,7 @@ try {
     $isFinanceUser = function_exists('isFinance') ? isFinance() : false;
     $roleAdmin = defined('ROLE_ADMIN') ? ROLE_ADMIN : 'admin';
     $statusPending = defined('STATUS_PENDING') ? STATUS_PENDING : 'pending';
+    $statusConfirming = defined('STATUS_CONFIRMING') ? STATUS_CONFIRMING : 'confirming';
     $statusDraft = defined('STATUS_DRAFT') ? STATUS_DRAFT : 'draft';
 
     $vouchers = [];
@@ -173,7 +177,7 @@ try {
         $statusLower = strtolower((string) ($v['status'] ?? ''));
 
         $looksDraft = !$isPaidFlag
-            && $statusLower === $statusPending
+            && in_array($statusLower, array($statusPending, $statusConfirming), true)
             && (
                 empty($v['payee_name'])
                 || (float) $v['total_amount'] <= 0

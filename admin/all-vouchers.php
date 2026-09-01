@@ -18,6 +18,9 @@ if (function_exists('ensureApprovalsTableSchema')) {
     ensureApprovalsTableSchema();
 }
 ensureVoucherReferenceColumn();
+if (function_exists('repairMissingVoucherApprovalRows')) {
+    repairMissingVoucherApprovalRows($pdo, 50);
+}
 
 // -------------------------------------------------------------------------
 // POST handlers (Mark Paid / Mark Posted) — reused as-is by the React UI.

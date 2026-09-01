@@ -38,6 +38,7 @@ foreach ($ncAllItems as $row) {
     }
 }
 $ncItems = $ncAllItems;
+$showNotifDot = ($unread > 0 || $ncCountUnread > 0);
 $markAllApi = function_exists('app_url') ? app_url('/includes/notifications_api.php') : '/includes/notifications_api.php';
 $ncCss = function_exists('app_url') ? app_url('/assets/css/notifications-centre.css') : '/assets/css/notifications-centre.css';
 ?>
@@ -69,6 +70,7 @@ $ncCss = function_exists('app_url') ? app_url('/assets/css/notifications-centre.
     background: transparent !important;
 }
 .header-notif-bell-inner {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -86,12 +88,12 @@ $ncCss = function_exists('app_url') ? app_url('/assets/css/notifications-centre.
 }
 .header-notif-dot {
     position: absolute;
-    top: 7px;
-    right: 9px;
-    width: 9px;
-    height: 9px;
+    top: -1px;
+    right: -3px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    background: #7c3aed;
+    background: #22c55e;
     border: 2px solid #fff;
     box-sizing: content-box;
     pointer-events: none;
@@ -125,9 +127,9 @@ $ncCss = function_exists('app_url') ? app_url('/assets/css/notifications-centre.
     height: 1.1rem;
 }
 .sidebar-notif-item .header-notif-dot {
-    top: 0.45rem;
-    left: 1.65rem;
-    right: auto;
+    top: -1px;
+    right: -3px;
+    left: auto;
 }
 .sidebar-notif-item .sidebar-notif-label {
     flex: 1 1 auto;
@@ -159,11 +161,12 @@ body.sidebar-collapsed .sidebar-notif-item .sidebar-notif-label {
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
             <?php endif; ?>
+            <?php if ($showNotifDot): ?>
+            <span class="header-notif-dot" aria-hidden="true"></span>
+            <?php endif; ?>
         </span>
         <?php if ($notifIsSidebar): ?>
-            <span class="sidebar-text sidebar-notif-label">Notifications<?php if ($unread > 0): ?> <span class="badge rounded-pill bg-primary ms-1"><?= $unread > 99 ? '99+' : (int) $unread ?></span><?php endif; ?></span>
-        <?php elseif ($unread > 0): ?>
-            <span class="header-notif-dot" aria-hidden="true"></span>
+            <span class="sidebar-text sidebar-notif-label">Notifications</span>
         <?php endif; ?>
     </button>
     <div id="notif-dd" class="notif-dropdown notif-dropdown--v2" onclick="event.stopPropagation();" role="dialog" aria-label="Notifications" aria-hidden="true">
@@ -200,6 +203,23 @@ body.sidebar-collapsed .sidebar-notif-item .sidebar-notif-label {
     </div>
 </div>
 <script>
+function syncHeaderNotifDot() {
+    var inner = document.querySelector('.header-notif-bell-inner');
+    if (!inner) return;
+    var unreadCards = document.querySelectorAll('#notif-dd-list .nc-card.is-unread');
+    var dot = inner.querySelector('.header-notif-dot');
+    if (unreadCards.length > 0) {
+        if (!dot) {
+            dot = document.createElement('span');
+            dot.className = 'header-notif-dot';
+            dot.setAttribute('aria-hidden', 'true');
+            inner.appendChild(dot);
+        }
+    } else if (dot) {
+        dot.remove();
+    }
+}
+
 function headerNotifItemClick(ev, el) {
     if (ev) {
         ev.preventDefault();
@@ -217,6 +237,7 @@ function headerNotifItemClick(ev, el) {
         if (dot) dot.remove();
         var icon = el.querySelector('.nc-card-icon');
         if (icon) icon.classList.add('nc-card-icon--read');
+        syncHeaderNotifDot();
         return;
     }
     if (typeof closeNotif === 'function') {

@@ -23,6 +23,12 @@ if (function_exists('ensureVoucherReferenceColumn')) ensureVoucherReferenceColum
 if (function_exists('repairMissingVoucherApprovalRows')) {
     repairMissingVoucherApprovalRows($pdo, 50);
 }
+if (function_exists('repairVoucherApprovalDuplicates')) {
+    repairVoucherApprovalDuplicates($pdo, null, 50);
+}
+if (function_exists('repairStuckConfirmingVouchers')) {
+    repairStuckConfirmingVouchers($pdo, 50);
+}
 
 try {
     if (!function_exists('tableExists') || !tableExists('payment_vouchers', $pdo)) {

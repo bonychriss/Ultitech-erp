@@ -39,6 +39,12 @@ export async function fetchQuotationsInit() {
   return data;
 }
 
+export const DELETABLE_QUOTATION_STATUSES = ['quotation', 'draft', 'cancelled', 'canceled'];
+
+export function quotationStatusIsDeletable(status) {
+  return DELETABLE_QUOTATION_STATUSES.includes(String(status || '').toLowerCase());
+}
+
 export function submitDeleteForm(deletePostUrl, ids) {
   const form = document.createElement('form');
   form.method = 'POST';

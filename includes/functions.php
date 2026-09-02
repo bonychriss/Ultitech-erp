@@ -2073,18 +2073,17 @@ function syncVoucherApprovalAssignees(PDO $pdo, $voucherId, array $roleNames)
             $find->execute(array($voucherId, $roleKey));
             $existingRows = $find->fetchAll(PDO::FETCH_ASSOC) ?: array();
             if ($existingRows) {
-                $updated = false;
+                $updateByRole = $pdo->prepare(
+                    'UPDATE approvals SET approver_id = ?, approver_name = ? WHERE voucher_id = ? AND LOWER(TRIM(role)) = ?'
+                );
                 foreach ($existingRows as $existing) {
                     $existingId = (int) ($existing['id'] ?? 0);
-                    if ($existingId <= 0) {
-                        continue;
+                    if ($existingId > 0) {
+                        $update->execute(array($approverId, $name, $existingId));
                     }
-                    $update->execute(array($approverId, $name, $existingId));
-                    $updated = true;
                 }
-                if ($updated) {
-                    continue;
-                }
+                $updateByRole->execute(array($approverId, $name, $voucherId, $roleKey));
+                continue;
             }
 
             $vals = array($voucherId, $approverId, $name, $role);
@@ -2361,7 +2360,8 @@ function voucherCoreApprovalRolesComplete(PDO $pdo, $voucherId, array $voucher =
 }
 
 /**
- * Pending approvals excluding General Manager (GM is finalized separately).
+ * Pending employee approval roles (Applicant, Department Manager, Checked By only).
+ * Ignores duplicate or legacy rows outside the core workflow roles.
  */
 function countPendingEmployeeApprovalRoles(PDO $pdo, $voucherId): int
 {
@@ -2369,16 +2369,299 @@ function countPendingEmployeeApprovalRoles(PDO $pdo, $voucherId): int
     if ($voucherId <= 0 || !($pdo instanceof PDO) || !erp_connection_has_table($pdo, 'approvals')) {
         return 0;
     }
+
+    $voucher = array();
     try {
-        $st = $pdo->prepare(
-            "SELECT COUNT(*) FROM approvals WHERE voucher_id = ? AND status <> 'approved'
-             AND LOWER(TRIM(role)) NOT IN ('general manager', 'gm')"
-        );
+        $st = $pdo->prepare('SELECT applicant, department_manager, checked_by FROM payment_vouchers WHERE id = ? LIMIT 1');
         $st->execute(array($voucherId));
-        return (int) $st->fetchColumn();
+        $voucher = $st->fetch(PDO::FETCH_ASSOC) ?: array();
     } catch (Throwable $e) {
         return 0;
     }
+
+    if (function_exists('voucherCoreApprovalRolesComplete')
+        && voucherCoreApprovalRolesComplete($pdo, $voucherId, $voucher)) {
+        return 0;
+    }
+
+    $roleFieldMap = array(
+        'applicant' => 'applicant',
+        'department manager' => 'department_manager',
+        'checked by' => 'checked_by',
+    );
+    $pending = 0;
+    foreach ($roleFieldMap as $roleKey => $field) {
+        $assignee = trim((string) ($voucher[$field] ?? ''));
+        if ($assignee === '') {
+            continue;
+        }
+        if (!voucherApprovalRoleIsApproved($pdo, $voucherId, $roleKey)) {
+            $pending++;
+        }
+    }
+
+    return $pending;
+}
+
+/**
+ * Whether a normalized voucher approval role has at least one approved row.
+ */
+function voucherApprovalRoleIsApproved(PDO $pdo, $voucherId, $roleKey): bool
+{
+    $voucherId = (int) $voucherId;
+    $roleKey = normalizeVoucherApprovalRoleKey($roleKey);
+    if ($voucherId <= 0 || $roleKey === '' || !($pdo instanceof PDO)) {
+        return false;
+    }
+    try {
+        $st = $pdo->prepare('SELECT role, status FROM approvals WHERE voucher_id = ?');
+        $st->execute(array($voucherId));
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: array();
+    } catch (Throwable $e) {
+        return false;
+    }
+    foreach ($rows as $row) {
+        if (normalizeVoucherApprovalRoleKey($row['role'] ?? '') !== $roleKey) {
+            continue;
+        }
+        if (strtolower(trim((string) ($row['status'] ?? ''))) === 'approved') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Move confirming vouchers to pending once Applicant, Department Manager, and Checked By signed off.
+ */
+function maybePromoteVoucherFromConfirmingToPending(PDO $pdo, $voucherId, array $voucher = array()): bool
+{
+    $voucherId = (int) $voucherId;
+    if ($voucherId <= 0 || !($pdo instanceof PDO) || !erp_connection_has_table($pdo, 'payment_vouchers')) {
+        return false;
+    }
+
+    if (empty($voucher)) {
+        try {
+            $st = $pdo->prepare(
+                'SELECT id, status, applicant, department_manager, checked_by, general_manager
+                 FROM payment_vouchers WHERE id = ? LIMIT 1'
+            );
+            $st->execute(array($voucherId));
+            $voucher = $st->fetch(PDO::FETCH_ASSOC) ?: array();
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    $status = strtolower(trim((string) ($voucher['status'] ?? '')));
+    if ($status !== 'confirming') {
+        return false;
+    }
+    if (!voucherCoreApprovalRolesComplete($pdo, $voucherId, $voucher)) {
+        return false;
+    }
+
+    try {
+        $st = $pdo->prepare("UPDATE payment_vouchers SET status = 'pending' WHERE id = ? AND status = 'confirming'");
+        $st->execute(array($voucherId));
+        return $st->rowCount() > 0;
+    } catch (Throwable $e) {
+        error_log('maybePromoteVoucherFromConfirmingToPending voucher ' . $voucherId . ': ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Repair approvals.id when tenant tables were created without AUTO_INCREMENT (all rows id=0).
+ */
+function ensureApprovalsTableIdColumn(PDO $pdo = null)
+{
+    global $pdo;
+    $usePdo = $pdo instanceof PDO ? $pdo : ($GLOBALS['pdo'] ?? null);
+    if (!($usePdo instanceof PDO) || !erp_connection_has_table($usePdo, 'approvals')) {
+        return false;
+    }
+    static $completed = array();
+    $token = pdoInstanceToken($usePdo);
+    if (isset($completed[$token])) {
+        return true;
+    }
+
+    try {
+        $col = $usePdo->query("SHOW COLUMNS FROM approvals WHERE Field = 'id'")->fetch(PDO::FETCH_ASSOC) ?: array();
+        $extra = strtolower(trim((string) ($col['Extra'] ?? '')));
+        $key = strtolower(trim((string) ($col['Key'] ?? '')));
+        $needsRepair = strpos($extra, 'auto_increment') === false || $key !== 'pri';
+        if ($needsRepair) {
+            $usePdo->exec('SET @voucher_approval_rownum := 0');
+            $usePdo->exec(
+                'UPDATE approvals SET id = (@voucher_approval_rownum := @voucher_approval_rownum + 1)
+                 ORDER BY voucher_id, created_at, role, status, approver_name'
+            );
+            try {
+                $usePdo->exec('ALTER TABLE approvals MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT PRIMARY KEY');
+            } catch (Throwable $eAlter) {
+                try {
+                    $usePdo->exec('ALTER TABLE approvals ADD PRIMARY KEY (id)');
+                } catch (Throwable $ePk) {
+                    /* ignore */
+                }
+                try {
+                    $usePdo->exec('ALTER TABLE approvals MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT');
+                } catch (Throwable $eAi) {
+                    error_log('ensureApprovalsTableIdColumn: ' . $eAi->getMessage());
+                }
+            }
+        }
+        $completed[$token] = true;
+        return true;
+    } catch (Throwable $e) {
+        error_log('ensureApprovalsTableIdColumn: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Prefer approved rows, then the newest approval timestamp, when deduplicating approvals.
+ */
+function voucherApprovalRowIsPreferred(array $candidate, array $incumbent): bool
+{
+    $candidateApproved = strtolower(trim((string) ($candidate['status'] ?? ''))) === 'approved';
+    $incumbentApproved = strtolower(trim((string) ($incumbent['status'] ?? ''))) === 'approved';
+    if ($candidateApproved && !$incumbentApproved) {
+        return true;
+    }
+    if (!$candidateApproved && $incumbentApproved) {
+        return false;
+    }
+
+    $candidateAt = strtotime((string) ($candidate['approved_at'] ?? '')) ?: 0;
+    $incumbentAt = strtotime((string) ($incumbent['approved_at'] ?? '')) ?: 0;
+    if ($candidateAt !== $incumbentAt) {
+        return $candidateAt > $incumbentAt;
+    }
+
+    return (int) ($candidate['id'] ?? 0) > (int) ($incumbent['id'] ?? 0);
+}
+
+/**
+ * Collapse duplicate approval rows down to one row per voucher role.
+ */
+function repairVoucherApprovalDuplicates(PDO $pdo, $voucherId = null, $limit = 100): int
+{
+    if (!($pdo instanceof PDO) || !erp_connection_has_table($pdo, 'approvals')) {
+        return 0;
+    }
+    ensureApprovalsTableIdColumn($pdo);
+
+    $limit = max(1, min(500, (int) $limit));
+    $employeeRoles = voucherEmployeeApprovalRoleKeys();
+    $allowedRoles = array_merge($employeeRoles, array('general manager'));
+
+    try {
+        if ($voucherId !== null && (int) $voucherId > 0) {
+            $voucherIds = array((int) $voucherId);
+        } else {
+            $voucherIds = $pdo->query(
+                'SELECT voucher_id FROM approvals GROUP BY voucher_id HAVING COUNT(*) > 3 ORDER BY voucher_id DESC LIMIT ' . $limit
+            )->fetchAll(PDO::FETCH_COLUMN) ?: array();
+        }
+    } catch (Throwable $e) {
+        error_log('repairVoucherApprovalDuplicates: ' . $e->getMessage());
+        return 0;
+    }
+
+    $repaired = 0;
+    foreach ($voucherIds as $vid) {
+        $vid = (int) $vid;
+        if ($vid <= 0) {
+            continue;
+        }
+        try {
+            $st = $pdo->prepare('SELECT * FROM approvals WHERE voucher_id = ? ORDER BY id ASC');
+            $st->execute(array($vid));
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: array();
+            if (count($rows) <= 3) {
+                continue;
+            }
+
+            $keepByRole = array();
+            $deleteIds = array();
+            foreach ($rows as $row) {
+                $rowId = (int) ($row['id'] ?? 0);
+                $roleKey = normalizeVoucherApprovalRoleKey($row['role'] ?? '');
+                if (!in_array($roleKey, $allowedRoles, true)) {
+                    if ($rowId > 0) {
+                        $deleteIds[] = $rowId;
+                    }
+                    continue;
+                }
+                if (!isset($keepByRole[$roleKey]) || voucherApprovalRowIsPreferred($row, $keepByRole[$roleKey])) {
+                    if (isset($keepByRole[$roleKey])) {
+                        $oldId = (int) ($keepByRole[$roleKey]['id'] ?? 0);
+                        if ($oldId > 0) {
+                            $deleteIds[] = $oldId;
+                        }
+                    }
+                    $keepByRole[$roleKey] = $row;
+                } elseif ($rowId > 0) {
+                    $deleteIds[] = $rowId;
+                }
+            }
+
+            $deleteIds = array_values(array_unique(array_filter($deleteIds, static function ($id) {
+                return (int) $id > 0;
+            })));
+            if (!empty($deleteIds)) {
+                $placeholders = implode(',', array_fill(0, count($deleteIds), '?'));
+                $pdo->prepare('DELETE FROM approvals WHERE id IN (' . $placeholders . ')')->execute($deleteIds);
+            }
+
+            $voucher = array();
+            $vst = $pdo->prepare('SELECT applicant, department_manager, checked_by, status FROM payment_vouchers WHERE id = ? LIMIT 1');
+            $vst->execute(array($vid));
+            $voucher = $vst->fetch(PDO::FETCH_ASSOC) ?: array();
+            maybePromoteVoucherFromConfirmingToPending($pdo, $vid, $voucher);
+            $repaired++;
+        } catch (Throwable $eRow) {
+            error_log('repairVoucherApprovalDuplicates voucher ' . $vid . ': ' . $eRow->getMessage());
+        }
+    }
+
+    return $repaired;
+}
+
+/**
+ * Promote confirming vouchers whose core employee approvals are already complete.
+ */
+function repairStuckConfirmingVouchers(PDO $pdo, $limit = 100): int
+{
+    if (!($pdo instanceof PDO) || !erp_connection_has_table($pdo, 'payment_vouchers')) {
+        return 0;
+    }
+    $limit = max(1, min(500, (int) $limit));
+    try {
+        $rows = $pdo->query(
+            "SELECT id, applicant, department_manager, checked_by, status
+             FROM payment_vouchers
+             WHERE status = 'confirming'
+             ORDER BY id DESC
+             LIMIT {$limit}"
+        )->fetchAll(PDO::FETCH_ASSOC) ?: array();
+    } catch (Throwable $e) {
+        return 0;
+    }
+
+    $promoted = 0;
+    foreach ($rows as $row) {
+        if (maybePromoteVoucherFromConfirmingToPending($pdo, (int) ($row['id'] ?? 0), $row)) {
+            $promoted++;
+        }
+    }
+
+    return $promoted;
 }
 
 /**
@@ -9129,6 +9412,9 @@ function ensureApprovalsTableSchema()
     }
     ensurePaymentVouchersCoreSchema($pdo);
     if (tableExists('approvals', $pdo)) {
+        if (function_exists('ensureApprovalsTableIdColumn')) {
+            ensureApprovalsTableIdColumn($pdo);
+        }
         $ensuredApprovals = true;
         return;
     }

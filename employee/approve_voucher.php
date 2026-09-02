@@ -244,12 +244,16 @@ try {
             erp_upsert_general_manager_approval($pdo, $voucher_id, $gmName, $userId);
         }
     } else {
-        $pendingEmployee = function_exists('countPendingEmployeeApprovalRoles')
-            ? countPendingEmployeeApprovalRoles($pdo, $voucher_id)
-            : 0;
-        if ($pendingEmployee === 0) {
-            $pstmt = $pdo->prepare('UPDATE payment_vouchers SET status = ? WHERE id = ?');
-            $pstmt->execute(['pending', $voucher_id]);
+        if (function_exists('maybePromoteVoucherFromConfirmingToPending')) {
+            maybePromoteVoucherFromConfirmingToPending($pdo, $voucher_id, $voucherAssignees);
+        } else {
+            $pendingEmployee = function_exists('countPendingEmployeeApprovalRoles')
+                ? countPendingEmployeeApprovalRoles($pdo, $voucher_id)
+                : 0;
+            if ($pendingEmployee === 0) {
+                $pstmt = $pdo->prepare('UPDATE payment_vouchers SET status = ? WHERE id = ?');
+                $pstmt->execute(['pending', $voucher_id]);
+            }
         }
     }
 

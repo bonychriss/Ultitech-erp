@@ -33,7 +33,8 @@ if (!isset($_GET['mode']) || $_GET['mode'] !== 'new') {
                 $statusStmt = $salesDb->prepare("SELECT status FROM sales_orders WHERE id = ?");
                 $statusStmt->execute([$delId]);
                 $status = $statusStmt->fetchColumn();
-                if ($status !== 'quotation') {
+                if (!function_exists('sales_quotation_status_is_deletable')
+                    || !sales_quotation_status_is_deletable(is_string($status) ? $status : '')) {
                     continue;
                 }
 
@@ -574,10 +575,11 @@ function QuotationsListApp() {
     () => filteredQuotations.filter((q) => selectedIds.has(q.id)),
     [filteredQuotations, selectedIds]
   );
-  const canDelete = selectedList.length > 0 && selectedList.every((q) => (q.status || "").toLowerCase() === "quotation");
+  const deletableQuotationStatuses = ["quotation", "draft", "cancelled", "canceled"];
+  const canDelete = selectedList.length > 0 && selectedList.every((q) => deletableQuotationStatuses.includes((q.status || "").toLowerCase()));
   const canInvoice = selectedList.length === 1;
   const handleDelete = (e) => {
-    if (!confirm("Delete selected quotations? (Only quotation status, no invoice)")) e.preventDefault();
+    if (!confirm("Delete selected quotations? (Draft, quotation, or cancelled only — no invoice)")) e.preventDefault();
   };
   const viewBtn = (mode, icon, title) => /* @__PURE__ */ React.createElement(
     "button",

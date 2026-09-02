@@ -1015,6 +1015,21 @@ function salesQuoteCreateUsesReactShell(): bool
 }
 
 /**
+ * Quotation list statuses that may be bulk-deleted (no linked invoice).
+ *
+ * @return list<string>
+ */
+function sales_quotation_deletable_statuses(): array
+{
+    return array('quotation', 'draft', 'cancelled', 'canceled');
+}
+
+function sales_quotation_status_is_deletable(?string $status): bool
+{
+    return in_array(strtolower(trim((string) $status)), sales_quotation_deletable_statuses(), true);
+}
+
+/**
  * Quotations list uses the React desk shell (Roadmaster, or Ultimate).
  */
 function salesQuotationsListUsesReactShell(): bool

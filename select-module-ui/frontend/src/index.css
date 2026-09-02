@@ -219,6 +219,11 @@ body {
   height: 48px;
 }
 
+.sm-icon--sales {
+  width: 48px;
+  height: 48px;
+}
+
 .sm-label {
   color: #1f2937;
   font-size: 16px;

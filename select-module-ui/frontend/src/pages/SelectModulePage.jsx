@@ -20,7 +20,6 @@ import {
   Send,
   Server,
   Settings,
-  TrendingUp,
   Truck,
   Wallet,
   Warehouse,
@@ -73,6 +72,45 @@ function PerformanceIcon() {
   )
 }
 
+function SalesIcon() {
+  return (
+    <svg className="sm-icon sm-icon--sales" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="3" y1="16" x2="12" y2="16" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
+      <line x1="3" y1="23" x2="9" y2="23" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
+      <line x1="3" y1="30" x2="14" y2="30" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
+      <path
+        d="M16 13.5 L40 13.5 L36.5 26.5 L19.5 26.5 Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinejoin="round"
+      />
+      <line x1="18" y1="17.5" x2="38" y2="17.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <line x1="18.8" y1="21" x2="37.2" y2="21" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <line x1="23" y1="13.8" x2="21.2" y2="26.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <line x1="27.5" y1="13.7" x2="26.2" y2="26.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <line x1="32" y1="13.6" x2="31.2" y2="26.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path
+        d="M16 13.5 C13 13.5 9.5 10.5 7 8.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M19.5 26.5 L18 34.5 M18 34.5 L36 34.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="18" cy="37.5" r="3.2" fill="currentColor" />
+      <circle cx="36" cy="37.5" r="3.2" fill="currentColor" />
+    </svg>
+  )
+}
+
 const ICONS = {
   voucher: FileText,
   attendance: ClipboardCheck,
@@ -88,7 +126,7 @@ const ICONS = {
   budgets: ChartColumn,
   stock: Boxes,
   warehouses: Warehouse,
-  sales: TrendingUp,
+  sales: SalesIcon,
   statement: FileText,
   dispatch: Truck,
   todo: ListChecks,
@@ -108,6 +146,13 @@ function ModuleIcon({ name, color }) {
     return (
       <div className="sm-icon-box">
         <PerformanceIcon />
+      </div>
+    )
+  }
+  if (name === 'sales') {
+    return (
+      <div className="sm-icon-box" style={{ color }}>
+        <SalesIcon />
       </div>
     )
   }

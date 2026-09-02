@@ -22,6 +22,10 @@ $isUltimateStockSimple = (
     || (!empty($_SESSION['company_slug']) && strtolower((string) $_SESSION['company_slug']) === 'ultimate')
 );
 
+$requireProductImage = $isUltimateStockSimple
+    || (isset($_SERVER['REQUEST_URI']) && strpos((string) $_SERVER['REQUEST_URI'], '/roadmaster/') !== false)
+    || (!empty($_SESSION['company_slug']) && strtolower((string) $_SESSION['company_slug']) === 'roadmaster');
+
 $year = date('Y');
 
 function stock_products_api_generate_code(PDO $pdo, string $prefix): string
@@ -99,6 +103,28 @@ if (empty($category_id)) {
     http_response_code(422);
     echo json_encode(['ok' => false, 'error' => 'Category is required.']);
     exit;
+}
+
+if ($requireProductImage) {
+    $hasUploadedImage = false;
+    if (isset($_FILES['product_images']) && is_array($_FILES['product_images']['name'] ?? null)) {
+        $fileNames = $_FILES['product_images']['name'];
+        $fileErrors = $_FILES['product_images']['error'] ?? [];
+        foreach ($fileNames as $i => $origName) {
+            if (trim((string) $origName) === '') {
+                continue;
+            }
+            if ((int) ($fileErrors[$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+                $hasUploadedImage = true;
+                break;
+            }
+        }
+    }
+    if (!$hasUploadedImage) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'Please add at least one product image before saving.']);
+        exit;
+    }
 }
 
 try {

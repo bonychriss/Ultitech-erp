@@ -265,6 +265,7 @@ export default function ProductCreate({ data = {} }) {
     createApiUrl = 'api/create-product.php',
     updateApiUrl = 'api/update-product.php',
     updated = false,
+    requireProductImage = false,
   } = data;
 
   const isEdit = mode === 'edit' && product && product.id;
@@ -380,7 +381,14 @@ export default function ProductCreate({ data = {} }) {
     if (!name.trim()) nextErrors.push('Product name is required.');
     if (!categoryId) nextErrors.push('Category is required.');
     if (unitPrice === '' || Number.isNaN(Number(unitPrice))) nextErrors.push('Selling price is required.');
+    if (requireProductImage && !isEdit && images.length === 0) {
+      nextErrors.push('Please add at least one product image before saving.');
+    }
     if (nextErrors.length) {
+      if (requireProductImage && !isEdit && images.length === 0) {
+        window.alert('Please add at least one product image before you can save this product.');
+        document.getElementById('product-images')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       setErrors(nextErrors);
       return;
     }
@@ -859,11 +867,16 @@ export default function ProductCreate({ data = {} }) {
 
           <section className="prod-create-section" id="product-images">
             <div className="prod-create-section-header">
-              <h2>Images</h2>
+              <h2>
+                Images
+                {requireProductImage && !isEdit ? <span className="req"> *</span> : null}
+              </h2>
               <p>
                 {isEdit
                   ? 'Manage existing photos or upload new ones. Mark one as primary.'
-                  : 'Upload one or more product photos. The first image is used as the primary photo.'}
+                  : requireProductImage
+                    ? 'Add at least one product photo before saving. The first image is used as the primary photo.'
+                    : 'Upload one or more product photos. The first image is used as the primary photo.'}
               </p>
             </div>
 

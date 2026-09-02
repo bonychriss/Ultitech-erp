@@ -15,6 +15,10 @@ $isUltimateStockSimple = (
     || (!empty($_SESSION['company_slug']) && strtolower((string) $_SESSION['company_slug']) === 'ultimate')
 );
 
+$requireProductImage = $isUltimateStockSimple
+    || (isset($_SERVER['REQUEST_URI']) && strpos((string) $_SERVER['REQUEST_URI'], '/roadmaster/') !== false)
+    || (!empty($_SESSION['company_slug']) && strtolower((string) $_SESSION['company_slug']) === 'roadmaster');
+
 $showCost = in_array($_SESSION['role'] ?? '', ['admin', 'procurement'], true);
 
 $categories = $pdo->query('SELECT id, name FROM categories ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC);
@@ -53,9 +57,11 @@ $__sn = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
 if (preg_match('#^(.*?/stock)/#', $__sn, $__m)) {
     $base = rtrim($__m[1], '/') . '/';
 }
-/* Tenant URLs like /ultimate/stock/... must load shared /stock/ UI assets */
+/* Tenant URLs like /ultimate/stock/... or /roadmaster/stock/... load shared /stock/ UI assets */
 if (strpos($base, '/ultimate/stock') !== false) {
     $base = preg_replace('#/ultimate/stock#', '/stock', $base, 1);
+} elseif (strpos($base, '/roadmaster/stock') !== false) {
+    $base = preg_replace('#/roadmaster/stock#', '/stock', $base, 1);
 }
 $uiCss = $base . 'stock-ui/dist/assets/stock-ui.css';
 $uiJs = $base . 'stock-ui/dist/assets/stock-ui.js';
@@ -201,6 +207,7 @@ body.page-products-desk button.prod-create-btn-save {
             'page' => 'product-create',
             'data' => [
                 'isUltimate' => $isUltimateStockSimple,
+                'requireProductImage' => $requireProductImage,
                 'showCost' => $showCost,
                 'categories' => array_map(static function ($c) {
                     return ['id' => (int) $c['id'], 'name' => (string) $c['name']];

@@ -4031,16 +4031,6 @@ function clearAuthSession()
 
 require_once __DIR__ . '/auth_remember.php';
 
-if (
-    session_status() === PHP_SESSION_ACTIVE
-    && empty($_SESSION['user_id'])
-    && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST'
-    && !defined('ERP_REMEMBER_ME_ATTEMPTED')
-) {
-    define('ERP_REMEMBER_ME_ATTEMPTED', true);
-    attemptRememberMeLogin();
-}
-
 if (!function_exists('isDiagnosticScriptRequest')) {
     function isDiagnosticScriptRequest(): bool
     {
@@ -6559,7 +6549,7 @@ function erp_system_font_css_version(): string
     $effective = getEffectiveFontKey($userId > 0 ? $userId : null);
     $def = getSystemFontDefinition($effective);
 
-    return substr(md5($effective . '|' . ($def['stack'] ?? '') . '|u' . $userId), 0, 12);
+    return substr(hash('sha256', $effective . '|' . ($def['stack'] ?? '') . '|u' . $userId), 0, 12);
 }
 
 /** URL to tenant-aware dynamic font CSS (linked from style.css and HTML head injection). */

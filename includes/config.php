@@ -293,6 +293,17 @@ if (session_status() == PHP_SESSION_NONE) {
 require_once __DIR__ . '/error_page_helpers.php';
 require_once __DIR__ . '/functions.php';
 
+if (
+    session_status() === PHP_SESSION_ACTIVE
+    && empty($_SESSION['user_id'])
+    && function_exists('attemptRememberMeLogin')
+    && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST'
+    && !defined('ERP_REMEMBER_ME_ATTEMPTED')
+) {
+    define('ERP_REMEMBER_ME_ATTEMPTED', true);
+    attemptRememberMeLogin();
+}
+
 if (isset($control_pdo)) {
     $cid = null;
     $slug = null;

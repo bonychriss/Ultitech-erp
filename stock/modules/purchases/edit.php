@@ -120,7 +120,7 @@ try {
     $productCols = [];
 }
 
-$productImageCol = in_array('image', $productCols, true) ? 'image' : (in_array('main_image', $productCols, true) ? 'main_image' : null);
+$productImageCol = in_array('main_image', $productCols, true) ? 'main_image' : (in_array('image', $productCols, true) ? 'image' : null);
 $productBuyingPriceCol = in_array('buying_price', $productCols, true) ? 'buying_price' : (in_array('cost_price', $productCols, true) ? 'cost_price' : 'unit_price');
 $productSupplierCol = in_array('supplier_id', $productCols, true) ? 'supplier_id' : null;
 $stocksItemCols = [];

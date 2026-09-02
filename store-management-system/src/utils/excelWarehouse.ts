@@ -68,7 +68,7 @@ export async function exportIncomingExcel(receipts: PendingReceipt[]) {
     product_name: r.productName,
     po_reference: r.poReference,
     qty_expected: r.qtyExpected,
-    qty_verified: r.qtyExpected,
+    qty_verified: '',
     notes: '',
   }));
   await writeWorkbook(stamp('incoming-verify'), rows, 'Incoming');
@@ -127,7 +127,11 @@ export function parseIncomingRows(rows: SheetRow[], receipts: PendingReceipt[]):
       return;
     }
 
-    const qtyRaw = row.qty_verified ?? row.quantity ?? row.qty ?? receipt.qtyExpected;
+    const qtyRaw = row.qty_verified ?? row.quantity ?? row.qty;
+    if (qtyRaw === '' || qtyRaw === null || qtyRaw === undefined) {
+      errors.push(`Row ${line}: qty_verified is required for ${receipt.productSku}.`);
+      return;
+    }
     const qtyVerified = Number(qtyRaw);
     if (Number.isNaN(qtyVerified) || qtyVerified < 0) {
       errors.push(`Row ${line}: invalid qty_verified for ${receipt.productSku}.`);

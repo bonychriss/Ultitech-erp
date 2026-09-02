@@ -89,10 +89,10 @@ try {
     $productCols = [];
 }
 $productImageCol = null;
-if (in_array('image', $productCols, true)) {
-    $productImageCol = 'image';
-} elseif (in_array('main_image', $productCols, true)) {
+if (in_array('main_image', $productCols, true)) {
     $productImageCol = 'main_image';
+} elseif (in_array('image', $productCols, true)) {
+    $productImageCol = 'image';
 }
 
 /**

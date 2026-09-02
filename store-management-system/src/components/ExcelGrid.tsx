@@ -23,7 +23,8 @@ export interface ExcelColumn<T> {
   getValue: (row: T) => string | number;
   setValue?: (row: T, value: string) => T;
   cellClass?: (row: T, value: string | number) => string;
-  render?: (row: T, value: string | number, editing: boolean) => React.ReactNode;
+  columnClass?: string;
+  render?: (row: T, value: string | number, editing: boolean, cellKey: string) => React.ReactNode;
 }
 
 interface ExcelGridProps<T> {
@@ -49,6 +50,7 @@ function colLetter(index: number): string {
 
 function isEditable<T>(col: ExcelColumn<T>, row: T): boolean {
   if (typeof col.editable === 'function') return col.editable(row);
+  if (col.editable && col.render) return true;
   return Boolean(col.editable && col.setValue);
 }
 
@@ -227,11 +229,12 @@ export default function ExcelGrid<T>({
     const editable = isEditable(col, row);
     const isActive = active?.rowId === id && active?.colKey === col.key;
     const extraClass = col.cellClass?.(row, value) ?? '';
+    const columnClass = col.columnClass ?? '';
 
     return (
       <td
         key={col.key}
-        className={`sms-excel-cell${editable ? ' is-editable' : ' is-readonly'}${isActive ? ' is-active' : ''} sms-excel-align-${col.align || 'left'} ${extraClass}`}
+        className={`sms-excel-cell${editable ? ' is-editable' : ' is-readonly'}${isActive ? ' is-active' : ''} sms-excel-align-${col.align || 'left'} ${columnClass} ${extraClass}`}
         onClick={() => {
           if (editable) {
             focusCell(id, col.key);
@@ -242,7 +245,7 @@ export default function ExcelGrid<T>({
       >
         {editable ? (
           col.render ? (
-            col.render(row, value, isActive)
+            col.render(row, value, isActive, `${id}:${col.key}`)
           ) : (
             <input
               type={col.type === 'number' ? 'number' : 'text'}
@@ -270,7 +273,7 @@ export default function ExcelGrid<T>({
             />
           )
         ) : (
-          <span className="sms-excel-readonly">{col.render ? col.render(row, value, false) : String(value ?? '')}</span>
+          <span className="sms-excel-readonly">{col.render ? col.render(row, value, false, `${id}:${col.key}`) : String(value ?? '')}</span>
         )}
       </td>
     );
@@ -425,7 +428,7 @@ export default function ExcelGrid<T>({
                 <tr key={`pad-${i}`} className="sms-excel-row sms-excel-row-pad">
                   <td className="sms-excel-row-num">{displayRows.length + i + 1}</td>
                   {columns.map((col) => (
-                    <td key={col.key} className="sms-excel-cell sms-excel-cell-pad" />
+                    <td key={col.key} className={`sms-excel-cell sms-excel-cell-pad ${col.columnClass || ''}`} />
                   ))}
                 </tr>
               ))}

@@ -9,6 +9,8 @@ import {
 import type { PendingReceipt, Product } from '../types';
 import StatusPopup, { type StatusPopupTone } from './StatusPopup';
 import ExcelGrid, { type ExcelColumn } from './ExcelGrid';
+import ProductPickerCell from './ProductPickerCell';
+import PoReferencePickerCell from './PoReferencePickerCell';
 
 interface VerifyReceiptsProps {
   warehouseId: number;
@@ -92,7 +94,7 @@ function receiptToRow(receipt: PendingReceipt): IncomingGridRow {
     productName: receipt.productName,
     poReference: receipt.poReference || '',
     qtyExpected: String(receipt.qtyExpected),
-    qtyVerified: String(receipt.qtyExpected),
+    qtyVerified: '',
     notes: '',
     isManual: false,
   };
@@ -268,25 +270,41 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
         header: 'Product SKU',
         letter: 'A',
         width: '9rem',
-        editable: (row) => row.isManual,
         getValue: (row) => row.productSku,
-        setValue: (row, value) => {
-          const product = productBySku.get(value.trim().toLowerCase());
-          return {
-            ...row,
-            productSku: value,
-            productId: product?.id ?? '',
-            productName: product?.name ?? '',
-          };
-        },
-        cellClass: (row) => (row.productSku.trim() && !resolveProduct(row) ? 'is-error' : ''),
+        columnClass: 'sms-excel-col-locked',
       },
       {
         key: 'name',
         header: 'Product Name',
         letter: 'B',
-        width: '14rem',
+        width: '16rem',
+        editable: true,
         getValue: (row) => row.productName || resolveProduct(row)?.name || '',
+        render: (row, value, editing, cellKey) => (
+          <ProductPickerCell
+            products={products}
+            displayName={String(value ?? '')}
+            open={editing}
+            cellKey={cellKey}
+            onPick={(product) => {
+              setGridRows((prev) =>
+                ensureTrailingEmptyRows(
+                  prev.map((item) =>
+                    item.rowId !== row.rowId
+                      ? item
+                      : {
+                          ...item,
+                          productId: product.id,
+                          productSku: product.sku || '',
+                          productName: product.name,
+                          poReference: '',
+                        }
+                  )
+                )
+              );
+            }}
+          />
+        ),
       },
       {
         key: 'po',
@@ -295,7 +313,33 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
         width: '9rem',
         editable: true,
         getValue: (row) => row.poReference,
-        setValue: (row, value) => ({ ...row, poReference: value }),
+        render: (row, value, editing, cellKey) => (
+          <PoReferencePickerCell
+            productId={row.productId || resolveProduct(row)?.id || ''}
+            productSku={row.productSku || resolveProduct(row)?.sku || ''}
+            displayValue={String(value ?? '')}
+            open={editing}
+            cellKey={cellKey}
+            onPick={(reference) => {
+              const expectedQty =
+                reference.qtyRemaining > 0 ? reference.qtyRemaining : reference.qtyOrdered;
+              const qtyText = expectedQty > 0 ? String(expectedQty) : '';
+              setGridRows((prev) =>
+                ensureTrailingEmptyRows(
+                  prev.map((item) =>
+                    item.rowId !== row.rowId
+                      ? item
+                      : {
+                          ...item,
+                          poReference: reference.poReference || reference.poNumber,
+                          qtyExpected: qtyText !== '' ? qtyText : item.qtyExpected,
+                        }
+                  )
+                )
+              );
+            }}
+          />
+        ),
       },
       {
         key: 'expected',
@@ -303,10 +347,9 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
         letter: 'D',
         width: '6.5rem',
         align: 'right',
-        editable: true,
-        type: 'number',
+        editable: false,
+        columnClass: 'sms-excel-col-locked',
         getValue: (row) => row.qtyExpected,
-        setValue: (row, value) => ({ ...row, qtyExpected: value }),
       },
       {
         key: 'verified',
@@ -385,7 +428,7 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
         ),
       },
     ],
-    [confirmingAll, processingRowId, productBySku]
+    [confirmingAll, processingRowId, productBySku, products]
   );
 
   return (

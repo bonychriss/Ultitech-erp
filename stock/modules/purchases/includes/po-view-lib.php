@@ -205,17 +205,21 @@ function poViewLoadLineItems(PDO $pdo, int $id, bool $isLegacyPurchase): array
     $items = [];
     $linesSubtotalUsd = 0.0;
 
-    $productCols = [];
-    try {
-        $productCols = $pdo->query('SHOW COLUMNS FROM products')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-    } catch (Throwable $e) {
-        $productCols = [];
-    }
-    $productImageCol = null;
-    if (in_array('image', $productCols, true)) {
-        $productImageCol = 'image';
-    } elseif (in_array('main_image', $productCols, true)) {
-        $productImageCol = 'main_image';
+    $legacyImageExpr = 'NULL';
+    $stockImageSelect = 'NULL AS product_image, NULL AS image_product_id';
+    $stockImageJoin = '';
+    if (function_exists('stock_product_main_image_sql')) {
+        try {
+            $legacyImageExpr = stock_product_main_image_sql($pdo, 'pr');
+            $stockImageSelect = stock_product_main_image_sql($pdo, 'pimg') . ' AS product_image, pimg.id AS image_product_id';
+            $stockImageJoin = "LEFT JOIN products pimg
+                   ON (LOWER(TRIM(pimg.name)) = LOWER(TRIM(si.name)))
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(pimg.product_code)) = LOWER(TRIM(si.sku)))";
+        } catch (Throwable $e) {
+            $legacyImageExpr = 'NULL';
+            $stockImageSelect = 'NULL AS product_image, NULL AS image_product_id';
+            $stockImageJoin = '';
+        }
     }
 
     try {
@@ -224,7 +228,7 @@ function poViewLoadLineItems(PDO $pdo, int $id, bool $isLegacyPurchase): array
                 'SELECT pi.id, pi.product_id AS product_id, pi.quantity AS quantity, pi.unit_price AS unit_price,
                     (pi.quantity * pi.unit_price) AS total_amount,
                     pr.name AS product_name, pr.product_code AS product_code, pr.description AS product_desc,
-                    ' . ($productImageCol ? ('pr.`' . $productImageCol . '`') : 'NULL') . ' AS product_image,
+                    ' . $legacyImageExpr . ' AS product_image,
                     NULL AS last_price, pi.product_id AS image_product_id
                 FROM purchase_items pi
                 LEFT JOIN products pr ON pr.id = pi.product_id
@@ -238,18 +242,14 @@ function poViewLoadLineItems(PDO $pdo, int $id, bool $isLegacyPurchase): array
                 'SELECT pi.id, pi.item_id AS product_id, pi.qty_ordered AS quantity, pi.unit_cost AS unit_price,
                     (pi.qty_ordered * pi.unit_cost) AS total_amount,
                     si.name AS product_name, si.sku AS product_code, si.description AS product_desc,
-                    ' . ($productImageCol ? ("pimg.`$productImageCol` AS product_image, pimg.id AS image_product_id,") : 'NULL AS product_image, NULL AS image_product_id,') . '
+                    ' . $stockImageSelect . ',
                     (SELECT pi2.unit_cost FROM stocks_po_items pi2
                         INNER JOIN stocks_purchase_orders p2 ON pi2.po_id = p2.id
                         WHERE pi2.item_id = pi.item_id AND p2.status = \'Approved\' AND p2.id < ?
                         ORDER BY p2.created_at DESC, p2.id DESC LIMIT 1) AS last_price
                  FROM stocks_po_items pi
                  INNER JOIN stocks_items si ON si.id = pi.item_id
-                 ' . ($productImageCol ? "
-                 LEFT JOIN products pimg
-                   ON (LOWER(TRIM(pimg.name)) = LOWER(TRIM(si.name)))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(pimg.product_code)) = LOWER(TRIM(si.sku)))
-                 " : '') . '
+                 ' . $stockImageJoin . '
                  WHERE pi.po_id = ?
                  ORDER BY pi.id ASC'
             );

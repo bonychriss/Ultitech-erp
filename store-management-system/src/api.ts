@@ -7,6 +7,7 @@ import type {
   PendingReceipt,
   PendingInvoice,
   Product,
+  ProductPoReference,
   PurchaseOrderAttachment,
   PurchaseOrderLine,
   PurchaseOrderSummary,
@@ -289,6 +290,21 @@ export async function confirmManualIncoming(
 export async function fetchPurchaseOrders(): Promise<PurchaseOrderSummary[]> {
   const data = await request<{ orders: PurchaseOrderSummary[] }>('purchase_orders');
   return data.orders;
+}
+
+export async function fetchProductPoReferences(
+  productId: string,
+  sku = ''
+): Promise<ProductPoReference[]> {
+  const params: Record<string, string> = {};
+  if (productId.trim()) {
+    params.product_id = productId.trim();
+  }
+  if (sku.trim()) {
+    params.sku = sku.trim();
+  }
+  const data = await request<{ references: ProductPoReference[] }>('product_po_references', { params });
+  return data.references;
 }
 
 export async function fetchPurchaseOrder(

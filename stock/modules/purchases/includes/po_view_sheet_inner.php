@@ -17,16 +17,13 @@ $docFontStack = function_exists('sales_document_font_family_css')
     ? sales_document_font_family_css($company ?? [])
     : "'Arima', Arial, 'Helvetica Neue', Helvetica, sans-serif";
 
-$resolveImage = static function (array $item) use ($noImageUrl): string {
-    $imgPid = (int) ($item['image_product_id'] ?? $item['product_id'] ?? 0);
+$resolveImage = static function (array $item): string {
+    $imgPid = (int) ($item['image_product_id'] ?? 0);
     $imgFile = (string) ($item['product_image'] ?? '');
     if ($imgPid > 0 && function_exists('resolveStockPurchaseLineImageUrl')) {
-        $resolved = resolveStockPurchaseLineImageUrl($imgPid, $imgFile);
-        if ($resolved !== '') {
-            return $resolved;
-        }
+        return resolveStockPurchaseLineImageUrl($imgPid, $imgFile);
     }
-    return $noImageUrl;
+    return '';
 };
 ?>
 <div class="sheet-container" style="font-family: <?= htmlspecialchars($docFontStack, ENT_QUOTES, 'UTF-8') ?>; font-size: 13px;">
@@ -127,10 +124,15 @@ $resolveImage = static function (array $item) use ($noImageUrl): string {
                         <tr>
                             <td class="num"><?= $itemIdx + 1 ?></td>
                             <td style="padding: 4px 6px;">
-                                <img src="<?= htmlspecialchars($imgUrl, ENT_QUOTES, 'UTF-8') ?>"
-                                     crossorigin="anonymous"
-                                     style="width: 60px; height: 60px; object-fit: cover;"
-                                     onerror="this.src='<?= htmlspecialchars($noImageUrl, ENT_QUOTES, 'UTF-8') ?>'; this.onerror=null;">
+                                <?php if ($imgUrl !== ''): ?>
+                                    <img src="<?= htmlspecialchars($imgUrl, ENT_QUOTES, 'UTF-8') ?>"
+                                         alt=""
+                                         style="width: 60px; height: 60px; object-fit: cover;"
+                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div style="display: none; width: 60px; height: 60px; background: #eee; border-radius: 4px; align-items: center; justify-content: center; font-size: 10px; color: #aaa;">No Image</div>
+                                <?php else: ?>
+                                    <div style="width: 60px; height: 60px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #aaa;">No Image</div>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <?= htmlspecialchars((string) ($item['product_name'] ?? 'Item')) ?>

@@ -173,3 +173,17 @@ export interface PurchaseOrderLine {
   unitCost: number;
   imageUrl?: string;
 }
+
+export interface ProductPoReference {
+  poId: string;
+  lineId?: string;
+  poNumber: string;
+  poReference: string;
+  source: 'stocks' | 'legacy';
+  supplierName: string;
+  qtyOrdered: number;
+  qtyReceived: number;
+  qtyRemaining: number;
+  receiveStatus?: string;
+  createdAt: string;
+}

@@ -1,5 +1,8 @@
 <?php
-require_once __DIR__ . '/../config_mail.php';
+$mailConfigFile = dirname(__DIR__) . '/config_mail.php';
+if (is_file($mailConfigFile)) {
+    require_once $mailConfigFile;
+}
 require_once __DIR__ . '/SimpleSMTP.php';
 
 /**

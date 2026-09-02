@@ -1351,25 +1351,15 @@ function resolveStockPurchaseLineImageUrl(int $productId, string $imageValue): s
 
     if (function_exists('stock_product_list_image_url')) {
         global $stockBasePath;
-        $url = stock_product_list_image_url($productId, $imageValue, 'medium', (string) ($stockBasePath ?? ''));
-        if ($url !== '') {
-            return $url;
-        }
+        return (string) stock_product_list_image_url(
+            $productId,
+            $imageValue,
+            'medium',
+            (string) ($stockBasePath ?? '')
+        );
     }
 
-    $params = ['product_id' => $productId, 'size' => 'medium'];
-    if ($imageValue !== '') {
-        $params['file'] = basename(str_replace('\\', '/', $imageValue));
-    }
-    $query = http_build_query($params);
-    global $stockBasePath;
-    if (!empty($stockBasePath)) {
-        return rtrim((string) $stockBasePath, '/') . '/product_image.php?' . $query;
-    }
-
-    return function_exists('app_url')
-        ? (string) app_url('stock/product_image.php?' . $query)
-        : '/stock/product_image.php?' . $query;
+    return '';
 }
 
 /**
@@ -1383,23 +1373,10 @@ function fetchStockPurchaseOrderDisplayLineItems(PDO $pdo, int $poId): array
         return [];
     }
 
-    $productCols = [];
-    try {
-        $productCols = $pdo->query('SHOW COLUMNS FROM products')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-    } catch (Throwable $e) {
-        $productCols = [];
-    }
-    $productImageCol = null;
-    if (in_array('image', $productCols, true)) {
-        $productImageCol = 'image';
-    } elseif (in_array('main_image', $productCols, true)) {
-        $productImageCol = 'main_image';
-    }
-
     $imgSelect = 'NULL AS product_image, NULL AS image_product_id';
     $pimgJoin = '';
-    if ($productImageCol !== null) {
-        $imgSelect = "pimg.`{$productImageCol}` AS product_image, pimg.id AS image_product_id";
+    if (function_exists('stock_product_main_image_sql')) {
+        $imgSelect = stock_product_main_image_sql($pdo, 'pimg') . ' AS product_image, pimg.id AS image_product_id';
         $pimgJoin = "LEFT JOIN products pimg
             ON (LOWER(TRIM(pimg.name)) = LOWER(TRIM(si.name)))
             OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(pimg.product_code)) = LOWER(TRIM(si.sku)))";
@@ -1426,7 +1403,9 @@ function fetchStockPurchaseOrderDisplayLineItems(PDO $pdo, int $poId): array
         return $rows;
     }
 
-    $prImg = $productImageCol !== null ? "pr.`{$productImageCol}` AS product_image" : 'NULL AS product_image';
+    $prImg = function_exists('stock_product_main_image_sql')
+        ? (stock_product_main_image_sql($pdo, 'pr') . ' AS product_image')
+        : 'NULL AS product_image';
     try {
         $sql2 = "SELECT pi.item_id AS product_id, pi.qty_ordered AS quantity, pi.unit_cost AS unit_price,
                 pr.name AS product_name, COALESCE(pr.product_code, '') AS product_code,

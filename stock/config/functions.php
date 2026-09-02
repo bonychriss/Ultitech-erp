@@ -1461,28 +1461,51 @@ if (!function_exists('stock_product_list_image_url')) {
 }
 
 /**
- * SQL expression for a product's display image (main_image or first gallery row).
+ * SQL expression for a product's display image (main_image, image, or first gallery row).
  */
 if (!function_exists('stock_product_main_image_sql')) {
     function stock_product_main_image_sql(PDO $pdo, $alias = 'p')
     {
         $alias = preg_replace('/[^a-z_]/i', '', (string) $alias) ?: 'p';
-        $hasGallery = false;
-        try {
-            $pdo->query('SELECT image_name FROM product_images LIMIT 1');
-            $hasGallery = true;
-        } catch (Throwable $e) {
+        static $meta = array();
+        $metaKey = spl_object_id($pdo);
+        if (!isset($meta[$metaKey])) {
+            $cols = array();
             $hasGallery = false;
+            try {
+                $cols = $pdo->query('SHOW COLUMNS FROM products')->fetchAll(PDO::FETCH_COLUMN) ?: array();
+            } catch (Throwable $e) {
+                $cols = array();
+            }
+            try {
+                $pdo->query('SELECT image_name FROM product_images LIMIT 1');
+                $hasGallery = true;
+            } catch (Throwable $e) {
+                $hasGallery = false;
+            }
+            $meta[$metaKey] = array('cols' => $cols, 'gallery' => $hasGallery);
         }
-        if ($hasGallery) {
-            return "COALESCE(NULLIF(TRIM({$alias}.main_image), ''), (
-                SELECT pi.image_name FROM product_images pi
+        $cols = $meta[$metaKey]['cols'];
+        $parts = array();
+        if (in_array('main_image', $cols, true)) {
+            $parts[] = "NULLIF(TRIM({$alias}.main_image), '')";
+        }
+        if (in_array('image', $cols, true)) {
+            $parts[] = "NULLIF(TRIM({$alias}.image), '')";
+        }
+        if (!empty($meta[$metaKey]['gallery'])) {
+            $parts[] = "(SELECT pi.image_name FROM product_images pi
                 WHERE pi.product_id = {$alias}.id
-                ORDER BY pi.is_primary DESC, pi.id ASC LIMIT 1
-            ))";
+                ORDER BY pi.is_primary DESC, pi.id ASC LIMIT 1)";
+        }
+        if ($parts === array()) {
+            return 'NULL';
+        }
+        if (count($parts) === 1) {
+            return $parts[0];
         }
 
-        return "{$alias}.main_image";
+        return 'COALESCE(' . implode(', ', $parts) . ')';
     }
 }
 

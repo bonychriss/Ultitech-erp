@@ -4058,6 +4058,140 @@ html[data-theme="dark"] .sms-incoming-card {
   color: #222;
 }
 
+.sms-excel-cell.sms-excel-col-locked,
+.sms-excel-cell.is-readonly.sms-excel-col-locked,
+.sms-excel-cell-pad.sms-excel-col-locked {
+  background: #f0f0f0;
+  color: #555;
+  user-select: none;
+  cursor: default;
+}
+
+.sms-excel-cell.sms-excel-col-locked.is-active {
+  outline-color: #c4c4c4;
+}
+
+.sms-product-picker {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.sms-product-picker-menu {
+  position: fixed;
+  z-index: 2400;
+  max-height: 320px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #c5c5c5;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  border-radius: 2px;
+}
+
+.sms-product-picker-meta {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.sms-product-picker-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sms-excel-readonly-muted {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.sms-product-picker-item--stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+
+.sms-product-picker-empty {
+  padding: 0.75rem 0.65rem;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.sms-product-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.65rem;
+  background: #fff;
+  border: 0;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sms-product-picker-item:hover,
+.sms-product-picker-item.is-active {
+  background: #e8f5ee;
+}
+
+.sms-product-picker-thumb {
+  flex-shrink: 0;
+}
+
+.sms-product-picker-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: #0f172a;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.sms-product-picker-sku {
+  font-size: 0.6875rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+html[data-theme="dark"] .sms-product-picker-menu {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .sms-product-picker-meta {
+  background: #1e293b;
+  color: #94a3b8;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .sms-product-picker-item {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+html[data-theme="dark"] .sms-product-picker-item:hover,
+html[data-theme="dark"] .sms-product-picker-item.is-active {
+  background: #14532d;
+}
+
+html[data-theme="dark"] .sms-product-picker-name {
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .sms-product-picker-sku,
+html[data-theme="dark"] .sms-product-picker-empty {
+  color: #94a3b8;
+}
+
 .sms-excel-cell.is-editable:hover {
   background: #f5fbff;
 }
@@ -4318,6 +4452,13 @@ html[data-theme="dark"] .sms-excel-cell-pad {
 
 html[data-theme="dark"] .sms-excel-cell.is-readonly {
   color: #e2e8f0;
+}
+
+html[data-theme="dark"] .sms-excel-cell.sms-excel-col-locked,
+html[data-theme="dark"] .sms-excel-cell.is-readonly.sms-excel-col-locked,
+html[data-theme="dark"] .sms-excel-cell-pad.sms-excel-col-locked {
+  background: #1e293b;
+  color: #94a3b8;
 }
 
 html[data-theme="dark"] .sms-excel-input {

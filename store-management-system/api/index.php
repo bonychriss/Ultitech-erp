@@ -646,6 +646,216 @@ function sms_fetch_receivable_purchase_orders(PDO $pdo): array
     return array_slice($orders, 0, 50);
 }
 
+/**
+ * PO numbers/references that include a catalogue product on an open receivable line.
+ *
+ * @return list<array<string, mixed>>
+ */
+function sms_fetch_po_references_for_product(PDO $pdo, int $productId, string $sku = ''): array
+{
+    $productId = (int) $productId;
+    $sku = trim($sku);
+    $productName = '';
+    $productCode = $sku;
+
+    if ($productId > 0) {
+        try {
+            $stmt = $pdo->prepare('SELECT name, product_code FROM products WHERE id = ? LIMIT 1');
+            $stmt->execute([$productId]);
+            $productRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $productName = trim((string) ($productRow['name'] ?? ''));
+            if ($productCode === '') {
+                $productCode = trim((string) ($productRow['product_code'] ?? ''));
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    if ($productId <= 0 && $productCode === '' && $productName === '') {
+        return [];
+    }
+
+    $refs = [];
+    $seen = [];
+    $companyId = sms_active_company_id();
+
+    $pushRef = static function (array $row, string $source) use (&$refs, &$seen): void {
+        $poId = (int) ($row['id'] ?? 0);
+        $lineId = (int) ($row['line_id'] ?? 0);
+        if ($poId <= 0) {
+            return;
+        }
+        $key = $source . ':' . $poId . ':' . $lineId;
+        if (isset($seen[$key])) {
+            return;
+        }
+        $seen[$key] = true;
+
+        $ordered = (float) ($row['line_ordered'] ?? $row['ordered_qty'] ?? 0);
+        $received = (float) ($row['line_received'] ?? $row['received_qty'] ?? 0);
+        $remaining = (float) ($row['line_remaining'] ?? max(0, $ordered - $received));
+        $receiveStatus = 'Pending';
+        if ($ordered > 0 && $remaining <= 0.0001) {
+            $receiveStatus = 'Received';
+        } elseif ($received > 0.0001 && $remaining > 0.0001) {
+            $receiveStatus = 'Partially received';
+        }
+
+        $poNumber = trim((string) ($row['po_number'] ?? $row['purchase_no'] ?? ''));
+        if ($poNumber === '') {
+            $poNumber = 'PO#' . $poId;
+        }
+
+        $refs[] = [
+            'poId' => (string) $poId,
+            'lineId' => (string) $lineId,
+            'poNumber' => $poNumber,
+            'poReference' => $poNumber,
+            'source' => $source,
+            'supplierName' => trim((string) ($row['supplier_name'] ?? '')),
+            'qtyOrdered' => $ordered,
+            'qtyReceived' => $received,
+            'qtyRemaining' => $remaining,
+            'receiveStatus' => $receiveStatus,
+            'createdAt' => (string) ($row['created_at'] ?? ''),
+        ];
+    };
+
+    if (tableExists('stocks_purchase_orders') && tableExists('stocks_po_items')) {
+        $poCols = [];
+        try {
+            $poCols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } catch (Throwable $e) {
+            $poCols = [];
+        }
+
+        $supplierJoin = tableExists('stocks_suppliers')
+            ? 'LEFT JOIN stocks_suppliers ss ON p.supplier_id = ss.id'
+            : '';
+        $supplierExpr = tableExists('stocks_suppliers')
+            ? "COALESCE(ss.name, CONCAT('Supplier #', p.supplier_id))"
+            : "CONCAT('Supplier #', p.supplier_id)";
+
+        $matchParts = [];
+        $matchParams = [];
+        if ($productId > 0) {
+            $matchParts[] = 'pi.item_id = ?';
+            $matchParams[] = $productId;
+            $matchParts[] = 'EXISTS (
+                SELECT 1 FROM products px
+                WHERE px.id = ?
+                  AND (
+                    LOWER(TRIM(COALESCE(px.product_code, \'\'))) = LOWER(TRIM(COALESCE(si.sku, \'\')))
+                    OR LOWER(TRIM(px.name)) = LOWER(TRIM(si.name))
+                  )
+            )';
+            $matchParams[] = $productId;
+        }
+        if ($productCode !== '') {
+            $matchParts[] = 'LOWER(TRIM(si.sku)) = LOWER(TRIM(?))';
+            $matchParams[] = $productCode;
+        }
+        if ($productName !== '') {
+            $matchParts[] = 'LOWER(TRIM(si.name)) = LOWER(TRIM(?))';
+            $matchParams[] = $productName;
+        }
+
+        if ($matchParts !== []) {
+            $sql = "SELECT p.id, pi.id AS line_id, p.po_number, p.status, p.purchase_type, p.created_at,
+                           {$supplierExpr} AS supplier_name,
+                           COALESCE(pi.qty_ordered, 0) AS line_ordered,
+                           COALESCE(pi.qty_received, 0) AS line_received,
+                           GREATEST(COALESCE(pi.qty_ordered, 0) - COALESCE(pi.qty_received, 0), 0) AS line_remaining
+                    FROM stocks_purchase_orders p
+                    {$supplierJoin}
+                    INNER JOIN stocks_po_items pi ON pi.po_id = p.id
+                    LEFT JOIN stocks_items si ON si.id = pi.item_id
+                    WHERE p.status NOT IN ('Received', 'Cancelled')
+                      AND (" . implode(' OR ', $matchParts) . ')
+                      AND GREATEST(COALESCE(pi.qty_ordered, 0) - COALESCE(pi.qty_received, 0), 0) > 0.0001';
+            if (in_array('company_id', $poCols, true) && $companyId > 0) {
+                $sql .= ' AND p.company_id = ' . (int) $companyId;
+            }
+            $sql .= ' ORDER BY p.created_at DESC, p.id DESC, pi.id ASC LIMIT 100';
+
+            try {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($matchParams);
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $hasShipment = sms_po_has_shipment($pdo, (int) ($row['id'] ?? 0));
+                    if (!sms_po_can_receive($row, $hasShipment)) {
+                        continue;
+                    }
+                    $pushRef($row, 'stocks');
+                }
+            } catch (Throwable $e) {
+            }
+        }
+    }
+
+    if (tableExists('purchases') && tableExists('purchase_items') && sms_purchase_workflow_loaded()) {
+        ensureLegacyPurchaseItemsReceivedColumn($pdo);
+        $legacyCols = [];
+        try {
+            $legacyCols = $pdo->query('SHOW COLUMNS FROM purchases')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } catch (Throwable $e) {
+            $legacyCols = [];
+        }
+
+        $matchParts = [];
+        $matchParams = [];
+        if ($productId > 0) {
+            $matchParts[] = 'pi.product_id = ?';
+            $matchParams[] = $productId;
+        }
+        if ($productCode !== '') {
+            $matchParts[] = 'LOWER(TRIM(pr.product_code)) = LOWER(TRIM(?))';
+            $matchParams[] = $productCode;
+        }
+        if ($productName !== '') {
+            $matchParts[] = 'LOWER(TRIM(pr.name)) = LOWER(TRIM(?))';
+            $matchParams[] = $productName;
+        }
+
+        if ($matchParts !== []) {
+            $sql = "SELECT p.id, pi.id AS line_id, p.purchase_no AS po_number, p.status, p.created_at,
+                           COALESCE(s.name, CONCAT('Supplier #', p.supplier_id)) AS supplier_name,
+                           COALESCE(pi.quantity, 0) AS line_ordered,
+                           COALESCE(pi.qty_received, 0) AS line_received,
+                           GREATEST(COALESCE(pi.quantity, 0) - COALESCE(pi.qty_received, 0), 0) AS line_remaining
+                    FROM purchases p
+                    LEFT JOIN stocks_suppliers s ON p.supplier_id = s.id
+                    INNER JOIN purchase_items pi ON pi.purchase_id = p.id
+                    LEFT JOIN products pr ON pr.id = pi.product_id
+                    WHERE p.status NOT IN ('Received', 'Cancelled')
+                      AND (" . implode(' OR ', $matchParts) . ')
+                      AND GREATEST(COALESCE(pi.quantity, 0) - COALESCE(pi.qty_received, 0), 0) > 0.0001';
+            if (in_array('company_id', $legacyCols, true) && $companyId > 0) {
+                $sql .= ' AND p.company_id = ' . (int) $companyId;
+            }
+            $sql .= ' ORDER BY p.created_at DESC, p.id DESC LIMIT 100';
+
+            try {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($matchParams);
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    if (!sms_po_can_receive($row, true)) {
+                        continue;
+                    }
+                    $pushRef($row, 'legacy');
+                }
+            } catch (Throwable $e) {
+            }
+        }
+    }
+
+    usort($refs, static function (array $a, array $b): int {
+        return strcmp((string) ($b['createdAt'] ?? ''), (string) ($a['createdAt'] ?? ''));
+    });
+
+    return $refs;
+}
+
 function sms_stock_public_url(string $relativePath): string
 {
     $relative = ltrim(str_replace('\\', '/', $relativePath), '/');
@@ -2290,6 +2500,18 @@ try {
             sms_json([
                 'success' => true,
                 'orders' => sms_fetch_receivable_purchase_orders($pdo),
+            ]);
+            break;
+
+        case 'product_po_references':
+            $productId = (int) ($_GET['product_id'] ?? $_POST['product_id'] ?? 0);
+            $sku = trim((string) ($_GET['sku'] ?? $_POST['sku'] ?? ''));
+            if ($productId <= 0 && $sku === '') {
+                sms_error('product_id or sku is required');
+            }
+            sms_json([
+                'success' => true,
+                'references' => sms_fetch_po_references_for_product($pdo, $productId, $sku),
             ]);
             break;
 

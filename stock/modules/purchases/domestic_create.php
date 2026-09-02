@@ -383,7 +383,7 @@ try {
 
 $hasImageCol = in_array('image', $productCols, true);
 $hasMainImageCol = in_array('main_image', $productCols, true);
-$productImageCol = $hasImageCol ? 'image' : ($hasMainImageCol ? 'main_image' : null);
+$productImageCol = $hasMainImageCol ? 'main_image' : ($hasImageCol ? 'image' : null);
 $productBuyingPriceCol = in_array('buying_price', $productCols, true) ? 'buying_price' : (in_array('cost_price', $productCols, true) ? 'cost_price' : 'unit_price');
 $productSupplierCol = in_array('supplier_id', $productCols, true) ? 'supplier_id' : null;
 $stockItemCols = [];

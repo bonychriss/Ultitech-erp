@@ -14,6 +14,7 @@ import { dispatchInvoice, fetchInvoiceDetail, fetchPendingInvoices, recordSample
 import StatusPopup, { type StatusPopupTone } from './StatusPopup';
 import ExcelToolbar from './ExcelToolbar';
 import ExcelGrid, { type ExcelColumn } from './ExcelGrid';
+import ProductPickerCell from './ProductPickerCell';
 import { exportOutgoingTemplate, parseExcelFile, parseOutgoingRows } from '../utils/excelWarehouse';
 import type { InvoiceLine, PendingInvoice, Product } from '../types';
 
@@ -245,24 +246,37 @@ export default function StoreOutgoingForm({
         header: 'Product SKU',
         letter: 'A',
         width: '9rem',
-        editable: true,
         getValue: (row) => row.sku,
-        setValue: (row, value) => {
-          const product = productBySku.get(value.trim().toLowerCase());
-          return {
-            ...row,
-            sku: value,
-            productId: product?.id ?? '',
-          };
-        },
-        cellClass: (row) => (row.sku.trim() && !row.productId ? 'is-error' : ''),
+        columnClass: 'sms-excel-col-locked',
       },
       {
         key: 'name',
         header: 'Product Name',
         letter: 'B',
-        width: '14rem',
+        width: '16rem',
+        editable: true,
         getValue: (row) => productById.get(row.productId)?.name ?? '',
+        render: (row, value, editing, cellKey) => (
+          <ProductPickerCell
+            products={products}
+            displayName={String(value ?? '')}
+            open={editing}
+            cellKey={cellKey}
+            onPick={(product) => {
+              setSampleGridRows((prev) =>
+                prev.map((item) =>
+                  item.rowId !== row.rowId
+                    ? item
+                    : {
+                        ...item,
+                        productId: product.id,
+                        sku: product.sku || '',
+                      }
+                )
+              );
+            }}
+          />
+        ),
       },
       {
         key: 'stock',
@@ -304,7 +318,7 @@ export default function StoreOutgoingForm({
         setValue: (row, value) => ({ ...row, rowNotes: value }),
       },
     ],
-    [productById, productBySku]
+    [productById, products]
   );
 
   const refreshInvoices = React.useCallback(async () => {

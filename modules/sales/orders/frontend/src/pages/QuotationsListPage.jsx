@@ -17,7 +17,7 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { fetchQuotationsInit, quotationStatusIsDeletable, submitDeleteForm } from '../api/quotationsDesk';
+import { confirmDeleteQuotations, fetchQuotationsInit, quotationStatusIsDeletable, submitDeleteForm } from '../api/quotationsDesk';
 import QuotationKpiTraceModal from '../components/QuotationKpiTraceModal';
 import { resolveQuotationKpiTrace } from '../utils/quotationKpiTrace';
 import {
@@ -364,9 +364,10 @@ export default function QuotationsListPage() {
     }
   }
 
-  function handleDelete() {
-    if (!window.confirm('Delete selected quotations? (Draft, quotation, or cancelled only — no invoice)')) return;
-    submitDeleteForm(urls.delete_post || 'create.php', Array.from(selectedIds));
+  async function handleDelete() {
+    const ids = Array.from(selectedIds);
+    if (!(await confirmDeleteQuotations())) return;
+    submitDeleteForm(urls.delete_post || 'create.php', ids);
   }
 
   function handleNewClick() {

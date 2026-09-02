@@ -45,6 +45,24 @@ export function quotationStatusIsDeletable(status) {
   return DELETABLE_QUOTATION_STATUSES.includes(String(status || '').toLowerCase());
 }
 
+export async function confirmDeleteQuotations() {
+  const message = 'Delete selected quotations? (Draft, quotation, or cancelled only — no invoice)';
+  if (typeof window !== 'undefined' && typeof window.Swal !== 'undefined') {
+    const result = await window.Swal.fire({
+      title: 'Delete selected quotations?',
+      html: '<span style="font-size:14px;color:#64748b">Draft, quotation, or cancelled only — no invoice.</span>',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#dc2626',
+      cancelButtonText: 'Cancel',
+      cancelButtonColor: '#94a3b8',
+    });
+    return result.isConfirmed === true;
+  }
+  return window.confirm(message);
+}
+
 export function submitDeleteForm(deletePostUrl, ids) {
   const form = document.createElement('form');
   form.method = 'POST';

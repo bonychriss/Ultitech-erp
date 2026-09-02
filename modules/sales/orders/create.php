@@ -578,8 +578,36 @@ function QuotationsListApp() {
   const deletableQuotationStatuses = ["quotation", "draft", "cancelled", "canceled"];
   const canDelete = selectedList.length > 0 && selectedList.every((q) => deletableQuotationStatuses.includes((q.status || "").toLowerCase()));
   const canInvoice = selectedList.length === 1;
-  const handleDelete = (e) => {
-    if (!confirm("Delete selected quotations? (Draft, quotation, or cancelled only — no invoice)")) e.preventDefault();
+  const submitSelectedDelete = () => {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = window.location.pathname + window.location.search;
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "delete_ids";
+    input.value = Array.from(selectedIds).join(",");
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+  };
+  const handleDeleteClick = () => {
+    const message = "Delete selected quotations? (Draft, quotation, or cancelled only — no invoice)";
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        title: "Delete selected quotations?",
+        html: '<span style="font-size:14px;color:#64748b">Draft, quotation, or cancelled only — no invoice.</span>',
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Delete",
+        confirmButtonColor: "#dc2626",
+        cancelButtonText: "Cancel",
+        cancelButtonColor: "#94a3b8"
+      }).then((result) => {
+        if (result.isConfirmed) submitSelectedDelete();
+      });
+      return;
+    }
+    if (confirm(message)) submitSelectedDelete();
   };
   const viewBtn = (mode, icon, title) => /* @__PURE__ */ React.createElement(
     "button",
@@ -695,7 +723,7 @@ function QuotationsListApp() {
     },
     /* @__PURE__ */ React.createElement("i", { className: "fas fa-file-invoice-dollar text-[#2563EB] me-1" }),
     "Invoice"
-  ), canDelete && /* @__PURE__ */ React.createElement("form", { method: "POST", onSubmit: handleDelete, className: "inline m-0" }, /* @__PURE__ */ React.createElement("input", { type: "hidden", name: "delete_ids", value: Array.from(selectedIds).join(",") }), /* @__PURE__ */ React.createElement("button", { type: "submit", className: "text-sm font-semibold px-2.5 py-1.5 rounded-lg border border-red-200 bg-white text-red-700 hover:bg-red-50" }, /* @__PURE__ */ React.createElement("i", { className: "fas fa-trash-alt me-1" }), "Delete"))));
+  ), canDelete && /* @__PURE__ */ React.createElement("button", { type: "button", onClick: handleDeleteClick, className: "text-sm font-semibold px-2.5 py-1.5 rounded-lg border border-red-200 bg-white text-red-700 hover:bg-red-50" }, /* @__PURE__ */ React.createElement("i", { className: "fas fa-trash-alt me-1" }), "Delete"))));
   const rmFooter = filteredQuotations.length > 0 && viewMode === "list" && /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 bg-white text-sm text-gray-600" }, /* @__PURE__ */ React.createElement("span", null, "Showing ", /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-gray-800" }, rangeStart), " to ", /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-gray-800" }, rangeEnd), " of", " ", /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-gray-800" }, filteredQuotations.length), " quotations"), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1" }, /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -814,7 +842,7 @@ function QuotationsListApp() {
     },
     /* @__PURE__ */ React.createElement("i", { className: "fas fa-file-invoice-dollar text-[#2563EB] me-1" }),
     "Invoice"
-  ), canDelete && /* @__PURE__ */ React.createElement("form", { method: "POST", onSubmit: handleDelete, className: "inline m-0" }, /* @__PURE__ */ React.createElement("input", { type: "hidden", name: "delete_ids", value: Array.from(selectedIds).join(",") }), /* @__PURE__ */ React.createElement("button", { type: "submit", className: "text-sm font-semibold px-2.5 py-1.5 rounded border border-red-200 bg-white text-red-700 hover:bg-red-50" }, /* @__PURE__ */ React.createElement("i", { className: "fas fa-trash-alt me-1" }), "Delete"))))), /* @__PURE__ */ React.createElement("div", { className: "bg-transparent min-h-[50vh] pb-8" }, renderQuotationsBody()));
+  ), canDelete && /* @__PURE__ */ React.createElement("button", { type: "button", onClick: handleDeleteClick, className: "text-sm font-semibold px-2.5 py-1.5 rounded border border-red-200 bg-white text-red-700 hover:bg-red-50" }, /* @__PURE__ */ React.createElement("i", { className: "fas fa-trash-alt me-1" }), "Delete"))))), /* @__PURE__ */ React.createElement("div", { className: "bg-transparent min-h-[50vh] pb-8" }, renderQuotationsBody()));
 }
 (function() {
   const rootEl = document.getElementById("react-root");

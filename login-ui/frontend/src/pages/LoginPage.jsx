@@ -24,6 +24,8 @@ function getLoginConfig() {
     error: '',
     notice: '',
     companyLogoUrl: '',
+    rememberedUser: '',
+    rememberChecked: false,
   }
 }
 
@@ -31,6 +33,8 @@ export default function LoginPage() {
   const cfg = useMemo(() => getLoginConfig(), [])
   const [submitting, setSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [loginUser, setLoginUser] = useState(cfg.rememberedUser || '')
+  const [rememberMe, setRememberMe] = useState(Boolean(cfg.rememberChecked))
 
   const handleSubmit = () => {
     setSubmitting(true)
@@ -94,6 +98,8 @@ export default function LoginPage() {
                       id="user"
                       placeholder="Your Name"
                       autoComplete="username"
+                      value={loginUser}
+                      onChange={(e) => setLoginUser(e.target.value)}
                       required
                     />
                   </div>
@@ -120,8 +126,16 @@ export default function LoginPage() {
                     </button>
                   </div>
 
-                  <div className="form-group remember-mobile">
-                    <input type="checkbox" name="remember" id="remember-me" className="agree-term" value="1" />
+                  <div className="form-group remember-me">
+                    <input
+                      type="checkbox"
+                      name="remember"
+                      id="remember-me"
+                      className="agree-term"
+                      value="1"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
                     <label htmlFor="remember-me" className="label-agree-term">
                       <span></span>
                       Remember me

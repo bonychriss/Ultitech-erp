@@ -93,6 +93,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $winningSlug = function_exists('resolvePostLoginCompanySlug') ? resolvePostLoginCompanySlug(null) : '';
 
     if ($authOk) {
+        $remember = !empty($_POST['remember']);
+        if ($remember && function_exists('issueRememberMeToken')) {
+            issueRememberMeToken(
+                (int) ($_SESSION['user_id'] ?? 0),
+                (string) ($_SESSION['company_slug'] ?? $submittedCompanySlug),
+                $user
+            );
+        } elseif (function_exists('clearRememberMeToken')) {
+            clearRememberMeToken();
+            if (function_exists('clearRememberMeLoginHint')) {
+                clearRememberMeLoginHint();
+            }
+        }
         $resolvedSlug = $winningSlug !== '' ? $winningSlug : '';
         $nextAfterLogin = trim((string) ($_POST['next'] ?? $_GET['next'] ?? ''));
         $redirectAfterLogin = resolvePostLoginRedirectUrl($resolvedSlug, $nextAfterLogin);
@@ -167,6 +180,9 @@ $loginConfig = [
     'error' => $error,
     'notice' => $notice,
     'companyLogoUrl' => loginUiNormalizePublicUrl($selectedCompanyLogo),
+    'rememberedUser' => function_exists('getRememberMeLoginHint') ? getRememberMeLoginHint() : '',
+    'rememberChecked' => trim((string) ($_COOKIE[function_exists('erpRememberMeTokenCookieName') ? erpRememberMeTokenCookieName() : ''] ?? '')) !== ''
+        || (function_exists('getRememberMeLoginHint') && getRememberMeLoginHint() !== ''),
 ];
 ?>
 <!DOCTYPE html>

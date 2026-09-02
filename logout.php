@@ -5,6 +5,13 @@
 // Capture company slug before destroying session
 $companySlug = trim((string)($_SESSION['company_slug'] ?? ''));
 
+if (function_exists('clearRememberMeToken')) {
+    clearRememberMeToken();
+}
+if (function_exists('clearRememberMeLoginHint')) {
+    clearRememberMeLoginHint();
+}
+
 // Clear all session data
 @session_unset();
 $_SESSION = [];

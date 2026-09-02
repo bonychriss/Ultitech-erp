@@ -257,6 +257,24 @@ figure {
   font-family: var(--login-font) !important;
 }
 
+.form-group.remember-me {
+  overflow: visible;
+  margin-top: 6px;
+  margin-bottom: 18px;
+  min-height: 28px;
+}
+
+.form-group.remember-me > label.label-agree-term {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  padding-left: 0;
+}
+
 input[type='checkbox'].agree-term {
   width: 2em;
   margin: 0;
@@ -408,7 +426,7 @@ input[type='checkbox'].agree-term:checked + .label-agree-term > span::before {
   color: #059669;
 }
 
-/*  Mobile welcome layout  */
+/* ?? Mobile welcome layout ?? */
 .mobile-welcome-header {
   display: none;
 }
@@ -516,7 +534,7 @@ input[type='checkbox'].agree-term:checked + .label-agree-term > span::before {
     display: block;
   }
 
-  .remember-mobile {
+  .remember-me {
     margin-bottom: 20px;
   }
 

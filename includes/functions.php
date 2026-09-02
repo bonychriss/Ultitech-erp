@@ -4029,6 +4029,18 @@ function clearAuthSession()
     @session_regenerate_id(true);
 }
 
+require_once __DIR__ . '/auth_remember.php';
+
+if (
+    session_status() === PHP_SESSION_ACTIVE
+    && empty($_SESSION['user_id'])
+    && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST'
+    && !defined('ERP_REMEMBER_ME_ATTEMPTED')
+) {
+    define('ERP_REMEMBER_ME_ATTEMPTED', true);
+    attemptRememberMeLogin();
+}
+
 if (!function_exists('isDiagnosticScriptRequest')) {
     function isDiagnosticScriptRequest(): bool
     {

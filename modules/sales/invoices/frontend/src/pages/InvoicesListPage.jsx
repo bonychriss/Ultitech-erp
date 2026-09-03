@@ -89,6 +89,63 @@ function formatDate(dateStr) {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
+function parseDateOnly(dateStr) {
+  if (!dateStr) return null;
+  const raw = String(dateStr).trim();
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  }
+  const d = new Date(raw.includes('T') ? raw : raw.replace(' ', 'T'));
+  if (Number.isNaN(d.getTime())) return null;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function isInvoiceDueDateOverdue(invoice) {
+  const status = (invoice?.status || '').toLowerCase().trim();
+  if (['paid', 'cancelled', 'canceled', 'draft'].includes(status)) return false;
+  if ((parseFloat(invoice?.balance_due) || 0) <= 0.005) return false;
+  const due = parseDateOnly(invoice?.due_date);
+  if (!due) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return due.getTime() <= today.getTime();
+}
+
+function formatDueDateRelative(dateStr) {
+  const due = parseDateOnly(dateStr);
+  if (!due) return { label: '-', title: '' };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  let label;
+  if (diffDays === 0) label = 'Today';
+  else if (diffDays > 0) label = `In ${diffDays} day${diffDays === 1 ? '' : 's'}`;
+  else {
+    const daysAgo = Math.abs(diffDays);
+    label = `${daysAgo} day${daysAgo === 1 ? '' : 's'} ago`;
+  }
+
+  const title = formatDate(dateStr);
+  return { label, title: title !== '-' ? title : '' };
+}
+
+function DueDateCell({ invoice }) {
+  const { label, title } = formatDueDateRelative(invoice?.due_date);
+  const overdue = isInvoiceDueDateOverdue(invoice);
+
+  return (
+    <span
+      className={`exp-desk-subdate inv-due-date-label${overdue ? ' inv-due-date--overdue' : ''}`}
+      title={title || undefined}
+    >
+      {label}
+    </span>
+  );
+}
+
 function fmtBig(n) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n || 0);
 }
@@ -784,7 +841,6 @@ export default function InvoicesListPage() {
                 <col className="inv-col-invoice-date" />
                 <col className="inv-col-due-date" />
                 <col className="inv-col-total" />
-                <col className="inv-col-balance" />
                 <col className="inv-col-status" />
                 <col className="inv-col-actions" />
               </colgroup>
@@ -803,10 +859,9 @@ export default function InvoicesListPage() {
                   <th className="inv-col-salesperson">Salesperson</th>
                   <th className="inv-col-invoice-date">Invoice date</th>
                   <th className="inv-col-due-date">Due date</th>
-                  <th className="exp-desk-amt inv-col-total">Total</th>
-                  <th className="exp-desk-amt inv-col-balance">Balance</th>
+                  <th className="inv-col-total">Total</th>
                   <th className="inv-col-status">Status</th>
-                  <th className="qt-col-actions inv-col-actions">Actions</th>
+                  <th className="qt-col-actions inv-col-actions" aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
@@ -832,16 +887,17 @@ export default function InvoicesListPage() {
                       />
                     </td>
                     <td className="inv-col-number">
-                      <span className="exp-desk-ref">{inv.invoice_number}</span>
-                      {supportsOrderTypeSplit && inv.order_type && (
-                        <div className="exp-desk-cell-sub"><TypeBadge type={inv.order_type} /></div>
-                      )}
+                      <span className="inv-number-cell">
+                        <span className="exp-desk-ref">{inv.invoice_number}</span>
+                        {supportsOrderTypeSplit && inv.order_type && (
+                          <span className="inv-number-type"><TypeBadge type={inv.order_type} /></span>
+                        )}
+                      </span>
                     </td>
                     <td className="inv-col-customer">
                       <span
-                        className="exp-desk-cell-main"
+                        className="exp-desk-cell-main inv-cell-customer"
                         title={inv.customer_name || ''}
-                        style={{ textTransform: isRoadmaster ? 'uppercase' : 'none' }}
                       >
                         {inv.customer_name || '-'}
                       </span>
@@ -853,9 +909,10 @@ export default function InvoicesListPage() {
                       </div>
                     </td>
                     <td className="inv-col-invoice-date"><span className="exp-desk-subdate">{formatDate(inv.invoice_date)}</span></td>
-                    <td className="inv-col-due-date"><span className="exp-desk-subdate">{formatDate(inv.due_date)}</span></td>
+                    <td className="inv-col-due-date">
+                      <DueDateCell invoice={inv} />
+                    </td>
                     <td className="exp-desk-amt inv-col-total">{formatCurrency(inv.total_amount)}</td>
-                    <td className="exp-desk-amt inv-col-balance">{formatCurrency(inv.balance_due)}</td>
                     <td className="inv-col-status"><StatusPill status={inv.status} /></td>
                     <td className="qt-col-actions inv-col-actions" onClick={(e) => e.stopPropagation()} data-inv-actions="1">
                       <div className="qt-actions-menu">

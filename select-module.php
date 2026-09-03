@@ -122,15 +122,6 @@ $push([
     'badge' => $emailModuleUpdateBadge ? (string) ($emailModuleUpdateBadge['label'] ?? 'New') : null,
 ]);
 $push([
-    'id' => 'expenses',
-    'label' => 'Expenses',
-    'desc' => 'Record & track business expenses',
-    'href' => $companyRoute('modules/expenses/index') . '?module=expenses',
-    'icon' => 'expenses',
-    'color' => '#7e22ce',
-    'badge' => $expensesModuleUpdateBadge ? (string) ($expensesModuleUpdateBadge['label'] ?? 'New') : null,
-]);
-$push([
     'id' => 'petty_cash',
     'label' => 'Petty Cash',
     'desc' => 'Custodian float, vouchers & Balances',
@@ -147,28 +138,13 @@ $push([
     'color' => '#1d4ed8',
 ]);
 $push([
-    'id' => 'revenue',
-    'label' => 'Revenue & Debt',
-    'desc' => 'Income Recording & Collection',
-    'href' => $companyRoute('revenue_entries') . '?module=revenue',
-    'icon' => 'revenue',
-    'color' => '#d97706',
-]);
-$push([
     'id' => 'accounting',
     'label' => 'Accounting',
-    'desc' => 'Balances, Journals & Reports',
+    'desc' => 'Balances, revenue, expenses, journals & reports',
     'href' => $companyRoute('accounting'),
     'icon' => 'accounting',
     'color' => '#0f172a',
-]);
-$push([
-    'id' => 'balances',
-    'label' => 'Balances',
-    'desc' => 'Liquidity & Accounts',
-    'href' => $companyRoute('modules/balances/index'),
-    'icon' => 'balances',
-    'color' => '#0891b2',
+    'badge' => $expensesModuleUpdateBadge ? (string) ($expensesModuleUpdateBadge['label'] ?? 'New') : null,
 ]);
 
 if (function_exists('isFinanceOrAdmin') && isFinanceOrAdmin()) {

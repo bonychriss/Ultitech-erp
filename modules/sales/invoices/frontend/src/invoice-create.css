@@ -1049,3 +1049,154 @@ body.page-inv-desk button.inv-product-dropdown-close {
   background: transparent !important;
   box-shadow: none !important;
 }
+
+/* —— Enerpize-style create invoice layout —— */
+.inv-create--enerpize {
+  max-width: 1200px;
+}
+
+.inv-create--enerpize .inv-en-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem 1.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.inv-create--enerpize .inv-en-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.inv-create--enerpize .inv-en-card-head h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.inv-create--enerpize .inv-en-label {
+  display: block;
+  margin: 0 0 0.4rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.01em;
+  padding-top: 0;
+}
+
+.inv-create--enerpize .inv-en-label .req {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.inv-create--enerpize .inv-en-field {
+  min-width: 0;
+}
+
+.inv-create--enerpize .inv-en-field--client {
+  margin-bottom: 1.25rem;
+}
+
+.inv-create--enerpize .inv-en-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+  align-items: start;
+}
+
+.inv-create--enerpize .inv-en-field--currency {
+  grid-column: span 2;
+}
+
+.inv-create--enerpize .inv-en-rates {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.inv-create--enerpize .inv-en-rates .inv-rate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.inv-create--enerpize .inv-en-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.inv-create--enerpize .inv-summary-box {
+  width: min(100%, 22rem);
+  margin-left: auto;
+  margin-top: 0;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1rem 1.15rem;
+}
+
+.inv-create--enerpize .inv-summary-row--total {
+  margin-top: 0.35rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.inv-create--enerpize .inv-line-table thead th {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.inv-create--enerpize .exp-create-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  margin-top: 0.5rem;
+  padding: 0.85rem 0;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0), #f8fafc 35%);
+}
+
+@media (max-width: 1100px) {
+  .inv-create--enerpize .inv-en-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inv-create--enerpize .inv-en-field--currency {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .inv-create--enerpize .inv-en-card {
+    padding: 1rem;
+  }
+
+  .inv-create--enerpize .inv-en-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inv-create--enerpize .inv-en-field--currency {
+    grid-column: span 1;
+  }
+
+  .inv-create--enerpize .inv-en-footer {
+    justify-content: stretch;
+  }
+
+  .inv-create--enerpize .inv-summary-box {
+    width: 100%;
+  }
+}

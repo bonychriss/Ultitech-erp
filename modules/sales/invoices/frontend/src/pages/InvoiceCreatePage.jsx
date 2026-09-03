@@ -542,7 +542,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
   const nonTzsCurrencies = displayCurrencies.filter((code) => code !== 'TZS');
 
   return (
-    <div className="exp-create-shell">
+    <div className="exp-create-shell inv-create--enerpize">
       {showMoneySavingOverlay ? (
         <MoneySavingOverlay src={moneyAnimSrc} label="Creating invoice..." />
       ) : null}
@@ -554,152 +554,141 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
 
       <form onSubmit={handleSubmit}>
         <div className="exp-create-main">
-          <section className="exp-create-section" id="invoice-general">
-
-            {!isQuote && (
-            <div className="exp-create-row">
-              <label className="exp-create-label">Invoice Number</label>
-              <div>
-                <input type="text" readOnly className="exp-create-input exp-create-input--readonly" value={init.next_invoice_number || '-'} />
-                <div className="exp-create-help">Generated automatically when the invoice is saved.</div>
+          <section className="exp-create-section inv-en-card" id="invoice-general">
+            <div className="inv-en-card-head">
+              <h2>{isQuote ? 'Quotation details' : 'Invoice details'}</h2>
+              <div className="exp-create-help">
+                <a href={init.customer_catalogue_url}>Customer catalogue</a>
+                {' · '}
+                <a href={init.customers_index_url}>Manage customers</a>
               </div>
             </div>
-            )}
 
-            {isQuote && isEditMode && (
-            <div className="exp-create-row">
-              <label className="exp-create-label">Quotation Number</label>
-              <div>
-                <input type="text" readOnly className="exp-create-input exp-create-input--readonly" value={init.order?.order_number || '-'} />
-              </div>
+            <div className="inv-en-field inv-en-field--client">
+              <label className="inv-en-label">Client<span className="req">*</span></label>
+              <select className="exp-create-select" value={customerId} onChange={(e) => setCustomerId(e.target.value)} required>
+                <option value="">Select client</option>
+                {(init.customers || []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.company_name}{c.contact_person ? ` (${c.contact_person})` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
-            )}
 
-            <div className="exp-create-row">
-              <label className="exp-create-label">Customer<span className="req">*</span></label>
-              <div>
-                <select className="exp-create-select" value={customerId} onChange={(e) => setCustomerId(e.target.value)} required>
-                  <option value="">Select Customer</option>
-                  {(init.customers || []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.company_name}{c.contact_person ? ` (${c.contact_person})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <div className="exp-create-help">
-                  <a href={init.customer_catalogue_url}>Customer catalogue</a>
-                  {' | '}
-                  <a href={init.customers_index_url}>Manage customers</a>
+            <div className="inv-en-meta-grid">
+              {!isQuote && (
+                <div className="inv-en-field">
+                  <label className="inv-en-label">Invoice number</label>
+                  <input type="text" readOnly className="exp-create-input exp-create-input--readonly" value={init.next_invoice_number || '-'} />
                 </div>
-              </div>
-            </div>
-
-            <div className="exp-create-row exp-create-row--dates">
-              <label className="exp-create-label">{isQuote ? 'Quote date' : 'Invoice date'}<span className="req">*</span></label>
-              <div className="exp-create-dates-inline">
-                <input type="date" className="exp-create-input exp-create-input--date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} required />
-                <div className="exp-create-date-pair">
-                  <label className="exp-create-date-label">{isQuote ? 'Valid until' : 'Due date'}<span className="req">*</span></label>
-                  <input
-                    type="date"
-                    className="exp-create-input exp-create-input--date"
-                    value={isQuote ? validUntil : dueDate}
-                    onChange={(e) => (isQuote ? setValidUntil(e.target.value) : setDueDate(e.target.value))}
-                    required
-                  />
+              )}
+              {isQuote && isEditMode && (
+                <div className="inv-en-field">
+                  <label className="inv-en-label">Quotation number</label>
+                  <input type="text" readOnly className="exp-create-input exp-create-input--readonly" value={init.order?.order_number || '-'} />
                 </div>
+              )}
+              <div className="inv-en-field">
+                <label className="inv-en-label">{isQuote ? 'Quote date' : 'Invoice date'}<span className="req">*</span></label>
+                <input type="date" className="exp-create-input" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} required />
               </div>
-            </div>
-
-            <div className="exp-create-row exp-create-row--lead-currency">
-              <label className="exp-create-label">Lead time <span className="exp-create-label-hint">(days)</span></label>
-              <div className="exp-create-lead-currency-inline">
-                <input type="number" min="0" className="exp-create-input exp-create-input--lead" value={leadTime} onChange={(e) => setLeadTime(e.target.value)} placeholder="e.g. 10" />
-                <div className="exp-create-currency-pair">
-                  <label className="exp-create-inline-label">Currencies<span className="req">*</span></label>
-                  <div ref={currencyRef} className="exp-create-currency-field">
-                    <div className="inv-currency-chips">
-                      {displayCurrencies.map((code) => {
-                        const meta = currencyOptions[code] || { name: code, flag: 'un' };
-                        const isPrimary = primaryCurrency === code;
-                        return (
-                          <span key={code} className={`inv-currency-chip${isPrimary ? ' is-primary' : ''}`}>
-                            <img src={`${FLAG_BASE}${meta.flag}.png`} alt="" className="inv-currency-flag" />
-                            <strong>{code}</strong>
-                            <button type="button" className={isPrimary ? 'is-active' : ''} onClick={() => setPrimaryCurrency(code)}>
-                              {isPrimary ? 'Billing' : 'Set billing'}
+              <div className="inv-en-field">
+                <label className="inv-en-label">{isQuote ? 'Valid until' : 'Due date'}<span className="req">*</span></label>
+                <input
+                  type="date"
+                  className="exp-create-input"
+                  value={isQuote ? validUntil : dueDate}
+                  onChange={(e) => (isQuote ? setValidUntil(e.target.value) : setDueDate(e.target.value))}
+                  required
+                />
+              </div>
+              <div className="inv-en-field">
+                <label className="inv-en-label">Payment terms <span className="exp-create-label-hint">(days)</span></label>
+                <input type="number" min="0" className="exp-create-input" value={leadTime} onChange={(e) => setLeadTime(e.target.value)} placeholder="e.g. 30" />
+              </div>
+              <div className="inv-en-field inv-en-field--currency">
+                <label className="inv-en-label">Currency<span className="req">*</span></label>
+                <div ref={currencyRef} className="exp-create-currency-field">
+                  <div className="inv-currency-chips">
+                    {displayCurrencies.map((code) => {
+                      const meta = currencyOptions[code] || { name: code, flag: 'un' };
+                      const isPrimary = primaryCurrency === code;
+                      return (
+                        <span key={code} className={`inv-currency-chip${isPrimary ? ' is-primary' : ''}`}>
+                          <img src={`${FLAG_BASE}${meta.flag}.png`} alt="" className="inv-currency-flag" />
+                          <strong>{code}</strong>
+                          <button type="button" className={isPrimary ? 'is-active' : ''} onClick={() => setPrimaryCurrency(code)}>
+                            {isPrimary ? 'Billing' : 'Set billing'}
+                          </button>
+                          <button
+                            type="button"
+                            className="inv-currency-chip-remove"
+                            onClick={() => toggleCurrency(code)}
+                            aria-label={`Remove ${code}`}
+                            title="Remove currency"
+                          >
+                            <X size={12} aria-hidden />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div className={`inv-currency-picker${currencyMenuOpen ? ' is-open' : ''}`}>
+                    <button type="button" className="inv-currency-trigger" onClick={() => setCurrencyMenuOpen((o) => !o)}>
+                      <span className="inv-currency-trigger-label">Select currencies</span>
+                      <span>{displayCurrencies.length} selected</span>
+                    </button>
+                    {currencyMenuOpen && (
+                      <div className="inv-currency-menu" role="listbox">
+                        {Object.entries(currencyOptions).map(([code, meta]) => {
+                          const isChecked = displayCurrencies.includes(code);
+                          return (
+                            <button key={code} type="button" className={`inv-currency-option${isChecked ? ' is-checked' : ''}`} onClick={() => toggleCurrency(code)}>
+                              <span className="inv-currency-check">{isChecked ? '\u2713' : ''}</span>
+                              <img src={`${FLAG_BASE}${meta.flag}.png`} alt="" className="inv-currency-flag" />
+                              <span className="code">{code}</span>
+                              <span className="name">{meta.name}</span>
                             </button>
-                            <button
-                              type="button"
-                              className="inv-currency-chip-remove"
-                              onClick={() => toggleCurrency(code)}
-                              aria-label={`Remove ${code}`}
-                              title="Remove currency"
-                            >
-                              <X size={12} aria-hidden />
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                    <div className={`inv-currency-picker${currencyMenuOpen ? ' is-open' : ''}`}>
-                      <button type="button" className="inv-currency-trigger" onClick={() => setCurrencyMenuOpen((o) => !o)}>
-                        <span className="inv-currency-trigger-label">Select currencies</span>
-                        <span>{displayCurrencies.length} selected</span>
-                      </button>
-                      {currencyMenuOpen && (
-                        <div className="inv-currency-menu" role="listbox">
-                          {Object.entries(currencyOptions).map(([code, meta]) => {
-                            const isChecked = displayCurrencies.includes(code);
-                            return (
-                              <button key={code} type="button" className={`inv-currency-option${isChecked ? ' is-checked' : ''}`} onClick={() => toggleCurrency(code)}>
-                                <span className="inv-currency-check">{isChecked ? '\u2713' : ''}</span>
-                                <img src={`${FLAG_BASE}${meta.flag}.png`} alt="" className="inv-currency-flag" />
-                                <span className="code">{code}</span>
-                                <span className="name">{meta.name}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
             {nonTzsCurrencies.length > 0 && (
-              <div className="exp-create-row">
-                <label className="exp-create-label">Exchange rates</label>
-                <div>
-                  <div className="inv-rate-grid">
-                    {nonTzsCurrencies.map((code) => (
-                      <div key={code}>
-                        <label className="exp-create-help" htmlFor={`rate-${code}`}>{code}</label>
-                        <input
-                          id={`rate-${code}`}
-                          type="number"
-                          step="0.0001"
-                          min="0"
-                          className="exp-create-input"
-                          value={exchangeRates[code] || ''}
-                          onChange={(e) => setExchangeRates((prev) => ({ ...prev, [code]: e.target.value }))}
-                          placeholder="TZS per 1 unit"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="exp-create-help">
-                    {rateLoadingCodes.length ? `Loading BOT rate for ${rateLoadingCodes.join(', ')}�` : rateHint}
-                  </div>
+              <div className="inv-en-rates">
+                <div className="inv-en-label">Exchange rates</div>
+                <div className="inv-rate-grid">
+                  {nonTzsCurrencies.map((code) => (
+                    <div key={code} className="inv-en-field">
+                      <label className="inv-en-label" htmlFor={`rate-${code}`}>{code}</label>
+                      <input
+                        id={`rate-${code}`}
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        className="exp-create-input"
+                        value={exchangeRates[code] || ''}
+                        onChange={(e) => setExchangeRates((prev) => ({ ...prev, [code]: e.target.value }))}
+                        placeholder="TZS per 1 unit"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="exp-create-help">
+                  {rateLoadingCodes.length ? `Loading BOT rate for ${rateLoadingCodes.join(', ')}…` : rateHint}
                 </div>
               </div>
             )}
           </section>
 
-          <section className="exp-create-section" id="invoice-lines">
-            <div className="exp-create-section-header">
-              <h2>Line Items</h2>
+          <section className="exp-create-section inv-en-card" id="invoice-lines">
+            <div className="inv-en-card-head">
+              <h2>Items</h2>
               <div className="exp-create-help">
                 <a href={init.catalogue_url}>Product catalogue</a>
               </div>
@@ -841,33 +830,35 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
 
             <div className="inv-line-toolbar inv-line-toolbar--below">
               <button type="button" className="inv-line-btn inv-line-btn--primary inv-line-btn--rounded" onClick={() => setItems((prev) => [...prev, emptyLine(taxPercentage || 18)])}>
-                Add row
+                + Add item
               </button>
             </div>
 
-            <div className="inv-summary-box">
-              <div className="inv-summary-row">
-                <span>{taxMode === 'inclusive' ? 'Subtotal (excl. tax)' : 'Subtotal'}</span>
-                <strong>{moneyLabel(totals.subtotal)}</strong>
-              </div>
-              <div className="inv-summary-row">
-                <span>Discount (-)</span>
-                <input type="number" step="0.01" className="inv-summary-input" value={discountAmount} onChange={(e) => setDiscountAmount(Math.max(0, parseFloat(e.target.value) || 0))} />
-              </div>
-              <div className="inv-summary-row">
-                <span>Tax (%)</span>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input type="number" step="0.01" className="inv-summary-input" value={taxPercentage} onChange={(e) => setTaxPercentage(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))} />
-                  <span>{moneyLabel(totals.taxAmt)}</span>
+            <div className="inv-en-footer">
+              <div className="inv-summary-box">
+                <div className="inv-summary-row">
+                  <span>{taxMode === 'inclusive' ? 'Subtotal (excl. tax)' : 'Subtotal'}</span>
+                  <strong>{moneyLabel(totals.subtotal)}</strong>
                 </div>
-              </div>
-              <div className="inv-summary-row">
-                <span>Shipping (+)</span>
-                <input type="number" step="0.01" className="inv-summary-input" value={shippingCharges} onChange={(e) => setShippingCharges(Math.max(0, parseFloat(e.target.value) || 0))} />
-              </div>
-              <div className="inv-summary-row">
-                <span>Grand Total</span>
-                <span className="inv-summary-total">{moneyLabel(totals.grandTotal)}</span>
+                <div className="inv-summary-row">
+                  <span>Discount (-)</span>
+                  <input type="number" step="0.01" className="inv-summary-input" value={discountAmount} onChange={(e) => setDiscountAmount(Math.max(0, parseFloat(e.target.value) || 0))} />
+                </div>
+                <div className="inv-summary-row">
+                  <span>Tax (%)</span>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="number" step="0.01" className="inv-summary-input" value={taxPercentage} onChange={(e) => setTaxPercentage(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))} />
+                    <span>{moneyLabel(totals.taxAmt)}</span>
+                  </div>
+                </div>
+                <div className="inv-summary-row">
+                  <span>Shipping (+)</span>
+                  <input type="number" step="0.01" className="inv-summary-input" value={shippingCharges} onChange={(e) => setShippingCharges(Math.max(0, parseFloat(e.target.value) || 0))} />
+                </div>
+                <div className="inv-summary-row inv-summary-row--total">
+                  <span>Grand Total</span>
+                  <span className="inv-summary-total">{moneyLabel(totals.grandTotal)}</span>
+                </div>
               </div>
             </div>
           </section>

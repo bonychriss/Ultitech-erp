@@ -75,7 +75,7 @@
 
   function messageForState() {
     if (state === 'downloading') {
-      return 'Downloading update';
+      return 'Downloading updateï¿½';
     }
     if (state === 'ready') {
       return version ? 'Update ' + version + ' ready to install' : 'Update ready to install';
@@ -88,7 +88,7 @@
       return 'Install Now';
     }
     if (state === 'downloading') {
-      return 'Downloading';
+      return 'Downloadingï¿½';
     }
     return 'Download';
   }
@@ -200,7 +200,7 @@
       if (typeof detail.percent === 'number') {
         var text = document.querySelector('#' + BANNER_ID + ' .ultitech-update-text');
         if (text) {
-          text.textContent = 'Downloading update ' + Math.round(detail.percent) + '%';
+          text.textContent = 'Downloading updateï¿½ ' + Math.round(detail.percent) + '%';
         }
       }
       return;

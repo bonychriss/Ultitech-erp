@@ -1,31 +1,36 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  BookOpen,
-  Boxes,
-  ChartColumn,
-  ClipboardCheck,
   Coins,
   FileText,
   HardDrive,
   Inbox,
   Lightbulb,
-  ListChecks,
   Mail,
   Monitor,
   Download,
   Palette,
   PieChart,
   Receipt,
-  Scale,
   Send,
   Server,
   Settings,
-  Truck,
-  Wallet,
-  Warehouse,
-  Banknote,
   Star,
 } from 'lucide-react'
+import crmIconSrc from '../assets/crm-icon.png'
+import storeIconSrc from '../assets/store-icon.png'
+import stockIconSrc from '../assets/stock-icon.png'
+import salesIconSrc from '../assets/sales-icon.png'
+import accountingIconSrc from '../assets/accounting-icon.png'
+import payrollIconSrc from '../assets/payroll-icon.png'
+import pettyCashIconSrc from '../assets/petty-cash-icon.png'
+import mailIconSrc from '../assets/mail-icon.png'
+import outstandingIconSrc from '../assets/outstanding-icon.png'
+import deliveryIconSrc from '../assets/delivery-icon.png'
+import attendanceIconSrc from '../assets/attendance-icon.png'
+import budgetsIconSrc from '../assets/budgets-icon.png'
+import statementIconSrc from '../assets/statement-icon.png'
+import dispatchIconSrc from '../assets/dispatch-icon.png'
+import todoIconSrc from '../assets/todo-icon.png'
 
 function getConfig() {
   if (typeof window !== 'undefined' && window.__SELECT_MODULE_CFG__ && typeof window.__SELECT_MODULE_CFG__ === 'object') {
@@ -74,62 +79,189 @@ function PerformanceIcon() {
 
 function SalesIcon() {
   return (
-    <svg className="sm-icon sm-icon--sales" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <line x1="3" y1="16" x2="12" y2="16" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-      <line x1="3" y1="23" x2="9" y2="23" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-      <line x1="3" y1="30" x2="14" y2="30" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-      <path
-        d="M16 13.5 L40 13.5 L36.5 26.5 L19.5 26.5 Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.6"
-        strokeLinejoin="round"
-      />
-      <line x1="18" y1="17.5" x2="38" y2="17.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <line x1="18.8" y1="21" x2="37.2" y2="21" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <line x1="23" y1="13.8" x2="21.2" y2="26.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <line x1="27.5" y1="13.7" x2="26.2" y2="26.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <line x1="32" y1="13.6" x2="31.2" y2="26.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      <path
-        d="M16 13.5 C13 13.5 9.5 10.5 7 8.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M19.5 26.5 L18 34.5 M18 34.5 L36 34.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="18" cy="37.5" r="3.2" fill="currentColor" />
-      <circle cx="36" cy="37.5" r="3.2" fill="currentColor" />
-    </svg>
+    <img
+      src={salesIconSrc}
+      alt=""
+      className="sm-icon sm-icon--sales"
+      aria-hidden="true"
+    />
+  )
+}
+
+function CrmIcon() {
+  return (
+    <img
+      src={crmIconSrc}
+      alt=""
+      className="sm-icon sm-icon--crm"
+      aria-hidden="true"
+    />
+  )
+}
+
+function StoreIcon() {
+  return (
+    <img
+      src={storeIconSrc}
+      alt=""
+      className="sm-icon sm-icon--store"
+      aria-hidden="true"
+    />
+  )
+}
+
+function StockIcon() {
+  return (
+    <img
+      src={stockIconSrc}
+      alt=""
+      className="sm-icon sm-icon--stock"
+      aria-hidden="true"
+    />
+  )
+}
+
+function AccountingIcon() {
+  return (
+    <img
+      src={accountingIconSrc}
+      alt=""
+      className="sm-icon sm-icon--accounting"
+      aria-hidden="true"
+    />
+  )
+}
+
+function PayrollIcon() {
+  return (
+    <img
+      src={payrollIconSrc}
+      alt=""
+      className="sm-icon sm-icon--payroll"
+      aria-hidden="true"
+    />
+  )
+}
+
+function PettyCashIcon() {
+  return (
+    <img
+      src={pettyCashIconSrc}
+      alt=""
+      className="sm-icon sm-icon--petty-cash"
+      aria-hidden="true"
+    />
+  )
+}
+
+function MailIcon() {
+  return (
+    <img
+      src={mailIconSrc}
+      alt=""
+      className="sm-icon sm-icon--mail"
+      aria-hidden="true"
+    />
+  )
+}
+
+function OutstandingIcon() {
+  return (
+    <img
+      src={outstandingIconSrc}
+      alt=""
+      className="sm-icon sm-icon--outstanding"
+      aria-hidden="true"
+    />
+  )
+}
+
+function DeliveryIcon() {
+  return (
+    <img
+      src={deliveryIconSrc}
+      alt=""
+      className="sm-icon sm-icon--delivery"
+      aria-hidden="true"
+    />
+  )
+}
+
+function AttendanceIcon() {
+  return (
+    <img
+      src={attendanceIconSrc}
+      alt=""
+      className="sm-icon sm-icon--attendance"
+      aria-hidden="true"
+    />
+  )
+}
+
+function BudgetsIcon() {
+  return (
+    <img
+      src={budgetsIconSrc}
+      alt=""
+      className="sm-icon sm-icon--budgets"
+      aria-hidden="true"
+    />
+  )
+}
+
+function StatementIcon() {
+  return (
+    <img
+      src={statementIconSrc}
+      alt=""
+      className="sm-icon sm-icon--statement"
+      aria-hidden="true"
+    />
+  )
+}
+
+function DispatchIcon() {
+  return (
+    <img
+      src={dispatchIconSrc}
+      alt=""
+      className="sm-icon sm-icon--dispatch"
+      aria-hidden="true"
+    />
+  )
+}
+
+function TodoIcon() {
+  return (
+    <img
+      src={todoIconSrc}
+      alt=""
+      className="sm-icon sm-icon--todo"
+      aria-hidden="true"
+    />
   )
 }
 
 const ICONS = {
   voucher: FileText,
-  attendance: ClipboardCheck,
-  deliveries: Truck,
-  outstanding: FileText,
-  email: Mail,
+  attendance: AttendanceIcon,
+  deliveries: DeliveryIcon,
+  outstanding: OutstandingIcon,
+  email: MailIcon,
   expenses: Receipt,
-  petty_cash: Wallet,
-  payroll: Banknote,
+  petty_cash: PettyCashIcon,
+  payroll: PayrollIcon,
   revenue: Coins,
-  accounting: BookOpen,
-  balances: Scale,
-  budgets: ChartColumn,
-  stock: Boxes,
-  warehouses: Warehouse,
+  accounting: AccountingIcon,
+  balances: AccountingIcon,
+  budgets: BudgetsIcon,
+  stock: StockIcon,
+  warehouses: StoreIcon,
   sales: SalesIcon,
-  statement: FileText,
-  dispatch: Truck,
-  todo: ListChecks,
+  crm: CrmIcon,
+  statement: StatementIcon,
+  dispatch: DispatchIcon,
+  todo: TodoIcon,
   performance: PerformanceIcon,
   settings_admin: Monitor,
   settings: Settings,
@@ -151,8 +283,106 @@ function ModuleIcon({ name, color }) {
   }
   if (name === 'sales') {
     return (
-      <div className="sm-icon-box" style={{ color }}>
+      <div className="sm-icon-box">
         <SalesIcon />
+      </div>
+    )
+  }
+  if (name === 'crm') {
+    return (
+      <div className="sm-icon-box">
+        <CrmIcon />
+      </div>
+    )
+  }
+  if (name === 'warehouses') {
+    return (
+      <div className="sm-icon-box">
+        <StoreIcon />
+      </div>
+    )
+  }
+  if (name === 'stock') {
+    return (
+      <div className="sm-icon-box">
+        <StockIcon />
+      </div>
+    )
+  }
+  if (name === 'accounting' || name === 'balances') {
+    return (
+      <div className="sm-icon-box">
+        <AccountingIcon />
+      </div>
+    )
+  }
+  if (name === 'payroll') {
+    return (
+      <div className="sm-icon-box">
+        <PayrollIcon />
+      </div>
+    )
+  }
+  if (name === 'petty_cash') {
+    return (
+      <div className="sm-icon-box">
+        <PettyCashIcon />
+      </div>
+    )
+  }
+  if (name === 'email') {
+    return (
+      <div className="sm-icon-box">
+        <MailIcon />
+      </div>
+    )
+  }
+  if (name === 'outstanding') {
+    return (
+      <div className="sm-icon-box">
+        <OutstandingIcon />
+      </div>
+    )
+  }
+  if (name === 'deliveries') {
+    return (
+      <div className="sm-icon-box">
+        <DeliveryIcon />
+      </div>
+    )
+  }
+  if (name === 'attendance') {
+    return (
+      <div className="sm-icon-box">
+        <AttendanceIcon />
+      </div>
+    )
+  }
+  if (name === 'budgets') {
+    return (
+      <div className="sm-icon-box">
+        <BudgetsIcon />
+      </div>
+    )
+  }
+  if (name === 'statement') {
+    return (
+      <div className="sm-icon-box">
+        <StatementIcon />
+      </div>
+    )
+  }
+  if (name === 'dispatch') {
+    return (
+      <div className="sm-icon-box">
+        <DispatchIcon />
+      </div>
+    )
+  }
+  if (name === 'todo') {
+    return (
+      <div className="sm-icon-box">
+        <TodoIcon />
       </div>
     )
   }

@@ -2,18 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Coins,
   FileText,
-  HardDrive,
   Inbox,
-  Lightbulb,
   Mail,
   Monitor,
   Download,
   Palette,
-  PieChart,
   Receipt,
-  Send,
   Server,
-  Settings,
   Star,
 } from 'lucide-react'
 import crmIconSrc from '../assets/crm-icon.png'
@@ -31,6 +26,12 @@ import budgetsIconSrc from '../assets/budgets-icon.png'
 import statementIconSrc from '../assets/statement-icon.png'
 import dispatchIconSrc from '../assets/dispatch-icon.png'
 import todoIconSrc from '../assets/todo-icon.png'
+import settingsIconSrc from '../assets/settings-icon.png'
+import backupIconSrc from '../assets/backup-icon.png'
+import suggestionIconSrc from '../assets/suggestion-icon.png'
+import reportIconSrc from '../assets/report-icon.png'
+import letterIconSrc from '../assets/letter-icon.png'
+import performanceIconSrc from '../assets/performance-icon.png'
 
 function getConfig() {
   if (typeof window !== 'undefined' && window.__SELECT_MODULE_CFG__ && typeof window.__SELECT_MODULE_CFG__ === 'object') {
@@ -61,19 +62,12 @@ function writeFlag(kind, version, userId) {
 
 function PerformanceIcon() {
   return (
-    <svg className="sm-icon sm-icon--performance" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="5" y="29" width="7" height="11" rx="1.5" fill="#ef4444" stroke="#0f172a" strokeWidth="1.6" />
-      <rect x="14" y="24" width="7" height="16" rx="1.5" fill="#eab308" stroke="#0f172a" strokeWidth="1.6" />
-      <rect x="23" y="17" width="7" height="23" rx="1.5" fill="#22c55e" stroke="#0f172a" strokeWidth="1.6" />
-      <rect x="32" y="9" width="7" height="31" rx="1.5" fill="#3b82f6" stroke="#0f172a" strokeWidth="1.6" />
-      <path d="M7 24 L18 16 L33 9" fill="none" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M29 9 L33 9 L33 13" fill="none" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="38" cy="11" r="7.5" fill="#22c55e" stroke="#0f172a" strokeWidth="1.6" />
-      <path d="M35.2 11 L37.4 13.4 L41.2 8.8" fill="none" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="36" cy="36" r="6" fill="#eab308" stroke="#0f172a" strokeWidth="1.6" />
-      <path d="M36 30.5v2.2M36 39.3v2.2M30.5 36h2.2M39.3 36h2.2M31.9 31.9l1.6 1.6M38.5 38.5l1.6 1.6M31.9 40.1l1.6-1.6M38.5 33.5l1.6-1.6" stroke="#0f172a" strokeWidth="1.8" strokeLinecap="round" />
-      <circle cx="36" cy="36" r="2.2" fill="#fef08a" stroke="#0f172a" strokeWidth="1.2" />
-    </svg>
+    <img
+      src={performanceIconSrc}
+      alt=""
+      className="sm-icon sm-icon--performance"
+      aria-hidden="true"
+    />
   )
 }
 
@@ -242,6 +236,61 @@ function TodoIcon() {
   )
 }
 
+function SettingsIcon() {
+  return (
+    <img
+      src={settingsIconSrc}
+      alt=""
+      className="sm-icon sm-icon--settings"
+      aria-hidden="true"
+    />
+  )
+}
+
+function BackupIcon() {
+  return (
+    <img
+      src={backupIconSrc}
+      alt=""
+      className="sm-icon sm-icon--backup"
+      aria-hidden="true"
+    />
+  )
+}
+
+function SuggestionIcon() {
+  return (
+    <img
+      src={suggestionIconSrc}
+      alt=""
+      className="sm-icon sm-icon--suggestion"
+      aria-hidden="true"
+    />
+  )
+}
+
+function ReportIcon() {
+  return (
+    <img
+      src={reportIconSrc}
+      alt=""
+      className="sm-icon sm-icon--report"
+      aria-hidden="true"
+    />
+  )
+}
+
+function LetterIcon() {
+  return (
+    <img
+      src={letterIconSrc}
+      alt=""
+      className="sm-icon sm-icon--letter"
+      aria-hidden="true"
+    />
+  )
+}
+
 const ICONS = {
   voucher: FileText,
   attendance: AttendanceIcon,
@@ -264,12 +313,12 @@ const ICONS = {
   todo: TodoIcon,
   performance: PerformanceIcon,
   settings_admin: Monitor,
-  settings: Settings,
-  suggestions: Lightbulb,
-  analytics: PieChart,
-  backup: HardDrive,
+  settings: SettingsIcon,
+  suggestions: SuggestionIcon,
+  analytics: ReportIcon,
+  backup: BackupIcon,
   inbox: Inbox,
-  letter: Send,
+  letter: LetterIcon,
   layout: Palette,
 }
 
@@ -383,6 +432,41 @@ function ModuleIcon({ name, color }) {
     return (
       <div className="sm-icon-box">
         <TodoIcon />
+      </div>
+    )
+  }
+  if (name === 'settings') {
+    return (
+      <div className="sm-icon-box">
+        <SettingsIcon />
+      </div>
+    )
+  }
+  if (name === 'backup') {
+    return (
+      <div className="sm-icon-box">
+        <BackupIcon />
+      </div>
+    )
+  }
+  if (name === 'suggestions') {
+    return (
+      <div className="sm-icon-box">
+        <SuggestionIcon />
+      </div>
+    )
+  }
+  if (name === 'analytics') {
+    return (
+      <div className="sm-icon-box">
+        <ReportIcon />
+      </div>
+    )
+  }
+  if (name === 'letter') {
+    return (
+      <div className="sm-icon-box">
+        <LetterIcon />
       </div>
     )
   }

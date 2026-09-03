@@ -215,8 +215,10 @@ body {
 }
 
 .sm-icon--performance {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  display: block;
 }
 
 .sm-icon--sales {
@@ -320,6 +322,41 @@ body {
 .sm-icon--todo {
   width: 48px;
   height: 48px;
+  object-fit: contain;
+  display: block;
+}
+
+.sm-icon--settings {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  display: block;
+}
+
+.sm-icon--backup {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  display: block;
+}
+
+.sm-icon--suggestion {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  display: block;
+}
+
+.sm-icon--report {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  display: block;
+}
+
+.sm-icon--letter {
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   display: block;
 }

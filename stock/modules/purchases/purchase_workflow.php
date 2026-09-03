@@ -287,6 +287,96 @@ function stockPurchaseCompanyScopeSql(string $columnQualified, bool $hasCompanyC
     return " AND ({$columnQualified} IS NULL OR {$columnQualified} = 0 OR {$columnQualified} = ?)";
 }
 
+/** Flash for React purchases desk (index.php reads flash_message / flash_type). */
+function stockPurchaseSetFlash(string $message, string $type = 'success'): void
+{
+    $normalized = strtolower(trim($type));
+    if ($normalized === 'danger' || $normalized === 'error') {
+        $normalized = 'error';
+    } elseif (!in_array($normalized, ['success', 'warning', 'info'], true)) {
+        $normalized = 'success';
+    }
+    $_SESSION['flash_message'] = $message;
+    $_SESSION['flash_type'] = $normalized;
+}
+
+/** Admin gate for destructive purchase-order actions. */
+function stockPurchaseIsAdmin(): bool
+{
+    if (function_exists('isAdmin') && isAdmin()) {
+        return true;
+    }
+    $role = strtolower(trim((string) ($_SESSION['role'] ?? '')));
+    if (in_array($role, ['admin', 'administrator', 'superadmin', 'super_admin', 'company_admin', 'owner', 'system_admin', 'platform_admin'], true)) {
+        return true;
+    }
+    return function_exists('hasRole') && hasRole('admin');
+}
+
+/**
+ * Load a PO row for delete/cancel, respecting stock vs legacy list source.
+ *
+ * @return array<string, mixed>|null
+ */
+function loadStockPurchaseOrderForDelete(PDO $pdo, int $id, string $source = 'stock', int $companyId = 0): ?array
+{
+    if ($id <= 0) {
+        return null;
+    }
+    if ($companyId <= 0) {
+        $companyId = stockPurchaseActiveCompanyId();
+    }
+
+    $source = strtolower(trim($source));
+    if ($source === 'legacy') {
+        if (!tableExists('purchases', $pdo)) {
+            return null;
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT * FROM purchases WHERE id = ? LIMIT 1');
+            $stmt->execute([$id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                return null;
+            }
+            $row['_po_table'] = 'purchases';
+            $row['po_number'] = $row['po_number'] ?? $row['purchase_no'] ?? ('PO-' . $id);
+            if (in_array('company_id', array_keys($row), true) && $companyId > 0) {
+                $rowCompany = (int) ($row['company_id'] ?? 0);
+                if ($rowCompany > 0 && $rowCompany !== $companyId) {
+                    return null;
+                }
+            }
+            return $row;
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
+
+    if (!tableExists('stocks_purchase_orders', $pdo)) {
+        return null;
+    }
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM stocks_purchase_orders WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        $row['_po_table'] = 'stocks_purchase_orders';
+        $poCols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        if (in_array('company_id', $poCols, true) && $companyId > 0) {
+            $rowCompany = (int) ($row['company_id'] ?? 0);
+            if ($rowCompany > 0 && $rowCompany !== $companyId) {
+                return null;
+            }
+        }
+        return $row;
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
 /**
  * Load a PO for internal actions using the same visibility rules as the purchases list.
  *

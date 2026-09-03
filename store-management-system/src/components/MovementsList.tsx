@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowDownCircle, ArrowUpCircle, History, Inbox, Loader2, Package } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, History, Inbox, Loader2, Package, Trash2 } from 'lucide-react';
 import type { StockMovement } from '../types';
 import { movementStatus } from './MovementDetail';
 
 interface MovementsListProps {
   movements: StockMovement[];
   loading?: boolean;
+  deletingId?: string | null;
   onSelect?: (movement: StockMovement) => void;
+  onDelete?: (movement: StockMovement) => void;
 }
 
 function formatWhen(iso: string): { day: string; time: string } {
@@ -62,7 +64,9 @@ function MovementThumb({ imageUrl, name }: { imageUrl?: string; name: string }) 
 export default function MovementsList({
   movements,
   loading = false,
+  deletingId = null,
   onSelect,
+  onDelete,
 }: MovementsListProps) {
   const rows = useMemo(
     () => movements.filter((m) => m.movementType === 'in' || m.movementType === 'out'),
@@ -98,6 +102,7 @@ export default function MovementsList({
             <th className="sms-col-type">Type</th>
             <th className="sms-col-status">Status</th>
             <th className="sms-col-qty text-right">Qty</th>
+            {onDelete ? <th className="sms-col-actions">Actions</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -170,6 +175,28 @@ export default function MovementsList({
                     {m.quantity}
                   </span>
                 </td>
+                {onDelete ? (
+                  <td className="sms-col-actions">
+                    <button
+                      type="button"
+                      className="sms-desk-btn sms-desk-btn-secondary sms-desk-btn-sm sms-desk-btn-delete"
+                      disabled={deletingId === m.id}
+                      title="Delete this product record"
+                      aria-label={`Delete ${productName}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(m);
+                      }}
+                    >
+                      {deletingId === m.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      <span>Delete</span>
+                    </button>
+                  </td>
+                ) : null}
               </tr>
             );
           })}

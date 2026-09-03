@@ -56,6 +56,23 @@ function sms_can_manage_products(): bool
     return in_array($role, ['admin', 'procurement'], true);
 }
 
+function sms_is_system_admin(): bool
+{
+    if (function_exists('isAdmin') && isAdmin()) {
+        return true;
+    }
+    $role = strtolower(trim((string) ($_SESSION['role'] ?? '')));
+    return in_array($role, [
+        'admin',
+        'administrator',
+        'superadmin',
+        'super_admin',
+        'system_admin',
+        'platform_admin',
+        'owner',
+    ], true);
+}
+
 function sms_product_columns(PDO $pdo): array
 {
     static $cache = null;
@@ -179,6 +196,60 @@ function sms_upsert_stock(PDO $pdo, int $productId, int $warehouseId, int $quant
 
     $pdo->prepare('INSERT INTO stock (product_id, warehouse_id, quantity, location, last_updated) VALUES (?, ?, ?, ?, NOW())')
         ->execute([$productId, $warehouseId, $quantity, $location]);
+}
+
+function sms_delete_warehouse_movement(PDO $pdo, int $movementId, int $warehouseId): array
+{
+    if ($movementId <= 0 || $warehouseId <= 0) {
+        return ['ok' => false, 'message' => 'movement_id and warehouse_id are required'];
+    }
+    if (!tableExists('stock_movements')) {
+        return ['ok' => false, 'message' => 'Stock movements table is not available'];
+    }
+
+    $hasWarehouse = sms_movement_has_column($pdo, 'warehouse_id');
+    $sql = 'SELECT * FROM stock_movements WHERE id = ?';
+    $params = [$movementId];
+    if ($hasWarehouse) {
+        $sql .= ' AND warehouse_id = ?';
+        $params[] = $warehouseId;
+    }
+    $sql .= ' LIMIT 1';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) {
+        return ['ok' => false, 'message' => 'Product record not found in this warehouse'];
+    }
+
+    $productId = (int) ($row['product_id'] ?? 0);
+    $qty = (int) abs((float) ($row['quantity'] ?? 0));
+    $type = strtolower(trim((string) ($row['movement_type'] ?? '')));
+
+    $pdo->beginTransaction();
+    try {
+        if ($productId > 0 && $qty > 0 && in_array($type, ['in', 'out'], true)) {
+            $stockStmt = $pdo->prepare('SELECT quantity FROM stock WHERE product_id = ? AND warehouse_id = ?');
+            $stockStmt->execute([$productId, $warehouseId]);
+            $currentQty = (int) ($stockStmt->fetchColumn() ?: 0);
+            $newQty = $type === 'in'
+                ? max(0, $currentQty - $qty)
+                : $currentQty + $qty;
+            sms_upsert_stock($pdo, $productId, $warehouseId, $newQty);
+        }
+
+        $del = $pdo->prepare('DELETE FROM stock_movements WHERE id = ?');
+        $del->execute([$movementId]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        return ['ok' => false, 'message' => $e->getMessage()];
+    }
+
+    return ['ok' => true, 'message' => 'Product record deleted'];
 }
 
 function sms_movement_columns(PDO $pdo): array
@@ -1733,6 +1804,7 @@ try {
                         ? (string) getCompanyLogoUrl()
                         : '',
                     'canManageProducts' => sms_can_manage_products(),
+                    'isSystemAdmin' => sms_is_system_admin(),
                     'manageProductsUrl' => function_exists('app_url')
                         ? app_url('stock/modules/products/index.php')
                         : '../stock/modules/products/index.php',
@@ -2055,6 +2127,25 @@ try {
                     'totalOut' => $totalOut,
                     'netMovement' => $totalIn - $totalOut,
                 ],
+            ]);
+            break;
+
+        case 'movement_delete':
+            if (!sms_is_system_admin()) {
+                sms_error('Only a system administrator can delete warehouse records.', 403);
+            }
+            $movementId = (int) ($_POST['id'] ?? $_POST['movement_id'] ?? 0);
+            $warehouseId = (int) ($_POST['warehouse_id'] ?? 0);
+            if ($movementId <= 0 || $warehouseId <= 0) {
+                sms_error('id and warehouse_id are required');
+            }
+            $result = sms_delete_warehouse_movement($pdo, $movementId, $warehouseId);
+            if (!($result['ok'] ?? false)) {
+                sms_error((string) ($result['message'] ?? 'Could not delete product record'));
+            }
+            sms_json([
+                'success' => true,
+                'message' => (string) ($result['message'] ?? 'Product record deleted'),
             ]);
             break;
 

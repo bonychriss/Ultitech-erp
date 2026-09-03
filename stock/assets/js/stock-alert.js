@@ -53,6 +53,12 @@
         },
         confirm: function (message, title, onConfirm) {
             title = title || 'Confirm';
+            if (typeof Swal === 'undefined') {
+                if (window.confirm(message || 'Are you sure?') && typeof onConfirm === 'function') {
+                    onConfirm();
+                }
+                return Promise.resolve({ isConfirmed: false });
+            }
             return Swal.fire({
                 title: title,
                 text: message || 'Are you sure?',

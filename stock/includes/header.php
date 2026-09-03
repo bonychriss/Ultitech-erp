@@ -18,7 +18,7 @@ $modulesLink = $rootPath . 'select-module.php';
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Stock: consistent alerts + redirect -->
-    <script src="<?= htmlspecialchars($stockBasePath) ?>assets/js/stock-alert.js"></script>
+    <script src="<?= htmlspecialchars($stockBasePath) ?>assets/js/stock-alert.js?v=<?= (int) (@filemtime(__DIR__ . '/../assets/js/stock-alert.js') ?: time()) ?>"></script>
     <!-- Bootstrap 5 JS Bundle (Loaded early to prevent race conditions) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     

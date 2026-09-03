@@ -549,6 +549,24 @@ body.page-store-management .sms-desk-page button.sms-desk-kpi-card {
   white-space: nowrap;
 }
 
+.sms-col-actions {
+  width: 6.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sms-desk-btn-delete {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fff;
+}
+
+.sms-desk-btn-delete:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
 .sms-move-chip {
   display: inline-flex;
   align-items: center;
@@ -1173,6 +1191,89 @@ html[data-theme="dark"] .sms-excel-page-title {
 .sms-status-popup .sms-btn-primary {
   min-width: 7.5rem;
   justify-content: center;
+}
+
+.sms-warn-popup {
+  width: min(22.5rem, 100%);
+  background: #fff;
+  border-radius: 1.75rem;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.22);
+}
+
+.sms-warn-popup-head {
+  background: #ef6a62;
+  padding: 2.15rem 1.5rem 1.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sms-warn-popup-icon {
+  width: 4.25rem;
+  height: 4.25rem;
+  color: #fff;
+}
+
+.sms-warn-popup-body {
+  padding: 1.5rem 1.6rem 1.7rem;
+  text-align: center;
+}
+
+.sms-warn-popup-title {
+  margin: 0 0 0.55rem;
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #1e293b;
+}
+
+.sms-warn-popup-message {
+  margin: 0 0 1.35rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.sms-warn-popup-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.sms-warn-popup-btn {
+  min-width: 6.5rem;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.7rem 1.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sms-warn-popup-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.sms-warn-popup-btn--ghost {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.sms-warn-popup-btn--ghost:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.sms-warn-popup-btn--danger {
+  background: #ef6a62;
+  color: #fff;
+}
+
+.sms-warn-popup-btn--danger:hover:not(:disabled) {
+  background: #e85a52;
 }
 
 .sms-modal {

@@ -361,14 +361,23 @@ export default function PurchasesList({ data }) {
   };
 
   const confirmGo = (message, title, href) => {
-    if (window.StockAlert?.confirm) {
-      window.StockAlert.confirm(message, title, () => {
-        window.location.href = href;
-      });
-      return;
+    const go = () => {
+      window.location.assign(href);
+    };
+    try {
+      if (window.StockAlert?.confirm) {
+        window.StockAlert.confirm(message, title, go);
+        return;
+      }
+    } catch (_err) {
+      // Fall through to native confirm if SweetAlert fails.
     }
-    if (window.confirm(message)) window.location.href = href;
+    if (window.confirm(message)) go();
   };
+
+  const rowKey = (po) => `${po.source || 'stock'}-${po.id}`;
+  const withSource = (base, po) =>
+    `${base}?id=${po.id}&source=${encodeURIComponent(po.source || 'stock')}`;
 
   if (booting) {
     return (
@@ -632,16 +641,16 @@ export default function PurchasesList({ data }) {
               <tbody>
                 {filtered.map((po) => (
                   <tr
-                    key={`${po.source || 'stock'}-${po.id}`}
+                    key={rowKey(po)}
                     onClick={(e) => {
                       if (e.target.closest('a, button')) return;
-                      window.location.href = `${viewUrl}?id=${po.id}`;
+                      window.location.href = withSource(viewUrl, po);
                     }}
                   >
                     <td>
                       <a
                         className="po-desk-ref"
-                        href={`${viewUrl}?id=${po.id}`}
+                        href={withSource(viewUrl, po)}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {po.purchase_no || `PO #${po.id}`}
@@ -678,30 +687,30 @@ export default function PurchasesList({ data }) {
                     <td
                       className="is-actions"
                       onClick={(e) => e.stopPropagation()}
-                      ref={openId === po.id ? menuRef : null}
+                      ref={openId === rowKey(po) ? menuRef : null}
                     >
                       <div className="po-desk-actions">
                         <button
                           type="button"
                           className="prod-desk-icon-btn"
                           title="More actions"
-                          aria-expanded={openId === po.id}
-                          onClick={() => setOpenId(openId === po.id ? null : po.id)}
+                          aria-expanded={openId === rowKey(po)}
+                          onClick={() => setOpenId(openId === rowKey(po) ? null : rowKey(po))}
                         >
                           <HiOutlineEllipsisVertical size={16} />
                         </button>
-                        {openId === po.id ? (
+                        {openId === rowKey(po) ? (
                           <div className="po-desk-menu" role="menu">
-                            <a href={`${viewUrl}?id=${po.id}`} role="menuitem">
+                            <a href={withSource(viewUrl, po)} role="menuitem">
                               <HiOutlineDocumentText size={15} /> View PO
                             </a>
                             {po.can_edit ? (
-                              <a href={`${editUrl}?id=${po.id}`} role="menuitem">
+                              <a href={withSource(editUrl, po)} role="menuitem">
                                 <HiOutlinePencilSquare size={15} /> Edit
                               </a>
                             ) : null}
                             {po.can_receive ? (
-                              <a href={`${receiveUrl}?id=${po.id}`} role="menuitem">
+                              <a href={withSource(receiveUrl, po)} role="menuitem">
                                 <HiOutlineCheckBadge size={15} /> Receive stock
                               </a>
                             ) : null}
@@ -732,7 +741,11 @@ export default function PurchasesList({ data }) {
                                   className="is-danger"
                                   role="menuitem"
                                   onClick={() =>
-                                    confirmGo('Cancel this order?', 'Cancel Order', `${cancelUrl}?id=${po.id}`)
+                                    confirmGo(
+                                      'Cancel this order?',
+                                      'Cancel Order',
+                                      withSource(cancelUrl, po)
+                                    )
                                   }
                                 >
                                   <HiOutlineXCircle size={15} /> Cancel order
@@ -750,7 +763,7 @@ export default function PurchasesList({ data }) {
                                     confirmGo(
                                       'Permanently delete this purchase order? This cannot be undone.',
                                       'Delete Order',
-                                      `${deleteUrl}?id=${po.id}`
+                                      withSource(deleteUrl, po)
                                     )
                                   }
                                 >

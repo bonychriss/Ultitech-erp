@@ -36,6 +36,7 @@ export interface StoreConfig {
   companyLogoUrl?: string;
   manageWarehousesUrl: string;
   canManageProducts: boolean;
+  isSystemAdmin?: boolean;
   manageProductsUrl: string;
 }
 

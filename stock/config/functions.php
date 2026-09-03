@@ -26,11 +26,26 @@ if (!function_exists('redirect')) {
 // Auth functions helper
 if (!function_exists('hasRole')) {
     function hasRole($roles) {
-        if (!isset($_SESSION['role'])) return false;
-        if (is_array($roles)) {
-            return in_array($_SESSION['role'], $roles);
+        if (!isset($_SESSION['role'])) {
+            return false;
         }
-        return $_SESSION['role'] === $roles;
+        $role = strtolower(trim((string) $_SESSION['role']));
+        if ($role === '') {
+            return false;
+        }
+        if (is_array($roles)) {
+            $needles = array_map(static function ($r) {
+                return strtolower(trim((string) $r));
+            }, $roles);
+            return in_array($role, $needles, true);
+        }
+        if ($role === strtolower(trim((string) $roles))) {
+            return true;
+        }
+        if ($roles === 'admin' && function_exists('isAdmin')) {
+            return isAdmin();
+        }
+        return false;
     }
 }
 

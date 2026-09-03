@@ -168,6 +168,17 @@ export async function fetchMovements(
   return { movements: data.movements, stats: data.stats };
 }
 
+export async function deleteWarehouseMovement(warehouseId: number, movementId: string): Promise<void> {
+  await request('movement_delete', {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'movement_delete',
+      warehouse_id: warehouseId,
+      id: movementId,
+    }),
+  });
+}
+
 export async function recordStockMovement(
   warehouseId: number,
   payload: {

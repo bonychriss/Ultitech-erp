@@ -18,7 +18,8 @@ import MovementDetail from './components/MovementDetail';
 import StoreOutgoingForm from './components/StoreOutgoingForm';
 import StoreReceiveForm from './components/StoreReceiveForm';
 import ExportPdfModal, { type ExportPdfRange } from './components/ExportPdfModal';
-import { fetchInit, fetchMovements, fetchProducts } from './api';
+import WarningConfirmPopup from './components/WarningConfirmPopup';
+import { deleteWarehouseMovement, fetchInit, fetchMovements, fetchProducts } from './api';
 import { exportMovementsPdf } from './utils/exportMovementsPdf';
 import { exportMovementsExcel } from './utils/excelWarehouse';
 import type { Product, StockMovement, StoreConfig, Warehouse } from './types';
@@ -46,14 +47,17 @@ export default function App() {
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportPdfOpen, setExportPdfOpen] = useState(false);
   const [exportPdfError, setExportPdfError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<StockMovement | null>(null);
 
-  const loadMovements = useCallback(async (whId: number, search = searchTerm, type: MovementFilter = movementFilter) => {
+  const canDeleteRecords = Boolean(config?.isSystemAdmin);
+
+  const loadMovements = useCallback(async (whId: number, search = searchTerm) => {
     setLoadingMovements(true);
     setError(null);
     try {
       const data = await fetchMovements(whId, {
         search: search.trim() || undefined,
-        type: type === 'all' ? undefined : type,
       });
       setMovements(data.movements.filter((m) => m.movementType === 'in' || m.movementType === 'out'));
     } catch (err) {
@@ -61,7 +65,7 @@ export default function App() {
     } finally {
       setLoadingMovements(false);
     }
-  }, [searchTerm, movementFilter]);
+  }, [searchTerm]);
 
   const loadProducts = useCallback(async (whId: number) => {
     try {
@@ -93,7 +97,7 @@ export default function App() {
         if (defaultWarehouse) {
           setWarehouseId(defaultWarehouse.id);
           await Promise.all([
-            loadMovements(defaultWarehouse.id, '', 'all'),
+            loadMovements(defaultWarehouse.id, ''),
             loadProducts(defaultWarehouse.id),
           ]);
         }
@@ -109,10 +113,10 @@ export default function App() {
   useEffect(() => {
     if (!warehouseId || loading) return;
     const timer = window.setTimeout(() => {
-      loadMovements(warehouseId, searchTerm, movementFilter);
+      loadMovements(warehouseId, searchTerm);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [warehouseId, searchTerm, movementFilter, loadMovements, loading]);
+  }, [warehouseId, searchTerm, loadMovements, loading]);
 
   const selectedWarehouse = warehouses.find((w) => w.id === warehouseId) ?? null;
 
@@ -142,10 +146,10 @@ export default function App() {
   const refreshData = useCallback(async () => {
     if (!warehouseId) return;
     await Promise.all([
-      loadMovements(warehouseId, searchTerm, movementFilter),
+      loadMovements(warehouseId, searchTerm),
       loadProducts(warehouseId),
     ]);
-  }, [warehouseId, loadMovements, loadProducts, searchTerm, movementFilter]);
+  }, [warehouseId, loadMovements, loadProducts, searchTerm]);
 
   const openOutgoing = (kind: OutgoingKind = 'sold', product: Product | null = null) => {
     setOutgoingKind(kind);
@@ -157,6 +161,31 @@ export default function App() {
   const openMovementDetail = (movement: StockMovement) => {
     setSelectedMovement(movement);
     setView('detail');
+  };
+
+  const handleDeleteMovement = async (movement: StockMovement) => {
+    if (!warehouseId || !canDeleteRecords) return;
+    setPendingDelete(movement);
+  };
+
+  const confirmPendingDelete = async () => {
+    if (!warehouseId || !pendingDelete || !canDeleteRecords) return;
+    const movement = pendingDelete;
+    setDeletingId(movement.id);
+    setError(null);
+    try {
+      await deleteWarehouseMovement(warehouseId, movement.id);
+      setPendingDelete(null);
+      if (selectedMovement?.id === movement.id) {
+        setSelectedMovement(null);
+        setView('list');
+      }
+      await refreshData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete product record');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleExportExcel = async () => {
@@ -462,7 +491,9 @@ export default function App() {
           <MovementsList
             movements={listedMovements}
             loading={loadingMovements && movements.length === 0}
+            deletingId={deletingId}
             onSelect={openMovementDetail}
+            onDelete={canDeleteRecords ? handleDeleteMovement : undefined}
           />
         )}
       </section>
@@ -479,6 +510,21 @@ export default function App() {
         }}
         onExport={handleExportPdf}
       />
+      {pendingDelete && (
+        <WarningConfirmPopup
+          title="Warning!"
+          message={`Delete ${pendingDelete.productName || pendingDelete.productSku || 'this product'} from warehouse records? This will reverse the stock quantity for this row.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          confirming={deletingId === pendingDelete.id}
+          onCancel={() => {
+            if (!deletingId) setPendingDelete(null);
+          }}
+          onConfirm={() => {
+            void confirmPendingDelete();
+          }}
+        />
+      )}
     </div>
   );
 }

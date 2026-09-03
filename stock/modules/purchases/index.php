@@ -294,7 +294,7 @@ $poStatusClass = static function (string $status): string {
     return $map[$status] ?? 'po-desk-badge--draft';
 };
 
-$isAdmin = hasRole('admin');
+$isAdmin = function_exists('stockPurchaseIsAdmin') ? stockPurchaseIsAdmin() : hasRole('admin');
 $search = trim((string) ($_GET['search'] ?? ''));
 
 $purchasesPayload = [];
@@ -368,6 +368,13 @@ if (!empty($_SESSION['flash_message'])) {
     $flashMessage = (string) $_SESSION['flash_message'];
     $flashType = (string) ($_SESSION['flash_type'] ?? 'success');
     unset($_SESSION['flash_message'], $_SESSION['flash_type']);
+} elseif (!empty($_SESSION['success'])) {
+    $flashMessage = (string) $_SESSION['success'];
+    $flashType = (string) ($_SESSION['success_type'] ?? 'success');
+    if ($flashType === 'danger') {
+        $flashType = 'error';
+    }
+    unset($_SESSION['success'], $_SESSION['success_type']);
 }
 
 $base = isset($stockBasePath) && $stockBasePath !== ''

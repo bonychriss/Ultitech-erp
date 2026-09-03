@@ -5515,7 +5515,7 @@ function isAdmin()
     $role = strtolower(trim((string)$_SESSION['role']));
     $roleAdmin = defined('ROLE_ADMIN') ? ROLE_ADMIN : 'admin';
     $roleCoAdmin = defined('ROLE_COMPANY_ADMIN') ? ROLE_COMPANY_ADMIN : 'company_admin';
-    return $role === $roleAdmin || $role === $roleCoAdmin || in_array($role, ['admin', 'administrator', 'superadmin', 'super_admin', 'company_admin', 'company admin', 'owner'], true);
+    return $role === $roleAdmin || $role === $roleCoAdmin || in_array($role, ['admin', 'administrator', 'superadmin', 'super_admin', 'company_admin', 'company admin', 'owner', 'system_admin', 'platform_admin'], true);
 }
 
 function isCompanyAdmin()

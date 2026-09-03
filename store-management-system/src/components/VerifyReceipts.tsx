@@ -85,27 +85,27 @@ function ensureTrailingEmptyRows(
   return [...rows, ...Array.from({ length: toAdd }, () => createManualRow())];
 }
 
-function receiptToRow(receipt: PendingReceipt): IncomingGridRow {
-  return {
-    rowId: receipt.id,
-    receiptId: receipt.id,
-    productId: receipt.productId,
-    productSku: receipt.productSku,
-    productName: receipt.productName,
-    poReference: receipt.poReference || '',
-    qtyExpected: String(receipt.qtyExpected),
-    qtyVerified: '',
-    notes: '',
-    isManual: false,
-  };
+function matchPendingReceipt(
+  row: IncomingGridRow,
+  product: Product,
+  pendingReceipts: PendingReceipt[]
+): PendingReceipt | undefined {
+  if (row.receiptId) {
+    return pendingReceipts.find((receipt) => receipt.id === row.receiptId);
+  }
+  const forProduct = pendingReceipts.filter((receipt) => receipt.productId === product.id);
+  const po = row.poReference.trim().toLowerCase();
+  if (po) {
+    return forProduct.find((receipt) => (receipt.poReference || '').trim().toLowerCase() === po);
+  }
+  return forProduct.length === 1 ? forProduct[0] : undefined;
 }
 
 export default function VerifyReceipts({ warehouseId, products, onVerified }: VerifyReceiptsProps) {
   const [gridRows, setGridRows] = useState<IncomingGridRow[]>(() => ensureTrailingEmptyRows([]));
-  const [loading, setLoading] = useState(true);
+  const [pendingReceipts, setPendingReceipts] = useState<PendingReceipt[]>([]);
   const [confirmingAll, setConfirmingAll] = useState(false);
   const [processingRowId, setProcessingRowId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [statusPopup, setStatusPopup] = useState<PopupState>(null);
 
   const productBySku = useMemo(() => {
@@ -118,25 +118,19 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
-  const loadReceipts = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const refreshPendingReceipts = useCallback(async () => {
     try {
       const list = await fetchPendingReceipts(warehouseId);
-      setGridRows((prev) => {
-        const manualRows = prev.filter((row) => row.isManual && rowHasContent(row));
-        return ensureTrailingEmptyRows([...list.map(receiptToRow), ...manualRows]);
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load pending receipts');
-    } finally {
-      setLoading(false);
+      setPendingReceipts(list);
+    } catch {
+      setPendingReceipts([]);
     }
   }, [warehouseId]);
 
   useEffect(() => {
-    loadReceipts();
-  }, [loadReceipts]);
+    setGridRows(ensureTrailingEmptyRows([]));
+    void refreshPendingReceipts();
+  }, [warehouseId, refreshPendingReceipts]);
 
   const handleRowsChange = useCallback((rows: IncomingGridRow[]) => {
     setGridRows(ensureTrailingEmptyRows(rows));
@@ -190,26 +184,26 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
     const notes = row.notes.trim();
 
     try {
-      if (row.isManual || !row.receiptId) {
-        await confirmManualIncoming(warehouseId, {
-          productId: product.id,
+      const pending = matchPendingReceipt(row, product, pendingReceipts);
+      if (pending) {
+        await updatePendingReceipt(warehouseId, {
+          receiptId: pending.id,
           qtyExpected: expectedQty,
-          qtyVerified: verified,
           poReference: row.poReference.trim(),
+        });
+        await verifyReceipt(warehouseId, {
+          receiptId: pending.id,
+          qtyVerified: verified,
           notes,
         });
         return null;
       }
 
-      await updatePendingReceipt(warehouseId, {
-        receiptId: row.receiptId,
+      await confirmManualIncoming(warehouseId, {
+        productId: product.id,
         qtyExpected: expectedQty,
-        poReference: row.poReference.trim(),
-      });
-
-      await verifyReceipt(warehouseId, {
-        receiptId: row.receiptId,
         qtyVerified: verified,
+        poReference: row.poReference.trim(),
         notes,
       });
       return null;
@@ -225,9 +219,9 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
       setStatusPopup({ title: 'Confirmation failed', message: errMsg, tone: 'error' });
     } else {
       setStatusPopup({ title: 'Stock confirmed', message: 'Product confirmed into stock.', tone: 'success' });
-      if (row.isManual) removeRow(row.rowId);
+      removeRow(row.rowId);
       await onVerified();
-      await loadReceipts();
+      await refreshPendingReceipts();
     }
     setProcessingRowId(null);
   };
@@ -252,7 +246,8 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
       else ok += 1;
     }
     await onVerified();
-    await loadReceipts();
+    await refreshPendingReceipts();
+    setGridRows(ensureTrailingEmptyRows([]));
     setConfirmingAll(false);
     setStatusPopup({
       title: ok > 0 ? 'Stock confirmed' : 'Confirmation failed',
@@ -298,6 +293,9 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
                           productSku: product.sku || '',
                           productName: product.name,
                           poReference: '',
+                          qtyExpected: '',
+                          qtyVerified: '',
+                          notes: '',
                         }
                   )
                 )
@@ -433,51 +431,37 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
 
   return (
     <div className="sms-po-receive sms-po-receive--excel">
-      {error && <div className="sms-alert sms-alert-error mb-2">{error}</div>}
-
-      {loading ? (
-        <div className="sms-table-empty py-10">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-          <span>Loading pending receipts...</span>
-        </div>
-      ) : (
-        <div className="sms-excel-grid-host">
-          <ExcelGrid
-            rows={gridRows}
-            columns={incomingColumns}
-            rowKey={(row) => row.rowId}
-            sheetName="Incoming"
-            onRowsChange={handleRowsChange}
-            onCreateEmptyRow={createManualRow}
-            padVisualRows={12}
-            ribbonActions={
-              <button
-                type="button"
-                disabled={confirmingAll || processingRowId !== null}
-                onClick={handleConfirmAll}
-                className="sms-excel-ribbon-confirm-btn"
-              >
-                {confirmingAll ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4" />
-                )}
-                Confirm all rows
-              </button>
-            }
-            footer={
-              <span className="sms-excel-hint">
-                Type in the next empty row below your data — new rows appear automatically like Excel
-              </span>
-            }
-          />
-          {gridRows.every((row) => row.isManual && !rowHasContent(row)) && !loading && (
-            <p className="sms-excel-hint mt-2">
-              No pending deliveries. Type a product SKU in column A on any empty row below.
-            </p>
-          )}
-        </div>
-      )}
+      <div className="sms-excel-grid-host">
+        <ExcelGrid
+          rows={gridRows}
+          columns={incomingColumns}
+          rowKey={(row) => row.rowId}
+          sheetName="Incoming"
+          onRowsChange={handleRowsChange}
+          onCreateEmptyRow={createManualRow}
+          padVisualRows={12}
+          ribbonActions={
+            <button
+              type="button"
+              disabled={confirmingAll || processingRowId !== null}
+              onClick={handleConfirmAll}
+              className="sms-excel-ribbon-confirm-btn"
+            >
+              {confirmingAll ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4" />
+              )}
+              Confirm all rows
+            </button>
+          }
+          footer={
+            <span className="sms-excel-hint">
+              The sheet starts empty. Pick a product, then a PO reference — Qty Expected fills from that PO line.
+            </span>
+          }
+        />
+      </div>
 
       {statusPopup && (
         <StatusPopup

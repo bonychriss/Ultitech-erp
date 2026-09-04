@@ -32,6 +32,7 @@ import suggestionIconSrc from '../assets/suggestion-icon.png'
 import reportIconSrc from '../assets/report-icon.png'
 import letterIconSrc from '../assets/letter-icon.png'
 import performanceIconSrc from '../assets/performance-icon.png'
+import voucherIconSrc from '../assets/voucher-icon.png'
 
 function getConfig() {
   if (typeof window !== 'undefined' && window.__SELECT_MODULE_CFG__ && typeof window.__SELECT_MODULE_CFG__ === 'object') {
@@ -291,8 +292,19 @@ function LetterIcon() {
   )
 }
 
+function VoucherIcon() {
+  return (
+    <img
+      src={voucherIconSrc}
+      alt=""
+      className="sm-icon sm-icon--voucher"
+      aria-hidden="true"
+    />
+  )
+}
+
 const ICONS = {
-  voucher: FileText,
+  voucher: VoucherIcon,
   attendance: AttendanceIcon,
   deliveries: DeliveryIcon,
   outstanding: OutstandingIcon,
@@ -467,6 +479,13 @@ function ModuleIcon({ name, color }) {
     return (
       <div className="sm-icon-box">
         <LetterIcon />
+      </div>
+    )
+  }
+  if (name === 'voucher') {
+    return (
+      <div className="sm-icon-box">
+        <VoucherIcon />
       </div>
     )
   }

@@ -95,7 +95,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $sigImg = "<img src='$sigUrl' alt='Signature' style='max-height: 80px; max-width: 100%; object-fit: contain;'>";
         }
 
-        $logoUrl = $baseUrl . '/assets/images/Untitled.jpg';
+        $logoUrl = function_exists('getCompanyLogoUrl') ? trim((string) getCompanyLogoUrl()) : '';
+        if ($logoUrl === '') {
+            $logoUrl = $baseUrl . '/assets/images/Untitled.jpg';
+        }
 
         // HTML Body
         $body = "
@@ -107,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             </style>
         </head>
         <body style='background-color: #525659; font-family: sans-serif; margin: 0; padding: 20px;'>
-            <div style='background-color: #f4f1ea; max-width: 800px; margin: 0 auto; padding: 40px; box-shadow: 0 0 10px rgba(0,0,0,0.1); color: #1a1a1a;'>
+            <div style='background-color: #ffffff; max-width: 800px; margin: 0 auto; padding: 40px; box-shadow: 0 0 10px rgba(0,0,0,0.1); color: #1a1a1a;'>
                 
                 <!-- Header -->
                 <table style='width: 100%; border-collapse: collapse; margin-bottom: 30px;'>
@@ -330,7 +333,10 @@ foreach ($slips as $slip) {
         $sigImg = "<img src='$sigUrl' alt='Signature' style='max-height: 80px; max-width: 100%; object-fit: contain;'>";
     }
 
-    $logoUrl = $baseUrl . '/assets/images/Untitled.jpg';
+    $logoUrl = function_exists('getCompanyLogoUrl') ? trim((string) getCompanyLogoUrl()) : '';
+    if ($logoUrl === '') {
+        $logoUrl = $baseUrl . '/assets/images/Untitled.jpg';
+    }
 
     // HTML Body - mimicking "Monsieur" Layout with inline CSS
     $body = "
@@ -342,7 +348,7 @@ foreach ($slips as $slip) {
         </style>
     </head>
     <body style='background-color: #525659; font-family: sans-serif; margin: 0; padding: 20px;'>
-        <div style='background-color: #f4f1ea; max-width: 800px; margin: 0 auto; padding: 40px; box-shadow: 0 0 10px rgba(0,0,0,0.1); color: #1a1a1a;'>
+        <div style='background-color: #ffffff; max-width: 800px; margin: 0 auto; padding: 40px; box-shadow: 0 0 10px rgba(0,0,0,0.1); color: #1a1a1a;'>
             
             <!-- Header -->
             <table style='width: 100%; border-collapse: collapse; margin-bottom: 30px;'>

@@ -672,6 +672,72 @@ function payrollDeskSaveSalary(PDO $pdo, array $payload): void
 }
 
 /**
+ * Employee-facing published payslips for the logged-in user.
+ *
+ * @return array<string, mixed>
+ */
+function payrollDeskMyPayslipsPayload(PDO $pdo): array
+{
+    $userId = (int) ($_SESSION['user_id'] ?? 0);
+    $slips = [];
+
+    if ($userId > 0 && function_exists('payroll_table_exists')
+        && payroll_table_exists('payslips')
+        && payroll_table_exists('payroll_runs')) {
+        $stmt = $pdo->prepare(
+            'SELECT p.*, pr.month, pr.year, pr.run_date, pr.status AS run_status
+             FROM ' . payroll_table('payslips') . ' p
+             JOIN ' . payroll_table('payroll_runs') . ' pr ON p.payroll_run_id = pr.id
+             WHERE p.user_id = ?
+               AND pr.status IN (\'approved\', \'paid\')
+               AND p.is_published = 1
+             ORDER BY pr.year DESC, pr.month DESC, p.id DESC'
+        );
+        $stmt->execute([$userId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        foreach ($rows as $row) {
+            $year = (int) ($row['year'] ?? 0);
+            $month = (int) ($row['month'] ?? 0);
+            $periodDate = sprintf('%04d-%02d-01', $year, max(1, $month));
+            $runStatus = (string) ($row['run_status'] ?? $row['status'] ?? 'approved');
+            $slipStatus = strtolower((string) ($row['status'] ?? $runStatus));
+            if ($slipStatus !== 'paid' && $runStatus === 'paid') {
+                $slipStatus = 'paid';
+            }
+
+            $slips[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'idLabel' => '#' . str_pad((string) (int) ($row['id'] ?? 0), 5, '0', STR_PAD_LEFT),
+                'year' => $year,
+                'month' => $month,
+                'periodLabel' => date('F Y', strtotime($periodDate)),
+                'runDate' => (string) ($row['run_date'] ?? ''),
+                'runDateLabel' => !empty($row['run_date']) ? date('d M, Y', strtotime((string) $row['run_date'])) : '',
+                'basicSalary' => (float) ($row['basic_salary'] ?? 0),
+                'netSalary' => (float) ($row['net_salary'] ?? 0),
+                'status' => $slipStatus === 'paid' ? 'paid' : 'approved',
+                'statusLabel' => $slipStatus === 'paid' ? 'Paid' : 'Approved',
+            ];
+        }
+    }
+
+    return [
+        'user' => payrollDeskCurrentUser(),
+        'stats' => [
+            'total' => count($slips),
+            'paid' => count(array_filter($slips, static fn(array $s): bool => ($s['status'] ?? '') === 'paid')),
+            'latestNet' => $slips[0]['netSalary'] ?? 0,
+            'latestPeriod' => $slips[0]['periodLabel'] ?? null,
+        ],
+        'payslips' => $slips,
+        'links' => [
+            'payslipBase' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString(),
+        ],
+    ];
+}
+
+/**
  * @param array<string, mixed> $extraWindowVars
  */
 function payrollDeskRenderReactEntry(string $pageTitle, string $headerTitle, string $payrollPage, array $extraWindowVars = []): void

@@ -41,6 +41,54 @@ $is_owner = ($current_user_id > 0 && $current_user_id == $slip['user_id']);
 if (!isFinanceOrAdmin() && !$is_owner) {
     die("Access denied. You can only view your own payslips.");
 }
+
+$isPrintMode = isset($_GET['print_mode']);
+$isEmbed = isset($_GET['embed']) && !$isPrintMode;
+
+$companyInfo = function_exists('getCompanyInfo') ? getCompanyInfo() : [];
+$companyName = trim((string) ($companyInfo['company_name'] ?? ''));
+if ($companyName === '' && function_exists('getCompanySetting')) {
+    $companyName = trim((string) getCompanySetting('company_name', ''));
+}
+if ($companyName === '') {
+    $companyName = defined('COMPANY_NAME') ? (string) COMPANY_NAME : 'ERP System';
+}
+
+$companyLogoUrl = function_exists('getCompanyLogoUrl') ? trim((string) getCompanyLogoUrl()) : '';
+if ($companyLogoUrl === '') {
+    $fallbackLogo = 'assets/images/Untitled.jpg';
+    $fallbackDisk = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $fallbackLogo);
+    if (is_file($fallbackDisk)) {
+        $companyLogoUrl = function_exists('app_url') ? app_url('/' . $fallbackLogo) : ($baseUrl . '/' . $fallbackLogo);
+    }
+}
+
+$companyAddress = '';
+$companyPhone = '';
+$companyEmail = '';
+if (function_exists('getCompanySetting')) {
+    $companyAddress = trim((string) getCompanySetting('company_address', ''));
+    $companyPhone = trim((string) getCompanySetting('company_phone', ''));
+    $companyEmail = trim((string) getCompanySetting('company_email', ''));
+}
+if ($companyAddress === '') {
+    $companyAddress = trim((string) ($companyInfo['company_address'] ?? ''));
+}
+if ($companyPhone === '') {
+    $companyPhone = trim((string) ($companyInfo['company_phone'] ?? ''));
+}
+if ($companyEmail === '') {
+    $companyEmail = trim((string) ($companyInfo['company_email'] ?? ''));
+}
+if ($companyAddress === '') {
+    $companyAddress = defined('COMPANY_ADDRESS') ? (string) COMPANY_ADDRESS : '';
+}
+if ($companyPhone === '') {
+    $companyPhone = defined('COMPANY_PHONE') ? (string) COMPANY_PHONE : '';
+}
+if ($companyEmail === '') {
+    $companyEmail = defined('COMPANY_EMAIL') ? (string) COMPANY_EMAIL : '';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,7 +103,7 @@ if (!isFinanceOrAdmin() && !$is_owner) {
     <style>
         /* Base Reset & Colors */
         :root {
-            --bg-color: #f4f1ea; /* The Monsieur Beige */
+            --bg-color: #ffffff;
             --text-color: #1a1a1a;
             --accent-color: #dcbfa4; /* Thin gold lines */
             --header-font: 'Playfair Display', serif;
@@ -63,13 +111,14 @@ if (!isFinanceOrAdmin() && !$is_owner) {
         }
         
         body { 
-            background: <?= isset($_GET['print_mode']) ? 'white' : '#525659' ?>; /* Application BG or white for PDF */
+            background: <?= $isPrintMode ? 'white' : ($isEmbed ? '#e2e8f0' : '#525659') ?>;
             font-family: var(--body-font); 
             color: var(--text-color);
             margin: 0;
-            padding: <?= isset($_GET['print_mode']) ? '0' : '40px 0' ?>;
+            padding: <?= $isPrintMode ? '0' : ($isEmbed ? '12px' : '40px 0') ?>;
             display: flex;
             justify-content: center;
+            <?= $isEmbed ? 'align-items: flex-start; min-height: 100%; box-sizing: border-box; overflow-x: hidden;' : '' ?>
         }
 
         /* The "Paper" Sheet */
@@ -77,12 +126,19 @@ if (!isFinanceOrAdmin() && !$is_owner) {
             background: var(--bg-color);
             width: 100%;
             max-width: 210mm; /* A4 Width Limit */
-            <?= isset($_GET['print_mode']) ? 'height: 297mm; overflow: hidden;' : 'min-height: 297mm;' ?>
-            padding: 50px;
+            <?= $isPrintMode ? 'height: 297mm; overflow: hidden;' : ($isEmbed ? 'min-height: auto;' : 'min-height: 297mm;') ?>
+            padding: <?= $isEmbed ? '28px 32px' : '50px' ?>;
             box-sizing: border-box;
-            box-shadow: <?= isset($_GET['print_mode']) ? 'none' : '0 0 25px rgba(0,0,0,0.2)' ?>;
+            box-shadow: <?= ($isPrintMode || $isEmbed) ? 'none' : '0 0 25px rgba(0,0,0,0.2)' ?>;
             position: relative;
+            <?= $isEmbed ? 'transform-origin: top center;' : '' ?>
         }
+
+<?php if ($isEmbed): ?>
+        html, body { height: auto; }
+        .signature-section { margin-top: 36px; }
+        .page-bottom { margin-top: 36px; }
+<?php endif; ?>
 
         /* Responsive Mobile Adjustments */
         @media (max-width: 768px) {
@@ -114,7 +170,7 @@ if (!isFinanceOrAdmin() && !$is_owner) {
             }
         }
 
-<?php if (isset($_GET['print_mode'])): ?>
+<?php if ($isPrintMode): ?>
         @page { size: A4; margin: 0; }
         .payslip-sheet { width: 210mm; height: 297mm; padding: 50px; }
 <?php endif; ?>
@@ -139,7 +195,7 @@ if (!isFinanceOrAdmin() && !$is_owner) {
         }
 
         .company-block { text-align: right; }
-        .company-logo-img { height: 50px; width: auto; object-fit: contain; margin-bottom: 5px; mix-blend-mode: multiply; }
+        .company-logo-img { height: 50px; width: auto; object-fit: contain; margin-bottom: 5px; }
         .company-name { font-family: var(--header-font); font-size: 18px; font-weight: 700; }
         .company-slogan { font-size: 12px; color: #666; font-style: italic; }
 
@@ -251,7 +307,7 @@ if (!isFinanceOrAdmin() && !$is_owner) {
 </head>
 <body>
     
-    <?php if (!isset($_GET['print_mode'])): ?>
+    <?php if (!$isPrintMode && !$isEmbed): ?>
     <div class="controls no-print">
         <button class="btn btn-success" id="downloadBtn" onclick="downloadPDF()">Download PDF</button>
         <button class="btn btn-secondary" onclick="window.close()">Close</button>
@@ -266,8 +322,10 @@ if (!isFinanceOrAdmin() && !$is_owner) {
                 <div class="ref-no">No. <?= str_pad($slip['payroll_run_id'], 3, '0', STR_PAD_LEFT) ?>-<?= str_pad($slip['id'], 5, '0', STR_PAD_LEFT) ?></div>
             </div>
             <div class="company-block">
-                <img src="<?= $baseUrl ?>/assets/images/Untitled.jpg" alt="Logo" class="company-logo-img">
-                <div class="company-name"><?= defined('COMPANY_NAME') ? COMPANY_NAME : 'ERP System' ?></div>
+                <?php if ($companyLogoUrl !== ''): ?>
+                <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>" class="company-logo-img">
+                <?php endif; ?>
+                <div class="company-name"><?= htmlspecialchars($companyName) ?></div>
                 <div class="company-slogan">Excellence in Service</div>
             </div>
         </div>
@@ -392,9 +450,9 @@ if (!isFinanceOrAdmin() && !$is_owner) {
                 </div>
 
                 <div class="page-bottom">
-                    <div><?= defined('COMPANY_ADDRESS') ? COMPANY_ADDRESS : 'Plot 123, Standard Street' ?></div>
-                    <div><?= defined('COMPANY_PHONE') ? COMPANY_PHONE : '+255 000 000 000' ?></div>
-                    <div><?= defined('COMPANY_EMAIL') ? COMPANY_EMAIL : 'payroll@example.com' ?></div>
+                    <?php if ($companyAddress !== ''): ?><div><?= htmlspecialchars($companyAddress) ?></div><?php endif; ?>
+                    <?php if ($companyPhone !== ''): ?><div><?= htmlspecialchars($companyPhone) ?></div><?php endif; ?>
+                    <?php if ($companyEmail !== ''): ?><div><?= htmlspecialchars($companyEmail) ?></div><?php endif; ?>
                 </div>
             </div>
 
@@ -445,10 +503,11 @@ if (!isFinanceOrAdmin() && !$is_owner) {
         function downloadPDF() {
             const element = document.getElementById('payslipContent');
             const btn = document.getElementById('downloadBtn');
-            const originalText = btn.innerHTML;
-            
-            btn.innerHTML = 'Generating...';
-            btn.disabled = true;
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = 'Generating...';
+                btn.disabled = true;
+            }
 
             const opt = {
                 margin: 0,
@@ -459,10 +518,45 @@ if (!isFinanceOrAdmin() && !$is_owner) {
             };
 
             html2pdf().from(element).set(opt).save().then(() => {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+                if (btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            }).catch(() => {
+                if (btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
             });
         }
+
+<?php if ($isEmbed): ?>
+        function fitPayslipToViewport() {
+            const sheet = document.getElementById('payslipContent');
+            if (!sheet) return;
+            sheet.style.transform = 'none';
+            sheet.style.width = '';
+            sheet.style.marginBottom = '';
+            const pad = 24;
+            const availW = Math.max(280, window.innerWidth - pad);
+            const availH = Math.max(320, window.innerHeight - pad);
+            const naturalW = sheet.offsetWidth;
+            const naturalH = sheet.scrollHeight;
+            if (naturalW <= 0 || naturalH <= 0) return;
+            const scale = Math.min(availW / naturalW, availH / naturalH, 1);
+            sheet.style.transform = 'scale(' + scale + ')';
+            sheet.style.transformOrigin = 'top center';
+            sheet.style.marginBottom = Math.max(0, (naturalH * scale) - naturalH) + 'px';
+            document.body.style.minHeight = Math.ceil(naturalH * scale + pad) + 'px';
+        }
+
+        window.addEventListener('load', () => {
+            fitPayslipToViewport();
+            setTimeout(fitPayslipToViewport, 150);
+            setTimeout(fitPayslipToViewport, 500);
+        });
+        window.addEventListener('resize', fitPayslipToViewport);
+<?php endif; ?>
 
         // Auto-download if ?download=1 is present
         window.addEventListener('load', () => {

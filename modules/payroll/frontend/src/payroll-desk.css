@@ -853,3 +853,79 @@ a.pay-desk-kpi-card:hover {
     text-align: left;
   }
 }
+
+.pay-my-slips-note {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.pay-slip-preview-backdrop {
+  padding: 0.5rem;
+  align-items: stretch;
+}
+
+.pay-slip-preview-modal {
+  width: min(64rem, calc(100vw - 1rem));
+  max-height: calc(100vh - 1rem);
+  height: calc(100vh - 1rem);
+  border-radius: 12px;
+}
+
+.pay-slip-preview-sub {
+  margin-top: 0.2rem;
+  color: #64748b;
+  font-size: 0.8125rem;
+}
+
+.pay-slip-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.pay-slip-preview-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.pay-slip-preview-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #e2e8f0;
+}
+
+.pay-slip-preview-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(226, 232, 240, 0.92);
+  color: #475569;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 767.98px) {
+  .pay-slip-preview-backdrop {
+    padding: 0.35rem;
+  }
+  .pay-slip-preview-modal {
+    width: calc(100vw - 0.7rem);
+    max-height: calc(100vh - 0.7rem);
+    height: calc(100vh - 0.7rem);
+    border-radius: 10px;
+  }
+}

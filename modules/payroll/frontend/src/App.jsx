@@ -2,6 +2,7 @@ import PayrollDeskPage from './pages/PayrollDeskPage';
 import SalariesDeskPage from './pages/SalariesDeskPage';
 import SalaryEditPage from './pages/SalaryEditPage';
 import ViewRunPage from './pages/ViewRunPage';
+import MyPayslipsPage from './pages/MyPayslipsPage';
 
 function resolvePage() {
   if (typeof window !== 'undefined' && window.__PAYROLL_PAGE__) {
@@ -23,6 +24,10 @@ export default function App() {
 
   if (page === 'view-run') {
     return <ViewRunPage />;
+  }
+
+  if (page === 'my-payslips') {
+    return <MyPayslipsPage />;
   }
 
   return <PayrollDeskPage />;

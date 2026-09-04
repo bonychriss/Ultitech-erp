@@ -152,6 +152,15 @@ export async function fetchSalariesInit() {
   return data;
 }
 
+export async function fetchMyPayslipsInit() {
+  const res = await fetch(`${getApiBase()}/my-payslips-init.php`, { credentials: 'same-origin' });
+  const data = await parseJson(res);
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 export async function fetchSalaryEmployee(id) {
   const res = await fetch(`${getApiBase()}/salary-get.php?id=${encodeURIComponent(String(id))}`, {
     credentials: 'same-origin',

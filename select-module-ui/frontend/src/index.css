@@ -361,6 +361,13 @@ body {
   display: block;
 }
 
+.sm-icon--voucher {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  display: block;
+}
+
 .sm-label {
   color: #1f2937;
   font-size: 16px;

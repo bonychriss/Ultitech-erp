@@ -293,20 +293,15 @@ export default function PriceListPage() {
     setIsGenerating(true);
     setIsModalOpen(false);
     setPdfItemCount(selectedProducts.length);
-    setGenStats({ progress: 5, time: '0.0', speed: '1.2' });
+    setGenStats({ progress: 1, time: '0.0', speed: '0' });
 
     const start = Date.now();
     const timer = window.setInterval(() => {
-      setGenStats((prev) => {
-        const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-        const newProgress = Math.min(99, parseFloat(prev.progress) + (Math.random() * 1.5));
-        return {
-          progress: newProgress,
-          time: elapsed,
-          speed: (Math.random() * 2 + 1.5).toFixed(1),
-        };
-      });
-    }, 150);
+      setGenStats((prev) => ({
+        ...prev,
+        time: ((Date.now() - start) / 1000).toFixed(1),
+      }));
+    }, 250);
 
     let failed = false;
     try {
@@ -317,7 +312,10 @@ export default function PriceListPage() {
         currency,
         logoUrl: init?.logo_url,
         currentUser: init?.current_user,
-        onProgress: (value) => setGenStats((prev) => ({ ...prev, progress: value })),
+        onProgress: (value) => setGenStats((prev) => ({
+          ...prev,
+          progress: Math.max(Number(prev.progress) || 0, Number(value) || 0),
+        })),
       });
       setGenStats((prev) => ({ ...prev, progress: 100 }));
       setSelectMode(false);
@@ -330,7 +328,7 @@ export default function PriceListPage() {
       window.setTimeout(() => {
         setIsGenerating(false);
         setGenStats({ progress: 0, time: 0, speed: 0 });
-      }, failed ? 0 : 1000);
+      }, failed ? 0 : 600);
     }
   }
 
@@ -706,7 +704,7 @@ export default function PriceListPage() {
               <span>{Math.floor(genStats.progress)}%</span>
             </div>
             <h2>Generating Price List</h2>
-            <p>Preparing images and compiling {pdfItemCount} products...</p>
+            <p>Loading product photos, then building PDF for {pdfItemCount} items...</p>
             <div className="pl-generating-bar">
               <div style={{ width: `${genStats.progress}%` }} />
             </div>

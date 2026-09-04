@@ -38,23 +38,24 @@
 
 .pl-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
-@media (min-width: 640px) {
-  .pl-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1280px) {
-  .pl-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (min-width: 768px) {
+  .pl-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+  }
 }
 
 .pl-kpi-card {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
   padding: 0.85rem 1rem;
   background: #fff;
   border: 1px solid #f1f5f9;

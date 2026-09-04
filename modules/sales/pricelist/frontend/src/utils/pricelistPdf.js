@@ -1,20 +1,102 @@
 import { escapeHtml, formatPlainNumber, PLACEHOLDER_IMG, EMPTY_CELL } from './pricelistFormat.js';
 
-function getBase64Image(url) {
+const PDF_THUMB_MAX = 96;
+const IMAGE_CONCURRENCY = 8;
+const IMAGE_TIMEOUT_MS = 12000;
+
+function toPdfImageUrl(url) {
+  const raw = String(url || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('data:')) return raw;
+  try {
+    const parsed = new URL(raw, window.location.href);
+    if (parsed.searchParams.has('size')) {
+      parsed.searchParams.set('size', 'thumbnail');
+    }
+    return parsed.toString();
+  } catch {
+    return raw
+      .replace(/([?&])size=(medium|large|original)\b/i, '$1size=thumbnail');
+  }
+}
+
+function canvasToJpegDataUrl(img, maxEdge = PDF_THUMB_MAX) {
+  const srcW = img.naturalWidth || img.width || 1;
+  const srcH = img.naturalHeight || img.height || 1;
+  const scale = Math.min(1, maxEdge / Math.max(srcW, srcH));
+  const width = Math.max(1, Math.round(srcW * scale));
+  const height = Math.max(1, Math.round(srcH * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(img, 0, 0, width, height);
+  return canvas.toDataURL('image/jpeg', 0.82);
+}
+
+function loadImageElement(url, useCors) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.src = url;
+    if (useCors) img.crossOrigin = 'anonymous';
+    const timer = window.setTimeout(() => {
+      img.onload = null;
+      img.onerror = null;
+      reject(new Error('timeout'));
+    }, IMAGE_TIMEOUT_MS);
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/jpeg'));
+      window.clearTimeout(timer);
+      resolve(img);
     };
-    img.onerror = () => reject(new Error('Could not load logo for repeating header'));
+    img.onerror = () => {
+      window.clearTimeout(timer);
+      reject(new Error('load failed'));
+    };
+    img.src = url;
   });
+}
+
+async function imageUrlToDataUrl(url) {
+  const source = String(url || '').trim();
+  if (!source) return PLACEHOLDER_IMG;
+  if (source.startsWith('data:')) return source;
+
+  const candidates = [true, false];
+  for (const useCors of candidates) {
+    try {
+      const img = await loadImageElement(source, useCors);
+      if (!img.naturalWidth) continue;
+      return canvasToJpegDataUrl(img);
+    } catch {
+      /* try next strategy */
+    }
+  }
+  return PLACEHOLDER_IMG;
+}
+
+async function mapWithConcurrency(items, limit, mapper, onItemDone) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  let completed = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+      completed += 1;
+      if (onItemDone) onItemDone(completed, items.length);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, Math.max(1, items.length)) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
+async function getBase64Image(url) {
+  return imageUrlToDataUrl(url);
 }
 
 export async function generatePriceListPdf({
@@ -30,6 +112,35 @@ export async function generatePriceListPdf({
     throw new Error('PDF library is still loading. Please wait a moment and try again.');
   }
 
+  const list = Array.isArray(products) ? products : [];
+  const report = (value) => {
+    if (typeof onProgress === 'function') onProgress(value);
+  };
+
+  report(4);
+
+  const imageSources = list.map((product) => toPdfImageUrl(product.image_url) || PLACEHOLDER_IMG);
+  const imageDataUrls = await mapWithConcurrency(
+    imageSources,
+    IMAGE_CONCURRENCY,
+    (url) => imageUrlToDataUrl(url),
+    (done, total) => {
+      const ratio = total > 0 ? done / total : 1;
+      report(4 + Math.round(ratio * 72));
+    },
+  );
+
+  report(78);
+
+  const safeLogoUrl = String(logoUrl || '').replace(/"/g, '');
+  const signatureUrl = String(currentUser?.signature_url || '').replace(/"/g, '');
+  const [logoDataUrl, signatureDataUrl] = await Promise.all([
+    safeLogoUrl ? imageUrlToDataUrl(safeLogoUrl) : Promise.resolve(''),
+    signatureUrl ? imageUrlToDataUrl(signatureUrl) : Promise.resolve(''),
+  ]);
+
+  report(84);
+
   const element = document.createElement('div');
   element.style.width = '190mm';
   element.style.padding = '12mm';
@@ -39,8 +150,10 @@ export async function generatePriceListPdf({
 
   const footerName = escapeHtml(company?.company_name || '');
   const footerAddr = escapeHtml(company?.company_address || '');
-  const safeLogoUrl = String(logoUrl || '').replace(/"/g, '');
-  const signatureUrl = currentUser?.signature_url || '';
+  const logoSrc = logoDataUrl && logoDataUrl !== PLACEHOLDER_IMG ? logoDataUrl : safeLogoUrl;
+  const signatureSrc = signatureDataUrl && signatureDataUrl !== PLACEHOLDER_IMG
+    ? signatureDataUrl
+    : signatureUrl;
 
   element.innerHTML = `
     <style>
@@ -48,6 +161,8 @@ export async function generatePriceListPdf({
       tr { page-break-inside: avoid !important; break-inside: avoid !important; }
       td, th { border: 1px solid #e5e7eb; word-wrap: break-word; }
       .pdf-header-p1 { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 2px solid #001f3f; margin-bottom: 30px; }
+      .pdf-thumb { width: 48px; height: 48px; border-radius: 4px; overflow: hidden; background: #f9fafb; margin: 0 auto; }
+      .pdf-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
     </style>
 
     <div class="pdf-header-p1">
@@ -57,7 +172,7 @@ export async function generatePriceListPdf({
         <div style="font-size: 12px; font-weight: 700; color: #111827; margin-top: 4px;">${footerName}</div>
         <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">Date: ${escapeHtml(new Date().toLocaleDateString())}</div>
       </div>
-      <img src="${safeLogoUrl}" style="max-height: 65px; max-width: 180px; object-fit: contain;" alt="" />
+      ${logoSrc ? `<img src="${logoSrc}" style="max-height: 65px; max-width: 180px; object-fit: contain;" alt="" />` : ''}
     </div>
 
     <table>
@@ -71,12 +186,12 @@ export async function generatePriceListPdf({
         </tr>
       </thead>
       <tbody>
-        ${products.map((product, index) => `
+        ${list.map((product, index) => `
           <tr>
             <td style="padding: 10px 8px; font-size: 11px; color: #6b7280; text-align: center;">${index + 1}</td>
             <td style="padding: 10px 8px;">
-              <div style="width: 48px; height: 48px; border-radius: 4px; overflow: hidden; background: #f9fafb; margin: 0 auto;">
-                <img src="${product.image_url || PLACEHOLDER_IMG}" style="width: 100%; height: 100%; object-fit: cover;" />
+              <div class="pdf-thumb">
+                <img src="${imageDataUrls[index] || PLACEHOLDER_IMG}" alt="" />
               </div>
             </td>
             <td style="padding: 10px 8px; font-size: 12px; font-weight: 700; color: #111827; vertical-align: middle;">${escapeHtml(product.name)}</td>
@@ -104,7 +219,7 @@ export async function generatePriceListPdf({
       <div style="text-align: center; width: 220px;">
         <div style="font-size: 10px; color: #6b7280; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">Sales Representative</div>
         <div style="height: 45px; display: flex; align-items: center; justify-content: center;">
-          ${signatureUrl ? `<img src="${signatureUrl}" style="max-height: 45px; max-width: 160px; object-fit: contain;" />` : '<div style="width: 100%; border-bottom: 1px solid #e5e7eb; margin-top: 30px;"></div>'}
+          ${signatureSrc ? `<img src="${signatureSrc}" style="max-height: 45px; max-width: 160px; object-fit: contain;" alt="" />` : '<div style="width: 100%; border-bottom: 1px solid #e5e7eb; margin-top: 30px;"></div>'}
         </div>
         <div style="border-top: 2px solid #001f3f; margin-top: 5px; padding-top: 8px;">
           <div style="font-size: 12px; font-weight: 800; color: #111827;">${escapeHtml(currentUser?.full_name || 'Authorized Signatory')}</div>
@@ -113,41 +228,84 @@ export async function generatePriceListPdf({
     </div>
   `;
 
-  const opt = {
-    margin: [30, 10, 15, 10],
-    filename: `PriceList_${new Date().toISOString().split('T')[0]}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 1.5, useCORS: true, logging: false },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak: { mode: ['css', 'legacy'] },
-  };
+  // Keep off-screen so images decode before capture.
+  element.style.position = 'fixed';
+  element.style.left = '-10000px';
+  element.style.top = '0';
+  element.style.zIndex = '-1';
+  document.body.appendChild(element);
 
-  let logoBase64 = null;
   try {
-    logoBase64 = await getBase64Image(safeLogoUrl);
-  } catch {
-    logoBase64 = null;
-  }
+    await Promise.all(
+      Array.from(element.querySelectorAll('img')).map(
+        (img) => (img.complete
+          ? Promise.resolve()
+          : new Promise((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          })),
+      ),
+    );
 
-  await window.html2pdf().set(opt).from(element).toPdf().get('pdf').then(async (pdf) => {
-    const totalPages = pdf.internal.getNumberOfPages();
-    for (let i = 2; i <= totalPages; i += 1) {
-      pdf.setPage(i);
-      pdf.setDrawColor(229, 231, 235);
-      pdf.setLineWidth(0.2);
-      pdf.line(10, 20, 200, 20);
-      if (logoBase64) {
-        pdf.addImage(logoBase64, 'JPEG', 165, 5, 35, 12, undefined, 'FAST');
+    report(90);
+
+    const scale = list.length > 120 ? 1 : (list.length > 60 ? 1.15 : 1.35);
+    const opt = {
+      margin: [30, 10, 15, 10],
+      filename: `PriceList_${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.92 },
+      html2canvas: {
+        scale,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        imageTimeout: 0,
+        backgroundColor: '#ffffff',
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] },
+    };
+
+    let logoBase64 = null;
+    if (logoDataUrl && logoDataUrl.startsWith('data:image')) {
+      logoBase64 = logoDataUrl;
+    } else if (safeLogoUrl) {
+      try {
+        logoBase64 = await getBase64Image(safeLogoUrl);
+      } catch {
+        logoBase64 = null;
       }
-      pdf.setFontSize(8);
-      pdf.setTextColor(37, 99, 235);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('OFFICIAL PRICE LIST', 10, 10);
-      pdf.setFontSize(7);
-      pdf.setTextColor(107, 114, 128);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`${footerName} | Page ${i} of ${totalPages}`, 10, 14);
     }
-    if (onProgress) onProgress(100);
-  }).save();
+
+    await window.html2pdf().set(opt).from(element).toPdf().get('pdf').then(async (pdf) => {
+      const totalPages = pdf.internal.getNumberOfPages();
+      for (let i = 2; i <= totalPages; i += 1) {
+        pdf.setPage(i);
+        pdf.setDrawColor(229, 231, 235);
+        pdf.setLineWidth(0.2);
+        pdf.line(10, 20, 200, 20);
+        if (logoBase64) {
+          try {
+            const format = logoBase64.includes('image/png') ? 'PNG' : 'JPEG';
+            pdf.addImage(logoBase64, format, 165, 5, 35, 12, undefined, 'FAST');
+          } catch {
+            /* skip broken header logo */
+          }
+        }
+        pdf.setFontSize(8);
+        pdf.setTextColor(37, 99, 235);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('OFFICIAL PRICE LIST', 10, 10);
+        pdf.setFontSize(7);
+        pdf.setTextColor(107, 114, 128);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`${String(company?.company_name || '')} | Page ${i} of ${totalPages}`, 10, 14);
+      }
+      report(100);
+    }).save();
+  } finally {
+    if (element.parentNode) {
+      element.parentNode.removeChild(element);
+    }
+  }
 }

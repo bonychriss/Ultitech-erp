@@ -706,7 +706,7 @@ export default function PriceListPage() {
               <span>{Math.floor(genStats.progress)}%</span>
             </div>
             <h2>Generating Price List</h2>
-            <p>Compiling {pdfItemCount} selected products with images...</p>
+            <p>Preparing images and compiling {pdfItemCount} products...</p>
             <div className="pl-generating-bar">
               <div style={{ width: `${genStats.progress}%` }} />
             </div>

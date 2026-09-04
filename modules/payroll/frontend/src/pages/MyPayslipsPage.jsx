@@ -7,7 +7,6 @@ import {
   Loader2,
   Search,
   Wallet,
-  X,
 } from 'lucide-react';
 import {
   buildPayslipUrl,
@@ -44,8 +43,6 @@ export default function MyPayslipsPage() {
   const [search, setSearch] = useState('');
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
-  const [previewSlip, setPreviewSlip] = useState(null);
-  const [iframeLoading, setIframeLoading] = useState(false);
   const searchWrapRef = useRef(null);
 
   const loadData = useCallback(async () => {
@@ -76,20 +73,6 @@ export default function MyPayslipsPage() {
     return () => document.removeEventListener('mousedown', onDown);
   }, []);
 
-  useEffect(() => {
-    if (!previewSlip) return undefined;
-    const onKey = (event) => {
-      if (event.key === 'Escape') setPreviewSlip(null);
-    };
-    document.addEventListener('keydown', onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [previewSlip]);
-
   const links = init?.links || {};
   const stats = init?.stats || {};
   const allSlips = init?.payslips || [];
@@ -105,24 +88,10 @@ export default function MyPayslipsPage() {
     return allSlips.filter((slip) => matchesSlip(slip, q)).slice(0, 6);
   }, [allSlips, search]);
 
-  function openPayslipPreview(slip) {
+  function openPayslip(slip) {
     if (!slip?.id) return;
-    setSuggestionsOpen(false);
-    setIframeLoading(true);
-    setPreviewSlip(slip);
+    window.location.href = buildPayslipUrl(slip.id, links);
   }
-
-  function closePayslipPreview() {
-    setPreviewSlip(null);
-    setIframeLoading(false);
-  }
-
-  const previewUrl = previewSlip
-    ? buildPayslipUrl(previewSlip.id, links, { embed: 1 })
-    : '';
-  const previewDownloadUrl = previewSlip
-    ? buildPayslipUrl(previewSlip.id, links, { download: 1 })
-    : '';
 
   if (loading && !init) {
     return (
@@ -165,7 +134,7 @@ export default function MyPayslipsPage() {
                   const slip = suggestions[activeSuggestion];
                   if (slip) {
                     setSearch(slip.periodLabel || '');
-                    openPayslipPreview(slip);
+                    openPayslip(slip);
                   }
                 } else if (event.key === 'Escape') {
                   setSuggestionsOpen(false);
@@ -199,13 +168,13 @@ export default function MyPayslipsPage() {
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => {
                           setSearch(slip.periodLabel || '');
-                          openPayslipPreview(slip);
+                          openPayslip(slip);
                         }}
                       >
                         <div className="pay-desk-suggestion-meta">
                           <div className="pay-desk-suggestion-name">{slip.periodLabel}</div>
                           <div className="pay-desk-suggestion-code">
-                            {slip.runDateLabel || '—'}
+                            {slip.runDateLabel || '-'}
                             {' | '}
                             {slip.statusLabel}
                           </div>
@@ -297,12 +266,12 @@ export default function MyPayslipsPage() {
                     tabIndex={0}
                     onClick={(event) => {
                       if (isRowActionTarget(event.target)) return;
-                      openPayslipPreview(slip);
+                      openPayslip(slip);
                     }}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        openPayslipPreview(slip);
+                        openPayslip(slip);
                       }
                     }}
                   >
@@ -310,7 +279,7 @@ export default function MyPayslipsPage() {
                       <div className="pay-desk-cell-main">{slip.periodLabel}</div>
                       <div className="pay-desk-cell-sub">{slip.idLabel}</div>
                     </td>
-                    <td className="pay-desk-hide-md">{slip.runDateLabel || '—'}</td>
+                    <td className="pay-desk-hide-md">{slip.runDateLabel || '-'}</td>
                     <td className="pay-desk-hide-lg">{formatAmount(slip.basicSalary)}</td>
                     <td className="pay-desk-amt">{formatAmount(slip.netSalary)}</td>
                     <td>
@@ -322,7 +291,7 @@ export default function MyPayslipsPage() {
                           type="button"
                           className="pay-desk-icon-btn"
                           title="View payslip"
-                          onClick={() => openPayslipPreview(slip)}
+                          onClick={() => openPayslip(slip)}
                         >
                           <Eye size={15} aria-hidden="true" />
                         </button>
@@ -348,68 +317,6 @@ export default function MyPayslipsPage() {
       <div className="pay-my-slips-note">
         Issues with your payslip? Please contact the Finance or HR department for clarification.
       </div>
-
-      {previewSlip && (
-        <div
-          className="pay-desk-modal-backdrop pay-slip-preview-backdrop"
-          role="presentation"
-          onClick={closePayslipPreview}
-        >
-          <div
-            className="pay-desk-modal pay-slip-preview-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="pay-slip-preview-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="pay-salary-edit-modal-head">
-              <div>
-                <h2 id="pay-slip-preview-title" className="pay-salary-edit-modal-title">
-                  {previewSlip.periodLabel || 'Payslip'}
-                </h2>
-                <div className="pay-slip-preview-sub">
-                  {previewSlip.idLabel}
-                  {previewSlip.statusLabel ? ` · ${previewSlip.statusLabel}` : ''}
-                </div>
-              </div>
-              <div className="pay-slip-preview-actions">
-                <a
-                  href={previewDownloadUrl}
-                  className="pay-desk-btn pay-desk-btn-secondary"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Download size={14} aria-hidden="true" />
-                  PDF
-                </a>
-                <button
-                  type="button"
-                  className="pay-salary-edit-modal-close"
-                  onClick={closePayslipPreview}
-                  aria-label="Close payslip preview"
-                >
-                  <X size={18} aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-            <div className="pay-slip-preview-body">
-              {iframeLoading && (
-                <div className="pay-slip-preview-loading" role="status" aria-live="polite">
-                  <Loader2 className="pay-desk-boot-spinner" aria-hidden="true" />
-                  <span>Loading payslip...</span>
-                </div>
-              )}
-              <iframe
-                key={previewSlip.id}
-                title={`Payslip ${previewSlip.periodLabel || previewSlip.id}`}
-                src={previewUrl}
-                className="pay-slip-preview-frame"
-                onLoad={() => setIframeLoading(false)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

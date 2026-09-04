@@ -10,18 +10,15 @@ import {
   ChevronRight,
   Coins,
   Download,
-  Filter,
   Loader2,
   MoreVertical,
   Package,
-  Printer,
-  RotateCcw,
   Search,
-  Settings,
   Tag,
   X,
 } from 'lucide-react';
 import { fetchPricelistInit } from '../api/pricelistDesk.js';
+import filterIcon from '../assets/filter-icon.png';
 import {
   buildVisiblePageNumbers,
   EMPTY_CELL,
@@ -31,6 +28,37 @@ import {
   PLACEHOLDER_IMG,
 } from '../utils/pricelistFormat.js';
 import { generatePriceListPdf } from '../utils/pricelistPdf.js';
+
+const EMPTY_LOTTIE_FALLBACK = '/assets/animations/nothing.lottie';
+
+function ensureDotLottiePlayer() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  if (customElements.get('dotlottie-wc')) return;
+  if (document.getElementById('pl-dotlottie-wc')) return;
+  const script = document.createElement('script');
+  script.id = 'pl-dotlottie-wc';
+  script.type = 'module';
+  script.src = 'https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js';
+  document.head.appendChild(script);
+}
+
+function EmptyProductsState({ animationSrc }) {
+  useEffect(() => {
+    ensureDotLottiePlayer();
+  }, []);
+
+  const src = animationSrc || EMPTY_LOTTIE_FALLBACK;
+
+  return (
+    <div className="exp-desk-empty pl-empty">
+      <div className="pl-empty-lottie" aria-hidden="true">
+        <dotlottie-wc src={src} autoplay loop speed="1" style={{ width: '220px', height: '220px' }} />
+      </div>
+      <p className="exp-desk-empty-title">No products found</p>
+      <p className="exp-desk-empty-sub">Try adjusting search or filters.</p>
+    </div>
+  );
+}
 
 export default function PriceListPage() {
   const [init, setInit] = useState(null);
@@ -45,12 +73,15 @@ export default function PriceListPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState('');
   const [activeOnly, setActiveOnly] = useState(true);
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [menuRowId, setMenuRowId] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [pdfItemCount, setPdfItemCount] = useState(0);
 
   const loadInit = useCallback(async () => {
     setLoading(true);
@@ -72,7 +103,6 @@ export default function PriceListPage() {
   }, [loadInit]);
 
   const currency = init?.currency || 'TZS';
-  const urls = init?.urls || {};
 
   const categoryOptions = useMemo(() => {
     const set = new Set();
@@ -184,7 +214,7 @@ export default function PriceListPage() {
     setActiveOnly(true);
     setMinPrice('');
     setMaxPrice('');
-    setShowMoreFilters(false);
+    setShowFilterPanel(false);
   }
 
   function handlePriceChange(id, newPrice) {
@@ -195,15 +225,82 @@ export default function PriceListPage() {
     ));
   }
 
-  function resetPrices() {
-    setProducts((prev) => prev.map(
-      (product) => ({ ...product, edited_price: product.selling_price }),
-    ));
+  const selectedCount = selectedIds.size;
+
+  const activeFilterCount = [
+    categoryFilter,
+    brandFilter,
+    minPrice,
+    maxPrice,
+    !activeOnly,
+  ].filter(Boolean).length;
+
+  const pageAllSelected = paginatedProducts.length > 0
+    && paginatedProducts.every((product) => selectedIds.has(product.id));
+
+  const filteredAllSelected = filteredProducts.length > 0
+    && filteredProducts.every((product) => selectedIds.has(product.id));
+
+  function enterSelectMode() {
+    setSelectMode(true);
+    setSelectedIds(new Set());
+    setMenuRowId(null);
+    setIsModalOpen(false);
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    setIsModalOpen(false);
+  }
+
+  function toggleProductSelected(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function togglePageSelection() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (pageAllSelected) {
+        paginatedProducts.forEach((product) => next.delete(product.id));
+      } else {
+        paginatedProducts.forEach((product) => next.add(product.id));
+      }
+      return next;
+    });
+  }
+
+  function selectAllFiltered() {
+    setSelectedIds(new Set(filteredProducts.map((product) => product.id)));
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function openPrepareModal() {
+    if (selectedCount === 0) {
+      window.alert('Select at least one product for the price list PDF.');
+      return;
+    }
+    setIsModalOpen(true);
   }
 
   async function handleGeneratePdf() {
+    const selectedProducts = products.filter((product) => selectedIds.has(product.id));
+    if (selectedProducts.length === 0) {
+      window.alert('Select at least one product for the price list PDF.');
+      return;
+    }
+
     setIsGenerating(true);
     setIsModalOpen(false);
+    setPdfItemCount(selectedProducts.length);
     setGenStats({ progress: 5, time: '0.0', speed: '1.2' });
 
     const start = Date.now();
@@ -222,7 +319,7 @@ export default function PriceListPage() {
     let failed = false;
     try {
       await generatePriceListPdf({
-        products,
+        products: selectedProducts,
         customerName,
         company: init?.company,
         currency,
@@ -231,6 +328,8 @@ export default function PriceListPage() {
         onProgress: (value) => setGenStats((prev) => ({ ...prev, progress: value })),
       });
       setGenStats((prev) => ({ ...prev, progress: 100 }));
+      setSelectMode(false);
+      setSelectedIds(new Set());
     } catch (err) {
       failed = true;
       window.alert(err instanceof Error ? err.message : 'Failed to generate PDF.');
@@ -266,59 +365,67 @@ export default function PriceListPage() {
   }
 
   return (
-    <div className="exp-desk-page pl-page">
+    <div className={`exp-desk-page pl-page${selectMode ? ' pl-selecting' : ''}`}>
       <div className="pl-toolbar pl-no-print">
-        {urls.settings && (
-          <a href={urls.settings} className="pl-settings-link" title="Sales settings">
-            <Settings size={18} aria-hidden="true" />
-          </a>
-        )}
         <div className="pl-header-actions">
-          <button type="button" className="exp-desk-btn exp-desk-btn-secondary" onClick={resetPrices}>
-            <RotateCcw size={16} aria-hidden="true" />
-            Reset prices
-          </button>
-          <button type="button" className="exp-desk-btn exp-desk-btn-primary" onClick={() => setIsModalOpen(true)}>
-            <Download size={16} aria-hidden="true" />
-            Download PDF
-          </button>
-          <button type="button" className="exp-desk-btn exp-desk-btn-secondary" onClick={() => window.print()}>
-            <Printer size={16} aria-hidden="true" />
-            Print
-          </button>
+          {selectMode ? (
+            <>
+              <button type="button" className="exp-desk-btn exp-desk-btn-secondary" onClick={exitSelectMode}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="exp-desk-btn exp-desk-btn-primary"
+                onClick={openPrepareModal}
+                disabled={selectedCount === 0}
+              >
+                <Download size={16} aria-hidden="true" />
+                Continue ({selectedCount})
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={`pl-filter-btn${showFilterPanel ? ' is-active' : ''}${activeFilterCount > 0 ? ' has-filters' : ''}`}
+                onClick={() => setShowFilterPanel((value) => !value)}
+                aria-expanded={showFilterPanel}
+                aria-controls="pl-filter-panel"
+              >
+                <img src={filterIcon} alt="" className="pl-filter-btn-icon" width={18} height={18} />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="pl-filter-btn-badge">{activeFilterCount}</span>
+                )}
+              </button>
+              <button type="button" className="exp-desk-btn exp-desk-btn-primary pl-btn-rounded" onClick={enterSelectMode}>
+                <Download size={16} aria-hidden="true" />
+                Download PDF
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="pl-kpi-grid pl-no-print">
-        <div className="pl-kpi-card">
-          <span className="pl-kpi-icon pl-kpi-icon--violet"><Package size={18} /></span>
-          <div>
-            <div className="pl-kpi-value">{dashboardStats.totalProducts}</div>
-            <div className="pl-kpi-label">Total Products</div>
+      {selectMode && (
+        <div className="pl-select-banner pl-no-print" role="status">
+          <div className="pl-select-banner-text">
+            Select products to include in the price list PDF.
+          </div>
+          <div className="pl-select-banner-actions">
+            <button type="button" className="pl-chip-link" onClick={togglePageSelection}>
+              {pageAllSelected ? 'Clear page' : 'Select page'}
+            </button>
+            <button
+              type="button"
+              className="pl-chip-link"
+              onClick={filteredAllSelected ? clearSelection : selectAllFiltered}
+            >
+              {filteredAllSelected ? 'Clear all' : `Select all (${filteredProducts.length})`}
+            </button>
           </div>
         </div>
-        <div className="pl-kpi-card">
-          <span className="pl-kpi-icon pl-kpi-icon--blue"><Tag size={18} /></span>
-          <div>
-            <div className="pl-kpi-value">{dashboardStats.pricedItems}</div>
-            <div className="pl-kpi-label">Priced Items</div>
-          </div>
-        </div>
-        <div className="pl-kpi-card">
-          <span className="pl-kpi-icon pl-kpi-icon--green"><Coins size={18} /></span>
-          <div>
-            <div className="pl-kpi-value pl-kpi-value--money">{formatMoneyDashboard(dashboardStats.totalValue, currency)}</div>
-            <div className="pl-kpi-label">Total Value (Approx.)</div>
-          </div>
-        </div>
-        <div className="pl-kpi-card">
-          <span className="pl-kpi-icon pl-kpi-icon--amber"><CalendarDays size={18} /></span>
-          <div>
-            <div className="pl-kpi-value">{dashboardStats.lastLabel}</div>
-            <div className="pl-kpi-label">Last Updated</div>
-          </div>
-        </div>
-      </div>
+      )}
 
       <div className="pl-filters pl-no-print">
         <div className="pl-filter-row">
@@ -337,74 +444,150 @@ export default function PriceListPage() {
               </button>
             )}
           </div>
-          <select className="pl-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-            <option value="">All Categories</option>
-            {categoryOptions.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-          <select className="pl-select" value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
-            <option value="">All Brands</option>
-            {brandOptions.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className={`pl-filter-toggle${showMoreFilters ? ' is-active' : ''}`}
-            onClick={() => setShowMoreFilters((value) => !value)}
-          >
-            <Filter size={16} aria-hidden="true" />
-            More Filters
-          </button>
         </div>
 
-        {showMoreFilters && (
-          <div className="pl-more-filters">
-            <label>
-              <span>Min price</span>
-              <input type="number" step="any" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" />
-            </label>
-            <label>
-              <span>Max price</span>
-              <input type="number" step="any" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Any" />
-            </label>
+        {showFilterPanel && (
+          <div className="pl-filter-panel" id="pl-filter-panel">
+            <div className="pl-filter-panel-grid">
+              <label>
+                <span>Category</span>
+                <select className="pl-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                  <option value="">All Categories</option>
+                  {categoryOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Brand</span>
+                <select className="pl-select" value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
+                  <option value="">All Brands</option>
+                  {brandOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Min price</span>
+                <input type="number" step="any" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" />
+              </label>
+              <label>
+                <span>Max price</span>
+                <input type="number" step="any" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Any" />
+              </label>
+              <label className="pl-filter-check">
+                <input
+                  type="checkbox"
+                  checked={activeOnly}
+                  onChange={(e) => setActiveOnly(e.target.checked)}
+                />
+                <span>Active items only</span>
+              </label>
+            </div>
+            {(categoryFilter || brandFilter || minPrice || maxPrice || !activeOnly) && (
+              <div className="pl-filter-panel-foot">
+                <button type="button" className="pl-clear-link" onClick={clearAllFilters}>Clear all filters</button>
+              </div>
+            )}
           </div>
         )}
 
-        <div className="pl-filter-chips">
-          {activeOnly && (
-            <span className="pl-chip">
-              Active items only
-              <button type="button" onClick={() => setActiveOnly(false)} aria-label="Remove filter">
-                <X size={12} />
-              </button>
-            </span>
-          )}
-          {!activeOnly && (
-            <button type="button" className="pl-chip-link" onClick={() => setActiveOnly(true)}>
-              Show active items only
-            </button>
-          )}
-          {(search || categoryFilter || brandFilter || minPrice || maxPrice || !activeOnly) && (
+        {(categoryFilter || brandFilter || minPrice || maxPrice || !activeOnly) && !showFilterPanel && (
+          <div className="pl-filter-chips">
+            {categoryFilter && (
+              <span className="pl-chip">
+                {categoryFilter}
+                <button type="button" onClick={() => setCategoryFilter('')} aria-label="Remove category filter">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+            {brandFilter && (
+              <span className="pl-chip">
+                {brandFilter}
+                <button type="button" onClick={() => setBrandFilter('')} aria-label="Remove brand filter">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+            {(minPrice || maxPrice) && (
+              <span className="pl-chip">
+                Price{minPrice ? ` ≥ ${minPrice}` : ''}{maxPrice ? ` ≤ ${maxPrice}` : ''}
+                <button
+                  type="button"
+                  onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+                  aria-label="Remove price filter"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+            {!activeOnly && (
+              <span className="pl-chip">
+                Including inactive
+                <button type="button" onClick={() => setActiveOnly(true)} aria-label="Show active only">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
             <button type="button" className="pl-clear-link" onClick={clearAllFilters}>Clear all</button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {!selectMode && (
+        <div className="pl-kpi-grid pl-no-print">
+          <div className="pl-kpi-card">
+            <span className="pl-kpi-icon pl-kpi-icon--violet"><Package size={18} /></span>
+            <div>
+              <div className="pl-kpi-value">{dashboardStats.totalProducts}</div>
+              <div className="pl-kpi-label">Total Products</div>
+            </div>
+          </div>
+          <div className="pl-kpi-card">
+            <span className="pl-kpi-icon pl-kpi-icon--blue"><Tag size={18} /></span>
+            <div>
+              <div className="pl-kpi-value">{dashboardStats.pricedItems}</div>
+              <div className="pl-kpi-label">Priced Items</div>
+            </div>
+          </div>
+          <div className="pl-kpi-card">
+            <span className="pl-kpi-icon pl-kpi-icon--green"><Coins size={18} /></span>
+            <div>
+              <div className="pl-kpi-value pl-kpi-value--money">{formatMoneyDashboard(dashboardStats.totalValue, currency)}</div>
+              <div className="pl-kpi-label">Total Value (Approx.)</div>
+            </div>
+          </div>
+          <div className="pl-kpi-card">
+            <span className="pl-kpi-icon pl-kpi-icon--amber"><CalendarDays size={18} /></span>
+            <div>
+              <div className="pl-kpi-value">{dashboardStats.lastLabel}</div>
+              <div className="pl-kpi-label">Last Updated</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="exp-desk-results pl-table-section">
         {filteredProducts.length === 0 ? (
-          <div className="exp-desk-empty pl-empty">
-            <Tag className="pl-empty-icon" aria-hidden="true" />
-            <p className="exp-desk-empty-title">No products found</p>
-            <p className="exp-desk-empty-sub">Try adjusting search or filters.</p>
-          </div>
+          <EmptyProductsState animationSrc={init?.empty_animation_url} />
         ) : (
           <>
             <div className="exp-desk-table-wrap">
               <table className="exp-desk-table pl-table">
                 <thead>
                   <tr>
+                    {selectMode && (
+                      <th className="pl-col-check">
+                        <input
+                          type="checkbox"
+                          className="pl-row-check"
+                          checked={pageAllSelected}
+                          onChange={togglePageSelection}
+                          aria-label="Select all products on this page"
+                        />
+                      </th>
+                    )}
                     <th className="pl-col-num">#</th>
                     <th className="pl-col-image">Image</th>
                     <th>Product Details</th>
@@ -417,8 +600,24 @@ export default function PriceListPage() {
                 <tbody>
                   {paginatedProducts.map((product, index) => {
                     const rowNum = (currentPage - 1) * pageSize + index + 1;
+                    const isSelected = selectedIds.has(product.id);
                     return (
-                      <tr key={product.id}>
+                      <tr
+                        key={product.id}
+                        className={selectMode && isSelected ? 'is-selected' : undefined}
+                        onClick={selectMode ? () => toggleProductSelected(product.id) : undefined}
+                      >
+                        {selectMode && (
+                          <td className="pl-col-check" onClick={(event) => event.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              className="pl-row-check"
+                              checked={isSelected}
+                              onChange={() => toggleProductSelected(product.id)}
+                              aria-label={`Select ${product.name || 'product'}`}
+                            />
+                          </td>
+                        )}
                         <td className="pl-col-num">{rowNum}</td>
                         <td className="pl-col-image">
                           <img
@@ -440,13 +639,14 @@ export default function PriceListPage() {
                             step="any"
                             value={product.edited_price}
                             onChange={(e) => handlePriceChange(product.id, e.target.value)}
+                            onClick={(event) => event.stopPropagation()}
                             className={`pl-price-input${product.edited_price !== product.selling_price ? ' is-edited' : ''}`}
                           />
                           {product.edited_price !== product.selling_price && (
                             <div className="pl-price-was">Was {formatCurrency(product.selling_price, currency)}</div>
                           )}
                         </td>
-                        <td className="pl-col-action" data-pl-row-menu>
+                        <td className="pl-col-action" data-pl-row-menu onClick={(event) => event.stopPropagation()}>
                           <div className="pl-row-menu-wrap">
                             <button
                               type="button"
@@ -533,7 +733,9 @@ export default function PriceListPage() {
               className="pl-modal-input"
               autoFocus
             />
-            <p className="pl-modal-help">This will appear at the top of the price list.</p>
+            <p className="pl-modal-help">
+              This will appear at the top of the price list. PDF will include {selectedCount} selected product{selectedCount === 1 ? '' : 's'}.
+            </p>
             <div className="pl-modal-actions">
               <button type="button" className="exp-desk-btn exp-desk-btn-secondary" onClick={() => setIsModalOpen(false)}>
                 Cancel
@@ -554,7 +756,7 @@ export default function PriceListPage() {
               <span>{Math.floor(genStats.progress)}%</span>
             </div>
             <h2>Generating Price List</h2>
-            <p>Compiling {products.length} products with images...</p>
+            <p>Compiling {pdfItemCount} selected products with images...</p>
             <div className="pl-generating-bar">
               <div style={{ width: `${genStats.progress}%` }} />
             </div>

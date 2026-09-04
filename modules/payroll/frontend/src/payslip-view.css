@@ -1,0 +1,156 @@
+.pv-page-root {
+  width: 100%;
+  min-height: 320px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: var(--erp-font-family, Inter, system-ui, sans-serif);
+}
+
+.pv-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  background: #f8fafc;
+}
+
+.pv-control-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.pv-control-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.pv-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #475569;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.4rem 0.65rem;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.pv-back-link:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.pv-title-block {
+  min-width: 0;
+}
+
+.pv-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.pv-subtitle {
+  margin-top: 0.15rem;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.pv-control-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.pv-document-stage {
+  width: 100%;
+  padding: 1.25rem 0 2rem;
+}
+
+.pv-sheet-container {
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  background: #fff;
+  box-sizing: border-box;
+  position: relative;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.pv-document-frame {
+  display: block;
+  width: 100%;
+  min-height: 900px;
+  border: 0;
+  background: #fff;
+}
+
+.pv-document-loading,
+.pv-boot-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 3rem 1rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.pv-document-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.pv-boot-error {
+  color: #b91c1c;
+}
+
+@media (max-width: 767.98px) {
+  .pv-control-panel {
+    padding-bottom: 0.75rem;
+  }
+
+  .pv-document-stage {
+    padding: 0.75rem 0 1.5rem;
+  }
+
+  .pv-sheet-container {
+    max-width: 100%;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+  }
+}
+
+@media print {
+  .pv-chrome {
+    display: none !important;
+  }
+
+  .pv-page-root,
+  .pv-document-stage {
+    background: #fff !important;
+    padding: 0 !important;
+  }
+
+  .pv-sheet-container {
+    max-width: none;
+    border: none;
+    box-shadow: none;
+  }
+}

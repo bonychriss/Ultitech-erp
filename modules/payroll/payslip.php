@@ -89,6 +89,51 @@ if ($companyPhone === '') {
 if ($companyEmail === '') {
     $companyEmail = defined('COMPANY_EMAIL') ? (string) COMPANY_EMAIL : '';
 }
+
+$isDownload = isset($_GET['download']);
+
+// Full-page React document viewer (same pattern as sales order view).
+if (!$isPrintMode && !$isEmbed && !$isDownload) {
+    require_once __DIR__ . '/includes/payroll-lib.php';
+    if (payrollDeskLoadReactAssets() !== null) {
+        if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
+            $_GET['module'] = 'payroll';
+        }
+        $_SESSION['active_module'] = 'payroll';
+
+        $periodLabel = date('F Y', mktime(0, 0, 0, (int) $slip['month'], 1, (int) $slip['year']));
+        $backUrl = isFinanceOrAdmin()
+            ? payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(['id' => (int) $slip['payroll_run_id']])
+            : payrollDeskPublicUrl('my_payslips.php') . payrollDeskQueryString();
+
+        payrollDeskRenderReactEntry(
+            'Payslip - ' . (string) $slip['full_name'],
+            'Payslip',
+            'payslip-view',
+            [
+                '__PAYROLL_PAYSLIP_ID__' => (int) $id,
+                '__PAYROLL_PAYSLIP_META__' => [
+                    'id' => (int) $id,
+                    'periodLabel' => $periodLabel,
+                    'employeeName' => (string) ($slip['full_name'] ?? ''),
+                    'idLabel' => '#' . str_pad((string) $id, 5, '0', STR_PAD_LEFT),
+                    'runId' => (int) ($slip['payroll_run_id'] ?? 0),
+                    'statusLabel' => ((string) ($slip['status'] ?? '') === 'paid') ? 'Paid' : 'Approved',
+                    'backUrl' => $backUrl,
+                    'myPayslipsUrl' => payrollDeskPublicUrl('my_payslips.php') . payrollDeskQueryString(),
+                    'downloadUrl' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString([
+                        'id' => (int) $id,
+                        'download' => 1,
+                    ]),
+                    'embedUrl' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString([
+                        'id' => (int) $id,
+                        'embed' => 1,
+                    ]),
+                ],
+            ]
+        );
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -111,33 +156,32 @@ if ($companyEmail === '') {
         }
         
         body { 
-            background: <?= $isPrintMode ? 'white' : ($isEmbed ? '#e2e8f0' : '#525659') ?>;
+            background: <?= $isPrintMode ? 'white' : ($isEmbed ? '#ffffff' : '#525659') ?>;
             font-family: var(--body-font); 
             color: var(--text-color);
             margin: 0;
-            padding: <?= $isPrintMode ? '0' : ($isEmbed ? '12px' : '40px 0') ?>;
+            padding: <?= $isPrintMode ? '0' : ($isEmbed ? '0' : '40px 0') ?>;
             display: flex;
             justify-content: center;
-            <?= $isEmbed ? 'align-items: flex-start; min-height: 100%; box-sizing: border-box; overflow-x: hidden;' : '' ?>
+            <?= $isEmbed ? 'align-items: stretch; min-height: 100%; box-sizing: border-box; overflow-x: hidden;' : '' ?>
         }
 
         /* The "Paper" Sheet */
         .payslip-sheet {
             background: var(--bg-color);
             width: 100%;
-            max-width: 210mm; /* A4 Width Limit */
+            max-width: <?= $isEmbed ? 'none' : '210mm' ?>;
             <?= $isPrintMode ? 'height: 297mm; overflow: hidden;' : ($isEmbed ? 'min-height: auto;' : 'min-height: 297mm;') ?>
-            padding: <?= $isEmbed ? '28px 32px' : '50px' ?>;
+            padding: <?= $isEmbed ? '40px 42px' : '50px' ?>;
             box-sizing: border-box;
             box-shadow: <?= ($isPrintMode || $isEmbed) ? 'none' : '0 0 25px rgba(0,0,0,0.2)' ?>;
             position: relative;
-            <?= $isEmbed ? 'transform-origin: top center;' : '' ?>
         }
 
 <?php if ($isEmbed): ?>
-        html, body { height: auto; }
-        .signature-section { margin-top: 36px; }
-        .page-bottom { margin-top: 36px; }
+        html, body { height: auto; width: 100%; }
+        .signature-section { margin-top: 40px; }
+        .page-bottom { margin-top: 40px; }
 <?php endif; ?>
 
         /* Responsive Mobile Adjustments */
@@ -531,31 +575,7 @@ if ($companyEmail === '') {
         }
 
 <?php if ($isEmbed): ?>
-        function fitPayslipToViewport() {
-            const sheet = document.getElementById('payslipContent');
-            if (!sheet) return;
-            sheet.style.transform = 'none';
-            sheet.style.width = '';
-            sheet.style.marginBottom = '';
-            const pad = 24;
-            const availW = Math.max(280, window.innerWidth - pad);
-            const availH = Math.max(320, window.innerHeight - pad);
-            const naturalW = sheet.offsetWidth;
-            const naturalH = sheet.scrollHeight;
-            if (naturalW <= 0 || naturalH <= 0) return;
-            const scale = Math.min(availW / naturalW, availH / naturalH, 1);
-            sheet.style.transform = 'scale(' + scale + ')';
-            sheet.style.transformOrigin = 'top center';
-            sheet.style.marginBottom = Math.max(0, (naturalH * scale) - naturalH) + 'px';
-            document.body.style.minHeight = Math.ceil(naturalH * scale + pad) + 'px';
-        }
-
-        window.addEventListener('load', () => {
-            fitPayslipToViewport();
-            setTimeout(fitPayslipToViewport, 150);
-            setTimeout(fitPayslipToViewport, 500);
-        });
-        window.addEventListener('resize', fitPayslipToViewport);
+        // Embed mode fills the iframe width; vertical scroll shows the full document.
 <?php endif; ?>
 
         // Auto-download if ?download=1 is present

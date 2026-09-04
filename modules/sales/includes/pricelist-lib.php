@@ -246,9 +246,22 @@ function pricelistInitData(): array
     global $pdo;
 
     $module = pricelistDeskModuleQuery();
+    $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
 
+    $companySettings = false;
     try {
-        $companySettings = $pdo->query('SELECT * FROM sales_settings LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+        if ($companyId > 0) {
+            try {
+                $stmt = $pdo->prepare('SELECT * FROM sales_settings WHERE company_id = ? LIMIT 1');
+                $stmt->execute([$companyId]);
+                $companySettings = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (Throwable $e) {
+                $companySettings = false;
+            }
+        }
+        if (!$companySettings) {
+            $companySettings = $pdo->query('SELECT * FROM sales_settings LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+        }
     } catch (Throwable $e) {
         $companySettings = false;
     }
@@ -256,12 +269,42 @@ function pricelistInitData(): array
         $companySettings = pricelistDeskDefaultCompanySettings();
     }
 
+    // Prefer tenant company profile so name/address match the active company logo.
+    if (function_exists('getCompanySetting')) {
+        foreach ([
+            'company_name',
+            'company_address',
+            'company_phone',
+            'company_email',
+            'company_tin',
+            'company_vat',
+            'company_website',
+        ] as $key) {
+            $val = getCompanySetting($key);
+            if (is_string($val) && trim($val) !== '') {
+                $companySettings[$key] = trim($val);
+            }
+        }
+    }
+
     $fetch = pricelistDeskFetchProducts($pdo);
     $currency = (string) ($companySettings['default_currency'] ?? 'TZS');
-    $logoFile = (string) ($companySettings['company_logo'] ?? 'Untitled.jpg');
-    $logoPath = function_exists('app_url')
-        ? app_url('/assets/images/' . ltrim($logoFile, '/'))
-        : '/assets/images/' . ltrim($logoFile, '/');
+
+    $logoPath = '';
+    if (function_exists('getCompanyLogoUrl')) {
+        $logoPath = trim((string) getCompanyLogoUrl($companyId > 0 ? $companyId : null));
+    }
+    if ($logoPath === '') {
+        $logoFile = (string) ($companySettings['company_logo'] ?? 'Untitled.jpg');
+        $logoPath = function_exists('app_url')
+            ? app_url('/assets/images/' . ltrim($logoFile, '/'))
+            : '/assets/images/' . ltrim($logoFile, '/');
+    }
+    $companySettings['company_logo_url'] = $logoPath;
+
+    $emptyAnimationUrl = function_exists('app_url')
+        ? app_url('/assets/animations/nothing.lottie')
+        : '/assets/animations/nothing.lottie';
 
     $userId = (int) ($_SESSION['user_id'] ?? 0);
     $currentUser = ['full_name' => '', 'signature_path' => ''];
@@ -292,6 +335,7 @@ function pricelistInitData(): array
         'company' => $companySettings,
         'currency' => $currency,
         'logo_url' => $logoPath,
+        'empty_animation_url' => $emptyAnimationUrl,
         'current_user' => $currentUser,
         'meta' => $fetch['meta'],
         'urls' => [

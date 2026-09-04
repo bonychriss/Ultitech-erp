@@ -6,8 +6,6 @@ import {
 } from 'react';
 import {
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   Coins,
   Download,
   Loader2,
@@ -20,9 +18,7 @@ import {
 import { fetchPricelistInit } from '../api/pricelistDesk.js';
 import filterIcon from '../assets/filter-icon.png';
 import {
-  buildVisiblePageNumbers,
   EMPTY_CELL,
-  formatCurrency,
   formatMoneyDashboard,
   mapProductsWithEditedPrices,
   PLACEHOLDER_IMG,
@@ -30,6 +26,40 @@ import {
 import { generatePriceListPdf } from '../utils/pricelistPdf.js';
 
 const EMPTY_LOTTIE_FALLBACK = '/assets/animations/nothing.lottie';
+
+function ProductImage({ src, alt = '' }) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const imageSrc = failed || !src ? PLACEHOLDER_IMG : src;
+
+  useEffect(() => {
+    setLoaded(false);
+    setFailed(false);
+  }, [src]);
+
+  return (
+    <div className={`pl-product-image-wrap${loaded ? ' is-loaded' : ''}`}>
+      {!loaded && <span className="pl-image-skeleton" aria-hidden="true" />}
+      <img
+        src={imageSrc}
+        alt={alt}
+        className={`pl-product-image${loaded ? ' is-visible' : ''}`}
+        loading="lazy"
+        decoding="async"
+        ref={(node) => {
+          if (node && node.complete && node.naturalWidth > 0) {
+            setLoaded(true);
+          }
+        }}
+        onLoad={() => setLoaded(true)}
+        onError={() => {
+          setFailed(true);
+          setLoaded(true);
+        }}
+      />
+    </div>
+  );
+}
 
 function ensureDotLottiePlayer() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -76,8 +106,6 @@ export default function PriceListPage() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [menuRowId, setMenuRowId] = useState(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -144,19 +172,6 @@ export default function PriceListPage() {
     });
   }, [search, products, categoryFilter, brandFilter, activeOnly, minPrice, maxPrice]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize) || 1);
-  const currentPage = Math.min(page, totalPages);
-
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredProducts.slice(start, start + pageSize);
-  }, [filteredProducts, currentPage, pageSize]);
-
-  const visiblePageNumbers = useMemo(
-    () => buildVisiblePageNumbers(totalPages, currentPage),
-    [totalPages, currentPage],
-  );
-
   useEffect(() => {
     const onDocClick = (event) => {
       if (!event.target.closest('[data-pl-row-menu]')) setMenuRowId(null);
@@ -164,14 +179,6 @@ export default function PriceListPage() {
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
   }, []);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [filteredProducts.length, pageSize, page, totalPages]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, categoryFilter, brandFilter, activeOnly, minPrice, maxPrice, pageSize]);
 
   const dashboardStats = useMemo(() => {
     const totalProducts = products.length;
@@ -235,10 +242,7 @@ export default function PriceListPage() {
     !activeOnly,
   ].filter(Boolean).length;
 
-  const pageAllSelected = paginatedProducts.length > 0
-    && paginatedProducts.every((product) => selectedIds.has(product.id));
-
-  const filteredAllSelected = filteredProducts.length > 0
+  const allFilteredSelected = filteredProducts.length > 0
     && filteredProducts.every((product) => selectedIds.has(product.id));
 
   function enterSelectMode() {
@@ -259,18 +263,6 @@ export default function PriceListPage() {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      return next;
-    });
-  }
-
-  function togglePageSelection() {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (pageAllSelected) {
-        paginatedProducts.forEach((product) => next.delete(product.id));
-      } else {
-        paginatedProducts.forEach((product) => next.add(product.id));
-      }
       return next;
     });
   }
@@ -342,10 +334,8 @@ export default function PriceListPage() {
     }
   }
 
-  const startIdx = filteredProducts.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endIdx = filteredProducts.length === 0
-    ? 0
-    : Math.min(filteredProducts.length, currentPage * pageSize);
+  const startIdx = filteredProducts.length === 0 ? 0 : 1;
+  const endIdx = filteredProducts.length;
 
   if (loading && !init) {
     return (
@@ -413,15 +403,12 @@ export default function PriceListPage() {
             Select products to include in the price list PDF.
           </div>
           <div className="pl-select-banner-actions">
-            <button type="button" className="pl-chip-link" onClick={togglePageSelection}>
-              {pageAllSelected ? 'Clear page' : 'Select page'}
-            </button>
             <button
               type="button"
               className="pl-chip-link"
-              onClick={filteredAllSelected ? clearSelection : selectAllFiltered}
+              onClick={allFilteredSelected ? clearSelection : selectAllFiltered}
             >
-              {filteredAllSelected ? 'Clear all' : `Select all (${filteredProducts.length})`}
+              {allFilteredSelected ? 'Clear all' : `Select all (${filteredProducts.length})`}
             </button>
           </div>
         </div>
@@ -582,9 +569,9 @@ export default function PriceListPage() {
                         <input
                           type="checkbox"
                           className="pl-row-check"
-                          checked={pageAllSelected}
-                          onChange={togglePageSelection}
-                          aria-label="Select all products on this page"
+                          checked={allFilteredSelected}
+                          onChange={allFilteredSelected ? clearSelection : selectAllFiltered}
+                          aria-label="Select all products"
                         />
                       </th>
                     )}
@@ -598,8 +585,8 @@ export default function PriceListPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedProducts.map((product, index) => {
-                    const rowNum = (currentPage - 1) * pageSize + index + 1;
+                  {filteredProducts.map((product, index) => {
+                    const rowNum = index + 1;
                     const isSelected = selectedIds.has(product.id);
                     return (
                       <tr
@@ -620,12 +607,7 @@ export default function PriceListPage() {
                         )}
                         <td className="pl-col-num">{rowNum}</td>
                         <td className="pl-col-image">
-                          <img
-                            src={product.image_url || PLACEHOLDER_IMG}
-                            alt=""
-                            className="pl-product-image"
-                            onError={(event) => { event.currentTarget.src = PLACEHOLDER_IMG; }}
-                          />
+                          <ProductImage src={product.image_url || PLACEHOLDER_IMG} />
                         </td>
                         <td>
                           <div className="exp-desk-cell-main">{product.name}</div>
@@ -642,9 +624,6 @@ export default function PriceListPage() {
                             onClick={(event) => event.stopPropagation()}
                             className={`pl-price-input${product.edited_price !== product.selling_price ? ' is-edited' : ''}`}
                           />
-                          {product.edited_price !== product.selling_price && (
-                            <div className="pl-price-was">Was {formatCurrency(product.selling_price, currency)}</div>
-                          )}
                         </td>
                         <td className="pl-col-action" data-pl-row-menu onClick={(event) => event.stopPropagation()}>
                           <div className="pl-row-menu-wrap">
@@ -680,35 +659,6 @@ export default function PriceListPage() {
                 Showing <strong>{startIdx}</strong> to <strong>{endIdx}</strong> of{' '}
                 <strong>{filteredProducts.length}</strong> products
               </p>
-              <div className="pl-pagination-controls">
-                <div className="pl-page-buttons">
-                  <button type="button" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                    <ChevronLeft size={16} />
-                  </button>
-                  {visiblePageNumbers.map((item, idx) => (
-                    item === 'ellipsis' ? (
-                      <span key={`ellipsis-${idx}`} className="pl-page-ellipsis">...</span>
-                    ) : (
-                      <button
-                        key={`page-${item}-${idx}`}
-                        type="button"
-                        className={currentPage === item ? 'is-active' : ''}
-                        onClick={() => setPage(item)}
-                      >
-                        {item}
-                      </button>
-                    )
-                  ))}
-                  <button type="button" disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-                <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="pl-select pl-page-size">
-                  {[10, 25, 50, 100].map((size) => (
-                    <option key={size} value={size}>{size} / page</option>
-                  ))}
-                </select>
-              </div>
             </div>
           </>
         )}

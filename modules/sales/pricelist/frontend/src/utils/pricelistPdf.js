@@ -83,7 +83,6 @@ export async function generatePriceListPdf({
             <td style="padding: 10px 8px; font-size: 11px; color: #4b5563; vertical-align: middle;">${escapeHtml(product.description || EMPTY_CELL)}</td>
             <td style="padding: 10px 8px; text-align: right; font-size: 12px; font-weight: 800; color: #111827; vertical-align: middle;">
               ${formatPlainNumber(product.edited_price)}
-              ${product.edited_price !== product.selling_price ? `<div style="font-size: 9px; color: #d97706; font-weight: 500; margin-top: 2px;">Was ${formatPlainNumber(product.selling_price)}</div>` : ''}
             </td>
           </tr>
         `).join('')}

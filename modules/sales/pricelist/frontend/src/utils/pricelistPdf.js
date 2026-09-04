@@ -1,8 +1,8 @@
 import { formatPlainNumber, PLACEHOLDER_IMG, EMPTY_CELL } from './pricelistFormat.js';
 
-const PDF_THUMB_MAX = 48;
-const IMAGE_CONCURRENCY = 16;
-const IMAGE_TIMEOUT_MS = 6000;
+const PDF_THUMB_MAX = 64;
+const IMAGE_CONCURRENCY = 6;
+const IMAGE_TIMEOUT_MS = 15000;
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
 const MARGIN_X = 12;
@@ -24,19 +24,50 @@ function getJsPdfCtor() {
   return null;
 }
 
-function toPdfImageUrl(url) {
+function toAbsoluteUrl(url) {
   const raw = String(url || '').trim();
-  if (!raw) return '';
-  if (raw.startsWith('data:')) return raw;
+  if (!raw || raw.startsWith('data:')) return raw;
   try {
-    const parsed = new URL(raw, window.location.href);
-    if (parsed.searchParams.has('size')) {
-      parsed.searchParams.set('size', 'thumbnail');
+    return new URL(raw, window.location.href).toString();
+  } catch {
+    return raw;
+  }
+}
+
+function withSize(url, size) {
+  const absolute = toAbsoluteUrl(url);
+  if (!absolute || absolute.startsWith('data:')) return absolute;
+  try {
+    const parsed = new URL(absolute);
+    if (parsed.searchParams.has('size') || parsed.pathname.includes('product_image.php')) {
+      parsed.searchParams.set('size', size);
     }
     return parsed.toString();
   } catch {
-    return raw.replace(/([?&])size=(medium|large|original)\b/i, '$1size=thumbnail');
+    if (/([?&])size=/.test(absolute)) {
+      return absolute.replace(/([?&])size=[^&]*/i, `$1size=${size}`);
+    }
+    return absolute;
   }
+}
+
+function buildImageCandidates(url) {
+  const primary = toAbsoluteUrl(url);
+  if (!primary) return [];
+  if (primary.startsWith('data:')) return [primary];
+
+  const candidates = [];
+  const pushUnique = (value) => {
+    if (value && !candidates.includes(value)) candidates.push(value);
+  };
+
+  // Prefer the same URL the UI already shows (usually medium), then other sizes.
+  pushUnique(primary);
+  pushUnique(withSize(primary, 'medium'));
+  pushUnique(withSize(primary, 'thumbnail'));
+  pushUnique(withSize(primary, 'large'));
+  pushUnique(withSize(primary, 'original'));
+  return candidates;
 }
 
 function canvasToDataUrl(img, maxEdge = PDF_THUMB_MAX, asPng = false) {
@@ -56,11 +87,7 @@ function canvasToDataUrl(img, maxEdge = PDF_THUMB_MAX, asPng = false) {
     ctx.clearRect(0, 0, width, height);
   }
   ctx.drawImage(img, 0, 0, width, height);
-  return asPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.72);
-}
-
-function canvasToJpegDataUrl(img, maxEdge = PDF_THUMB_MAX) {
-  return canvasToDataUrl(img, maxEdge, false);
+  return asPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.78);
 }
 
 function loadImageElement(url, useCors) {
@@ -84,20 +111,76 @@ function loadImageElement(url, useCors) {
   });
 }
 
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('read failed'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function fetchImageAsDataUrl(url) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'same-origin',
+      cache: 'force-cache',
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    if (!blob || !String(blob.type || '').startsWith('image/')) {
+      // Some hosts omit content-type; still try if payload exists.
+      if (!blob || blob.size < 32) throw new Error('not an image');
+    }
+    return blobToDataUrl(blob);
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+async function dataUrlToResized(dataUrl, maxEdge = PDF_THUMB_MAX, asPng = false) {
+  if (!dataUrl || dataUrl.startsWith('data:image/svg')) return PLACEHOLDER_IMG;
+  const img = await loadImageElement(dataUrl, false);
+  if (!img.naturalWidth) return PLACEHOLDER_IMG;
+  return canvasToDataUrl(img, maxEdge, asPng);
+}
+
 async function imageUrlToDataUrl(url, { maxEdge = PDF_THUMB_MAX, asPng = false } = {}) {
   const source = String(url || '').trim();
   if (!source) return PLACEHOLDER_IMG;
-  if (source.startsWith('data:')) return source;
+  if (source.startsWith('data:')) {
+    return source.startsWith('data:image/svg') ? PLACEHOLDER_IMG : dataUrlToResized(source, maxEdge, asPng);
+  }
 
-  for (const useCors of [true, false]) {
+  const candidates = buildImageCandidates(source);
+  for (const candidate of candidates) {
+    // 1) fetch → data URL (most reliable on same-origin live hosts)
     try {
-      const img = await loadImageElement(source, useCors);
-      if (!img.naturalWidth) continue;
-      return canvasToDataUrl(img, maxEdge, asPng);
+      const fetched = await fetchImageAsDataUrl(candidate);
+      if (fetched && fetched.startsWith('data:image')) {
+        return dataUrlToResized(fetched, maxEdge, asPng);
+      }
     } catch {
-      /* next */
+      /* try img element next */
+    }
+
+    // 2) <img> decode with/without CORS
+    for (const useCors of [true, false]) {
+      try {
+        const img = await loadImageElement(candidate, useCors);
+        if (!img.naturalWidth) continue;
+        return canvasToDataUrl(img, maxEdge, asPng);
+      } catch {
+        /* next */
+      }
     }
   }
+
   return PLACEHOLDER_IMG;
 }
 
@@ -394,7 +477,7 @@ export async function generatePriceListPdf({
   report(2);
 
   // Preload images quickly; failures fall back to placeholder.
-  const imageSources = list.map((product) => toPdfImageUrl(product.image_url) || PLACEHOLDER_IMG);
+  const imageSources = list.map((product) => String(product.image_url || '').trim() || PLACEHOLDER_IMG);
   const imageDataUrls = await mapWithConcurrency(
     imageSources,
     IMAGE_CONCURRENCY,

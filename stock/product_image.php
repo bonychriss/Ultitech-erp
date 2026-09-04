@@ -30,9 +30,22 @@ $ctx = function_exists('stock_image_company_context')
 
 $path = null;
 if (function_exists('stock_resolve_product_image_file')) {
-    $path = stock_resolve_product_image_file($productId, $size, $file, $ctx['slug'], $ctx['company_id']);
-    if (($path === null || !is_file($path)) && $file !== '') {
-        $path = stock_resolve_product_image_file($productId, $size, '', $ctx['slug'], $ctx['company_id']);
+    $sizeFallbacks = array($size);
+    foreach (array('thumbnail', 'medium', 'large', 'original') as $candidate) {
+        if (!in_array($candidate, $sizeFallbacks, true)) {
+            $sizeFallbacks[] = $candidate;
+        }
+    }
+
+    foreach ($sizeFallbacks as $trySize) {
+        $path = stock_resolve_product_image_file($productId, $trySize, $file, $ctx['slug'], $ctx['company_id']);
+        if (($path === null || !is_file($path)) && $file !== '') {
+            $path = stock_resolve_product_image_file($productId, $trySize, '', $ctx['slug'], $ctx['company_id']);
+        }
+        if ($path !== null && is_file($path)) {
+            break;
+        }
+        $path = null;
     }
 }
 

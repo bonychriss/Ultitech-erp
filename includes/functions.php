@@ -2889,6 +2889,348 @@ function getUserPendingVoucherApprovals(PDO $pdo, $voucherId, $userId, $userName
 }
 
 /**
+ * Resolve the single current Payment Voucher workflow turn for a voucher.
+ *
+ * Only the person whose turn it currently is should see a PV task badge.
+ *
+ * @return array{action:string,role_key:string,role_label:string,assignee_name:string,assignee_user_id:?int}|null
+ */
+function getCurrentPaymentVoucherTurn(PDO $pdo, array $voucher): ?array
+{
+    if (!($pdo instanceof PDO) || empty($voucher)) {
+        return null;
+    }
+
+    $status = strtolower(trim((string) ($voucher['status'] ?? '')));
+    $voucherId = (int) ($voucher['id'] ?? 0);
+    if ($voucherId <= 0 || $status === '' || $status === 'rejected') {
+        return null;
+    }
+
+    $isPaid = (int) ($voucher['is_paid'] ?? 0) === 1;
+    $isPosted = (int) ($voucher['is_posted'] ?? 0) === 1;
+
+    if ($status === 'approved') {
+        if (!$isPaid) {
+            return array(
+                'action' => 'mark_paid',
+                'role_key' => 'finance',
+                'role_label' => 'Finance',
+                'assignee_name' => '',
+                'assignee_user_id' => null,
+            );
+        }
+        if (!$isPosted) {
+            return array(
+                'action' => 'post',
+                'role_key' => 'finance',
+                'role_label' => 'Finance',
+                'assignee_name' => '',
+                'assignee_user_id' => null,
+            );
+        }
+
+        return null;
+    }
+
+    if (!in_array($status, array('confirming', 'pending'), true)) {
+        return null;
+    }
+
+    $sequence = array(
+        array(
+            'role_key' => 'applicant',
+            'role_label' => 'Applicant',
+            'field' => 'applicant',
+            'action' => 'sign_applicant',
+        ),
+        array(
+            'role_key' => 'department manager',
+            'role_label' => 'Department Manager',
+            'field' => 'department_manager',
+            'action' => 'sign_dept_manager',
+        ),
+        array(
+            'role_key' => 'checked by',
+            'role_label' => 'Checked By',
+            'field' => 'checked_by',
+            'action' => 'sign_checked_by',
+        ),
+    );
+
+    $sameApplicantDept = function_exists('voucherApplicantMatchesDepartmentManager')
+        && voucherApplicantMatchesDepartmentManager($voucher);
+
+    foreach ($sequence as $step) {
+        $assigneeName = trim((string) ($voucher[$step['field']] ?? ''));
+        if ($assigneeName === '') {
+            continue;
+        }
+        if ($step['role_key'] === 'department manager' && $sameApplicantDept) {
+            // One signature covers both Applicant and Department Manager.
+            continue;
+        }
+        if (!voucherApprovalRoleIsApproved($pdo, $voucherId, $step['role_key'])) {
+            $assigneeUserId = resolveVoucherUserIdByDisplayName($pdo, $assigneeName);
+            return array(
+                'action' => $step['action'],
+                'role_key' => $step['role_key'],
+                'role_label' => $step['role_label'],
+                'assignee_name' => $assigneeName,
+                'assignee_user_id' => $assigneeUserId > 0 ? $assigneeUserId : null,
+            );
+        }
+    }
+
+    // Core employee signatures complete → final / GM approve (admins).
+    if (function_exists('voucherCoreApprovalRolesComplete')
+        && voucherCoreApprovalRolesComplete($pdo, $voucherId, $voucher)
+        && function_exists('userCanVoucherGeneralManagerApprove')) {
+        // Probe with a synthetic admin check path: if GM already approved, no turn.
+        try {
+            $st = $pdo->prepare(
+                "SELECT status FROM approvals WHERE voucher_id = ? AND LOWER(TRIM(role)) IN ('general manager', 'gm') ORDER BY id DESC LIMIT 1"
+            );
+            $st->execute(array($voucherId));
+            $gmStatus = strtolower(trim((string) ($st->fetchColumn() ?: '')));
+            if ($gmStatus === 'approved') {
+                return null;
+            }
+        } catch (Throwable $e) {
+        }
+
+        $gmName = trim((string) ($voucher['general_manager'] ?? ''));
+        return array(
+            'action' => 'final_approve',
+            'role_key' => 'general manager',
+            'role_label' => 'Final Approver',
+            'assignee_name' => $gmName,
+            'assignee_user_id' => null,
+        );
+    }
+
+    return null;
+}
+
+/**
+ * Whether the logged-in user is responsible for the voucher's current turn.
+ */
+function userHasPaymentVoucherTurn(PDO $pdo, array $voucher, int $userId, string $userName = ''): bool
+{
+    $userId = (int) $userId;
+    $userName = trim($userName);
+    if ($userId <= 0 && $userName === '') {
+        return false;
+    }
+
+    $turn = getCurrentPaymentVoucherTurn($pdo, $voucher);
+    if ($turn === null) {
+        return false;
+    }
+
+    $action = (string) ($turn['action'] ?? '');
+    if ($action === 'mark_paid' || $action === 'post') {
+        $isAdminUser = function_exists('isAdmin') && isAdmin();
+        $isFinanceUser = function_exists('isFinance') && isFinance();
+        return $isAdminUser || $isFinanceUser;
+    }
+
+    if ($action === 'final_approve') {
+        return function_exists('userCanVoucherGeneralManagerApprove')
+            && userCanVoucherGeneralManagerApprove($pdo, $voucher, $userId);
+    }
+
+    $roleKey = (string) ($turn['role_key'] ?? '');
+    if ($roleKey === '') {
+        return false;
+    }
+
+    if (userIsVoucherApprovalRoleAssignee($voucher, $roleKey, $userName, $userId, $pdo)) {
+        return true;
+    }
+
+    $assigneeUserId = (int) ($turn['assignee_user_id'] ?? 0);
+    if ($userId > 0 && $assigneeUserId > 0 && $assigneeUserId === $userId) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Payment vouchers that currently require action from the logged-in user.
+ *
+ * @return list<array<string,mixed>>
+ */
+function getPendingPaymentVoucherTasks(PDO $pdo, ?int $userId = null, ?string $userName = null, int $limit = 50): array
+{
+    if (!($pdo instanceof PDO) || !erp_connection_has_table($pdo, 'payment_vouchers')) {
+        return array();
+    }
+
+    $userId = $userId !== null ? (int) $userId : (int) ($_SESSION['user_id'] ?? 0);
+    if ($userName === null || trim((string) $userName) === '') {
+        $userName = function_exists('resolveVoucherSessionDisplayName')
+            ? resolveVoucherSessionDisplayName($pdo)
+            : trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? ''));
+    }
+    $userName = trim((string) $userName);
+    if ($userId <= 0 && $userName === '') {
+        return array();
+    }
+
+    $limit = max(1, min(200, (int) $limit));
+    $isAdminUser = function_exists('isAdmin') && isAdmin();
+    $isFinanceUser = function_exists('isFinance') && isFinance();
+
+    $select = 'id, voucher_no, payee_name, total_amount, currency, status, date_created, created_at,
+               applicant, department_manager, checked_by, prepared_by, general_manager, created_by,
+               IFNULL(is_paid,0) AS is_paid, IFNULL(is_posted,0) AS is_posted, approved_by';
+    $where = array();
+    $params = array();
+
+    if ($isAdminUser || $isFinanceUser) {
+        $where[] = "(
+            status IN ('confirming', 'pending')
+            OR (status = 'approved' AND (IFNULL(is_paid,0) = 0 OR IFNULL(is_posted,0) = 0))
+        )";
+    } else {
+        $where[] = "status IN ('confirming', 'pending')";
+        $nameParts = array();
+        if ($userName !== '') {
+            foreach (array('applicant', 'department_manager', 'checked_by') as $col) {
+                $nameParts[] = "LOWER(TRIM($col)) = LOWER(?)";
+                $params[] = $userName;
+            }
+        }
+        if ($userId > 0) {
+            // Also catch by resolved user id via approvals table when present.
+            if (erp_connection_has_table($pdo, 'approvals')) {
+                $where[] = "(
+                    " . ($nameParts ? implode(' OR ', $nameParts) : '0=1') . "
+                    OR id IN (
+                        SELECT DISTINCT voucher_id FROM approvals
+                        WHERE status = 'pending' AND approver_id = ?
+                    )
+                )";
+                $params[] = $userId;
+            } elseif ($nameParts) {
+                $where[] = '(' . implode(' OR ', $nameParts) . ')';
+            } else {
+                return array();
+            }
+        } elseif ($nameParts) {
+            $where[] = '(' . implode(' OR ', $nameParts) . ')';
+        } else {
+            return array();
+        }
+    }
+
+    if (function_exists('companyScopeSql')) {
+        try {
+            list($scopeFrag, $scopeParams) = companyScopeSql('payment_vouchers', '');
+            if (is_string($scopeFrag) && trim($scopeFrag) !== '') {
+                $where[] = ltrim(trim($scopeFrag), 'AND ');
+                if (is_array($scopeParams)) {
+                    $params = array_merge($params, $scopeParams);
+                }
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    $sql = 'SELECT ' . $select . ' FROM payment_vouchers WHERE ' . implode(' AND ', $where)
+        . ' ORDER BY COALESCE(date_created, created_at) DESC, id DESC LIMIT ' . (int) ($limit * 4);
+
+    try {
+        $st = $pdo->prepare($sql);
+        $st->execute($params);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: array();
+    } catch (Throwable $e) {
+        error_log('getPendingPaymentVoucherTasks: ' . $e->getMessage());
+        return array();
+    }
+
+    $out = array();
+    foreach ($rows as $row) {
+        if (!userHasPaymentVoucherTurn($pdo, $row, $userId, $userName)) {
+            continue;
+        }
+        $turn = getCurrentPaymentVoucherTurn($pdo, $row);
+        if ($turn === null) {
+            continue;
+        }
+        $vid = (int) ($row['id'] ?? 0);
+        $viewUrl = function_exists('company_url')
+            ? company_url('employee/view-voucher.php?id=' . $vid . '&module=voucher')
+            : (function_exists('app_url') ? app_url('/employee/view-voucher.php?id=' . $vid . '&module=voucher') : '/employee/view-voucher.php?id=' . $vid);
+
+        $out[] = array(
+            'id' => $vid,
+            'voucher_no' => (string) ($row['voucher_no'] ?? ''),
+            'payee_name' => (string) ($row['payee_name'] ?? ''),
+            'total_amount' => (float) ($row['total_amount'] ?? 0),
+            'currency' => (string) ($row['currency'] ?? 'TZS'),
+            'status' => (string) ($row['status'] ?? ''),
+            'date_created' => (string) ($row['date_created'] ?? $row['created_at'] ?? ''),
+            'prepared_by' => (string) ($row['prepared_by'] ?? ''),
+            'required_action' => (string) ($turn['role_label'] ?? ''),
+            'action_key' => (string) ($turn['action'] ?? ''),
+            'action_label' => paymentVoucherTurnActionLabel($turn),
+            'view_url' => $viewUrl,
+        );
+        if (count($out) >= $limit) {
+            break;
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * Count Payment Vouchers currently requiring action from the logged-in user.
+ */
+function countPendingPaymentVoucherTasks(?PDO $explicitPdo = null, ?int $userId = null, ?string $userName = null): int
+{
+    global $pdo;
+    $usePdo = $explicitPdo instanceof PDO
+        ? $explicitPdo
+        : ($pdo instanceof PDO ? $pdo : ($GLOBALS['pdo'] ?? null));
+    if (!($usePdo instanceof PDO)) {
+        return 0;
+    }
+
+    return count(getPendingPaymentVoucherTasks($usePdo, $userId, $userName, 100));
+}
+
+/**
+ * Human label for the current PV turn action.
+ *
+ * @param array{action?:string,role_label?:string} $turn
+ */
+function paymentVoucherTurnActionLabel(array $turn): string
+{
+    $action = (string) ($turn['action'] ?? '');
+    switch ($action) {
+        case 'sign_applicant':
+            return 'Sign as Applicant';
+        case 'sign_dept_manager':
+            return 'Sign as Department Manager';
+        case 'sign_checked_by':
+            return 'Sign as Checked By';
+        case 'final_approve':
+            return 'Final approval';
+        case 'mark_paid':
+            return 'Mark as paid';
+        case 'post':
+            return 'Post voucher';
+        default:
+            $label = trim((string) ($turn['role_label'] ?? ''));
+            return $label !== '' ? ('Action required: ' . $label) : 'Action required';
+    }
+}
+
+/**
  * Record General Manager approval when voucher is finalized (GM is not in create-time approvals).
  */
 function erp_upsert_general_manager_approval(PDO $pdo, $voucherId, $gmName, $approverUserId = null)

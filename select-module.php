@@ -70,6 +70,17 @@ $voucherModuleUrl = $isAdmin
     ? ($companyRoute('admin/dashboard') . '?module=voucher')
     : ($companyRoute('employee/dashboard') . '?module=voucher');
 
+$pvTaskCount = 0;
+if (function_exists('countPendingPaymentVoucherTasks')) {
+    try {
+        $pvTaskCount = (int) countPendingPaymentVoucherTasks();
+    } catch (Throwable $e) {
+        $pvTaskCount = 0;
+    }
+}
+
+$pvTasksListUrl = $companyRoute('employee/pending-voucher-tasks.php') . '?module=voucher';
+
 $deliveriesDashUrl = $companyRoute('deliveries/index') . '?module=deliveries';
 if ($currentCompanySlug !== '') {
     $deliveriesDashUrl .= '&company_slug=' . rawurlencode($currentCompanySlug);
@@ -330,6 +341,13 @@ $selectModuleConfig = [
     'enabledModuleLabels' => $enabledModuleNames,
     'modules' => $modules,
     'mailUpdate' => $emailModuleUpdateCampaign,
+    'pvTasks' => [
+        'url' => $pvTasksListUrl,
+        'count' => $pvTaskCount,
+        'title' => $pvTaskCount > 0
+            ? ($pvTaskCount === 1 ? '1 voucher needs your action' : $pvTaskCount . ' vouchers need your action')
+            : 'Payment voucher tasks',
+    ],
 ];
 ?>
 <!DOCTYPE html>

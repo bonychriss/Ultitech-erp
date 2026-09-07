@@ -647,6 +647,12 @@ export default function SelectModulePage() {
   const mailUpdate = cfg.mailUpdate && typeof cfg.mailUpdate === 'object' ? cfg.mailUpdate : null
   const desktopAppDownloadUrl = cfg.desktopAppDownloadUrl || ''
   const showDesktopAppDownload = Boolean(cfg.showDesktopAppDownload && desktopAppDownloadUrl)
+  const pvTasks = cfg.pvTasks && typeof cfg.pvTasks === 'object' ? cfg.pvTasks : null
+  const pvTasksUrl = typeof pvTasks?.url === 'string' ? pvTasks.url : ''
+  const pvTaskCount = Math.max(0, Number(pvTasks?.count) || 0)
+  const pvTasksTitle = typeof pvTasks?.title === 'string' && pvTasks.title
+    ? pvTasks.title
+    : 'Payment voucher tasks'
   const enabledPreview = enabledLabels.slice(0, 4).join(', ')
   const enabledMore = enabledLabels.length > 4
 
@@ -731,6 +737,23 @@ export default function SelectModulePage() {
             <strong>{companyName}</strong>
             {enabledPreview ? ` ? ${enabledPreview}${enabledMore ? '...' : ''}` : null}
           </span>
+          {pvTasksUrl ? (
+            <a
+              href={pvTasksUrl}
+              className="sm-pv-notify"
+              title={pvTasksTitle}
+              aria-label={pvTasksTitle}
+            >
+              <span className="sm-pv-notify-inner" aria-hidden="true">
+                <img src={voucherIconSrc} alt="" className="sm-pv-notify-icon" />
+                {pvTaskCount > 0 ? (
+                  <span className="sm-pv-notify-badge">
+                    {pvTaskCount > 99 ? '99+' : pvTaskCount}
+                  </span>
+                ) : null}
+              </span>
+            </a>
+          ) : null}
           {showStatus && statusUrl ? (
             <a href={statusUrl} className="sm-status-btn">
               <Server size={10} aria-hidden="true" /> Status
@@ -755,9 +778,35 @@ export default function SelectModulePage() {
               }}
             >
               {mod.badge ? (
-                <span className={`sm-badge${mod.id === 'email' ? ' sm-badge--mail' : ''}`} title="Recently updated">
-                  {mod.badge}
-                </span>
+                mod.badgeHref ? (
+                  <span
+                    role="link"
+                    tabIndex={0}
+                    className={`sm-badge${mod.badgeKind === 'count' ? ' sm-badge--count' : ''}`}
+                    title={mod.badgeTitle || 'Needs your action'}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      window.location.href = mod.badgeHref
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        window.location.href = mod.badgeHref
+                      }
+                    }}
+                  >
+                    {mod.badgeKind === 'count' && Number(mod.badge) > 99 ? '99+' : mod.badge}
+                  </span>
+                ) : (
+                  <span
+                    className={`sm-badge${mod.id === 'email' ? ' sm-badge--mail' : ''}`}
+                    title={mod.badgeTitle || 'Recently updated'}
+                  >
+                    {mod.badge}
+                  </span>
+                )
               ) : null}
               <ModuleIcon name={mod.icon} color={mod.color || '#111'} />
               <span className="sm-label">{mod.label}</span>

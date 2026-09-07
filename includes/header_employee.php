@@ -167,6 +167,7 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
             <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
                 <i class="fas fa-moon" id="themeToggleIcon"></i>
             </button>
+            <?php require __DIR__ . '/partials/header_pv_tasks.php'; ?>
             <?php require __DIR__ . '/partials/header_notifications.php'; ?>
             <?php endif; ?>
         </div>

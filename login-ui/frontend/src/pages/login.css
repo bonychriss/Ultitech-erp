@@ -156,6 +156,7 @@ figure {
 
 .form-group input[type='text'],
 .form-group input[type='email'],
+.form-group input[type='tel'],
 .form-group input[type='password'] {
   width: 100%;
   display: block;
@@ -166,10 +167,106 @@ figure {
   font-size: 13px;
   color: #222;
   background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .form-group-password input {
   padding-right: 36px;
+}
+
+.form-group-phone .phone-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding-left: 30px;
+  box-sizing: border-box;
+  border-bottom: 1px solid #999;
+  min-height: 34px;
+}
+
+.form-group-phone .phone-country {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 4px 10px 4px 0;
+  cursor: pointer;
+}
+
+.form-group-phone .country-flag-img {
+  width: 22px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  display: block;
+  flex-shrink: 0;
+}
+
+.form-group-phone .country-flag-fallback {
+  width: 22px;
+  height: 16px;
+  border-radius: 2px;
+  background: #e8eef6;
+  color: #475569;
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.form-group-phone .country-dial {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222;
+  font-family: var(--login-font) !important;
+  letter-spacing: 0.01em;
+}
+
+.form-group-phone .country-chevron {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #222;
+  margin-left: 2px;
+}
+
+.form-group-phone .country-code-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+}
+
+.form-group-phone .phone-divider {
+  width: 1px;
+  height: 18px;
+  background: #c5c5c5;
+  flex: 0 0 auto;
+  margin-right: 12px;
+}
+
+.form-group-phone input[type='tel'] {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none !important;
+  border-bottom: none !important;
+  padding: 6px 0;
+  box-shadow: none;
+}
+
+.form-group-phone:focus-within .phone-row {
+  border-bottom-color: #222;
 }
 
 .toggle-password {
@@ -255,6 +352,19 @@ figure {
   margin-top: 4px;
   font-weight: 600;
   font-family: var(--login-font) !important;
+}
+
+.trial-note {
+  font-size: 12px;
+  color: #888;
+  margin: 0 0 18px;
+  line-height: 1.5;
+  font-family: var(--login-font) !important;
+}
+
+.trial-home-link {
+  display: block;
+  margin-top: 8px;
 }
 
 .form-group.remember-me {

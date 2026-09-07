@@ -572,10 +572,10 @@ export async function generatePriceListPdf({
     pdf.setFillColor(255, 255, 255);
     pdf.rect(PAGE_WIDTH_MM - MARGIN_X - 40, MARGIN_TOP - 4, 40, 6, 'F');
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(107, 114, 128);
+      pdf.setFontSize(8);
+      pdf.setTextColor(107, 114, 128);
     pdf.text(`Page ${p} of ${totalPages}`, PAGE_WIDTH_MM - MARGIN_X, MARGIN_TOP + 2, { align: 'right' });
-  }
+    }
 
   report(100);
   pdf.save(`PriceList_${new Date().toISOString().split('T')[0]}.pdf`);

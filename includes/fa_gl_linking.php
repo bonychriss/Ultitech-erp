@@ -112,6 +112,9 @@ if (!function_exists('fa_gl_find_erp_account')) {
      */
     function fa_gl_find_erp_account(PDO $pdo, string $type, array $codes = [], array $namePatterns = []): ?int
     {
+        if (function_exists('tableExists') && !tableExists('erp_accounts', $pdo)) {
+            return null;
+        }
         foreach ($codes as $code) {
             $code = trim((string) $code);
             if ($code === '') {
@@ -173,6 +176,18 @@ if (!function_exists('fa_gl_create_erp_account')) {
         $name = trim($name);
         if ($code === '' || $name === '') {
             return 0;
+        }
+        if (function_exists('tableExists') && !tableExists('erp_accounts', $pdo)) {
+            if (function_exists('general_ledger_ensure_accounts_table')) {
+                try {
+                    general_ledger_ensure_accounts_table($pdo);
+                } catch (Throwable $e) {
+                    return 0;
+                }
+            }
+            if (function_exists('tableExists') && !tableExists('erp_accounts', $pdo)) {
+                return 0;
+            }
         }
 
         $existing = fa_gl_find_erp_account($pdo, $type, [$code], [$name]);

@@ -1,6 +1,7 @@
-# Prevent execution of PHP inside uploads and asset subfolders
+# Prevent execution of PHP inside uploads and asset subfolders.
+# Allow the dynamic system-font stylesheet used by style.css @import.
 <IfModule mod_authz_core.c>
-  <FilesMatch "\.php$">
+  <FilesMatch "(?i)^(?!erp-system-font\.css\.php$).+\.php$">
     Require all denied
   </FilesMatch>
 </IfModule>

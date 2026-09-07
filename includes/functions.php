@@ -1494,6 +1494,12 @@ function ensureCompaniesTableColumns($explicitPdo = null)
         'phone' => 'VARCHAR(50) NULL',
         'address' => 'TEXT NULL',
         'country' => "VARCHAR(100) NULL DEFAULT 'Tanzania'",
+        'industry_type' => "VARCHAR(50) NOT NULL DEFAULT 'trading'",
+        // SaaS trial / paid stay on the shared DB (no migrate-after-pay).
+        'plan_status' => "VARCHAR(20) NOT NULL DEFAULT 'paid'",
+        'trial_started_at' => 'DATETIME NULL',
+        'trial_ends_at' => 'DATETIME NULL',
+        'paid_at' => 'DATETIME NULL',
         'created_at' => 'TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP',
         'updated_at' => 'TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
     ];
@@ -1508,6 +1514,186 @@ function ensureCompaniesTableColumns($explicitPdo = null)
             error_log('ensureCompaniesTableColumns(' . $columnName . '): ' . $e->getMessage());
         }
     }
+}
+
+/** Default free-trial length in days (shared DB; no private DB on signup). */
+function erp_trial_days(): int
+{
+    if (defined('ERP_TRIAL_DAYS')) {
+        return max(1, (int) ERP_TRIAL_DAYS);
+    }
+    return 14;
+}
+
+function erp_company_plan_pdo(): ?PDO
+{
+    global $control_pdo, $pdo;
+    if (($control_pdo ?? null) instanceof PDO) {
+        return $control_pdo;
+    }
+    if (($pdo ?? null) instanceof PDO) {
+        return $pdo;
+    }
+    return null;
+}
+
+/**
+ * Plan info for a company (trial stays on shared DB until marked paid).
+ *
+ * @return array{
+ *   company_id:int,
+ *   plan_status:string,
+ *   trial_started_at:?string,
+ *   trial_ends_at:?string,
+ *   paid_at:?string,
+ *   days_remaining:?int,
+ *   is_trial:bool,
+ *   is_expired:bool,
+ *   access_allowed:bool
+ * }
+ */
+function getCompanyPlanInfo(?int $companyId = null): array
+{
+    $companyId = $companyId ?? (int) ($_SESSION['company_id'] ?? 0);
+    $empty = [
+        'company_id' => $companyId,
+        'plan_status' => 'paid',
+        'trial_started_at' => null,
+        'trial_ends_at' => null,
+        'paid_at' => null,
+        'days_remaining' => null,
+        'is_trial' => false,
+        'is_expired' => false,
+        'access_allowed' => true,
+    ];
+    if ($companyId <= 0) {
+        return $empty;
+    }
+
+    $db = erp_company_plan_pdo();
+    if (!($db instanceof PDO) || !tableExists('companies', $db)) {
+        return $empty;
+    }
+
+    ensureCompaniesTableColumns($db);
+    if (!columnExists('companies', 'plan_status', $db)) {
+        return $empty;
+    }
+
+    try {
+        $cols = 'id, plan_status';
+        if (columnExists('companies', 'trial_started_at', $db)) {
+            $cols .= ', trial_started_at';
+        }
+        if (columnExists('companies', 'trial_ends_at', $db)) {
+            $cols .= ', trial_ends_at';
+        }
+        if (columnExists('companies', 'paid_at', $db)) {
+            $cols .= ', paid_at';
+        }
+        $st = $db->prepare("SELECT {$cols} FROM companies WHERE id = ? LIMIT 1");
+        $st->execute([$companyId]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return $empty;
+        }
+    } catch (Throwable $e) {
+        error_log('getCompanyPlanInfo: ' . $e->getMessage());
+        return $empty;
+    }
+
+    $status = strtolower(trim((string) ($row['plan_status'] ?? 'paid')));
+    if ($status === '' || $status === 'active') {
+        $status = 'paid';
+    }
+    $trialStarted = isset($row['trial_started_at']) && $row['trial_started_at'] !== null && $row['trial_started_at'] !== ''
+        ? (string) $row['trial_started_at']
+        : null;
+    $trialEnds = isset($row['trial_ends_at']) && $row['trial_ends_at'] !== null && $row['trial_ends_at'] !== ''
+        ? (string) $row['trial_ends_at']
+        : null;
+    $paidAt = isset($row['paid_at']) && $row['paid_at'] !== null && $row['paid_at'] !== ''
+        ? (string) $row['paid_at']
+        : null;
+
+    $now = time();
+    $endsTs = $trialEnds ? strtotime($trialEnds) : false;
+    $daysRemaining = null;
+    if ($endsTs !== false) {
+        $daysRemaining = (int) max(0, (int) ceil(($endsTs - $now) / 86400));
+    }
+
+    // Auto-flip trial → expired when the end date has passed (same shared DB).
+    if ($status === 'trial' && $endsTs !== false && $endsTs < $now) {
+        $status = 'expired';
+        try {
+            $upd = $db->prepare("UPDATE companies SET plan_status = 'expired' WHERE id = ? AND plan_status = 'trial'");
+            $upd->execute([$companyId]);
+        } catch (Throwable $e) {
+            error_log('getCompanyPlanInfo expire: ' . $e->getMessage());
+        }
+    }
+
+    $isTrial = ($status === 'trial');
+    $isExpired = ($status === 'expired');
+    $accessAllowed = !$isExpired;
+
+    return [
+        'company_id' => $companyId,
+        'plan_status' => $status,
+        'trial_started_at' => $trialStarted,
+        'trial_ends_at' => $trialEnds,
+        'paid_at' => $paidAt,
+        'days_remaining' => $isTrial ? $daysRemaining : ($isExpired ? 0 : null),
+        'is_trial' => $isTrial,
+        'is_expired' => $isExpired,
+        'access_allowed' => $accessAllowed,
+    ];
+}
+
+function isCompanySubscriptionAccessAllowed(?int $companyId = null): bool
+{
+    $info = getCompanyPlanInfo($companyId);
+    return !empty($info['access_allowed']);
+}
+
+/** Mark company paid in place (same shared database — no data migration). */
+function markCompanyPlanPaid(int $companyId): bool
+{
+    if ($companyId <= 0) {
+        return false;
+    }
+    $db = erp_company_plan_pdo();
+    if (!($db instanceof PDO)) {
+        return false;
+    }
+    ensureCompaniesTableColumns($db);
+    if (!columnExists('companies', 'plan_status', $db)) {
+        return false;
+    }
+    try {
+        $sets = ["plan_status = 'paid'"];
+        $params = [];
+        if (columnExists('companies', 'paid_at', $db)) {
+            $sets[] = 'paid_at = ?';
+            $params[] = date('Y-m-d H:i:s');
+        }
+        $params[] = $companyId;
+        $sql = 'UPDATE companies SET ' . implode(', ', $sets) . ' WHERE id = ?';
+        $db->prepare($sql)->execute($params);
+        return true;
+    } catch (Throwable $e) {
+        error_log('markCompanyPlanPaid: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/** @return array{started:string,ends:string} */
+function erp_trial_window_now(): array
+{
+    $started = date('Y-m-d H:i:s');
+    $ends = date('Y-m-d H:i:s', time() + (erp_trial_days() * 86400));
+    return ['started' => $started, 'ends' => $ends];
 }
 
 function ensureUsersControlTable($explicitPdo = null)
@@ -4919,6 +5105,75 @@ function isSuperAdmin(): bool
 }
 
 /**
+ * Ultimate Trading platform system admin (email allowlist).
+ * Cross-company tenant tools must use this — not every isSuperAdmin()/company admin.
+ */
+function isUltimateSystemAdmin(): bool
+{
+    static $resolved = null;
+    if ($resolved !== null) {
+        return $resolved;
+    }
+
+    $allowed = [
+        'admin@ultimatetrading.com',
+    ];
+
+    $email = '';
+    if (function_exists('normalizeLoginEmail')) {
+        $email = normalizeLoginEmail((string) ($_SESSION['email'] ?? ''));
+    } else {
+        $email = strtolower(trim((string) ($_SESSION['email'] ?? '')));
+    }
+
+    if ($email === '') {
+        $ident = trim((string) ($_SESSION['username'] ?? ''));
+        if (strpos($ident, '@') !== false) {
+            $email = function_exists('normalizeLoginEmail')
+                ? normalizeLoginEmail($ident)
+                : strtolower($ident);
+        }
+    }
+
+    // Existing sessions may lack email because older authenticate() SELECTs omitted it.
+    if ($email === '') {
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        if ($userId > 0) {
+            global $pdo, $control_pdo;
+            $candidates = [];
+            if ($control_pdo instanceof PDO) {
+                $candidates[] = $control_pdo;
+            }
+            if ($pdo instanceof PDO && !in_array($pdo, $candidates, true)) {
+                $candidates[] = $pdo;
+            }
+            foreach ($candidates as $db) {
+                try {
+                    if (!function_exists('tableExists') || !tableExists('users', $db)) {
+                        continue;
+                    }
+                    $st = $db->prepare('SELECT email FROM users WHERE id = ? LIMIT 1');
+                    $st->execute([$userId]);
+                    $found = trim((string) ($st->fetchColumn() ?: ''));
+                    if ($found !== '') {
+                        $email = function_exists('normalizeLoginEmail')
+                            ? normalizeLoginEmail($found)
+                            : strtolower($found);
+                        $_SESSION['email'] = $email;
+                        break;
+                    }
+                } catch (Throwable $e) {
+                    // try next PDO
+                }
+            }
+        }
+    }
+
+    $resolved = ($email !== '' && in_array($email, $allowed, true));
+    return $resolved;
+}
+
+/**
  * Platform-level operator (control DB admin, super admin, or management unlock).
  * Use for cross-company tools (upload migration, company management).
  */
@@ -5635,7 +5890,7 @@ function authenticate($userOrEmail, $password, $companySlug = null)
             $extraWhere = ' AND ' . implode(' AND ', $whereParts);
         }
         // Allow login by username OR email for a simpler UX
-        $sql = "SELECT id, username, password, full_name, role, department{$companySelect}{$statusSelect}{$approvalSelect} FROM users WHERE (username = ? OR email = ?){$extraWhere}";
+        $sql = "SELECT id, username, email, password, full_name, role, department{$companySelect}{$statusSelect}{$approvalSelect} FROM users WHERE (username = ? OR email = ?){$extraWhere}";
         $params = [$userOrEmail, $userOrEmail];
         // Single-DB: scope user to control-plane company_id. Tenant DB: users often use
         // a local company_id (e.g. 1) — the database itself is already scoped to the tenant.
@@ -5660,7 +5915,7 @@ function authenticate($userOrEmail, $password, $companySlug = null)
         if (!$strictTenantAuth && $tenantDb && $tenantReachable && $control_pdo && $selectedCompany) {
             $controlCompanyId = (int) ($selectedCompany['id'] ?? 0);
             if ($controlCompanyId > 0 && columnExists('users', 'company_id', $control_pdo)) {
-                $controlSql = "SELECT id, username, password, full_name, role, department FROM users WHERE (username = ? OR email = ?) AND company_id = ?{$extraWhere} LIMIT 1";
+                $controlSql = "SELECT id, username, email, password, full_name, role, department FROM users WHERE (username = ? OR email = ?) AND company_id = ?{$extraWhere} LIMIT 1";
                 $controlStmt = $control_pdo->prepare($controlSql);
                 $controlStmt->execute([$userOrEmail, $userOrEmail, $controlCompanyId]);
                 $controlUser = $controlStmt->fetch(PDO::FETCH_ASSOC);
@@ -5687,7 +5942,7 @@ function authenticate($userOrEmail, $password, $companySlug = null)
             // Privileged control users may belong to another company_id but still access this tenant.
             $tenantPwOk = $user && password_verify($password, (string) ($user['password'] ?? ''));
             if (!$tenantPwOk && columnExists('users', 'company_id', $control_pdo)) {
-                $globalSql = "SELECT id, username, password, full_name, role, department FROM users WHERE (username = ? OR email = ?){$extraWhere} LIMIT 1";
+                $globalSql = "SELECT id, username, email, password, full_name, role, department FROM users WHERE (username = ? OR email = ?){$extraWhere} LIMIT 1";
                 $globalStmt = $control_pdo->prepare($globalSql);
                 $globalStmt->execute([$userOrEmail, $userOrEmail]);
                 $globalUser = $globalStmt->fetch(PDO::FETCH_ASSOC);
@@ -5750,13 +6005,13 @@ function authenticate($userOrEmail, $password, $companySlug = null)
                         if (columnExists('users', 'approval_status', $fbPdo)) {
                             $fbParts[] = "(approval_status = 'approved' OR approval_status = 'active' OR approval_status = '')";
                         }
-                        $fbSql = 'SELECT id, username, password, full_name, role, department FROM users WHERE ' . implode(' AND ', $fbParts) . ' LIMIT 1';
+                        $fbSql = 'SELECT id, username, email, password, full_name, role, department FROM users WHERE ' . implode(' AND ', $fbParts) . ' LIMIT 1';
                         $fbStmt = $fbPdo->prepare($fbSql);
                         $fbStmt->execute($fbParams);
                         $fbUser = $fbStmt->fetch(PDO::FETCH_ASSOC);
                         if ($fbUser && password_verify($password, (string) ($fbUser['password'] ?? ''))) {
                             $tenantHash = (string) $fbUser['password'];
-                            foreach (['username', 'full_name', 'role', 'department'] as $field) {
+                            foreach (['username', 'email', 'full_name', 'role', 'department'] as $field) {
                                 if (!empty($fbUser[$field])) {
                                     $user[$field] = $fbUser[$field];
                                 }
@@ -5986,6 +6241,38 @@ function requireLogin()
                         header('Location: ' . $setupUrl);
                     } else {
                         echo "<script>window.location.href='" . $setupUrl . "';</script>";
+                    }
+                    exit;
+                }
+            }
+        }
+
+        // Free-trial expiry: keep data on shared DB; block modules until marked paid.
+        if (!function_exists('isUltimateSystemAdmin') || !isUltimateSystemAdmin()) {
+            $planCompanyId = (int) ($_SESSION['company_id'] ?? 0);
+            if ($planCompanyId > 0 && function_exists('isCompanySubscriptionAccessAllowed')
+                && !isCompanySubscriptionAccessAllowed($planCompanyId)) {
+                $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+                $expiredUrl = app_url('/trial-expired.php');
+                $allowedExpired = [
+                    '/trial-expired.php',
+                    '/logout.php',
+                    '/my-account.php',
+                    '/admin/mark-company-paid.php',
+                    '/employee/account.php',
+                ];
+                $isAllowedExpired = false;
+                foreach ($allowedExpired as $allow) {
+                    if (strpos($script, $allow) !== false) {
+                        $isAllowedExpired = true;
+                        break;
+                    }
+                }
+                if (!$isAllowedExpired) {
+                    if (!headers_sent()) {
+                        header('Location: ' . $expiredUrl);
+                    } else {
+                        echo "<script>window.location.href='" . $expiredUrl . "';</script>";
                     }
                     exit;
                 }
@@ -6938,8 +7225,13 @@ function ensureSystemSettingsSchema()
 function getSystemFontCatalog(): array
 {
     return [
+        'dm_sans' => [
+            'label' => 'DM Sans (Default)',
+            'stack' => "'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif",
+            'google' => 'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap',
+        ],
         'poppins' => [
-            'label' => 'Poppins (Default)',
+            'label' => 'Poppins',
             'stack' => "'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
             'google' => 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap',
         ],
@@ -6989,11 +7281,6 @@ function getSystemFontCatalog(): array
             'stack' => "'Source Sans 3', system-ui, -apple-system, sans-serif",
             'google' => 'https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600;700&display=swap',
         ],
-        'dm_sans' => [
-            'label' => 'DM Sans',
-            'stack' => "'DM Sans', system-ui, -apple-system, sans-serif",
-            'google' => 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap',
-        ],
         'raleway' => [
             'label' => 'Raleway',
             'stack' => "'Raleway', system-ui, -apple-system, sans-serif",
@@ -7025,7 +7312,7 @@ function getSystemFontKey(): string
 {
     global $pdo;
     $catalog = getSystemFontCatalog();
-    $default = 'poppins';
+    $default = 'dm_sans';
     if (!isset($pdo) || !($pdo instanceof PDO)) {
         return $default;
     }
@@ -7050,7 +7337,7 @@ function getSystemFontDefinition(?string $key = null): ?array
 {
     $catalog = getSystemFontCatalog();
     $resolved = strtolower(trim((string) ($key ?? getEffectiveFontKey())));
-    return $catalog[$resolved] ?? $catalog['poppins'] ?? null;
+    return $catalog[$resolved] ?? $catalog['dm_sans'] ?? $catalog['poppins'] ?? null;
 }
 
 function saveSystemFontKey(string $key): bool

@@ -7,13 +7,13 @@ export const CFG = {
   selectedKey: typeof RAW.selectedKey === 'string' ? RAW.selectedKey : '',
   effectiveKey: RAW.effectiveKey || '',
   isPersonalChoice: Boolean(RAW.isPersonalChoice),
-  companyFont: RAW.companyFont || { key: 'poppins', label: 'Poppins', stack: "'Poppins', sans-serif" },
-  effectiveFont: RAW.effectiveFont || RAW.companyFont || { key: 'poppins', label: 'Poppins', stack: "'Poppins', sans-serif" },
+  companyFont: RAW.companyFont || { key: 'dm_sans', label: 'DM Sans', stack: "'DM Sans', sans-serif" },
+  effectiveFont: RAW.effectiveFont || RAW.companyFont || { key: 'dm_sans', label: 'DM Sans', stack: "'DM Sans', sans-serif" },
   fonts: Array.isArray(RAW.fonts) ? RAW.fonts : [],
 }
 
 export function companyDefaultLabel() {
-  return `Company default (${CFG.companyFont.label || 'Poppins'})`
+  return `Company default (${CFG.companyFont.label || 'DM Sans'})`
 }
 
 export function fontById(key) {
@@ -27,6 +27,6 @@ export function labelForKey(key) {
 }
 
 export function stackForKey(key) {
-  if (!key) return CFG.companyFont.stack || "'Poppins', sans-serif"
-  return fontById(key).stack || CFG.companyFont.stack || "'Poppins', sans-serif"
+  if (!key) return CFG.companyFont.stack || "'DM Sans', sans-serif"
+  return fontById(key).stack || CFG.companyFont.stack || "'DM Sans', sans-serif"
 }

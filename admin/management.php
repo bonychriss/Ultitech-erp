@@ -14,55 +14,9 @@ if ($showAiSettings) {
         die('Admin access required.');
     }
 } else {
-    if (!isSuperAdmin()) {
+    if (!function_exists('isUltimateSystemAdmin') || !isUltimateSystemAdmin()) {
         http_response_code(403);
-        die('Only super admin can manage companies.');
-    }
-
-    if (!isset($_SESSION['management_unlocked']) || $_SESSION['management_unlocked'] !== true) {
-        $secretHash = '$2y$10$0LDRbl5yTGabQK7ZzDmvKOCEEXZWiogWpMwMklz4R3xA2GTHXepca';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['management_secret'])) {
-            if (password_verify($_POST['management_secret'], $secretHash)) {
-                $_SESSION['management_unlocked'] = true;
-                header('Location: ' . $_SERVER['REQUEST_URI']);
-                exit;
-            } else {
-                $secretError = "Invalid access code.";
-            }
-        }
-
-        ?>
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <title>Restricted Access</title>
-            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap" rel="stylesheet">
-            <style>
-                body { font-family: 'Outfit', sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-                .auth-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; box-sizing: border-box; }
-                h2 { margin-top: 0; color: #0f172a; }
-                input[type="password"] { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 20px; font-size: 14px; box-sizing: border-box; outline: none; }
-                input[type="password"]:focus { border-color: #5c59f0; }
-                button { width: 100%; padding: 12px; background: #5c59f0; color: white; border: none; border-radius: 8px; margin-top: 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-                button:hover { background: #4b49d1; }
-                .error { color: #ef4444; font-size: 13px; margin-top: 12px; font-weight: 500; }
-            </style>
-        </head>
-        <body>
-            <div class="auth-box">
-                <h2>Access Restricted</h2>
-                <p style="color: #64748b; font-size: 14px; margin-bottom: 0;">Please enter the management access code.</p>
-                <form method="post">
-                    <input type="password" name="management_secret" placeholder="Enter secret code" required autofocus>
-                    <?php if (isset($secretError)): ?><div class="error"><?= htmlspecialchars($secretError) ?></div><?php endif; ?>
-                    <button type="submit">Unlock</button>
-                </form>
-            </div>
-        </body>
-        </html>
-        <?php
-        exit;
+        die('Only the system admin (admin@ultimatetrading.com) can manage companies.');
     }
 }
 
@@ -136,11 +90,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_company'])) {
             }
             
             $pdo->commit();
+            if ($newCompanyId > 0 && function_exists('markCompanyPlanPaid')) {
+                markCompanyPlanPaid($newCompanyId);
+            }
             $msg = 'Company "' . $companyName . '" created successfully.';
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             $msg = 'Create failed: ' . $e->getMessage();
         }
+    }
+
+    $returnTo = trim((string) ($_POST['return_to'] ?? ''));
+    if ($returnTo !== '' && $msg !== '') {
+        $safeReturn = basename(parse_url($returnTo, PHP_URL_PATH) ?: '');
+        if ($safeReturn === 'settings.php' || str_starts_with($safeReturn, 'settings.php')) {
+            $_SESSION['flash_message'] = $msg;
+            $_SESSION['flash_type'] = preg_match('/failed|required/i', $msg) ? 'error' : 'success';
+            $qs = parse_url($returnTo, PHP_URL_QUERY);
+            header('Location: settings.php' . ($qs ? ('?' . $qs) : ''));
+            exit;
+        }
+        if ($safeReturn === 'management.php' || str_starts_with($safeReturn, 'management.php')) {
+            $_SESSION['flash_message'] = $msg;
+            $_SESSION['flash_type'] = preg_match('/failed|required/i', $msg) ? 'error' : 'success';
+            $qs = parse_url($returnTo, PHP_URL_QUERY);
+            header('Location: management.php' . ($qs ? ('?' . $qs) : ''));
+            exit;
+        }
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_company_paid'])) {
+    $payId = (int) ($_POST['company_id'] ?? 0);
+    if ($payId <= 0) {
+        $msg = 'Invalid company for payment unlock.';
+    } elseif (!function_exists('isUltimateSystemAdmin') || !isUltimateSystemAdmin()) {
+        $msg = 'Only the system admin can mark a company as paid.';
+    } elseif (!function_exists('markCompanyPlanPaid') || !markCompanyPlanPaid($payId)) {
+        $msg = 'Could not mark company as paid.';
+    } else {
+        $msg = 'Company marked as paid (same shared database — no data migration).';
+    }
+
+    $returnTo = trim((string) ($_POST['return_to'] ?? 'management.php'));
+    $safeReturn = basename(parse_url($returnTo, PHP_URL_PATH) ?: '');
+    if ($safeReturn === 'management.php' || str_starts_with($safeReturn, 'management.php')) {
+        $_SESSION['flash_message'] = $msg;
+        $_SESSION['flash_type'] = preg_match('/Could not|Invalid|Only the/i', $msg) ? 'error' : 'success';
+        $qs = parse_url($returnTo, PHP_URL_QUERY);
+        header('Location: management.php' . ($qs ? ('?' . $qs) : ''));
+        exit;
     }
 }
 
@@ -192,6 +191,9 @@ $totalStaff = 0;
 $modulesEnabledCount = 9; // System default for new companies
 
 try {
+    if (function_exists('ensureCompaniesTableColumns')) {
+        ensureCompaniesTableColumns($pdo);
+    }
     $totalCompanies = (int)$pdo->query("SELECT COUNT(*) FROM companies")->fetchColumn();
     $activeCount = (int)$pdo->query("SELECT COUNT(*) FROM companies WHERE status = 'active'")->fetchColumn();
     $totalStaff = (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
@@ -216,6 +218,83 @@ $aiCsrf = function_exists('csrf_token') ? csrf_token() : '';
 $msgTone = 'success';
 if ($msg !== '' && preg_match('/failed|Invalid|not found|does not match|required\\.|Slug does not|Delete failed|Create failed|Enter the company slug/i', $msg)) {
     $msgTone = 'danger';
+}
+if ($msg === '' && !empty($_SESSION['flash_message'])) {
+    $msg = (string) $_SESSION['flash_message'];
+    $msgTone = (($_SESSION['flash_type'] ?? '') === 'error') ? 'danger' : 'success';
+    unset($_SESSION['flash_message'], $_SESSION['flash_type']);
+}
+
+// Company management (register / tenants) uses React; AI settings keep the PHP UI below.
+if (!$showAiSettings) {
+    require_once __DIR__ . '/management-ui/lib.php';
+
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $openRegister = strtolower(trim((string) ($_GET['view'] ?? ''))) === 'register'
+        || strtolower(trim((string) ($_GET['open'] ?? ''))) === 'register';
+
+    $formQs = [];
+    if ($ctxCompanySlug !== '') {
+        $formQs['company_slug'] = $ctxCompanySlug;
+    }
+    $formAction = 'management.php' . ($formQs ? ('?' . http_build_query($formQs)) : '');
+    $companiesListUrl = $formAction;
+
+    $companiesPayload = [];
+    foreach ($companies as $c) {
+        $slug = (string) ($c['company_slug'] ?? '');
+        $accessUrl = function_exists('company_url') ? company_url('select-module', $slug) : ('../select-module.php?company=' . rawurlencode($slug));
+        $fullAccessUrl = $scheme . '://' . $host . $accessUrl;
+        $createdAt = (string) ($c['created_at'] ?? '');
+        $registeredOn = $createdAt !== '' ? date('d M Y', strtotime($createdAt)) : '';
+        $planStatus = strtolower(trim((string) ($c['plan_status'] ?? 'paid')));
+        if ($planStatus === '' || $planStatus === 'active') {
+            $planStatus = 'paid';
+        }
+        $trialEndsAt = (string) ($c['trial_ends_at'] ?? '');
+        $companiesPayload[] = [
+            'id' => (int) ($c['id'] ?? 0),
+            'company_name' => (string) ($c['company_name'] ?? ''),
+            'subdomain' => (string) ($c['subdomain'] ?? ''),
+            'company_slug' => $slug,
+            'db_name' => (string) ($c['db_name'] ?? ''),
+            'base_currency' => (string) ($c['base_currency'] ?? 'TZS'),
+            'status' => (string) ($c['status'] ?? 'active'),
+            'plan_status' => $planStatus,
+            'trial_ends_at' => $trialEndsAt,
+            'trial_ends_label' => $trialEndsAt !== '' ? date('d M Y', strtotime($trialEndsAt)) : '',
+            'can_mark_paid' => in_array($planStatus, ['trial', 'expired'], true),
+            'user_count' => (int) ($c['user_count'] ?? 0),
+            'registeredOn' => $registeredOn,
+            'accessUrl' => $accessUrl,
+            'fullAccessUrl' => $fullAccessUrl,
+            'switchUrl' => 'switch-company.php?company_id=' . (int) ($c['id'] ?? 0),
+            'settingsUrl' => 'company-settings.php?company_id=' . (int) ($c['id'] ?? 0),
+        ];
+    }
+
+    managementRenderReactShell([
+        'openRegister' => $openRegister,
+        'formAction' => $formAction,
+        'returnTo' => $companiesListUrl,
+        'companiesListUrl' => $companiesListUrl,
+        'listUsersUrl' => $listUsersUrl,
+        'syncIndexUrl' => $syncIndexUrl,
+        'settingsHubUrl' => $settingsHubUrl,
+        'message' => $msg,
+        'messageTone' => $msgTone,
+        'activeCompanyId' => $activeCid,
+        'canMarkPaid' => function_exists('isUltimateSystemAdmin') && isUltimateSystemAdmin(),
+        'stats' => [
+            'totalCompanies' => $totalCompanies,
+            'activeCount' => $activeCount,
+            'totalStaff' => $totalStaff,
+            'modulesEnabledCount' => $modulesEnabledCount,
+        ],
+        'companies' => $companiesPayload,
+    ]);
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -1431,7 +1510,7 @@ if ($msg !== '' && preg_match('/failed|Invalid|not found|does not match|required
     </div>
 
     <!-- Register Company Form -->
-    <div class="section-card">
+    <div class="section-card" id="register-company">
         <div class="section-header">
             <div class="section-icon-box" style="background: #5c59f0;"><i class="bi bi-plus-lg"></i></div>
             <div class="section-title">
@@ -1481,7 +1560,7 @@ if ($msg !== '' && preg_match('/failed|Invalid|not found|does not match|required
     </div>
 
     <!-- Company Table -->
-    <div class="table-section-header">
+    <div class="table-section-header" id="registered-companies">
         <div class="table-title">
             <h2>Registered Companies</h2>
             <p>Manage and monitor all company instances.</p>

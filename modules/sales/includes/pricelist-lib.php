@@ -290,6 +290,64 @@ function pricelistInitData(): array
         }
     }
 
+    // Keep PDF header/footer aligned with Admin company profile (companies table),
+    // same source invoices/orders use — avoids stale sales_settings placeholders.
+    $companyProfile = null;
+    if (function_exists('getCurrentCompany')) {
+        $companyProfile = getCurrentCompany();
+    }
+    if ((!is_array($companyProfile) || $companyProfile === []) && function_exists('getRequestedCompany')) {
+        $companyProfile = getRequestedCompany();
+    }
+    if (is_array($companyProfile) && $companyProfile !== []) {
+        $profileName = trim((string) ($companyProfile['company_name'] ?? ''));
+        $profileAddress = trim((string) ($companyProfile['address'] ?? ''));
+        $profilePhone = trim((string) ($companyProfile['phone'] ?? ''));
+        $profileEmail = trim((string) ($companyProfile['email'] ?? ''));
+
+        if ($profileName !== '') {
+            $companySettings['company_name'] = $profileName;
+        }
+        if ($profileAddress !== '') {
+            $companySettings['company_address'] = $profileAddress;
+        }
+        if ($profilePhone !== '') {
+            $companySettings['company_phone'] = $profilePhone;
+        }
+        if ($profileEmail !== '') {
+            $companySettings['company_email'] = $profileEmail;
+        }
+    }
+
+    // Reject demo/placeholder addresses left in sales_settings (e.g. "123 Freight Road…").
+    $addressNow = trim((string) ($companySettings['company_address'] ?? ''));
+    if ($addressNow !== '' && preg_match('/123\s+Freight\s+Road|Logistics\s+Park/i', $addressNow)) {
+        $resolved = '';
+        if (is_array($companyProfile) && $companyProfile !== []) {
+            $candidate = trim((string) ($companyProfile['address'] ?? ''));
+            if ($candidate !== '' && !preg_match('/123\s+Freight\s+Road|Logistics\s+Park/i', $candidate)) {
+                $resolved = $candidate;
+            }
+        }
+        if ($resolved === '' && function_exists('getCompanySetting')) {
+            $addrVal = getCompanySetting('company_address', '');
+            if (is_string($addrVal) && trim($addrVal) !== '' && !preg_match('/123\s+Freight\s+Road|Logistics\s+Park/i', $addrVal)) {
+                $resolved = trim($addrVal);
+            }
+        }
+        if ($resolved === '' && defined('COMPANY_ADDRESS')) {
+            $fallback = trim((string) COMPANY_ADDRESS);
+            if ($fallback !== '' && !preg_match('/123\s+Freight\s+Road|Logistics\s+Park/i', $fallback)) {
+                $resolved = $fallback;
+            }
+        }
+        // Official Ultimate General Trading address (ultimate.co.tz).
+        if ($resolved === '') {
+            $resolved = 'House No.14, Atisoko Street, Mikocheni B, P.O. Box 78004, Dar es Salaam, Tanzania';
+        }
+        $companySettings['company_address'] = $resolved;
+    }
+
     $fetch = pricelistDeskFetchProducts($pdo);
     $currency = (string) ($companySettings['default_currency'] ?? 'TZS');
 

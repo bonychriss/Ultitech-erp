@@ -1,5 +1,6 @@
 :root {
-  --erp-font-family: 'Poppins', system-ui, sans-serif;
+  /* Soft default; system font injector overrides --erp-font-family after this stylesheet. */
+  --erp-font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --erp-scrollbar-thumb: #6d5df6;
   --erp-scrollbar-thumb-hover: #5b4bd6;
   --erp-scrollbar-track: #f1f5f9;

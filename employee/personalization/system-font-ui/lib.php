@@ -91,13 +91,13 @@ function systemFontUiBuildInitialConfig(int $userId): array
         'isPersonalChoice' => $userFontKey !== null,
         'companyFont' => [
             'key' => $companyFontKey,
-            'label' => (string) ($companyFontDef['label'] ?? 'Poppins'),
-            'stack' => (string) ($companyFontDef['stack'] ?? "'Poppins', sans-serif"),
+            'label' => (string) ($companyFontDef['label'] ?? 'DM Sans'),
+            'stack' => (string) ($companyFontDef['stack'] ?? "'DM Sans', sans-serif"),
         ],
         'effectiveFont' => [
             'key' => $effectiveFontKey,
-            'label' => (string) ($effectiveFontDef['label'] ?? 'Poppins'),
-            'stack' => (string) ($effectiveFontDef['stack'] ?? "'Poppins', sans-serif"),
+            'label' => (string) ($effectiveFontDef['label'] ?? 'DM Sans'),
+            'stack' => (string) ($effectiveFontDef['stack'] ?? "'DM Sans', sans-serif"),
         ],
         'fonts' => $fonts,
         'backUrl' => $backUrl,

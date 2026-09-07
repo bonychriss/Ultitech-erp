@@ -41,9 +41,9 @@ if ($syncPageError === '') {
             header('Location: ' . $loginUrl);
             exit;
         }
-        if (!function_exists('isSuperAdmin') || !isSuperAdmin()) {
+        if (!function_exists('isUltimateSystemAdmin') || !isUltimateSystemAdmin()) {
             http_response_code(403);
-            die('Access denied. Log in as super admin (e.g. admin@ultimatetrading.com) then open this page again.');
+            die('Access denied. Log in as system admin (admin@ultimatetrading.com) then open this page again.');
         }
     } catch (Throwable $e) {
         $syncPageError = $e->getMessage();

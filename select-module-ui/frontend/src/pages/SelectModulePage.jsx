@@ -324,7 +324,7 @@ const ICONS = {
   dispatch: DispatchIcon,
   todo: TodoIcon,
   performance: PerformanceIcon,
-  settings_admin: Monitor,
+  settings_admin: SettingsIcon,
   settings: SettingsIcon,
   suggestions: SuggestionIcon,
   analytics: ReportIcon,
@@ -447,7 +447,7 @@ function ModuleIcon({ name, color }) {
       </div>
     )
   }
-  if (name === 'settings') {
+  if (name === 'settings' || name === 'settings_admin') {
     return (
       <div className="sm-icon-box">
         <SettingsIcon />

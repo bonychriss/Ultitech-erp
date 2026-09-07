@@ -12,7 +12,7 @@ RewriteRule ^client-apps/ - [L]
 RewriteRule ^home/ - [L]
 
 # Diagnostic scripts: never rewrite as /{company_slug}/...
-RewriteRule ^(debug_[a-zA-Z0-9_.-]+\.php|reset_company_admin\.php|health-check\.php|hc\.php|ping\.php)$ - [L,NC]
+RewriteRule ^(debug_[a-zA-Z0-9_.-]+\.php|reset_company_admin\.php|health-check\.php|hc\.php|ping\.php|capture-bootstrap\.php)$ - [L,NC]
 RewriteCond %{REQUEST_URI} /(debug_[a-zA-Z0-9_.-]+\.php|hc\.php|ping\.php)$ [NC]
 RewriteRule ^ - [L]
 

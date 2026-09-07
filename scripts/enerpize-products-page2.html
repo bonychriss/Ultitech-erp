@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en" data-site-data="{&quot;dateFormat&quot;:&quot;d\/m\/Y&quot;}">
+<head>
+    <title>ROADMASTER  | List Products Page</title>
+    <meta charset="UTF-8"> <link rel="shortcut icon" href="/css/images/Enerpize-favicon.ico" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.daftra.com/templates/shop_1/css/app.min.css?v=0858"><script> var USER = { "client_id": 0 }; </script>
+    <script src="https://cdn.daftra.com/templates/shop_1/js/plugin_jquery.js?v=01236\"></script>
+<link rel="stylesheet" href="/dist/daftra/daftra.compat.styles.css?v=0858">
+<script src="/dist/daftra/daftra.compat.js?v=0858"></script>
+<script src="https://cdn.daftra.com/templates/shop_1/js/plugin_easepick.js?v=0858"></script>
+</head>
+<body class="ltr">
+<div id="site">
+
+    <header id="site-header">
+        <div class="container">
+            <div class="row align-items-center pt-4 pb-4 pt-lg-6 pb-lg-0">
+                <div class="col-lg-3 col flex-grow-0 order-1 order-lg-1">
+                    <div class="text-left">
+                        <a class="font-weight-extrabold fs-22 text-uppercase" href="/home">
+                            ROADMASTER 
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-1 col order-lg-2 d-none d-lg-block"></div>
+                <div class="col-lg-8 col order-2 order-lg-5 pl-0 pl-lg-3">
+                    <div class="text-right">
+                        <div class="d-inline-block">
+                            <form action="/contents/products_list">
+                                <div class="d-none d-lg-block">
+                                    <div class="input-group border-transparent border-hover-body align-items-stretch">
+                                        <input type="text" class="form-control bg-placeholder-2 border-0" placeholder="Enter search keywords"  value="" name="product_name">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-outline-primary border-0 bg-placeholder-2 py-0 px-3 fs-18" type="submit"><i class="far fa-search text-black"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <button type="button" data-toggle="collapse" data-target="#mainSearch" aria-controls="mainSearch" aria-expanded="false" class="btn mr-2 p-0 text-dark text-hover-primary fs-14 d-inline-block d-lg-none"><i class="fas fa-search mr-lg-1"></i></button>
+                        <button type="button" class="cart-toggle-btn btn-focus-shadow-0 btn mr-2 mr-lg-0 p-0 py-lg-1 px-lg-2 py-xl-3 px-xl-5 fs-14 fs-xl-16 text-dark text-hover-primary"><i class="fas fa-shopping-cart mr-lg-1 position-relative"><span id="totalCart"></span></i><span class="d-none d-lg-inline-block">Cart</span></button>
+
+
+                        <a href="/contents/login" class="btn mr-2 mr-lg-0 p-1 py-sm-1 px-sm-2 py-xl-3 px-xl-4 fs-10 fs-sm-13 fs-lg-14 fs-xl-16 btn-outline-primary">Sign In</a>
+                        <a href="/contents/register" class="btn mr-2 mr-lg-0 p-1 py-sm-1 px-sm-2 py-xl-3 px-xl-4 fs-10 fs-sm-13 fs-lg-14 fs-xl-16 btn-outline-primary">Register</a>
+
+                        <button class="btn mr-2 mr-lg-0 p-0 text-black lh-1 d-inline-block d-lg-none" type="button" data-toggle="collapse" data-target="#mainNav" aria-controls="mainNav" aria-expanded="false">
+                            <i class="far fa-bars fs-20"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="mainSearch" class="collapse d-lg-none">
+            <form action="/contents/products_list" class="border-top border-black py-5 px-4 text-center">
+                <input type="text" class="form-control bg-placeholder-2 border-0" placeholder="Enter search keywords"  value="" name="product_name">
+                <button class="btn btn-primary mx-auto mt-2 py-2 px-4 fs-18" type="submit"><i class="far fa-search mr-3"></i><span class="font-weight-medium">Search</span></button>
+            </form>
+        </div>
+        <div class="mt-lg-3">
+            <nav class="navbar navbar-expand-lg bg-primary py-0">
+                <div class="container">
+                    <div class="collapse navbar-collapse" id="mainNav">
+                        <ul class="navbar-nav p-0">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link fs-xl-16 " href="/home" >
+                                Home
+                                </a>
+
+
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link fs-xl-16 " href="/contents/products_list" >
+                                All Products 
+                                </a>
+
+
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link fs-xl-16 " href="/contents/process_content/contact_us" >
+                                Contact US
+                                </a>
+
+
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <div id="site-sidebar">
+    <div class="side-sidebar-wrap">
+        <div class="side-sidebar-header">
+            <button type="button" class="cart-toggle-btn btn p-0 font-weight-semibold d-inline-flex align-items-center fs-16 text-dark text-hover-primary"><i class="fas fa-arrow-circle-left mr-2 fs-18"></i>My Cart</button>
+        </div>
+        <div class="side-sidebar-body my-5">
+            <div class="cart-items">
+
+
+                <div style="display: none" class="cart-item" >
+                    <button class="btn text-danger-30 text-hover-danger fs-16 p-0 mr-4 tip remove-cart-item" title="Remove Item">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <div class="cart-item-details">
+                        <a href="#">
+                            <img src="" width="64" height="58" alt="Product Name" class="cart-item-image">
+                        </a>
+                        <div class="flex-grow-1 ml-3">
+                            <a href="#" class="text-dark"><h4 class="fs-16 font-weight-semibold cart-item-name"></h4></a>
+                            <div class="mt-2 d-flex align-items-center justify-content-between">
+                                <span class="text-alto font-weight-semibold cart-item-price"></span>
+                                <div class="cart-item-count">
+                                    <button class="btn p-0 fas fa-minus-circle fs-16 text-alto text-hover-primary minus"></button>
+                                    <input type="number" value="" class="form-control qty cart-item-qty"  min="1" step="1">
+                                    <button class="btn p-0 fas fa-plus-circle fs-16 text-alto text-hover-primary plus"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="empty-cart-text"></div>
+            <div class="cart-subtotal">
+                    <span class="font-weight-medium text-dark mr-3 qty-subtotal">
+                        Subtotal ( items)
+                    </span>
+                <span  class=" cart-total font-weight-bold text-primary fs-24">
+
+                    </span>
+            </div>
+        </div>
+        <div class="side-sidebar-footer">
+            <a id="checkout-btn" href="/client/contents/order_summary" class="disabled btn btn-primary d-flex align-items-center justify-content-between btn-block px-4 py-3 text-uppercase fs-16 font-weight-medium btn-lg mt-auto">
+                <span>Checkout</span>
+                <span class="fas fa-arrow-square-right"></span>
+            </a>
+        </div>
+    </div>
+</div>
+    <main id="main-content">
+        <script src="/js/functions_v1.js?v=01236\"></script>
+        <script>
+            var currencies = JSON.parse(`{"EUR":"\u20ac%s","EUR-FR":"%s\u00a0\u20ac","EUR-AT":"%s\u00a0\u20ac","EUR-BE":"%s\u00a0\u20ac","EUR-FI":"%s\u00a0\u20ac","EUR-DE":"%s\u00a0\u20ac","EUR-GR":"%s\u20ac","EUR-SI":"%s\u20ac","EUR-IE":"\u20ac%s","EUR-IT":"\u20ac%s","EUR-LU":"\u20ac%s","EUR-LT":"\u20ac%s","EUR-NL":"\u20ac%s","EUR-PT":"%s\u00a0\u20ac","EUR-ES":"%s\u00a0\u20ac","EUR-SK":"%s\u00a0\u20ac","AED":"%s\u00a0AED","AFN":"%s\u00a0AFN","XCD":"EC$%0.2f","ALL":"Lek%0.2f","AMD":"%0.2f\u00a0\u0564\u0580.","AOA":"%s\u00a0Kz","ARS":"$\u00a0%s","USD":"$%s","AUD":"$%s","AWG":"Afl.\u00a0%0.2f","AZN":"%s\u00a0m","BAM":"KM\u00a0%0.2f","BBD":"Bds$%0.2f","BDT":"\u09f3%s","XOF":"%s\u00a0CFA","BGN":"\u043b\u0432. %s","BIF":"%0.2f\u00a0FBu","BMD":"BD$%0.2f","BND":"$\u00a0%0.2f","BOB":"Bs\u00a0%0.2f","BRL":"R$%s","BSD":"BS$%0.2f","BTN":"Nu.\u00a0%0.2f","NOK":"Nkr%0.2f","BWP":"P%0.2f","BYR":"%s\u00a0Br","BZD":"$%0.2f","CAD":"$%s","CDF":"%0.2f\u00a0CDF","XAF":"%0.2f\u00a0FCFA","CHF":"Fr.\u00a0%s","NZD":"NZ$%s","CLP":"$%s","CNY":"\uffe5%0.2f","COP":"$\u00a0%s","CRC":"\u20a1%s","CUP":"CU$\u00a0%0.2f","CVE":"CV$%0.2f","ANG":"NAf.\u00a0%0.2f","CZK":"%s\u00a0K\u010d","DJF":"%0.2f\u00a0Fdj","DKK":"%s\u00a0DKK","DOP":"RD$%s","DZD":"%s\u00a0DA","EEK":"%0.2f\u00a0kr","EGP":"%s\u00a0L.E.","MAD":"%s\u00a0Dhs","ERN":"Nfk\u00a0%0.2f","ETB":"%s\u00a0Br","FJD":"FJ$%0.2f","FKP":"FK\u00a3%0.2f","GBP":"\u00a3%s","GEL":"GEL\u00a0%0.2f","GHS":"GH\u20b5 %s","GIP":"GI\u00a3%0.2f","GMD":"GMD%0.2f","GNF":"%0.2f\u00a0FG","GTQ":"Q\u00a0%s","GYD":"GY$%0.2f","HKD":"$%s","HNL":"L\u00a0%0.2f","HRK":"%s\u00a0kn","HTG":"HTG\u00a0%0.2f","HUF":"%s\u00a0Ft","IDR":"Rp %s","ILS":"\u20aa %s","INR":"Rs.\u00a0%s","IQD":"%s\u00a0IQD","IRR":"%0.2f\u00a0\ufdfc","ISK":"%0.2f\u00a0kr","JMD":"$%0.2f","JOD":"JD\u00a0%s\u0660","JPY":"\uffe5%s","KES":"Ksh %s","KGS":"KGS\u00a0%0.2f","KHR":"%0.2f\u17db","KMF":"CF\u00a0%0.2f","KPW":"KPW%0.2f","KRW":"\u20a9%s","KWD":"%s\u00a0KD","BHD":"BD %s","KYD":"KY$%0.2f","KZT":"%s\u00a0\u20b8","LAK":"\u20ad\u00a0%0.2f","LBP":"LBP\u200f\u00a0%0.2f","LKR":"Rs. %s","LRD":"L$%0.2f","LSL":"LSL%0.2f","LTL":"%0.2f\u00a0Lt","LVL":"%0.2f\u00a0Ls","LYD":"LD\u00a0%s","MDL":"%0.2f\u00a0MDL","MGA":"%0.2f\u00a0MGA","MKD":"MKD\u00a0%0.2f","MMK":"Ks %s","MNT":"\u20ae\u00a0%0.2f","MOP":"MOP$%0.2f","MRO":"UM\u00a0%0.2f","MRU":"UM\u00a0%0.2f","MUR":"MUR%0.2f","MVR":"MVR\u00a0%0.2f","MWK":"MWK\u00a0%0.2f","MXN":"$%s","MYR":"RM%s","MZN":"MTn%0.2f","NAD":"N$%0.2f","XPF":"%0.2f\u00a0FCFP","NGN":"\u20a6%s","NIO":"C$\u00a0%0.2f","NPR":"\u0928\u0947\u0930\u0942\u00a0%s","OMR":"%s\u00a0OMR","PAB":"B\/.\u00a0%0.2f","PEN":"S\/.%s","PGK":"PGK%0.2f","PHP":"\u20b1\u00a0%s","PKR":"Rs. %s","PLN":"%s\u00a0z\u0142","PYG":"\u20b2\u00a0%0.2f","QAR":"%s\u00a0QR","RON":"%s\u00a0Lei","RSD":"%s\u00a0RSD","RUB":"%s\u00a0\u0440\u0443\u0431.","RWF":"RWF\u00a0%0.2f","SAR":"%s\u00a0SR","SBD":"SI$%0.2f","SCR":"SRe%0.2f","SDG":"SDG\u00a0%0.2f","SEK":"%s\u00a0kr","SGD":"$%s","SHP":"SH\u00a3%0.2f","SLL":"Le%0.2f","SOS":"Sh.So%0.2f","SRD":"SR$\u00a0%0.2f","STD":"Db%0.2f","SYP":"%s\u00a0LS","SZL":"SZL%0.2f","THB":"\u0e3f%s","TJS":"TJS\u00a0%0.2f","TMT":"TMT\u00a0%0.2f","TND":"%s\u00a0DT","TOP":"T$\u00a0%0.2f","TRY":"%s\u00a0TL","TRL":"%s\u00a0TL","TTD":"$%0.2f","TWD":"NT$%s","TZS":"%s\u00a0TZS","UAH":"%s\u00a0\u0433\u0440\u043d","UGX":"USh%0.2f","UYU":"$U\u00a0%s","UZS":"UZS\u00a0%s","VEF":"Bs. %s","VND":"%s\u00a0\u20ab","VUV":"VT\u00a0%0.2f","WST":"WS$\u00a0%0.2f","YER":"YER \u200f%0.2f","ZAR":"R%s","ZMK":"ZK%0.2f","ZWL":"ZWL%0.2f","BTC":"BTC%0.2f"}`);
+            var number_formats =JSON.parse(`{"BTC":[1,",","."],"IDR":[0,",","."],"BDT":[0,".","."],"VND":[0,",","."],"SEK":[0,","," "],"MAD":[2,".",","],"PLN":[0,".",","],"TWD":[0,".",","],"COP":[0,".",","],"CZK":[2,","," "],"THB":[2,".",","],"BGN":[2,".",","],"PEN":[2,".",","],"RON":[2,",","."],"ETB":[2,".",","],"KWD":[3,".",","],"BHD":[3,".",","],"HUF":[0,","," "],"NGN":[0,".",","],"UAH":[0,","," "],"AOA":[2,",","."],"BRL":[2,",","."],"DKK":[2,",","."],"OMR":[3,".",","],"TND":[3,".",","],"GTQ":[2,".",","],"LKR":[2,".",","],"DOP":[2,".",","],"KES":[2,".",","],"RUB":[0,","," "],"BYR":[2,","," "],"DZD":[2,".",","],"EUR":[2,".",","],"IQD":[2,".",","],"CAD":[2,".",","],"USD":[2,".",","],"NPR":[2,".",","],"AED":[2,".",","],"CLP":[0,",","."],"PHP":[2,".",","],"PKR":[0,".",","],"EGP":[2,".",","],"JOD":[3,".",","],"CRC":[2,".",","],"HKD":[2,".",","],"QAR":[2,".",","],"AZN":[2,".",","],"ILS":[2,".",","],"SGD":[2,".",","],"AUD":[2,".",","],"NZD":[2,".",","],"ZAR":[2,".",","],"MYR":[2,".",","],"VEF":[2,",","."],"HRK":[2,",","."],"MXN":[2,".",","],"GHS":[2,".",","],"GBP":[2,".",","],"SAR":[2,".",","],"KZT":[2,".",","],"UZS":[0,".",","],"JPY":[0,".",","],"KRW":[0,".",","],"MMK":[0,".",","],"TRY":[2,",","."],"TRL":[2,",","."],"ARS":[2,",","."],"RSD":[2,",","."],"UYU":[2,",","."],"CHF":[2,",",""],"EUR-FR":[2,","," "],"EUR-SK":[2,","," "],"EUR-AT":[2,",","."],"EUR-SI":[2,",","."],"EUR-BE":[2,",","."],"EUR-FI":[2,","," "],"EUR-DE":[2,",","."],"EUR-GR":[2,",","."],"EUR-IE":[2,".",","],"EUR-IT":[2,",","."],"EUR-LU":[2,",","."],"EUR-NL":[2,",","."],"EUR-PT":[2,","," "],"EUR-ES":[2,",","."],"EUR-LT":[2,","," "],"LYD":[3,".",","]}`);
+            var shopFront = null;
+            var __countryCode = "TZ";
+            var __currencyCode = "TZS";
+            var country_code = "TZ";
+            var currency_code = "TZS";
+            var languageCode = "en";
+            $(function()
+            {
+                var totalCartEl = $("#totalCart");
+                var checkoutBtn = $("#checkout-btn");
+                // var cartProductsString = window.localStorage.getItem("shopFrontCart");
+                var cartProductsString = `[]`;
+                if(cartProductsString) {
+                    var cartProductsData = JSON.parse(cartProductsString);
+                }else{
+                    var cartProductsData = false;
+                }
+
+                $.fn.shopFrontCart = function(options) {
+                    var $elem = $(this);
+                    var $this = this;
+                    var cartItems = {};
+                    var cartItemEl = "";
+                    var defaultOptions = {
+                        emptyText: "No Items in the Cart",
+                        checkoutText: "checkout",
+                        productItemEl:  "div.product",
+                        cartItemEl: ".cart-item" ,
+                        addToCartLink: "/carts/add_to_cart/",
+                        deleteFromCartLink: "/carts/remove_from_cart/",
+                        updateQuantityLink: "/carts/update_qty/",
+                        localStorageName: "shopFront",
+                    };
+
+                    // item = {image: "", id: "", price: 0, name: "", qty: 0};
+
+                    var settings = $.extend(defaultOptions, options);
+                    var localStorageName = settings.localStorageName;
+                    var $emptyTextDiv = $(".empty-cart-text");
+                    var $subTotalDiv = $(".cart-subtotal");
+                    $emptyTextDiv.hide().text(settings.emptyText);
+                    this.init = function(){
+                        cartItemEl = $elem.find(settings.cartItemEl).first().clone();
+                        $elem.find(settings.cartItemEl).first().remove();
+                        $this.updateCartTotals();
+                    }
+
+                    this.setCartData = function(cartItemsIn) {
+                        cartItems = cartItemsIn;
+                        for (productId in cartItems) {
+                            $this.updateProductCartListItem(productId);
+                        }
+                        $this.updateCartTotals();
+                    }
+
+                    $("body").on("click", ".add-to-cart-btn", function (e) {
+
+                        e.stopPropagation();
+                        qtyEl = $(this).parents(".product").find("input.qty");
+                        var qty = 1;
+                        if(qtyEl.length) {
+                            qty = parseInt(qtyEl.val());
+                        }
+                        var itemEl = $(this).parents(settings.itemSelector);
+                        var productId = itemEl.data("product-id");
+                        var cartItem = cartItems[productId];
+                        if (cartItem) {
+                            cartItems[productId].qty =parseInt(cartItems[productId].qty) + parseInt(qty);
+                        } else {
+                            var image = itemEl.data("image");
+                            if (!image || image == undefined || image == "") {
+                                image = "https://cdn.daftra.com/templates/shop_1/img/product_img.svg";
+                            }
+                            var price = parseFloat(itemEl.data("price"));
+                            var name = itemEl.data("name");
+                            cartItems[productId] = {name: name,id: productId,qty: qty, image: image, price: price};
+
+                        }
+
+                        $this.saveItemToBackEnd(productId);
+                        $this.updateProductCartListItem(productId);
+                        $("body").addClass("sidebar-active");
+                        initTooltips();
+                    });
+
+
+                    this.updateItemQty = function(productId) {
+                        productId = parseInt(productId);
+                        cartItems[productId].qty = $(".product-id-"+productId).find(".cart-item-qty").val();
+                        $this.saveItemToBackEnd(productId);
+                        $this.updateProductCartListItem(productId);
+                    };
+                    $("body").on("change", ".cart-item-qty", function () {
+                        var itemEl = $(this).parents(settings.cartItemEl);
+                        var productId = itemEl.attr("data-id");
+                        $this.updateItemQty(productId);
+                    });
+
+
+                    this.getCartTotal = function () {
+                        var total = 0;
+                        for (productId in cartItems) {
+                            total += parseInt(cartItems[productId].qty) * parseFloat(cartItems[productId].price);
+                        }
+                        return total;
+                    };
+
+                    this.getCartTotalQty = function () {
+                        var total = 0;
+                        for (productId in cartItems) {
+                            total += parseInt(cartItems[productId].qty) ;
+                        }
+                        return total;
+                    };
+
+                    this.updateCartTotals = function () {
+                        var total = $this.getCartTotal();
+                        var totalQty = $this.getCartTotalQty();
+                        $(".qty-subtotal").text(`Subtotal (${totalQty} items)`);
+                        $(".cart-total").text(new Intl.NumberFormat(languageCode+'-'+country_code, { style: 'currency', currency: currency_code }).format(total));
+                       // $(".cart-total").text(format_price(total,__currencyCode));
+                     /*   format_price(total,__currencyCode, function (formattedPrice) {
+                            console.log("fr price : "+formattedPrice)
+
+                        });*/
+                        if(totalQty === 0) {
+                            checkoutBtn.addClass("disabled");
+                            $subTotalDiv.hide();
+                            $emptyTextDiv.show();
+                        } else {
+                            checkoutBtn.removeClass("disabled");
+                            $subTotalDiv.show();
+                            $emptyTextDiv.hide();
+                        }
+                        totalCartEl.text(totalQty);
+                    };
+
+                    this.updateProductCartListItem = function (productId) {
+                        var cartItem = cartItems[productId];
+                        var cartListItem = $elem.find(".product-id-"+productId);
+                        if(!cartItem) {
+                            cartListItem.remove();
+                        } else {
+                            if(cartListItem.length === 0) {
+                                cartListItem = $this.getCartListItemTemplate(productId);
+                                cartListItem.show();
+                                $elem.append(cartListItem);
+                            }
+                            cartListItem.find(".cart-item-name").text(cartItem.name);
+                            cartListItem.find(".cart-item-qty").val(cartItem.qty);
+                            cartListItem.find(".cart-item-price").text(new Intl.NumberFormat(languageCode+'-'+country_code, { style: 'currency', currency: currency_code }).format(cartItem.price));
+                            //cartListItem.find(".cart-item-price").text(format_price(cartItem.price,__currencyCode));
+                            cartListItem.find(".cart-item-image").attr("src",cartItem.image);
+                            cartListItem.attr("data-id", productId);
+                        }
+                        $this.updateCartTotals();
+                    };
+
+
+                    this.getCartListItemTemplate = function (productId) {
+                        var cartListTemplate = $(cartItemEl).clone();
+                        cartListTemplate.addClass("product-id-"+productId).attr("data-id", productId);
+                        return cartListTemplate;
+                    };
+
+                    this.saveItemToBackEnd = function (productId) {
+                        var cartItem = cartItems[productId];
+                        var link  = `${settings.updateQuantityLink}${productId}/${cartItem.qty}` ;
+                        $.ajax({
+                            url: link,
+                            dataType: "JSON",
+                            success: function(data)
+                            {
+                                if(data.status == "success") {
+                                    if($(".shopping-cart-btns").length == 0)
+                                    {
+                                    }
+                                    if(data.exists != true){
+                                        //TODO
+                                    }else{
+                                        //TODO
+                                    }
+                                }else{
+                                    alert("Error while adding your product");
+                                }
+                            }
+                        })
+                    };
+                    $("body").on("click", ".remove-cart-item", function () {
+                        var productId = $(this).parents(settings.cartItemEl).attr("data-id");
+                        delete cartItems[productId];
+                        $this.updateProductCartListItem(productId);
+                        var deleteUrl = settings.deleteFromCartLink + productId;
+                        $.ajax({
+                            url: deleteUrl,
+                            dataType: "JSON",
+                            success: function(data)
+                            {
+                                if(data.status != "success")
+                                {
+                                    alert("Error while adding your product");
+                                }
+                            }
+                        })
+                    });
+                    this.init();
+                    return $this;
+                };
+
+                 shopFront = $(".cart-items").shopFrontCart();
+                if(cartProductsData){
+                    var cartItems = {};
+                    for(key in cartProductsData) {
+                        var item = cartProductsData[key];
+                        cartItems[item.id] = {name: item.name,id: item.id,qty: item.quantity, image: item.image, price: item.price}
+                    }
+                    shopFront.setCartData(cartItems);
+
+                }
+            })
+        </script><div id="products-section" class="pb-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="pt-8">
+                    <div class="row">
+                        <div class="col col-lg-8">
+                            <div class="text-left">
+                                <div class="d-inline-flex flex-column flex-lg-row align-items-lg-center text-left w-100">
+                                    <span class="fs-16 d-block d-lg-inline-block font-weight-medium text-primary mr-2">
+                                        Sort by:
+                                    </span>
+                                    <div class="sort-filter">
+                                        <select class="form-control mr-1 d-inline-block w-auto">
+                                            <option value="unit_price">Price</option>
+                                        </select>
+                                        <button type="button" class="fas fa-arrow-down d-inline-flex align-items-center justify-content-center  w-38px h-38px btn p-0 btn-placeholder d-inline-block sort-dir-desc" data-toggle="tooltip" data-placement="bottom" title="DESC"></button>
+                                        <button type="button" class="fas fa-arrow-up d-inline-flex align-items-center justify-content-center w-38px h-38px btn p-0 btn-placeholder d-inline-block sort-dir-asc" data-toggle="tooltip" data-placement="bottom" title="ASC"></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col flex-grow-0 col-lg-4">
+                            <div class="text-right">
+                                <div class="d-inline-flex flex-column flex-lg-row align-items-lg-center text-left">
+                                    <span class="fs-16 d-block d-lg-inline-block font-weight-medium text-primary mr-2">
+                                        Display:
+                                    </span>
+                                    <select id="" class="form-control show-limit">
+                                        <option value="10"  >10</option>
+                                        <option value="20"  selected="selected">  >20</option>
+                                        <option value="30"  >30</option>
+                                        <option value="40"  >40</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 px-0 px-lg-3">
+                <div class="pt-8"></div>
+                <div class="border-top border-placeholder pb-8"></div>
+            </div>
+        </div>
+        <div class="row">
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="22" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/8a5a90c4-058e-47df-bf7e-7af17dacdea7.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=e07579b739053032b2d95f6816233f7788dcf24ef93c24e67ecd3c30cbba4c23" data-price="60000" data-name="Glow Plugs" data-brand="FAW" data-category="FUEL AND INJECTION SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/22" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/8a5a90c4-058e-47df-bf7e-7af17dacdea7.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=e07579b739053032b2d95f6816233f7788dcf24ef93c24e67ecd3c30cbba4c23"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Glow Plugs<span class="font-weight-medium fs-16 text-body ml-2">#000022</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Preheat cylinders for diesel cold starts </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">60,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="23" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/6483a5fc-6cc8-49aa-8b4f-130329f22a63.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=71683b742a349f463094617855ddad4ed6f0ce153475d2cf250072fe94040995" data-price="260000" data-name="Throttle Body" data-brand="FAW" data-category="FUEL AND INJECTION SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/23" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/6483a5fc-6cc8-49aa-8b4f-130329f22a63.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=71683b742a349f463094617855ddad4ed6f0ce153475d2cf250072fe94040995"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Throttle Body<span class="font-weight-medium fs-16 text-body ml-2">#000023</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Controls airflow entering the engine. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">260,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="24" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/287f8a22-5403-483b-918e-8cb5a50ca118.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=b7780e043b1dd0f5b6d1456de7593b1cf2a447a81dfa558d02b193e592f99023" data-price="120000" data-name="Air intake hose" data-brand="FAW" data-category="FUEL AND INJECTION SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/24" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/287f8a22-5403-483b-918e-8cb5a50ca118.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=b7780e043b1dd0f5b6d1456de7593b1cf2a447a81dfa558d02b193e592f99023"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Air intake hose<span class="font-weight-medium fs-16 text-body ml-2">#000024</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Directs air to the intake system. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">120,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="26" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/cbdd3f9f-7a71-4cfd-8062-6e663843e974.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=9a950820675cd795f35c12a701fcb0bf9c386e914750f851469a69fa58b509f2" data-price="180000" data-name="Intake manifold" data-brand="FAW" data-category="INDUCTION SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/26" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/cbdd3f9f-7a71-4cfd-8062-6e663843e974.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=9a950820675cd795f35c12a701fcb0bf9c386e914750f851469a69fa58b509f2"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Intake manifold<span class="font-weight-medium fs-16 text-body ml-2">#000026</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Distributes air from throttle body to cylinders. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">180,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="27" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/42c10005-cafb-4770-9e09-1c540de1e64c.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=e1e2d77841388e878c98e50ce90f1a59576088d1d071c1f8d7861ce6aa0ece52" data-price="90000" data-name="Radiator" data-brand="FAW" data-category="COOLING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/27" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/42c10005-cafb-4770-9e09-1c540de1e64c.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=e1e2d77841388e878c98e50ce90f1a59576088d1d071c1f8d7861ce6aa0ece52"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Radiator<span class="font-weight-medium fs-16 text-body ml-2">#000027</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Drives the cooling fan for temperature control. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">90,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="28" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/46297014-b44a-41b9-a792-5adce4cf5fdf.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=4e74589675423b196c738ef72b71a4f1a4b8a57edf3349187fd28be0feee8f4f" data-price="20000" data-name="Radiator Hose" data-brand="FAW" data-category="COOLING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/28" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/46297014-b44a-41b9-a792-5adce4cf5fdf.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=4e74589675423b196c738ef72b71a4f1a4b8a57edf3349187fd28be0feee8f4f"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Radiator Hose<span class="font-weight-medium fs-16 text-body ml-2">#000028</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Transfers coolant between engine and radiator. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">20,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="29" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/6ad1bb34-9885-4598-802b-abe75c764cc1.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=80cc42b445248e0f9cf752ba5d4309b1012771d98acb77fe07d50cc1866788ca" data-price="15000" data-name="Radiator cap" data-brand="FAW" data-category="COOLING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/29" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/6ad1bb34-9885-4598-802b-abe75c764cc1.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=80cc42b445248e0f9cf752ba5d4309b1012771d98acb77fe07d50cc1866788ca"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Radiator cap<span class="font-weight-medium fs-16 text-body ml-2">#000029</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Maintains cooling system pressure. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">15,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="30" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/7b0cb2c5-d520-4f3f-9a3e-5cb6871edf65.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=3abd2effd0382aae15ed7920060780d697839ac7bec0057e666bef85fa1f4ef8" data-price="90000" data-name="water pump" data-brand="FAW" data-category="FUEL AND INJECTION SYSTEM,COOLING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/30" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/7b0cb2c5-d520-4f3f-9a3e-5cb6871edf65.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=3abd2effd0382aae15ed7920060780d697839ac7bec0057e666bef85fa1f4ef8"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">water pump<span class="font-weight-medium fs-16 text-body ml-2">#000030</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Circulates coolant through the engine and radiator. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">90,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="31" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/8df1d3ad-e043-49cb-9681-fe96d2caf5d0.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=2c0748add28750af64de1e84ae4396e4a21df71fa5c311e699df55a1c781799e" data-price="60000" data-name="Thermostat" data-brand="FAW" data-category="COOLING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/31" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/8df1d3ad-e043-49cb-9681-fe96d2caf5d0.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=2c0748add28750af64de1e84ae4396e4a21df71fa5c311e699df55a1c781799e"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Thermostat<span class="font-weight-medium fs-16 text-body ml-2">#000031</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Regulates coolant flow based on temperature. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">60,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="32" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/f47096d7-f177-45fd-a0e7-be60d92ebdfd.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=84cbcd42c27bec1d2ecf941fba44cf647bf5d75485a97c60afa6b5998b3ed098" data-price="90000" data-name="Brake disc" data-brand="FAW" data-category="BRAKING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/32" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/f47096d7-f177-45fd-a0e7-be60d92ebdfd.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=84cbcd42c27bec1d2ecf941fba44cf647bf5d75485a97c60afa6b5998b3ed098"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Brake disc<span class="font-weight-medium fs-16 text-body ml-2">#000032</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Rotating disc surface for braking. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">90,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="33" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/a52e0431-e793-48c7-8de1-32d8bafcc990.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=36580f06c54963e007afc85af03bcb3c1f9901b7f1d5e0cf482706baf0993a57" data-price="80000" data-name="Brake Pad" data-brand="FAW" data-category="BRAKING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/33" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/a52e0431-e793-48c7-8de1-32d8bafcc990.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=36580f06c54963e007afc85af03bcb3c1f9901b7f1d5e0cf482706baf0993a57"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Brake Pad<span class="font-weight-medium fs-16 text-body ml-2">#000033</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Friction material pressed against the disc. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">80,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="34" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/a70bf0fe-88cd-4324-88c1-55e44a4fff04.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=ab0934a6dc26648441f11b75f6bebf3666ef0d9bc15f377dae0b14b621c98841" data-price="90000" data-name="Brake Caliper" data-brand="FAW" data-category="BRAKING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/34" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/a70bf0fe-88cd-4324-88c1-55e44a4fff04.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=ab0934a6dc26648441f11b75f6bebf3666ef0d9bc15f377dae0b14b621c98841"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Brake Caliper<span class="font-weight-medium fs-16 text-body ml-2">#000034</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Houses pistons that press pads onto the disc. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">90,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="35" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/5b80ac85-ca65-452a-867e-864f4ab52ac2.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=c3e441fb1446867d8cc3dadf05adbf5eec9da409226e74f7aab6c31388a13805" data-price="70000" data-name="Brake cylinder" data-brand="FAW" data-category="BRAKING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/35" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/5b80ac85-ca65-452a-867e-864f4ab52ac2.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=c3e441fb1446867d8cc3dadf05adbf5eec9da409226e74f7aab6c31388a13805"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Brake cylinder<span class="font-weight-medium fs-16 text-body ml-2">#000035</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Hydraulic cylinder in drum brake wheel cylinder. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">70,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="36" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/dd461b5b-2dbf-435a-b44a-e6dd44320482.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=4f42058c249767c85a3a3f3bf763998fa4a8f26dc6ab5457511c07f7dafb8085" data-price="15000" data-name="Brake booster" data-brand="FAW" data-category="BRAKING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/36" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/dd461b5b-2dbf-435a-b44a-e6dd44320482.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=4f42058c249767c85a3a3f3bf763998fa4a8f26dc6ab5457511c07f7dafb8085"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Brake booster<span class="font-weight-medium fs-16 text-body ml-2">#000036</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Vacuum assist to reduce pedal effort. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">15,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="37" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/1093f0d3-e370-408d-9df2-f8be3c114932.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=01be134acf3c885f825f5f5782868d823db8f69879b76da432b1f6aab47b79fd" data-price="50000" data-name="Brake drum" data-brand="FAW" data-category="BRAKING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/37" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/1093f0d3-e370-408d-9df2-f8be3c114932.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=01be134acf3c885f825f5f5782868d823db8f69879b76da432b1f6aab47b79fd"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Brake drum<span class="font-weight-medium fs-16 text-body ml-2">#000037</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Drum braking surface for shoes. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">50,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="38" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/71df67d1-1104-49c0-91ed-f71b205eea26.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=93a4287d67b0f2ebfd960c79e52376c5be12bf8d808ffd1861eee28e6e5e7139" data-price="120000" data-name="Brake hose" data-brand="FAW" data-category="BRAKING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/38" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/71df67d1-1104-49c0-91ed-f71b205eea26.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=93a4287d67b0f2ebfd960c79e52376c5be12bf8d808ffd1861eee28e6e5e7139"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Brake hose<span class="font-weight-medium fs-16 text-body ml-2">#000038</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Flexible hydraulic hose to caliper or wheel cylinder. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">120,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="39" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/a6780a92-28fc-4118-9f86-29dc7a821053.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=ad5f766a522aa8b1c9e426d8fe745ee0e1ea2ec5178184a497b8f2718b5cb166" data-price="70000" data-name="Speed sensor" data-brand="FAW" data-category="BRAKING SYSTEM," data-stock-balance="100">
+                    <a href="/contents/product_view/39" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/a6780a92-28fc-4118-9f86-29dc7a821053.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=ad5f766a522aa8b1c9e426d8fe745ee0e1ea2ec5178184a497b8f2718b5cb166"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Speed sensor<span class="font-weight-medium fs-16 text-body ml-2">#000039</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Wheel speed sensor for ABS. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">70,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="40" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/24edba0b-d15e-4a38-af60-16cf0797c023.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=2b19c5333d194bb485bd5c797fb15b6caf51c06cd634e20e3797755d9d019cec" data-price="80000" data-name="steering wheel" data-brand="FAW" data-category="STEERING AND SUSPENSION," data-stock-balance="100">
+                    <a href="/contents/product_view/40" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/24edba0b-d15e-4a38-af60-16cf0797c023.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=2b19c5333d194bb485bd5c797fb15b6caf51c06cd634e20e3797755d9d019cec"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">steering wheel<span class="font-weight-medium fs-16 text-body ml-2">#000040</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Driver interface to steer vehicle </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">80,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="41" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/5f18ddc3-efbe-4891-b4ee-c2ae8a64f9fb.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=f6c90a3b9c035d1c1bf26cf6c3f027f4d12163effc37ef2bab298d90da2abb4c" data-price="120000" data-name="steering column" data-brand="FAW" data-category="STEERING AND SUSPENSION," data-stock-balance="100">
+                    <a href="/contents/product_view/41" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/5f18ddc3-efbe-4891-b4ee-c2ae8a64f9fb.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=f6c90a3b9c035d1c1bf26cf6c3f027f4d12163effc37ef2bab298d90da2abb4c"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">steering column<span class="font-weight-medium fs-16 text-body ml-2">#000041</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Shaft assembly between wheel and steering box. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">120,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-sm-6 py-2">
+                <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4" data-product-id="43" data-image="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/977a772a-4578-44fd-96d9-096820de25a2.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=810847bbc3bb19d7c83e1caae50503f91c3d4247e0f2271488b81cfab28dbc3d" data-price="120000" data-name="Steering pump" data-brand="FAW" data-category="STEERING AND SUSPENSION," data-stock-balance="100">
+                    <a href="/contents/product_view/43" class="text-decoration-none text-primary text-hover-black">
+                        <img src="https://enerpize-users-data.s3.eu-west-1.amazonaws.com/files/1f7b9c84/product/977a772a-4578-44fd-96d9-096820de25a2.png?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEOr%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMSJGMEQCIDF%2BFC%2FG5%2FbV6ibTprd824fEKPKpeeBvE4HJYvrwoliaAiAoscQrA%2BhhQjgOz4uEOrmBXOdYw%2BuK9X%2BR19r5LnNhWCrCBQiz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDIyMjE4MjE0OTc2NCIM7CDIanp8fwhvwU73KpYFm1UrvmSIeW8y4UBO9%2BHopsSt%2FrzgbzXaK9a%2Bs0g93MekS03p%2FrdEEE1ojZkWEFKJfd7B7ThoHfreYGE9vqQMIvSl7Qyg961nhIyEvWE0s5tl7ktTUQsHf2MVVwRYQrNH20Nm9AWV9ka702zJJpyXyrq6pWTUkJWJ3c%2Fm53bp5inTyTXgCa51rE1e%2FA0Cm9mzpvtUZEXfj1d0lkUzixgnu06jam1sFQaz7HZQfkfHgc1%2Fb%2FNx2wNhz%2BcA91iFIrHn2o3fAb%2BZvZRY8ZYQiv70%2Bwk%2FGDLityWrI68RxdH%2B5hQxn4ad4D0%2Fy%2BQbXVUIGGiuFx62DEd2KGU2RxCLVO1o3C3EZa8NvHK0YzDvbzrwrCQSKxixsW1dqoqnCY%2By%2Bp7llwiwu2c0Wduk%2BtL5jd5fdgUAKyb%2Fq5ED%2FO6W6jVUlb7sa5Jlrb4V5hoth%2FmRNSPMoYEpfqSeIrBbd0gNWOHpcC%2BweeTf6Vkm8jdGvOzQMYy20smkIwH0Oe%2B3KMCh3jBJBYIiHfHgM43qZtw%2Bhhg8KuEiDVKMIGnnUOA3hHpsUOWYxYYLZ4kJYORsW1ch3ooAd8k9DYQ49xHndly3kFmYkg3dbwo%2BrkvuuWMTzR0g9iewyYKU4%2BmqkL%2F1VCOUR5cnTBPlxnnBPZXT1kdOlDoVSXTYa9sbBGCyn1%2FaEvj%2FESkvnNcbnNQncUpw1SgSd%2BThC0NTm%2Bh%2BejCbulmDgh%2FG0Jw64b338FgkDci07rC%2FYElYZBmPK5f7i%2BMZ4MBpI8ygiubxd66STw%2BAmsgMWCKs2WUqt7p7js0MjUZetzxsTtspmh%2FzNX7ikaj68eL8f8vqSIlLKFRMVjeze44oAZnRfD4cvS%2BDM1Q%2FXheLKpmgu8N5gflbdYwwrajc1AY6sgGuWWXahCxjflwvJqoAZ5o3PR1rPxxHRN2k0JIArbzijGeWE0NwBeFdiYhowm2%2Bq4nLvPJqSk9%2BPSTYJ4l20DajL0hjaFwhlXKQXN9MaSnhSl2Qjr9gxEumdCqoz7t%2FPZS93c7QDSnQ36WpsNLtVJbqnk3jh6M3MZhCCUHsR5pWHZn5EYDm6nTRuTBRipJYWRi0zF6fwEGTcjXAIVlbblBsSis0%2B9npobHbwKK%2FaXt8gO7c&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=ASIATHOYWR2COZNUIPRD%2F20260901%2Feu-west-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20260901T185922Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=6000&amp;X-Amz-Signature=810847bbc3bb19d7c83e1caae50503f91c3d4247e0f2271488b81cfab28dbc3d"  alt="" class="product-img-sm img-fluid h-180px w-100  mx-auto img-cover mb-3">
+                        <h6 class="fs-18 font-weight-bold mb-2">Steering pump<span class="font-weight-medium fs-16 text-body ml-2">#000043</span></h6>
+                    </a>
+                    <p class="fs-16 fs-md-14 fs-xl-16 font-weight-medium text-body mb-3 " > Hydraulic pump for power steering. </p>
+                    <div class="mb-3 font-weight-bold mt-auto">
+
+
+                        <span class="text-black fs-24">120,000 TZS</span>
+
+                    </div>
+                    <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"><i class="fal fa-cart-plus mr-2"></i>Add to Cart</button>
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="text-center pt-8">
+                    <nav class="d-inline-flex mb-0 align-items-center">
+                        <span class="text-primary fs-16 mr-2 font-weight-medium d-none d-lg-inline-block">
+                            Page:
+                        </span>
+                        <ul class="pagination mb-0">
+
+                            <li class="page-item"><a class="page-link bg-placeholder bg-hover-primary" href="/contents/products_list/page:1?"><i class="fa fas fa-arrow-left"></i></a></li>
+
+
+                            <li class="page-item" > <a class="page-link" href="/contents/products_list/page:1?" >  1 </a></li>
+                            <li class="page-item active"> <a class="page-link" href="/contents/products_list/page:2?" >  2 </a></li>
+
+
+                            <li class="page-item" > <a class="page-link" href="/contents/products_list/page:3?" >  3 </a></li>
+
+                            <li class="page-item"><a class="page-link bg-placeholder bg-hover-primary" href="/contents/products_list/page:3?"><i class="fas fa-arrow-right"></i></a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<style>* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}</style> <div class="custom_content container"><footer id="site-footer"><div class="container"><div class="row"><div class="col-lg-12 px-0 px-lg-3"><div class="border-top border-black pb-10"></div></div><div class="col-lg-4"><div class="widget mb-10 mb-lg-0"><h4 class="text-capitalize text-primary fs-20 font-weight-bold mb-5">About Us</h4><p class="fs-16 fs-lg-14 fs-xl-16 font-weight-medium text-dark-2 mb-0">Lorem ipsum, or lipsum as it is sometimes known, is dummy text used in laying out print, graphic or web designs. The passage is attributed to an typesetter.</p></div></div><div class="col-lg-1"></div><div class="col-lg-3"><div class="widget mb-10 mb-lg-0"><h4 class="text-capitalize text-primary fs-20 font-weight-bold mb-5">Links</h4><div class="row"><div class="col-sm-12"><a href="/home" class="fs-16 fs-lg-14 fs-xl-16 font-weight-medium text-dark-2 mb-2 d-inline-block">Home</a></div><div class="col-sm-12"><a href="/contents/products_list" class="fs-16 fs-lg-14 fs-xl-16 font-weight-medium text-dark-2 mb-2 d-inline-block">All products</a></div><div class="col-sm-12"><a href="/contents/process_content/contact_us" class="fs-16 fs-lg-14 fs-xl-16 font-weight-medium text-dark-2 mb-2 d-inline-block">Contact Us</a></div></div></div></div><div class="col-lg-1"></div><div class="col-lg-3"><div class="widget mb-10 mb-lg-0"><h4 class="text-capitalize text-primary fs-20 font-weight-bold mb-5">Contact</h4><p class="fs-16 fs-lg-14 fs-xl-16 font-weight-medium text-dark-2 mb-3">find us on social media</p><a href="#" target="_blank" title="Facebook" class="pr-2 mr-2 text-facebook fs-18 tip"><i class="fab fa-facebook-f"></i></a><a href="#" target="_blank" title="Twitter" class="pr-2 mr-2  fs-18 tip"><i class="fab fa-x-twitter"></i></a><a href="#" target="_blank" title="YouTube" class="pr-2 mr-2 text-youtube fs-18 tip"><i class="fab fa-youtube"></i></a></div></div></div></div><div class="copyrights pt-0 pt-lg-6 pt-xxl-11"><div class="container"><p class="fs-16 fs-lg-14 fs-xl-16 font-weight-medium text-dark-2 mb-0">All rights reserved.</p></div></div></footer><script src="https://cdn.daftra.com/templates/shop_1/js/plugin_modernizr.js?v=01236"></script><script src="https://cdn.daftra.com/templates/shop_1/js/plugin_popper.js?v=01236"></script><script src="https://cdn.daftra.com/templates/shop_1/js/plugin_bootstrap.js?v=01236"></script><script src="https://cdn.daftra.com/templates/shop_1/js/plugin_swiper.js?v=01236"></script><script src="https://cdn.daftra.com/templates/shop_1/js/plugin_fancybox.js?v=01236"></script><script src="https://cdn.daftra.com/templates/shop_1/js/plugin_tooltips.js?v=01236"></script><script src="https://cdn.daftra.com/templates/shop_1/js/app.js?v=01236"></script></div>

@@ -333,7 +333,7 @@ $selectModuleConfig = [
     'statusUrl' => $statusUrl,
     'showStatus' => $isRootAdminUsername,
     'desktopAppDownloadUrl' => $desktopAppDownloadUrl,
-    'showDesktopAppDownload' => true,
+    'showDesktopAppDownload' => false,
     'desktopUpdate' => $desktopLatestVersion !== null ? [
         'latestVersion' => $desktopLatestVersion,
         'downloadUrl' => $desktopAppDownloadUrl,
@@ -360,11 +360,11 @@ $selectModuleConfig = [
         echo erp_get_theme_init_html();
     } else { ?>
     <script>(function(){try{var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();</script>
-    <?php }
-    if (function_exists('renderSystemFontHeadMarkup')) {
+    <?php } ?>
+    <link rel="stylesheet" crossorigin href="<?= htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') ?>">
+    <?php if (function_exists('renderSystemFontHeadMarkup')) {
         renderSystemFontHeadMarkup();
     } ?>
-    <link rel="stylesheet" crossorigin href="<?= htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') ?>">
     <?php if ($desktopLatestVersion !== null):
         $desktopBannerCss = __DIR__ . '/assets/css/desktop-update-banner.css';
         $desktopBannerJs = __DIR__ . '/assets/js/desktop-update-banner.js';

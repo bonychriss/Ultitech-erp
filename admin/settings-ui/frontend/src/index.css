@@ -1,0 +1,6 @@
+/* Minimal base; page styles live in settings-hub.css */
+html,
+body,
+#root {
+  min-height: 100%;
+}

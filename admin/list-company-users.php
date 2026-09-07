@@ -10,9 +10,9 @@ if (!function_exists('isLoggedIn') || !isLoggedIn()) {
     exit;
 }
 
-if (!function_exists('isSuperAdmin') || !isSuperAdmin()) {
+if (!function_exists('isUltimateSystemAdmin') || !isUltimateSystemAdmin()) {
     http_response_code(403);
-    die('Access denied. Super admin only.');
+    die('Access denied. System admin (admin@ultimatetrading.com) only.');
 }
 
 ensureMultiCompanyControlSchema();
@@ -202,8 +202,8 @@ header('Content-Type: text/html; charset=UTF-8');
                                 <tr>
                                     <td><?= $n ?></td>
                                     <td><strong><?= $esc($u['email'] ?? '') ?></strong></td>
-                                    <td><?= $esc($u['username'] ?? '') ?></td>
-                                    <td><?= $esc($u['role'] ?? '') ?></td>
+                                    <td><?= $esc($u['username'] ?? 'Â') ?></td>
+                                    <td><?= $esc($u['role'] ?? 'Â') ?></td>
                                     <td><span class="badge <?= $esc($badgeClass) ?>"><?= $esc(ucfirst($st)) ?></span></td>
                                     <td><?= $esc((string) ($u['tenant_user_id'] ?? '')) ?></td>
                                 </tr>

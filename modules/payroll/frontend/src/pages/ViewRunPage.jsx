@@ -6,7 +6,6 @@ import {
   Inbox,
   Loader2,
   Mail,
-  RotateCcw,
   Send,
   Trash2,
   Wallet,
@@ -177,21 +176,10 @@ export default function ViewRunPage() {
               Approve run
             </button>
           )}
-          {can.revert && (
-            <button
-              type="button"
-              className="pay-desk-btn pay-desk-btn-secondary"
-              disabled={busy}
-              onClick={() => performAction('revert')}
-            >
-              <RotateCcw size={14} aria-hidden="true" />
-              Revert to draft
-            </button>
-          )}
           {can.markPaid && (
             <button
               type="button"
-              className="pay-desk-btn pay-desk-btn-success"
+              className="pay-desk-btn pay-desk-btn-success pay-desk-btn--pill"
               disabled={busy}
               onClick={() => setConfirm({
                 action: 'mark_paid',
@@ -324,6 +312,22 @@ export default function ViewRunPage() {
                             <img src={editIcon} alt="" className="pay-desk-edit-icon" aria-hidden="true" />
                           </button>
                         )}
+                        {can.removePayslip && (
+                          <button
+                            type="button"
+                            className="pay-desk-icon-btn pay-desk-icon-btn--del"
+                            title="Remove from run"
+                            disabled={busy}
+                            onClick={() => setConfirm({
+                              action: 'remove_payslip',
+                              payslipId: slip.id,
+                              title: 'Remove employee from this run?',
+                              body: `${slip.fullName || 'This employee'} will be removed from the draft payroll run. You can run payroll again later to include them.`,
+                            })}
+                          >
+                            <Trash2 size={15} aria-hidden="true" />
+                          </button>
+                        )}
                         {can.sendAll && !slip.isPublished && (
                           <button
                             type="button"
@@ -404,11 +408,11 @@ export default function ViewRunPage() {
                 </button>
                 <button
                   type="button"
-                  className={`pay-desk-btn ${confirm.action === 'delete' ? 'pay-desk-btn-danger' : 'pay-desk-btn-success'}`}
+                  className={`pay-desk-btn ${confirm.action === 'delete' || confirm.action === 'remove_payslip' ? 'pay-desk-btn-danger' : 'pay-desk-btn-success'} pay-desk-btn--pill`}
                   disabled={busy}
                   onClick={() => performAction(confirm.action, confirm.payslipId || 0)}
                 >
-                  {busy ? 'Working...' : 'Confirm'}
+                  {busy ? 'Working...' : (confirm.action === 'remove_payslip' ? 'Remove' : 'Confirm')}
                 </button>
               </div>
             </div>

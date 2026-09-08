@@ -45,94 +45,100 @@ if (!isFinanceOrAdmin() && !$is_owner) {
 $isPrintMode = isset($_GET['print_mode']);
 $isEmbed = isset($_GET['embed']) && !$isPrintMode;
 
-$companyInfo = function_exists('getCompanyInfo') ? getCompanyInfo() : [];
-$companyName = trim((string) ($companyInfo['company_name'] ?? ''));
-if ($companyName === '' && function_exists('getCompanySetting')) {
-    $companyName = trim((string) getCompanySetting('company_name', ''));
+/**
+ * Prefer Admin → Company Settings (companies row + company_settings KV).
+ * Skip demo placeholders like "123 Freight Road…".
+ */
+$companyProfile = [];
+if (function_exists('getCurrentCompany')) {
+    $companyProfile = getCurrentCompany() ?: [];
+}
+if ((!is_array($companyProfile) || $companyProfile === []) && function_exists('getCompanyInfo')) {
+    $companyProfile = getCompanyInfo() ?: [];
+}
+if (!is_array($companyProfile)) {
+    $companyProfile = [];
+}
+
+$pickCompanyValue = static function (array $keys) use ($companyProfile): string {
+    foreach ($keys as $key) {
+        $fromProfile = trim((string) ($companyProfile[$key] ?? ''));
+        if ($fromProfile !== '') {
+            return $fromProfile;
+        }
+        if (function_exists('getCompanySetting')) {
+            $fromSettings = trim((string) getCompanySetting($key, ''));
+            if ($fromSettings !== '') {
+                return $fromSettings;
+            }
+        }
+    }
+    return '';
+};
+
+$isPlaceholderDetail = static function (string $value): bool {
+    return $value !== '' && (bool) preg_match(
+        '/123\s+Freight\s+Road|Logistics\s+Park|procurement@shippex\.co\.tz|\+255\s*123\s*456\s*789/i',
+        $value
+    );
+};
+
+$companyName = $pickCompanyValue(['company_name', 'legal_name', 'name']);
+if ($companyName === '' && defined('COMPANY_NAME')) {
+    $companyName = trim((string) COMPANY_NAME);
 }
 if ($companyName === '') {
-    $companyName = defined('COMPANY_NAME') ? (string) COMPANY_NAME : 'ERP System';
+    $companyName = 'ERP System';
 }
 
-$companyLogoUrl = function_exists('getCompanyLogoUrl') ? trim((string) getCompanyLogoUrl()) : '';
-if ($companyLogoUrl === '') {
-    $fallbackLogo = 'assets/images/Untitled.jpg';
-    $fallbackDisk = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $fallbackLogo);
-    if (is_file($fallbackDisk)) {
-        $companyLogoUrl = function_exists('app_url') ? app_url('/' . $fallbackLogo) : ($baseUrl . '/' . $fallbackLogo);
-    }
+$companyAddress = $pickCompanyValue(['address', 'company_address']);
+$companyPhone = $pickCompanyValue(['phone', 'company_phone']);
+$companyEmail = $pickCompanyValue(['email', 'company_email']);
+
+if ($isPlaceholderDetail($companyAddress)) {
+    $companyAddress = '';
+}
+if ($isPlaceholderDetail($companyPhone)) {
+    $companyPhone = '';
+}
+if ($isPlaceholderDetail($companyEmail)) {
+    $companyEmail = '';
 }
 
-$companyAddress = '';
-$companyPhone = '';
-$companyEmail = '';
-if (function_exists('getCompanySetting')) {
-    $companyAddress = trim((string) getCompanySetting('company_address', ''));
-    $companyPhone = trim((string) getCompanySetting('company_phone', ''));
-    $companyEmail = trim((string) getCompanySetting('company_email', ''));
-}
+// Build address from parts when only city/country exist on the company row.
 if ($companyAddress === '') {
-    $companyAddress = trim((string) ($companyInfo['company_address'] ?? ''));
+    $addressParts = array_filter([
+        trim((string) ($companyProfile['address'] ?? '')),
+        trim((string) ($companyProfile['city'] ?? '')),
+        trim((string) ($companyProfile['country'] ?? getCompanySetting('country', ''))),
+    ], static fn ($part) => $part !== '' && !$isPlaceholderDetail($part));
+    $companyAddress = implode(', ', $addressParts);
 }
-if ($companyPhone === '') {
-    $companyPhone = trim((string) ($companyInfo['company_phone'] ?? ''));
+
+$companyLogoUrl = '';
+if (function_exists('resolveCompanyBrandingLogoUrl')) {
+    $companyLogoUrl = trim((string) resolveCompanyBrandingLogoUrl());
 }
-if ($companyEmail === '') {
-    $companyEmail = trim((string) ($companyInfo['company_email'] ?? ''));
-}
-if ($companyAddress === '') {
-    $companyAddress = defined('COMPANY_ADDRESS') ? (string) COMPANY_ADDRESS : '';
-}
-if ($companyPhone === '') {
-    $companyPhone = defined('COMPANY_PHONE') ? (string) COMPANY_PHONE : '';
-}
-if ($companyEmail === '') {
-    $companyEmail = defined('COMPANY_EMAIL') ? (string) COMPANY_EMAIL : '';
+if ($companyLogoUrl === '' && function_exists('getCompanyLogoUrl')) {
+    $companyLogoUrl = trim((string) getCompanyLogoUrl());
 }
 
 $isDownload = isset($_GET['download']);
 
-// Full-page React document viewer (same pattern as sales order view).
-if (!$isPrintMode && !$isEmbed && !$isDownload) {
-    require_once __DIR__ . '/includes/payroll-lib.php';
-    if (payrollDeskLoadReactAssets() !== null) {
-        if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
-            $_GET['module'] = 'payroll';
-        }
-        $_SESSION['active_module'] = 'payroll';
-
-        $periodLabel = date('F Y', mktime(0, 0, 0, (int) $slip['month'], 1, (int) $slip['year']));
-        $backUrl = isFinanceOrAdmin()
-            ? payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(['id' => (int) $slip['payroll_run_id']])
-            : payrollDeskPublicUrl('my_payslips.php') . payrollDeskQueryString();
-
-        payrollDeskRenderReactEntry(
-            'Payslip - ' . (string) $slip['full_name'],
-            'Payslip',
-            'payslip-view',
-            [
-                '__PAYROLL_PAYSLIP_ID__' => (int) $id,
-                '__PAYROLL_PAYSLIP_META__' => [
-                    'id' => (int) $id,
-                    'periodLabel' => $periodLabel,
-                    'employeeName' => (string) ($slip['full_name'] ?? ''),
-                    'idLabel' => '#' . str_pad((string) $id, 5, '0', STR_PAD_LEFT),
-                    'runId' => (int) ($slip['payroll_run_id'] ?? 0),
-                    'statusLabel' => ((string) ($slip['status'] ?? '') === 'paid') ? 'Paid' : 'Approved',
-                    'backUrl' => $backUrl,
-                    'myPayslipsUrl' => payrollDeskPublicUrl('my_payslips.php') . payrollDeskQueryString(),
-                    'downloadUrl' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString([
-                        'id' => (int) $id,
-                        'download' => 1,
-                    ]),
-                    'embedUrl' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString([
-                        'id' => (int) $id,
-                        'embed' => 1,
-                    ]),
-                ],
-            ]
-        );
+// Full-page Laravel + React document viewer (embed/download/print stay on legacy HTML).
+if (
+    !$isPrintMode
+    && !$isEmbed
+    && !$isDownload
+    && !defined('PAYROLL_PAYSLIP_LEGACY_FALLBACK')
+) {
+    if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
+        $_GET['module'] = 'payroll';
     }
+    $_GET['desk'] = 'payslip';
+    $_GET['id'] = $id;
+    require dirname(__DIR__, 2) . '/payroll.php';
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -238,10 +244,16 @@ if (!$isPrintMode && !$isEmbed && !$isDownload) {
             letter-spacing: 0.5px;
         }
 
-        .company-block { text-align: right; }
-        .company-logo-img { height: 50px; width: auto; object-fit: contain; margin-bottom: 5px; }
+        .company-block { text-align: right; max-width: 280px; margin-left: auto; }
+        .company-logo-img { height: 50px; width: auto; object-fit: contain; margin-bottom: 8px; }
         .company-name { font-family: var(--header-font); font-size: 18px; font-weight: 700; }
-        .company-slogan { font-size: 12px; color: #666; font-style: italic; }
+        .company-details {
+            margin-top: 6px;
+            font-size: 11px;
+            line-height: 1.45;
+            color: #555;
+        }
+        .company-details div + div { margin-top: 2px; }
 
         /* --- Info Section --- */
         .info-section { display: flex; justify-content: space-between; margin-bottom: 50px; }
@@ -370,18 +382,22 @@ if (!$isPrintMode && !$isEmbed && !$isDownload) {
                 <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>" class="company-logo-img">
                 <?php endif; ?>
                 <div class="company-name"><?= htmlspecialchars($companyName) ?></div>
-                <div class="company-slogan">Excellence in Service</div>
+                <?php if ($companyAddress !== '' || $companyPhone !== '' || $companyEmail !== ''): ?>
+                <div class="company-details">
+                    <?php if ($companyAddress !== ''): ?><div><?= htmlspecialchars($companyAddress) ?></div><?php endif; ?>
+                    <?php if ($companyPhone !== ''): ?><div><?= htmlspecialchars($companyPhone) ?></div><?php endif; ?>
+                    <?php if ($companyEmail !== ''): ?><div><?= htmlspecialchars($companyEmail) ?></div><?php endif; ?>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
 
         <!-- Info -->
         <div class="info-section">
             <div class="to-block">
-                <h3>Payslip For:</h3>
                 <div class="recipient-name"><?= htmlspecialchars($slip['full_name']) ?></div>
                 <div class="recipient-details">
                     <?= htmlspecialchars($slip['department']) ?><br>
-                    <?= ucfirst($slip['role']) ?><br>
                     TIN: <?= htmlspecialchars($slip['tin_number'] ?? 'N/A') ?>
                 </div>
             </div>
@@ -491,12 +507,6 @@ if (!$isPrintMode && !$isEmbed && !$isDownload) {
                 <div class="bank-row">
                     <span class="bank-label">Account Number :</span>
                     <span class="bank-val"><?= htmlspecialchars($slip['account_number'] ?? 'N/A') ?></span>
-                </div>
-
-                <div class="page-bottom">
-                    <?php if ($companyAddress !== ''): ?><div><?= htmlspecialchars($companyAddress) ?></div><?php endif; ?>
-                    <?php if ($companyPhone !== ''): ?><div><?= htmlspecialchars($companyPhone) ?></div><?php endif; ?>
-                    <?php if ($companyEmail !== ''): ?><div><?= htmlspecialchars($companyEmail) ?></div><?php endif; ?>
                 </div>
             </div>
 

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * ERP entry for Payroll — erp-laravel Domains/Payroll + React UI.
+ * ERP entry for Payroll  erp-laravel Domains/Payroll + React UI.
  * URL: /{company}/payroll or /{company}/modules/payroll/index ? payroll.php
  */
 require_once __DIR__ . '/includes/functions.php';
@@ -20,12 +20,16 @@ if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
 $_SESSION['active_module'] = 'payroll';
 
 if (!isFinanceOrAdmin()) {
-    $q = array_merge($_GET ?: [], ['module' => 'payroll']);
-    $payslips = function_exists('app_url')
-        ? app_url('/modules/payroll/my_payslips.php')
-        : '/public_html/modules/payroll/my_payslips.php';
-    header('Location: ' . $payslips . '?' . http_build_query($q));
-    exit;
+    $deskEarly = strtolower(trim((string) ($_GET['desk'] ?? '')));
+    // Payslip view allows the owning employee; access is enforced when loading meta.
+    if ($deskEarly !== 'payslip') {
+        $q = array_merge($_GET ?: [], ['module' => 'payroll']);
+        $payslips = function_exists('app_url')
+            ? app_url('/modules/payroll/my_payslips.php')
+            : '/public_html/modules/payroll/my_payslips.php';
+        header('Location: ' . $payslips . '?' . http_build_query($q));
+        exit;
+    }
 }
 
 $slug = trim((string) ($_SESSION['company_slug'] ?? (function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : '')));
@@ -86,11 +90,12 @@ $desk = strtolower(trim((string) ($_GET['desk'] ?? '')));
 $payrollDesks = [
     'run-payroll' => true,
     'edit-payslip' => true,
+    'payslip' => true,
     'settings' => true,
 ];
 
 if ($desk !== '' && isset($payrollDesks[$desk])) {
-    if ($desk === 'edit-payslip') {
+    if ($desk === 'edit-payslip' || $desk === 'payslip') {
         $payslipId = (int) ($_GET['id'] ?? 0);
         if ($payslipId <= 0) {
             header('Location: ' . (function_exists('app_url') ? app_url('/modules/payroll/index.php') : '/modules/payroll/index.php') . '?module=payroll');

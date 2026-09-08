@@ -50,6 +50,12 @@ final class PayrollShell
             $windowScript .= ';window.__PAYROLL_PAYSLIP_ID__ = ' . json_encode($payslipId, JSON_UNESCAPED_SLASHES);
         }
 
+        $payslipMeta = $cfg['payslipMeta'] ?? null;
+        if (is_array($payslipMeta) && $payslipMeta !== []) {
+            $windowScript .= ';window.__PAYROLL_PAYSLIP_META__ = '
+                . json_encode($payslipMeta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
         $employeeId = (int) ($cfg['employeeId'] ?? 0);
         if ($employeeId > 0) {
             $windowScript .= ';window.__PAYROLL_EMPLOYEE_ID__ = ' . json_encode($employeeId, JSON_UNESCAPED_SLASHES);

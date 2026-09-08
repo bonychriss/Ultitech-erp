@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import {
   deskPageUrl,
   fetchPayslipEdit,
@@ -19,22 +19,22 @@ const emptyForm = {
   remarks: '',
 };
 
-function MoneyField({ id, label, value, onChange }) {
+function Field({ id, label, value, onChange, type = 'number' }) {
   return (
-    <label className="pay-sharpfill" htmlFor={id}>
-      <span className="pay-sharpfill-label">{label}</span>
-      <div className="pay-sharpfill-box">
-        <span className="pay-sharpfill-prefix">TZS</span>
+    <div className="pay-ca-row">
+      <label className="pay-ca-label" htmlFor={id}>{label}</label>
+      <div className="pay-ca-money">
+        {type === 'number' && <span className="pay-ca-money-prefix">TZS</span>}
         <input
           id={id}
-          type="number"
-          step="0.01"
-          className="pay-sharpfill-input"
+          type={type}
+          step={type === 'number' ? '0.01' : undefined}
+          className="pay-ca-input"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
-    </label>
+    </div>
   );
 }
 
@@ -148,7 +148,7 @@ export default function EditPayslipForm({
 
   if (loading) {
     return (
-      <div className="pay-desk-loading" role="status" aria-live="polite">
+      <div className="pay-ca-loading" role="status" aria-live="polite">
         <Loader2 className="pay-desk-boot-spinner" size={18} aria-hidden="true" />
         <span>Loading payslip...</span>
       </div>
@@ -157,7 +157,7 @@ export default function EditPayslipForm({
 
   if (!init && error) {
     return (
-      <div className="pay-slip-edit-modal-body-pad">
+      <div className="pay-ca-main">
         <div className="pay-desk-flash-error" role="alert">{error}</div>
         {typeof onClose === 'function' ? (
           <button type="button" className="pay-desk-btn pay-desk-btn-secondary pay-desk-btn--pill" onClick={onClose}>
@@ -173,81 +173,63 @@ export default function EditPayslipForm({
   }
 
   return (
-    <div className="pay-slip-edit-modal-body-pad">
-      <div className="pay-slip-edit-modal-employee">
-        <EmployeeAvatar name={slip.fullName} id={slip.userId} />
-        <div className="pay-desk-employee-meta">
-          <div className="pay-desk-cell-main">{slip.fullName || 'Employee'}</div>
-          <div className="pay-desk-cell-sub">{slip.periodLabel || ''}</div>
-        </div>
-      </div>
-
-      {error && <div className="pay-desk-flash-error" role="alert">{error}</div>}
-      {notice && <div className="pay-desk-flash-ok" role="status">{notice}</div>}
-
-      <form className="pay-slip-edit-card pay-slip-edit-card--modal" onSubmit={handleSubmit}>
-        <div className="pay-slip-edit-ledger">
-          <div className="pay-slip-edit-block">
-            <h3 className="pay-slip-edit-block-title">Earnings</h3>
-            <div className="pay-sharpfill-stack">
-              <MoneyField id="basic_salary" label="Basic salary" value={form.basicSalary} onChange={(v) => updateField('basicSalary', v)} />
-              <MoneyField id="total_allowances" label="Allowances" value={form.totalAllowances} onChange={(v) => updateField('totalAllowances', v)} />
-              <MoneyField id="monthly_adjustment" label="Adjustments" value={form.monthlyAdjustment} onChange={(v) => updateField('monthlyAdjustment', v)} />
-            </div>
-          </div>
-
-          <div className="pay-slip-edit-block pay-slip-edit-block--deductions">
-            <h3 className="pay-slip-edit-block-title">Deductions</h3>
-            <div className="pay-sharpfill-stack">
-              <MoneyField id="nssf_deduction" label="NSSF (employee)" value={form.nssfDeduction} onChange={(v) => updateField('nssfDeduction', v)} />
-              <MoneyField id="tax_deduction" label="PAYE (tax)" value={form.taxDeduction} onChange={(v) => updateField('taxDeduction', v)} />
-              <MoneyField id="other_deductions" label="Other deductions" value={form.otherDeductions} onChange={(v) => updateField('otherDeductions', v)} />
-            </div>
+    <form className="pay-ca-form" onSubmit={handleSubmit}>
+      <div className="pay-ca-main">
+        <div className="pay-ca-employee">
+          <EmployeeAvatar name={slip.fullName} id={slip.userId} />
+          <div className="pay-desk-employee-meta">
+            <div className="pay-desk-cell-main">{slip.fullName || 'Employee'}</div>
+            <div className="pay-desk-cell-sub">{slip.periodLabel || ''}</div>
           </div>
         </div>
 
-        <div className="pay-slip-edit-block">
-          <h3 className="pay-slip-edit-block-title">Additional info</h3>
-          <label className="pay-sharpfill pay-sharpfill--full" htmlFor="remarks">
-            <span className="pay-sharpfill-label">Remarks / notes</span>
+        {error && <div className="pay-desk-flash-error" role="alert">{error}</div>}
+        {notice && <div className="pay-desk-flash-ok" role="status">{notice}</div>}
+
+        <section className="pay-ca-section">
+          <h3 className="pay-ca-section-title">Earnings</h3>
+          <Field id="basic_salary" label="Basic salary" value={form.basicSalary} onChange={(v) => updateField('basicSalary', v)} />
+          <Field id="total_allowances" label="Allowances" value={form.totalAllowances} onChange={(v) => updateField('totalAllowances', v)} />
+          <Field id="monthly_adjustment" label="Adjustments" value={form.monthlyAdjustment} onChange={(v) => updateField('monthlyAdjustment', v)} />
+        </section>
+
+        <section className="pay-ca-section">
+          <h3 className="pay-ca-section-title">Deductions</h3>
+          <Field id="nssf_deduction" label="NSSF (employee)" value={form.nssfDeduction} onChange={(v) => updateField('nssfDeduction', v)} />
+          <Field id="tax_deduction" label="PAYE (tax)" value={form.taxDeduction} onChange={(v) => updateField('taxDeduction', v)} />
+          <Field id="other_deductions" label="Other deductions" value={form.otherDeductions} onChange={(v) => updateField('otherDeductions', v)} />
+        </section>
+
+        <section className="pay-ca-section">
+          <div className="pay-ca-row">
+            <label className="pay-ca-label" htmlFor="remarks">Remarks / notes</label>
             <textarea
               id="remarks"
-              className="pay-sharpfill-textarea"
+              className="pay-ca-textarea"
               rows={2}
               placeholder="Add any special notes or reasons for adjustments..."
               value={form.remarks}
               onChange={(e) => updateField('remarks', e.target.value)}
             />
-          </label>
-        </div>
+          </div>
+        </section>
 
-        <div className="pay-slip-edit-footer">
-          <div className="pay-slip-net-box">
-            <div className="pay-slip-net-label">Estimated net salary</div>
-            <div className="pay-slip-net-value">TZS {formatAmount(netPreview)}</div>
-          </div>
-          <div className="pay-slip-edit-footer-actions">
-            {typeof onClose === 'function' && (
-              <button type="button" className="pay-desk-btn pay-desk-btn-secondary pay-desk-btn--pill" onClick={onClose} disabled={saving}>
-                Cancel
-              </button>
-            )}
-            <button type="submit" className="pay-desk-btn pay-desk-btn-primary pay-desk-btn--pill" disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 size={16} className="pay-desk-boot-spinner" aria-hidden="true" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save size={16} aria-hidden="true" />
-                  Save changes
-                </>
-              )}
-            </button>
-          </div>
+        <div className="pay-ca-net">
+          <span className="pay-ca-net-label">Estimated net</span>
+          <span className="pay-ca-net-value">TZS {formatAmount(netPreview)}</span>
         </div>
-      </form>
-    </div>
+      </div>
+
+      <div className="pay-ca-actions">
+        {typeof onClose === 'function' && (
+          <button type="button" className="pay-desk-btn pay-desk-btn-secondary pay-desk-btn--pill" onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
+        )}
+        <button type="submit" className="pay-desk-btn pay-desk-btn-primary pay-desk-btn--pill" disabled={saving}>
+          {saving ? 'Saving...' : 'Save changes'}
+        </button>
+      </div>
+    </form>
   );
 }

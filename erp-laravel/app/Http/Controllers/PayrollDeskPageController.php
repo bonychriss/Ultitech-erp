@@ -46,14 +46,44 @@ class PayrollDeskPageController extends Controller
             ? rtrim((string) app_url('/modules/payroll/api'), '/')
             : '/public_html/modules/payroll/api';
 
+        $payslipId = (int) ($request->query('id') ?: ($erp['payslip_id'] ?? 0));
+        $payslipMeta = null;
+        $pageTitle = $meta['title'];
+        $headerTitle = $meta['header'];
+
+        if ($desk === 'payslip') {
+            if ($payslipId <= 0) {
+                return response(
+                    '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;">'
+                    . '<h1>Payslip required</h1><p>Missing payslip id.</p></body></html>',
+                    400
+                )->header('Content-Type', 'text/html; charset=UTF-8');
+            }
+            try {
+                require_once rtrim((string) config('erp.app_root'), '\\/') . '/modules/payroll/includes/payroll-lib.php';
+                $pdo = payrollDeskBootstrap();
+                $payslipMeta = payrollDeskGetPayslipViewMeta($pdo, $payslipId);
+                $pageTitle = 'Payslip - ' . (string) ($payslipMeta['employeeName'] ?? 'Payslip');
+            } catch (\Throwable $e) {
+                return response(
+                    '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;">'
+                    . '<h1>Payslip</h1><p>'
+                    . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')
+                    . '</p></body></html>',
+                    403
+                )->header('Content-Type', 'text/html; charset=UTF-8');
+            }
+        }
+
         $viewData = (new PayrollShell())->viewData([
             'apiBase' => $apiBase,
             'payrollPage' => $meta['page'],
-            'pageTitle' => $meta['title'],
-            'headerTitle' => $meta['header'],
+            'pageTitle' => $pageTitle,
+            'headerTitle' => $headerTitle,
             'companySlug' => (string) ($erp['company_slug'] ?? ''),
             'backUrl' => (string) ($erp['back_url'] ?? ''),
-            'payslipId' => (int) ($request->query('id') ?: ($erp['payslip_id'] ?? 0)),
+            'payslipId' => $payslipId,
+            'payslipMeta' => $payslipMeta,
             'employeeId' => (int) ($request->query('employee_id') ?: ($erp['employee_id'] ?? 0)),
             'runId' => (int) ($request->query('run_id') ?: ($erp['run_id'] ?? 0)),
         ]);

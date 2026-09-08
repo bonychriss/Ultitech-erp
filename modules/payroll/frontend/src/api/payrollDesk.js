@@ -227,6 +227,17 @@ export async function fetchPayslipEdit(id) {
   return data;
 }
 
+export async function fetchPayslipViewMeta(id) {
+  const res = await fetch(`${getApiBase()}/payslip-view-init.php?id=${encodeURIComponent(String(id))}`, {
+    credentials: 'same-origin',
+  });
+  const data = await parseJson(res);
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 export async function savePayslipEdit(payload) {
   const res = await fetch(`${getApiBase()}/payslip-save.php`, {
     method: 'POST',

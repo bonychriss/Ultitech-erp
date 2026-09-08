@@ -390,6 +390,11 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
                 && in_array($status, ['approved', 'paid'], true)
                 && empty($run['is_published']),
             'editPayslip' => function_exists('isFinance') && isFinance() && $status === 'draft',
+            'removePayslip' => $status === 'draft' && (
+                (function_exists('isFinanceOrAdmin') && isFinanceOrAdmin())
+                || (function_exists('isAdmin') && isAdmin())
+                || (function_exists('isFinance') && isFinance())
+            ),
         ],
         'links' => [
             'payroll' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
@@ -496,6 +501,47 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
         $pdo->prepare('UPDATE ' . payroll_table('payslips') . ' SET is_published = 1 WHERE id = ? AND payroll_run_id = ?')
             ->execute([$payslipId, $runId]);
         $message = 'The payslip has been sent to the employee account.';
+    } elseif ($action === 'remove_payslip') {
+        $canRemove = (function_exists('isFinanceOrAdmin') && isFinanceOrAdmin())
+            || (function_exists('isAdmin') && isAdmin())
+            || (function_exists('isFinance') && isFinance());
+        if (!$canRemove) {
+            throw new RuntimeException('Unauthorized.');
+        }
+        if ((string) ($run['status'] ?? '') !== 'draft') {
+            throw new RuntimeException('Employees can only be removed from a draft run.');
+        }
+        if ($payslipId <= 0) {
+            throw new RuntimeException('Payslip id is required.');
+        }
+
+        $check = $pdo->prepare(
+            'SELECT id, user_id FROM ' . payroll_table('payslips')
+            . ' WHERE id = ? AND payroll_run_id = ? LIMIT 1'
+        );
+        $check->execute([$payslipId, $runId]);
+        $slip = $check->fetch(PDO::FETCH_ASSOC);
+        if (!$slip) {
+            throw new RuntimeException('Payslip not found in this run.');
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('DELETE FROM ' . payroll_table('payslips') . ' WHERE id = ? AND payroll_run_id = ?')
+                ->execute([$payslipId, $runId]);
+            $pdo->prepare(
+                'UPDATE ' . payroll_table('payroll_runs')
+                . ' SET total_payout = COALESCE((SELECT SUM(net_salary) FROM ' . payroll_table('payslips')
+                . ' WHERE payroll_run_id = ?), 0) WHERE id = ?'
+            )->execute([$runId, $runId]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw new RuntimeException('Could not remove employee from this run.');
+        }
+        $message = 'Employee removed from this payroll run.';
     } else {
         throw new RuntimeException('Unknown action.');
     }
@@ -942,6 +988,62 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
 /**
  * @return array<string,mixed>
  */
+/**
+ * Meta for Laravel/React payslip document viewer.
+ *
+ * @return array<string,mixed>
+ */
+function payrollDeskGetPayslipViewMeta(PDO $pdo, int $payslipId): array
+{
+    if ($payslipId <= 0) {
+        throw new InvalidArgumentException('Invalid payslip id.');
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT p.id, p.user_id, p.status, p.payroll_run_id, pr.month, pr.year, u.full_name
+         FROM ' . payroll_table('payslips') . ' p
+         JOIN ' . payroll_table('payroll_runs') . ' pr ON p.payroll_run_id = pr.id
+         JOIN users u ON p.user_id = u.id
+         WHERE p.id = ?
+         LIMIT 1'
+    );
+    $stmt->execute([$payslipId]);
+    $slip = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$slip) {
+        throw new RuntimeException('Payslip not found.');
+    }
+
+    $currentUserId = (int) ($_SESSION['user_id'] ?? 0);
+    $isOwner = $currentUserId > 0 && $currentUserId === (int) ($slip['user_id'] ?? 0);
+    if (!isFinanceOrAdmin() && !$isOwner) {
+        throw new RuntimeException('Access denied. You can only view your own payslips.');
+    }
+
+    $periodLabel = date('F Y', mktime(0, 0, 0, (int) $slip['month'], 1, (int) $slip['year']));
+    $backUrl = isFinanceOrAdmin()
+        ? payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(['id' => (int) $slip['payroll_run_id']])
+        : payrollDeskPublicUrl('my_payslips.php') . payrollDeskQueryString();
+
+    return [
+        'id' => (int) $slip['id'],
+        'periodLabel' => $periodLabel,
+        'employeeName' => (string) ($slip['full_name'] ?? ''),
+        'idLabel' => '#' . str_pad((string) $payslipId, 5, '0', STR_PAD_LEFT),
+        'runId' => (int) ($slip['payroll_run_id'] ?? 0),
+        'statusLabel' => ((string) ($slip['status'] ?? '') === 'paid') ? 'Paid' : 'Approved',
+        'backUrl' => $backUrl,
+        'myPayslipsUrl' => payrollDeskPublicUrl('my_payslips.php') . payrollDeskQueryString(),
+        'downloadUrl' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString([
+            'id' => $payslipId,
+            'download' => 1,
+        ]),
+        'embedUrl' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString([
+            'id' => $payslipId,
+            'embed' => 1,
+        ]),
+    ];
+}
+
 function payrollDeskGetPayslipEditPayload(PDO $pdo, int $payslipId): array
 {
     if ($payslipId <= 0) {

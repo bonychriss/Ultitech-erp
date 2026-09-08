@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Download, Loader2 } from 'lucide-react';
-import { deskPageUrl } from '../api/payrollDesk';
+import { deskPageUrl, fetchPayslipViewMeta } from '../api/payrollDesk';
 
 function readPayslipMeta() {
   if (typeof window === 'undefined') return null;
@@ -21,8 +21,34 @@ function readPayslipMeta() {
 }
 
 export default function PayslipViewPage() {
-  const meta = useMemo(() => readPayslipMeta(), []);
+  const seeded = useMemo(() => readPayslipMeta(), []);
+  const [meta, setMeta] = useState(seeded);
+  const [bootError, setBootError] = useState('');
   const [iframeLoading, setIframeLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function hydrate() {
+      if (seeded?.employeeName && seeded?.embedUrl) return;
+      const id = Number(seeded?.id || 0);
+      if (id <= 0) {
+        setBootError('Payslip not found.');
+        return;
+      }
+      try {
+        const data = await fetchPayslipViewMeta(id);
+        if (!cancelled) setMeta(data);
+      } catch (err) {
+        if (!cancelled) {
+          setBootError(err instanceof Error ? err.message : 'Failed to load payslip.');
+        }
+      }
+    }
+    hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [seeded]);
 
   useEffect(() => {
     if (!meta?.id) return undefined;
@@ -30,11 +56,11 @@ export default function PayslipViewPage() {
     return undefined;
   }, [meta]);
 
-  if (!meta?.id) {
+  if (bootError || !meta?.id) {
     return (
       <div className="pv-page-root">
         <div className="pv-boot-error" role="alert">
-          Payslip not found.
+          {bootError || 'Payslip not found.'}
         </div>
       </div>
     );
@@ -59,7 +85,7 @@ export default function PayslipViewPage() {
           <div className="pv-control-actions">
             <a
               href={meta.downloadUrl}
-              className="pay-desk-btn pay-desk-btn-primary"
+              className="pay-desk-btn pay-desk-btn-primary pay-desk-btn--pill"
               target="_blank"
               rel="noopener noreferrer"
             >

@@ -25,6 +25,11 @@ final class DeskShell
                 'title' => 'Edit payslip',
                 'header' => 'Edit payslip',
             ],
+            'payslip' => [
+                'page' => 'payslip-view',
+                'title' => 'Payslip',
+                'header' => 'Payslip',
+            ],
             'settings' => [
                 'page' => 'settings',
                 'title' => 'Payroll settings',
@@ -43,6 +48,7 @@ final class DeskShell
         return [
             'run-payroll' => 'modules/payroll/desks/run_payroll.php',
             'edit-payslip' => 'modules/payroll/desks/edit_payslip.php',
+            'payslip' => 'modules/payroll/desks/payslip.php',
             'settings' => 'modules/payroll/desks/settings.php',
         ];
     }

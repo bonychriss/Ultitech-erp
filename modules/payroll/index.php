@@ -1,8 +1,5 @@
 <?php
 /**
- * Payroll dashboard — React shell.
+ * Payroll dashboard — Laravel bridge (erp-laravel Domains/Payroll + React UI).
  */
-require_once __DIR__ . '/includes/payroll-lib.php';
-
-payrollDeskRequireFinanceOrAdmin();
-payrollDeskRenderReactEntry('Payroll', 'Payroll', 'dashboard');
+require dirname(__DIR__, 2) . '/payroll.php';

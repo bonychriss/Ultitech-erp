@@ -52,6 +52,11 @@ RewriteRule ^([A-Za-z0-9-]+)/select-module/?$ select-module.php?company_slug=$1 
 # /{company_slug}/suggest (must be explicit: physical /ultimate/ dir breaks the generic !-d proxy)
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/suggest/?$ suggest.php?company_slug=$1 [QSA,L,NC]
+# /{company_slug}/payroll → Laravel+React payroll desk
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/payroll/?$ payroll.php?company_slug=$1&module=payroll [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/modules/payroll/index(\.php)?$ payroll.php?company_slug=$1&module=payroll [QSA,L,NC]
 # /{company_slug}/attendance
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/attendance/?$ attendance/index.php?module=attendance&company_slug=$1 [QSA,L,NC]

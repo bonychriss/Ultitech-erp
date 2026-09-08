@@ -34,6 +34,11 @@ return [
             'legacy_api' => true, // Phase 1: stock/dashboard.php via LegacyDashboardBridge
             'entry' => 'stock.php',
         ],
+        'payroll' => [
+            'enabled' => true,
+            'legacy_api' => true, // desk APIs stay under modules/payroll/api
+            'entry' => 'payroll.php',
+        ],
     ],
 
     'react_dist' => [
@@ -48,6 +53,7 @@ return [
         'sales_settings' => 'modules/sales/settings/frontend/dist',
         'suggest' => 'suggest-laravel/frontend/dist',
         'stock' => 'stock/stock-ui/dist',
+        'payroll' => 'modules/payroll/frontend/dist',
     ],
 
     'sales_laravel_desks' => [

@@ -11,6 +11,7 @@ use App\Http\Controllers\SalesDeskApiController;
 use App\Http\Controllers\SalesDeskPageController;
 use App\Http\Controllers\StockDeskPageController;
 use App\Http\Controllers\StockPageController;
+use App\Http\Controllers\PayrollPageController;
 use App\Http\Controllers\SuggestApiController;
 use App\Http\Controllers\SuggestPageController;
 use App\Http\Middleware\AttachErpContext;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| erp-laravel routes — Home + Trial (public) + Sales + Suggest + Stock
+| erp-laravel routes — Home + Trial (public) + Sales + Suggest + Stock + Payroll
 |--------------------------------------------------------------------------
 */
 
@@ -47,6 +48,9 @@ Route::middleware([AttachErpContext::class])->group(function () {
     Route::get('/suggest', [SuggestPageController::class, 'show'])->name('suggest.page');
     Route::get('/api/suggestions', [SuggestApiController::class, 'index'])->name('suggest.api.index');
     Route::post('/api/suggestions', [SuggestApiController::class, 'store'])->name('suggest.api.store');
+
+    // Payroll
+    Route::get('/payroll', [PayrollPageController::class, 'show'])->name('payroll.page');
 
     // Stock (full module via legacy desk bridge)
     Route::match(['get', 'post'], '/stock', [StockPageController::class, 'show'])->name('stock.page');

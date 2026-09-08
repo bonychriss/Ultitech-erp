@@ -9,10 +9,11 @@ import {
   Pencil,
   Plus,
   Search,
+  Trash2,
   Users,
   X,
 } from 'lucide-react';
-import { fetchIndexInit } from '../api/catalogueDesk';
+import { deleteCustomer, fetchIndexInit } from '../api/catalogueDesk';
 import CustomerAddModal from '../components/CustomerAddModal.jsx';
 
 const AVATAR_STYLES = [
@@ -89,6 +90,7 @@ export default function CustomerIndexPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState('');
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(0);
 
   const loadData = useCallback(async (module) => {
     setLoading(true);
@@ -163,6 +165,33 @@ export default function CustomerIndexPage() {
     setAddModalOpen(false);
     setToast('Customer created successfully.');
     loadData(module);
+  }
+
+  async function handleDeleteCustomer(customer, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const id = Number(customer?.id || 0);
+    if (!id || deletingId) return;
+
+    const label = customer.company_name || customer.customer_code || `#${id}`;
+    const confirmed = window.confirm(
+      `Delete customer "${label}" permanently?\n\nThis cannot be undone. Customers with quotes, orders, or invoices cannot be deleted.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingId(id);
+    setError('');
+    try {
+      const result = await deleteCustomer(id, urls.delete);
+      setToast(result.message || 'Customer deleted.');
+      await loadData(module);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete customer.');
+    } finally {
+      setDeletingId(0);
+    }
   }
 
   if (loading && !data) {
@@ -335,6 +364,21 @@ export default function CustomerIndexPage() {
                             <Pencil size={15} aria-hidden="true" />
                             <span className="exp-desk-row-action-label">Edit</span>
                           </a>
+                          <button
+                            type="button"
+                            className="exp-desk-row-action exp-desk-row-action--danger"
+                            title="Delete customer"
+                            aria-label="Delete customer"
+                            disabled={deletingId === customer.id}
+                            onClick={(event) => handleDeleteCustomer(customer, event)}
+                          >
+                            {deletingId === customer.id ? (
+                              <Loader2 size={15} className="ci-delete-spinner" aria-hidden="true" />
+                            ) : (
+                              <Trash2 size={15} aria-hidden="true" />
+                            )}
+                            <span className="exp-desk-row-action-label">Delete</span>
+                          </button>
                         </div>
                       </td>
                     </tr>

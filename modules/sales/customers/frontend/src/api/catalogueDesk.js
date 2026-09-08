@@ -111,3 +111,18 @@ export async function submitEditCustomer(payload) {
   }
   return data;
 }
+
+export async function deleteCustomer(id, deleteUrl) {
+  const endpoint = deleteUrl || `${getApiBase()}/delete.php`;
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}

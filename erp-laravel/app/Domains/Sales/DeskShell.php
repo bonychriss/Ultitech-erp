@@ -299,7 +299,7 @@ final class DeskShell
             ? customerCatalogueModuleQuery()
             : (isset($_GET['module']) ? (string) $_GET['module'] : 'sales');
         $cfg = ['module' => $module, 'engine' => 'erp-laravel Domains/Sales'];
-        $deskPage = 'catalogue';
+        $deskPage = 'index';
 
         $script = 'window.__CUSTOMERS_DESK_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
             . 'window.__CUSTOMERS_DESK_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';'
@@ -309,7 +309,7 @@ final class DeskShell
 
         return $this->pack(
             'Customers',
-            $this->listBody('page-customers-desk'),
+            $this->listBody('page-customer-index-desk'),
             $assets,
             $script
         );

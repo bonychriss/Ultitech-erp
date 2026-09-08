@@ -141,10 +141,105 @@ function customerIndexInitData(): array
             'add' => sales_module_url('customers/add.php', ['module' => $module]),
             'edit' => sales_module_url('customers/edit.php', ['module' => $module]),
             'view' => sales_module_url('customers/view.php', ['module' => $module]),
+            'delete' => rtrim(customersDeskWebBase(), '/') . '/api/delete.php',
             'crm' => function_exists('company_url')
                 ? company_url('modules/crm/my-clients/index') . '?module=crm'
                 : (function_exists('app_url') ? app_url('/modules/crm/my-clients/index') . '?module=crm' : '/modules/crm/my-clients/index.php?module=crm'),
         ],
+    ];
+}
+
+/**
+ * Permanently delete a customer when they have no linked sales documents.
+ *
+ * @return array{ok?:bool,error?:string,message?:string}
+ */
+function customerDeleteById(int $customerId): array
+{
+    $customerId = (int) $customerId;
+    if ($customerId <= 0) {
+        return ['error' => 'Invalid customer.'];
+    }
+
+    $salesDb = customersDeskSalesDb();
+
+    $where = 'WHERE id = ?';
+    $params = [$customerId];
+    $scope = function_exists('salesCompanyScopeSql') ? salesCompanyScopeSql('customers') : ['', []];
+    if (!empty($scope[0])) {
+        $where .= $scope[0];
+        $params = array_merge($params, $scope[1]);
+    }
+
+    $stmt = $salesDb->prepare("SELECT id, company_name, customer_code FROM customers $where LIMIT 1");
+    $stmt->execute($params);
+    $customer = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$customer) {
+        return ['error' => 'Customer not found.'];
+    }
+
+    $related = [];
+    $checks = [
+        'sales_orders' => 'quotes/orders',
+        'invoices' => 'invoices',
+    ];
+    foreach ($checks as $table => $label) {
+        $hasTable = true;
+        if (function_exists('tableExists')) {
+            $hasTable = tableExists($table, $salesDb);
+        } else {
+            try {
+                $salesDb->query("SELECT 1 FROM {$table} LIMIT 1");
+            } catch (Throwable $e) {
+                $hasTable = false;
+            }
+        }
+        if (!$hasTable) {
+            continue;
+        }
+        try {
+            $countStmt = $salesDb->prepare("SELECT COUNT(*) FROM {$table} WHERE customer_id = ?");
+            $countStmt->execute([$customerId]);
+            $count = (int) $countStmt->fetchColumn();
+            if ($count > 0) {
+                $related[] = $label . ' (' . $count . ')';
+            }
+        } catch (Throwable $e) {
+            error_log('customerDeleteById related check ' . $table . ': ' . $e->getMessage());
+        }
+    }
+
+    if ($related) {
+        return [
+            'error' => 'Cannot delete this customer because they are linked to '
+                . implode(' and ', $related)
+                . '. Remove or reassign those documents first.',
+        ];
+    }
+
+    try {
+        $del = $salesDb->prepare('DELETE FROM customers WHERE id = ?');
+        $del->execute([$customerId]);
+        if ($del->rowCount() < 1) {
+            return ['error' => 'Could not delete the customer.'];
+        }
+    } catch (Throwable $e) {
+        error_log('customerDeleteById: ' . $e->getMessage());
+        return ['error' => 'Could not delete the customer. It may still be linked to other records.'];
+    }
+
+    $label = trim((string) ($customer['company_name'] ?? ''));
+    if ($label === '') {
+        $label = trim((string) ($customer['customer_code'] ?? ''));
+    }
+    if ($label === '') {
+        $label = '#' . $customerId;
+    }
+
+    return [
+        'ok' => true,
+        'message' => 'Customer "' . $label . '" deleted.',
+        'id' => $customerId,
     ];
 }
 

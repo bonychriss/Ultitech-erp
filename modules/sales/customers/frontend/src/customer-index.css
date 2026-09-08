@@ -39,12 +39,61 @@ body.page-customer-index-desk .exp-desk-btn-create {
 
 .ci-customers-table .exp-desk-table th.ci-col-action,
 .ci-customers-table .exp-desk-table td.ci-col-action {
-  width: 6.5rem;
-  min-width: 6.5rem;
+  width: 11rem;
+  min-width: 11rem;
 }
 
 .ci-customers-table .exp-desk-row-actions {
-  min-width: 6.5rem;
+  min-width: 11rem;
+}
+
+.ci-customers-table .exp-desk-row-actions-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ci-customers-table .exp-desk-row-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ci-customers-table .exp-desk-row-action:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.ci-customers-table .exp-desk-row-action--danger {
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.ci-customers-table .exp-desk-row-action--danger:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+.ci-customers-table .exp-desk-row-action:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.ci-delete-spinner {
+  animation: ci-spin 0.8s linear infinite;
+}
+
+@keyframes ci-spin {
+  to { transform: rotate(360deg); }
 }
 
 .ci-avatar {
@@ -234,4 +283,19 @@ html[data-theme="dark"] body.page-customer-index-desk .exp-desk-flash-success {
   background: #052e16;
   border-color: #166534;
   color: #bbf7d0;
+}
+
+html[data-theme="dark"] .ci-customers-table .exp-desk-row-action {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .ci-customers-table .exp-desk-row-action--danger {
+  color: #f87171;
+  border-color: #7f1d1d;
+}
+
+html[data-theme="dark"] .ci-customers-table .exp-desk-row-action--danger:hover {
+  background: #450a0a;
 }

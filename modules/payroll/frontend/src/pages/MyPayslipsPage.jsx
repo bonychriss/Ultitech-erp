@@ -195,35 +195,41 @@ export default function MyPayslipsPage() {
 
       {error && <div className="pay-desk-flash-error" role="alert">{error}</div>}
 
-      <div className="pay-desk-kpi-grid">
+      <div className="pay-desk-kpi-grid pay-desk-kpi-grid--compact" aria-label="Summary">
         <div className="pay-desk-kpi-card">
-          <div className="pay-desk-kpi-icon pay-desk-kpi-icon--indigo">
-            <FileText size={18} aria-hidden="true" />
-          </div>
-          <div className="pay-desk-kpi-body">
-            <div className="pay-desk-kpi-label">Published slips</div>
-            <div className="pay-desk-kpi-value">{Number(stats.total || 0)}</div>
+          <div className="pay-desk-kpi">
+            <div className="pay-desk-kpi-icon pay-desk-kpi-icon--indigo">
+              <FileText size={16} aria-hidden="true" />
+            </div>
+            <div className="pay-desk-kpi-body">
+              <div className="pay-desk-kpi-label">Published slips</div>
+              <div className="pay-desk-kpi-value">{Number(stats.total || 0)}</div>
+            </div>
           </div>
         </div>
         <div className="pay-desk-kpi-card">
-          <div className="pay-desk-kpi-icon pay-desk-kpi-icon--teal">
-            <Wallet size={18} aria-hidden="true" />
-          </div>
-          <div className="pay-desk-kpi-body">
-            <div className="pay-desk-kpi-label">Paid slips</div>
-            <div className="pay-desk-kpi-value">{Number(stats.paid || 0)}</div>
+          <div className="pay-desk-kpi">
+            <div className="pay-desk-kpi-icon pay-desk-kpi-icon--teal">
+              <Wallet size={16} aria-hidden="true" />
+            </div>
+            <div className="pay-desk-kpi-body">
+              <div className="pay-desk-kpi-label">Paid slips</div>
+              <div className="pay-desk-kpi-value">{Number(stats.paid || 0)}</div>
+            </div>
           </div>
         </div>
         <div className="pay-desk-kpi-card">
-          <div className="pay-desk-kpi-icon pay-desk-kpi-icon--violet">
-            <Wallet size={18} aria-hidden="true" />
-          </div>
-          <div className="pay-desk-kpi-body">
-            <div className="pay-desk-kpi-label">Latest net</div>
-            <div className="pay-desk-kpi-value pay-desk-kpi-value--money">{formatAmount(stats.latestNet || 0)}</div>
-            {stats.latestPeriod && (
-              <div className="pay-desk-kpi-helper">{stats.latestPeriod}</div>
-            )}
+          <div className="pay-desk-kpi">
+            <div className="pay-desk-kpi-icon pay-desk-kpi-icon--violet">
+              <Wallet size={16} aria-hidden="true" />
+            </div>
+            <div className="pay-desk-kpi-body">
+              <div className="pay-desk-kpi-label">Latest net</div>
+              <div className="pay-desk-kpi-value pay-desk-kpi-value--money">{formatAmount(stats.latestNet || 0)}</div>
+              {stats.latestPeriod && (
+                <div className="pay-desk-kpi-helper">{stats.latestPeriod}</div>
+              )}
+            </div>
           </div>
         </div>
       </div>

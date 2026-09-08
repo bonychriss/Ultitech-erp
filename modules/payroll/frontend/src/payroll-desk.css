@@ -494,6 +494,42 @@ a.pay-desk-kpi-card:hover {
   margin-top: 0.15rem;
 }
 
+.pay-desk-kpi-grid--compact {
+  gap: 0.5rem;
+}
+
+.pay-desk-kpi-grid--compact .pay-desk-kpi-card {
+  padding: 0.45rem 0.75rem;
+}
+
+.pay-desk-kpi-grid--compact .pay-desk-kpi {
+  gap: 0.5rem;
+}
+
+.pay-desk-kpi-grid--compact .pay-desk-kpi-icon {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 8px;
+}
+
+.pay-desk-kpi-grid--compact .pay-desk-kpi-label {
+  font-size: 0.65rem;
+}
+
+.pay-desk-kpi-grid--compact .pay-desk-kpi-value {
+  font-size: 0.95rem;
+  margin-top: 0;
+}
+
+.pay-desk-kpi-grid--compact .pay-desk-kpi-value--money {
+  font-size: 0.85rem;
+}
+
+.pay-desk-kpi-grid--compact .pay-desk-kpi-helper {
+  font-size: 0.65rem;
+  margin-top: 0.05rem;
+}
+
 .pay-desk-results-head {
   display: flex;
   justify-content: space-between;

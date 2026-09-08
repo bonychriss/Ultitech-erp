@@ -21,9 +21,10 @@ $_SESSION['active_module'] = 'payroll';
 
 if (!isFinanceOrAdmin()) {
     $deskEarly = strtolower(trim((string) ($_GET['desk'] ?? '')));
-    // Payslip view allows the owning employee; access is enforced when loading meta.
-    if ($deskEarly !== 'payslip') {
+    // Employees may open their list and their own payslip view (ownership enforced in meta).
+    if ($deskEarly !== 'payslip' && $deskEarly !== 'my-payslips') {
         $q = array_merge($_GET ?: [], ['module' => 'payroll']);
+        unset($q['desk']);
         $payslips = function_exists('app_url')
             ? app_url('/modules/payroll/my_payslips.php')
             : '/public_html/modules/payroll/my_payslips.php';
@@ -92,6 +93,7 @@ $payrollDesks = [
     'edit-payslip' => true,
     'payslip' => true,
     'settings' => true,
+    'my-payslips' => true,
 ];
 
 if ($desk !== '' && isset($payrollDesks[$desk])) {

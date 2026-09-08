@@ -1,8 +1,9 @@
 <?php
 /**
- * My Payslips — employee React shell.
+ * My Payslips — Laravel + React (erp-laravel Domains/Payroll).
  */
-require_once __DIR__ . '/includes/payroll-lib.php';
-
-payrollDeskRequireAccess();
-payrollDeskRenderReactEntry('My Payslips', 'My Payslips', 'my-payslips');
+if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
+    $_GET['module'] = 'payroll';
+}
+$_GET['desk'] = 'my-payslips';
+require dirname(__DIR__, 2) . '/payroll.php';

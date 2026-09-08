@@ -35,6 +35,11 @@ final class DeskShell
                 'title' => 'Payroll settings',
                 'header' => 'Settings',
             ],
+            'my-payslips' => [
+                'page' => 'my-payslips',
+                'title' => 'My Payslips',
+                'header' => 'My Payslips',
+            ],
         ];
     }
 
@@ -50,6 +55,7 @@ final class DeskShell
             'edit-payslip' => 'modules/payroll/desks/edit_payslip.php',
             'payslip' => 'modules/payroll/desks/payslip.php',
             'settings' => 'modules/payroll/desks/settings.php',
+            'my-payslips' => 'modules/payroll/desks/my_payslips.php',
         ];
     }
 

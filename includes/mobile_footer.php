@@ -285,7 +285,7 @@ switch ($active_module) {
             $mf_active_slug = 'modules';
         } elseif (strpos($script, 'settings') !== false) {
             $mf_active_slug = 'settings';
-        } elseif (strpos($script, 'my_payslips') !== false) {
+        } elseif (strpos($script, 'my_payslips') !== false || strpos($script, 'my-payslips') !== false || (isset($_GET['desk']) && (string) $_GET['desk'] === 'my-payslips')) {
             $mf_active_slug = 'home';
         } elseif (strpos($script, '/modules/payroll/') !== false) {
             $mf_active_slug = strpos($script, 'salaries') !== false ? 'cart' : 'home';

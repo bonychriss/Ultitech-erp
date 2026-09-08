@@ -157,12 +157,10 @@ export default function SettingsHubPage() {
                   <Icon className="ash-card-icon" strokeWidth={1.75} />
                 </div>
                 <div className="ash-card-body">
-                  <div className="ash-card-label">
+                  <div className="ash-card-value">
                     {card.title}
                     {card.badge ? <span className="ash-badge">{card.badge}</span> : null}
                   </div>
-                  <div className="ash-card-value">{card.title}</div>
-                  <div className="ash-card-helper">{card.description}</div>
                 </div>
               </article>
             )

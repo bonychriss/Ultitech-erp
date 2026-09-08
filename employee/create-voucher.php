@@ -708,14 +708,23 @@ $mapSalesOrders = static function (array $rows): array {
     return $out;
 };
 
-$cvPostUrl = 'create-voucher.php';
+$cvPostUrl = function_exists('company_url')
+    ? company_url('employee/create-voucher.php')
+    : 'create-voucher.php';
 if (!empty($_SERVER['QUERY_STRING'])) {
-    $cvPostUrl .= '?' . $_SERVER['QUERY_STRING'];
+    $cvPostUrl .= (str_contains($cvPostUrl, '?') ? '&' : '?') . $_SERVER['QUERY_STRING'];
 }
+
+$cvCancelUrl = function_exists('company_url')
+    ? company_url('employee/my-vouchers.php')
+    : 'my-vouchers.php';
+$cvCancelUrl .= $voucherModuleQs !== ''
+    ? ((str_contains($cvCancelUrl, '?') ? '&' : '?') . ltrim($voucherModuleQs, '?'))
+    : '';
 
 $createVoucherConfig = [
     'postUrl' => $cvPostUrl,
-    'cancelUrl' => 'my-vouchers.php' . $voucherModuleQs,
+    'cancelUrl' => $cvCancelUrl,
     'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'voucher',
     'preparedBy' => trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? '')),
     'today' => date('Y-m-d'),

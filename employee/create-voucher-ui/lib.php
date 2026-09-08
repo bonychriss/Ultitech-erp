@@ -9,12 +9,24 @@ declare(strict_types=1);
 
 function createVoucherUiWebBasePath(): string
 {
-    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    if ($script !== '') {
-        return rtrim(dirname($script), '/');
-    }
+    // Always serve Vite assets from physical /employee/ (not /{slug}/employee aliases).
     if (function_exists('app_url')) {
         return rtrim((string) app_url('/employee'), '/');
+    }
+
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    if ($script !== '' && preg_match('#^(.*?)/employee(?:/|$)#', $script, $m)) {
+        // /public_html/ultimate/employee/... → /public_html/employee
+        $prefix = $m[1];
+        if (preg_match('#/([A-Za-z0-9-]+)$#', $prefix, $slug)
+            && !in_array(strtolower($slug[1]), ['public_html', 'htdocs'], true)
+        ) {
+            $prefix = preg_replace('#/([A-Za-z0-9-]+)$#', '', $prefix) ?: $prefix;
+        }
+        return rtrim($prefix, '/') . '/employee';
+    }
+    if ($script !== '') {
+        return rtrim(dirname($script), '/');
     }
     return '/employee';
 }

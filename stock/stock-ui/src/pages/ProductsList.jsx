@@ -96,7 +96,17 @@ export default function ProductsList({ data }) {
     created = false,
     stats = {},
     missingImages = null,
+    urls = {},
   } = data;
+
+  const listUrl = urls.list || 'index.php';
+  const addUrl = urls.add || 'add.php';
+  const viewUrl = (id) => (urls.view ? `${urls.view}${id}` : `view.php?id=${id}`);
+  const editUrl = (id) => (urls.edit ? `${urls.edit}${id}` : `edit.php?id=${id}`);
+  const listUrlWithQuery = (qs) => {
+    if (!qs) return listUrl;
+    return listUrl.includes('?') ? `${listUrl}&${qs}` : `${listUrl}?${qs}`;
+  };
 
   const missingImagesCount = Number(
     missingImages?.count ?? stats?.missing_images_count ?? 0
@@ -347,7 +357,7 @@ export default function ProductsList({ data }) {
 
   const openSuggestion = (item) => {
     if (!item?.id) return;
-    window.location.href = `view.php?id=${item.id}`;
+    window.location.href = viewUrl(item.id);
   };
 
   const onSearchKeyDown = (e) => {
@@ -387,7 +397,7 @@ export default function ProductsList({ data }) {
     if (supplier) params.set('supplier', supplier);
     if (brand) params.set('brand', brand);
     const qs = params.toString();
-    navigateWithSkeleton(qs ? `index.php?${qs}` : 'index.php');
+    navigateWithSkeleton(listUrlWithQuery(qs));
   };
 
   const applyFilters = () => {
@@ -400,11 +410,13 @@ export default function ProductsList({ data }) {
     if (supplier) params.set('supplier', supplier);
     if (brand) params.set('brand', brand);
     const qs = params.toString();
-    navigateWithSkeleton(qs ? `index.php?${qs}` : 'index.php');
+    navigateWithSkeleton(listUrlWithQuery(qs));
   };
 
   const clearFilters = () => {
-    navigateWithSkeleton(isFilteringDuplicates ? 'index.php?show_duplicates=1' : 'index.php');
+    navigateWithSkeleton(
+      isFilteringDuplicates ? listUrlWithQuery('show_duplicates=1') : listUrl
+    );
   };
 
   if (booting || pageLoading) {
@@ -590,7 +602,7 @@ export default function ProductsList({ data }) {
             )}
           </div>
 
-          <a href="add.php" className="prod-desk-btn prod-desk-btn-primary">
+          <a href={addUrl} className="prod-desk-btn prod-desk-btn-primary">
             <HiOutlinePlus size={16} aria-hidden="true" />
             <span className="prod-desk-btn-label-desktop">Add product</span>
             <span className="prod-desk-btn-label-mobile">New</span>
@@ -607,7 +619,7 @@ export default function ProductsList({ data }) {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <a href="index.php?show_duplicates=1" className="prod-desk-btn prod-desk-btn-primary">
+            <a href={listUrlWithQuery('show_duplicates=1')} className="prod-desk-btn prod-desk-btn-primary">
               Resolve now
             </a>
             <button type="button" className="prod-desk-btn prod-desk-btn-secondary" onClick={() => setDupDismissed(true)}>
@@ -623,7 +635,7 @@ export default function ProductsList({ data }) {
             <div className="prod-desk-alert-title">Duplicate cleanup mode</div>
             <div className="prod-desk-alert-sub">Showing only redundant items.</div>
           </div>
-          <a href="index.php" className="prod-desk-btn" style={{ background: '#fff', color: '#0369a1' }}>
+          <a href={listUrl} className="prod-desk-btn" style={{ background: '#fff', color: '#0369a1' }}>
             Exit cleanup
           </a>
         </div>
@@ -734,7 +746,7 @@ export default function ProductsList({ data }) {
                         <div className="prod-desk-product">
                           <ProductThumb src={img} className="prod-desk-thumb" size={14} />
                           <div style={{ minWidth: 0 }}>
-                            <a href={`view.php?id=${product.id}`} className="prod-desk-name">
+                            <a href={viewUrl(product.id)} className="prod-desk-name">
                               {product.name}
                             </a>
                             <div className="prod-desk-code">CODE: {product.product_code || '—'}</div>
@@ -780,10 +792,10 @@ export default function ProductsList({ data }) {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div className="prod-desk-actions">
-                          <a href={`view.php?id=${product.id}`} className="prod-desk-icon-btn prod-desk-icon-btn--view" title="View">
+                          <a href={viewUrl(product.id)} className="prod-desk-icon-btn prod-desk-icon-btn--view" title="View">
                             <HiOutlineEye size={16} aria-hidden="true" />
                           </a>
-                          <a href={`edit.php?id=${product.id}`} className="prod-desk-icon-btn prod-desk-icon-btn--edit" title="Edit">
+                          <a href={editUrl(product.id)} className="prod-desk-icon-btn prod-desk-icon-btn--edit" title="Edit">
                             <HiOutlinePencilSquare size={16} aria-hidden="true" />
                           </a>
                           <a href={`duplicate.php?id=${product.id}`} className="prod-desk-icon-btn prod-desk-icon-btn--dup" title="Duplicate">
@@ -858,7 +870,7 @@ export default function ProductsList({ data }) {
               <ul className="prod-desk-modal-list">
                 {missingImageSamples.map((item) => (
                   <li key={item.id}>
-                    <a href={`edit.php?id=${item.id}`}>
+                    <a href={editUrl(item.id)}>
                       <span className="prod-desk-modal-list-name">{item.name || 'Untitled'}</span>
                       {item.product_code ? (
                         <span className="prod-desk-modal-list-code">{item.product_code}</span>
@@ -885,8 +897,8 @@ export default function ProductsList({ data }) {
               <a
                 href={
                   missingImageSamples[0]?.id
-                    ? `edit.php?id=${missingImageSamples[0].id}`
-                    : 'edit.php'
+                    ? editUrl(missingImageSamples[0].id)
+                    : addUrl
                 }
                 className="prod-desk-modal-btn prod-desk-modal-btn--primary"
                 style={{ borderRadius: 9999 }}

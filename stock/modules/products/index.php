@@ -403,7 +403,19 @@ html[data-theme="dark"] body.page-products-desk .employee-header--products-desk 
                 'showCost' => $showCost,
                 'baseUrl' => $base,
                 'searchApiUrl' => $base . 'modules/products/api/search.php',
-                'uploadsUrl' => '../uploads/index.php?folder=uploads',
+                'uploadsUrl' => function_exists('stock_desk_url')
+                    ? stock_desk_url('uploads', ['folder' => 'uploads'])
+                    : '../uploads/index.php?folder=uploads',
+                'urls' => [
+                    'list' => function_exists('stock_desk_url') ? stock_desk_url('products') : 'index.php',
+                    'add' => function_exists('stock_desk_url') ? stock_desk_url('product-create') : 'add.php',
+                    'view' => function_exists('stock_desk_url')
+                        ? (rtrim(stock_desk_url('product-view'), '/') . '?id=')
+                        : 'view.php?id=',
+                    'edit' => function_exists('stock_desk_url')
+                        ? (rtrim(stock_desk_url('product-edit'), '/') . '?id=')
+                        : 'edit.php?id=',
+                ],
                 'filterSearch' => $filterSearch,
                 'filterCategory' => $filterCategory,
                 'filterItemType' => $filterItemType,

@@ -344,8 +344,13 @@ export default function SalesSettingsPage() {
   const fieldPrefix = layoutConfig?.fieldPrefix || activeTab;
 
   return (
-    <div className="exp-create-shell">
-      <nav className="exp-create-nav ss-settings-nav" aria-label="Settings sections">
+    <div className="exp-create-shell ss-settings-shell">
+      <header className="ss-page-intro">
+        <h1 className="ss-page-title">Sales settings</h1>
+        <p className="ss-page-lead">Tax, currency, and document footer content for quotations and invoices.</p>
+      </header>
+
+      <nav className="ss-settings-nav" aria-label="Settings sections">
         <ul>
           {settingsTabs.map((tab) => (
             <li key={tab.key}>
@@ -364,361 +369,346 @@ export default function SalesSettingsPage() {
         </ul>
       </nav>
 
-      <form onSubmit={saveAll}>
+      <form className="ss-settings-form" onSubmit={saveAll}>
         <div className="exp-create-main">
           {activeTab === 'financials' && (
-            <section className="exp-create-section" id="settings-financials">
+            <section className="exp-create-section ss-form-section" id="settings-financials">
               <div className="exp-create-section-header">
                 <h2>Tax &amp; Finance</h2>
                 <p>VAT, currency, and payment details for quotations and invoices.</p>
               </div>
 
-              <div className="exp-create-row">
-                <label className="exp-create-label" htmlFor="company_tin">TIN</label>
-                <div>
-                  <input
-                    id="company_tin"
-                    name="company_tin"
-                    className="exp-create-input"
-                    value={settings.company_tin || ''}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 156-585-246"
-                  />
-                </div>
-              </div>
-
-              <div className="exp-create-row">
-                <label className="exp-create-label" htmlFor="company_vat">VRN / VAT registration</label>
-                <div>
-                  <input
-                    id="company_vat"
-                    name="company_vat"
-                    className="exp-create-input"
-                    value={settings.company_vat || ''}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 40-048025-L"
-                  />
-                </div>
-              </div>
-
-              <div className="exp-create-row">
-                <label className="exp-create-label" htmlFor="default_currency">Primary currency</label>
-                <div>
-                  <input
-                    id="default_currency"
-                    name="default_currency"
-                    className="exp-create-input"
-                    value={settings.default_currency || ''}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-
-              <div className="exp-create-row">
-                <label className="exp-create-label" htmlFor="sales_document_font">Document font</label>
-                <div>
-                  <select
-                    id="sales_document_font"
-                    name="sales_document_font"
-                    className="exp-create-select"
-                    value={settings.sales_document_font || 'arima'}
-                    onChange={handleInputChange}
-                  >
-                    {(init.fontCatalog || []).map((font) => (
-                      <option key={font.key} value={font.key}>
-                        {font.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="exp-create-help">
-                    Used on quotations, invoices, and delivery notes when printing or exporting PDF.
+              <div className="ss-form-block">
+                <h3 className="ss-form-block-title">Registration</h3>
+                <div className="ss-form-grid">
+                  <div className="ss-field">
+                    <label className="ss-field-label" htmlFor="company_tin">TIN</label>
+                    <input
+                      id="company_tin"
+                      name="company_tin"
+                      className="ss-field-input"
+                      value={settings.company_tin || ''}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 156-585-246"
+                      autoComplete="off"
+                    />
                   </div>
-                  <div
-                    className="ss-doc-font-preview"
-                    style={{
-                      '--ss-doc-font-stack': getSelectedFontStack(init, settings.sales_document_font || 'arima'),
-                      fontFamily: getSelectedFontStack(init, settings.sales_document_font || 'arima'),
-                    }}
-                  >
-                    <div className="ss-doc-font-preview-label">Preview</div>
-                    <p className="ss-doc-font-preview-body">
-                      Quotation #QT-2026-001 — Sample Customer Ltd — Total TZS 1,475,000
-                    </p>
+                  <div className="ss-field">
+                    <label className="ss-field-label" htmlFor="company_vat">VRN / VAT registration</label>
+                    <input
+                      id="company_vat"
+                      name="company_vat"
+                      className="ss-field-input"
+                      value={settings.company_vat || ''}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 40-048025-L"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="ss-field">
+                    <label className="ss-field-label" htmlFor="default_currency">Primary currency</label>
+                    <input
+                      id="default_currency"
+                      name="default_currency"
+                      className="ss-field-input"
+                      value={settings.default_currency || ''}
+                      onChange={handleInputChange}
+                      placeholder="TZS"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="ss-field">
+                    <label className="ss-field-label" htmlFor="sales_document_font">Document font</label>
+                    <select
+                      id="sales_document_font"
+                      name="sales_document_font"
+                      className="ss-field-input ss-field-select"
+                      value={settings.sales_document_font || 'arima'}
+                      onChange={handleInputChange}
+                    >
+                      {(init.fontCatalog || []).map((font) => (
+                        <option key={font.key} value={font.key}>
+                          {font.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="ss-field-help">Used when printing or exporting PDF.</p>
                   </div>
                 </div>
-              </div>
-
-              <div className="ss-tax-options">
-                <TaxToggleRow
-                  title="Tax inclusive"
-                  subtitle="Calculate tax backwards from the total price."
-                  enabled={settings.enable_tax_inclusive}
-                  onChange={(value) => setSettings((prev) => ({ ...prev, enable_tax_inclusive: value }))}
-                />
-
-                <TaxToggleRow
-                  title="Tax exclusive"
-                  subtitle="Add tax on top of the product subtotal."
-                  enabled={settings.enable_tax_exclusive}
-                  onChange={(value) => setSettings((prev) => ({ ...prev, enable_tax_exclusive: value }))}
-                />
-              </div>
-
-              <div className="exp-create-row">
-                <label className="exp-create-label" htmlFor="bank_details">Payment details</label>
-                <div>
-                  <textarea
-                    id="bank_details"
-                    name="bank_details"
-                    className="exp-create-textarea"
-                    rows={5}
-                    value={settings.bank_details || ''}
-                    onChange={handleInputChange}
-                    placeholder="Bank name, account name, account number, branch, mobile payment details"
-                  />
-                  <div className="exp-create-help">Shown on quotations and invoices for customer payments.</div>
+                <div
+                  className="ss-doc-font-preview"
+                  style={{
+                    '--ss-doc-font-stack': getSelectedFontStack(init, settings.sales_document_font || 'arima'),
+                    fontFamily: getSelectedFontStack(init, settings.sales_document_font || 'arima'),
+                  }}
+                >
+                  <div className="ss-doc-font-preview-label">Font preview</div>
+                  <p className="ss-doc-font-preview-body">
+                    Quotation #QT-2026-001 — Sample Customer Ltd — Total TZS 1,475,000
+                  </p>
                 </div>
               </div>
 
-              <div className="exp-create-row">
-                <label className="exp-create-label" htmlFor="document_footer_message">Document footer</label>
-                <div>
-                  <textarea
-                    id="document_footer_message"
-                    name="document_footer_message"
-                    className="exp-create-textarea"
-                    rows={4}
-                    value={settings.document_footer_message ?? ''}
-                    onChange={handleInputChange}
-                    placeholder="e.g. Thank you for your business."
+              <div className="ss-form-block">
+                <h3 className="ss-form-block-title">Tax calculation</h3>
+                <div className="ss-tax-options">
+                  <TaxToggleRow
+                    title="Tax inclusive"
+                    subtitle="Calculate tax backwards from the total price."
+                    enabled={settings.enable_tax_inclusive}
+                    onChange={(value) => setSettings((prev) => ({ ...prev, enable_tax_inclusive: value }))}
                   />
-                  <div className="exp-create-help">Printed at the bottom of quotations and invoices.</div>
+                  <TaxToggleRow
+                    title="Tax exclusive"
+                    subtitle="Add tax on top of the product subtotal."
+                    enabled={settings.enable_tax_exclusive}
+                    onChange={(value) => setSettings((prev) => ({ ...prev, enable_tax_exclusive: value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="ss-form-block">
+                <h3 className="ss-form-block-title">Customer-facing text</h3>
+                <div className="ss-form-stack">
+                  <div className="ss-field ss-field--full">
+                    <label className="ss-field-label" htmlFor="bank_details">Payment details</label>
+                    <textarea
+                      id="bank_details"
+                      name="bank_details"
+                      className="ss-field-input ss-field-textarea"
+                      rows={3}
+                      value={settings.bank_details || ''}
+                      onChange={handleInputChange}
+                      placeholder="Bank name, account name, account number, branch, mobile payment details"
+                    />
+                    <p className="ss-field-help">Shown on quotations and invoices for customer payments.</p>
+                  </div>
+                  <div className="ss-field ss-field--full">
+                    <label className="ss-field-label" htmlFor="document_footer_message">Document footer</label>
+                    <textarea
+                      id="document_footer_message"
+                      name="document_footer_message"
+                      className="ss-field-input ss-field-textarea"
+                      rows={2}
+                      value={settings.document_footer_message ?? ''}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Thank you for your business."
+                    />
+                    <p className="ss-field-help">Printed at the bottom of quotations and invoices.</p>
+                  </div>
                 </div>
               </div>
             </section>
           )}
 
           {layoutConfig && (
-            <section className="exp-create-section" id={`settings-${activeTab}`}>
+            <section className="exp-create-section ss-form-section" id={`settings-${activeTab}`}>
               <div className="exp-create-section-header">
                 <h2>{layoutConfig.sectionTitle}</h2>
                 <p>{layoutConfig.sectionDescription}</p>
               </div>
 
-              <div className="exp-create-row ss-layout-picker-row">
-                <span className="exp-create-label">Document layout</span>
-                <div>
-                  {layoutConfig.hideLayoutPicker ? (
-                    <>
-                      <div className="ss-layout-current">
-                        <span className="ss-layout-current-badge">In use</span>
-                        <div className="ss-layout-current-copy">
-                          <strong className="ss-layout-current-name">{selectedLayout.label}</strong>
-                          <span className="ss-layout-current-meta">
-                            Active layout for
-                            {' '}
-                            {layoutConfig.documentLabel}
-                            {' '}
-                            quotations and invoices
-                          </span>
-                        </div>
+              <div className="ss-form-block">
+                <h3 className="ss-form-block-title">Document layout</h3>
+                {layoutConfig.hideLayoutPicker ? (
+                  <>
+                    <div className="ss-layout-current">
+                      <span className="ss-layout-current-badge">In use</span>
+                      <div className="ss-layout-current-copy">
+                        <strong className="ss-layout-current-name">{selectedLayout.label}</strong>
+                        <span className="ss-layout-current-meta">
+                          Active layout for
+                          {' '}
+                          {layoutConfig.documentLabel}
+                          {' '}
+                          quotations and invoices
+                        </span>
                       </div>
-                      {selectedLayout.description ? (
-                        <div className="exp-create-help">{selectedLayout.description}</div>
-                      ) : null}
-                    </>
-                  ) : (
-                    <>
-                      <div className="ss-layout-pills" role="radiogroup" aria-label="Document layout">
-                        {layoutOptions.map((option) => {
-                          const selected = !option.comingSoon && Number(selectedLayoutId) === Number(option.id);
-                          const teaserActive = layoutTeaser && Number(layoutTeaser.id) === Number(option.id);
-                          return (
-                            <button
-                              key={option.id}
-                              type="button"
-                              role="radio"
-                              aria-checked={selected || Boolean(teaserActive)}
-                              aria-disabled={option.comingSoon || undefined}
-                              className={`ss-pill-choice${selected ? ' is-selected' : ''}${option.comingSoon ? ' is-coming-soon' : ''}${teaserActive ? ' is-teaser-active' : ''}`}
-                              onClick={() => handleLayoutSelect(activeTab, option)}
-                            >
-                              <span className="ss-pill-choice-label">{String(option.id)}</span>
-                              {option.comingSoon ? (
-                                <span className="ss-pill-soon-badge">Soon</span>
-                              ) : selected ? (
-                                <span className="ss-pill-choice-knob" aria-hidden="true" />
-                              ) : null}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="exp-create-help">
-                        {layoutTeaser ? (
-                          <>
-                            <strong>{layoutTeaser.label}</strong>
-                            {' '}
-                            layout is
-                            {' '}
-                            <span className="ss-coming-soon-inline">coming soon</span>
-                            .
-                          </>
-                        ) : (
-                          <>
-                            <strong>{selectedLayout.label}</strong>
-                            {' '}
-                            layout is active for
-                            {' '}
-                            {layoutConfig.documentLabel}
-                            {' '}
-                            documents.
-                            {selectedLayout.description ? (
-                              <>
-                                {' '}
-                                {selectedLayout.description}
-                              </>
-                            ) : null}
-                          </>
-                        )}
-                      </div>
-                    </>
-                  )}
-
-                  {(!layoutConfig.hideLayoutPicker && layoutTeaser) ? null : layoutPreviewUrl && (
-                    <div className="ss-layout-preview-block">
-                      <div className="ss-layout-live-preview">
-                        <iframe
-                          key={`${activeTab}-${selectedLayoutId}`}
-                          title={`${selectedLayout.label} layout preview`}
-                          src={layoutPreviewUrl}
-                          className="ss-layout-preview-frame"
-                          loading="lazy"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        className="ss-layout-preview-open"
-                        onClick={() => openLayoutPreviewPopup(layoutPreviewUrl)}
-                      >
-                        Preview layout
-                      </button>
                     </div>
-                  )}
-                </div>
+                    {selectedLayout.description ? (
+                      <p className="ss-field-help">{selectedLayout.description}</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <div className="ss-layout-pills" role="radiogroup" aria-label="Document layout">
+                      {layoutOptions.map((option) => {
+                        const selected = !option.comingSoon && Number(selectedLayoutId) === Number(option.id);
+                        const teaserActive = layoutTeaser && Number(layoutTeaser.id) === Number(option.id);
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected || Boolean(teaserActive)}
+                            aria-disabled={option.comingSoon || undefined}
+                            className={`ss-pill-choice${selected ? ' is-selected' : ''}${option.comingSoon ? ' is-coming-soon' : ''}${teaserActive ? ' is-teaser-active' : ''}`}
+                            onClick={() => handleLayoutSelect(activeTab, option)}
+                          >
+                            <span className="ss-pill-choice-label">{String(option.id)}</span>
+                            {option.comingSoon ? (
+                              <span className="ss-pill-soon-badge">Soon</span>
+                            ) : selected ? (
+                              <span className="ss-pill-choice-knob" aria-hidden="true" />
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="ss-field-help">
+                      {layoutTeaser ? (
+                        <>
+                          <strong>{layoutTeaser.label}</strong>
+                          {' '}
+                          layout is
+                          {' '}
+                          <span className="ss-coming-soon-inline">coming soon</span>
+                          .
+                        </>
+                      ) : (
+                        <>
+                          <strong>{selectedLayout.label}</strong>
+                          {' '}
+                          layout is active for
+                          {' '}
+                          {layoutConfig.documentLabel}
+                          {' '}
+                          documents.
+                          {selectedLayout.description ? (
+                            <>
+                              {' '}
+                              {selectedLayout.description}
+                            </>
+                          ) : null}
+                        </>
+                      )}
+                    </p>
+                  </>
+                )}
+
+                {(!layoutConfig.hideLayoutPicker && layoutTeaser) ? null : layoutPreviewUrl && (
+                  <div className="ss-layout-preview-block">
+                    <div className="ss-layout-live-preview">
+                      <iframe
+                        key={`${activeTab}-${selectedLayoutId}`}
+                        title={`${selectedLayout.label} layout preview`}
+                        src={layoutPreviewUrl}
+                        className="ss-layout-preview-frame"
+                        loading="lazy"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="ss-layout-preview-open"
+                      onClick={() => openLayoutPreviewPopup(layoutPreviewUrl)}
+                    >
+                      Preview layout
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="ss-editor-layout">
-                <div>
-                  <div className="exp-create-row">
-                    <label className="exp-create-label" htmlFor={`${fieldPrefix}_payment_details`}>Payment instructions</label>
-                    <div>
+                <div className="ss-form-block">
+                  <h3 className="ss-form-block-title">Footer content</h3>
+                  <div className="ss-form-stack">
+                    <div className="ss-field ss-field--full">
+                      <label className="ss-field-label" htmlFor={`${fieldPrefix}_payment_details`}>Payment instructions</label>
                       <textarea
                         id={`${fieldPrefix}_payment_details`}
                         name={`${fieldPrefix}_payment_details`}
-                        className="exp-create-textarea"
+                        className="ss-field-input ss-field-textarea"
                         rows={4}
                         value={settings[`${fieldPrefix}_payment_details`] ?? ''}
                         onChange={handleInputChange}
                         placeholder="Enter bank names and account numbers..."
                       />
                     </div>
-                  </div>
 
-                  <div className="exp-create-row">
-                    <label className="exp-create-label" htmlFor={`${fieldPrefix}_terms`}>Terms &amp; policy</label>
-                    <div>
+                    <div className="ss-field ss-field--full">
+                      <label className="ss-field-label" htmlFor={`${fieldPrefix}_terms`}>Terms &amp; policy</label>
                       <textarea
                         id={`${fieldPrefix}_terms`}
                         name={`${fieldPrefix}_terms`}
-                        className="exp-create-textarea"
+                        className="ss-field-input ss-field-textarea"
                         rows={4}
                         value={settings[`${fieldPrefix}_terms`] ?? ''}
                         onChange={handleInputChange}
                         placeholder="Standard terms and conditions..."
                       />
                     </div>
-                  </div>
 
-                  <div className="exp-create-row">
-                    <label className="exp-create-label" htmlFor={`${fieldPrefix}_validity`}>Quote validity</label>
-                    <div>
-                      <input
-                        id={`${fieldPrefix}_validity`}
-                        name={`${fieldPrefix}_validity`}
-                        className="exp-create-input"
-                        value={settings[`${fieldPrefix}_validity`] ?? ''}
-                        onChange={handleInputChange}
-                        placeholder="e.g. Valid for 10 days"
-                      />
+                    <div className="ss-form-grid">
+                      <div className="ss-field">
+                        <label className="ss-field-label" htmlFor={`${fieldPrefix}_validity`}>Quote validity</label>
+                        <input
+                          id={`${fieldPrefix}_validity`}
+                          name={`${fieldPrefix}_validity`}
+                          className="ss-field-input"
+                          value={settings[`${fieldPrefix}_validity`] ?? ''}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Valid for 10 days"
+                        />
+                      </div>
+                      <div className="ss-field">
+                        <label className="ss-field-label" htmlFor={`${fieldPrefix}_thanks_note`}>Closing note</label>
+                        <input
+                          id={`${fieldPrefix}_thanks_note`}
+                          name={`${fieldPrefix}_thanks_note`}
+                          className="ss-field-input"
+                          value={settings[`${fieldPrefix}_thanks_note`] ?? ''}
+                          onChange={handleInputChange}
+                          placeholder={activeTab === 'settings' ? 'e.g. Thank you for your business' : 'e.g. Thank you for choosing Roadmaster'}
+                        />
+                      </div>
+                      <div className="ss-field ss-field--full">
+                        <label className="ss-field-label" htmlFor={`${fieldPrefix}_return_policy`}>Return policy</label>
+                        <input
+                          id={`${fieldPrefix}_return_policy`}
+                          name={`${fieldPrefix}_return_policy`}
+                          className="ss-field-input"
+                          value={settings[`${fieldPrefix}_return_policy`] ?? ''}
+                          onChange={handleInputChange}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="exp-create-row">
-                    <label className="exp-create-label" htmlFor={`${fieldPrefix}_thanks_note`}>Closing note</label>
-                    <div>
-                      <input
-                        id={`${fieldPrefix}_thanks_note`}
-                        name={`${fieldPrefix}_thanks_note`}
-                        className="exp-create-input"
-                        value={settings[`${fieldPrefix}_thanks_note`] ?? ''}
-                        onChange={handleInputChange}
-                        placeholder={activeTab === 'settings' ? 'e.g. Thank you for your business' : 'e.g. Thank you for choosing Roadmaster'}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="exp-create-row">
-                    <label className="exp-create-label" htmlFor={`${fieldPrefix}_return_policy`}>Return policy</label>
-                    <div>
-                      <input
-                        id={`${fieldPrefix}_return_policy`}
-                        name={`${fieldPrefix}_return_policy`}
-                        className="exp-create-input"
-                        value={settings[`${fieldPrefix}_return_policy`] ?? ''}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-
-                  {layoutConfig.showTruckRemarks && (
-                    <div className="exp-create-row">
-                      <label className="exp-create-label" htmlFor="truck_remarks">Truck remarks</label>
-                      <div>
+                    {layoutConfig.showTruckRemarks && (
+                      <div className="ss-field ss-field--full">
+                        <label className="ss-field-label" htmlFor="truck_remarks">Truck remarks</label>
                         <textarea
                           id="truck_remarks"
                           name="truck_remarks"
-                          className="exp-create-textarea"
+                          className="ss-field-input ss-field-textarea"
                           rows={4}
                           value={settings.truck_remarks ?? ''}
                           onChange={handleInputChange}
                           placeholder="Appears on the second page of truck documents..."
                         />
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 <div className="ss-preview-pane">
                   <div className="ss-preview-label">Document footer preview</div>
                   <div className="ss-mock-footer">
                     <div className="ss-mock-payment-header">Payment details</div>
-                    <div style={{ whiteSpace: 'pre-line', fontSize: '9px', lineHeight: 1.4, marginBottom: '0.75rem' }}>
+                    <div className="ss-mock-payment-body">
                       {settings[`${fieldPrefix}_payment_details`] || 'Select a payment method...'}
                     </div>
-                    <div style={{ fontSize: '8px', color: '#64748b', lineHeight: 1.3 }}>
-                      <div style={{ marginBottom: '0.25rem' }}>{settings[`${fieldPrefix}_terms`]}</div>
-                      <div style={{ fontWeight: 700 }}>{settings[`${fieldPrefix}_validity`]}</div>
+                    <div className="ss-mock-meta">
+                      <div>{settings[`${fieldPrefix}_terms`]}</div>
+                      <div className="ss-mock-meta-strong">{settings[`${fieldPrefix}_validity`]}</div>
                     </div>
                     <div className="ss-mock-thanks">
                       {settings[`${fieldPrefix}_thanks_note`] || 'Thank you'}
-                      <div style={{ fontSize: '7px', fontWeight: 400, color: '#94a3b8', marginTop: '6px' }}>
+                      <div className="ss-mock-policy">
                         {settings[`${fieldPrefix}_return_policy`]}
                       </div>
                     </div>
                   </div>
                   <div className="ss-preview-note">
-                    <i className="fas fa-magic" aria-hidden="true" />
-                    {' '}
                     Preview updates as you type
                   </div>
                 </div>
@@ -726,17 +716,17 @@ export default function SalesSettingsPage() {
             </section>
           )}
 
-          <div className="exp-create-actions">
+          <div className="ss-form-actions">
             <button
               type="button"
-              className="exp-create-btn-cancel"
+              className="ss-btn ss-btn--ghost"
               onClick={() => { window.location.href = init.urls.dashboard; }}
             >
               Cancel
             </button>
-            <button type="submit" className="exp-create-btn-save" disabled={saving}>
+            <button type="submit" className="ss-btn ss-btn--primary" disabled={saving}>
               {saving && <Loader2 size={18} className="exp-create-spinner" aria-hidden="true" />}
-              {saving ? 'Saving...' : 'Save changes'}
+              {saving ? 'Saving…' : 'Save changes'}
             </button>
           </div>
         </div>

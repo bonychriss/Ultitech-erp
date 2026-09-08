@@ -1,0 +1,87 @@
+RewriteEngine On
+
+# Physical /ultimate/ directory: pretty-URL aliases for company "ultimate" only.
+# Parent .htaccess tenant rules do not apply once Apache is inside this real folder.
+
+RewriteRule ^login/?$ login.php [L,QSA,NC]
+RewriteRule ^register/?$ register.php [L,QSA,NC]
+RewriteRule ^select-module/?$ select-module.php [L,QSA,NC]
+RewriteRule ^suggest/?$ suggest.php [L,QSA,NC]
+RewriteRule ^sales/?$ sales.php [L,QSA,NC]
+RewriteRule ^sales/(invoices|orders|customers|my-sales|catalogue|pricelist|settings|quotations|quote-create|invoice-create|payment-create|admin-targets|admin-reassign|products-view|send-doc|order-view|invoice-view|quote-edit|delivery-note)/?$ sales.php?desk=$1 [L,QSA,NC]
+RewriteRule ^sales/order/([0-9]+)/?$ sales.php?desk=order-view&id=$1 [L,QSA,NC]
+RewriteRule ^sales/invoice/([0-9]+)/?$ sales.php?desk=invoice-view&id=$1 [L,QSA,NC]
+RewriteRule ^sales/quote/([0-9]+)/edit/?$ sales.php?desk=quote-edit&id=$1 [L,QSA,NC]
+RewriteRule ^sales/print/(order|invoice)/([0-9]+)/?$ sales.php?desk=print-$1&id=$2 [L,QSA,NC]
+RewriteRule ^stock/?$ stock.php [L,QSA,NC]
+RewriteRule ^stock/(dashboard|catalogue|settings|product-detail|products|product-view|product-create|product-edit|products-import|categories|category-add|category-edit|brands|brand-edit|uploads|uploads-upload|uploads-recycle|suppliers|supplier-add|supplier-edit|supplier-view|statements|shipments|shipment-create|shipment-edit|shipment-view|shipment-receive|shipment-import|shippers|shipper-add|shipper-edit|purchases|purchase-create|purchase-edit|purchase-view|purchase-receive|purchase-classification|purchase-payments|purchase-receipt-audit|replenishment|reports|reports-purchases|movements|stock-adjust|stock-batches|transfers|fleet-parts|analytics)/?$ stock.php?desk=$1 [L,QSA,NC]
+RewriteRule ^stock/product/([0-9]+)/?$ stock.php?desk=product-view&id=$1 [L,QSA,NC]
+RewriteRule ^stock/purchase/([0-9]+)/?$ stock.php?desk=purchase-view&id=$1 [L,QSA,NC]
+RewriteRule ^stock/shipment/([0-9]+)/?$ stock.php?desk=shipment-view&id=$1 [L,QSA,NC]
+RewriteRule ^stock/supplier/([0-9]+)/?$ stock.php?desk=supplier-view&id=$1 [L,QSA,NC]
+
+# Legacy physical paths under ultimate/stock/modules → Laravel desks
+RewriteRule ^stock/modules/products/index\.php$ stock.php?desk=products [L,QSA,NC]
+RewriteRule ^stock/modules/products/add\.php$ stock.php?desk=product-create [L,QSA,NC]
+RewriteRule ^stock/modules/products/edit\.php$ stock.php?desk=product-edit [L,QSA,NC]
+RewriteRule ^stock/modules/products/view\.php$ stock.php?desk=product-view [L,QSA,NC]
+RewriteRule ^stock/modules/products/categories\.php$ stock.php?desk=categories [L,QSA,NC]
+RewriteRule ^stock/modules/products/bulk_import\.php$ stock.php?desk=products-import [L,QSA,NC]
+RewriteRule ^stock/modules/suppliers/index\.php$ stock.php?desk=suppliers [L,QSA,NC]
+RewriteRule ^stock/modules/suppliers/add\.php$ stock.php?desk=supplier-add [L,QSA,NC]
+RewriteRule ^stock/modules/suppliers/edit\.php$ stock.php?desk=supplier-edit [L,QSA,NC]
+RewriteRule ^stock/modules/suppliers/view\.php$ stock.php?desk=supplier-view [L,QSA,NC]
+RewriteRule ^stock/modules/shipments/index\.php$ stock.php?desk=shipments [L,QSA,NC]
+RewriteRule ^stock/modules/purchases/index\.php$ stock.php?desk=purchases [L,QSA,NC]
+RewriteRule ^stock/modules/purchases/domestic_create\.php$ stock.php?desk=purchase-create [L,QSA,NC]
+RewriteRule ^stock/modules/purchases/view_po\.php$ stock.php?desk=purchase-view [L,QSA,NC]
+RewriteRule ^stock/modules/purchases/edit\.php$ stock.php?desk=purchase-edit [L,QSA,NC]
+RewriteRule ^stock/modules/stock/movements\.php$ stock.php?desk=movements [L,QSA,NC]
+RewriteRule ^stock/modules/uploads/index\.php$ stock.php?desk=uploads [L,QSA,NC]
+RewriteRule ^stock/modules/reports/replenishment\.php$ stock.php?desk=replenishment [L,QSA,NC]
+RewriteRule ^stock/modules/reports/stock\.php$ stock.php?desk=reports [L,QSA,NC]
+RewriteRule ^stock/modules/statements/supplier\.php$ stock.php?desk=statements [L,QSA,NC]
+RewriteRule ^stock/catalogue\.php$ stock.php?desk=catalogue [L,QSA,NC]
+RewriteRule ^stock/settings\.php$ stock.php?desk=settings [L,QSA,NC]
+RewriteRule ^stock/dashboard\.php$ stock.php [L,QSA,NC]
+
+RewriteRule ^accounting/?$ accounting.php [L,QSA,NC]
+RewriteRule ^payment-vouchers/?$ payment-vouchers.php [L,QSA,NC]
+RewriteRule ^revenue/?$ revenue.php [L,QSA,NC]
+
+# customer_statement lives at app root — proxy when missing under ultimate/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^customer_statement/(.*)$ ../customer_statement/$1?company_slug=ultimate [L,QSA]
+
+# Missing employee/* under ultimate/employee/ → parent employee/ (stubs like account.php still win via !-f)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^employee/(.+)$ ../employee/$1?company_slug=ultimate [L,QSA]
+
+# Missing admin/* under ultimate/ → parent admin/ (voucher desks, APIs, assets)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^admin/(.+)$ ../admin/$1?company_slug=ultimate [L,QSA]
+
+# ultimate/modules only has balances/email stubs — proxy missing ERP module files to parent.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{DOCUMENT_ROOT}/public_html/modules/$1 -f
+RewriteRule ^modules/(.+)$ ../modules/$1?company_slug=ultimate [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{DOCUMENT_ROOT}/modules/$1 -f
+RewriteRule ^modules/(.+)$ ../modules/$1?company_slug=ultimate [L,QSA]
+
+# Real files/dirs under ultimate/ (todo, deliveries, attendance, stock/..., balances, �)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Generic extensionless proxy to parent app
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/$1.php -f
+RewriteRule ^(.+?)/?$ ../$1.php?company_slug=ultimate [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/public_html/$1.php -f
+RewriteRule ^(.+?)/?$ ../$1.php?company_slug=ultimate [L,QSA]

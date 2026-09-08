@@ -9,13 +9,22 @@ declare(strict_types=1);
 
 function vouchersUiWebBasePath(): string
 {
-    // Directory of the currently-running script (e.g. /admin for all-vouchers.php).
-    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    if ($script !== '') {
-        return rtrim(dirname($script), '/');
-    }
+    // Physical /admin assets — not /{company_slug}/admin aliases.
     if (function_exists('app_url')) {
         return rtrim((string) app_url('/admin'), '/');
+    }
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    if ($script !== '' && preg_match('#^(.*?)/admin(?:/|$)#', $script, $m)) {
+        $prefix = $m[1];
+        if (preg_match('#/([A-Za-z0-9-]+)$#', $prefix, $slug)
+            && !in_array(strtolower($slug[1]), ['public_html', 'htdocs'], true)
+        ) {
+            $prefix = preg_replace('#/([A-Za-z0-9-]+)$#', '', $prefix) ?: $prefix;
+        }
+        return rtrim($prefix, '/') . '/admin';
+    }
+    if ($script !== '') {
+        return rtrim(dirname($script), '/');
     }
     return '/admin';
 }

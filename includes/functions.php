@@ -4968,6 +4968,30 @@ function company_url(string $path = 'select-module', $slug = null): string
 }
 
 /**
+ * Pretty URL for a Stock desk routed via stock.php → erp-laravel.
+ *
+ * @param array<string,scalar|null> $query
+ */
+function stock_desk_url(string $desk = '', array $query = [], $slug = null): string
+{
+    $desk = strtolower(trim($desk));
+    if ($desk === '' || $desk === 'dashboard' || $desk === 'home') {
+        $path = 'stock';
+    } else {
+        $path = 'stock/' . rawurlencode($desk);
+    }
+    $url = company_url($path, $slug);
+    $query = array_filter(
+        $query,
+        static fn ($v) => $v !== null && $v !== ''
+    );
+    if ($query !== []) {
+        $url .= (str_contains($url, '?') ? '&' : '?') . http_build_query($query);
+    }
+    return $url;
+}
+
+/**
  * Logged-in user profile settings (photo, email, username, WhatsApp, password).
  */
 function user_profile_settings_path(): string

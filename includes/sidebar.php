@@ -187,26 +187,26 @@ if (stripos($path_to_check, '/dispatch/') !== false) {
 
 switch ($active_module) {
     case 'stocks':
-        addItem($menuItems, 'dashboard', 'Dashboard', 'chart-bar', $prefix . 'stock/dashboard.php');
-        addItem($menuItems, 'catalogue', 'Catalogue', 'clipboard', $prefix . 'stock/catalogue.php');
-        addItem($menuItems, 'products', 'Products', 'archive', $prefix . 'stock/modules/products/index.php', null, [
+        addItem($menuItems, 'dashboard', 'Dashboard', 'chart-bar', $prefix . 'stock');
+        addItem($menuItems, 'catalogue', 'Catalogue', 'clipboard', $prefix . 'stock/catalogue');
+        addItem($menuItems, 'products', 'Products', 'archive', $prefix . 'stock/products', null, [
             [
                 'id' => 'product-files',
                 'label' => 'Files',
                 'icon' => 'folder-open',
-                'path' => $prefix . 'stock/modules/uploads/index.php?folder=products&images=1',
+                'path' => $prefix . 'stock/uploads?folder=products&images=1',
             ],
         ]);
-        addItem($menuItems, 'categories', 'Categories', 'ticket', $prefix . 'stock/modules/products/categories.php');
-        addItem($menuItems, 'image-library', 'Image library', 'image', $prefix . 'stock/modules/uploads/index.php');
-        addItem($menuItems, 'suppliers', 'Suppliers', 'users', $prefix . 'stock/modules/suppliers/index.php');
-        addItem($menuItems, 'statements', 'Statement', 'file-invoice', $prefix . 'stock/modules/statements/supplier.php');
-        addItem($menuItems, 'shipments', 'Shipments', 'truck', $prefix . 'stock/modules/shipments/index.php');
-        addItem($menuItems, 'purchases', 'Purchases', 'shopping-bag', $prefix . 'stock/modules/purchases/index.php');
-        addItem($menuItems, 'replenishment', 'Replenishment', 'clipboard', $prefix . 'stock/modules/reports/replenishment.php');
-        addItem($menuItems, 'stock-control', 'Stock Control', 'cog', $prefix . 'stock/modules/stock/movements.php');
-        addItem($menuItems, 'reports', 'Reports', 'document-text', $prefix . 'stock/modules/reports/stock.php');
-        addItem($menuItems, 'settings', 'Settings', 'cog', $prefix . 'stock/settings.php');
+        addItem($menuItems, 'categories', 'Categories', 'ticket', $prefix . 'stock/categories');
+        addItem($menuItems, 'image-library', 'Image library', 'image', $prefix . 'stock/uploads');
+        addItem($menuItems, 'suppliers', 'Suppliers', 'users', $prefix . 'stock/suppliers');
+        addItem($menuItems, 'statements', 'Statement', 'file-invoice', $prefix . 'stock/statements');
+        addItem($menuItems, 'shipments', 'Shipments', 'truck', $prefix . 'stock/shipments');
+        addItem($menuItems, 'purchases', 'Purchases', 'shopping-bag', $prefix . 'stock/purchases');
+        addItem($menuItems, 'replenishment', 'Replenishment', 'clipboard', $prefix . 'stock/replenishment');
+        addItem($menuItems, 'stock-control', 'Stock Control', 'cog', $prefix . 'stock/movements');
+        addItem($menuItems, 'reports', 'Reports', 'document-text', $prefix . 'stock/reports');
+        addItem($menuItems, 'settings', 'Settings', 'cog', $prefix . 'stock/settings');
         break;
 
     case 'crm':
@@ -252,11 +252,11 @@ switch ($active_module) {
         }
 
         addItem($menuItems, 'invoices', 'Invoices', 'currency', $prefix . 'modules/sales/invoices/index.php?module=sales');
-        addItem($menuItems, 'supplier-statement', 'Supplier statement', 'file-invoice', $prefix . 'stock/modules/statements/supplier.php');
+        addItem($menuItems, 'supplier-statement', 'Supplier statement', 'file-invoice', $prefix . 'stock/statements');
 
         addItem($menuItems, 'create-invoice', 'Create Invoice', 'currency', $prefix . 'modules/sales/invoices/create.php?module=sales');
         addItem($menuItems, 'record-payment', 'Record Payment', 'currency', $prefix . 'revenue_entries.php?module=revenue');
-        addItem($menuItems, 'settings', 'Settings', 'cog', $prefix . 'modules/sales/settings/index.php?module=sales');
+        addItem($menuItems, 'settings', 'Settings', 'cog', $prefix . 'sales/settings?module=sales');
         if ($is_admin) {
              addItem($menuItems, 'targets', 'Set Targets', 'presentation', $prefix . 'modules/sales/admin/targets.php?module=sales');
         }

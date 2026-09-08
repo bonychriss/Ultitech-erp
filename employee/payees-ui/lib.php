@@ -9,12 +9,12 @@ declare(strict_types=1);
 
 function payeesUiWebBasePath(): string
 {
+    if (function_exists('app_url')) {
+        return rtrim((string) app_url('/employee'), '/');
+    }
     $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
     if ($script !== '') {
         return rtrim(dirname($script), '/');
-    }
-    if (function_exists('app_url')) {
-        return rtrim((string) app_url('/employee'), '/');
     }
     return '/employee';
 }

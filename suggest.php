@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * ERP entry for Suggest — Laravel API + React UI (ERP sidebar).
+ * ERP entry for Suggest — erp-laravel Domains/Suggest + React UI.
  * URL: /{company}/suggest → suggest.php
  */
 require_once __DIR__ . '/includes/functions.php';
@@ -65,39 +65,48 @@ $GLOBALS['ERP_SUGGEST_CONTEXT'] = [
     'back_url' => $backUrl,
     'suggest_url' => $suggestPublicUrl,
     'app_root' => rtrim((string) (function_exists('app_url') ? app_url('/') : '/public_html'), '/'),
-    'db_name' => $dbName !== '' ? $dbName : 'new_trading_voucher-35313030c7e2',
+    'db_name' => $dbName !== '' ? $dbName : (defined('DB_NAME') ? (string) DB_NAME : ''),
 ];
+$GLOBALS['ERP_CONTEXT'] = $GLOBALS['ERP_SUGGEST_CONTEXT'];
+$GLOBALS['ERP_CONTEXT']['module'] = 'suggest';
 
-// JSON API → Laravel
+$laravelRoot = __DIR__ . '/erp-laravel';
+$laravelAutoload = $laravelRoot . '/vendor/autoload.php';
+
 $api = strtolower(trim((string) ($_GET['api'] ?? '')));
 if ($api === 'suggestions' || $api === '1') {
-    $GLOBALS['ERP_SUGGEST_ROUTE'] = '/api/suggestions';
-    require __DIR__ . '/suggest-laravel/bootstrap/erp-bridge.php';
-    exit;
-}
+    if (!is_file($laravelAutoload)) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(503);
+        echo json_encode([
+            'ok' => false,
+            'error' => 'erp-laravel vendor is missing. Run composer install in erp-laravel/.',
+        ]);
+        exit;
+    }
 
-// Optional Blade fallback: ?view=blade
-if (strtolower(trim((string) ($_GET['view'] ?? ''))) === 'blade') {
-    $GLOBALS['ERP_SUGGEST_ROUTE'] = '/suggest';
-    require __DIR__ . '/suggest-laravel/bootstrap/erp-bridge.php';
+    $GLOBALS['ERP_ROUTE'] = '/api/suggestions';
+    require $laravelRoot . '/bootstrap/erp-bridge.php';
     exit;
 }
 
 $_SESSION['active_module'] = 'suggestions';
 
-$laravelEnv = __DIR__ . '/suggest-laravel/.env';
-$laravelEnvExample = __DIR__ . '/suggest-laravel/.env.example';
+$laravelEnv = $laravelRoot . '/.env';
+$laravelEnvExample = $laravelRoot . '/.env.example';
 if (!is_file($laravelEnv) && is_file($laravelEnvExample)) {
     @copy($laravelEnvExample, $laravelEnv);
 }
 
-require_once __DIR__ . '/suggest-laravel/ui-lib.php';
+if (!is_file($laravelAutoload)) {
+    http_response_code(503);
+    echo '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;">';
+    echo '<h1>erp-laravel required</h1>';
+    echo '<p>Run <code>composer install</code> in <code>erp-laravel/</code>.</p>';
+    echo '</body></html>';
+    exit;
+}
 
-$apiUrl = $suggestPublicUrl . (str_contains($suggestPublicUrl, '?') ? '&' : '?') . 'api=suggestions';
-
-suggestUiRenderReactShell([
-    'apiUrl' => $apiUrl,
-    'backUrl' => $backUrl,
-    'userName' => (string) ($_SESSION['full_name'] ?? ''),
-    'companySlug' => $slug,
-]);
+$GLOBALS['ERP_ROUTE'] = '/suggest';
+require $laravelRoot . '/bootstrap/erp-bridge.php';
+exit;

@@ -43,18 +43,63 @@ RewriteRule ^([A-Za-z0-9-]+)/owner/sites/dashboard/?$ select-module.php?company_
 # /{company_slug}/select-module
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/select-module/?$ select-module.php?company_slug=$1 [QSA,L,NC]
+# /{company_slug}/suggest (must be explicit: physical /ultimate/ dir breaks the generic !-d proxy)
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/suggest/?$ suggest.php?company_slug=$1 [QSA,L,NC]
 # /{company_slug}/attendance
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/attendance/?$ attendance/index.php?module=attendance&company_slug=$1 [QSA,L,NC]
 # /{company_slug}/register
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/register/?$ register.php?company_slug=$1 [QSA,L,NC]
-# /{company_slug}/sales
+# /{company_slug}/sales → Laravel+React sales desk
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
-RewriteRule ^([A-Za-z0-9-]+)/sales/?$ modules/sales/dashboard/index.php?module=sales&company_slug=$1 [QSA,L,NC]
-# /{company_slug}/stock
+RewriteRule ^([A-Za-z0-9-]+)/sales/?$ sales.php?company_slug=$1 [QSA,L,NC]
+# /{company_slug}/sales/{desk}
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
-RewriteRule ^([A-Za-z0-9-]+)/stock/?$ stock/dashboard.php?module=stocks&company_slug=$1 [QSA,L,NC]
+RewriteRule ^([A-Za-z0-9-]+)/sales/(invoices|orders|customers|my-sales|catalogue|pricelist|settings|quotations|quote-create|invoice-create|payment-create|admin-targets|admin-reassign|products-view|send-doc|order-view|invoice-view|quote-edit|delivery-note)/?$ sales.php?company_slug=$1&desk=$2 [QSA,L,NC]
+# /{company_slug}/sales/order/{id} and invoice/{id}
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/sales/order/([0-9]+)/?$ sales.php?company_slug=$1&desk=order-view&id=$2 [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/sales/invoice/([0-9]+)/?$ sales.php?company_slug=$1&desk=invoice-view&id=$2 [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/sales/quote/([0-9]+)/edit/?$ sales.php?company_slug=$1&desk=quote-edit&id=$2 [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/sales/print/(order|invoice)/([0-9]+)/?$ sales.php?company_slug=$1&desk=print-$2&id=$3 [QSA,L,NC]
+# /{company_slug}/stock → erp-laravel Domains/Stock (stock.php)
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/?$ stock.php?module=stocks&company_slug=$1 [QSA,L,NC]
+# /{company_slug}/stock/{desk}
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/(dashboard|catalogue|settings|product-detail|products|product-view|product-create|product-edit|products-import|categories|category-add|category-edit|brands|brand-edit|uploads|uploads-upload|uploads-recycle|suppliers|supplier-add|supplier-edit|supplier-view|statements|shipments|shipment-create|shipment-edit|shipment-view|shipment-receive|shipment-import|shippers|shipper-add|shipper-edit|purchases|purchase-create|purchase-edit|purchase-view|purchase-receive|purchase-classification|purchase-payments|purchase-receipt-audit|replenishment|reports|reports-purchases|movements|stock-adjust|stock-batches|transfers|fleet-parts|analytics)/?$ stock.php?module=stocks&company_slug=$1&desk=$2 [QSA,L,NC]
+# /{company_slug}/stock/product/{id}
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/product/([0-9]+)/?$ stock.php?module=stocks&company_slug=$1&desk=product-view&id=$2 [QSA,L,NC]
+# /{company_slug}/stock/purchase/{id}
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/purchase/([0-9]+)/?$ stock.php?module=stocks&company_slug=$1&desk=purchase-view&id=$2 [QSA,L,NC]
+# /{company_slug}/stock/shipment/{id}
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/shipment/([0-9]+)/?$ stock.php?module=stocks&company_slug=$1&desk=shipment-view&id=$2 [QSA,L,NC]
+# /{company_slug}/stock/supplier/{id}
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/supplier/([0-9]+)/?$ stock.php?module=stocks&company_slug=$1&desk=supplier-view&id=$2 [QSA,L,NC]
+# Legacy /{slug}/stock/modules/... → desks
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/modules/products/add\.php$ stock.php?module=stocks&company_slug=$1&desk=product-create [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/modules/products/index\.php$ stock.php?module=stocks&company_slug=$1&desk=products [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/modules/products/edit\.php$ stock.php?module=stocks&company_slug=$1&desk=product-edit [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/modules/products/view\.php$ stock.php?module=stocks&company_slug=$1&desk=product-view [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/modules/products/categories\.php$ stock.php?module=stocks&company_slug=$1&desk=categories [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/catalogue\.php$ stock.php?module=stocks&company_slug=$1&desk=catalogue [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/settings\.php$ stock.php?module=stocks&company_slug=$1&desk=settings [QSA,L,NC]
 # /{company_slug}/accounting
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/accounting/?$ modules/accounting/index.php?module=accounting&company_slug=$1 [QSA,L,NC]
@@ -74,6 +119,11 @@ RewriteRule ^([A-Za-z0-9-]+)/payment-vouchers/?$ admin/all-vouchers.php?module=v
 # /{company_slug}/revenue
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/revenue/?$ revenue_entries.php?module=revenue&company_slug=$1 [QSA,L,NC]
+# /{company_slug}/customer_statement (explicit: physical /ultimate/ breaks generic !-d proxy)
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/customer_statement/?$ customer_statement/index.php?company_slug=$1 [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/customer_statement/(.+)$ customer_statement/$2?company_slug=$1 [QSA,L,NC]
 # /{company_slug} -> dashboard
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/?$ select-module.php?company_slug=$1 [QSA,L,NC]

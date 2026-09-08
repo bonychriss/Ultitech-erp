@@ -211,6 +211,7 @@ function emptyLine(defaultTax = 18) {
     searchQuery: '',
     showDropdown: false,
     focusIndex: -1,
+    pendingProductIds: {},
   };
 }
 
@@ -290,7 +291,9 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
 
   const closeAllProductDropdowns = useCallback(() => {
     setItems((prev) => prev.map((item) => (
-      item.showDropdown ? { ...item, showDropdown: false, focusIndex: -1 } : item
+      item.showDropdown
+        ? { ...item, showDropdown: false, focusIndex: -1, pendingProductIds: {} }
+        : item
     )));
   }, []);
 

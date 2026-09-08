@@ -1,10 +1,15 @@
 <?php
-require_once __DIR__ . '/config/database.php';
+/**
+ * Serve product images with a light bootstrap.
+ * Do NOT load includes/functions.php / schema ensures — list pages fire hundreds of these.
+ */
+declare(strict_types=1);
+
+if (session_status() === PHP_SESSION_NONE) {
+    @session_start();
+}
+
 require_once __DIR__ . '/config/functions.php';
-// IMPORTANT: Do NOT require login here.
-// Image requests from <img> tags can be redirected to the login page (HTML),
-// which makes every image appear broken. Product images are not sensitive,
-// so we serve them publicly from disk with strict path validation below.
 
 $productId = (int) ($_GET['product_id'] ?? 0);
 $size = (string) ($_GET['size'] ?? 'medium');
@@ -26,7 +31,11 @@ $file = basename($file);
 
 $ctx = function_exists('stock_image_company_context')
     ? stock_image_company_context()
-    : array('slug' => '', 'company_id' => 1);
+    : array('slug' => '', 'company_id' => (int) ($_SESSION['company_id'] ?? 0));
+
+if (!empty($_GET['company_id'])) {
+    $ctx['company_id'] = (int) $_GET['company_id'];
+}
 
 $path = null;
 if (function_exists('stock_resolve_product_image_file')) {
@@ -38,9 +47,9 @@ if (function_exists('stock_resolve_product_image_file')) {
     }
 
     foreach ($sizeFallbacks as $trySize) {
-        $path = stock_resolve_product_image_file($productId, $trySize, $file, $ctx['slug'], $ctx['company_id']);
+        $path = stock_resolve_product_image_file($productId, $trySize, $file, $ctx['slug'], (int) $ctx['company_id']);
         if (($path === null || !is_file($path)) && $file !== '') {
-            $path = stock_resolve_product_image_file($productId, $trySize, '', $ctx['slug'], $ctx['company_id']);
+            $path = stock_resolve_product_image_file($productId, $trySize, '', $ctx['slug'], (int) $ctx['company_id']);
         }
         if ($path !== null && is_file($path)) {
             break;
@@ -51,6 +60,7 @@ if (function_exists('stock_resolve_product_image_file')) {
 
 if ($path === null || !is_file($path)) {
     http_response_code(404);
+    header('Cache-Control: public, max-age=300');
     exit('Not found');
 }
 

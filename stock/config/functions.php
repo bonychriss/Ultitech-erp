@@ -1463,6 +1463,9 @@ if (!function_exists('stock_product_list_image_url')) {
         if ($ctx['slug'] !== '') {
             $params['company_slug'] = $ctx['slug'];
         }
+        if ((int) ($ctx['company_id'] ?? 0) > 0) {
+            $params['company_id'] = (int) $ctx['company_id'];
+        }
 
         if ($stockBasePath !== '') {
             return rtrim((string) $stockBasePath, '/') . '/product_image.php?' . http_build_query($params);

@@ -118,15 +118,56 @@ $mainImageExpr = $hasProductImages
 $itemTypeSelect = $hasItemType ? 'p.item_type' : "'general' AS item_type";
 
 $orderBySql = 'p.id DESC';
+$orderParams = [];
 if ($filterSearch !== '') {
     [$ordSql, $ordParams] = stock_products_search_order_sql($filterSearch, 'p');
     $orderBySql = $ordSql;
-    foreach ($ordParams as $op) {
-        $params[] = $op;
-    }
 }
 if ($createdId > 0) {
     $orderBySql = "(p.id = {$createdId}) DESC, " . $orderBySql;
+}
+
+$filterParams = $params;
+$queryParams = array_merge($filterParams, $orderParams);
+
+$perPage = 48;
+$page = max(1, (int) ($_GET['page'] ?? 1));
+$totalFiltered = 0;
+try {
+    $countSql = "SELECT COUNT(*) FROM (
+        SELECT p.id FROM products p {$whereClause} GROUP BY p.id
+    ) stock_prod_count";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($filterParams);
+    $totalFiltered = (int) ($countStmt->fetchColumn() ?: 0);
+} catch (PDOException $e) {
+    $totalFiltered = 0;
+}
+$totalPages = max(1, (int) ceil(max(0, $totalFiltered) / $perPage));
+if ($page > $totalPages) {
+    $page = $totalPages;
+}
+$offset = ($page - 1) * $perPage;
+
+$lowStockCount = 0;
+$outOfStockCount = 0;
+try {
+    $kpiSql = "SELECT
+            SUM(CASE WHEN q <= 0 THEN 1 ELSE 0 END) AS out_cnt,
+            SUM(CASE WHEN q > 0 AND q <= r THEN 1 ELSE 0 END) AS low_cnt
+        FROM (
+            SELECT COALESCE(MAX(st.quantity), 0) AS q, COALESCE(p.reorder_level, 0) AS r
+            FROM products p
+            LEFT JOIN stock st ON p.id = st.product_id
+            {$whereClause}
+            GROUP BY p.id
+        ) stock_kpi";
+    $kpiStmt = $pdo->prepare($kpiSql);
+    $kpiStmt->execute($filterParams);
+    $kpi = $kpiStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $outOfStockCount = (int) ($kpi['out_cnt'] ?? 0);
+    $lowStockCount = (int) ($kpi['low_cnt'] ?? 0);
+} catch (PDOException $e) {
 }
 
 $sql = "SELECT p.id, p.name, p.product_code, p.brand, p.currency, p.unit_price, p.buying_price,
@@ -140,13 +181,14 @@ $sql = "SELECT p.id, p.name, p.product_code, p.brand, p.currency, p.unit_price, 
         LEFT JOIN stock st ON p.id = st.product_id
         {$whereClause}
         GROUP BY p.id
-        ORDER BY {$orderBySql}";
+        ORDER BY {$orderBySql}
+        LIMIT {$perPage} OFFSET {$offset}";
 
 $products = [];
 $dbError = '';
 try {
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    $stmt->execute($queryParams);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     $rows = [];
@@ -161,9 +203,6 @@ $updated = (int) ($_GET['updated'] ?? 0);
 $totalGlow = $imported + $updated;
 $glowCount = 0;
 
-$lowStockCount = 0;
-$outOfStockCount = 0;
-
 foreach ($rows as $row) {
     $filename = !empty($row['resolved_main_image'])
         ? (string) $row['resolved_main_image']
@@ -176,11 +215,6 @@ foreach ($rows as $row) {
 
     $qty = (int) ($row['quantity'] ?? 0);
     $reorder = (int) ($row['reorder_level'] ?? 0);
-    if ($qty <= 0) {
-        $outOfStockCount++;
-    } elseif ($qty <= $reorder) {
-        $lowStockCount++;
-    }
 
     $isRecent = (($_GET['bulk_import'] ?? '') === 'success' && $glowCount < $totalGlow);
     if ($isRecent) {
@@ -212,52 +246,45 @@ $totalProductsAll = 0;
 try {
     $totalProductsAll = (int) ($pdo->query('SELECT COUNT(*) FROM products')->fetchColumn() ?: 0);
 } catch (PDOException $e) {
-    $totalProductsAll = count($products);
+    $totalProductsAll = $totalFiltered;
 }
 
-// Missing photos = products that would show no image on the list (same rules as image_url).
+// Missing photos = products with no main_image / gallery filename (SQL only — no disk flood).
 $missingImagesCount = 0;
 $missingImageSamples = [];
 try {
-    $missImageExpr = $hasProductImages
-        ? "COALESCE(NULLIF(TRIM(p.main_image), ''), (
-                SELECT pi.image_name
-                FROM product_images pi
+    $missWhere = $hasProductImages
+        ? "WHERE TRIM(IFNULL(p.main_image, '')) = ''
+             AND NOT EXISTS (
+                SELECT 1 FROM product_images pi
                 WHERE pi.product_id = p.id
                   AND TRIM(IFNULL(pi.image_name, '')) <> ''
-                ORDER BY pi.is_primary DESC, pi.id ASC
-                LIMIT 1
-           ))"
-        : 'p.main_image';
-
-    $missStmt = $pdo->query(
-        "SELECT p.id, p.name, p.product_code, {$missImageExpr} AS resolved_main_image
-         FROM products p
-         ORDER BY p.id DESC"
+             )"
+        : "WHERE TRIM(IFNULL(p.main_image, '')) = ''";
+    $missingImagesCount = (int) ($pdo->query("SELECT COUNT(*) FROM products p {$missWhere}")->fetchColumn() ?: 0);
+    $missSampleStmt = $pdo->query(
+        "SELECT p.id, p.name, p.product_code FROM products p {$missWhere} ORDER BY p.id DESC LIMIT 8"
     );
-    $missingRows = [];
-    if ($missStmt) {
-        while ($mrow = $missStmt->fetch(PDO::FETCH_ASSOC)) {
-            $fn = trim((string) ($mrow['resolved_main_image'] ?? ''));
-            $url = '';
-            if ($fn !== '' && function_exists('stock_product_list_image_url')) {
-                $url = stock_product_list_image_url((int) $mrow['id'], $fn, 'medium', (string) $base);
-            }
-            if ($url === '') {
-                $missingRows[] = [
-                    'id' => (int) ($mrow['id'] ?? 0),
-                    'name' => (string) ($mrow['name'] ?? ''),
-                    'product_code' => (string) ($mrow['product_code'] ?? ''),
-                ];
-            }
-        }
-    }
-    $missingImagesCount = count($missingRows);
-    $missingImageSamples = array_slice($missingRows, 0, 8);
+    $missingImageSamples = $missSampleStmt
+        ? array_map(static function ($mrow) {
+            return [
+                'id' => (int) ($mrow['id'] ?? 0),
+                'name' => (string) ($mrow['name'] ?? ''),
+                'product_code' => (string) ($mrow['product_code'] ?? ''),
+            ];
+        }, $missSampleStmt->fetchAll(PDO::FETCH_ASSOC) ?: [])
+        : [];
 } catch (Throwable $e) {
     $missingImagesCount = 0;
     $missingImageSamples = [];
 }
+
+$pagination = [
+    'page' => $page,
+    'per_page' => $perPage,
+    'total' => $totalFiltered,
+    'total_pages' => $totalPages,
+];
 
 $assetVersion = max(
     (int) (@filemtime(__DIR__ . '/../../stock-ui/dist/assets/stock-ui.js') ?: 0),
@@ -428,9 +455,10 @@ html[data-theme="dark"] body.page-products-desk .employee-header--products-desk 
                 'imported' => $imported,
                 'updated' => $updated,
                 'created' => (($_GET['created'] ?? '') === '1'),
+                'pagination' => $pagination,
                 'stats' => [
                     'total_count' => $totalProductsAll,
-                    'listed_count' => count($products),
+                    'listed_count' => $totalFiltered,
                     'low_stock_count' => $lowStockCount,
                     'out_of_stock_count' => $outOfStockCount,
                     'missing_images_count' => $missingImagesCount,

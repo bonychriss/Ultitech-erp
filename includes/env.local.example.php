@@ -11,6 +11,9 @@ $DB_NAME = 'ultimate_trading-35313030f83f';
 $DATA_DB_NAME = 'new_trading_voucher-35313030c7e2';
 $SALES_DB_NAME = 'new_trading_voucher-35313030c7e2';
 
+// Shared empty ERP DB for all free-trial companies (company_id isolation)
+$TRIAL_DB_NAME = 'ultitech_trial';
+
 // Roadmaster tenant (stock / procurement)
 $ROADMASTER_DB_NAME = 'roadmaster_db-35313030b5e8';
 $ROADMASTER_DB_HOST = 'localhost';

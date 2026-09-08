@@ -252,6 +252,28 @@ function sales_find_database_pdo()
         return $resolved;
     }
 
+    // Shared free-trial companies must not fall through to Ultimate's DATA_DB / SALES_DB.
+    if ($cid > 0) {
+        global $control_pdo;
+        if (($control_pdo ?? null) instanceof PDO) {
+            try {
+                $st = $control_pdo->prepare('SELECT db_name FROM companies WHERE id = ? LIMIT 1');
+                $st->execute([$cid]);
+                $coDb = trim((string) ($st->fetchColumn() ?: ''));
+                if ($coDb !== '' && function_exists('isSharedTrialDatabaseName') && isSharedTrialDatabaseName($coDb)) {
+                    $trialPdo = function_exists('connectToTenantDatabase') ? connectToTenantDatabase($coDb) : null;
+                    if ($trialPdo instanceof PDO) {
+                        $resolved = $trialPdo;
+                        $resolvedCid = $cid;
+                        $GLOBALS['sales_database_name'] = $coDb;
+                        return $resolved;
+                    }
+                }
+            } catch (Throwable $e) {
+            }
+        }
+    }
+
     $tryConnections = array();
     if ($pdo instanceof PDO) {
         $tryConnections[] = $pdo;
@@ -414,7 +436,11 @@ function sales_resolve_db()
  */
 function salesCompanyScopeSql($table, $alias = '')
 {
-    if (defined('IS_TENANT_DB') && IS_TENANT_DB && !sales_uses_control_database()) {
+    // Exclusive private tenant DBs skip filtering; shared trial DB must always scope by company_id.
+    if (defined('IS_TENANT_DB') && IS_TENANT_DB
+        && !(defined('IS_SHARED_TRIAL_DB') && IS_SHARED_TRIAL_DB)
+        && !sales_uses_control_database()
+    ) {
         return ['', []];
     }
     $cid = (int) (currentCompanyId() ?? 0);
@@ -433,24 +459,15 @@ function salesCompanyScopeSql($table, $alias = '')
     $safeAlias = $alias !== '' ? preg_replace('/[^a-z0-9_]/i', '', $alias) : '';
     $col = ($safeAlias !== '' ? $safeAlias . '.' : '') . 'company_id';
 
-    static $strictTagged = [];
-    $tagKey = $table . ':' . $cid;
-    if (!isset($strictTagged[$tagKey])) {
-        $strictTagged[$tagKey] = false;
-        try {
-            $st = $conn->prepare("SELECT COUNT(*) FROM `{$table}` WHERE company_id = ?");
-            $st->execute([$cid]);
-            $strictTagged[$tagKey] = ((int) $st->fetchColumn()) > 0;
-        } catch (Throwable $e) {
-            $strictTagged[$tagKey] = true;
-        }
+    // Only Ultimate may see legacy NULL/0 rows; new trial companies must stay empty.
+    $isUltimate = function_exists('isUltimatePrimaryCompanyId')
+        ? isUltimatePrimaryCompanyId($cid)
+        : ($cid === 1);
+    if ($isUltimate) {
+        return [" AND ({$col} = ? OR {$col} IS NULL OR {$col} = 0)", [$cid]];
     }
 
-    if ($strictTagged[$tagKey]) {
-        return [" AND {$col} = ?", [$cid]];
-    }
-
-    return [" AND ({$col} = ? OR {$col} IS NULL OR {$col} = 0)", [$cid]];
+    return [" AND {$col} = ?", [$cid]];
 }
 
 /**

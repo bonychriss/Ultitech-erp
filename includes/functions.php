@@ -1564,6 +1564,37 @@ function isSharedTrialDatabaseName($dbName): bool
 }
 
 /**
+ * True for the platform Ultimate company (owns DATA_DB_NAME).
+ */
+function isUltimatePrimaryCompanyId($companyId = null, $explicitPdo = null): bool
+{
+    $cid = (int) ($companyId ?? 0);
+    if ($cid <= 0) {
+        return false;
+    }
+    global $control_pdo, $pdo;
+    $db = $explicitPdo instanceof PDO
+        ? $explicitPdo
+        : (($control_pdo ?? null) instanceof PDO ? $control_pdo : $pdo);
+    if (!($db instanceof PDO) || !function_exists('tableExists') || !tableExists('companies', $db)) {
+        return $cid === 1;
+    }
+    try {
+        $st = $db->prepare('SELECT company_slug FROM companies WHERE id = ? LIMIT 1');
+        $st->execute([$cid]);
+        $slug = strtolower(trim((string) ($st->fetchColumn() ?: '')));
+        if ($slug === 'ultimate') {
+            return true;
+        }
+        $stUlt = $db->query("SELECT id FROM companies WHERE company_slug = 'ultimate' ORDER BY id ASC LIMIT 1");
+        $ultimateId = (int) ($stUlt ? $stUlt->fetchColumn() : 0);
+        return $ultimateId > 0 && $ultimateId === $cid;
+    } catch (Throwable $e) {
+        return $cid === 1;
+    }
+}
+
+/**
  * Schema source for cloning empty trial tables (structure only — never copy rows).
  */
 function erp_trial_schema_source_database_name(): string
@@ -2154,11 +2185,40 @@ function voucher_operational_pdo()
 function erp_bootstrap_active_pdo()
 {
     global $pdo;
+    if (defined('IS_SHARED_TRIAL_DB') && IS_SHARED_TRIAL_DB && $pdo instanceof PDO) {
+        return;
+    }
     if (defined('IS_TENANT_DB') && IS_TENANT_DB && $pdo instanceof PDO) {
         if (function_exists('ensurePayeesTableSchema')) {
             ensurePayeesTableSchema($pdo);
         }
         return;
+    }
+    // Do not pull Ultimate DATA_DB into shared free-trial workspaces.
+    if ($pdo instanceof PDO) {
+        try {
+            $active = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+            if ($active !== '' && function_exists('isSharedTrialDatabaseName') && isSharedTrialDatabaseName($active)) {
+                return;
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    $sessionCid = (int) ($_SESSION['company_id'] ?? 0);
+    if ($sessionCid > 0 && function_exists('isSharedTrialDatabaseName')) {
+        global $control_pdo;
+        $meta = ($control_pdo ?? null) instanceof PDO ? $control_pdo : null;
+        if ($meta instanceof PDO) {
+            try {
+                $st = $meta->prepare('SELECT db_name FROM companies WHERE id = ? LIMIT 1');
+                $st->execute([$sessionCid]);
+                $coDb = trim((string) ($st->fetchColumn() ?: ''));
+                if (isSharedTrialDatabaseName($coDb)) {
+                    return;
+                }
+            } catch (Throwable $e) {
+            }
+        }
     }
     if (!function_exists('erp_data_pdo')) {
         return;
@@ -5508,13 +5568,21 @@ function isCompanyScopingEnabled(): bool
  */
 function isSharedControlDatabaseMode($explicitPdo = null)
 {
-    if (defined('IS_TENANT_DB') && IS_TENANT_DB) {
+    if (defined('IS_TENANT_DB') && IS_TENANT_DB && !(defined('IS_SHARED_TRIAL_DB') && IS_SHARED_TRIAL_DB)) {
         return false;
     }
     global $pdo;
     $usePdo = $explicitPdo ?? $pdo;
     if (!($usePdo instanceof PDO)) {
         return false;
+    }
+    try {
+        $active = (string) $usePdo->query('SELECT DATABASE()')->fetchColumn();
+        if ($active !== '' && function_exists('isSharedTrialDatabaseName') && isSharedTrialDatabaseName($active)) {
+            return true;
+        }
+    } catch (Throwable $e) {
+        // fall through
     }
     $configured = defined('DB_NAME') ? (string) DB_NAME : '';
     if ($configured === '') {
@@ -5541,7 +5609,11 @@ function companyScopeSql($table, $alias = '', $explicitPdo = null)
     if (!isCompanyScopingEnabled() || !($usePdo instanceof PDO) || !tableExists($table, $usePdo) || !columnExists($table, 'company_id', $usePdo)) {
         return array('', array());
     }
-    if (defined('IS_TENANT_DB') && IS_TENANT_DB && $explicitPdo === null) {
+    // Exclusive private tenant DBs skip filtering; shared trial keeps company_id isolation.
+    if (defined('IS_TENANT_DB') && IS_TENANT_DB
+        && !(defined('IS_SHARED_TRIAL_DB') && IS_SHARED_TRIAL_DB)
+        && $explicitPdo === null
+    ) {
         return array('', array());
     }
     $cid = (int) (currentCompanyId() ?: 0);

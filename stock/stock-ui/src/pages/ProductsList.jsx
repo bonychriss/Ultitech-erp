@@ -15,6 +15,8 @@ import {
   HiOutlineTag,
   HiOutlinePhoto,
   HiOutlineXMark,
+  HiOutlineChevronLeft,
+  HiOutlineChevronRight,
 } from 'react-icons/hi2';
 import ProductsDeskSkeleton from './ProductsDeskSkeleton';
 import ProductThumb from './ProductThumb';
@@ -97,6 +99,7 @@ export default function ProductsList({ data }) {
     stats = {},
     missingImages = null,
     urls = {},
+    pagination = null,
   } = data;
 
   const listUrl = urls.list || 'index.php';
@@ -106,6 +109,13 @@ export default function ProductsList({ data }) {
   const listUrlWithQuery = (qs) => {
     if (!qs) return listUrl;
     return listUrl.includes('?') ? `${listUrl}&${qs}` : `${listUrl}?${qs}`;
+  };
+
+  const pageInfo = {
+    page: Math.max(1, Number(pagination?.page ?? 1) || 1),
+    perPage: Math.max(1, Number(pagination?.per_page ?? 48) || 48),
+    total: Math.max(0, Number(pagination?.total ?? stats?.listed_count ?? products.length) || 0),
+    totalPages: Math.max(1, Number(pagination?.total_pages ?? 1) || 1),
   };
 
   const missingImagesCount = Number(
@@ -136,6 +146,18 @@ export default function ProductsList({ data }) {
   const filterWrapRef = useRef(null);
   const searchWrapRef = useRef(null);
   const searchAbortRef = useRef(null);
+
+  const buildPageHref = (pageNum) => {
+    const params = new URLSearchParams();
+    if (filterSearch) params.set('search', filterSearch);
+    if (filterCategory) params.set('category', filterCategory);
+    if (filterItemType) params.set('item_type', filterItemType);
+    if (filterSupplier) params.set('supplier', filterSupplier);
+    if (filterBrand) params.set('brand', filterBrand);
+    if (isFilteringDuplicates) params.set('show_duplicates', '1');
+    if (pageNum > 1) params.set('page', String(pageNum));
+    return listUrlWithQuery(params.toString());
+  };
 
   useEffect(() => {
     if (bulkImportSuccess && window.Swal) {
@@ -684,7 +706,9 @@ export default function ProductsList({ data }) {
       <section className="prod-desk-results">
         <div className="prod-desk-results-head">
           <span className="prod-desk-results-count">
-            {products.length} {products.length === 1 ? 'result' : 'results'}
+            {pageInfo.total > 0
+              ? `Showing ${(pageInfo.page - 1) * pageInfo.perPage + 1}–${Math.min(pageInfo.page * pageInfo.perPage, pageInfo.total)} of ${pageInfo.total}`
+              : `0 results`}
           </span>
         </div>
 
@@ -817,6 +841,37 @@ export default function ProductsList({ data }) {
               </tbody>
             </table>
           </div>
+        )}
+        {pageInfo.totalPages > 1 && (
+          <nav className="prod-desk-pagination" aria-label="Product pages">
+            <a
+              className={`prod-desk-page-btn${pageInfo.page <= 1 ? ' is-disabled' : ''}`}
+              href={pageInfo.page <= 1 ? undefined : buildPageHref(pageInfo.page - 1)}
+              aria-disabled={pageInfo.page <= 1}
+              onClick={(e) => {
+                if (pageInfo.page <= 1) e.preventDefault();
+                else setPageLoading(true);
+              }}
+            >
+              <HiOutlineChevronLeft size={16} aria-hidden="true" />
+              Prev
+            </a>
+            <span className="prod-desk-page-status">
+              Page {pageInfo.page} of {pageInfo.totalPages}
+            </span>
+            <a
+              className={`prod-desk-page-btn${pageInfo.page >= pageInfo.totalPages ? ' is-disabled' : ''}`}
+              href={pageInfo.page >= pageInfo.totalPages ? undefined : buildPageHref(pageInfo.page + 1)}
+              aria-disabled={pageInfo.page >= pageInfo.totalPages}
+              onClick={(e) => {
+                if (pageInfo.page >= pageInfo.totalPages) e.preventDefault();
+                else setPageLoading(true);
+              }}
+            >
+              Next
+              <HiOutlineChevronRight size={16} aria-hidden="true" />
+            </a>
+          </nav>
         )}
       </section>
 

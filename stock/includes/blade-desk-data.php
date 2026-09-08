@@ -713,6 +713,8 @@ if (!function_exists('stock_blade_products_list_data')) {
                 'add' => stock_blade_desk_url('product-create'),
                 'view' => rtrim(stock_blade_desk_url('product-view'), '/') . '?id=',
                 'edit' => rtrim(stock_blade_desk_url('product-edit'), '/') . '?id=',
+                'delete' => $base . 'modules/products/delete.php?id=',
+                'deleteBulk' => $base . 'modules/products/delete_bulk.php?ids=',
             ],
             'filterSearch' => $filterSearch,
             'filterCategory' => $filterCategory,

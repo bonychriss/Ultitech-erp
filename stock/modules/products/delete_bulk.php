@@ -1,7 +1,7 @@
 <?php
 // stock/modules/products/delete_bulk.php
-require_once '../../config/database.php';
-require_once '../../config/functions.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/functions.php';
 requireLogin();
 
 if (isset($_GET['ids']) && !empty($_GET['ids'])) {
@@ -37,5 +37,8 @@ if (isset($_GET['ids']) && !empty($_GET['ids'])) {
     flash('success', 'No products selected for deletion.', 'warning');
 }
 
+if (function_exists('stock_desk_url')) {
+    redirect(stock_desk_url('products'));
+}
 redirect('index.php');
 ?>

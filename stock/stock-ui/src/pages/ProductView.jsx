@@ -149,6 +149,8 @@ export default function ProductView({ data }) {
     listUrl = 'index.php',
     editUrl = '',
     duplicateUrl = '',
+    deleteUrl = '',
+    baseUrl = '',
   } = data;
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -186,7 +188,11 @@ export default function ProductView({ data }) {
   const stockBadge = product.is_out_of_stock ? 'Out' : product.is_low_stock ? 'Low' : null;
 
   const confirmDelete = () => {
-    const url = `delete.php?id=${product.id}`;
+    const url =
+      deleteUrl ||
+      (baseUrl
+        ? `${baseUrl}modules/products/delete.php?id=${product.id}`
+        : `delete.php?id=${product.id}`);
     if (window.StockAlert) {
       window.StockAlert.confirm(
         'Delete this product? This action cannot be undone.',

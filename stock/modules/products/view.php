@@ -264,6 +264,7 @@ html[data-theme="dark"] body.page-products-desk .employee-header--products-desk 
                     ? (rtrim(stock_desk_url('product-edit'), '/') . '?id=' . $id)
                     : ('edit.php?id=' . $id),
                 'duplicateUrl' => 'duplicate.php?id=' . $id,
+                'deleteUrl' => $base . 'modules/products/delete.php?id=' . $id,
             ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)) ?: '{"page":"product-view","data":{}}' ?>;
     </script>

@@ -442,6 +442,8 @@ html[data-theme="dark"] body.page-products-desk .employee-header--products-desk 
                     'edit' => function_exists('stock_desk_url')
                         ? (rtrim(stock_desk_url('product-edit'), '/') . '?id=')
                         : 'edit.php?id=',
+                    'delete' => $base . 'modules/products/delete.php?id=',
+                    'deleteBulk' => $base . 'modules/products/delete_bulk.php?ids=',
                 ],
                 'filterSearch' => $filterSearch,
                 'filterCategory' => $filterCategory,

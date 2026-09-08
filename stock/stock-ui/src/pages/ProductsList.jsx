@@ -341,21 +341,28 @@ export default function ProductsList({ data }) {
     );
   };
 
+  const deleteUrl = (id) =>
+    urls.delete ? `${urls.delete}${id}` : `delete.php?id=${id}`;
+  const deleteBulkUrl = (ids) =>
+    urls.deleteBulk
+      ? `${urls.deleteBulk}${ids.join(',')}`
+      : `delete_bulk.php?ids=${ids.join(',')}`;
+
   const handleBulkDelete = () => {
     if (selectedIds.length === 0) return;
     const count = selectedIds.length;
     const msg = `Delete ${count} selected product${count > 1 ? 's' : ''}? This cannot be undone.`;
     if (window.StockAlert) {
       window.StockAlert.confirm(msg, 'Bulk Delete', () => {
-        window.location.href = `delete_bulk.php?ids=${selectedIds.join(',')}`;
+        window.location.href = deleteBulkUrl(selectedIds);
       });
     } else if (window.confirm(msg)) {
-      window.location.href = `delete_bulk.php?ids=${selectedIds.join(',')}`;
+      window.location.href = deleteBulkUrl(selectedIds);
     }
   };
 
   const confirmDelete = (id) => {
-    const url = `delete.php?id=${id}`;
+    const url = deleteUrl(id);
     if (window.StockAlert) {
       window.StockAlert.confirm(
         'Delete this product? This action cannot be undone.',

@@ -1,7 +1,7 @@
 <?php
 // session_start();
-require_once '../../config/database.php';
-require_once '../../config/functions.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/functions.php';
 requireLogin();
 // requireRole(['admin', 'procurement']);
 
@@ -18,6 +18,10 @@ if (isset($_GET['id'])) {
     } catch (PDOException $e) {
         flash('success', 'Error: Could not delete product. It may be part of existing purchase records.', 'danger');
     }
+}
+
+if (function_exists('stock_desk_url')) {
+    redirect(stock_desk_url('products'));
 }
 redirect('index.php');
 ?>

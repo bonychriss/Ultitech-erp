@@ -18,6 +18,7 @@ import {
 } from '../api/payrollDesk';
 import EmployeeAvatar from '../components/EmployeeAvatar.jsx';
 import SalaryEditModal from '../components/SalaryEditModal.jsx';
+import RunPayrollModal from '../components/RunPayrollModal.jsx';
 import editIcon from '../assets/edit-icon.png';
 
 function readEditIdFromUrl() {
@@ -71,6 +72,7 @@ export default function SalariesDeskPage() {
   const [editingEmployeeId, setEditingEmployeeId] = useState(() => readEditIdFromUrl());
   const [notice, setNotice] = useState('');
   const [glowEmployeeId, setGlowEmployeeId] = useState(0);
+  const [runModalOpen, setRunModalOpen] = useState(false);
   const filterWrapRef = useRef(null);
   const searchWrapRef = useRef(null);
   const glowRowRef = useRef(null);
@@ -359,14 +361,15 @@ export default function SalariesDeskPage() {
             )}
           </div>
 
-          <a
-            href={links.runPayroll || deskPageUrl('run_payroll.php')}
+          <button
+            type="button"
             className="pay-desk-btn pay-desk-btn-primary"
+            onClick={() => setRunModalOpen(true)}
           >
             <Plus size={16} aria-hidden="true" />
             <span className="pay-desk-btn-label-desktop">Run payroll</span>
             <span className="pay-desk-btn-label-mobile">Run</span>
-          </a>
+          </button>
         </div>
       </div>
 
@@ -528,6 +531,16 @@ export default function SalariesDeskPage() {
           onSaved={handleSaved}
         />
       )}
+
+      <RunPayrollModal
+        open={runModalOpen}
+        onClose={() => setRunModalOpen(false)}
+        onGenerated={(payload) => {
+          setNotice(payload?.periodLabel
+            ? `Draft payroll created for ${payload.periodLabel}.`
+            : 'Draft payroll created.');
+        }}
+      />
     </div>
   );
 }

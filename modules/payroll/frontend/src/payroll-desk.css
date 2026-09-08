@@ -968,8 +968,8 @@ a.pay-desk-kpi-card:hover {
 .pay-run-field input {
   appearance: none;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 0.65rem 0.75rem;
+  border-radius: 9999px;
+  padding: 0.65rem 1rem;
   font-size: 0.9375rem;
   font-weight: 500;
   color: #0f172a;
@@ -989,8 +989,8 @@ a.pay-desk-kpi-card:hover {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
-  padding: 0.65rem 0.75rem;
-  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  border-radius: 9999px;
   background: #eff6ff;
   color: #1e40af;
   font-size: 0.8125rem;
@@ -1007,8 +1007,53 @@ a.pay-desk-kpi-card:hover {
 .pay-run-submit {
   width: 100%;
   justify-content: center;
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1.25rem !important;
   font-weight: 650;
+  border-radius: 9999px !important;
+}
+
+.pay-run-modal {
+  width: min(32rem, calc(100vw - 1.5rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}
+
+.pay-run-modal-body {
+  padding: 0 0 0.25rem;
+}
+
+.pay-run-modal-body .pay-run-form {
+  padding-top: 0.35rem;
+}
+
+.pay-run-modal-body .pay-desk-setup,
+.pay-run-modal-body .pay-desk-flash-error,
+.pay-run-modal-body .pay-desk-flash-ok,
+.pay-run-modal-body .pay-desk-loading {
+  margin: 0.75rem 1.15rem;
+}
+
+.pay-run-modal-success-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.65rem;
+}
+
+.pay-desk-link-btn {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #2563eb;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.pay-desk-link-btn:hover {
+  color: #1d4ed8;
 }
 
 @media (max-width: 640px) {

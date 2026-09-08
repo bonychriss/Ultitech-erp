@@ -21,6 +21,7 @@ import {
   fetchDeskInit,
   formatMoney,
 } from '../api/payrollDesk';
+import RunPayrollModal from '../components/RunPayrollModal';
 
 function StatusBadge({ status }) {
   const cls = {
@@ -64,6 +65,7 @@ export default function PayrollDeskPage() {
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [glowRunId, setGlowRunId] = useState(0);
+  const [runModalOpen, setRunModalOpen] = useState(false);
   const searchWrapRef = useRef(null);
   const glowRowRef = useRef(null);
 
@@ -267,13 +269,14 @@ export default function PayrollDeskPage() {
             <Settings2 size={15} aria-hidden="true" />
             Settings
           </a>
-          <a
-            href={links.runPayroll || deskPageUrl('run_payroll.php')}
+          <button
+            type="button"
             className="pay-desk-btn pay-desk-btn-primary"
+            onClick={() => setRunModalOpen(true)}
           >
             <Plus size={16} aria-hidden="true" />
             Run payroll
-          </a>
+          </button>
         </div>
       </div>
 
@@ -365,7 +368,9 @@ export default function PayrollDeskPage() {
               {search
                 ? 'Try adjusting your search.'
                 : (
-                  <a href={links.runPayroll || deskPageUrl('run_payroll.php')}>Run your first payroll</a>
+                  <button type="button" className="pay-desk-link-btn" onClick={() => setRunModalOpen(true)}>
+                    Run your first payroll
+                  </button>
                 )}
             </p>
           </div>
@@ -495,6 +500,20 @@ export default function PayrollDeskPage() {
           </div>
         </div>
       )}
+
+      <RunPayrollModal
+        open={runModalOpen}
+        onClose={() => setRunModalOpen(false)}
+        onGenerated={(payload) => {
+          loadData(true);
+          if (payload?.runId) {
+            setGlowRunId(Number(payload.runId) || 0);
+            setNotice(payload.periodLabel
+              ? `Draft payroll created for ${payload.periodLabel}.`
+              : 'Draft payroll created.');
+          }
+        }}
+      />
     </div>
   );
 }

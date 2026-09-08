@@ -20,6 +20,7 @@ final class DeskShell
             'pricelist',
             'settings',
             'catalogue',
+            'customer-catalogue',
             'quote-create',
             'invoice-create',
             'order-view',
@@ -64,6 +65,7 @@ final class DeskShell
             'pricelist' => $this->pricelist(),
             'settings' => $this->settings(),
             'catalogue' => $this->catalogue(),
+            'customer-catalogue' => $this->customerCatalogue(),
             'quote-create' => $this->quoteCreate(),
             'invoice-create' => $this->invoiceCreate(),
             'order-view' => $this->orderView(),
@@ -314,6 +316,72 @@ final class DeskShell
             $this->listBody('page-customer-index-desk'),
             $assets,
             $script
+        );
+    }
+
+    private function customerCatalogue(): ?array
+    {
+        $lib = $this->root() . '/modules/sales/customers/includes/catalogue-lib.php';
+        if (!is_file($lib)) {
+            return null;
+        }
+        require_once $lib;
+        if (function_exists('customerCatalogueDeskBootstrap')) {
+            customerCatalogueDeskBootstrap();
+        }
+        if (!function_exists('customersDeskLoadReactAssets')) {
+            return null;
+        }
+        $assets = customersDeskLoadReactAssets();
+        if ($assets === null) {
+            return null;
+        }
+
+        $module = function_exists('customerCatalogueModuleQuery')
+            ? customerCatalogueModuleQuery()
+            : (isset($_GET['module']) ? (string) $_GET['module'] : 'sales');
+        $cfg = [
+            'module' => $module,
+            'engine' => 'erp-laravel Domains/Sales',
+        ];
+        $deskPage = 'catalogue';
+
+        $script = 'window.__CUSTOMERS_DESK_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__CUSTOMERS_DESK_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__CUSTOMERS_DESK_PAGE__ = ' . json_encode($deskPage, JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__CUSTOMER_CATALOGUE_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__CUSTOMER_CATALOGUE_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';';
+
+        $extraHead = '<style>
+html:has(body.page-sales-customer-catalogue), body.page-sales-customer-catalogue { background: #fff !important; }
+body.page-sales-customer-catalogue { color: #1f2937; min-height: 100vh; }
+body.page-sales-customer-catalogue .layout-main-wrapper,
+body.page-sales-customer-catalogue .layout-main-wrapper > .flex-grow-1 { background: #fff !important; width: 100%; }
+body.page-sales-customer-catalogue header.employee-header { background: #fff !important; box-shadow: none !important; border-bottom: 1px solid rgba(15,23,42,.06); }
+main.main-content.sales-customer-catalogue-shell {
+  flex: 1 1 auto; width: 100% !important; max-width: none !important; margin: 0 !important;
+  padding: 1rem 1rem 2rem !important; overflow: auto !important; background: #fff !important;
+  min-height: calc(100vh - 80px);
+}
+@media (min-width: 993px) {
+  main.main-content.sales-customer-catalogue-shell { padding: 1.25rem 1.75rem 2rem !important; }
+}
+main.main-content.sales-customer-catalogue-shell #root { width: 100%; min-height: 40vh; }
+</style>';
+
+        return $this->pack(
+            'Customer catalogue',
+            'page-sales-customer-catalogue page-customer-catalogue-desk',
+            $assets,
+            $script,
+            [
+                'sweetAlert' => false,
+                'includeBootstrap' => false,
+                'extraHead' => $extraHead,
+                'mainRootClass' => 'sales-customer-catalogue-shell',
+                'employeeHeaderExtraClass' => 'employee-header--sales-customer-catalogue',
+                'employeeHeaderTitle' => '',
+            ]
         );
     }
 

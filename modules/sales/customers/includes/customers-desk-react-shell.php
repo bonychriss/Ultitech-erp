@@ -97,32 +97,17 @@ html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-
 }
 
 <?php if ($customersDeskPage === 'catalogue'): ?>
-/* Catalogue desk overrides (inline so they always apply above bundled CSS) */
-body.page-customer-catalogue-desk .exp-desk-page-header.cc-page-header {
-    display: grid !important;
-    grid-template-columns: minmax(2.5rem, 1fr) minmax(16rem, 34rem) minmax(2.5rem, 1fr) !important;
-    align-items: center;
-    gap: 0.75rem 1rem;
+/* Catalogue desk — white canvas matching product catalogue */
+body.page-customer-catalogue-desk,
+body.page-customer-catalogue-desk .layout-main-wrapper,
+body.page-customer-catalogue-desk .layout-main-wrapper > .flex-grow-1,
+body.page-customer-catalogue-desk .main-content.exp-desk-react-root {
+    background: #fff !important;
 }
-body.page-customer-catalogue-desk .exp-desk-page-header.cc-page-header .exp-desk-page-header-search {
-    grid-column: 2;
-    width: 100%;
-    max-width: 34rem;
-    justify-self: center;
-}
-body.page-customer-catalogue-desk .exp-desk-page-header.cc-page-header .exp-desk-search-field,
-body.page-customer-catalogue-desk .cc-search-mobile .exp-desk-search-field {
-    border-radius: 9999px !important;
-}
-body.page-customer-catalogue-desk .exp-desk-page-header .cc-add-btn {
-    border-radius: 9999px !important;
-    padding-left: 1rem;
-    padding-right: 1rem;
-}
-@media (max-width: 900px) {
-    body.page-customer-catalogue-desk .exp-desk-page-header.cc-page-header {
-        grid-template-columns: auto minmax(12rem, 1fr) auto !important;
-    }
+body.page-customer-catalogue-desk header.employee-header {
+    background: #fff !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid rgba(15,23,42,.06);
 }
 <?php endif; ?>
 </style>

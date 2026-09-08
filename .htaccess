@@ -63,7 +63,7 @@ RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/sales/?$ sales.php?company_slug=$1 [QSA,L,NC]
 # /{company_slug}/sales/{desk}
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
-RewriteRule ^([A-Za-z0-9-]+)/sales/(invoices|orders|customers|my-sales|catalogue|pricelist|settings|quotations|quote-create|invoice-create|payment-create|admin-targets|admin-reassign|products-view|send-doc|order-view|invoice-view|quote-edit|delivery-note)/?$ sales.php?company_slug=$1&desk=$2 [QSA,L,NC]
+RewriteRule ^([A-Za-z0-9-]+)/sales/(invoices|orders|customers|my-sales|catalogue|customer-catalogue|pricelist|settings|quotations|quote-create|invoice-create|payment-create|admin-targets|admin-reassign|products-view|send-doc|order-view|invoice-view|quote-edit|delivery-note)/?$ sales.php?company_slug=$1&desk=$2 [QSA,L,NC]
 # /{company_slug}/sales/order/{id} and invoice/{id}
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/sales/order/([0-9]+)/?$ sales.php?company_slug=$1&desk=order-view&id=$2 [QSA,L,NC]

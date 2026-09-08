@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { fetchCatalogueInit } from '../api/catalogueDesk';
 
-const PAGE_SIZE_OPTIONS = [12, 24, 48];
+const PAGE_SIZE_OPTIONS = [12, 24, 48, 100, 200];
 const PAGINATION_WINDOW = 5;
 
 const AVATAR_STYLES = [
@@ -92,34 +92,36 @@ function CustomerCard({
       role="button"
       tabIndex={0}
     >
-      <div className="cc-card-check" onClick={(e) => e.stopPropagation()} aria-hidden="true">
-        <input
-          type="checkbox"
-          className="cc-checkbox"
-          checked={selected}
-          onChange={() => onToggle(customer.id)}
-          aria-label={`Select ${customer.company_name}`}
-        />
-      </div>
-      <span className="cc-card-code">{customer.customer_code || 'N/A'}</span>
-      <div className="cc-card-avatar-wrap">
+      <div className="cc-card-media">
+        <label className="cc-card-check" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            className="cc-checkbox"
+            checked={selected}
+            onChange={() => onToggle(customer.id)}
+            aria-label={`Select ${customer.company_name}`}
+          />
+        </label>
         <div className="cc-card-avatar" style={style}>{getInitials(customer.company_name)}</div>
       </div>
-      <h3 className="cc-card-title">{customer.company_name}</h3>
-      {customer.contact_person ? (
-        <p className="cc-card-contact">{customer.contact_person}</p>
-      ) : null}
-      {customer.invoice_count > 0 ? (
-        <span className="cc-card-badge">{customer.invoice_count} invoices (6 mo)</span>
-      ) : null}
-      <div className="cc-card-foot">
-        <a
-          href={viewUrl}
-          className="cc-link"
-          onClick={(e) => e.stopPropagation()}
-        >
-          View details
-        </a>
+      <div className="cc-card-meta">
+        <div className="cc-card-code">{customer.customer_code || 'N/A'}</div>
+        <h3 className="cc-card-title">{customer.company_name}</h3>
+        {customer.contact_person ? (
+          <p className="cc-card-contact">{customer.contact_person}</p>
+        ) : null}
+        {customer.invoice_count > 0 ? (
+          <span className="cc-card-badge">{customer.invoice_count} invoices (6 mo)</span>
+        ) : null}
+        <div className="cc-card-foot">
+          <a
+            href={viewUrl}
+            className="cc-link"
+            onClick={(e) => e.stopPropagation()}
+          >
+            View details
+          </a>
+        </div>
       </div>
     </article>
   );
@@ -166,7 +168,7 @@ export default function CustomerCataloguePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(24);
+  const [pageSize, setPageSize] = useState(200);
   const [selectedIds, setSelectedIds] = useState({});
 
   const loadData = useCallback(async () => {
@@ -305,75 +307,68 @@ export default function CustomerCataloguePage() {
 
   if (loading && !data) {
     return (
-      <div className="exp-desk-page exp-desk-boot-loading" role="status">
+      <div className="cc-page cc-loading" role="status">
         <Loader2 className="exp-desk-boot-spinner" aria-hidden="true" />
-        <span>Loading customer catalogue...</span>
+        <p>Loading customer catalogue...</p>
       </div>
     );
   }
 
+  const docLabel = context.doc_label || 'Quotation';
+  const addSelectedLabel = context.add_selected_label || 'quotation';
+
   return (
-    <div className="exp-desk-page cc-page">
+    <div className="cc-page">
       {error && (
         <div className="exp-desk-flash exp-desk-flash-error" role="alert">{error}</div>
       )}
 
-      <div className="exp-desk-page-header cc-page-header">
-        <div className="cc-page-header-back">
+      <div className="cc-toolbar">
+        <div className="cc-toolbar-left">
           <a href={urls.return || '#'} className="cc-back-btn" title="Back">
             <ArrowLeft size={18} aria-hidden="true" />
           </a>
+          <div>
+            <div className="cc-title-row">
+              <h1 className="cc-title">Customer catalogue</h1>
+              <span className="cc-doc-badge">{docLabel}</span>
+            </div>
+            <p className="cc-subtitle">
+              Select a customer then click <strong>Add selected</strong> for your {addSelectedLabel}.
+            </p>
+          </div>
         </div>
-        <div className="exp-desk-page-header-search exp-desk-page-header-search--desktop cc-page-header-search">
-          <div className="exp-desk-search-field cc-search-field">
-            <Search className="exp-desk-search-icon" size={16} aria-hidden="true" />
+        <button type="button" className="cc-add-btn" onClick={handleSendToDoc}>
+          <UserCheck size={16} aria-hidden="true" />
+          Add selected ({totalSelected})
+        </button>
+      </div>
+
+      <div className="cc-filters">
+        <div>
+          <label className="cc-filter-label" htmlFor="cc-search">Search</label>
+          <div className="cc-search-wrap">
+            <Search className="cc-search-icon" size={16} aria-hidden="true" />
             <input
               id="cc-search"
               type="search"
-              className="exp-desk-search-input"
               placeholder="Search by company, contact, code, phone or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
-        <div className="exp-desk-page-header-actions">
-          <button
-            type="button"
-            className="exp-desk-btn exp-desk-btn-primary cc-add-btn"
-            onClick={handleSendToDoc}
-          >
-            <UserCheck size={16} aria-hidden="true" />
-            Add selected (
-            {totalSelected}
-            )
-          </button>
-        </div>
       </div>
 
-      <div className="cc-search-mobile">
-        <div className="exp-desk-search-field cc-search-field">
-          <Search className="exp-desk-search-icon" size={16} aria-hidden="true" />
-          <input
-            type="search"
-            className="exp-desk-search-input"
-            placeholder="Search customers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            aria-label="Search customers"
-          />
-        </div>
-      </div>
-
-      <div className="cc-toolbar">
+      <div className="cc-view-bar">
         <p className="cc-count">
-          <strong>{filteredCustomers.length}</strong>
+          <span>{filteredCustomers.length}</span>
           {' '}
           shown /
           {' '}
-          <strong>{customers.length}</strong>
+          <span>{customers.length}</span>
           {' '}
-          active
+          total
         </p>
         <div className="cc-view-toggle" role="group" aria-label="View mode">
           <button
@@ -398,48 +393,46 @@ export default function CustomerCataloguePage() {
       </div>
 
       {filteredCustomers.length === 0 ? (
-        <div className="exp-desk-empty cc-empty">
-          <div className="cc-empty-icon exp-desk-kpi-icon exp-desk-kpi-icon--indigo" aria-hidden="true">
+        <div className="cc-empty">
+          <div className="cc-empty-icon" aria-hidden="true">
             <Users size={24} />
           </div>
-          <p className="exp-desk-empty-title">No customers found</p>
-          <p className="exp-desk-empty-sub">Try adjusting your search.</p>
+          <p className="cc-empty-title">No customers found</p>
+          <p className="cc-empty-sub">Try adjusting your search.</p>
           {searchTerm && (
-            <button type="button" className="exp-desk-btn exp-desk-btn-ghost" onClick={() => setSearchTerm('')}>
+            <button type="button" className="cc-link-btn" onClick={() => setSearchTerm('')}>
               Clear search
             </button>
           )}
         </div>
       ) : viewMode === 'list' ? (
-        <section className="cc-section cc-table-wrap">
-          <div className="cc-table-scroll">
-            <table className="cc-table">
-              <thead>
-                <tr>
-                  <th className="cc-col-check" aria-label="Select" />
-                  <th className="cc-col-avatar" aria-label="Avatar" />
-                  <th>Code</th>
-                  <th>Company</th>
-                  <th>Contact</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th className="cc-col-action" />
-                </tr>
-              </thead>
-              <tbody>
-                {pagedCustomers.map((customer) => (
-                  <CustomerListRow
-                    key={customer.id}
-                    customer={customer}
-                    selected={!!selectedIds[customer.id]}
-                    onToggle={handleToggle}
-                    viewUrl={buildViewUrl(urls.customer_view, customer.id, module)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <div className="cc-list-wrap">
+          <table className="cc-table">
+            <thead>
+              <tr>
+                <th className="cc-col-check" aria-label="Select" />
+                <th className="cc-col-avatar" aria-label="Avatar" />
+                <th>Code</th>
+                <th>Company</th>
+                <th>Contact</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th className="cc-col-action" />
+              </tr>
+            </thead>
+            <tbody>
+              {pagedCustomers.map((customer) => (
+                <CustomerListRow
+                  key={customer.id}
+                  customer={customer}
+                  selected={!!selectedIds[customer.id]}
+                  onToggle={handleToggle}
+                  viewUrl={buildViewUrl(urls.customer_view, customer.id, module)}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className="cc-grid">
           {pagedCustomers.map((customer) => (
@@ -457,17 +450,7 @@ export default function CustomerCataloguePage() {
       {filteredCustomers.length > 0 && (
         <div className="cc-pagination">
           <p className="cc-pagination-range">
-            Showing
-            {' '}
-            {rangeStart}
-            {' '}
-            to
-            {' '}
-            {rangeEnd}
-            {' '}
-            of
-            {' '}
-            {filteredCustomers.length}
+            Showing {rangeStart} to {rangeEnd} of {filteredCustomers.length}
           </p>
           <div className="cc-pagination-controls">
             <button

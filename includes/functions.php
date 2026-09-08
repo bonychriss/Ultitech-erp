@@ -4992,6 +4992,35 @@ function stock_desk_url(string $desk = '', array $query = [], $slug = null): str
 }
 
 /**
+ * Absolute URL for stock product JSON APIs (create/update/search).
+ * Uses company-prefixed path when possible so /ultimate/... keeps tenant context.
+ */
+function stock_products_api_url(string $script, $slug = null): string
+{
+    $script = basename(str_replace('\\', '/', $script));
+    if ($script === '') {
+        $script = 'update-product.php';
+    }
+    if (!str_ends_with(strtolower($script), '.php')) {
+        $script .= '.php';
+    }
+    $resolvedSlug = strtolower(trim((string) ($slug ?? '')));
+    if ($resolvedSlug === '') {
+        $resolvedSlug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+    }
+    if ($resolvedSlug === '' && function_exists('getRequestedCompanySlug')) {
+        $resolvedSlug = strtolower(trim((string) getRequestedCompanySlug()));
+    }
+    if ($resolvedSlug !== '') {
+        return rtrim(company_url('stock/modules/products/api/' . $script, $resolvedSlug), '/');
+    }
+    $base = function_exists('app_url')
+        ? rtrim((string) app_url('/stock'), '/') . '/'
+        : '/stock/';
+    return $base . 'modules/products/api/' . $script;
+}
+
+/**
  * Logged-in user profile settings (photo, email, username, WhatsApp, password).
  */
 function user_profile_settings_path(): string

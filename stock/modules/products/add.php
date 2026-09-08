@@ -230,7 +230,9 @@ body.page-products-desk button.prod-create-btn-save {
                 'listUrl' => function_exists('stock_desk_url')
                     ? stock_desk_url('products')
                     : ($base . 'modules/products/index.php'),
-                'createApiUrl' => $base . 'modules/products/api/create-product.php',
+                'createApiUrl' => function_exists('stock_products_api_url')
+                    ? stock_products_api_url('create-product.php')
+                    : ($base . 'modules/products/api/create-product.php'),
                 'baseUrl' => $base,
             ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)) ?: '{"page":"product-create","data":{}}' ?>;

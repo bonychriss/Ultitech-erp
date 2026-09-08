@@ -297,8 +297,12 @@ body.page-products-desk button.prod-create-btn-save {
                 'viewUrl' => function_exists('stock_desk_url')
                     ? stock_desk_url('product-view', ['id' => $id])
                     : ($base . 'modules/products/view.php?id=' . $id),
-                'createApiUrl' => $base . 'modules/products/api/create-product.php',
-                'updateApiUrl' => $base . 'modules/products/api/update-product.php',
+                'createApiUrl' => function_exists('stock_products_api_url')
+                    ? stock_products_api_url('create-product.php')
+                    : ($base . 'modules/products/api/create-product.php'),
+                'updateApiUrl' => function_exists('stock_products_api_url')
+                    ? stock_products_api_url('update-product.php')
+                    : ($base . 'modules/products/api/update-product.php'),
                 'baseUrl' => $base,
                 'updated' => (isset($_GET['updated']) && (string) $_GET['updated'] === '1'),
             ],

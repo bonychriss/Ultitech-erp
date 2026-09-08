@@ -6,10 +6,20 @@
 require_once __DIR__ . '/../../../config/database.php';
 require_once __DIR__ . '/../../../config/functions.php';
 require_once __DIR__ . '/../../../classes/ImageProcessor.php';
-requireLogin();
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
+
+$accept = strtolower((string) ($_SERVER['HTTP_ACCEPT'] ?? ''));
+$wantsJson = str_contains($accept, 'application/json')
+    || strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
+if ($wantsJson && (!function_exists('isLoggedIn') || !isLoggedIn())) {
+    http_response_code(401);
+    echo json_encode(['ok' => false, 'error' => 'Please sign in again.']);
+    exit;
+}
+
+requireLogin();
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     http_response_code(405);

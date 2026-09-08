@@ -118,6 +118,51 @@ function mergeCatalogueLines(prev, mapped, emptyLineFn) {
   return next.length ? next : [emptyLineFn()];
 }
 
+function formDraftKey(isQuote) {
+  return isQuote ? 'sales_quote_form_draft' : 'sales_invoice_form_draft';
+}
+
+function sanitizeDraftItems(items) {
+  return (Array.isArray(items) ? items : [])
+    .filter((line) => Number(line?.product_id) > 0)
+    .map((line) => ({
+      ...line,
+      showDropdown: false,
+      focusIndex: -1,
+      quantity: Number(line.quantity) || 1,
+      unit_price: Number(line.unit_price) || 0,
+      discount: Number(line.discount) || 0,
+      line_total: Number(line.line_total) || recalcLineTotal(line),
+    }));
+}
+
+function readFormDraft(isQuote) {
+  try {
+    const raw = localStorage.getItem(formDraftKey(isQuote));
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    return draft && typeof draft === 'object' ? draft : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeFormDraft(isQuote, payload) {
+  try {
+    localStorage.setItem(formDraftKey(isQuote), JSON.stringify(payload));
+  } catch {
+    // ignore
+  }
+}
+
+function clearFormDraft(isQuote) {
+  try {
+    localStorage.removeItem(formDraftKey(isQuote));
+  } catch {
+    // ignore
+  }
+}
+
 function formatCurrency(val) {
   return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val || 0);
 }
@@ -329,11 +374,40 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
         setPrimaryCurrencyState(code);
       }
 
+      const docIsQuote = (data.document_type || 'invoice') === 'quote';
+      const draft = readFormDraft(docIsQuote);
+      if (draft) {
+        if (draft.customerId) setCustomerId(String(draft.customerId));
+        if (draft.invoiceDate) setInvoiceDate(String(draft.invoiceDate));
+        if (draft.dueDate) setDueDate(String(draft.dueDate));
+        if (draft.validUntil) setValidUntil(String(draft.validUntil));
+        if (draft.leadTime != null) setLeadTime(String(draft.leadTime));
+        if (draft.orderType) setOrderType(String(draft.orderType));
+        if (draft.discountAmount != null) setDiscountAmount(Number(draft.discountAmount) || 0);
+        if (draft.taxPercentage != null) setTaxPercentage(Number(draft.taxPercentage) || 18);
+        if (draft.shippingCharges != null) setShippingCharges(Number(draft.shippingCharges) || 0);
+        if (Array.isArray(draft.currencies) && draft.currencies.length) setCurrencies(draft.currencies);
+        if (draft.primaryCurrency) setPrimaryCurrencyState(String(draft.primaryCurrency));
+        if (draft.exchangeRates && typeof draft.exchangeRates === 'object') {
+          setExchangeRates({ TZS: '1.0000', ...draft.exchangeRates });
+        }
+        if (draft.createdBy) setCreatedBy(String(draft.createdBy));
+      }
+
       const picked = new URLSearchParams(window.location.search).get('customer_id')
         || localStorage.getItem('selected_customer_id');
       if (picked) {
         setCustomerId(String(picked));
         localStorage.removeItem('selected_customer_id');
+        try {
+          const url = new URL(window.location.href);
+          if (url.searchParams.has('customer_id')) {
+            url.searchParams.delete('customer_id');
+            window.history.replaceState({}, '', url.toString());
+          }
+        } catch {
+          // ignore
+        }
       }
 
       const productsList = data.products || [];
@@ -342,7 +416,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
         if (!prod) return null;
         const qty = parseFloat(ci.quantity) || 1;
         const price = parseFloat(prod.selling_price) || 0;
-        const line = emptyLine();
+        const line = emptyLine(data.tax_percentage || 18);
         line.product_id = prod.id;
         line.searchQuery = prod.name;
         line.unit_price = price;
@@ -353,18 +427,17 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
         return line;
       }).filter(Boolean);
 
-      let restored = false;
+      let nextItems = sanitizeDraftItems(draft?.items);
+      if (!nextItems.length) nextItems = [emptyLine(data.tax_percentage || 18)];
+
+      let catalogueMapped = [];
       try {
         const raw = localStorage.getItem(CATALOGUE_ITEMS_KEY);
         if (raw) {
           const catItems = JSON.parse(raw);
           if (Array.isArray(catItems) && catItems.length > 0) {
-            const mapped = mapCatalogueItems(catItems);
-            if (mapped.length) {
-              setItems((prev) => mergeCatalogueLines(prev, mapped, () => emptyLine(data.tax_percentage || 18)));
-              writeCatalogueSelectionDraft(catItems);
-              restored = true;
-            }
+            catalogueMapped = mapCatalogueItems(catItems);
+            if (catalogueMapped.length) writeCatalogueSelectionDraft(catItems);
           }
           localStorage.removeItem(CATALOGUE_ITEMS_KEY);
         }
@@ -372,17 +445,14 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
         // ignore catalogue restore errors
       }
 
-      if (!restored) {
+      if (!catalogueMapped.length) {
         const idsParam = new URLSearchParams(window.location.search).get('catalogue_product_ids');
         if (idsParam) {
           const ids = idsParam.split(',').map((s) => Number(s.trim())).filter((id) => id > 0);
           if (ids.length > 0) {
             const catItems = ids.map((id) => ({ product_id: id, quantity: 1 }));
-            const mapped = mapCatalogueItems(catItems);
-            if (mapped.length) {
-              setItems((prev) => mergeCatalogueLines(prev, mapped, () => emptyLine(data.tax_percentage || 18)));
-              writeCatalogueSelectionDraft(catItems);
-            }
+            catalogueMapped = mapCatalogueItems(catItems);
+            if (catalogueMapped.length) writeCatalogueSelectionDraft(catItems);
           }
           try {
             const url = new URL(window.location.href);
@@ -393,6 +463,11 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
           }
         }
       }
+
+      if (catalogueMapped.length) {
+        nextItems = mergeCatalogueLines(nextItems, catalogueMapped, () => emptyLine(data.tax_percentage || 18));
+      }
+      setItems(nextItems);
     } catch (err) {
       setErrors([err instanceof Error ? err.message : 'Failed to load form.']);
     } finally {
@@ -401,6 +476,64 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
   }, [isEditMode]);
 
   useEffect(() => { loadInit(); }, [loadInit]);
+
+  const persistFormDraft = useCallback(() => {
+    if (isEditMode || !init || loading) return;
+    const hasLines = items.some((line) => Number(line.product_id) > 0);
+    if (!hasLines && !customerId) return;
+    writeFormDraft(isQuote, {
+      customerId,
+      invoiceDate,
+      dueDate,
+      validUntil,
+      leadTime,
+      orderType,
+      discountAmount,
+      taxPercentage,
+      shippingCharges,
+      currencies,
+      primaryCurrency,
+      exchangeRates,
+      createdBy,
+      items: sanitizeDraftItems(items),
+    });
+  }, [
+    isEditMode,
+    init,
+    loading,
+    isQuote,
+    customerId,
+    invoiceDate,
+    dueDate,
+    validUntil,
+    leadTime,
+    orderType,
+    discountAmount,
+    taxPercentage,
+    shippingCharges,
+    currencies,
+    primaryCurrency,
+    exchangeRates,
+    createdBy,
+    items,
+  ]);
+
+  useEffect(() => {
+    if (isEditMode || !init || loading) return undefined;
+    const timer = window.setTimeout(() => persistFormDraft(), 250);
+    return () => window.clearTimeout(timer);
+  }, [isEditMode, init, loading, persistFormDraft]);
+
+  useEffect(() => {
+    if (isEditMode) return undefined;
+    const onLeave = () => persistFormDraft();
+    window.addEventListener('pagehide', onLeave);
+    window.addEventListener('beforeunload', onLeave);
+    return () => {
+      window.removeEventListener('pagehide', onLeave);
+      window.removeEventListener('beforeunload', onLeave);
+    };
+  }, [isEditMode, persistFormDraft]);
 
   useEffect(() => {
     if (!currencyMenuOpen) return undefined;
@@ -648,6 +781,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
           ? await submitCreateQuote(buildFormData())
           : await submitCreateInvoice(buildFormData()));
       clearCatalogueSelectionDraft();
+      clearFormDraft(isQuote);
       window.location.href = result.redirect || indexUrl;
     } catch (err) {
       setErrors([err instanceof Error ? err.message : `Failed to ${isEditMode ? 'update' : 'create'} ${isQuote ? 'quotation' : 'invoice'}.`]);
@@ -692,7 +826,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
             <div className="inv-en-card-head">
               <h2>{isQuote ? 'Quotation details' : 'Invoice details'}</h2>
               <div className="exp-create-help">
-                <a href={init.customer_catalogue_url}>Customer catalogue</a>
+                <a href={init.customer_catalogue_url} onClick={persistFormDraft}>Customer catalogue</a>
                 {' · '}
                 <a href={init.customers_index_url}>Manage customers</a>
               </div>
@@ -834,7 +968,10 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
               <div className="exp-create-help">
                 <a
                   href={catalogueUrlWithSelected(init.catalogue_url, items)}
-                  onClick={() => writeCatalogueSelectionDraft(items)}
+                  onClick={() => {
+                    persistFormDraft();
+                    writeCatalogueSelectionDraft(items);
+                  }}
                 >
                   Product catalogue
                 </a>

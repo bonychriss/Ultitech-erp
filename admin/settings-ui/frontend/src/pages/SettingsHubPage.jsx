@@ -14,11 +14,13 @@ import {
   FileSpreadsheet,
   Trash2,
   MessageCircle,
+  Type,
 } from 'lucide-react'
 import { executeFactoryReset, getSettingsCfg, saveSystemFont } from '../api/settingsHub.js'
 
 const ICON_MAP = {
   building: Building2,
+  type: Type,
   'plus-square': PlusSquare,
   sitemap: Network,
   users: Users,
@@ -50,6 +52,7 @@ export default function SettingsHubPage() {
   const [fontKey, setFontKey] = useState(cfg.font?.current || 'dm_sans')
   const [flash, setFlash] = useState(cfg.flash || null)
   const [fontBusy, setFontBusy] = useState(false)
+  const [fontOpen, setFontOpen] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [resetConfirm, setResetConfirm] = useState('')
   const [resetBusy, setResetBusy] = useState(false)
@@ -84,6 +87,7 @@ export default function SettingsHubPage() {
       if (data.font?.stack) {
         document.documentElement.style.setProperty('--erp-font-family', data.font.stack)
       }
+      setFontOpen(false)
     } catch (err) {
       setFlash({ type: 'error', message: err.message || 'Could not save font.' })
     } finally {
@@ -138,59 +142,43 @@ export default function SettingsHubPage() {
 
         <p className="ash-lead">Manage system configurations across departments.</p>
 
-        <section className="ash-font-card">
-          <div className="ash-font-head">
-            <h2>System font</h2>
-            <p>Applies across modules, sidebars, forms, and dashboards for this company.</p>
-          </div>
-          <form className="ash-font-form" onSubmit={onApplyFont}>
-            <label className="ash-label" htmlFor="ash-system-font">
-              Font family
-            </label>
-            <div className="ash-font-row">
-              <select
-                id="ash-system-font"
-                className="ash-select"
-                value={fontKey}
-                onChange={(e) => setFontKey(e.target.value)}
-              >
-                {catalog.map((font) => (
-                  <option key={font.id} value={font.id}>
-                    {font.label}
-                  </option>
-                ))}
-              </select>
-              <button type="submit" className="ash-btn-primary" disabled={fontBusy}>
-                {fontBusy ? 'Saving�' : 'Apply font'}
-              </button>
-            </div>
-            <div className="ash-font-preview" style={{ fontFamily: selectedFont.stack }}>
-              <p className="ash-font-preview-title">Preview - {selectedFont.label}</p>
-              <p className="ash-font-preview-body">
-                The quick brown fox jumps over the lazy dog. 0123456789 - Payment voucher #1042 - Jumatano, 28 May 2026
-              </p>
-            </div>
-          </form>
-        </section>
-
         <div className="ash-grid">
           {(cfg.cards || []).map((card) => {
             const Icon = ICON_MAP[card.icon] || Building2
             const isReset = card.action === 'factory_reset'
             const isRegister = card.action === 'register_company'
+            const isFont = card.action === 'system_font'
             const content = (
               <article
                 className={`ash-card${card.danger ? ' ash-card--danger' : ''}`}
                 style={{ '--ash-accent': card.accent || '#2563eb' }}
               >
-                <Icon className="ash-card-icon" strokeWidth={1.75} aria-hidden="true" />
-                <h2>
-                  {card.title}
-                  {card.badge ? <span className="ash-badge">{card.badge}</span> : null}
-                </h2>
-                <p>{card.description}</p>
+                <div className="ash-card-icon-wrap" aria-hidden="true">
+                  <Icon className="ash-card-icon" strokeWidth={1.75} />
+                </div>
+                <div className="ash-card-body">
+                  <div className="ash-card-label">
+                    {card.title}
+                    {card.badge ? <span className="ash-badge">{card.badge}</span> : null}
+                  </div>
+                  <div className="ash-card-value">{card.title}</div>
+                  <div className="ash-card-helper">{card.description}</div>
+                </div>
               </article>
             )
+
+            if (isFont) {
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  className="ash-card-link"
+                  onClick={() => setFontOpen(true)}
+                >
+                  {content}
+                </button>
+              )
+            }
 
             if (isReset) {
               return (
@@ -230,6 +218,67 @@ export default function SettingsHubPage() {
           })}
         </div>
       </div>
+
+      {fontOpen ? (
+        <div
+          className="ash-modal-backdrop"
+          role="presentation"
+          onClick={() => !fontBusy && setFontOpen(false)}
+        >
+          <div
+            className="ash-modal ash-modal--font"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ash-font-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="ash-font-title">System font</h2>
+            <p className="ash-reset-lead">
+              Applies across modules, sidebars, forms, and dashboards for this company.
+            </p>
+            <form className="ash-font-form" onSubmit={onApplyFont}>
+              <label className="ash-label" htmlFor="ash-system-font">
+                Font family
+              </label>
+              <div className="ash-font-row">
+                <select
+                  id="ash-system-font"
+                  className="ash-select"
+                  value={fontKey}
+                  onChange={(e) => setFontKey(e.target.value)}
+                  autoFocus
+                >
+                  {catalog.map((font) => (
+                    <option key={font.id} value={font.id}>
+                      {font.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="ash-font-preview" style={{ fontFamily: selectedFont.stack }}>
+                <p className="ash-font-preview-title">Preview - {selectedFont.label}</p>
+                <p className="ash-font-preview-body">
+                  The quick brown fox jumps over the lazy dog. 0123456789 - Payment voucher #1042 -
+                  Jumatano, 28 May 2026
+                </p>
+              </div>
+              <div className="ash-modal-actions">
+                <button
+                  type="button"
+                  className="ash-btn-ghost"
+                  onClick={() => setFontOpen(false)}
+                  disabled={fontBusy}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="ash-btn-primary" disabled={fontBusy}>
+                  {fontBusy ? 'Saving…' : 'Apply font'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {registerOpen ? (
         <div
@@ -349,7 +398,7 @@ export default function SettingsHubPage() {
             {resetPhase === 'cleaning' ? (
               <div className="ash-reset-cleaning">
                 <div className="ash-cleaning-ring" aria-hidden="true" />
-                <p className="ash-cleaning-title">Cleaning company data�</p>
+                <p className="ash-cleaning-title">Cleaning company data…</p>
                 <p className="ash-cleaning-sub">Please wait. Do not close this window.</p>
               </div>
             ) : null}

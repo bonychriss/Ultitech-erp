@@ -109,6 +109,10 @@
   margin-bottom: 1.5rem;
 }
 
+.ash-modal--font {
+  max-width: 34rem;
+}
+
 .ash-font-head h2 {
   margin: 0 0 0.25rem;
   font-size: 1.05rem;

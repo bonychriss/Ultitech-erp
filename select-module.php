@@ -237,11 +237,18 @@ $push([
 ]);
 
 if ($isAdmin || $isRootAdminUsername) {
+    $settingsHubQs = ['module' => 'settings'];
+    if ($logoCompanyId > 0) {
+        $settingsHubQs['company_id'] = $logoCompanyId;
+    }
+    if ($currentCompanySlug !== '') {
+        $settingsHubQs['company_slug'] = $currentCompanySlug;
+    }
     $push([
         'id' => 'settings',
         'label' => 'General Settings',
         'desc' => 'Manage Global Preferences',
-        'href' => $companyRoute('admin/settings') . '?module=settings',
+        'href' => $companyRoute('admin/settings') . '?' . http_build_query($settingsHubQs),
         'icon' => 'settings_admin',
         'color' => '#4b5563',
     ]);

@@ -133,6 +133,16 @@ function adminSettingsUiHubCards(): array
             'superAdminOnly' => false,
         ],
         [
+            'id' => 'system_font',
+            'title' => 'System font',
+            'description' => 'Applies across modules, sidebars, forms, and dashboards for this company.',
+            'href' => '#system-font',
+            'accent' => '#4f46e5',
+            'icon' => 'type',
+            'action' => 'system_font',
+            'superAdminOnly' => false,
+        ],
+        [
             'id' => 'register_company',
             'title' => 'Register new company',
             'description' => 'Create a company tenant with default module setup.',

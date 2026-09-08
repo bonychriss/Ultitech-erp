@@ -76,6 +76,17 @@ RewriteRule ^([^/]+\.php)$ ../$1?company_slug=ultimate [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^employee/(.+)$ ../employee/$1?company_slug=ultimate [L,QSA]
 
+# Settings hub (extensionless select-module link → settings.php)
+RewriteRule ^admin/settings/?$ admin/settings.php [L,QSA,NC]
+
+# Extensionless admin/*.php under ultimate/ (when stub missing, proxy parent)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{DOCUMENT_ROOT}/public_html/admin/$1.php -f
+RewriteRule ^admin/([^./]+)/?$ ../admin/$1.php?company_slug=ultimate [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{DOCUMENT_ROOT}/admin/$1.php -f
+RewriteRule ^admin/([^./]+)/?$ ../admin/$1.php?company_slug=ultimate [L,QSA]
+
 # Missing admin/* under ultimate/ → parent admin/ (voucher desks, APIs, assets)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^admin/(.+)$ ../admin/$1?company_slug=ultimate [L,QSA]

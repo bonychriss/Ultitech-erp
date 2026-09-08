@@ -949,7 +949,6 @@ switch ($active_module) {
     case 'settings':
         if ($is_admin) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=settings');
-            addItem($menuItems, 'settings-hub', 'Settings Hub', 'grid', $prefix . 'admin/settings.php?module=settings');
             $csSidebarQs = ['module' => 'settings', 'tab' => 'profile'];
             $csSidebarCid = (int) (function_exists('currentCompanyId') ? currentCompanyId() : ($_SESSION['active_company_id'] ?? 0));
             if ($csSidebarCid > 0) {
@@ -959,6 +958,9 @@ switch ($active_module) {
             if ($csSidebarSlug !== '') {
                 $csSidebarQs['company_slug'] = $csSidebarSlug;
             }
+            addItem($menuItems, 'settings-hub', 'Settings Hub', 'grid', $prefix . 'admin/settings.php?module=settings'
+                . ($csSidebarCid > 0 ? '&company_id=' . $csSidebarCid : '')
+                . ($csSidebarSlug !== '' ? '&company_slug=' . rawurlencode($csSidebarSlug) : ''));
             addItem($menuItems, 'company-settings', 'Company Settings', 'building', $prefix . 'admin/company-settings.php?' . http_build_query($csSidebarQs));
             addItem($menuItems, 'sys-wa', 'WhatsApp Config', 'whatsapp', $prefix . 'admin/whatsapp-settings.php?module=settings');
             addItem($menuItems, 'sys-time', 'Time & Format', 'clock', $prefix . 'admin/time-settings.php?module=settings');

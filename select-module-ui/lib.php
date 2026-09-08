@@ -16,7 +16,21 @@ function selectModuleUiWebBasePath(): string
         if (substr($dir, -15) === '/select-module-ui') {
             return rtrim(dirname($dir), '/');
         }
-        return $dir === '' ? '' : $dir;
+
+        // Physical company stubs (e.g. /ultitech_erp/ultimate/select-module.php) must
+        // resolve UI assets from the app root — not from /ultimate/select-module-ui/.
+        $appRootFs = dirname(__DIR__);
+        $slugSeg = ($dir === '' || $dir === '/') ? '' : basename($dir);
+        if (
+            $slugSeg !== ''
+            && is_file($appRootFs . DIRECTORY_SEPARATOR . $slugSeg . DIRECTORY_SEPARATOR . 'select-module.php')
+            && is_dir($appRootFs . DIRECTORY_SEPARATOR . 'select-module-ui')
+            && !is_dir($appRootFs . DIRECTORY_SEPARATOR . $slugSeg . DIRECTORY_SEPARATOR . 'select-module-ui')
+        ) {
+            $dir = rtrim(dirname($dir), '/');
+        }
+
+        return $dir === '' || $dir === '/' ? '' : $dir;
     }
     if (function_exists('app_url')) {
         return rtrim((string) app_url(''), '/');

@@ -142,6 +142,18 @@ if (!function_exists('resolveEffectiveTenantDbConnection')) {
             return $resolved;
         }
 
+        // Shared free-trial DB must never be remapped onto Ultimate's DATA_DB_NAME.
+        if ($tenantDbName !== '' && function_exists('isSharedTrialDatabaseName') && isSharedTrialDatabaseName($tenantDbName)) {
+            if (function_exists('useGlobalDbCredentialsForTenants') && useGlobalDbCredentialsForTenants()) {
+                if ($resolved['host'] === '' || !preg_match('/^(localhost|127\.0\.0\.1)$/i', $resolved['host'])) {
+                    $resolved['host'] = defined('DB_HOST') ? (string) DB_HOST : '127.0.0.1';
+                }
+                $resolved['user'] = '';
+                $resolved['pass'] = null;
+            }
+            return $resolved;
+        }
+
         // Dedicated tenant DBs (e.g. Roadmaster) must never be remapped to DATA_DB_NAME
         // just because payment_vouchers is empty — that steals Ultimate's users/data.
         $roadmasterDb = isset($GLOBALS['ROADMASTER_DB_NAME']) ? trim((string) $GLOBALS['ROADMASTER_DB_NAME']) : '';
@@ -1516,13 +1528,194 @@ function ensureCompaniesTableColumns($explicitPdo = null)
     }
 }
 
-/** Default free-trial length in days (shared DB; no private DB on signup). */
+/** Default free-trial length in days. */
 function erp_trial_days(): int
 {
     if (defined('ERP_TRIAL_DAYS')) {
         return max(1, (int) ERP_TRIAL_DAYS);
     }
     return 14;
+}
+
+/**
+ * Shared empty ERP database used by all free-trial companies (company_id isolation).
+ */
+function erp_shared_trial_database_name(): string
+{
+    if (defined('TRIAL_DB_NAME') && trim((string) TRIAL_DB_NAME) !== '') {
+        return trim((string) TRIAL_DB_NAME);
+    }
+    if (isset($GLOBALS['TRIAL_DB_NAME']) && trim((string) $GLOBALS['TRIAL_DB_NAME']) !== '') {
+        return trim((string) $GLOBALS['TRIAL_DB_NAME']);
+    }
+    return 'ultitech_trial';
+}
+
+/**
+ * True when the given DB name is the shared free-trial database.
+ */
+function isSharedTrialDatabaseName($dbName): bool
+{
+    $dbName = trim((string) $dbName);
+    if ($dbName === '') {
+        return false;
+    }
+    return strcasecmp($dbName, erp_shared_trial_database_name()) === 0;
+}
+
+/**
+ * Schema source for cloning empty trial tables (structure only — never copy rows).
+ */
+function erp_trial_schema_source_database_name(): string
+{
+    if (defined('DATA_DB_NAME') && trim((string) DATA_DB_NAME) !== '') {
+        return trim((string) DATA_DB_NAME);
+    }
+    if (defined('SALES_DB_NAME') && trim((string) SALES_DB_NAME) !== '') {
+        return trim((string) SALES_DB_NAME);
+    }
+    return defined('DB_NAME') ? trim((string) DB_NAME) : '';
+}
+
+/**
+ * Create the shared trial database (if needed) and clone empty table structures from the schema source.
+ * All free-trial signups point companies.db_name here; data is isolated by company_id.
+ *
+ * @return string|null Trial database name on success
+ */
+function erp_ensure_shared_trial_database(): ?string
+{
+    $trialDb = erp_shared_trial_database_name();
+    if ($trialDb === '' || !preg_match('/^[A-Za-z0-9_-]+$/', $trialDb)) {
+        error_log('erp_ensure_shared_trial_database: invalid TRIAL_DB_NAME');
+        return null;
+    }
+
+    $host = defined('DB_HOST') ? (string) DB_HOST : '127.0.0.1';
+    $user = defined('DB_USER') ? (string) DB_USER : 'root';
+    $pass = defined('DB_PASS') ? (string) DB_PASS : '';
+
+    try {
+        $admin = new PDO(
+            'mysql:host=' . $host . ';charset=utf8mb4',
+            $user,
+            $pass,
+            array(
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            )
+        );
+    } catch (Throwable $e) {
+        error_log('erp_ensure_shared_trial_database connect: ' . $e->getMessage());
+        return null;
+    }
+
+    try {
+        $admin->exec(
+            'CREATE DATABASE IF NOT EXISTS `' . str_replace('`', '``', $trialDb) . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+        );
+    } catch (Throwable $e) {
+        error_log('erp_ensure_shared_trial_database CREATE: ' . $e->getMessage());
+        // May already exist without CREATE privilege — try connecting.
+    }
+
+    $trialPdo = function_exists('connectToTenantDatabase')
+        ? connectToTenantDatabase($trialDb, $host, $user, $pass)
+        : null;
+    if (!($trialPdo instanceof PDO)) {
+        try {
+            $trialPdo = new PDO(
+                'mysql:host=' . $host . ';dbname=' . $trialDb . ';charset=utf8mb4',
+                $user,
+                $pass,
+                array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
+            );
+        } catch (Throwable $e) {
+            error_log('erp_ensure_shared_trial_database open: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    $sourceDb = erp_trial_schema_source_database_name();
+    if ($sourceDb !== '' && strcasecmp($sourceDb, $trialDb) !== 0) {
+        erp_clone_empty_schema_into_database($admin, $sourceDb, $trialDb);
+    }
+
+    erp_ensure_trial_database_company_id_columns($trialPdo);
+
+    return $trialDb;
+}
+
+/**
+ * Clone BASE TABLE structures from source DB into target DB (no rows).
+ */
+function erp_clone_empty_schema_into_database(PDO $adminPdo, string $sourceDb, string $targetDb): void
+{
+    $sourceDb = trim($sourceDb);
+    $targetDb = trim($targetDb);
+    if ($sourceDb === '' || $targetDb === '' || strcasecmp($sourceDb, $targetDb) === 0) {
+        return;
+    }
+    $src = str_replace('`', '``', $sourceDb);
+    $dst = str_replace('`', '``', $targetDb);
+
+    try {
+        $st = $adminPdo->query(
+            "SELECT TABLE_NAME FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = " . $adminPdo->quote($sourceDb) . "
+               AND TABLE_TYPE = 'BASE TABLE'
+             ORDER BY TABLE_NAME"
+        );
+        $tables = $st ? ($st->fetchAll(PDO::FETCH_COLUMN) ?: array()) : array();
+    } catch (Throwable $e) {
+        error_log('erp_clone_empty_schema_into_database list: ' . $e->getMessage());
+        return;
+    }
+
+    $skip = array('users', 'companies', 'company_modules', 'user_company_index', 'sessions', 'remember_tokens');
+    foreach ($tables as $table) {
+        $table = (string) $table;
+        if ($table === '' || in_array(strtolower($table), $skip, true)) {
+            continue;
+        }
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $table)) {
+            continue;
+        }
+        try {
+            $exists = $adminPdo->query("SHOW TABLES FROM `{$dst}` LIKE " . $adminPdo->quote($table))->fetchColumn();
+            if ($exists) {
+                continue;
+            }
+            $adminPdo->exec("CREATE TABLE `{$dst}`.`{$table}` LIKE `{$src}`.`{$table}`");
+        } catch (Throwable $e) {
+            error_log('erp_clone_empty_schema_into_database ' . $table . ': ' . $e->getMessage());
+        }
+    }
+}
+
+/**
+ * Ensure company_id exists on common operational tables in the shared trial DB.
+ */
+function erp_ensure_trial_database_company_id_columns(PDO $pdo): void
+{
+    $tables = array(
+        'products', 'brands', 'categories', 'suppliers', 'sales_orders', 'sales_order_items',
+        'payment_vouchers', 'payees', 'invoices', 'quotes', 'customers', 'stock_movements',
+        'warehouses', 'chart_of_accounts', 'journal_entries', 'journal_lines',
+    );
+    foreach ($tables as $table) {
+        try {
+            if (!function_exists('tableExists') || !tableExists($table, $pdo)) {
+                continue;
+            }
+            if (function_exists('columnExists') && columnExists($table, 'company_id', $pdo)) {
+                continue;
+            }
+            $pdo->exec('ALTER TABLE `' . str_replace('`', '``', $table) . '` ADD COLUMN company_id INT NULL DEFAULT NULL, ADD INDEX idx_company_id (company_id)');
+        } catch (Throwable $e) {
+            // Column may already exist or table engine may reject — ignore.
+        }
+    }
 }
 
 function erp_company_plan_pdo(): ?PDO

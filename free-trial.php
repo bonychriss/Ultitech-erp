@@ -213,6 +213,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log('free-trial schema ensure: ' . $schemaEx->getMessage());
             }
 
+            // One shared empty trial ERP database for all free-trial companies (isolated by company_id).
+            $trialDbName = null;
+            if (function_exists('erp_ensure_shared_trial_database')) {
+                $trialDbName = erp_ensure_shared_trial_database();
+            }
+            if ($trialDbName === null || $trialDbName === '') {
+                throw new RuntimeException('Could not prepare the free-trial database. Please try again later.');
+            }
+
             $db->beginTransaction();
 
             $companySlug = freeTrialMakeSlug($db, $companyName);
@@ -228,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'timezone' => 'Africa/Dar_es_Salaam',
                 'base_currency' => 'TZS',
                 'industry_type' => $industryType,
-                'db_name' => null,
+                'db_name' => $trialDbName,
                 'email' => $emailNorm,
                 'phone' => $phone,
                 'plan_status' => 'trial',

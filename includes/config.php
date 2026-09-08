@@ -153,6 +153,11 @@ if (isset($SALES_DB_NAME) && trim((string) $SALES_DB_NAME) !== '' && !defined('S
 if (isset($DATA_DB_NAME) && trim((string) $DATA_DB_NAME) !== '' && !defined('DATA_DB_NAME')) {
     define('DATA_DB_NAME', trim((string) $DATA_DB_NAME));
 }
+if (isset($TRIAL_DB_NAME) && trim((string) $TRIAL_DB_NAME) !== '' && !defined('TRIAL_DB_NAME')) {
+    define('TRIAL_DB_NAME', trim((string) $TRIAL_DB_NAME));
+} elseif (!defined('TRIAL_DB_NAME')) {
+    define('TRIAL_DB_NAME', 'ultitech_trial');
+}
 if (isset($ROADMASTER_DB_NAME) && trim((string) $ROADMASTER_DB_NAME) !== '') {
     $GLOBALS['ROADMASTER_DB_NAME'] = trim((string) $ROADMASTER_DB_NAME);
 }
@@ -469,11 +474,19 @@ if (isset($control_pdo)) {
                     $GLOBALS['pdo'] = $tenantPdo;
                     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-                    if (!defined('IS_TENANT_DB')) define('IS_TENANT_DB', true);
-                    if (!defined('DATA_DB_NAME') && $tenantDbName !== '' && $tenantDbName !== $useName) {
+                    // Shared trial DB hosts many companies — keep company_id scoping (do not set IS_TENANT_DB).
+                    $isSharedTrial = function_exists('isSharedTrialDatabaseName') && isSharedTrialDatabaseName($tenantDbName);
+                    if ($isSharedTrial) {
+                        if (!defined('IS_SHARED_TRIAL_DB')) {
+                            define('IS_SHARED_TRIAL_DB', true);
+                        }
+                    } elseif (!defined('IS_TENANT_DB')) {
+                        define('IS_TENANT_DB', true);
+                    }
+                    if (!$isSharedTrial && !defined('DATA_DB_NAME') && $tenantDbName !== '' && $tenantDbName !== $useName) {
                         define('DATA_DB_NAME', $tenantDbName);
                     }
-                    error_log("SUCCESS: Switched to tenant DB: $tenantDbName for CID: $cid");
+                    error_log("SUCCESS: Switched to tenant DB: $tenantDbName for CID: $cid" . ($isSharedTrial ? ' (shared trial)' : ''));
 
                     // Keep tenant PDO for vouchers; sales module uses sales_pdo() to find sales_orders DB
                     try {

@@ -244,28 +244,29 @@ if (
             letter-spacing: 0.5px;
         }
 
-        .company-block { text-align: right; max-width: 280px; margin-left: auto; }
-        .company-logo-img { height: 50px; width: auto; object-fit: contain; margin-bottom: 8px; }
+        .company-block { text-align: right; }
+        .company-logo-img { height: 50px; width: auto; object-fit: contain; margin-bottom: 5px; }
         .company-name { font-family: var(--header-font); font-size: 18px; font-weight: 700; }
-        .company-details {
-            margin-top: 6px;
-            font-size: 11px;
-            line-height: 1.45;
-            color: #555;
-        }
-        .company-details div + div { margin-top: 2px; }
 
         /* --- Info Section --- */
-        .info-section { display: flex; justify-content: space-between; margin-bottom: 50px; }
+        .info-section { margin-bottom: 50px; }
         
         .to-block h3 { margin: 0 0 8px 0; font-size: 14px; color: #555; font-weight: 500; }
         .recipient-name { font-family: var(--body-font); font-size: 20px; font-weight: 700; margin-bottom: 8px; }
         .recipient-details { font-size: 13px; line-height: 1.6; color: #444; }
 
-        .meta-block { text-align: right; font-size: 13px; line-height: 1.8; }
-        .meta-row { display: flex; justify-content: flex-end; gap: 30px; }
-        .meta-label { color: #666; }
+        .meta-block { margin-top: 14px; font-size: 13px; line-height: 1.8; }
+        .meta-row { display: flex; gap: 16px; }
+        .meta-row + .meta-row { margin-top: 5px; }
+        .meta-label { color: #666; min-width: 72px; }
         .meta-val { font-weight: 600; }
+        .company-details {
+            margin-top: 14px;
+            font-size: 11px;
+            line-height: 1.45;
+            color: #555;
+        }
+        .company-details div + div { margin-top: 2px; }
 
         /* --- Table --- */
         .pay-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
@@ -382,13 +383,6 @@ if (
                 <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>" class="company-logo-img">
                 <?php endif; ?>
                 <div class="company-name"><?= htmlspecialchars($companyName) ?></div>
-                <?php if ($companyAddress !== '' || $companyPhone !== '' || $companyEmail !== ''): ?>
-                <div class="company-details">
-                    <?php if ($companyAddress !== ''): ?><div><?= htmlspecialchars($companyAddress) ?></div><?php endif; ?>
-                    <?php if ($companyPhone !== ''): ?><div><?= htmlspecialchars($companyPhone) ?></div><?php endif; ?>
-                    <?php if ($companyEmail !== ''): ?><div><?= htmlspecialchars($companyEmail) ?></div><?php endif; ?>
-                </div>
-                <?php endif; ?>
             </div>
         </div>
 
@@ -400,20 +394,27 @@ if (
                     <?= htmlspecialchars($slip['department']) ?><br>
                     TIN: <?= htmlspecialchars($slip['tin_number'] ?? 'N/A') ?>
                 </div>
-            </div>
-            <div class="meta-block">
-                <div class="meta-row">
-                    <span class="meta-label">Email</span>
-                    <span class="meta-val"><?= $slip['email'] ?? 'Not set' ?></span>
+                <div class="meta-block">
+                    <div class="meta-row">
+                        <span class="meta-label">Email</span>
+                        <span class="meta-val"><?= htmlspecialchars($slip['email'] ?? 'Not set') ?></span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">Period</span>
+                        <span class="meta-val"><?= date('F Y', mktime(0,0,0,$slip['month'], 1, $slip['year'])) ?></span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">Run Date</span>
+                        <span class="meta-val"><?= date('M d, Y', strtotime($slip['run_date'])) ?></span>
+                    </div>
                 </div>
-                <div class="meta-row" style="margin-top: 5px;">
-                    <span class="meta-label">Period</span>
-                    <span class="meta-val"><?= date('F Y', mktime(0,0,0,$slip['month'], 1, $slip['year'])) ?></span>
+                <?php if ($companyAddress !== '' || $companyPhone !== '' || $companyEmail !== ''): ?>
+                <div class="company-details">
+                    <?php if ($companyAddress !== ''): ?><div><?= htmlspecialchars($companyAddress) ?></div><?php endif; ?>
+                    <?php if ($companyPhone !== ''): ?><div><?= htmlspecialchars($companyPhone) ?></div><?php endif; ?>
+                    <?php if ($companyEmail !== ''): ?><div><?= htmlspecialchars($companyEmail) ?></div><?php endif; ?>
                 </div>
-                <div class="meta-row" style="margin-top: 5px;">
-                    <span class="meta-label">Run Date</span>
-                    <span class="meta-val"><?= date('M d, Y', strtotime($slip['run_date'])) ?></span>
-                </div>
+                <?php endif; ?>
             </div>
         </div>
 

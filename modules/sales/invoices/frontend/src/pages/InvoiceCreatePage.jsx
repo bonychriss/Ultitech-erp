@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ImageOff, Loader2, Trash2, X } from 'lucide-react';
 import { fetchCreateInit, fetchExchangeRate, fetchQuoteEditInit, submitCreateInvoice, submitCreateQuote, submitQuoteEdit } from '../api/invoicesDesk';
 
@@ -8,12 +9,12 @@ function measureProductDropdownStyle(anchorEl) {
   if (!anchorEl || typeof window === 'undefined') return null;
   const input = anchorEl.querySelector('input') || anchorEl;
   const rect = input.getBoundingClientRect();
-  const width = Math.min(Math.max(rect.width, 280), Math.max(200, window.innerWidth - 24));
+  const width = Math.min(Math.max(rect.width, 220), Math.max(180, window.innerWidth - 24));
   const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
   const spaceBelow = window.innerHeight - rect.bottom - 12;
   const spaceAbove = rect.top - 12;
-  const openAbove = spaceBelow < 180 && spaceAbove > spaceBelow;
-  const maxHeight = Math.min(280, Math.max(140, openAbove ? spaceAbove : spaceBelow));
+  const openAbove = spaceBelow < 150 && spaceAbove > spaceBelow;
+  const maxHeight = Math.min(200, Math.max(120, openAbove ? spaceAbove : spaceBelow));
 
   if (openAbove) {
     return {
@@ -35,6 +36,23 @@ function measureProductDropdownStyle(anchorEl) {
     width: `${width}px`,
     maxHeight: `${maxHeight}px`,
     zIndex: 400,
+  };
+}
+
+function measureProductDropdownPopupStyle() {
+  if (typeof window === 'undefined') return null;
+  const width = Math.min(880, Math.max(360, window.innerWidth - 40));
+  const maxHeight = Math.min(640, Math.max(320, window.innerHeight - 56));
+  return {
+    position: 'fixed',
+    left: '50%',
+    top: '50%',
+    transform: 'translate(-50%, -50%)',
+    bottom: 'auto',
+    right: 'auto',
+    width: `${width}px`,
+    maxHeight: `${maxHeight}px`,
+    zIndex: 1200,
   };
 }
 
@@ -550,6 +568,9 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
   useEffect(() => {
     if (!hasOpenProductDropdown) return undefined;
     function onDocClick(e) {
+      if (e.target.closest('.inv-product-dropdown') || e.target.closest('.inv-product-dropdown-backdrop')) {
+        return;
+      }
       let inside = false;
       productSearchRefs.current.forEach((el) => {
         if (el?.contains(e.target)) inside = true;
@@ -568,9 +589,14 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
       return undefined;
     }
 
+    const pendingCount = Object.keys(openItem.pendingProductIds || {}).length;
+    const asPopup = pendingCount >= 2;
+
     const sync = () => {
       const el = productSearchRefs.current.get(openItem.id);
-      const style = measureProductDropdownStyle(el);
+      const style = asPopup
+        ? measureProductDropdownPopupStyle()
+        : measureProductDropdownStyle(el);
       setProductDropdownItemId(openItem.id);
       setProductDropdownStyle(style);
     };
@@ -706,22 +732,89 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
     });
   }
 
-  function selectProduct(index, product) {
-    if (!product) return;
-    updateItem(index, {
-      product_id: product.id,
-      searchQuery: product.name || '',
-      unit_price: parseFloat(product.selling_price) || 0,
-      description: product.description || '',
-      image: productImageUrl(product, init?.stock_uploads_base) || '',
-      showDropdown: false,
-      focusIndex: -1,
+  function lineFromProduct(product, taxPercent) {
+    const line = emptyLine(taxPercent);
+    line.product_id = product.id;
+    line.searchQuery = product.name || '';
+    line.unit_price = parseFloat(product.selling_price) || 0;
+    line.description = product.description || '';
+    line.image = productImageUrl(product, init?.stock_uploads_base) || '';
+    line.quantity = 1;
+    line.line_total = recalcLineTotal(line);
+    return line;
+  }
+
+  function togglePendingProduct(index, productId) {
+    const id = Number(productId) || 0;
+    if (!id) return;
+    setItems((prev) => {
+      const next = [...prev];
+      const item = { ...next[index] };
+      const pending = { ...(item.pendingProductIds || {}) };
+      if (pending[id]) delete pending[id];
+      else pending[id] = true;
+      item.pendingProductIds = pending;
+      item.showDropdown = true;
+      next[index] = item;
+      return next;
     });
-    if (supportsTruckInvoices && product.item_type === 'vehicle' && orderType !== 'truck') {
+  }
+
+  function applyPendingProducts(index) {
+    const item = items[index];
+    if (!item) return;
+    const pendingIds = Object.keys(item.pendingProductIds || {})
+      .map((id) => Number(id))
+      .filter((id) => id > 0);
+    if (pendingIds.length === 0) {
+      updateItem(index, { showDropdown: false, focusIndex: -1, pendingProductIds: {} });
+      return;
+    }
+
+    const productsList = init?.products || [];
+    const picked = pendingIds
+      .map((id) => productsList.find((p) => Number(p.id) === id))
+      .filter(Boolean);
+    if (!picked.length) return;
+
+    const tax = item.tax_percent || taxPercentage || 18;
+    const keepQty = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+
+    setItems((prev) => {
+      const next = [...prev];
+      const first = lineFromProduct(picked[0], tax);
+      first.quantity = item.product_id ? 1 : keepQty;
+      first.line_total = recalcLineTotal(first);
+      first.id = item.id;
+      next[index] = first;
+
+      const extras = picked.slice(1).map((product) => lineFromProduct(product, tax));
+      if (extras.length) next.splice(index + 1, 0, ...extras);
+      return next;
+    });
+
+    if (supportsTruckInvoices && picked.some((p) => p.item_type === 'vehicle') && orderType !== 'truck') {
       setOrderType('truck');
       setCurrencies([]);
       setPrimaryCurrencyState('');
     }
+  }
+
+  function openProductDropdown(index) {
+    setItems((prev) => {
+      const next = [...prev];
+      const item = { ...next[index] };
+      const pending = { ...(item.pendingProductIds || {}) };
+      if (item.product_id && !Object.keys(pending).length) {
+        pending[Number(item.product_id)] = true;
+      }
+      item.showDropdown = true;
+      item.pendingProductIds = pending;
+      next[index] = item;
+      return next.map((row, i) => (
+        i === index ? row : (row.showDropdown ? { ...row, showDropdown: false, focusIndex: -1 } : row)
+      ));
+    });
   }
 
   function buildFormData() {
@@ -1005,6 +1098,8 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
                           return p.name?.toLowerCase().includes(q) || p.product_code?.toLowerCase().includes(q);
                         })
                       : [];
+                    const pendingCount = Object.keys(item.pendingProductIds || {}).length;
+                    const dropdownAsPopup = pendingCount >= 2;
                     return (
                       <tr key={item.id}>
                         <td>{index + 1}</td>
@@ -1027,52 +1122,129 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
                             type="text"
                             value={item.searchQuery}
                             placeholder="Search product..."
-                            onChange={(e) => updateItem(index, { searchQuery: e.target.value, showDropdown: true })}
-                            onFocus={() => updateItem(index, { showDropdown: true })}
+                            onChange={(e) => updateItem(index, {
+                              searchQuery: e.target.value,
+                              showDropdown: true,
+                              pendingProductIds: item.pendingProductIds || {},
+                            })}
+                            onFocus={() => openProductDropdown(index)}
                           />
-                          {item.showDropdown && (
-                            <div
-                              className="inv-product-dropdown inv-product-dropdown--fixed"
-                              style={productDropdownItemId === item.id && productDropdownStyle ? productDropdownStyle : undefined}
-                            >
+                          {item.showDropdown && (() => {
+                            const panel = (
+                              <>
+                              {dropdownAsPopup ? (
+                                <div
+                                  className="inv-product-dropdown-backdrop"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    updateItem(index, { showDropdown: false, focusIndex: -1, pendingProductIds: {} });
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                className={`inv-product-dropdown inv-product-dropdown--fixed inv-product-dropdown--multi${dropdownAsPopup ? ' inv-product-dropdown--popup' : ''}`}
+                                style={productDropdownItemId === item.id && productDropdownStyle ? productDropdownStyle : undefined}
+                                onMouseDown={(e) => e.stopPropagation()}
+                              >
                               <div className="inv-product-dropdown-header">
-                                <span>Select product</span>
+                                <div className="inv-product-dropdown-header-text">
+                                  <span className="inv-product-dropdown-title">Select products</span>
+                                  {dropdownAsPopup ? (
+                                    <span className="inv-product-dropdown-count">{pendingCount} selected</span>
+                                  ) : null}
+                                </div>
                                 <button
                                   type="button"
                                   className="inv-product-dropdown-close"
-                                  onClick={() => updateItem(index, { showDropdown: false, focusIndex: -1 })}
+                                  onClick={() => updateItem(index, { showDropdown: false, focusIndex: -1, pendingProductIds: {} })}
                                   aria-label="Close product search"
                                 >
                                   <X size={14} aria-hidden />
                                 </button>
                               </div>
-                              {matching.length > 0 ? (
-                                matching.slice(0, 20).map((p, mi) => {
-                                const thumbUrl = productImageUrl(p, init.stock_uploads_base);
-                                return (
-                                <div
-                                  key={p.id}
-                                  className={`inv-product-option${item.focusIndex === mi ? ' is-focused' : ''}`}
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={() => selectProduct(index, p)}
-                                >
-                                  <ProductThumb
-                                    src={thumbUrl}
-                                    boxClassName="inv-product-option-thumb"
-                                    iconSize={16}
+                              {dropdownAsPopup ? (
+                                <div className="inv-product-dropdown-search">
+                                  <input
+                                    type="text"
+                                    value={item.searchQuery}
+                                    placeholder="Search by name or code..."
+                                    autoFocus
+                                    onChange={(e) => updateItem(index, {
+                                      searchQuery: e.target.value,
+                                      showDropdown: true,
+                                      pendingProductIds: item.pendingProductIds || {},
+                                    })}
+                                    onMouseDown={(e) => e.stopPropagation()}
                                   />
-                                  <div>
-                                    <div><strong>{p.name}</strong></div>
-                                    <div className="exp-create-help">{p.product_code} | {formatCurrency(p.selling_price)}</div>
-                                  </div>
                                 </div>
-                                );
-                              })
-                              ) : (
-                                <div className="inv-product-dropdown-empty">No matching products</div>
-                              )}
-                            </div>
-                          )}
+                              ) : null}
+                              <div className="inv-product-dropdown-list">
+                                {matching.length > 0 ? (
+                                  matching.slice(0, dropdownAsPopup ? 120 : 50).map((p, mi) => {
+                                    const thumbUrl = productImageUrl(p, init.stock_uploads_base);
+                                    const checked = !!(item.pendingProductIds || {})[p.id];
+                                    return (
+                                      <div
+                                        key={p.id}
+                                        className={`inv-product-option${item.focusIndex === mi ? ' is-focused' : ''}${checked ? ' is-checked' : ''}`}
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => togglePendingProduct(index, p.id)}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          className="inv-product-option-check"
+                                          checked={checked}
+                                          onChange={() => togglePendingProduct(index, p.id)}
+                                          onClick={(e) => e.stopPropagation()}
+                                          aria-label={`Select ${p.name}`}
+                                        />
+                                        <ProductThumb
+                                          src={thumbUrl}
+                                          boxClassName="inv-product-option-thumb"
+                                          iconSize={16}
+                                        />
+                                        <div className="inv-product-option-body">
+                                          <div className="inv-product-option-name">{p.name}</div>
+                                          <div className="inv-product-option-meta">
+                                            <span>{p.product_code || '—'}</span>
+                                            <span>{formatCurrency(p.selling_price)}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <div className="inv-product-dropdown-empty">No matching products</div>
+                                )}
+                              </div>
+                              <div className="inv-product-dropdown-footer">
+                                {dropdownAsPopup ? (
+                                  <button
+                                    type="button"
+                                    className="inv-product-dropdown-cancel"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => updateItem(index, { showDropdown: false, focusIndex: -1, pendingProductIds: {} })}
+                                  >
+                                    Cancel
+                                  </button>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  className="inv-product-dropdown-add"
+                                  disabled={pendingCount === 0}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => applyPendingProducts(index)}
+                                >
+                                  Add selected ({pendingCount})
+                                </button>
+                              </div>
+                              </div>
+                              </>
+                            );
+                            return dropdownAsPopup && typeof document !== 'undefined'
+                              ? createPortal(panel, document.body)
+                              : panel;
+                          })()}
                           </div>
                         </td>
                         <td className="inv-line-col-qty">

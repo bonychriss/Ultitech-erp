@@ -480,6 +480,24 @@ if (isset($control_pdo)) {
                         if (!defined('IS_SHARED_TRIAL_DB')) {
                             define('IS_SHARED_TRIAL_DB', true);
                         }
+                        // Ensure users table exists; mirror logged-in control user for UI joins.
+                        try {
+                            if (!tableExists('users', $tenantPdo) && function_exists('erp_ensure_shared_trial_users_table')) {
+                                $host = defined('DB_HOST') ? (string) DB_HOST : '127.0.0.1';
+                                $user = defined('DB_USER') ? (string) DB_USER : 'root';
+                                $pass = defined('DB_PASS') ? (string) DB_PASS : '';
+                                $admin = new PDO('mysql:host=' . $host . ';charset=utf8mb4', $user, $pass, array(
+                                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                                ));
+                                erp_ensure_shared_trial_users_table($admin, $tenantDbName, $tenantPdo);
+                            }
+                            $uid = (int) ($_SESSION['user_id'] ?? 0);
+                            if ($uid > 0 && function_exists('erp_mirror_control_user_to_shared_trial')) {
+                                erp_mirror_control_user_to_shared_trial($uid, $tenantDbName);
+                            }
+                        } catch (Throwable $e) {
+                            error_log('shared trial users ensure: ' . $e->getMessage());
+                        }
                     } elseif (!defined('IS_TENANT_DB')) {
                         define('IS_TENANT_DB', true);
                     }

@@ -692,6 +692,20 @@ html[data-theme="dark"] .sm-card:hover .sm-desc {
   animation: sm-rise 0.45s ease-out 0.2s both;
 }
 
+.sm-guide-orb--trial {
+  background: linear-gradient(145deg, #ecfdf5, #d1fae5);
+  color: #047857;
+}
+
+.sm-trial-hint {
+  max-width: 16.5rem;
+  margin: -0.15rem auto 1.1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #059669;
+  text-align: center;
+}
+
 .sm-modal-actions {
   display: flex;
   justify-content: flex-end;

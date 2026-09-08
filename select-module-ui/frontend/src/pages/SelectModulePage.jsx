@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Compass,
   Coins,
   FileText,
   Inbox,
@@ -497,6 +498,39 @@ function ModuleIcon({ name, color }) {
   )
 }
 
+function TrialGuidelineModal({ open, guide, onDismiss }) {
+  if (!open || !guide) return null
+
+  return (
+    <div className="sm-modal-backdrop sm-modal-backdrop--guide" role="presentation" onClick={onDismiss}>
+      <div
+        className="sm-modal sm-modal--guide sm-modal--trial"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sm-trial-guide-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sm-guide-orb sm-guide-orb--trial" aria-hidden="true">
+          <span className="sm-guide-orb-ring" />
+          <span className="sm-guide-orb-ring sm-guide-orb-ring--delay" />
+          <Compass className="sm-guide-orb-icon" strokeWidth={2} />
+        </div>
+        <div className="sm-modal-kicker">Quick start</div>
+        <h2 id="sm-trial-guide-title" className="sm-modal-title">
+          {guide.title || 'Your workspace is ready'}
+        </h2>
+        <p className="sm-modal-body">{guide.body}</p>
+        {guide.hint ? <p className="sm-trial-hint">{guide.hint}</p> : null}
+        <div className="sm-modal-actions sm-modal-actions--stack">
+          <button type="button" className="sm-modal-btn sm-modal-btn--primary" onClick={onDismiss}>
+            {guide.cta || 'Got it'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MailGuidelineModal({ open, campaign, onDismiss, onReview }) {
   if (!open || !campaign) return null
   const guide = campaign.guideline || {}
@@ -645,6 +679,7 @@ export default function SelectModulePage() {
   const enabledLabels = Array.isArray(cfg.enabledModuleLabels) ? cfg.enabledModuleLabels : []
   const modules = Array.isArray(cfg.modules) ? cfg.modules : []
   const mailUpdate = cfg.mailUpdate && typeof cfg.mailUpdate === 'object' ? cfg.mailUpdate : null
+  const trialGuide = cfg.trialGuide && typeof cfg.trialGuide === 'object' ? cfg.trialGuide : null
   const desktopAppDownloadUrl = cfg.desktopAppDownloadUrl || ''
   const showDesktopAppDownload = Boolean(cfg.showDesktopAppDownload && desktopAppDownloadUrl)
   const pvTasks = cfg.pvTasks && typeof cfg.pvTasks === 'object' ? cfg.pvTasks : null
@@ -659,11 +694,13 @@ export default function SelectModulePage() {
   const version = mailUpdate?.version || ''
   const userId = mailUpdate?.userId || 0
 
+  const [showTrialGuide, setShowTrialGuide] = useState(Boolean(trialGuide?.active))
   const [showGuide, setShowGuide] = useState(false)
   const [showRate, setShowRate] = useState(false)
   const [rateDone, setRateDone] = useState(false)
 
   useEffect(() => {
+    if (showTrialGuide) return
     if (!mailUpdate?.active) return
     const rated = readFlag('rated', version, userId)
     const guided = readFlag('guideline', version, userId)
@@ -677,7 +714,23 @@ export default function SelectModulePage() {
     if (!guided && !rated) {
       setShowGuide(true)
     }
-  }, [mailUpdate, version, userId])
+  }, [mailUpdate, version, userId, showTrialGuide])
+
+  useEffect(() => {
+    if (!showTrialGuide) return undefined
+    // Drop ?welcome=1 from the URL so refresh does not reopen the guide forever.
+    try {
+      const url = new URL(window.location.href)
+      if (url.searchParams.has('welcome')) {
+        url.searchParams.delete('welcome')
+        const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams}` : '') + url.hash
+        window.history.replaceState({}, '', next)
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    return undefined
+  }, [showTrialGuide])
 
   useEffect(() => {
     if (!rateDone) return undefined
@@ -823,16 +876,21 @@ export default function SelectModulePage() {
       ) : null}
 
       <MailGuidelineModal
-        open={showGuide}
+        open={showGuide && !showTrialGuide}
         campaign={mailUpdate}
         onDismiss={dismissGuide}
         onReview={reviewMail}
       />
       <MailRatingModal
-        open={showRate}
+        open={showRate && !showTrialGuide}
         campaign={mailUpdate}
         onSkip={skipRate}
         onSubmitted={onRated}
+      />
+      <TrialGuidelineModal
+        open={showTrialGuide}
+        guide={trialGuide}
+        onDismiss={() => setShowTrialGuide(false)}
       />
 
       {showDesktopAppDownload ? (

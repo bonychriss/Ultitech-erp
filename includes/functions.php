@@ -1673,8 +1673,130 @@ function erp_ensure_shared_trial_database(): ?string
     }
 
     erp_ensure_trial_database_company_id_columns($trialPdo);
+    erp_ensure_shared_trial_users_table($admin, $trialDb, $trialPdo);
 
     return $trialDb;
+}
+
+/**
+ * Shared trial DB needs an empty `users` table so tenant $pdo queries do not 1146.
+ * Real credentials stay on the control DB; rows may be mirrored for UI joins.
+ */
+function erp_ensure_shared_trial_users_table(PDO $adminPdo, string $trialDb, ?PDO $trialPdo = null): void
+{
+    $trialDb = trim($trialDb);
+    if ($trialDb === '' || !preg_match('/^[A-Za-z0-9_-]+$/', $trialDb)) {
+        return;
+    }
+    $controlDb = defined('DB_NAME') ? trim((string) DB_NAME) : '';
+    if ($controlDb === '' || strcasecmp($controlDb, $trialDb) === 0) {
+        return;
+    }
+    $src = str_replace('`', '``', $controlDb);
+    $dst = str_replace('`', '``', $trialDb);
+    try {
+        $exists = $adminPdo->query("SHOW TABLES FROM `{$dst}` LIKE 'users'")->fetchColumn();
+        if (!$exists) {
+            $adminPdo->exec("CREATE TABLE `{$dst}`.`users` LIKE `{$src}`.`users`");
+        }
+    } catch (Throwable $e) {
+        error_log('erp_ensure_shared_trial_users_table: ' . $e->getMessage());
+        return;
+    }
+
+    if ($trialPdo instanceof PDO && function_exists('columnExists') && !columnExists('users', 'company_id', $trialPdo)) {
+        try {
+            $trialPdo->exec('ALTER TABLE users ADD COLUMN company_id INT NULL DEFAULT NULL');
+        } catch (Throwable $e) {
+        }
+    }
+}
+
+/**
+ * Mirror a control-plane user into the shared trial DB (same id when possible) for UI lookups.
+ */
+function erp_mirror_control_user_to_shared_trial(int $userId, ?string $trialDbName = null): bool
+{
+    if ($userId <= 0) {
+        return false;
+    }
+    global $control_pdo;
+    if (!(($control_pdo ?? null) instanceof PDO)) {
+        return false;
+    }
+    $trialDb = $trialDbName !== null && trim($trialDbName) !== ''
+        ? trim($trialDbName)
+        : erp_shared_trial_database_name();
+    if ($trialDb === '' || !function_exists('connectToTenantDatabase')) {
+        return false;
+    }
+    $trialPdo = connectToTenantDatabase($trialDb);
+    if (!($trialPdo instanceof PDO)) {
+        return false;
+    }
+
+    try {
+        if (!tableExists('users', $trialPdo)) {
+            $host = defined('DB_HOST') ? (string) DB_HOST : '127.0.0.1';
+            $user = defined('DB_USER') ? (string) DB_USER : 'root';
+            $pass = defined('DB_PASS') ? (string) DB_PASS : '';
+            $admin = new PDO('mysql:host=' . $host . ';charset=utf8mb4', $user, $pass, array(
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ));
+            erp_ensure_shared_trial_users_table($admin, $trialDb, $trialPdo);
+        }
+        if (!tableExists('users', $trialPdo)) {
+            return false;
+        }
+
+        $st = $control_pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+        $st->execute([$userId]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return false;
+        }
+
+        $trialCols = $trialPdo->query('SHOW COLUMNS FROM users')->fetchAll(PDO::FETCH_COLUMN) ?: array();
+        $trialCols = array_map('strval', $trialCols);
+        if ($trialCols === []) {
+            return false;
+        }
+
+        $insertCols = [];
+        $insertVals = [];
+        foreach ($trialCols as $col) {
+            if (!array_key_exists($col, $row)) {
+                continue;
+            }
+            $insertCols[] = $col;
+            $insertVals[] = $row[$col];
+        }
+        if ($insertCols === []) {
+            return false;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($insertCols), '?'));
+        $colSql = implode(', ', array_map(static function ($c) {
+            return '`' . str_replace('`', '``', $c) . '`';
+        }, $insertCols));
+        $updates = [];
+        foreach ($insertCols as $col) {
+            if (strtolower($col) === 'id') {
+                continue;
+            }
+            $safe = '`' . str_replace('`', '``', $col) . '`';
+            $updates[] = $safe . ' = VALUES(' . $safe . ')';
+        }
+        $sql = 'INSERT INTO users (' . $colSql . ') VALUES (' . $placeholders . ')';
+        if ($updates !== []) {
+            $sql .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', $updates);
+        }
+        $trialPdo->prepare($sql)->execute($insertVals);
+        return true;
+    } catch (Throwable $e) {
+        error_log('erp_mirror_control_user_to_shared_trial: ' . $e->getMessage());
+        return false;
+    }
 }
 
 /**
@@ -6168,17 +6290,26 @@ function authenticate($userOrEmail, $password, $companySlug = null)
             }
             $tenantReachable = false;
             if ($tenantDb !== '') {
-                $effectiveTenant = resolveEffectiveTenantDbConnection($tenantDb, $tenantHost, $tenantUser, $tenantPass);
-                $tenantDb = $effectiveTenant['db_name'];
-                $tenantHost = $effectiveTenant['host'];
-                $tenantUser = $effectiveTenant['user'];
-                $tenantPass = $effectiveTenant['pass'];
-                $tenantPdo = connectToTenantDatabase($tenantDb, $tenantHost, $tenantUser, $tenantPass);
-                if ($tenantPdo instanceof PDO) {
-                    $pdo = $tenantPdo;
-                    $tenantReachable = true;
-                } elseif ($control_pdo instanceof PDO) {
-                    $pdo = $control_pdo;
+                // Shared free-trial DB: auth users live on control (not mirrored-only).
+                if (function_exists('isSharedTrialDatabaseName') && isSharedTrialDatabaseName($tenantDb)) {
+                    if (($control_pdo ?? null) instanceof PDO) {
+                        $pdo = $control_pdo;
+                    }
+                    $tenantReachable = false;
+                    $tenantDb = null;
+                } else {
+                    $effectiveTenant = resolveEffectiveTenantDbConnection($tenantDb, $tenantHost, $tenantUser, $tenantPass);
+                    $tenantDb = $effectiveTenant['db_name'];
+                    $tenantHost = $effectiveTenant['host'];
+                    $tenantUser = $effectiveTenant['user'];
+                    $tenantPass = $effectiveTenant['pass'];
+                    $tenantPdo = connectToTenantDatabase($tenantDb, $tenantHost, $tenantUser, $tenantPass);
+                    if ($tenantPdo instanceof PDO) {
+                        $pdo = $tenantPdo;
+                        $tenantReachable = true;
+                    } elseif ($control_pdo instanceof PDO) {
+                        $pdo = $control_pdo;
+                    }
                 }
             }
         }

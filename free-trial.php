@@ -337,6 +337,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->commit();
             }
 
+            if ($userId > 0 && function_exists('erp_mirror_control_user_to_shared_trial')) {
+                try {
+                    erp_mirror_control_user_to_shared_trial($userId, $trialDbName);
+                } catch (Throwable $mirrorEx) {
+                    error_log('free-trial user mirror: ' . $mirrorEx->getMessage());
+                }
+            }
+
             // DM Sans is the post-registration UI default (personalization + all pages).
             try {
                 if ($userId > 0 && function_exists('saveUserFontKey')) {

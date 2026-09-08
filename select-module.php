@@ -327,6 +327,28 @@ $statusUrl = function_exists('app_url') ? app_url('/system-status.php') : 'syste
 $desktopAppDownloadUrl = function_exists('app_url') ? app_url('/client-apps/download-desktop.php') : '/client-apps/download-desktop.php';
 $desktopLatestVersion = selectModuleDesktopLatestVersion();
 
+$showTrialGuide = false;
+if (isset($_GET['welcome']) && (string) $_GET['welcome'] === '1') {
+    $showTrialGuide = true;
+}
+if (!empty($_SESSION['show_trial_guide'])) {
+    $showTrialGuide = true;
+    unset($_SESSION['show_trial_guide']);
+}
+if (!empty($_SESSION['trial_signup_done'])) {
+    $showTrialGuide = true;
+    unset($_SESSION['trial_signup_done']);
+}
+
+$trialDaysLeft = null;
+$companyIdForPlan = (int) ($currentCompany['id'] ?? currentCompanyId() ?? 0);
+if ($showTrialGuide && $companyIdForPlan > 0 && function_exists('getCompanyPlanInfo')) {
+    $plan = getCompanyPlanInfo($companyIdForPlan);
+    if (!empty($plan['is_trial']) && isset($plan['days_remaining'])) {
+        $trialDaysLeft = (int) $plan['days_remaining'];
+    }
+}
+
 $selectModuleConfig = [
     'companyName' => $currentCompanyName,
     'logoUrl' => $modulePageLogoUrl,
@@ -343,6 +365,15 @@ $selectModuleConfig = [
     'enabledModuleLabels' => $enabledModuleNames,
     'modules' => $modules,
     'mailUpdate' => $emailModuleUpdateCampaign,
+    'trialGuide' => $showTrialGuide ? [
+        'active' => true,
+        'title' => 'Your workspace is ready',
+        'body' => 'This is a fresh trial account — start by opening a module below (Stock, Sales, or Payment Voucher). Add your products and customers as you go.',
+        'hint' => $trialDaysLeft !== null
+            ? ($trialDaysLeft === 1 ? '1 day left on your free trial.' : $trialDaysLeft . ' days left on your free trial.')
+            : 'Explore freely during your free trial.',
+        'cta' => 'Got it',
+    ] : null,
     'pvTasks' => [
         'url' => $pvTasksListUrl,
         'count' => $pvTaskCount,

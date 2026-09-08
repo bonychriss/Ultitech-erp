@@ -13,6 +13,10 @@ $slug = trim((string) ($_SESSION['company_slug'] ?? ''));
 $workspaceUrl = $slug !== ''
     ? company_url('select-module', $slug)
     : app_url('/select-module.php');
+// Show the short onboarding guideline on select-module after free-trial signup.
+$sep = str_contains($workspaceUrl, '?') ? '&' : '?';
+$workspaceUrl .= $sep . 'welcome=1';
+$_SESSION['show_trial_guide'] = 1;
 $welcomeLottieUrl = app_url('/assets/animations/Welcome.lottie');
 ?>
 <!DOCTYPE html>

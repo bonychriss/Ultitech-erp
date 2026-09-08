@@ -86,6 +86,7 @@ $desk = strtolower(trim((string) ($_GET['desk'] ?? '')));
 $payrollDesks = [
     'run-payroll' => true,
     'edit-payslip' => true,
+    'settings' => true,
 ];
 
 if ($desk !== '' && isset($payrollDesks[$desk])) {

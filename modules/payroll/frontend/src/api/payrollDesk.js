@@ -262,3 +262,26 @@ export function resolveEmployeeId() {
   }
   return 0;
 }
+
+export async function fetchSettings() {
+  const res = await fetch(`${getApiBase()}/settings-get.php`, { credentials: 'same-origin' });
+  const data = await parseJson(res);
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+export async function saveSettingsAction(payload) {
+  const res = await fetch(`${getApiBase()}/settings-save.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok || data.error || data.success === false) {
+    throw new Error(data.error || data.message || `Request failed (${res.status})`);
+  }
+  return data;
+}

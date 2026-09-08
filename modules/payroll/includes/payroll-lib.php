@@ -1086,3 +1086,310 @@ function payrollDeskRenderReactEntry(string $pageTitle, string $headerTitle, str
     require __DIR__ . '/payroll-react-shell.php';
     exit;
 }
+
+/**
+ * @return array{settings:array<string,string>,taxBands:list<array<string,mixed>>,rules:list<array<string,mixed>>,links:array<string,string>}
+ */
+function payrollDeskGetSettingsPayload(PDO $pdo): array
+{
+    if (!payroll_table_exists('payroll_settings') || !payroll_table_exists('payroll_tax_bands')) {
+        throw new RuntimeException('Payroll settings tables are missing. Run setup first.');
+    }
+
+    payrollDeskEnsureTaxBandDescriptionColumn($pdo);
+
+    $settings = [
+        'payDay' => '30',
+        'socialSecurityRate' => '10',
+        'taxRate' => '0',
+    ];
+    $st = $pdo->query('SELECT * FROM ' . payroll_table('payroll_settings'));
+    while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
+        $key = trim((string) ($row['setting_key'] ?? ''));
+        $val = $row['setting_value'] ?? null;
+        if ($key === '' || $val === null || $val === '') {
+            $key = trim((string) ($row['meta_key'] ?? $key));
+            $val = $row['meta_value'] ?? $val;
+        }
+        $key = (string) $key;
+        $val = (string) ($val ?? '');
+        if ($key === 'pay_day') {
+            $settings['payDay'] = $val;
+        } elseif ($key === 'social_security_rate' || $key === 'nssf_rate') {
+            // Legacy nssf_rate may be stored as a fraction (0.05); UI expects percent.
+            if ($key === 'nssf_rate' && is_numeric($val) && (float) $val > 0 && (float) $val < 1) {
+                $val = (string) ((float) $val * 100);
+            }
+            if ($key === 'social_security_rate' || $settings['socialSecurityRate'] === '10') {
+                $settings['socialSecurityRate'] = $val;
+            }
+        } elseif ($key === 'tax_rate') {
+            $settings['taxRate'] = $val;
+        }
+    }
+
+    $taxBands = [];
+    $bands = $pdo->query('SELECT * FROM ' . payroll_table('payroll_tax_bands') . ' ORDER BY min_salary ASC')->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($bands as $band) {
+        $taxBands[] = payrollDeskNormalizeTaxBand($band);
+    }
+
+    $rules = [];
+    if (payroll_table_exists('erp_payroll_settings')) {
+        $ruleRows = $pdo->query('SELECT * FROM ' . payroll_table('erp_payroll_settings') . ' ORDER BY id DESC')->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($ruleRows as $rule) {
+            $rules[] = payrollDeskNormalizeRule($rule);
+        }
+    }
+
+    return [
+        'settings' => $settings,
+        'taxBands' => $taxBands,
+        'rules' => $rules,
+        'links' => [
+            'dashboard' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
+            'help' => payrollDeskPublicUrl('help.php') . payrollDeskQueryString(),
+            'setup' => payrollDeskPublicUrl('setup.php') . payrollDeskQueryString(),
+        ],
+    ];
+}
+
+function payrollDeskEnsureTaxBandDescriptionColumn(PDO $pdo): void
+{
+    static $checked = false;
+    if ($checked) {
+        return;
+    }
+    $checked = true;
+    try {
+        $cols = $pdo->query('SHOW COLUMNS FROM ' . payroll_table('payroll_tax_bands'))->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('description', $cols, true)) {
+            $pdo->exec(
+                'ALTER TABLE ' . payroll_table('payroll_tax_bands')
+                . ' ADD COLUMN `description` varchar(255) DEFAULT NULL AFTER `offset_amount`'
+            );
+        }
+    } catch (Throwable $e) {
+        // Keep going; description will fall back to generated text.
+    }
+}
+
+/**
+ * @param array<string,mixed> $band
+ */
+function payrollDeskBuildTaxBandDescription(array $band): string
+{
+    $min = (float) ($band['min_salary'] ?? $band['minSalary'] ?? 0);
+    $rate = (float) ($band['tax_rate'] ?? $band['taxRate'] ?? 0);
+    $offset = (float) ($band['offset_amount'] ?? $band['offsetAmount'] ?? 0);
+
+    if ($rate == 0.0) {
+        return '0% (No tax)';
+    }
+
+    $base = $offset > 0 ? number_format($offset) . ' + ' : '';
+
+    return $base . rtrim(rtrim(number_format($rate, 2, '.', ''), '0'), '.') . '% of amount above ' . number_format($min);
+}
+
+/**
+ * @param array<string,mixed> $band
+ * @return array<string,mixed>
+ */
+function payrollDeskNormalizeTaxBand(array $band): array
+{
+    $min = (float) ($band['min_salary'] ?? 0);
+    $maxRaw = $band['max_salary'] ?? null;
+    $max = $maxRaw === null || $maxRaw === '' ? null : (float) $maxRaw;
+    $rate = (float) ($band['tax_rate'] ?? 0);
+    $offset = (float) ($band['offset_amount'] ?? 0);
+    $active = (int) ($band['is_active'] ?? 1) === 1;
+    $storedDescription = trim((string) ($band['description'] ?? ''));
+    $description = $storedDescription !== '' ? $storedDescription : payrollDeskBuildTaxBandDescription([
+        'min_salary' => $min,
+        'tax_rate' => $rate,
+        'offset_amount' => $offset,
+    ]);
+
+    if ($max === null) {
+        $rangeLabel = 'Above ' . number_format($min);
+    } else {
+        $rangeLabel = number_format($min) . ' - ' . number_format($max);
+    }
+
+    return [
+        'id' => (int) ($band['id'] ?? 0),
+        'minSalary' => $min,
+        'maxSalary' => $max,
+        'taxRate' => $rate,
+        'offsetAmount' => $offset,
+        'isActive' => $active,
+        'rangeLabel' => $rangeLabel,
+        'description' => $description,
+    ];
+}
+
+/**
+ * @param array<string,mixed> $rule
+ * @return array<string,mixed>
+ */
+function payrollDeskNormalizeRule(array $rule): array
+{
+    return [
+        'id' => (int) ($rule['id'] ?? 0),
+        'name' => (string) ($rule['name'] ?? ''),
+        'type' => (string) ($rule['type'] ?? 'deduction'),
+        'value' => (float) ($rule['value'] ?? 0),
+        'isPercentage' => (int) ($rule['is_percentage'] ?? 0) === 1,
+        'isActive' => (int) ($rule['is_active'] ?? 0) === 1,
+    ];
+}
+
+/**
+ * @param array<string,mixed> $payload
+ * @return array{message:string,data:array<string,mixed>}
+ */
+function payrollDeskSaveGlobalSettings(PDO $pdo, array $payload): array
+{
+    $map = [
+        'pay_day' => (string) ($payload['payDay'] ?? $payload['pay_day'] ?? '30'),
+        'social_security_rate' => (string) ($payload['socialSecurityRate'] ?? $payload['social_security_rate'] ?? '10'),
+        'tax_rate' => (string) ($payload['taxRate'] ?? $payload['tax_rate'] ?? '0'),
+    ];
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO ' . payroll_table('payroll_settings') . ' (setting_key, setting_value) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
+    );
+    foreach ($map as $key => $value) {
+        $stmt->execute([$key, $value]);
+    }
+
+    return [
+        'message' => 'Settings saved.',
+        'data' => payrollDeskGetSettingsPayload($pdo),
+    ];
+}
+
+/**
+ * @param array<string,mixed> $payload
+ * @return array{message:string,data:array<string,mixed>}
+ */
+function payrollDeskSaveTaxBand(PDO $pdo, array $payload): array
+{
+    payrollDeskEnsureTaxBandDescriptionColumn($pdo);
+
+    $id = (int) ($payload['id'] ?? 0);
+    $min = (float) ($payload['minSalary'] ?? $payload['min_salary'] ?? 0);
+    $maxRaw = $payload['maxSalary'] ?? $payload['max_salary'] ?? null;
+    $max = ($maxRaw === null || $maxRaw === '') ? null : (float) $maxRaw;
+    $rate = (float) ($payload['taxRate'] ?? $payload['tax_rate'] ?? 0);
+    $offset = (float) ($payload['offsetAmount'] ?? $payload['offset_amount'] ?? 0);
+    $active = !empty($payload['isActive'] ?? $payload['is_active'] ?? true) ? 1 : 0;
+    $description = trim((string) ($payload['description'] ?? ''));
+    if ($description === '') {
+        $description = payrollDeskBuildTaxBandDescription([
+            'min_salary' => $min,
+            'tax_rate' => $rate,
+            'offset_amount' => $offset,
+        ]);
+    }
+
+    if ($id > 0) {
+        $stmt = $pdo->prepare(
+            'UPDATE ' . payroll_table('payroll_tax_bands')
+            . ' SET min_salary = ?, max_salary = ?, tax_rate = ?, offset_amount = ?, description = ?, is_active = ? WHERE id = ?'
+        );
+        $stmt->execute([$min, $max, $rate, $offset, $description, $active, $id]);
+        $message = 'Tax band updated.';
+    } else {
+        $stmt = $pdo->prepare(
+            'INSERT INTO ' . payroll_table('payroll_tax_bands')
+            . ' (min_salary, max_salary, tax_rate, offset_amount, description, is_active) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([$min, $max, $rate, $offset, $description, $active]);
+        $message = 'Tax band added.';
+    }
+
+    return [
+        'message' => $message,
+        'data' => payrollDeskGetSettingsPayload($pdo),
+    ];
+}
+
+function payrollDeskDeleteTaxBand(PDO $pdo, int $id): array
+{
+    if ($id <= 0) {
+        throw new InvalidArgumentException('Invalid tax band id.');
+    }
+    $stmt = $pdo->prepare('DELETE FROM ' . payroll_table('payroll_tax_bands') . ' WHERE id = ?');
+    $stmt->execute([$id]);
+
+    return [
+        'message' => 'Tax band deleted.',
+        'data' => payrollDeskGetSettingsPayload($pdo),
+    ];
+}
+
+/**
+ * @param array<string,mixed> $payload
+ * @return array{message:string,data:array<string,mixed>}
+ */
+function payrollDeskSaveRule(PDO $pdo, array $payload): array
+{
+    if (!payroll_table_exists('erp_payroll_settings')) {
+        throw new RuntimeException('Custom rules table is missing.');
+    }
+
+    $id = (int) ($payload['id'] ?? 0);
+    $name = trim((string) ($payload['name'] ?? ''));
+    $type = strtolower(trim((string) ($payload['type'] ?? 'deduction')));
+    $value = (float) ($payload['value'] ?? 0);
+    $isPct = !empty($payload['isPercentage'] ?? $payload['is_percentage'] ?? false) ? 1 : 0;
+    $active = !empty($payload['isActive'] ?? $payload['is_active'] ?? true) ? 1 : 0;
+
+    if ($name === '') {
+        throw new InvalidArgumentException('Rule name is required.');
+    }
+    if (!in_array($type, ['allowance', 'deduction'], true)) {
+        $type = 'deduction';
+    }
+
+    if ($id > 0) {
+        $stmt = $pdo->prepare(
+            'UPDATE ' . payroll_table('erp_payroll_settings')
+            . ' SET name = ?, value = ?, is_percentage = ?, type = ?, is_active = ? WHERE id = ?'
+        );
+        $stmt->execute([$name, $value, $isPct, $type, $active, $id]);
+        $message = 'Rule updated.';
+    } else {
+        $stmt = $pdo->prepare(
+            'INSERT INTO ' . payroll_table('erp_payroll_settings')
+            . ' (name, value, is_percentage, type, is_active) VALUES (?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([$name, $value, $isPct, $type, $active]);
+        $message = 'Rule added.';
+    }
+
+    return [
+        'message' => $message,
+        'data' => payrollDeskGetSettingsPayload($pdo),
+    ];
+}
+
+function payrollDeskDeleteRule(PDO $pdo, int $id): array
+{
+    if (!payroll_table_exists('erp_payroll_settings')) {
+        throw new RuntimeException('Custom rules table is missing.');
+    }
+    if ($id <= 0) {
+        throw new InvalidArgumentException('Invalid rule id.');
+    }
+    $stmt = $pdo->prepare('DELETE FROM ' . payroll_table('erp_payroll_settings') . ' WHERE id = ?');
+    $stmt->execute([$id]);
+
+    return [
+        'message' => 'Rule deleted.',
+        'data' => payrollDeskGetSettingsPayload($pdo),
+    ];
+}

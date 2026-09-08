@@ -1295,3 +1295,161 @@ a.pay-desk-kpi-card:hover {
     border-radius: 10px;
   }
 }
+
+/* Settings desk */
+.pay-settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pay-settings-page-header {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.pay-settings-back-link {
+  color: #2563eb;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+.pay-settings-back-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.pay-settings-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  overflow: hidden;
+}
+
+.pay-settings-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pay-settings-card-head h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pay-settings-card-head p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.pay-settings-card--global {
+  max-width: none;
+}
+
+.pay-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1rem;
+}
+
+.pay-settings-form--horizontal {
+  padding: 1rem;
+}
+
+.pay-settings-fields-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 0.85rem 1rem;
+  align-items: start;
+}
+
+.pay-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.pay-settings-field--action {
+  align-self: end;
+  padding-bottom: 0.15rem;
+}
+
+.pay-settings-field .pay-desk-cell-sub {
+  margin: 0;
+}
+
+@media (max-width: 991.98px) {
+  .pay-settings-fields-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pay-settings-field--action {
+    align-self: stretch;
+  }
+
+  .pay-settings-field--action .pay-desk-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.pay-settings-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #475569;
+  margin: 0;
+}
+
+.pay-settings-modal-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pay-settings-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem 0.75rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.pay-settings-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding: 0.75rem 1rem 1rem;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.pay-settings-page .pay-desk-modal {
+  max-height: min(92vh, 40rem);
+}
+
+.pay-settings-description {
+  resize: vertical;
+  min-height: 2.75rem;
+}
+
+.pay-settings-manual-modal {
+  width: min(34rem, calc(100vw - 1.5rem));
+}

@@ -59,6 +59,28 @@
   margin-bottom: 24px;
 }
 
+.prod-create-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 0 1.25rem;
+  align-items: start;
+}
+
+.prod-create-pair .prod-create-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  grid-template-columns: none;
+}
+
+.prod-create-pair .prod-create-label {
+  padding-top: 0;
+}
+
+.prod-create-pair .prod-create-help {
+  grid-column: auto;
+}
+
 .prod-create-help {
   grid-column: 2;
   margin-top: 0.35rem;
@@ -558,6 +580,11 @@ body.page-products-desk button.prod-create-btn-save {
   .prod-create-row {
     grid-template-columns: 1fr;
     gap: 0.35rem;
+  }
+
+  .prod-create-pair {
+    grid-template-columns: 1fr;
+    gap: 0;
   }
 
   .prod-create-label {

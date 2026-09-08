@@ -478,14 +478,41 @@ export default function ProductCreate({ data = {} }) {
           height: auto !important;
           min-height: 0 !important;
         }
+        .prod-create-pair {
+          display: grid !important;
+          grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) !important;
+          gap: 0 1.25rem !important;
+          align-items: start !important;
+          margin-bottom: 0 !important;
+        }
+        .prod-create-pair .prod-create-row {
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 0.4rem !important;
+          grid-template-columns: none !important;
+          margin-bottom: 24px !important;
+        }
+        .prod-create-pair .prod-create-label {
+          padding-top: 0 !important;
+        }
+        .prod-create-pair .prod-create-help {
+          grid-column: auto !important;
+        }
         .prod-create-help { grid-column: 2; margin-top: 6px !important; }
         @media (max-width: 900px) {
+          body.dashboard .prod-create-pair {
+            grid-template-columns: 1fr !important;
+            gap: 0 !important;
+          }
           body.dashboard .prod-create-row {
             display: block !important;
             margin-top: 0 !important;
             margin-bottom: 16px !important;
             height: auto !important;
             min-height: 0 !important;
+          }
+          body.dashboard .prod-create-pair .prod-create-row {
+            display: block !important;
           }
           body.dashboard .prod-create-label {
             display: block !important;
@@ -588,33 +615,35 @@ export default function ProductCreate({ data = {} }) {
               )}
             </FieldRow>
 
-            <FieldRow label="Name" htmlFor="prod-name" required>
-              <input
-                id="prod-name"
-                className="prod-create-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter product name"
-                required
-              />
-            </FieldRow>
+            <div className="prod-create-pair">
+              <FieldRow label="Name" htmlFor="prod-name" required>
+                <input
+                  id="prod-name"
+                  className="prod-create-input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter product name"
+                  required
+                />
+              </FieldRow>
 
-            <FieldRow label="Category" htmlFor="prod-category" required>
-              <select
-                id="prod-category"
-                className="prod-create-select"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                required
-              >
-                <option value="">Select category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={String(c.id)}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </FieldRow>
+              <FieldRow label="Category" htmlFor="prod-category" required>
+                <select
+                  id="prod-category"
+                  className="prod-create-select"
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  required
+                >
+                  <option value="">Select category</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </FieldRow>
+            </div>
 
             <FieldRow label="Description" htmlFor="prod-desc">
               <textarea

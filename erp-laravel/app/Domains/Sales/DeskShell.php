@@ -4,7 +4,7 @@ namespace App\Domains\Sales;
 
 /**
  * Blade + React dist shells for Sales desks (Phase 2).
- * Print / payment / admin / catalogue stay on legacy modules/sales PHP.
+ * Print / payment / admin stay on legacy modules/sales PHP.
  */
 final class DeskShell
 {
@@ -19,6 +19,7 @@ final class DeskShell
             'my-sales',
             'pricelist',
             'settings',
+            'catalogue',
             'quote-create',
             'invoice-create',
             'order-view',
@@ -62,6 +63,7 @@ final class DeskShell
             'my-sales' => $this->mySales(),
             'pricelist' => $this->pricelist(),
             'settings' => $this->settings(),
+            'catalogue' => $this->catalogue(),
             'quote-create' => $this->quoteCreate(),
             'invoice-create' => $this->invoiceCreate(),
             'order-view' => $this->orderView(),
@@ -391,6 +393,92 @@ final class DeskShell
             $this->listBody('page-pricelist-desk'),
             $assets,
             $script
+        );
+    }
+
+    private function catalogue(): ?array
+    {
+        $salesFn = $this->root() . '/modules/sales/functions.php';
+        $lib = $this->root() . '/modules/sales/catalogue-ui/lib.php';
+        $load = $this->root() . '/modules/sales/catalogue-ui/load-catalogue-data.php';
+        if (!is_file($lib) || !is_file($load)) {
+            return null;
+        }
+        if (is_file($salesFn)) {
+            require_once $salesFn;
+        }
+        require_once $lib;
+        require_once $load;
+
+        if (!function_exists('salesCatalogueUiLoadReactAssets')) {
+            return null;
+        }
+        $assets = salesCatalogueUiLoadReactAssets();
+        if ($assets === null) {
+            return null;
+        }
+
+        $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+        $apiQuery = array_filter([
+            'module' => $module,
+            'doc' => isset($_GET['doc']) ? (string) $_GET['doc'] : null,
+            'return' => isset($_GET['return']) ? (string) $_GET['return'] : null,
+        ], static fn ($v) => $v !== null && $v !== '');
+
+        $initUrl = function_exists('sales_laravel_api_url')
+            ? sales_laravel_api_url('catalogue', $apiQuery)
+            : (string) ($assets['initUrl'] ?? '');
+
+        $initData = [];
+        $pdo = $GLOBALS['pdo'] ?? null;
+        if ($pdo instanceof \PDO && function_exists('sales_load_catalogue_payload')) {
+            try {
+                $payload = sales_load_catalogue_payload($pdo);
+                if (is_array($payload) && !empty($payload['ok'])) {
+                    $initData = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+                }
+            } catch (\Throwable $e) {
+                // React can still fetch via initUrl.
+            }
+        }
+
+        $cfg = [
+            'initUrl' => $initUrl,
+            'data' => $initData,
+            'engine' => 'erp-laravel Domains/Sales',
+        ];
+        $script = 'window.__CATALOGUE_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ';';
+
+        $extraHead = '<style>
+html:has(body.page-sales-catalogue), body.page-sales-catalogue { background: #fff !important; }
+body.page-sales-catalogue { color: #1f2937; min-height: 100vh; }
+body.page-sales-catalogue .layout-main-wrapper,
+body.page-sales-catalogue .layout-main-wrapper > .flex-grow-1 { background: #fff !important; width: 100%; }
+body.page-sales-catalogue header.employee-header { background: #fff !important; box-shadow: none !important; border-bottom: 1px solid rgba(15,23,42,.06); }
+main.main-content.sales-catalogue-shell {
+  flex: 1 1 auto; width: 100% !important; max-width: none !important; margin: 0 !important;
+  padding: 1rem 1rem 2rem !important; overflow: auto !important; background: #fff !important;
+  min-height: calc(100vh - 80px);
+}
+@media (min-width: 993px) {
+  main.main-content.sales-catalogue-shell { padding: 1.25rem 1.75rem 2rem !important; }
+}
+main.main-content.sales-catalogue-shell #root { width: 100%; min-height: 40vh; }
+</style>';
+
+        return $this->pack(
+            'Sales Catalogue',
+            'page-sales-catalogue',
+            $assets,
+            $script,
+            [
+                'sweetAlert' => false,
+                'includeBootstrap' => false,
+                'extraHead' => $extraHead,
+                'mainRootClass' => 'sales-catalogue-shell',
+                'employeeHeaderExtraClass' => 'employee-header--sales-catalogue',
+                'employeeHeaderTitle' => '',
+            ]
         );
     }
 

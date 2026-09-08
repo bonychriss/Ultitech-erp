@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../../includes/config.php';
-require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../../../../includes/config.php';
+require_once __DIR__ . '/../../../../includes/functions.php';
 require_once __DIR__ . '/../../functions.php';
-require_once __DIR__ . '/load-catalogue-data.php';
+require_once __DIR__ . '/../load-catalogue-data.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

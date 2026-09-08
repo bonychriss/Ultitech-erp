@@ -8,7 +8,7 @@ Single Laravel host for UltiTech ERP. Modules migrate **one by one** into `app/D
 |--------|------|
 | Dashboard + list/create/view/edit desks | Blade `erp.react-shell` via `sales.php` |
 | Desk JSON | `LegacyApiBridge` → `modules/sales/**/api` |
-| Still legacy | print, payment, send-doc, admin, catalogue, invoice convert (`order_id`) |
+| Still legacy | print, payment, send-doc, admin, invoice convert (`order_id`) |
 
 ## Suggest (Phase 3)
 

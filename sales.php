@@ -178,6 +178,7 @@ $laravelListDesks = [
     'my-sales',
     'pricelist',
     'settings',
+    'catalogue',
     'quote-create',
     'invoice-create',
     'order-view',

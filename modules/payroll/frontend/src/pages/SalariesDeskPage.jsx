@@ -19,6 +19,8 @@ import {
 import EmployeeAvatar from '../components/EmployeeAvatar.jsx';
 import SalaryEditModal from '../components/SalaryEditModal.jsx';
 import RunPayrollModal from '../components/RunPayrollModal.jsx';
+import { BankLogo } from '../components/BankSelect.jsx';
+import { findBankByName } from '../data/tanzaniaBanks.js';
 import editIcon from '../assets/edit-icon.png';
 
 function readEditIdFromUrl() {
@@ -363,7 +365,7 @@ export default function SalariesDeskPage() {
 
           <button
             type="button"
-            className="pay-desk-btn pay-desk-btn-primary"
+            className="pay-desk-btn pay-desk-btn-primary pay-desk-btn--pill"
             onClick={() => setRunModalOpen(true)}
           >
             <Plus size={16} aria-hidden="true" />
@@ -495,10 +497,13 @@ export default function SalariesDeskPage() {
                     <td className="pay-desk-amt">{formatAmount(emp.grossPay)}</td>
                     <td className="pay-desk-hide-md">
                       {emp.bankName ? (
-                        <>
-                          <div className="pay-desk-cell-main">{emp.bankName}</div>
-                          <div className="pay-desk-cell-sub">{emp.accountNumber}</div>
-                        </>
+                        <div className="pay-desk-bank-cell">
+                          <BankLogo bank={findBankByName(emp.bankName)} size={26} />
+                          <div>
+                            <div className="pay-desk-cell-main">{emp.bankName}</div>
+                            <div className="pay-desk-cell-sub">{emp.accountNumber}</div>
+                          </div>
+                        </div>
                       ) : (
                         <span className="pay-desk-cell-sub pay-desk-empty-cell">-</span>
                       )}

@@ -5,6 +5,7 @@ import ViewRunPage from './pages/ViewRunPage';
 import MyPayslipsPage from './pages/MyPayslipsPage';
 import PayslipViewPage from './pages/PayslipViewPage';
 import RunPayrollPage from './pages/RunPayrollPage';
+import EditPayslipPage from './pages/EditPayslipPage';
 
 function resolvePage() {
   if (typeof window !== 'undefined' && window.__PAYROLL_PAGE__) {
@@ -38,6 +39,10 @@ export default function App() {
 
   if (page === 'run-payroll') {
     return <RunPayrollPage />;
+  }
+
+  if (page === 'edit-payslip') {
+    return <EditPayslipPage />;
   }
 
   return <PayrollDeskPage />;

@@ -45,6 +45,21 @@ final class PayrollShell
                 'backUrl' => (string) ($cfg['backUrl'] ?? ''),
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
+        $payslipId = (int) ($cfg['payslipId'] ?? 0);
+        if ($payslipId > 0) {
+            $windowScript .= ';window.__PAYROLL_PAYSLIP_ID__ = ' . json_encode($payslipId, JSON_UNESCAPED_SLASHES);
+        }
+
+        $employeeId = (int) ($cfg['employeeId'] ?? 0);
+        if ($employeeId > 0) {
+            $windowScript .= ';window.__PAYROLL_EMPLOYEE_ID__ = ' . json_encode($employeeId, JSON_UNESCAPED_SLASHES);
+        }
+
+        $runId = (int) ($cfg['runId'] ?? 0);
+        if ($runId > 0) {
+            $windowScript .= ';window.__PAYROLL_RUN_ID__ = ' . json_encode($runId, JSON_UNESCAPED_SLASHES);
+        }
+
         $headMarkup = $head
             . '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">' . "\n"
             . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' . "\n"

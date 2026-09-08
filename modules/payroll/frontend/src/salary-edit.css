@@ -525,3 +525,178 @@ html[data-theme="dark"] .pay-create-shell--modal .pay-create-actions {
     justify-content: center;
   }
 }
+
+/* Bank select with logos */
+.pay-bank-select {
+  position: relative;
+  width: 100%;
+  max-width: 28rem;
+}
+
+.pay-bank-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.45rem;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pay-bank-select-trigger:hover,
+.pay-bank-select.is-open .pay-bank-select-trigger {
+  border-color: #94a3b8;
+}
+
+.pay-bank-select-value {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.pay-bank-select-value > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pay-bank-select-placeholder {
+  color: #94a3b8;
+}
+
+.pay-bank-select-caret {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.pay-bank-select-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.55rem;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.pay-bank-select-search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.pay-bank-select-search input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  font-size: 0.85rem;
+  color: #0f172a;
+  background: transparent;
+}
+
+.pay-bank-select-list {
+  max-height: 16rem;
+  overflow: auto;
+  padding: 0.3rem;
+}
+
+.pay-bank-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: #0f172a;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pay-bank-option:hover,
+.pay-bank-option.is-active {
+  background: #f1f5f9;
+}
+
+.pay-bank-option-main {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.pay-bank-option-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.pay-bank-option-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.pay-bank-option-short {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.pay-bank-select-empty {
+  padding: 0.85rem 0.6rem;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.pay-bank-logo,
+.pay-bank-logo-img {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.35rem;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem;
+  box-sizing: border-box;
+}
+
+.pay-bank-logo--empty {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.pay-desk-bank-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.pay-create-shell--modal .pay-bank-select {
+  max-width: none;
+}
+
+.pay-create-shell--modal .pay-bank-select-trigger {
+  border-radius: 0;
+  min-height: 2.35rem;
+}

@@ -658,7 +658,6 @@ switch ($active_module) {
         if (isFinanceOrAdmin()) {
             addItem($menuItems, 'dashboard', 'Dashboard', 'speedometer2', $prefix . 'modules/payroll/index.php?module=payroll');
             addItem($menuItems, 'salaries', 'Employees', 'person-badge', $prefix . 'modules/payroll/salaries.php?module=payroll');
-            addItem($menuItems, 'run', 'Run Payroll', 'play-circle', $prefix . 'modules/payroll/run_payroll.php?module=payroll');
             addItem($menuItems, 'settings', 'Settings', 'gear', $prefix . 'modules/payroll/settings.php?module=payroll');
         } else {
             addItem($menuItems, 'my-payslips', 'My Payslips', 'file-text', $prefix . 'modules/payroll/my_payslips.php?module=payroll');

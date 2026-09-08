@@ -270,7 +270,7 @@ switch ($active_module) {
                 ['slug' => 'cart', 'url' => $modUrl('modules/payroll/salaries.php?module=payroll'), 'label' => 'Staff', 'bi' => 'person-badge'],
                 ['slug' => 'modules', 'url' => $modUrl('select-module.php'), 'label' => 'Modules', 'bi' => 'grid'],
                 ['slug' => 'account', 'url' => $modUrl($accountPath . '?module=payroll'), 'label' => 'Account', 'bi' => $mfBiAccount],
-                ['slug' => 'settings', 'url' => $modUrl('modules/payroll/run_payroll.php?module=payroll'), 'label' => 'Run', 'bi' => 'play-circle'],
+                ['slug' => 'settings', 'url' => $modUrl('modules/payroll/settings.php?module=payroll'), 'label' => 'Settings', 'bi' => 'gear'],
             ];
         } else {
             $links = [
@@ -283,7 +283,7 @@ switch ($active_module) {
         }
         if (strpos($script, 'select-module') !== false) {
             $mf_active_slug = 'modules';
-        } elseif (strpos($script, 'run_payroll') !== false) {
+        } elseif (strpos($script, 'settings') !== false) {
             $mf_active_slug = 'settings';
         } elseif (strpos($script, 'my_payslips') !== false) {
             $mf_active_slug = 'home';

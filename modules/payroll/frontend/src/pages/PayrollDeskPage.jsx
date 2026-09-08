@@ -271,7 +271,7 @@ export default function PayrollDeskPage() {
           </a>
           <button
             type="button"
-            className="pay-desk-btn pay-desk-btn-primary"
+            className="pay-desk-btn pay-desk-btn-primary pay-desk-btn--pill"
             onClick={() => setRunModalOpen(true)}
           >
             <Plus size={16} aria-hidden="true" />

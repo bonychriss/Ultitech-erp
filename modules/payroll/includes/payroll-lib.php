@@ -940,6 +940,119 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
 }
 
 /**
+ * @return array<string,mixed>
+ */
+function payrollDeskGetPayslipEditPayload(PDO $pdo, int $payslipId): array
+{
+    if ($payslipId <= 0) {
+        throw new InvalidArgumentException('Invalid payslip id.');
+    }
+    if (!function_exists('isFinance') || !isFinance()) {
+        throw new RuntimeException('Access denied: Only administrators and finance staff can edit payroll values.');
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT p.*, pr.status AS run_status, pr.id AS run_id, u.full_name, u.id AS employee_user_id, pr.month, pr.year
+         FROM ' . payroll_table('payslips') . ' p
+         JOIN ' . payroll_table('payroll_runs') . ' pr ON p.payroll_run_id = pr.id
+         JOIN users u ON p.user_id = u.id
+         WHERE p.id = ?'
+    );
+    $stmt->execute([$payslipId]);
+    $slip = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$slip) {
+        throw new RuntimeException('Payslip not found.');
+    }
+
+    $runStatus = (string) ($slip['run_status'] ?? '');
+    if ($runStatus !== 'draft') {
+        throw new RuntimeException('Cannot edit a payslip in a non-draft run.');
+    }
+
+    $year = (int) ($slip['year'] ?? 0);
+    $month = (int) ($slip['month'] ?? 0);
+    $periodDate = sprintf('%04d-%02d-01', $year, max(1, $month));
+    $runId = (int) ($slip['run_id'] ?? $slip['payroll_run_id'] ?? 0);
+
+    return [
+        'payslip' => [
+            'id' => (int) ($slip['id'] ?? 0),
+            'runId' => $runId,
+            'userId' => (int) ($slip['employee_user_id'] ?? $slip['user_id'] ?? 0),
+            'fullName' => (string) ($slip['full_name'] ?? ''),
+            'periodLabel' => date('F Y', strtotime($periodDate)),
+            'month' => $month,
+            'year' => $year,
+            'runStatus' => $runStatus,
+            'basicSalary' => (float) ($slip['basic_salary'] ?? 0),
+            'totalAllowances' => (float) ($slip['total_allowances'] ?? 0),
+            'monthlyAdjustment' => (float) ($slip['monthly_adjustment'] ?? 0),
+            'grossSalary' => (float) ($slip['gross_salary'] ?? 0),
+            'nssfDeduction' => (float) ($slip['nssf_deduction'] ?? 0),
+            'taxDeduction' => (float) ($slip['tax_deduction'] ?? 0),
+            'otherDeductions' => (float) ($slip['other_deductions'] ?? 0),
+            'netSalary' => (float) ($slip['net_salary'] ?? 0),
+            'remarks' => (string) ($slip['remarks'] ?? ''),
+        ],
+        'links' => [
+            'dashboard' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
+            'viewRun' => payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]),
+            'editPayslipBase' => payrollDeskPublicUrl('edit_payslip.php') . payrollDeskQueryString(),
+        ],
+    ];
+}
+
+/**
+ * @param array<string,mixed> $payload
+ * @return array<string,mixed>
+ */
+function payrollDeskSavePayslip(PDO $pdo, int $payslipId, array $payload): array
+{
+    $current = payrollDeskGetPayslipEditPayload($pdo, $payslipId);
+    $runId = (int) ($current['payslip']['runId'] ?? 0);
+
+    $basic = (float) ($payload['basic_salary'] ?? $payload['basicSalary'] ?? 0);
+    $allowances = (float) ($payload['total_allowances'] ?? $payload['totalAllowances'] ?? 0);
+    $adjustment = (float) ($payload['monthly_adjustment'] ?? $payload['monthlyAdjustment'] ?? 0);
+    $nssf = (float) ($payload['nssf_deduction'] ?? $payload['nssfDeduction'] ?? 0);
+    $tax = (float) ($payload['tax_deduction'] ?? $payload['taxDeduction'] ?? 0);
+    $other = (float) ($payload['other_deductions'] ?? $payload['otherDeductions'] ?? 0);
+    $remarks = trim((string) ($payload['remarks'] ?? ''));
+
+    $gross = $basic + $allowances + $adjustment;
+    $net = $gross - $nssf - $tax - $other;
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare(
+            'UPDATE ' . payroll_table('payslips') . '
+             SET basic_salary = ?, total_allowances = ?, monthly_adjustment = ?,
+                 gross_salary = ?, nssf_deduction = ?, tax_deduction = ?,
+                 other_deductions = ?, net_salary = ?, remarks = ?
+             WHERE id = ?'
+        );
+        $stmt->execute([$basic, $allowances, $adjustment, $gross, $nssf, $tax, $other, $net, $remarks, $payslipId]);
+
+        $stmt = $pdo->prepare(
+            'UPDATE ' . payroll_table('payroll_runs') . '
+             SET total_payout = (SELECT SUM(net_salary) FROM ' . payroll_table('payslips') . ' WHERE payroll_run_id = ?)
+             WHERE id = ?'
+        );
+        $stmt->execute([$runId, $runId]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw new RuntimeException('Update failed: ' . $e->getMessage(), 0, $e);
+    }
+
+    return payrollDeskGetPayslipEditPayload($pdo, $payslipId);
+}
+
+/**
  * @param array<string, mixed> $extraWindowVars
  */
 function payrollDeskRenderReactEntry(string $pageTitle, string $headerTitle, string $payrollPage, array $extraWindowVars = []): void

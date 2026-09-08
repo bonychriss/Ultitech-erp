@@ -13,7 +13,6 @@ import {
   X,
 } from 'lucide-react';
 import {
-  buildEditPayslipUrl,
   buildPayslipUrl,
   deskPageUrl,
   fetchRun,
@@ -22,6 +21,7 @@ import {
   runAction,
 } from '../api/payrollDesk';
 import EmployeeAvatar from '../components/EmployeeAvatar.jsx';
+import EditPayslipModal from '../components/EditPayslipModal.jsx';
 import editIcon from '../assets/edit-icon.png';
 
 function isRowActionTarget(target) {
@@ -38,6 +38,7 @@ export default function ViewRunPage() {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [search, setSearch] = useState('');
+  const [editPayslipId, setEditPayslipId] = useState(0);
 
   const loadData = useCallback(async () => {
     if (runId <= 0) {
@@ -314,13 +315,14 @@ export default function ViewRunPage() {
                     <td style={{ textAlign: 'right' }} data-pay-row-ignore>
                       <div className="pay-desk-actions">
                         {can.editPayslip && (
-                          <a
-                            href={buildEditPayslipUrl(slip.id, links)}
+                          <button
+                            type="button"
                             className="pay-desk-icon-btn pay-desk-icon-btn--edit"
                             title="Edit payslip"
+                            onClick={() => setEditPayslipId(Number(slip.id) || 0)}
                           >
                             <img src={editIcon} alt="" className="pay-desk-edit-icon" aria-hidden="true" />
-                          </a>
+                          </button>
                         )}
                         {can.sendAll && !slip.isPublished && (
                           <button
@@ -413,6 +415,15 @@ export default function ViewRunPage() {
           </div>
         </div>
       )}
+
+      <EditPayslipModal
+        open={editPayslipId > 0}
+        payslipId={editPayslipId}
+        onClose={() => setEditPayslipId(0)}
+        onSaved={() => {
+          loadData();
+        }}
+      />
     </div>
   );
 }

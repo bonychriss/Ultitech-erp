@@ -7,6 +7,7 @@ import {
   saveSalary,
 } from '../api/payrollDesk';
 import EmployeeAvatar from '../components/EmployeeAvatar.jsx';
+import BankSelect from '../components/BankSelect.jsx';
 
 const emptySalary = {
   basicSalary: '',
@@ -248,13 +249,11 @@ export default function SalaryEditPage({
                 Bank name
               </label>
               <div>
-                <input
+                <BankSelect
                   id="bank_name"
-                  type="text"
-                  className="pay-create-input"
-                  placeholder="e.g. CRDB Bank"
                   value={form.bankName}
-                  onChange={(e) => updateField('bankName', e.target.value)}
+                  onChange={(next) => updateField('bankName', next)}
+                  placeholder="Select bank"
                 />
               </div>
             </div>

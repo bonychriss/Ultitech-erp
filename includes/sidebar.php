@@ -288,7 +288,6 @@ switch ($active_module) {
     case 'payroll':
         addItem($menuItems, 'dashboard', 'Dashboard', 'chart-bar', $prefix . 'modules/payroll/index.php?module=payroll');
         addItem($menuItems, 'salaries', 'Employees', 'users', $prefix . 'modules/payroll/salaries.php?module=payroll');
-        addItem($menuItems, 'run', 'Run Payroll', 'play', $prefix . 'modules/payroll/run_payroll.php?module=payroll');
         addItem($menuItems, 'settings', 'Settings', 'cog', $prefix . 'modules/payroll/settings.php?module=payroll');
         addItem($menuItems, 'help', 'User Manual', 'question-circle', $prefix . 'modules/payroll/help.php?module=payroll');
         break;

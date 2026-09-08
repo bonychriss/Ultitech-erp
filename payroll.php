@@ -85,9 +85,19 @@ if (!is_file($laravelAutoload)) {
 $desk = strtolower(trim((string) ($_GET['desk'] ?? '')));
 $payrollDesks = [
     'run-payroll' => true,
+    'edit-payslip' => true,
 ];
 
 if ($desk !== '' && isset($payrollDesks[$desk])) {
+    if ($desk === 'edit-payslip') {
+        $payslipId = (int) ($_GET['id'] ?? 0);
+        if ($payslipId <= 0) {
+            header('Location: ' . (function_exists('app_url') ? app_url('/modules/payroll/index.php') : '/modules/payroll/index.php') . '?module=payroll');
+            exit;
+        }
+        $GLOBALS['ERP_PAYROLL_CONTEXT']['payslip_id'] = $payslipId;
+        $GLOBALS['ERP_CONTEXT']['payslip_id'] = $payslipId;
+    }
     $GLOBALS['ERP_ROUTE'] = '/payroll/desk/' . $desk;
     $GLOBALS['ERP_PAYROLL_ROUTE'] = $GLOBALS['ERP_ROUTE'];
     require $laravelRoot . '/bootstrap/erp-bridge.php';

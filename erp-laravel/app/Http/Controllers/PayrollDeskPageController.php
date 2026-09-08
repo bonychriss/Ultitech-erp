@@ -53,6 +53,9 @@ class PayrollDeskPageController extends Controller
             'headerTitle' => $meta['header'],
             'companySlug' => (string) ($erp['company_slug'] ?? ''),
             'backUrl' => (string) ($erp['back_url'] ?? ''),
+            'payslipId' => (int) ($request->query('id') ?: ($erp['payslip_id'] ?? 0)),
+            'employeeId' => (int) ($request->query('employee_id') ?: ($erp['employee_id'] ?? 0)),
+            'runId' => (int) ($request->query('run_id') ?: ($erp['run_id'] ?? 0)),
         ]);
 
         if ($viewData === null) {

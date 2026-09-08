@@ -216,6 +216,42 @@ export async function generatePayrollRun(payload) {
   return data;
 }
 
+export async function fetchPayslipEdit(id) {
+  const res = await fetch(`${getApiBase()}/payslip-get.php?id=${encodeURIComponent(String(id))}`, {
+    credentials: 'same-origin',
+  });
+  const data = await parseJson(res);
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+export async function savePayslipEdit(payload) {
+  const res = await fetch(`${getApiBase()}/payslip-save.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok || data.error || data.success === false) {
+    throw new Error(data.error || data.message || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+export function resolvePayslipId() {
+  if (typeof window !== 'undefined' && window.__PAYROLL_PAYSLIP_ID__) {
+    return Number(window.__PAYROLL_PAYSLIP_ID__) || 0;
+  }
+  if (typeof window !== 'undefined') {
+    const fromQuery = new URLSearchParams(window.location.search).get('id');
+    return fromQuery ? Number(fromQuery) || 0 : 0;
+  }
+  return 0;
+}
+
 export function resolveEmployeeId() {
   if (typeof window !== 'undefined' && window.__PAYROLL_EMPLOYEE_ID__) {
     return Number(window.__PAYROLL_EMPLOYEE_ID__) || 0;

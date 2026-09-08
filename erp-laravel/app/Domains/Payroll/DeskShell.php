@@ -3,7 +3,7 @@
 namespace App\Domains\Payroll;
 
 /**
- * Payroll desk registry — React shells + optional legacy PHP desks.
+ * Payroll desk registry ? React shells + optional legacy PHP desks.
  */
 final class DeskShell
 {
@@ -20,6 +20,11 @@ final class DeskShell
                 'title' => 'Run payroll',
                 'header' => 'Run payroll',
             ],
+            'edit-payslip' => [
+                'page' => 'edit-payslip',
+                'title' => 'Edit payslip',
+                'header' => 'Edit payslip',
+            ],
         ];
     }
 
@@ -32,6 +37,7 @@ final class DeskShell
     {
         return [
             'run-payroll' => 'modules/payroll/desks/run_payroll.php',
+            'edit-payslip' => 'modules/payroll/desks/edit_payslip.php',
         ];
     }
 

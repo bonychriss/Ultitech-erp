@@ -33,6 +33,8 @@ $kernel = $app->make(Kernel::class);
 
 $route = (string) (
     $GLOBALS['ERP_ROUTE']
+    ?? $GLOBALS['ERP_HOME_ROUTE']
+    ?? $GLOBALS['ERP_TRIAL_ROUTE']
     ?? $GLOBALS['ERP_SALES_ROUTE']
     ?? $GLOBALS['ERP_SUGGEST_ROUTE']
     ?? $GLOBALS['ERP_STOCK_ROUTE']

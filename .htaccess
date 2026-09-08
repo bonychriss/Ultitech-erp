@@ -99,6 +99,8 @@ RewriteRule ^([A-Za-z0-9-]+)/stock/modules/products/index\.php$ stock.php?module
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/stock/modules/products/edit\.php$ stock.php?module=stocks&company_slug=$1&desk=product-edit [QSA,L,NC]
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/edit\.php$ stock.php?module=stocks&company_slug=$1&desk=product-edit [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/stock/modules/products/view\.php$ stock.php?module=stocks&company_slug=$1&desk=product-view [QSA,L,NC]
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/stock/modules/products/categories\.php$ stock.php?module=stocks&company_slug=$1&desk=categories [QSA,L,NC]

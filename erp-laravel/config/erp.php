@@ -9,6 +9,16 @@ return [
     'app_root' => dirname(__DIR__, 2),
 
     'modules' => [
+        'home' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'index.php',
+        ],
+        'trial' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'free-trial.php',
+        ],
         'sales' => [
             'enabled' => true,
             'legacy_api' => true, // Phase 1: include modules/sales/**/api/*.php
@@ -27,6 +37,8 @@ return [
     ],
 
     'react_dist' => [
+        'home' => 'home-ui/frontend/dist',
+        'trial' => 'login-ui/frontend/dist',
         'sales_dashboard' => 'modules/sales/dashboard/frontend/dist',
         'sales_invoices' => 'modules/sales/invoices/frontend/dist',
         'sales_orders' => 'modules/sales/orders/frontend/dist',

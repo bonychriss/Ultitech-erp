@@ -16,6 +16,7 @@ RewriteRule ^sales/print/(order|invoice)/([0-9]+)/?$ sales.php?desk=print-$1&id=
 RewriteRule ^stock/?$ stock.php [L,QSA,NC]
 RewriteRule ^stock/(dashboard|catalogue|settings|product-detail|products|product-view|product-create|product-edit|products-import|categories|category-add|category-edit|brands|brand-edit|uploads|uploads-upload|uploads-recycle|suppliers|supplier-add|supplier-edit|supplier-view|statements|shipments|shipment-create|shipment-edit|shipment-view|shipment-receive|shipment-import|shippers|shipper-add|shipper-edit|purchases|purchase-create|purchase-edit|purchase-view|purchase-receive|purchase-classification|purchase-payments|purchase-receipt-audit|replenishment|reports|reports-purchases|movements|stock-adjust|stock-batches|transfers|fleet-parts|analytics)/?$ stock.php?desk=$1 [L,QSA,NC]
 RewriteRule ^stock/product/([0-9]+)/?$ stock.php?desk=product-view&id=$1 [L,QSA,NC]
+RewriteRule ^stock/edit\.php$ stock.php?desk=product-edit [L,QSA,NC]
 RewriteRule ^stock/purchase/([0-9]+)/?$ stock.php?desk=purchase-view&id=$1 [L,QSA,NC]
 RewriteRule ^stock/shipment/([0-9]+)/?$ stock.php?desk=shipment-view&id=$1 [L,QSA,NC]
 RewriteRule ^stock/supplier/([0-9]+)/?$ stock.php?desk=supplier-view&id=$1 [L,QSA,NC]

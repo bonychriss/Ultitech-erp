@@ -3,6 +3,8 @@
 use App\Domains\Sales\DeskShell;
 use App\Domains\Sales\LegacyApiBridge;
 use App\Domains\Stock\DeskShell as StockDeskShell;
+use App\Http\Controllers\HomePageController;
+use App\Http\Controllers\TrialPageController;
 use App\Http\Controllers\SalesDashboardApiController;
 use App\Http\Controllers\SalesDashboardPageController;
 use App\Http\Controllers\SalesDeskApiController;
@@ -16,9 +18,15 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| erp-laravel routes — Sales + Suggest + Stock
+| erp-laravel routes — Home + Trial (public) + Sales + Suggest + Stock
 |--------------------------------------------------------------------------
 */
+
+// Public marketing homepage (no ERP session required)
+Route::get('/home', [HomePageController::class, 'show'])->name('home.page');
+
+// Public free-trial signup (POST stays on free-trial.php; GET shell via Laravel)
+Route::get('/free-trial', [TrialPageController::class, 'show'])->name('trial.page');
 
 Route::middleware([AttachErpContext::class])->group(function () {
     // Sales

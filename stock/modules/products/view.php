@@ -259,8 +259,10 @@ html[data-theme="dark"] body.page-products-desk .employee-header--products-desk 
                 'movements' => $movementPayload,
                 'showCost' => $showCost,
                 'baseUrl' => $base,
-                'listUrl' => 'index.php',
-                'editUrl' => 'edit.php?id=' . $id,
+                'listUrl' => function_exists('stock_desk_url') ? stock_desk_url('products') : 'index.php',
+                'editUrl' => function_exists('stock_desk_url')
+                    ? (rtrim(stock_desk_url('product-edit'), '/') . '?id=' . $id)
+                    : ('edit.php?id=' . $id),
                 'duplicateUrl' => 'duplicate.php?id=' . $id,
             ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)) ?: '{"page":"product-view","data":{}}' ?>;

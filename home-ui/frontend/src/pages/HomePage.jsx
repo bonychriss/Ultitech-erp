@@ -119,7 +119,7 @@ export default function HomePage() {
         </p>
         <div className="home-hero-actions">
           <a href={trialUrl} className="start-trial-btn">
-            Start Free Trial <span className="btn-arrow" aria-hidden="true">?</span>
+            Start Free Trial <span className="btn-arrow" aria-hidden="true">→</span>
           </a>
           <a href={loginUrl} className="ghost-btn">
             Sign in
@@ -137,7 +137,7 @@ export default function HomePage() {
       <section className="home-platform">
         <h2>Simple, connected, and ready to run</h2>
         <p className="sub">
-          One workspace for every department � with real-time visibility across the organization.
+          One workspace for every department — with real-time visibility across the organization.
         </p>
         <ErpOrbitDiagram />
       </section>
@@ -162,7 +162,7 @@ export default function HomePage() {
                 ))}
               </ul>
               <a href={trialUrl}>
-                Open module <span aria-hidden="true">?</span>
+                Open module <span aria-hidden="true">→</span>
               </a>
             </article>
           ))}
@@ -205,7 +205,7 @@ export default function HomePage() {
                 ))}
               </ul>
               <a href={trialUrl} className="text-link">
-                {band.cta} <span aria-hidden="true">?</span>
+                {band.cta} <span aria-hidden="true">→</span>
               </a>
             </div>
           </article>
@@ -234,7 +234,7 @@ export default function HomePage() {
           <p className="kicker">Pricing</p>
           <h2>All modules. One trial. No surprises.</h2>
           <p>
-            Use the full platform for 14 days. No card up front, no per-app upsell during the trial �
+            Use the full platform for 14 days. No card up front, no per-app upsell during the trial —
             finance, sales, stock, HR, and operations are included.
           </p>
           <ul>
@@ -243,7 +243,7 @@ export default function HomePage() {
             <li>Live reports from day one</li>
           </ul>
           <a href={trialUrl} className="start-trial-btn pricing-cta">
-            Start now � it&apos;s free
+            Start now — it&apos;s free
           </a>
         </div>
       </section>

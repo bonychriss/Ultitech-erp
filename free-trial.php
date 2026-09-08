@@ -409,17 +409,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$assets = loginUiLoadReactAssets();
-if ($assets === null) {
-    http_response_code(503);
-    header('Content-Type: text/html; charset=utf-8');
-    echo '<!DOCTYPE html><html><head><title>Start Free Trial</title></head><body style="font-family:sans-serif;padding:2rem;">';
-    echo '<h1>Start Free Trial</h1>';
-    echo '<p>Run <code>npm install</code> and <code>npm run build</code> inside <code>login-ui/frontend/</code>.</p>';
-    echo '</body></html>';
-    exit;
-}
-
 $illustrationPath = __DIR__ . '/assets/images/signup-image.jpg';
 if (!is_file($illustrationPath)) {
     $illustrationPath = __DIR__ . '/assets/images/signin-image.jpg';
@@ -427,7 +416,18 @@ if (!is_file($illustrationPath)) {
 $illustrationVer = is_file($illustrationPath) ? (int) filemtime($illustrationPath) : time();
 $illustrationHref = app_url('/assets/images/' . basename($illustrationPath));
 
-$trialConfig = [
+$laravelRoot = __DIR__ . '/erp-laravel';
+$laravelAutoload = $laravelRoot . '/vendor/autoload.php';
+if (!is_file($laravelAutoload)) {
+    http_response_code(503);
+    echo '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;">';
+    echo '<h1>erp-laravel required</h1>';
+    echo '<p>Run <code>composer install</code> in <code>erp-laravel/</code>.</p>';
+    echo '</body></html>';
+    exit;
+}
+
+$GLOBALS['ERP_TRIAL_CONTEXT'] = [
     'title' => 'Start your free trial',
     'subtitle' => 'Create your company workspace - 14 days, all modules included.',
     'illustrationUrl' => $illustrationHref . '?v=' . $illustrationVer,
@@ -439,31 +439,6 @@ $trialConfig = [
     'countryCodes' => $countryCodes,
     'values' => $values,
 ];
+$GLOBALS['ERP_TRIAL_ROUTE'] = '/free-trial';
 
-$trialConfigJson = json_encode(
-    $trialConfig,
-    JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)
-);
-if ($trialConfigJson === false) {
-    $trialConfigJson = '{}';
-}
-?>
-<!DOCTYPE html>
-<html lang="en" class="page-register page-trial">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Start Free Trial | UltiTech ERP</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" crossorigin href="<?= htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') ?>">
-    <script>
-        window.__TRIAL_CFG__ = <?= $trialConfigJson ?>;
-    </script>
-</head>
-<body class="page-register page-trial">
-    <noscript><div style="padding:2rem;font-family:sans-serif;">JavaScript is required to register.</div></noscript>
-    <div id="root"></div>
-    <script type="module" crossorigin src="<?= htmlspecialchars($assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'], ENT_QUOTES, 'UTF-8') ?>"></script>
-</body>
-</html>
+require $laravelRoot . '/bootstrap/erp-bridge.php';

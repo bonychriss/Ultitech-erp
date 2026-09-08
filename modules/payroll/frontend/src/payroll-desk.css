@@ -967,15 +967,18 @@ a.pay-desk-kpi-card:hover {
 .pay-run-field select,
 .pay-run-field input {
   appearance: none;
+  -webkit-appearance: none;
   border: 1px solid #e2e8f0;
-  border-radius: 9999px;
-  padding: 0.65rem 1rem;
+  border-radius: 9999px !important;
+  padding: 0.7rem 1.15rem;
   font-size: 0.9375rem;
   font-weight: 500;
   color: #0f172a;
   background: #fff;
   text-transform: none;
   letter-spacing: normal;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .pay-run-field select:focus,
@@ -989,8 +992,8 @@ a.pay-desk-kpi-card:hover {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
-  padding: 0.65rem 0.9rem;
-  border-radius: 9999px;
+  padding: 0.75rem 1.1rem;
+  border-radius: 9999px !important;
   background: #eff6ff;
   color: #1e40af;
   font-size: 0.8125rem;
@@ -1004,11 +1007,19 @@ a.pay-desk-kpi-card:hover {
   margin-top: 0.1rem;
 }
 
+.pay-run-modal .pay-desk-btn,
+.pay-run-modal .pay-desk-btn--pill,
+.pay-run-modal button.pay-desk-btn,
+.pay-run-modal a.pay-desk-btn,
+.pay-run-submit.pay-desk-btn {
+  border-radius: 9999px !important;
+}
+
 .pay-run-submit {
   width: 100%;
   justify-content: center;
-  padding: 0.8rem 1.25rem !important;
-  font-weight: 650;
+  padding: 0.85rem 1.35rem !important;
+  font-weight: 700;
   border-radius: 9999px !important;
 }
 

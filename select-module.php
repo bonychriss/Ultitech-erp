@@ -66,9 +66,11 @@ if (is_file($emailUpdateBadgePath)) {
     }
 }
 
-$voucherModuleUrl = $isAdmin
-    ? ($companyRoute('admin/dashboard') . '?module=voucher')
-    : ($companyRoute('employee/dashboard') . '?module=voucher');
+// Admins land on the voucher admin dashboard; employees on their PV desk.
+$voucherIsAdmin = $isAdmin || $isRootAdminUsername;
+$voucherModuleUrl = $voucherIsAdmin
+    ? ($companyRoute('admin/dashboard.php') . '?module=voucher')
+    : ($companyRoute('employee/dashboard.php') . '?module=voucher');
 
 $pvTaskCount = 0;
 if (function_exists('countPendingPaymentVoucherTasks')) {

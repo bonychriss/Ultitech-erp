@@ -738,6 +738,208 @@ function payrollDeskMyPayslipsPayload(PDO $pdo): array
 }
 
 /**
+ * @return array<string,mixed>
+ */
+function payrollDeskRunInitPayload(PDO $pdo): array
+{
+    $company = function_exists('getCurrentCompany') ? (getCurrentCompany() ?: []) : [];
+    $dashboard = payrollDeskDashboardData($pdo);
+    $now = new DateTimeImmutable('now');
+
+    return [
+        'company' => [
+            'name' => (string) ($company['company_name'] ?? ($_SESSION['company_name'] ?? (defined('COMPANY_NAME') ? COMPANY_NAME : 'Company'))),
+        ],
+        'user' => payrollDeskCurrentUser(),
+        'defaults' => [
+            'month' => (int) $now->format('n'),
+            'year' => (int) $now->format('Y'),
+        ],
+        'months' => array_map(static function (int $m): array {
+            return [
+                'value' => $m,
+                'label' => date('F', mktime(0, 0, 0, $m, 1)),
+            ];
+        }, range(1, 12)),
+        'stats' => [
+            'totalSalariedStaff' => $dashboard['totalSalariedStaff'],
+            'lastRun' => $dashboard['lastRun'],
+        ],
+        'missingTables' => $dashboard['missingTables'],
+        'links' => [
+            'dashboard' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
+            'salaries' => payrollDeskPublicUrl('salaries.php') . payrollDeskQueryString(),
+            'setup' => payrollDeskPublicUrl('setup.php') . payrollDeskQueryString(),
+            'viewRunBase' => payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(),
+            'modules' => function_exists('app_url') ? app_url('/select-module.php') : '/select-module.php',
+        ],
+    ];
+}
+
+/**
+ * Generate a draft payroll run for the given period.
+ *
+ * @return array{runId:int,totalPayout:float,employeeCount:int,periodLabel:string,viewRunUrl:string}
+ */
+function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserId): array
+{
+    if ($month < 1 || $month > 12) {
+        throw new InvalidArgumentException('Invalid month.');
+    }
+    if ($year < 2000 || $year > 2100) {
+        throw new InvalidArgumentException('Invalid year.');
+    }
+    if ($runByUserId <= 0) {
+        throw new InvalidArgumentException('Invalid user.');
+    }
+
+    $required = ['employee_salary', 'payroll_runs', 'payslips', 'payroll_settings'];
+    foreach ($required as $table) {
+        if (!function_exists('payroll_table_exists') || !payroll_table_exists($table)) {
+            throw new RuntimeException('Payroll setup required. Missing table: ' . $table);
+        }
+    }
+
+    $stmt = $pdo->prepare('SELECT id FROM ' . payroll_table('payroll_runs') . ' WHERE month = ? AND year = ?');
+    $stmt->execute([$month, $year]);
+    if ($stmt->fetch()) {
+        throw new RuntimeException('Payroll for this period already exists.');
+    }
+
+    $settings = [];
+    $st = $pdo->query('SELECT * FROM ' . payroll_table('payroll_settings'));
+    while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
+        $settings[(string) $r['setting_key']] = $r['setting_value'];
+    }
+
+    $nssf_rate = floatval($settings['social_security_rate'] ?? 10) / 100;
+
+    $active_rules = [];
+    if (function_exists('payroll_table_exists') && payroll_table_exists('erp_payroll_settings')) {
+        $active_rules = $pdo->query(
+            'SELECT * FROM ' . payroll_table('erp_payroll_settings') . ' WHERE is_active = 1'
+        )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    $tax_bands = [];
+    if (function_exists('payroll_table_exists') && payroll_table_exists('payroll_tax_bands')) {
+        $tax_bands = $pdo->query(
+            'SELECT * FROM ' . payroll_table('payroll_tax_bands') . ' WHERE is_active = 1 ORDER BY min_salary ASC'
+        )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    $users = $pdo->query('
+        SELECT u.id, es.basic_salary, es.house_allowance, es.transport_allowance, es.other_deductions, es.monthly_adjustment
+        FROM users u
+        JOIN ' . payroll_table('employee_salary') . ' es ON u.id = es.user_id
+        WHERE u.is_active = 1
+    ')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    if ($users === []) {
+        throw new RuntimeException('No active employees with salary records found.');
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare(
+            'INSERT INTO ' . payroll_table('payroll_runs')
+            . " (month, year, run_date, run_by, status, total_payout) VALUES (?, ?, CURDATE(), ?, 'draft', 0)"
+        );
+        $stmt->execute([$month, $year, $runByUserId]);
+        $runId = (int) $pdo->lastInsertId();
+
+        $total_payout = 0.0;
+        $insertSlip = $pdo->prepare(
+            'INSERT INTO ' . payroll_table('payslips') . '
+            (payroll_run_id, user_id, basic_salary, total_allowances, monthly_adjustment, gross_salary, tax_deduction, nssf_deduction, other_deductions, net_salary)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+
+        foreach ($users as $user) {
+            $basic = floatval($user['basic_salary']);
+            $allowances = floatval($user['house_allowance']) + floatval($user['transport_allowance']);
+
+            $dynamic_allowances = 0.0;
+            $dynamic_deductions = 0.0;
+
+            foreach ($active_rules as $rule) {
+                $val = !empty($rule['is_percentage'])
+                    ? ($basic * (floatval($rule['value']) / 100))
+                    : floatval($rule['value']);
+
+                if (($rule['type'] ?? '') === 'allowance') {
+                    $dynamic_allowances += $val;
+                } elseif (($rule['type'] ?? '') === 'deduction') {
+                    $dynamic_deductions += $val;
+                }
+            }
+
+            $allowances += $dynamic_allowances;
+            $adj = floatval($user['monthly_adjustment']);
+            $gross = $basic + $allowances + $adj;
+
+            $nssf = $gross * $nssf_rate;
+            $taxable_income = $gross - $nssf;
+
+            $tax = 0.0;
+            foreach ($tax_bands as $band) {
+                $max = $band['max_salary'] !== null ? floatval($band['max_salary']) : PHP_FLOAT_MAX;
+                $min = floatval($band['min_salary']);
+
+                if ($taxable_income >= $min && $taxable_income <= $max) {
+                    $threshold = $min > 0 ? $min - 1 : 0;
+                    $excess = $taxable_income - $threshold;
+                    $rate = floatval($band['tax_rate']) / 100;
+                    $tax = floatval($band['offset_amount']) + ($excess * $rate);
+                    break;
+                }
+            }
+
+            $other_deductions = floatval($user['other_deductions']) + $dynamic_deductions;
+            $net = $gross - $tax - $nssf - $other_deductions;
+
+            $insertSlip->execute([
+                $runId,
+                (int) $user['id'],
+                $basic,
+                $allowances,
+                $adj,
+                $gross,
+                $tax,
+                $nssf,
+                $other_deductions,
+                $net,
+            ]);
+
+            $total_payout += $net;
+        }
+
+        $pdo->prepare('UPDATE ' . payroll_table('payroll_runs') . ' SET total_payout = ? WHERE id = ?')
+            ->execute([$total_payout, $runId]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw new RuntimeException('Failed to generate payroll: ' . $e->getMessage(), 0, $e);
+    }
+
+    $periodDate = sprintf('%04d-%02d-01', $year, $month);
+    $viewRunUrl = payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]);
+
+    return [
+        'runId' => $runId,
+        'totalPayout' => $total_payout,
+        'employeeCount' => count($users),
+        'periodLabel' => date('F Y', strtotime($periodDate)),
+        'viewRunUrl' => $viewRunUrl,
+        'dashboardUrl' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
+    ];
+}
+
+/**
  * @param array<string, mixed> $extraWindowVars
  */
 function payrollDeskRenderReactEntry(string $pageTitle, string $headerTitle, string $payrollPage, array $extraWindowVars = []): void

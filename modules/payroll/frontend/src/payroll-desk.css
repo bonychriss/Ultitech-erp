@@ -918,6 +918,105 @@ a.pay-desk-kpi-card:hover {
   font-size: 0.875rem;
 }
 
+/* Run payroll */
+.pay-run-form-card {
+  max-width: 36rem;
+  margin: 0 auto;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--pay-desk-radius);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.pay-run-form-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 1.15rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.pay-run-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.15rem;
+}
+
+.pay-run-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.pay-run-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pay-run-field select,
+.pay-run-field input {
+  appearance: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #0f172a;
+  background: #fff;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.pay-run-field select:focus,
+.pay-run-field input:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.pay-run-form-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.pay-run-form-hint svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.pay-run-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  font-weight: 650;
+}
+
+@media (max-width: 640px) {
+  .pay-run-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 767.98px) {
   .pay-slip-preview-backdrop {
     padding: 0.35rem;

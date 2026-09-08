@@ -82,6 +82,24 @@ if (!is_file($laravelAutoload)) {
     exit;
 }
 
+$desk = strtolower(trim((string) ($_GET['desk'] ?? '')));
+$payrollDesks = [
+    'run-payroll' => true,
+];
+
+if ($desk !== '' && isset($payrollDesks[$desk])) {
+    $GLOBALS['ERP_ROUTE'] = '/payroll/desk/' . $desk;
+    $GLOBALS['ERP_PAYROLL_ROUTE'] = $GLOBALS['ERP_ROUTE'];
+    require $laravelRoot . '/bootstrap/erp-bridge.php';
+    exit;
+}
+
+if ($desk !== '') {
+    http_response_code(404);
+    echo 'Payroll desk not found.';
+    exit;
+}
+
 $GLOBALS['ERP_ROUTE'] = '/payroll';
 $GLOBALS['ERP_PAYROLL_ROUTE'] = '/payroll';
 require $laravelRoot . '/bootstrap/erp-bridge.php';

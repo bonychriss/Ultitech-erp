@@ -3,6 +3,7 @@
 use App\Domains\Sales\DeskShell;
 use App\Domains\Sales\LegacyApiBridge;
 use App\Domains\Stock\DeskShell as StockDeskShell;
+use App\Domains\Payroll\DeskShell as PayrollDeskShell;
 use App\Http\Controllers\HomePageController;
 use App\Http\Controllers\TrialPageController;
 use App\Http\Controllers\SalesDashboardApiController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\SalesDeskApiController;
 use App\Http\Controllers\SalesDeskPageController;
 use App\Http\Controllers\StockDeskPageController;
 use App\Http\Controllers\StockPageController;
+use App\Http\Controllers\PayrollDeskPageController;
 use App\Http\Controllers\PayrollPageController;
 use App\Http\Controllers\SuggestApiController;
 use App\Http\Controllers\SuggestPageController;
@@ -51,6 +53,9 @@ Route::middleware([AttachErpContext::class])->group(function () {
 
     // Payroll
     Route::get('/payroll', [PayrollPageController::class, 'show'])->name('payroll.page');
+    Route::match(['get', 'post'], '/payroll/desk/{desk}', [PayrollDeskPageController::class, 'show'])
+        ->where('desk', PayrollDeskShell::deskRegex())
+        ->name('payroll.page.desk');
 
     // Stock (full module via legacy desk bridge)
     Route::match(['get', 'post'], '/stock', [StockPageController::class, 'show'])->name('stock.page');

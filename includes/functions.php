@@ -1551,6 +1551,8 @@ function erp_shared_trial_database_name(): string
     return 'ultitech_trial';
 }
 
+
+
 /**
  * True when the given DB name is the shared free-trial database.
  */

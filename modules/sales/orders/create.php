@@ -1616,6 +1616,36 @@ function CreateOrderApp() {
     try {
       const raw = localStorage.getItem("sales_catalogue_items");
       let restored = false;
+      const mergeCatalogue = (prev, mapped) => {
+        const next = (prev || []).filter((it) => Number(it.product_id) > 0);
+        const indexByPid = new Map(next.map((it, idx) => [String(it.product_id), idx]));
+        mapped.forEach((line) => {
+          const key = String(line.product_id);
+          if (indexByPid.has(key)) {
+            const idx = indexByPid.get(key);
+            next[idx] = { ...next[idx], ...line, id: next[idx].id };
+          } else {
+            indexByPid.set(key, next.length);
+            next.push(line);
+          }
+        });
+        return next.length ? next : prev;
+      };
+      const writeDraft = (rows) => {
+        try {
+          localStorage.setItem(
+            "sales_catalogue_items_draft",
+            JSON.stringify(
+              (rows || [])
+                .map((row) => ({
+                  product_id: Number(row.product_id || 0),
+                  quantity: Math.max(1, parseFloat(row.quantity) || 1),
+                }))
+                .filter((row) => row.product_id > 0)
+            )
+          );
+        } catch (eDraft) {}
+      };
       if (raw) {
         const catItems = JSON.parse(raw);
         if (Array.isArray(catItems) && catItems.length > 0) {
@@ -1641,7 +1671,8 @@ function CreateOrderApp() {
             };
           }).filter(Boolean);
           if (newItems.length > 0) {
-            setItems(newItems);
+            setItems((prev) => mergeCatalogue(prev, newItems));
+            writeDraft(catItems);
             restored = true;
           }
         }
@@ -1672,7 +1703,8 @@ function CreateOrderApp() {
             };
           }).filter(Boolean);
           if (newItems.length > 0) {
-            setItems(newItems);
+            setItems((prev) => mergeCatalogue(prev, newItems));
+            writeDraft(ids.map((id) => ({ product_id: id, quantity: 1 })));
           }
           try {
             const url = new URL(window.location.href);

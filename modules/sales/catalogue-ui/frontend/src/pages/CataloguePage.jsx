@@ -1,8 +1,58 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CFG } from '../config.js'
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50]
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200]
 const PAGINATION_WINDOW = 5
+
+function selectionDraftKey(storageKey) {
+  return `${storageKey}_draft`
+}
+
+function readStoredSelection(storageKey) {
+  const map = {}
+  const ingest = (list) => {
+    if (!Array.isArray(list)) return
+    list.forEach((row) => {
+      const id = Number(row?.product_id ?? row?.id ?? 0)
+      const qty = Math.max(0, parseInt(row?.quantity, 10) || 0)
+      if (id > 0 && qty > 0) map[id] = qty
+    })
+  }
+  try {
+    ingest(JSON.parse(localStorage.getItem(selectionDraftKey(storageKey)) || '[]'))
+  } catch {
+    // ignore
+  }
+  try {
+    ingest(JSON.parse(localStorage.getItem(storageKey) || '[]'))
+  } catch {
+    // ignore
+  }
+  try {
+    const selected = new URLSearchParams(window.location.search).get('selected') || ''
+    selected.split(',').forEach((part) => {
+      const id = Number(String(part).trim())
+      if (id > 0 && map[id] == null) map[id] = 1
+    })
+  } catch {
+    // ignore
+  }
+  return map
+}
+
+function writeSelectionDraft(storageKey, selectedQtys) {
+  const items = Object.entries(selectedQtys || {})
+    .filter(([, qty]) => (Number(qty) || 0) > 0)
+    .map(([id, quantity]) => ({
+      product_id: Number(id),
+      quantity: Math.max(1, Number(quantity) || 1),
+    }))
+  try {
+    localStorage.setItem(selectionDraftKey(storageKey), JSON.stringify(items))
+  } catch {
+    // ignore
+  }
+}
 
 function paginationPageNumbers(currentPage, totalPages, windowSize = PAGINATION_WINDOW) {
   if (totalPages <= 1) return totalPages >= 1 ? [1] : []
@@ -27,6 +77,45 @@ function formatPrice(value) {
   }).format(value || 0)
 }
 
+function ProductImage({ src, alt, className, placeholderImage, variant = 'grid' }) {
+  const [loaded, setLoaded] = useState(false)
+  const [currentSrc, setCurrentSrc] = useState(src || placeholderImage)
+  const imgRef = useRef(null)
+
+  useEffect(() => {
+    setLoaded(false)
+    setCurrentSrc(src || placeholderImage)
+  }, [src, placeholderImage])
+
+  useEffect(() => {
+    const el = imgRef.current
+    if (el?.complete && el.naturalWidth > 0) setLoaded(true)
+  }, [currentSrc])
+
+  return (
+    <span className={`cat-img-wrap cat-img-wrap--${variant}${loaded ? ' is-loaded' : ''}`}>
+      {!loaded && <span className="cat-img-skeleton" aria-hidden="true" />}
+      <img
+        ref={imgRef}
+        src={currentSrc}
+        alt={alt || ''}
+        className={className}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={(e) => {
+          if (placeholderImage && e.currentTarget.src !== placeholderImage) {
+            setLoaded(false)
+            setCurrentSrc(placeholderImage)
+            return
+          }
+          setLoaded(true)
+        }}
+      />
+    </span>
+  )
+}
+
 function ProductCard({ product, quantity, placeholderImage, onQtyChange, onToggleCheck }) {
   const { id, product_code, name, selling_price, stock_quantity } = product
   const img = product.image_url || placeholderImage
@@ -40,11 +129,12 @@ function ProductCard({ product, quantity, placeholderImage, onQtyChange, onToggl
           <input type="checkbox" className="cat-checkbox" checked={checked} onChange={() => onToggleCheck(id)} aria-label={`Select ${name}`} />
         </label>
         <button type="button" className="cat-product-image-btn" onClick={() => onToggleCheck(id)} title={name}>
-          <img
+          <ProductImage
             src={img}
             alt={name}
             className="cat-product-image"
-            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = placeholderImage }}
+            placeholderImage={placeholderImage}
+            variant="grid"
           />
         </button>
         <div className="cat-qty cat-qty--under-image">
@@ -86,11 +176,12 @@ function ProductListRow({ product, quantity, placeholderImage, onQtyChange, onTo
         <input type="checkbox" className="cat-checkbox" checked={quantity > 0} onChange={() => onToggleCheck(id)} />
       </td>
       <td>
-        <img
+        <ProductImage
           src={img}
           alt=""
           className="cat-list-thumb"
-          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = placeholderImage }}
+          placeholderImage={placeholderImage}
+          variant="list"
         />
       </td>
       <td className="cat-mono">{product_code || '-'}</td>
@@ -138,8 +229,17 @@ export default function CataloguePage() {
   const [sortBy, setSortBy] = useState('default')
   const [viewMode, setViewMode] = useState('grid')
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
-  const [selectedQtys, setSelectedQtys] = useState({})
+  const [pageSize, setPageSize] = useState(200)
+  const [selectedQtys, setSelectedQtys] = useState(() => readStoredSelection(storageKey))
+  const skipSelectionPersist = useRef(true)
+
+  useEffect(() => {
+    if (skipSelectionPersist.current) {
+      skipSelectionPersist.current = false
+      return
+    }
+    writeSelectionDraft(storageKey, selectedQtys)
+  }, [storageKey, selectedQtys])
 
   useEffect(() => {
     if (initial.products) return undefined
@@ -218,6 +318,7 @@ export default function CataloguePage() {
       window.alert('Please select at least one product.')
       return
     }
+    writeSelectionDraft(storageKey, selectedQtys)
     localStorage.setItem(storageKey, JSON.stringify(items))
     const pickedIds = items.map((i) => Number(i.product_id) || 0).filter((id) => id > 0)
     let targetUrl = returnUrl

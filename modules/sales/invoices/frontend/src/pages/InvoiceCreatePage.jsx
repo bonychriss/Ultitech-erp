@@ -50,6 +50,74 @@ function validUntilIso(days = 7) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+const CATALOGUE_ITEMS_KEY = 'sales_catalogue_items';
+const CATALOGUE_SELECTION_DRAFT_KEY = 'sales_catalogue_items_draft';
+
+function writeCatalogueSelectionDraft(rows) {
+  try {
+    const items = (Array.isArray(rows) ? rows : [])
+      .map((row) => ({
+        product_id: Number(row.product_id || row.id || 0),
+        quantity: Math.max(1, parseFloat(row.quantity) || 1),
+      }))
+      .filter((row) => row.product_id > 0);
+    localStorage.setItem(CATALOGUE_SELECTION_DRAFT_KEY, JSON.stringify(items));
+  } catch {
+    // ignore
+  }
+}
+
+function clearCatalogueSelectionDraft() {
+  try {
+    localStorage.removeItem(CATALOGUE_SELECTION_DRAFT_KEY);
+    localStorage.removeItem(CATALOGUE_ITEMS_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function catalogueUrlWithSelected(baseUrl, items) {
+  if (!baseUrl) return baseUrl;
+  const ids = (items || [])
+    .map((item) => Number(item.product_id) || 0)
+    .filter((id) => id > 0);
+  if (ids.length === 0) return baseUrl;
+  try {
+    const url = new URL(baseUrl, window.location.origin);
+    url.searchParams.set('selected', [...new Set(ids)].join(','));
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return baseUrl;
+  }
+}
+
+function mergeCatalogueLines(prev, mapped, emptyLineFn) {
+  const next = (prev || []).filter((line) => Number(line.product_id) > 0);
+  const indexByPid = new Map(next.map((line, index) => [String(line.product_id), index]));
+  mapped.forEach((line) => {
+    const key = String(line.product_id);
+    if (indexByPid.has(key)) {
+      const index = indexByPid.get(key);
+      const existing = next[index];
+      next[index] = {
+        ...existing,
+        ...line,
+        id: existing.id,
+        quantity: line.quantity,
+        unit_price: line.unit_price || existing.unit_price,
+        line_total: line.line_total,
+        searchQuery: line.searchQuery || existing.searchQuery,
+        description: line.description || existing.description,
+        image: line.image || existing.image,
+      };
+    } else {
+      indexByPid.set(key, next.length);
+      next.push(line);
+    }
+  });
+  return next.length ? next : [emptyLineFn()];
+}
+
 function formatCurrency(val) {
   return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val || 0);
 }
@@ -287,17 +355,18 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
 
       let restored = false;
       try {
-        const raw = localStorage.getItem('sales_catalogue_items');
+        const raw = localStorage.getItem(CATALOGUE_ITEMS_KEY);
         if (raw) {
           const catItems = JSON.parse(raw);
           if (Array.isArray(catItems) && catItems.length > 0) {
             const mapped = mapCatalogueItems(catItems);
             if (mapped.length) {
-              setItems(mapped);
+              setItems((prev) => mergeCatalogueLines(prev, mapped, () => emptyLine(data.tax_percentage || 18)));
+              writeCatalogueSelectionDraft(catItems);
               restored = true;
             }
           }
-          localStorage.removeItem('sales_catalogue_items');
+          localStorage.removeItem(CATALOGUE_ITEMS_KEY);
         }
       } catch {
         // ignore catalogue restore errors
@@ -308,8 +377,12 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
         if (idsParam) {
           const ids = idsParam.split(',').map((s) => Number(s.trim())).filter((id) => id > 0);
           if (ids.length > 0) {
-            const mapped = mapCatalogueItems(ids.map((id) => ({ product_id: id, quantity: 1 })));
-            if (mapped.length) setItems(mapped);
+            const catItems = ids.map((id) => ({ product_id: id, quantity: 1 }));
+            const mapped = mapCatalogueItems(catItems);
+            if (mapped.length) {
+              setItems((prev) => mergeCatalogueLines(prev, mapped, () => emptyLine(data.tax_percentage || 18)));
+              writeCatalogueSelectionDraft(catItems);
+            }
           }
           try {
             const url = new URL(window.location.href);
@@ -574,6 +647,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
         : (isQuote
           ? await submitCreateQuote(buildFormData())
           : await submitCreateInvoice(buildFormData()));
+      clearCatalogueSelectionDraft();
       window.location.href = result.redirect || indexUrl;
     } catch (err) {
       setErrors([err instanceof Error ? err.message : `Failed to ${isEditMode ? 'update' : 'create'} ${isQuote ? 'quotation' : 'invoice'}.`]);
@@ -758,7 +832,12 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
             <div className="inv-en-card-head">
               <h2>Items</h2>
               <div className="exp-create-help">
-                <a href={init.catalogue_url}>Product catalogue</a>
+                <a
+                  href={catalogueUrlWithSelected(init.catalogue_url, items)}
+                  onClick={() => writeCatalogueSelectionDraft(items)}
+                >
+                  Product catalogue
+                </a>
               </div>
             </div>
 

@@ -36,14 +36,20 @@ const ICON_MAP = {
   trash: Trash2,
 }
 
-function loadGoogleFont(googleFamily) {
-  if (!googleFamily || typeof document === 'undefined') return
-  const id = `ash-google-font-${googleFamily.replace(/\s+/g, '-')}`
+function loadGoogleFont(google) {
+  if (!google || typeof document === 'undefined') return
+
+  const href = /^https?:\/\//i.test(String(google))
+    ? String(google)
+    : `https://fonts.googleapis.com/css2?family=${encodeURIComponent(String(google))}:wght@400;500;600;700&display=swap`
+
+  const id = `ash-google-font-${href.replace(/[^a-zA-Z0-9]+/g, '-').slice(0, 120)}`
   if (document.getElementById(id)) return
+
   const link = document.createElement('link')
   link.id = id
   link.rel = 'stylesheet'
-  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(googleFamily)}:wght@400;500;600;700&display=swap`
+  link.href = href
   document.head.appendChild(link)
 }
 
@@ -53,6 +59,7 @@ export default function SettingsHubPage() {
   const [flash, setFlash] = useState(cfg.flash || null)
   const [fontBusy, setFontBusy] = useState(false)
   const [fontOpen, setFontOpen] = useState(false)
+  const [fontPreviewTick, setFontPreviewTick] = useState(0)
   const [resetOpen, setResetOpen] = useState(false)
   const [resetConfirm, setResetConfirm] = useState('')
   const [resetBusy, setResetBusy] = useState(false)
@@ -70,7 +77,26 @@ export default function SettingsHubPage() {
 
   useEffect(() => {
     if (selectedFont.google) loadGoogleFont(selectedFont.google)
-  }, [selectedFont.google])
+  }, [selectedFont.google, selectedFont.id])
+
+  useEffect(() => {
+    if (!fontOpen || !selectedFont.stack) return undefined
+    const family = String(selectedFont.stack).split(',')[0].replace(/['"]/g, '').trim()
+    if (!family || family === 'system-ui') return undefined
+    let cancelled = false
+    const refresh = () => {
+      if (!cancelled) setFontPreviewTick((n) => n + 1)
+    }
+    if (document.fonts?.load) {
+      document.fonts.load(`400 16px "${family}"`).then(refresh).catch(() => {})
+      document.fonts.load(`700 16px "${family}"`).then(refresh).catch(() => {})
+    }
+    const t = window.setTimeout(refresh, 350)
+    return () => {
+      cancelled = true
+      window.clearTimeout(t)
+    }
+  }, [fontOpen, selectedFont.stack, selectedFont.id])
 
   useEffect(() => {
     if (!flash) return undefined
@@ -253,7 +279,11 @@ export default function SettingsHubPage() {
                   ))}
                 </select>
               </div>
-              <div className="ash-font-preview" style={{ fontFamily: selectedFont.stack }}>
+              <div
+                key={`${selectedFont.id}-${fontPreviewTick}`}
+                className="ash-font-preview"
+                style={{ fontFamily: selectedFont.stack }}
+              >
                 <p className="ash-font-preview-title">Preview - {selectedFont.label}</p>
                 <p className="ash-font-preview-body">
                   The quick brown fox jumps over the lazy dog. 0123456789 - Payment voucher #1042 -
@@ -264,12 +294,18 @@ export default function SettingsHubPage() {
                 <button
                   type="button"
                   className="ash-btn-ghost"
+                  style={{ borderRadius: 9999 }}
                   onClick={() => setFontOpen(false)}
                   disabled={fontBusy}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="ash-btn-primary" disabled={fontBusy}>
+                <button
+                  type="submit"
+                  className="ash-btn-primary"
+                  style={{ borderRadius: 9999 }}
+                  disabled={fontBusy}
+                >
                   {fontBusy ? 'Saving…' : 'Apply font'}
                 </button>
               </div>

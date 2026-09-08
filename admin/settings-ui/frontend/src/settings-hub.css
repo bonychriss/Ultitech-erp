@@ -172,10 +172,16 @@
 }
 
 .ash-modal--font .ash-btn-primary,
-.ash-modal--font .ash-btn-ghost {
-  padding: 0.45rem 0.85rem;
-  font-size: 0.8rem;
-  border-radius: 8px;
+.ash-modal--font .ash-btn-ghost,
+html body.page-admin-settings .ash-modal--font .ash-btn-primary,
+html body.page-admin-settings .ash-modal--font .ash-btn-ghost,
+html body.dashboard .ash-modal--font button.ash-btn-primary,
+html body.dashboard .ash-modal--font button.ash-btn-ghost,
+html body.page-exp-desk .ash-modal--font button.ash-btn-primary,
+html body.page-exp-desk .ash-modal--font button.ash-btn-ghost {
+  padding: 0.45rem 1.15rem !important;
+  font-size: 0.8rem !important;
+  border-radius: 9999px !important;
 }
 
 .ash-font-head h2 {

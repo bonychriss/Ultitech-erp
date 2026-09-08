@@ -32,12 +32,21 @@ function dashboardDeskModuleQuery(): string
 
 function dashboardDeskWebBase(): string
 {
+    // Never derive from SCRIPT_NAME — physical /{slug}/sales.php aliases would
+    // resolve assets under /{slug}/frontend/... (blank React shell).
+    if (function_exists('sales_app_url')) {
+        return rtrim(sales_app_url('modules/sales/dashboard'), '/');
+    }
+    if (function_exists('app_url')) {
+        return rtrim((string) app_url('/modules/sales/dashboard'), '/');
+    }
+
     $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    if ($script !== '') {
+    if ($script !== '' && str_contains($script, '/modules/sales/dashboard')) {
         return rtrim(dirname($script), '/');
     }
 
-    return sales_app_url('modules/sales/dashboard');
+    return '/modules/sales/dashboard';
 }
 
 /**

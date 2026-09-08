@@ -6,13 +6,17 @@ use App\Domains\Stock\DeskShell;
 use App\Domains\Stock\LegacyDeskBridge;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\View\View;
+use Throwable;
 
 /**
- * Stock desk pages via erp-laravel (legacy PHP include bridge).
+ * Stock desk pages via erp-laravel.
+ * Pilot Blade desks (GET): dashboard/products/brands/product-create.
+ * Brands POST (and all other desks): LegacyDeskBridge.
  */
 class StockDeskPageController extends Controller
 {
-    public function show(Request $request, string $desk): Response
+    public function show(Request $request, string $desk): View|Response
     {
         $desk = strtolower(trim($desk));
         if (!in_array($desk, DeskShell::laravelDesks(), true)) {
@@ -25,9 +29,54 @@ class StockDeskPageController extends Controller
             )->header('Content-Type', 'text/html; charset=UTF-8');
         }
 
-        $result = (new LegacyDeskBridge())->render($desk);
+        $method = strtoupper((string) $request->getMethod());
+        $useBlade = DeskShell::isBladeDesk($desk) && $method === 'GET';
 
-        return response($result['html'], $result['ok'] ? 200 : 503)
-            ->header('Content-Type', $result['contentType']);
+        // Brands (and any future Blade desk) still need legacy PHP for multipart POST.
+        if (!$useBlade) {
+            $result = (new LegacyDeskBridge())->render($desk);
+
+            return response($result['html'], $result['ok'] ? 200 : 503)
+                ->header('Content-Type', $result['contentType']);
+        }
+
+        try {
+            $viewData = (new DeskShell())->viewData($desk);
+        } catch (Throwable $e) {
+            report($e);
+
+            return response(
+                '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;">'
+                . '<h1>Stock desk error</h1>'
+                . '<p>' . htmlspecialchars($e->getMessage() !== '' ? $e->getMessage() : 'Unexpected error.', ENT_QUOTES, 'UTF-8') . '</p>'
+                . '</body></html>',
+                500
+            )->header('Content-Type', 'text/html; charset=UTF-8');
+        }
+
+        if ($viewData === null) {
+            return response(
+                '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;">'
+                . '<h1>Stock UI not available</h1>'
+                . '<p>React dist missing for desk <code>'
+                . htmlspecialchars($desk, ENT_QUOTES, 'UTF-8')
+                . '</code>.</p>'
+                . '</body></html>',
+                503
+            )->header('Content-Type', 'text/html; charset=UTF-8');
+        }
+
+        $GLOBALS['page_title'] = $viewData['pageTitle'];
+        $page_title = $viewData['pageTitle'];
+        $employeeHeaderTitle = $viewData['employeeHeaderTitle'];
+        $hideHeaderCompanyBranding = $viewData['hideHeaderCompanyBranding'];
+        $employeeHeaderExtraClass = $viewData['employeeHeaderExtraClass'];
+
+        return view('erp.react-shell', $viewData + [
+            'page_title' => $page_title,
+            'employeeHeaderTitle' => $employeeHeaderTitle,
+            'hideHeaderCompanyBranding' => $hideHeaderCompanyBranding,
+            'employeeHeaderExtraClass' => $employeeHeaderExtraClass,
+        ]);
     }
 }

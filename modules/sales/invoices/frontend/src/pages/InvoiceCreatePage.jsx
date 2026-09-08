@@ -1,8 +1,42 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ImageOff, Loader2, Trash2, X } from 'lucide-react';
 import { fetchCreateInit, fetchExchangeRate, fetchQuoteEditInit, submitCreateInvoice, submitCreateQuote, submitQuoteEdit } from '../api/invoicesDesk';
 
 const FLAG_BASE = 'https://flagcdn.com/w40/';
+
+function measureProductDropdownStyle(anchorEl) {
+  if (!anchorEl || typeof window === 'undefined') return null;
+  const input = anchorEl.querySelector('input') || anchorEl;
+  const rect = input.getBoundingClientRect();
+  const width = Math.min(Math.max(rect.width, 280), Math.max(200, window.innerWidth - 24));
+  const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
+  const spaceBelow = window.innerHeight - rect.bottom - 12;
+  const spaceAbove = rect.top - 12;
+  const openAbove = spaceBelow < 180 && spaceAbove > spaceBelow;
+  const maxHeight = Math.min(280, Math.max(140, openAbove ? spaceAbove : spaceBelow));
+
+  if (openAbove) {
+    return {
+      position: 'fixed',
+      left: `${left}px`,
+      bottom: `${window.innerHeight - rect.top + 4}px`,
+      top: 'auto',
+      width: `${width}px`,
+      maxHeight: `${maxHeight}px`,
+      zIndex: 400,
+    };
+  }
+
+  return {
+    position: 'fixed',
+    left: `${left}px`,
+    top: `${rect.bottom + 4}px`,
+    bottom: 'auto',
+    width: `${width}px`,
+    maxHeight: `${maxHeight}px`,
+    zIndex: 400,
+  };
+}
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -123,6 +157,8 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
   const rateFetchToken = useRef(0);
   const currencyRef = useRef(null);
   const productSearchRefs = useRef(new Map());
+  const [productDropdownStyle, setProductDropdownStyle] = useState(null);
+  const [productDropdownItemId, setProductDropdownItemId] = useState(null);
 
   const [customerId, setCustomerId] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(todayIso());
@@ -314,6 +350,30 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [hasOpenProductDropdown, closeAllProductDropdowns]);
+
+  useLayoutEffect(() => {
+    const openItem = items.find((item) => item.showDropdown);
+    if (!openItem) {
+      setProductDropdownStyle(null);
+      setProductDropdownItemId(null);
+      return undefined;
+    }
+
+    const sync = () => {
+      const el = productSearchRefs.current.get(openItem.id);
+      const style = measureProductDropdownStyle(el);
+      setProductDropdownItemId(openItem.id);
+      setProductDropdownStyle(style);
+    };
+
+    sync();
+    window.addEventListener('resize', sync);
+    window.addEventListener('scroll', sync, true);
+    return () => {
+      window.removeEventListener('resize', sync);
+      window.removeEventListener('scroll', sync, true);
+    };
+  }, [items]);
 
   const fetchBotRate = useCallback(async (code) => {
     const currencyCode = String(code || 'TZS').toUpperCase();
@@ -583,62 +643,52 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
                   <input type="text" readOnly className="exp-create-input exp-create-input--readonly" value={init.next_invoice_number || '-'} />
                 </div>
               )}
-              {isQuote && isEditMode && (
-                <div className="inv-en-field">
-                  <label className="inv-en-label">Quotation number</label>
-                  <input type="text" readOnly className="exp-create-input exp-create-input--readonly" value={init.order?.order_number || '-'} />
-                </div>
-              )}
-              <div className="inv-en-field">
-                <label className="inv-en-label">{isQuote ? 'Quote date' : 'Invoice date'}<span className="req">*</span></label>
-                <input type="date" className="exp-create-input" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} required />
-              </div>
-              <div className="inv-en-field">
-                <label className="inv-en-label">{isQuote ? 'Valid until' : 'Due date'}<span className="req">*</span></label>
-                <input
-                  type="date"
-                  className="exp-create-input"
-                  value={isQuote ? validUntil : dueDate}
-                  onChange={(e) => (isQuote ? setValidUntil(e.target.value) : setDueDate(e.target.value))}
-                  required
-                />
-              </div>
-              <div className="inv-en-field">
-                <label className="inv-en-label">Payment terms <span className="exp-create-label-hint">(days)</span></label>
-                <input type="number" min="0" className="exp-create-input" value={leadTime} onChange={(e) => setLeadTime(e.target.value)} placeholder="e.g. 30" />
-              </div>
               <div className="inv-en-field inv-en-field--currency">
                 <label className="inv-en-label">Currency<span className="req">*</span></label>
                 <div ref={currencyRef} className="exp-create-currency-field">
-                  <div className="inv-currency-chips">
-                    {displayCurrencies.map((code) => {
-                      const meta = currencyOptions[code] || { name: code, flag: 'un' };
-                      const isPrimary = primaryCurrency === code;
-                      return (
-                        <span key={code} className={`inv-currency-chip${isPrimary ? ' is-primary' : ''}`}>
-                          <img src={`${FLAG_BASE}${meta.flag}.png`} alt="" className="inv-currency-flag" />
-                          <strong>{code}</strong>
-                          <button type="button" className={isPrimary ? 'is-active' : ''} onClick={() => setPrimaryCurrency(code)}>
-                            {isPrimary ? 'Billing' : 'Set billing'}
-                          </button>
-                          <button
-                            type="button"
-                            className="inv-currency-chip-remove"
-                            onClick={() => toggleCurrency(code)}
-                            aria-label={`Remove ${code}`}
-                            title="Remove currency"
-                          >
-                            <X size={12} aria-hidden />
-                          </button>
-                        </span>
-                      );
-                    })}
-                  </div>
                   <div className={`inv-currency-picker${currencyMenuOpen ? ' is-open' : ''}`}>
-                    <button type="button" className="inv-currency-trigger" onClick={() => setCurrencyMenuOpen((o) => !o)}>
-                      <span className="inv-currency-trigger-label">Select currencies</span>
-                      <span>{displayCurrencies.length} selected</span>
-                    </button>
+                    <div
+                      className="inv-currency-trigger"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setCurrencyMenuOpen((o) => !o)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setCurrencyMenuOpen((o) => !o);
+                        }
+                      }}
+                    >
+                      {displayCurrencies.length > 0 ? (
+                        <span className="inv-currency-chips inv-currency-chips--in-box" onClick={(e) => e.stopPropagation()}>
+                          {displayCurrencies.map((code) => {
+                            const meta = currencyOptions[code] || { name: code, flag: 'un' };
+                            const isPrimary = primaryCurrency === code;
+                            return (
+                              <span key={code} className={`inv-currency-chip${isPrimary ? ' is-primary' : ''}`}>
+                                <img src={`${FLAG_BASE}${meta.flag}.png`} alt="" className="inv-currency-flag" />
+                                <strong>{code}</strong>
+                                <button type="button" className={isPrimary ? 'is-active' : ''} onClick={() => setPrimaryCurrency(code)}>
+                                  {isPrimary ? 'Billing' : 'Set billing'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="inv-currency-chip-remove"
+                                  onClick={() => toggleCurrency(code)}
+                                  aria-label={`Remove ${code}`}
+                                  title="Remove currency"
+                                >
+                                  <X size={12} aria-hidden />
+                                </button>
+                              </span>
+                            );
+                          })}
+                        </span>
+                      ) : (
+                        <span className="inv-currency-trigger-label">Select currencies</span>
+                      )}
+                      <span className="inv-currency-trigger-count">{displayCurrencies.length} selected</span>
+                    </div>
                     {currencyMenuOpen && (
                       <div className="inv-currency-menu" role="listbox">
                         {Object.entries(currencyOptions).map(([code, meta]) => {
@@ -656,6 +706,24 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
                     )}
                   </div>
                 </div>
+              </div>
+              <div className="inv-en-field">
+                <label className="inv-en-label">{isQuote ? 'Quote date' : 'Invoice date'}<span className="req">*</span></label>
+                <input type="date" className="exp-create-input" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} required />
+              </div>
+              <div className="inv-en-field">
+                <label className="inv-en-label">{isQuote ? 'Valid until' : 'Due date'}<span className="req">*</span></label>
+                <input
+                  type="date"
+                  className="exp-create-input"
+                  value={isQuote ? validUntil : dueDate}
+                  onChange={(e) => (isQuote ? setValidUntil(e.target.value) : setDueDate(e.target.value))}
+                  required
+                />
+              </div>
+              <div className="inv-en-field">
+                <label className="inv-en-label">Payment terms <span className="exp-create-label-hint">(days)</span></label>
+                <input type="number" min="0" className="exp-create-input" value={leadTime} onChange={(e) => setLeadTime(e.target.value)} placeholder="e.g. 30" />
               </div>
             </div>
 
@@ -744,7 +812,10 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
                             onFocus={() => updateItem(index, { showDropdown: true })}
                           />
                           {item.showDropdown && (
-                            <div className="inv-product-dropdown">
+                            <div
+                              className="inv-product-dropdown inv-product-dropdown--fixed"
+                              style={productDropdownItemId === item.id && productDropdownStyle ? productDropdownStyle : undefined}
+                            >
                               <div className="inv-product-dropdown-header">
                                 <span>Select product</span>
                                 <button

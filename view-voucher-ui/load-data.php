@@ -511,11 +511,19 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 'backUrl' => $backLink,
                 'editHref' => $editHref,
                 'markPaidUrl' => app_url(isAdmin() ? '/mark-paid.php' : '/employee/mark-paid.php'),
-                'approveUrl' => (strpos(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '') . (string) ($_SERVER['REQUEST_URI'] ?? '')), '/employee/') !== false)
-                    ? 'approve_voucher.php'
-                    : (function_exists('company_url') ? company_url('employee/approve_voucher.php') : app_url('/employee/approve_voucher.php')),
+                // Always absolute under company slug so /ultimate/view-voucher.php can POST approve.
+                'approveUrl' => function_exists('company_url')
+                    ? company_url('employee/approve_voucher.php')
+                    : (function_exists('app_url') ? app_url('/employee/approve_voucher.php') : '/employee/approve_voucher.php'),
                 'deleteAttachmentUrl' => app_url('/delete_attachment.php'),
-                'viewVoucherPostUrl' => 'view-voucher.php?id=' . $voucherId,
+                'viewVoucherPostUrl' => (function_exists('company_url')
+                    ? company_url('view-voucher.php')
+                    : (function_exists('app_url') ? app_url('/view-voucher.php') : 'view-voucher.php'))
+                    . '?id=' . $voucherId
+                    . ($returnFinance ? '&return=finance' : '')
+                    . (isset($_GET['module']) && (string) $_GET['module'] !== ''
+                        ? '&module=' . rawurlencode((string) $_GET['module'])
+                        : ''),
                 'returnFinance' => $returnFinance,
             ],
             'finAccounts' => array_map(static function ($acc) {

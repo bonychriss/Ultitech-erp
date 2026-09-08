@@ -20,6 +20,9 @@ if ($id <= 0) {
 }
 
 $payload = json_decode(file_get_contents('php://input') ?: '', true);
+if (!is_array($payload) && !empty($GLOBALS['ERP_SALES_RAW_BODY']) && is_string($GLOBALS['ERP_SALES_RAW_BODY'])) {
+    $payload = json_decode($GLOBALS['ERP_SALES_RAW_BODY'], true);
+}
 if (!is_array($payload)) {
     $payload = $_POST;
 }

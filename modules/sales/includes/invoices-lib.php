@@ -6,9 +6,9 @@ function invoicesDeskBootstrap(): void
 {
     static $booted = false;
     if (!$booted) {
-        require_once dirname(__DIR__, 4) . '/includes/config.php';
-        require_once dirname(__DIR__, 4) . '/includes/functions.php';
-        require_once dirname(__DIR__, 2) . '/functions.php';
+        require_once dirname(__DIR__, 3) . '/includes/config.php';
+        require_once dirname(__DIR__, 3) . '/includes/functions.php';
+        require_once dirname(__DIR__) . '/functions.php';
         $booted = true;
     }
 }
@@ -128,22 +128,43 @@ function invoicesDeskEmitHtmlAndExit(string $html): void
  * Render the shared React document-create shell, or return false when dist is missing.
  * require() stays in this function so $assets / $invoicesHeadMarkup remain in scope.
  */
-function salesDocumentCreateRenderReactShell(string $pageTitle, string $page = 'create'): bool
+function salesDocumentCreateRenderReactShell(string $pageTitle, string $page = 'create', string $documentType = 'invoice', int $orderId = 0): bool
 {
     $assets = invoicesDeskModuleAssetUrls();
     if ($assets === null) {
         return false;
     }
 
+    $documentType = strtolower(trim($documentType)) === 'quote' ? 'quote' : 'invoice';
+    if ($page === 'quote_edit') {
+        $documentType = 'quote';
+    }
     $page_title = $pageTitle;
     $employeeHeaderTitle = $pageTitle;
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--inv-desk';
     $bodyExtraClass = 'page-inv-desk';
     $invoicesPage = $page;
+
+    $script = 'window.__INVOICES_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
+        . 'window.__INVOICES_PAGE__ = ' . json_encode($invoicesPage, JSON_UNESCAPED_SLASHES) . ';'
+        . 'window.__INVOICES_DOCUMENT_TYPE__ = ' . json_encode($documentType, JSON_UNESCAPED_SLASHES) . ';';
+    if ($orderId > 0) {
+        $script .= 'window.__INVOICES_ORDER_ID__ = ' . (int) $orderId . ';';
+    }
+    if ($page === 'quote_edit' && $orderId > 0 && function_exists('sales_laravel_api_url')) {
+        $script .= 'window.__INVOICES_QUOTE_EDIT_INIT_URL__ = ' . json_encode(
+            sales_laravel_api_url('quote-edit-init', ['id' => $orderId, 'module' => 'sales']),
+            JSON_UNESCAPED_SLASHES
+        ) . ';'
+            . 'window.__INVOICES_QUOTE_EDIT_SAVE_URL__ = ' . json_encode(
+                sales_laravel_api_url('quote-edit-save', ['id' => $orderId, 'module' => 'sales']),
+                JSON_UNESCAPED_SLASHES
+            ) . ';';
+    }
+
     $invoicesHeadMarkup = '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') . '">'
-        . "\n" . '<script>window.__INVOICES_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
-        . 'window.__INVOICES_PAGE__ = ' . json_encode($invoicesPage, JSON_UNESCAPED_SLASHES) . ';</script>';
+        . "\n" . '<script>' . $script . '</script>';
 
     ob_start();
     try {

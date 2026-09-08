@@ -1,3 +1,9 @@
+# StackCP / 20i: run site on PHP 8.2+ (erp-laravel / Laravel 12 requires >= 8.2)
+#+PHPVersion
+#="php82"
+AddHandler x-httpd-php82 .php
+#-PHPVersion
+
 RewriteEngine On
 
 # StackCP panel path in browser is NOT the public site URL — redirect to domain root

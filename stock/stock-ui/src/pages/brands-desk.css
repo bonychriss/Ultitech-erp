@@ -1,4 +1,24 @@
-/* Brands desk � extends products-desk + category form patterns */
+/* Brands desk — extends products-desk + category form patterns */
+
+.brand-desk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand-desk-empty-lottie {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 0.25rem;
+}
+
+.brand-desk-empty-lottie dotlottie-wc {
+  display: block;
+  max-width: 100%;
+}
 
 .brand-desk-modal {
   width: min(34rem, calc(100vw - 2rem));

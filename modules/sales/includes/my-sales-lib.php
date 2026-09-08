@@ -32,17 +32,24 @@ function mySalesDeskModuleQuery(): string
 
 function mySalesDeskWebBase(): string
 {
+    // Prefer canonical app path — aliases under /{slug}/… must not break assets/API.
+    if (function_exists('sales_app_url')) {
+        return rtrim(sales_app_url('modules/sales/my-sales'), '/');
+    }
+    if (function_exists('app_url')) {
+        return rtrim((string) app_url('/modules/sales/my-sales'), '/');
+    }
+
     $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    if ($script !== '') {
+    if ($script !== '' && str_contains($script, '/modules/sales/my-sales')) {
         $dir = rtrim(dirname($script), '/');
         if (str_ends_with($dir, '/api')) {
             $dir = rtrim(dirname($dir), '/');
         }
-
         return $dir;
     }
 
-    return sales_app_url('modules/sales/my-sales');
+    return '/modules/sales/my-sales';
 }
 
 /**
@@ -100,9 +107,10 @@ function mySalesDeskShellHeadExtras(): string
 
     $dashCssPath = dirname(__DIR__) . '/dashboard/dashboard.css';
     $dashCssVer = is_file($dashCssPath) ? (int) filemtime($dashCssPath) : time();
-    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    $salesModuleBase = $script !== '' ? rtrim(dirname(dirname($script)), '/') : rtrim(sales_app_url('modules/sales'), '/');
-    $dashCssUrl = $salesModuleBase . '/dashboard/dashboard.css?v=' . $dashCssVer;
+    $dashCssUrl = (function_exists('sales_app_url')
+        ? rtrim(sales_app_url('modules/sales/dashboard/dashboard.css'), '/')
+        : (function_exists('app_url') ? app_url('/modules/sales/dashboard/dashboard.css') : '/modules/sales/dashboard/dashboard.css'))
+        . '?v=' . $dashCssVer;
     $parts[] = '<link rel="stylesheet" href="' . htmlspecialchars($dashCssUrl, ENT_QUOTES, 'UTF-8') . '">';
 
     return implode("\n    ", $parts);

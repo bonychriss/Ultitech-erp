@@ -32,12 +32,21 @@ function pricelistDeskModuleQuery(): string
 
 function pricelistDeskWebBase(): string
 {
+    // Assets are under modules/sales/pricelist/… relative to modules/sales.
+    if (function_exists('sales_app_url')) {
+        return rtrim(sales_app_url('modules/sales'), '/');
+    }
+    if (function_exists('app_url')) {
+        return rtrim((string) app_url('/modules/sales'), '/');
+    }
+
     $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    if ($script !== '') {
+    if ($script !== '' && str_contains($script, '/modules/sales')) {
+        // pricelist.php lives in modules/sales/
         return rtrim(dirname($script), '/');
     }
 
-    return sales_app_url('modules/sales');
+    return '/modules/sales';
 }
 
 /**

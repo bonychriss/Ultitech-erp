@@ -1,0 +1,21 @@
+<?php
+declare(strict_types=1);
+
+require_once dirname(__DIR__, 2) . '/includes/config.php';
+require_once dirname(__DIR__, 2) . '/includes/functions.php';
+
+header('Content-Type: text/plain; charset=utf-8');
+
+$st = $pdo->query("SELECT id, email, username, role, company_id FROM users ORDER BY id ASC LIMIT 20");
+while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
+    echo 'USER:' . json_encode($r, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+}
+
+try {
+    $c = $pdo->query('SELECT id, company_name, company_slug, status FROM companies ORDER BY id ASC LIMIT 10');
+    while ($r = $c->fetch(PDO::FETCH_ASSOC)) {
+        echo 'CO:' . json_encode($r, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+    }
+} catch (Throwable $e) {
+    echo 'CO_ERR:' . $e->getMessage() . PHP_EOL;
+}

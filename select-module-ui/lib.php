@@ -41,6 +41,11 @@ function selectModuleUiWebBasePath(): string
 function selectModuleUiPublicUrl(string $relativePath): string
 {
     $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
+    // Prefer app_url so physical /{slug}/select-module.php aliases do not
+    // resolve assets under /{slug}/select-module-ui/ (mismatched/missing dist).
+    if (function_exists('app_url')) {
+        return app_url('/select-module-ui/' . $relativePath);
+    }
     $base = selectModuleUiWebBasePath();
     return ($base === '' ? '' : $base) . '/select-module-ui/' . $relativePath;
 }

@@ -227,8 +227,10 @@ body.page-products-desk button.prod-create-btn-save {
                 'previewTruckCode' => $previewTruckCode,
                 'currencies' => ['TZS', 'USD', 'EUR'],
                 'defaultCurrency' => 'TZS',
-                'listUrl' => 'index.php',
-                'createApiUrl' => 'api/create-product.php',
+                'listUrl' => function_exists('stock_desk_url')
+                    ? stock_desk_url('products')
+                    : ($base . 'modules/products/index.php'),
+                'createApiUrl' => $base . 'modules/products/api/create-product.php',
                 'baseUrl' => $base,
             ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)) ?: '{"page":"product-create","data":{}}' ?>;

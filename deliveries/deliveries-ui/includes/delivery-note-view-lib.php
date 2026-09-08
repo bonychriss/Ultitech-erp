@@ -68,6 +68,9 @@ function deliveryNoteViewLoadNote(PDO $pdo, int $id, bool $isPublic = false, ?st
         throw new RuntimeException('Delivery note not found.');
     }
 
+    if (function_exists('deliveries_ensure_delivery_note_seller_signature')) {
+        deliveries_ensure_delivery_note_seller_signature($pdo, $note);
+    }
     $salespersonName = deliveries_delivery_note_salesperson($pdo, $note);
 
     $linkedOrder = null;

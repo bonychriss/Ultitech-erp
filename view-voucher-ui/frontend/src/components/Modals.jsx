@@ -264,19 +264,37 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
       }
     }
     try {
-      const approveUrl = new URL(data.actions.approveUrl || 'approve_voucher.php', window.location.href)
-      const here = window.location.pathname.split('/').filter(Boolean)
-      const there = approveUrl.pathname.split('/').filter(Boolean)
-      if (here[0] && there[0] && here[0] !== there[0]) {
-        there[0] = here[0]
-        approveUrl.pathname = `/${there.join('/')}`
+      const rawApprove = String(data.actions?.approveUrl || '').trim() || 'approve_voucher.php'
+      let approveUrl
+      try {
+        approveUrl = new URL(rawApprove, window.location.origin)
+      } catch {
+        approveUrl = new URL(rawApprove, window.location.href)
+      }
+      // Keep company-slug paths intact; only fix missing slug when path starts at /employee/.
+      const hereParts = window.location.pathname.split('/').filter(Boolean)
+      const thereParts = approveUrl.pathname.split('/').filter(Boolean)
+      const companyHint = hereParts[0] && !['employee', 'admin', 'stock', 'modules', 'assets'].includes(hereParts[0].toLowerCase())
+        ? hereParts[0]
+        : ''
+      if (
+        companyHint
+        && thereParts[0]
+        && thereParts[0].toLowerCase() === 'employee'
+        && thereParts[0].toLowerCase() !== companyHint.toLowerCase()
+      ) {
+        approveUrl.pathname = `/${companyHint}/${thereParts.join('/')}`
       }
       const res = await fetch(`${approveUrl.pathname}${approveUrl.search}`, {
         method: 'POST',
         body: fd,
         credentials: 'same-origin',
         headers: { Accept: 'application/json' },
+        redirect: 'manual',
       })
+      if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
+        throw new Error('Session expired or redirect while approving. Please refresh and try again.')
+      }
       let j = null
       try {
         j = await res.json()
@@ -295,7 +313,10 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
         setSaving(false)
       }
     } catch (err) {
-      const msg = err instanceof Error && err.message ? err.message : 'Network error'
+      const raw = err instanceof Error && err.message ? err.message : 'Network error'
+      const msg = /failed to fetch/i.test(raw)
+        ? 'Could not reach the approval server. Check your connection and refresh the page.'
+        : raw
       if (typeof window.Swal !== 'undefined') {
         window.Swal.fire({ icon: 'error', title: 'Approval failed', text: msg, confirmButtonColor: '#dc3545' })
       } else {

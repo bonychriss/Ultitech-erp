@@ -391,13 +391,20 @@ function salesQuotationsListRenderReactShell(): bool
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
     $ordersPage = 'list';
+    $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
 
     $cfg = [
-        'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'sales',
+        'module' => $module,
+        'engine' => 'Laravel + React',
     ];
+
+    $initUrl = function_exists('sales_laravel_api_url')
+        ? sales_laravel_api_url('quotations', ['module' => $module])
+        : ($assets['apiUrl'] . '/init.php');
 
     $ordersHeadMarkup = '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') . '">'
         . "\n" . '<script>window.__QUOTATIONS_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
+        . 'window.__QUOTATIONS_INIT_URL__ = ' . json_encode($initUrl, JSON_UNESCAPED_SLASHES) . ';'
         . 'window.__QUOTATIONS_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';'
         . 'window.__ORDERS_DESK_PAGE__ = ' . json_encode('quotations', JSON_UNESCAPED_SLASHES) . ';</script>';
 

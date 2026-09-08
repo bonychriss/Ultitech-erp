@@ -31,7 +31,15 @@ RewriteRule ^stock/modules/suppliers/index\.php$ stock.php?desk=suppliers [L,QSA
 RewriteRule ^stock/modules/suppliers/add\.php$ stock.php?desk=supplier-add [L,QSA,NC]
 RewriteRule ^stock/modules/suppliers/edit\.php$ stock.php?desk=supplier-edit [L,QSA,NC]
 RewriteRule ^stock/modules/suppliers/view\.php$ stock.php?desk=supplier-view [L,QSA,NC]
+RewriteRule ^stock/modules/brands/index\.php$ stock.php?desk=brands [L,QSA,NC]
+RewriteRule ^stock/modules/brands/edit\.php$ stock.php?desk=brand-edit [L,QSA,NC]
 RewriteRule ^stock/modules/shipments/index\.php$ stock.php?desk=shipments [L,QSA,NC]
+RewriteRule ^stock/modules/shippers/index\.php$ stock.php?desk=shippers [L,QSA,NC]
+RewriteRule ^stock/modules/shippers/add\.php$ stock.php?desk=shipper-add [L,QSA,NC]
+RewriteRule ^stock/modules/shippers/edit\.php$ stock.php?desk=shipper-edit [L,QSA,NC]
+RewriteRule ^stock/modules/transfers/index\.php$ stock.php?desk=transfers [L,QSA,NC]
+RewriteRule ^stock/modules/fleet_parts/index\.php$ stock.php?desk=fleet-parts [L,QSA,NC]
+RewriteRule ^stock/modules/analytics/index\.php$ stock.php?desk=analytics [L,QSA,NC]
 RewriteRule ^stock/modules/purchases/index\.php$ stock.php?desk=purchases [L,QSA,NC]
 RewriteRule ^stock/modules/purchases/domestic_create\.php$ stock.php?desk=purchase-create [L,QSA,NC]
 RewriteRule ^stock/modules/purchases/view_po\.php$ stock.php?desk=purchase-view [L,QSA,NC]
@@ -44,6 +52,11 @@ RewriteRule ^stock/modules/statements/supplier\.php$ stock.php?desk=statements [
 RewriteRule ^stock/catalogue\.php$ stock.php?desk=catalogue [L,QSA,NC]
 RewriteRule ^stock/settings\.php$ stock.php?desk=settings [L,QSA,NC]
 RewriteRule ^stock/dashboard\.php$ stock.php [L,QSA,NC]
+RewriteRule ^stock/index\.php$ stock.php [L,QSA,NC]
+
+# Any other missing file under ultimate/stock/ → parent stock/ tree (stops Oops 404s)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^stock/(.+)$ ../stock/$1?company_slug=ultimate&module=stocks [L,QSA]
 
 RewriteRule ^accounting/?$ accounting.php [L,QSA,NC]
 RewriteRule ^payment-vouchers/?$ payment-vouchers.php [L,QSA,NC]
@@ -52,6 +65,11 @@ RewriteRule ^revenue/?$ revenue.php [L,QSA,NC]
 # customer_statement lives at app root — proxy when missing under ultimate/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^customer_statement/(.*)$ ../customer_statement/$1?company_slug=ultimate [L,QSA]
+
+# Missing root-level *.php under ultimate/ → parent app (view-voucher.php, mark-paid.php, …)
+# Existing stubs (sales.php, login.php, …) still win via !-f.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^([^/]+\.php)$ ../$1?company_slug=ultimate [L,QSA]
 
 # Missing employee/* under ultimate/employee/ → parent employee/ (stubs like account.php still win via !-f)
 RewriteCond %{REQUEST_FILENAME} !-f

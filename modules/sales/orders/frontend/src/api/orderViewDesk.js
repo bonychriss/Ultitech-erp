@@ -12,6 +12,34 @@ export function getConfig() {
   return {};
 }
 
+function withQuery(base, params) {
+  const qs = params instanceof URLSearchParams
+    ? params.toString()
+    : new URLSearchParams(params || {}).toString();
+  if (!qs) return base;
+  return `${base}${base.includes('?') ? '&' : '?'}${qs}`;
+}
+
+function getInitUrl(params) {
+  if (typeof window !== 'undefined' && window.__SALES_ORDERS_INIT_URL__) {
+    return withQuery(String(window.__SALES_ORDERS_INIT_URL__), params);
+  }
+  const qs = params instanceof URLSearchParams
+    ? params.toString()
+    : new URLSearchParams(params || {}).toString();
+  return `${getApiBase()}/view-init.php${qs ? `?${qs}` : ''}`;
+}
+
+function getStatusUrl(params) {
+  if (typeof window !== 'undefined' && window.__SALES_ORDERS_STATUS_URL__) {
+    return withQuery(String(window.__SALES_ORDERS_STATUS_URL__), params);
+  }
+  const qs = params instanceof URLSearchParams
+    ? params.toString()
+    : new URLSearchParams(params || {}).toString();
+  return `${getApiBase()}/view-status.php${qs ? `?${qs}` : ''}`;
+}
+
 async function parseJson(response) {
   const text = await response.text();
   try {
@@ -29,8 +57,7 @@ async function parseJson(response) {
 }
 
 export async function fetchOrderViewInit(params) {
-  const qs = params instanceof URLSearchParams ? params.toString() : new URLSearchParams(params).toString();
-  const res = await fetch(`${getApiBase()}/view-init.php${qs ? `?${qs}` : ''}`, { credentials: 'same-origin' });
+  const res = await fetch(getInitUrl(params), { credentials: 'same-origin' });
   const data = await parseJson(res);
   if (!res.ok || data.error) {
     throw new Error(data.error || `Request failed (${res.status})`);
@@ -43,7 +70,7 @@ export async function postOrderStatusAction(orderId, action, module) {
   params.set('id', String(orderId));
   if (module) params.set('module', module);
 
-  const res = await fetch(`${getApiBase()}/view-status.php?${params.toString()}`, {
+  const res = await fetch(getStatusUrl(params), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },

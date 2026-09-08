@@ -401,5 +401,5 @@ function salesOrderEditRenderReactShell(int $orderId): void
     }
 
     $pageTitle = (string) ($init['page_title'] ?? 'Edit Quotation');
-    salesDocumentCreateRenderReactShell($pageTitle, 'quote_edit');
+    salesDocumentCreateRenderReactShell($pageTitle, 'quote_edit', 'quote', $orderId);
 }

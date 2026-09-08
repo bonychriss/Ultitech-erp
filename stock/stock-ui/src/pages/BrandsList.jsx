@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  HiOutlineInbox,
   HiOutlineMagnifyingGlass,
   HiOutlinePlus,
   HiOutlinePencilSquare,
@@ -14,6 +13,26 @@ import './products-desk.css';
 import './brands-desk.css';
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
+const EMPTY_LOTTIE_FALLBACK = '/assets/animations/nothing.lottie';
+
+function ensureDotLottiePlayer() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  if (customElements.get('dotlottie-wc')) return;
+  if (document.getElementById('brand-desk-dotlottie-wc')) return;
+  const script = document.createElement('script');
+  script.id = 'brand-desk-dotlottie-wc';
+  script.type = 'module';
+  script.src = 'https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js';
+  document.head.appendChild(script);
+}
+
+function resolveEmptyLottieSrc(src) {
+  if (src) return src;
+  const path = String(window.location?.pathname || '');
+  const m = path.match(/^(.*?\/public_html)(?:\/|$)/i);
+  if (m) return `${m[1]}${EMPTY_LOTTIE_FALLBACK}`;
+  return EMPTY_LOTTIE_FALLBACK;
+}
 
 function typeLabel(type) {
   if (type === 'truck' || type === 'vehicle') return 'Truck';
@@ -300,8 +319,10 @@ export default function BrandsList({ data }) {
     formAction = 'index.php',
     deleteUrl = 'delete.php',
     toast = '',
+    emptyLottie = '',
   } = data;
   const showTypeColumn = hasBrandType && !isUltimate;
+  const emptyLottieSrc = resolveEmptyLottieSrc(emptyLottie);
 
   const [brands] = useState(initialBrands);
   const [search, setSearch] = useState('');
@@ -312,6 +333,10 @@ export default function BrandsList({ data }) {
   useEffect(() => {
     const timer = window.setTimeout(() => setBooting(false), 220);
     return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    ensureDotLottiePlayer();
   }, []);
 
   useEffect(() => {
@@ -425,8 +450,16 @@ export default function BrandsList({ data }) {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="prod-desk-empty">
-            <HiOutlineInbox size={28} style={{ color: '#94a3b8' }} aria-hidden="true" />
+          <div className="prod-desk-empty brand-desk-empty">
+            <div className="brand-desk-empty-lottie" aria-hidden="true">
+              <dotlottie-wc
+                src={emptyLottieSrc}
+                autoplay
+                loop
+                speed="1"
+                style={{ width: '200px', height: '200px' }}
+              />
+            </div>
             <p className="prod-desk-empty-title">No brands found</p>
             <p className="prod-desk-empty-sub">
               {brands.length === 0 ? 'Create your first brand to get started.' : 'Try a different search.'}

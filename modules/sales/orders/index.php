@@ -1,7 +1,7 @@
 <?php
-require_once '../../../includes/config.php';
-require_once '../../../includes/functions.php';
-require_once '../functions.php';
+require_once __DIR__ . '/../../../includes/config.php';
+require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../functions.php';
 require_once __DIR__ . '/includes/orders-lib.php';
 
 if (session_status() === PHP_SESSION_NONE) {

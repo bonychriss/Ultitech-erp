@@ -1,15 +1,29 @@
 <?php
-require_once '../../../includes/config.php';
-require_once '../../../includes/functions.php';
-// require_once '../../../includes/auth.php';
-// checkAuthentication('sales');
-require_once '../functions.php';
+require_once __DIR__ . '/../../../includes/config.php';
+require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../functions.php';
 
 // Temporary auth bypass
 if (session_status() == PHP_SESSION_NONE)
     session_start();
 if (!isset($_SESSION['user_id']))
     $_SESSION['user_id'] = 1;
+
+// Legacy direct URL → sales.php short desk (Laravel entry).
+if (
+    empty($GLOBALS['ERP_SALES_CONTEXT'])
+    && (!isset($_GET['desk']) || trim((string) $_GET['desk']) === '')
+    && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET'
+    && function_exists('sales_module_url')
+) {
+    $legacyQuery = $_GET;
+    unset($legacyQuery['company_slug'], $legacyQuery['desk']);
+    $target = sales_module_url('orders/create.php', $legacyQuery);
+    if (is_string($target) && $target !== '' && !preg_match('#/modules/sales/orders/create\.php(?:$|\?)#i', $target)) {
+        header('Location: ' . $target, true, 302);
+        exit;
+    }
+}
 
 global $pdo, $control_pdo;
 $salesDb = function_exists('sales_pdo') ? sales_pdo() : $pdo;
@@ -1316,7 +1330,7 @@ $quotePageTitle = function_exists('salesQuoteCreatePageTitle')
 
 if (function_exists('salesQuoteCreateUsesReactShell') && salesQuoteCreateUsesReactShell()) {
     require_once __DIR__ . '/../invoices/includes/invoices-lib.php';
-    salesDocumentCreateRenderReactShell($quotePageTitle);
+    salesDocumentCreateRenderReactShell($quotePageTitle, 'create', 'quote');
 }
 ?>
 

@@ -1,7 +1,7 @@
 <?php
-require_once '../../../includes/config.php';
-require_once '../../../includes/functions.php';
-require_once '../../sales/functions.php';
+require_once __DIR__ . '/../../../includes/config.php';
+require_once __DIR__ . '/../../../includes/functions.php';
+require_once __DIR__ . '/../functions.php';
 
 if (session_status() == PHP_SESSION_NONE) session_start();
 $_SESSION['active_module'] = 'sales';
@@ -306,7 +306,7 @@ $reassignPageUrl = function_exists('sales_module_url')
     </style>
 </head>
 <body>
-    <?php include '../../../includes/header_employee.php'; ?>
+    <?php include __DIR__ . '/../../../includes/header_employee.php'; ?>
     
     <main class="main-content prod-shell bg-[#F9F9F9] min-h-[50vh] pb-8">
         <div class="max-w-full mx-auto">

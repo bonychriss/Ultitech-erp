@@ -74,3 +74,8 @@ client-apps/android/android/build/
 client-apps/android/.capacitor/
 client-apps/android/android/local.properties
 client-apps/android/android/.idea/
+
+# Electron unpacked/local builds (too large for GitHub)
+client-apps/desktop/dist-build-new/
+client-apps/desktop/updates/*.exe
+client-apps/desktop/updates/*.exe.blockmap

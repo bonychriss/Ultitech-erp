@@ -2390,7 +2390,76 @@ function generateSparklinePath($data, $width = 100, $height = 30) {
 function sales_module_url(string $relativePath, array $query = []): string
 {
     $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
-    $path = 'modules/sales/' . $relativePath;
+
+    // Phase 2 short desks: /{slug}/sales/{desk} via sales.php
+    $deskMap = [
+        'dashboard/index.php' => 'sales',
+        'dashboard/' => 'sales',
+        'dashboard' => 'sales',
+        'invoices/index.php' => 'sales/invoices',
+        'invoices/' => 'sales/invoices',
+        'invoices' => 'sales/invoices',
+        'invoices/create.php' => 'sales/invoice-create',
+        'invoices/view.php' => 'sales/invoice-view',
+        'invoices/print.php' => 'sales/print/invoice',
+        'orders/index.php' => 'sales/orders',
+        'orders/' => 'sales/orders',
+        'orders' => 'sales/orders',
+        'orders/create.php' => 'sales/quotations',
+        'orders/view.php' => 'sales/order-view',
+        'orders/edit.php' => 'sales/quote-edit',
+        'orders/print.php' => 'sales/print/order',
+        'customers/index.php' => 'sales/customers',
+        'customers/' => 'sales/customers',
+        'customers' => 'sales/customers',
+        'my-sales/index.php' => 'sales/my-sales',
+        'my-sales/' => 'sales/my-sales',
+        'my-sales' => 'sales/my-sales',
+        'catalogue.php' => 'sales/catalogue',
+        'catalogue' => 'sales/catalogue',
+        'pricelist.php' => 'sales/pricelist',
+        'pricelist' => 'sales/pricelist',
+        'settings/index.php' => 'sales/settings',
+        'settings/' => 'sales/settings',
+        'settings' => 'sales/settings',
+        'payments/create.php' => 'sales/payment-create',
+        'admin/targets.php' => 'sales/admin-targets',
+        'admin/reassign-sales.php' => 'sales/admin-reassign',
+        'products_view.php' => 'sales/products-view',
+        'send_doc.php' => 'sales/send-doc',
+    ];
+
+    $short = null;
+
+    // Prefer id-bearing short URLs when query has id.
+    if (isset($query['id']) && ctype_digit((string) $query['id'])) {
+        $id = (string) $query['id'];
+        if ($relativePath === 'orders/view.php') {
+            $short = 'sales/order/' . $id;
+            unset($query['id']);
+        } elseif ($relativePath === 'invoices/view.php') {
+            $short = 'sales/invoice/' . $id;
+            unset($query['id']);
+        } elseif ($relativePath === 'orders/edit.php') {
+            $short = 'sales/quote/' . $id . '/edit';
+            unset($query['id']);
+        } elseif ($relativePath === 'orders/print.php') {
+            $short = 'sales/print/order/' . $id;
+            unset($query['id']);
+        } elseif ($relativePath === 'invoices/print.php') {
+            $short = 'sales/print/invoice/' . $id;
+            unset($query['id']);
+        }
+    }
+
+    if ($short === null && $relativePath === 'orders/create.php' && isset($query['mode']) && (string) $query['mode'] === 'new') {
+        $short = 'sales/quote-create';
+        unset($query['mode']);
+    }
+
+    if ($short === null && isset($deskMap[$relativePath])) {
+        $short = $deskMap[$relativePath];
+    }
 
     $slug = '';
     if (function_exists('getRequestedCompanySlug')) {
@@ -2400,10 +2469,19 @@ function sales_module_url(string $relativePath, array $query = []): string
         $slug = strtolower(trim((string) $_SESSION['company_slug']));
     }
 
-    if ($slug !== '' && function_exists('company_url')) {
-        $url = company_url($path);
+    if ($short !== null) {
+        if ($slug !== '' && function_exists('company_url')) {
+            $url = company_url($short, $slug);
+        } else {
+            $url = function_exists('app_url') ? app_url('/' . $short) : '/' . $short;
+        }
     } else {
-        $url = sales_app_url($path);
+        $path = 'modules/sales/' . $relativePath;
+        if ($slug !== '' && function_exists('company_url')) {
+            $url = company_url($path);
+        } else {
+            $url = sales_app_url($path);
+        }
     }
 
     if ($query !== []) {
@@ -2424,6 +2502,31 @@ function sales_app_url(string $path = '/'): string
     $base = defined('APP_BASE_PATH') ? rtrim((string) APP_BASE_PATH, '/') : '';
     $p = '/' . ltrim(str_replace('\\', '/', $path), '/');
     return ($base !== '' ? $base : '') . $p;
+}
+
+/**
+ * Build a sales.php Laravel bridge API URL (?api=…).
+ *
+ * @param array<string,scalar|null> $extraQuery
+ */
+function sales_laravel_api_url(string $api, array $extraQuery = []): string
+{
+    $api = strtolower(trim($api));
+    $slug = trim((string) ($_SESSION['company_slug'] ?? ''));
+    if ($slug === '' && function_exists('getRequestedCompanySlug')) {
+        $slug = trim((string) getRequestedCompanySlug());
+    }
+
+    if ($slug !== '' && function_exists('company_url')) {
+        $base = company_url('sales', $slug);
+    } else {
+        $base = sales_app_url('/sales.php');
+    }
+
+    $query = array_merge(['api' => $api], $extraQuery);
+    $query = array_filter($query, static fn ($v) => $v !== null && $v !== '');
+
+    return $base . (str_contains((string) $base, '?') ? '&' : '?') . http_build_query($query);
 }
 
 /**

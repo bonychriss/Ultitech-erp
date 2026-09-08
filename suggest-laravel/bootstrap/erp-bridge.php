@@ -12,7 +12,18 @@ use Illuminate\Http\Request;
 
 $laravelRoot = dirname(__DIR__);
 
-require $laravelRoot . '/vendor/autoload.php';
+$autoload = $laravelRoot . '/vendor/autoload.php';
+if (!is_file($autoload)) {
+    header('Content-Type: application/json; charset=utf-8');
+    http_response_code(503);
+    echo json_encode([
+        'ok' => false,
+        'error' => 'Suggest Laravel vendor is missing. Run composer install in suggest-laravel/.',
+    ]);
+    exit;
+}
+
+require $autoload;
 
 /** @var \Illuminate\Foundation\Application $app */
 $app = require $laravelRoot . '/bootstrap/app.php';

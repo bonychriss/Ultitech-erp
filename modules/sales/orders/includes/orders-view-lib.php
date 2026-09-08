@@ -774,10 +774,20 @@ function salesOrderViewRenderReactShell(int $orderId): void
     $cfg = [
         'module' => $module,
         'order_id' => $orderId,
+        'engine' => 'Laravel + React',
     ];
+
+    $initUrl = function_exists('sales_laravel_api_url')
+        ? sales_laravel_api_url('order-view-init', ['id' => $orderId, 'module' => $module])
+        : ($assets['apiUrl'] . '/view-init.php?id=' . $orderId);
+    $statusUrl = function_exists('sales_laravel_api_url')
+        ? sales_laravel_api_url('order-view-status', ['id' => $orderId, 'module' => $module])
+        : ($assets['apiUrl'] . '/view-status.php?id=' . $orderId);
 
     $ordersHeadMarkup = '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') . '">'
         . "\n" . '<script>window.__SALES_ORDERS_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
+        . 'window.__SALES_ORDERS_INIT_URL__ = ' . json_encode($initUrl, JSON_UNESCAPED_SLASHES) . ';'
+        . 'window.__SALES_ORDERS_STATUS_URL__ = ' . json_encode($statusUrl, JSON_UNESCAPED_SLASHES) . ';'
         . 'window.__SALES_ORDERS_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';'
         . 'window.__ORDERS_DESK_PAGE__ = ' . json_encode('order_view', JSON_UNESCAPED_SLASHES) . ';</script>';
 

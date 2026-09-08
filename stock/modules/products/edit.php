@@ -291,10 +291,14 @@ body.page-products-desk button.prod-create-btn-save {
                 'useBrandFreeText' => count($brands) === 0,
                 'currencies' => ['TZS', 'USD', 'EUR'],
                 'defaultCurrency' => (string) ($product['currency'] ?? 'TZS'),
-                'listUrl' => 'index.php',
-                'viewUrl' => 'view.php?id=' . $id,
-                'createApiUrl' => 'api/create-product.php',
-                'updateApiUrl' => 'api/update-product.php',
+                'listUrl' => function_exists('stock_desk_url')
+                    ? stock_desk_url('products')
+                    : ($base . 'modules/products/index.php'),
+                'viewUrl' => function_exists('stock_desk_url')
+                    ? stock_desk_url('product-view', ['id' => $id])
+                    : ($base . 'modules/products/view.php?id=' . $id),
+                'createApiUrl' => $base . 'modules/products/api/create-product.php',
+                'updateApiUrl' => $base . 'modules/products/api/update-product.php',
                 'baseUrl' => $base,
                 'updated' => (isset($_GET['updated']) && (string) $_GET['updated'] === '1'),
             ],

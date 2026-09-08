@@ -1,0 +1,7 @@
+# Protect Laravel internals.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests|vendor|scripts)(/|$) - [F,L]
+  RewriteRule ^\.env - [F,L]
+  RewriteRule ^artisan$ - [F,L]
+</IfModule>

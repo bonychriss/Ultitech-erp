@@ -61,6 +61,13 @@ $saveBrandLogo = static function (array $file) {
     return $destName;
 };
 
+$redirectBrandsList = static function (): void {
+    if (function_exists('stock_desk_url')) {
+        redirect(stock_desk_url('brands'));
+    }
+    redirect('index.php');
+};
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
     if ($action === '' && isset($_POST['add_brand'])) {
@@ -87,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add' || $action === 'edit') {
         if ($name === '') {
             flash('success', 'Brand name is required.', 'danger');
-            redirect('index.php');
+            $redirectBrandsList();
         }
 
         $logo = null;
@@ -127,14 +134,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $id = (int) ($_POST['id'] ?? 0);
                 if ($id < 1) {
                     flash('success', 'Invalid brand.', 'danger');
-                    redirect('index.php');
+                    $redirectBrandsList();
                 }
                 $stmt = $pdo->prepare('SELECT * FROM brands WHERE id = ? LIMIT 1');
                 $stmt->execute([$id]);
                 $existing = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$existing) {
                     flash('success', 'Brand not found.', 'danger');
-                    redirect('index.php');
+                    $redirectBrandsList();
                 }
                 $logoName = (string) ($existing['logo'] ?? '');
                 if ($logo !== null) {
@@ -177,6 +184,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (PDOException $e) {
             flash('success', 'Could not save brand.', 'danger');
+        }
+        if (function_exists('stock_desk_url')) {
+            redirect(stock_desk_url('brands'));
         }
         redirect('index.php');
     }
@@ -350,6 +360,9 @@ body.page-products-desk a.brand-desk-btn {
                 'formAction' => 'index.php',
                 'deleteUrl' => 'delete.php',
                 'toast' => $toast,
+                'emptyLottie' => function_exists('app_url')
+                    ? app_url('/assets/animations/nothing.lottie')
+                    : '/assets/animations/nothing.lottie',
             ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)) ?: '{"page":"brands-list","data":{"brands":[]}}' ?>;
     </script>

@@ -249,11 +249,16 @@ try {
 
     $pdo->commit();
 
+    $redirect = function_exists('stock_desk_url')
+        ? stock_desk_url('products', ['created' => '1', 'created_id' => $product_id])
+        : ((function_exists('app_url') ? rtrim(app_url('/stock'), '/') : '/stock')
+            . '/modules/products/index.php?created=1&created_id=' . $product_id);
+
     $payload = [
         'ok' => true,
         'id' => $product_id,
         'product_code' => $product_code,
-        'redirect' => 'index.php?created=1&created_id=' . $product_id,
+        'redirect' => $redirect,
     ];
     if (!empty($imageErrors)) {
         $payload['image_warning'] = $imageErrors[0];

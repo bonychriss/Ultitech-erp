@@ -261,11 +261,20 @@ try {
 
     $pdo->commit();
 
+    $redirect = function_exists('stock_desk_url')
+        ? stock_desk_url('product-edit', ['id' => $id, 'updated' => '1'])
+        : ((function_exists('app_url') ? rtrim(app_url('/stock'), '/') : '/stock')
+            . '/modules/products/edit.php?id=' . $id . '&updated=1');
+    $viewUrl = function_exists('stock_desk_url')
+        ? stock_desk_url('product-view', ['id' => $id])
+        : ((function_exists('app_url') ? rtrim(app_url('/stock'), '/') : '/stock')
+            . '/modules/products/view.php?id=' . $id);
+
     echo json_encode([
         'ok' => true,
         'id' => $id,
-        'redirect' => 'edit.php?id=' . $id . '&updated=1',
-        'viewUrl' => 'view.php?id=' . $id,
+        'redirect' => $redirect,
+        'viewUrl' => $viewUrl,
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) {

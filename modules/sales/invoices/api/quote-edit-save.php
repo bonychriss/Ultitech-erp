@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$orderId = (int) ($_POST['order_id'] ?? 0);
+$orderId = (int) ($_POST['order_id'] ?? $_GET['id'] ?? 0);
 if ($orderId <= 0) {
     http_response_code(400);
     echo json_encode(['error' => 'Invalid order id.'], JSON_UNESCAPED_UNICODE);

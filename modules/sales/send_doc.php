@@ -1,7 +1,7 @@
 <?php
-require_once '../../includes/config.php';
-require_once '../../includes/mailer.php';
-require_once 'functions.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/mailer.php';
+require_once __DIR__ . '/functions.php';
 
 if (session_status() == PHP_SESSION_NONE) session_start();
 

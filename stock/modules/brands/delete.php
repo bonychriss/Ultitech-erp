@@ -31,5 +31,9 @@ if (isset($_GET['id'])) {
     }
 }
 
-header('Location: index.php?delete=success');
+if (function_exists('stock_desk_url')) {
+    header('Location: ' . stock_desk_url('brands', ['delete' => 'success']));
+} else {
+    header('Location: index.php?delete=success');
+}
 exit;

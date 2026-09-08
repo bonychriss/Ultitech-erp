@@ -322,7 +322,198 @@ function deliveries_load_public_company_branding(PDO $pdo, int $companyId): arra
 }
 
 /**
- * Display name for delivery note Salesperson field (stored value, then invoice, then creator).
+ * Resolve signature file path for a user (sales DB first, then filesystem fallback).
+ */
+function deliveries_resolve_user_signature_path(int $userId): string
+{
+    if ($userId <= 0) {
+        return '';
+    }
+
+    $salesFunctions = dirname(__DIR__, 2) . '/modules/sales/functions.php';
+    if (is_file($salesFunctions)) {
+        require_once $salesFunctions;
+    }
+
+    $candidates = [];
+
+    try {
+        $salesDb = function_exists('sales_pdo') ? sales_pdo() : ($GLOBALS['pdo'] ?? null);
+        if ($salesDb instanceof PDO) {
+            $st = $salesDb->prepare('SELECT signature_path FROM users WHERE id = ? LIMIT 1');
+            $st->execute([$userId]);
+            $path = trim((string) ($st->fetchColumn() ?: ''));
+            if ($path !== '') {
+                $candidates[] = $path;
+            }
+        }
+    } catch (Throwable $e) {
+        // continue
+    }
+
+    if (function_exists('getUserSignaturePathById')) {
+        $path = trim((string) (getUserSignaturePathById($userId) ?: ''));
+        if ($path !== '') {
+            $candidates[] = $path;
+        }
+    }
+
+    $appRoot = dirname(__DIR__, 2);
+    $sigDir = $appRoot . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'signatures';
+    if (is_dir($sigDir)) {
+        $matches = glob($sigDir . DIRECTORY_SEPARATOR . 'sig_' . $userId . '_*.{png,jpg,jpeg,webp}', GLOB_BRACE)
+            ?: (glob($sigDir . DIRECTORY_SEPARATOR . 'sig_' . $userId . '_*.png') ?: []);
+        if ($matches) {
+            usort($matches, static function ($a, $b) {
+                return (int) filemtime($b) <=> (int) filemtime($a);
+            });
+            $candidates[] = 'assets/signatures/' . basename($matches[0]);
+        }
+    }
+
+    foreach ($candidates as $path) {
+        $normalized = ltrim(str_replace('\\', '/', $path), '/');
+        $fs = $appRoot . '/' . $normalized;
+        if (is_file($fs)) {
+            return $normalized;
+        }
+        // Keep DB path even if file temporarily missing (CDN / delayed sync).
+        if ($normalized !== '') {
+            return $normalized;
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Absolute URL for a stored signature path (for PDF capture).
+ */
+function deliveries_signature_public_url(string $path): string
+{
+    $path = trim($path);
+    if ($path === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    if (function_exists('mediaUrlFromPath')) {
+        $url = mediaUrlFromPath($path, false);
+        if ($url !== '') {
+            if (preg_match('#^https?://#i', $url)) {
+                return $url;
+            }
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+            return $scheme . '://' . $host . '/' . ltrim($url, '/');
+        }
+    }
+    if (function_exists('app_url')) {
+        $url = app_url('/' . ltrim(str_replace('\\', '/', $path), '/'));
+        if (preg_match('#^https?://#i', $url)) {
+            return $url;
+        }
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        return $scheme . '://' . $host . '/' . ltrim($url, '/');
+    }
+
+    return '/' . ltrim(str_replace('\\', '/', $path), '/');
+}
+
+/**
+ * Resolve the seller (salesperson) for a sales order / linked invoice.
+ *
+ * @return array{user_id:int,name:string,signature_path:string}
+ */
+function deliveries_resolve_sales_order_seller(int $salesOrderId, int $invoiceId = 0): array
+{
+    $empty = ['user_id' => 0, 'name' => '', 'signature_path' => ''];
+    if ($salesOrderId <= 0 && $invoiceId <= 0) {
+        return $empty;
+    }
+
+    $salesFunctions = dirname(__DIR__, 2) . '/modules/sales/functions.php';
+    if (is_file($salesFunctions)) {
+        require_once $salesFunctions;
+    }
+
+    try {
+        $salesDb = function_exists('sales_pdo') ? sales_pdo() : ($GLOBALS['pdo'] ?? null);
+        if (!($salesDb instanceof PDO)) {
+            return $empty;
+        }
+
+        $userId = 0;
+        $name = '';
+
+        if ($invoiceId <= 0 && $salesOrderId > 0 && function_exists('sales_connection_has_table')
+            && sales_connection_has_table($salesDb, 'invoices')) {
+            $invCols = $salesDb->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if (in_array('order_id', $invCols, true)) {
+                $stInv = $salesDb->prepare('SELECT id FROM invoices WHERE order_id = ? ORDER BY id DESC LIMIT 1');
+                $stInv->execute([$salesOrderId]);
+                $invoiceId = (int) ($stInv->fetchColumn() ?: 0);
+            }
+        }
+
+        if ($invoiceId > 0) {
+            $name = deliveries_fetch_invoice_salesperson($invoiceId);
+            $invCols = $salesDb->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            $soCols = (function_exists('sales_connection_has_table') && sales_connection_has_table($salesDb, 'sales_orders'))
+                ? ($salesDb->query('SHOW COLUMNS FROM sales_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [])
+                : [];
+            $userRef = null;
+            $joinSo = '';
+            if (in_array('created_by', $invCols, true) && in_array('created_by', $soCols, true)) {
+                $userRef = 'COALESCE(i.created_by, so.created_by)';
+                $joinSo = ' LEFT JOIN sales_orders so ON i.order_id = so.id';
+            } elseif (in_array('created_by', $invCols, true)) {
+                $userRef = 'i.created_by';
+            } elseif (in_array('created_by', $soCols, true)) {
+                $userRef = 'so.created_by';
+                $joinSo = ' LEFT JOIN sales_orders so ON i.order_id = so.id';
+            }
+            if ($userRef !== null) {
+                $st = $salesDb->prepare("SELECT {$userRef} AS seller_id FROM invoices i{$joinSo} WHERE i.id = ? LIMIT 1");
+                $st->execute([$invoiceId]);
+                $userId = (int) ($st->fetchColumn() ?: 0);
+            }
+        }
+
+        if ($userId <= 0 && $salesOrderId > 0
+            && function_exists('sales_connection_has_table')
+            && sales_connection_has_table($salesDb, 'sales_orders')) {
+            $soCols = $salesDb->query('SHOW COLUMNS FROM sales_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if (in_array('created_by', $soCols, true)) {
+                $st = $salesDb->prepare('SELECT created_by FROM sales_orders WHERE id = ? LIMIT 1');
+                $st->execute([$salesOrderId]);
+                $userId = (int) ($st->fetchColumn() ?: 0);
+            }
+        }
+
+        if ($userId > 0 && $name === '' && function_exists('sales_connection_has_table')
+            && sales_connection_has_table($salesDb, 'users')) {
+            $stUser = $salesDb->prepare('SELECT full_name FROM users WHERE id = ? LIMIT 1');
+            $stUser->execute([$userId]);
+            $name = trim((string) ($stUser->fetchColumn() ?: ''));
+        }
+
+        $signature = $userId > 0 ? deliveries_resolve_user_signature_path($userId) : '';
+
+        return [
+            'user_id' => $userId,
+            'name' => $name,
+            'signature_path' => $signature,
+        ];
+    } catch (Throwable $e) {
+        return $empty;
+    }
+}
+
+/**
+ * Display name for delivery note Salesperson field (stored value, then invoice/sales order, then creator).
  */
 function deliveries_delivery_note_salesperson(PDO $pdo, array $note): string
 {
@@ -331,10 +522,13 @@ function deliveries_delivery_note_salesperson(PDO $pdo, array $note): string
         return $name;
     }
 
+    $noteId = (int) ($note['id'] ?? 0);
+    $orderId = (int) ($note['order_id'] ?? 0);
     $invoiceId = 0;
-    if (!empty($note['order_id'])) {
+
+    if ($orderId > 0) {
         $stmt = $pdo->prepare('SELECT * FROM delivery_orders WHERE id = ?');
-        $stmt->execute([(int) $note['order_id']]);
+        $stmt->execute([$orderId]);
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($order) {
             $invoiceId = deliveries_resolve_sales_invoice_id($pdo, $order);
@@ -343,16 +537,99 @@ function deliveries_delivery_note_salesperson(PDO $pdo, array $note): string
 
     if ($invoiceId > 0) {
         $name = deliveries_fetch_invoice_salesperson($invoiceId);
-        if ($name !== '') {
-            deliveries_ensure_delivery_note_salesperson_column($pdo);
-            $pdo->prepare(
-                'UPDATE delivery_notes SET salesperson_name = ? WHERE id = ? AND (salesperson_name IS NULL OR salesperson_name = \'\')'
-            )->execute([$name, (int) ($note['id'] ?? 0)]);
-            return $name;
+    }
+
+    if ($name === '' && $orderId > 0) {
+        $seller = deliveries_resolve_sales_order_seller($orderId, $invoiceId);
+        $name = $seller['name'];
+        if ($name === '' && $seller['user_id'] > 0) {
+            // keep user_id path covered by resolve helper
+            $name = $seller['name'];
         }
     }
 
+    if ($name !== '' && $noteId > 0) {
+        deliveries_ensure_delivery_note_salesperson_column($pdo);
+        $pdo->prepare(
+            'UPDATE delivery_notes SET salesperson_name = ? WHERE id = ? AND (salesperson_name IS NULL OR salesperson_name = \'\')'
+        )->execute([$name, $noteId]);
+        return $name;
+    }
+
     return trim((string) ($note['creator_name'] ?? ''));
+}
+
+/**
+ * Ensure authorized signature is the seller's signature (replace wrong/stale stamps).
+ */
+function deliveries_ensure_delivery_note_seller_signature(PDO $pdo, array &$note): void
+{
+    $noteId = (int) ($note['id'] ?? 0);
+    $orderId = (int) ($note['order_id'] ?? 0);
+    if ($noteId <= 0 || $orderId <= 0) {
+        return;
+    }
+
+    $invoiceId = 0;
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM delivery_orders WHERE id = ?');
+        $stmt->execute([$orderId]);
+        $deliveryOrder = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($deliveryOrder) {
+            $invoiceId = deliveries_resolve_sales_invoice_id($pdo, $deliveryOrder);
+        }
+    } catch (Throwable $e) {
+        $invoiceId = 0;
+    }
+
+    $seller = deliveries_resolve_sales_order_seller($orderId, $invoiceId);
+    if ($seller['user_id'] <= 0 && $seller['name'] === '' && $seller['signature_path'] === '') {
+        return;
+    }
+
+    $existingSig = trim((string) ($note['authorized_signature_path'] ?? ''));
+    $existingName = trim((string) ($note['salesperson_name'] ?? ''));
+    $sellerSig = trim((string) ($seller['signature_path'] ?? ''));
+    $sellerName = trim((string) ($seller['name'] ?? ''));
+    $sellerId = (int) ($seller['user_id'] ?? 0);
+
+    // Detect stamps that belong to someone else (e.g. sig_1_... while seller is 56).
+    $sigBelongsToSeller = true;
+    if ($existingSig !== '' && $sellerId > 0) {
+        if (preg_match('#(^|/)sig_(\d+)_#', str_replace('\\', '/', $existingSig), $m)) {
+            $sigBelongsToSeller = ((int) $m[2] === $sellerId);
+        } elseif ($sellerSig !== '' && $existingSig !== $sellerSig) {
+            $sigBelongsToSeller = false;
+        }
+    }
+
+    $updates = [];
+    $params = [];
+
+    if ($sellerName !== '' && $existingName !== $sellerName) {
+        deliveries_ensure_delivery_note_salesperson_column($pdo);
+        $updates[] = 'salesperson_name = ?';
+        $params[] = $sellerName;
+        $note['salesperson_name'] = $sellerName;
+    }
+
+    if ($sellerSig !== '') {
+        if ($existingSig !== $sellerSig || !$sigBelongsToSeller) {
+            $updates[] = 'authorized_signature_path = ?';
+            $params[] = $sellerSig;
+            $note['authorized_signature_path'] = $sellerSig;
+        }
+    } elseif ($existingSig !== '' && !$sigBelongsToSeller) {
+        // Clear wrong person's signature rather than showing it under the salesperson.
+        $updates[] = 'authorized_signature_path = NULL';
+        $note['authorized_signature_path'] = '';
+    }
+
+    if ($updates === []) {
+        return;
+    }
+    $params[] = $noteId;
+    $pdo->prepare('UPDATE delivery_notes SET ' . implode(', ', $updates) . ' WHERE id = ?')->execute($params);
 }
 
 /**

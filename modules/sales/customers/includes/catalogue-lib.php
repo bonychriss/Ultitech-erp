@@ -36,19 +36,19 @@ function customerCatalogueWebBase(): string
 
 function customersDeskWebBase(): string
 {
+    if (function_exists('sales_app_url')) {
+        return rtrim(sales_app_url('modules/sales/customers'), '/');
+    }
+    if (function_exists('app_url')) {
+        return rtrim((string) app_url('/modules/sales/customers'), '/');
+    }
+
     $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    if ($script !== '') {
+    if ($script !== '' && str_contains($script, '/modules/sales/customers')) {
         return rtrim(dirname($script), '/');
     }
 
-    if (function_exists('sales_module_url')) {
-        $customersUrl = sales_module_url('customers/index.php');
-        return rtrim(preg_replace('#/index\.php$#', '', $customersUrl), '/');
-    }
-
-    return function_exists('app_url')
-        ? app_url('/modules/sales/customers')
-        : '/modules/sales/customers';
+    return '/modules/sales/customers';
 }
 
 function customersDeskParseCustomerId(array $query = []): int

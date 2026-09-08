@@ -7,6 +7,7 @@ import {
 } from 'react';
 import {
   fetchInvoiceViewInit,
+  fetchDeliveryNoteDownloadPayload,
   postInvoiceStatusAction,
   submitEmailWithPdf,
 } from '../api/invoiceViewDesk.js';
@@ -15,6 +16,7 @@ import {
   downloadInvoicePdf,
   formatPdfError,
 } from '../utils/invoicePdf.js';
+import { downloadDeliveryNotePdfFromHtml } from '../utils/deliveryNoteOffscreenPdf.js';
 import InvoiceViewToolbar from '../components/InvoiceViewToolbar.jsx';
 import InvoiceDownloadModal from '../components/InvoiceDownloadModal.jsx';
 import InvoiceDocumentPane from '../components/InvoiceDocumentPane.jsx';
@@ -240,6 +242,46 @@ export default function InvoiceViewPage() {
     }
   };
 
+  const handleDownloadDeliveryNote = async () => {
+    if (pdfState === 'loading') return;
+    if (!urls.delivery_note) {
+      showToast('error', 'Delivery note is not available for this invoice.', 4000);
+      return;
+    }
+
+    setPdfFileName('DeliveryNote.pdf');
+    setPdfState('loading');
+    setPdfProgress(3);
+    setPdfMessage('Preparing delivery note...');
+
+    try {
+      const payload = await fetchDeliveryNoteDownloadPayload(urls.delivery_note);
+      const noteNumber = payload.note_number || 'document';
+      setPdfFileName(`DeliveryNote_${noteNumber}.pdf`);
+      setPdfProgress(10);
+      setPdfMessage('Generating PDF...');
+
+      await downloadDeliveryNotePdfFromHtml({
+        html: payload.document_html,
+        displayNumber: noteNumber,
+        fontStylesheets: payload.font_stylesheets || '',
+      }, (percent, message) => {
+        setPdfProgress(percent);
+        if (message) setPdfMessage(message);
+      });
+
+      setPdfState('success');
+      setPdfProgress(100);
+      setPdfMessage('Your delivery note PDF has been saved to your downloads folder.');
+    } catch (err) {
+      console.error('Delivery note PDF download failed:', err);
+      const reason = formatPdfError(err);
+      setPdfState('error');
+      setPdfMessage(reason);
+      showToast('error', reason, 5000);
+    }
+  };
+
   const handleEmail = async (event, emailUrl, email) => {
     event.preventDefault();
     const result = await confirmDialog({
@@ -335,6 +377,7 @@ export default function InvoiceViewPage() {
         onCloseDesktopActions={closeDesktopActions}
         onRunStatusAction={runStatusAction}
         onDownloadPdf={handleDownloadPdf}
+        onDownloadDeliveryNote={handleDownloadDeliveryNote}
         onEmail={handleEmail}
       />
 

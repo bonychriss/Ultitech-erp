@@ -209,7 +209,7 @@
             <strong>Order Date:</strong> <?= date('d/m/Y', strtotime((string) $note['delivery_date'])) ?>
         </div>
         <div class="meta-item">
-            <strong>Salesperson:</strong> <?= htmlspecialchars($salespersonName !== '' ? $salespersonName : '') ?>
+            <strong>Salesperson:</strong> <?= htmlspecialchars($salespersonName !== '' ? $salespersonName : '?') ?>
         </div>
         <div class="meta-item">
             <strong>Ref No:</strong> PO-<?= htmlspecialchars(substr((string) $note['note_number'], 3)) ?>
@@ -292,16 +292,28 @@
 
     <div class="signature-section">
         <div class="sig-box">
-            <?php if (!empty($note['authorized_signature_path'])): ?>
-                <img src="<?= app_url($note['authorized_signature_path']) ?>" class="signature-img" alt="Authorized Signature">
+            <?php
+            $authorizedSigPath = trim((string) ($note['authorized_signature_path'] ?? ''));
+            $authorizedSigUrl = $authorizedSigPath !== '' && function_exists('deliveries_signature_public_url')
+                ? deliveries_signature_public_url($authorizedSigPath)
+                : ($authorizedSigPath !== '' && function_exists('app_url') ? app_url($authorizedSigPath) : '');
+            ?>
+            <?php if ($authorizedSigUrl !== ''): ?>
+                <img src="<?= htmlspecialchars($authorizedSigUrl, ENT_QUOTES, 'UTF-8') ?>" class="signature-img" alt="Salesperson Signature" crossorigin="anonymous">
             <?php endif; ?>
             <div class="sig-line"></div>
-            <div class="sig-label">Authorized Signatory</div>
-            <div class="sig-sub">(<?= htmlspecialchars($dnCompanyName) ?>)</div>
+            <div class="sig-label">Salesperson Signature</div>
+            <div class="sig-sub">(<?= htmlspecialchars($salespersonName !== '' ? $salespersonName : $dnCompanyName) ?>)</div>
         </div>
         <div class="sig-box">
-            <?php if (!empty($note['receiver_signature_path'])): ?>
-                <img src="<?= app_url($note['receiver_signature_path']) ?>" class="signature-img" alt="Receiver Signature">
+            <?php
+            $receiverSigPath = trim((string) ($note['receiver_signature_path'] ?? ''));
+            $receiverSigUrl = $receiverSigPath !== '' && function_exists('deliveries_signature_public_url')
+                ? deliveries_signature_public_url($receiverSigPath)
+                : ($receiverSigPath !== '' && function_exists('app_url') ? app_url($receiverSigPath) : '');
+            ?>
+            <?php if ($receiverSigUrl !== ''): ?>
+                <img src="<?= htmlspecialchars($receiverSigUrl, ENT_QUOTES, 'UTF-8') ?>" class="signature-img" alt="Receiver Signature" crossorigin="anonymous">
             <?php endif; ?>
             <div class="sig-line"></div>
             <div class="sig-label">Receiver's Name & Signature</div>

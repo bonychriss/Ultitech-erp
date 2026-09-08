@@ -15,6 +15,7 @@ export default function InvoiceViewToolbar({
   onCloseDesktopActions,
   onRunStatusAction,
   onDownloadPdf,
+  onDownloadDeliveryNote,
   onEmail,
 }) {
   const showPrimaryDivider = flags.can_edit || flags.can_ship;
@@ -117,16 +118,15 @@ export default function InvoiceViewToolbar({
                     </a>
                   ) : null}
                   {flags.has_order && urls.delivery_note ? (
-                    <a
+                    <button
+                      type="button"
                       className="ov-actions-item"
-                      href={urls.delivery_note}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={onCloseDesktopActions}
+                      disabled={pdfDownloading || Boolean(busyAction)}
+                      onClick={() => { onCloseDesktopActions(); onDownloadDeliveryNote(); }}
                     >
-                      <i className="fas fa-truck" aria-hidden="true" />
+                      <i className={`fas ${pdfDownloading ? 'fa-spinner fa-spin' : 'fa-truck'}`} aria-hidden="true" />
                       Delivery Note
-                    </a>
+                    </button>
                   ) : null}
                   <hr className="ov-actions-divider" />
                   <button
@@ -217,10 +217,15 @@ export default function InvoiceViewToolbar({
                 </a>
               ) : null}
               {flags.has_order && urls.delivery_note ? (
-                <a className="ov-mobile-item" target="_blank" rel="noreferrer" href={urls.delivery_note}>
-                  <i className="fas fa-truck" aria-hidden="true" />
+                <button
+                  type="button"
+                  className="ov-mobile-item"
+                  disabled={pdfDownloading || Boolean(busyAction)}
+                  onClick={onDownloadDeliveryNote}
+                >
+                  <i className={`fas ${pdfDownloading ? 'fa-spinner fa-spin' : 'fa-truck'}`} aria-hidden="true" />
                   Delivery Note
-                </a>
+                </button>
               ) : null}
               <button type="button" className="ov-mobile-item" disabled={pdfDownloading} onClick={onDownloadPdf}>
                 <i className={`fas ${pdfDownloading ? 'fa-spinner fa-spin' : 'fa-download'}`} aria-hidden="true" />

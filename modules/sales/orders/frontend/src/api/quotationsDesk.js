@@ -12,6 +12,24 @@ export function getConfig() {
   return {};
 }
 
+function withQuery(base, params) {
+  const qs = params instanceof URLSearchParams
+    ? params.toString()
+    : new URLSearchParams(params || {}).toString();
+  if (!qs) return String(base);
+  return `${base}${String(base).includes('?') ? '&' : '?'}${qs}`;
+}
+
+function getInitUrl(params) {
+  if (typeof window !== 'undefined' && window.__QUOTATIONS_INIT_URL__) {
+    return withQuery(String(window.__QUOTATIONS_INIT_URL__), params);
+  }
+  const qs = params instanceof URLSearchParams
+    ? params.toString()
+    : new URLSearchParams(params || {}).toString();
+  return `${getApiBase()}/init.php${qs ? `?${qs}` : ''}`;
+}
+
 async function parseJson(response) {
   const text = await response.text();
   try {
@@ -30,8 +48,7 @@ async function parseJson(response) {
 
 export async function fetchQuotationsInit() {
   const params = new URLSearchParams(window.location.search);
-  const qs = params.toString();
-  const res = await fetch(`${getApiBase()}/init.php${qs ? `?${qs}` : ''}`, { credentials: 'same-origin' });
+  const res = await fetch(getInitUrl(params), { credentials: 'same-origin' });
   const data = await parseJson(res);
   if (!res.ok || data.error) {
     throw new Error(data.error || `Request failed (${res.status})`);

@@ -70,3 +70,26 @@ export async function submitEmailWithPdf(targetUrl, pdfDataUri) {
   document.body.appendChild(form);
   form.submit();
 }
+
+/**
+ * Create/sync delivery note for the linked sales order and return document HTML for PDF.
+ * @param {string} deliveryNoteUrl Absolute or relative URL to orders/delivery_note.php
+ */
+export async function fetchDeliveryNoteDownloadPayload(deliveryNoteUrl) {
+  const url = new URL(deliveryNoteUrl, window.location.href);
+  url.searchParams.set('format', 'json');
+
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+  const data = await parseJson(res);
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error || data.message || `Could not prepare delivery note (${res.status})`);
+  }
+  if (!data.document_html) {
+    throw new Error('Delivery note document was empty.');
+  }
+  return data;
+}

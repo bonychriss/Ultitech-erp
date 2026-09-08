@@ -503,7 +503,7 @@ switch ($active_module) {
         addItem($menuItems, 'create', 'Quotation', 'file-earmark-plus', $prefix . 'modules/sales/orders/create.php?module=sales');
         addItem($menuItems, 'orders', 'Sales Orders', 'bag', $prefix . 'modules/sales/orders/index.php?module=sales');
         addItem($menuItems, 'invoices', 'Invoices', 'receipt', $prefix . 'modules/sales/invoices/index.php?module=sales');
-        addItem($menuItems, 'sales-settings', 'Sales Settings', 'gear', $prefix . 'modules/sales/settings/index.php?module=sales');
+        addItem($menuItems, 'sales-settings', 'Sales Settings', 'gear', $prefix . 'sales/settings?module=sales');
         // Record Payment hidden
         if ($is_admin) {
              addItem($menuItems, 'targets', 'Set Targets', 'bullseye', $prefix . 'modules/sales/admin/targets.php?module=sales');

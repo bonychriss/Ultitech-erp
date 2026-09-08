@@ -1,6 +1,6 @@
 <?php
-require_once '../../../includes/config.php';
-require_once '../functions.php';
+require_once __DIR__ . '/../../../includes/config.php';
+require_once __DIR__ . '/../functions.php';
 
 // Auth checks
 if (session_status() == PHP_SESSION_NONE) session_start();
@@ -82,7 +82,7 @@ $currentCompanyTarget = $companyTargetStmt->fetchColumn() ?: 0;
     </style>
 </head>
 <body>
-    <?php include '../../../includes/header_employee.php'; ?>
+    <?php include __DIR__ . '/../../../includes/header_employee.php'; ?>
     
     <div class="main-content" id="react-root"></div>
 

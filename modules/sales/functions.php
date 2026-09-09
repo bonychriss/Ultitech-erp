@@ -1294,11 +1294,31 @@ function sales_document_has_settings_second_page(array $companySettings = []): b
 }
 
 /**
- * Resolve branded document layout inner path for Roadmaster truck/spare documents.
- * Ultimate and other tenants use view_sheet_inner.php in their view pages instead.
+ * Resolve branded document layout inner path for Roadmaster / Ultimate documents.
+ * Other tenants keep using view_sheet_inner.php in their view pages.
+ *
+ * Ultimate layout ids (sales_settings.spare_part_layout):
+ * 1 = original Standard sheet (view_sheet_inner.php)
+ * 2+ = branded Ultimate styles (Classic / Minimalist / Formal)
+ *
+ * @param array<string,mixed>|null $companySettings
  */
-function sales_branded_document_layout_inner_path(bool $isTruck): ?string
+function sales_branded_document_layout_inner_path(bool $isTruck, ?array &$companySettings = null, string $documentKind = 'invoice'): ?string
 {
+    if (function_exists('isUltimate') && isUltimate()) {
+        $layoutId = 1;
+        if (is_array($companySettings)) {
+            $layoutId = (int) ($companySettings['spare_part_layout'] ?? 1);
+        }
+        if ($layoutId <= 1) {
+            return sales_standard_document_view_inner_path($documentKind);
+        }
+
+        $path = __DIR__ . '/layouts/ultimate/spare-invoice-layout-inner.php';
+
+        return is_file($path) ? $path : sales_standard_document_view_inner_path($documentKind);
+    }
+
     if (!function_exists('isRoadmaster') || !isRoadmaster()) {
         return null;
     }

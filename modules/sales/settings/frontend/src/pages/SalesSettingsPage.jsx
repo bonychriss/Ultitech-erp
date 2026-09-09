@@ -26,13 +26,12 @@ function getLayoutTabConfig(activeTab) {
       fieldPrefix: 'spare',
       previewType: 'spare',
       catalogKey: 'ultimate',
-      sectionTitle: 'Document settings',
-      sectionDescription: 'View the document layout in use and manage footer content for quotations and invoices.',
+      sectionTitle: 'Document layout',
+      sectionDescription: 'Choose the print layout and footer content for quotations and invoices.',
       documentLabel: 'Ultimate',
-      saveLabel: 'Ultimate',
+      saveLabel: 'Document',
       showTruckRemarks: false,
-      hideLayoutPicker: true,
-      fixedLayoutId: 1,
+      hideLayoutPicker: false,
     };
   }
 
@@ -86,6 +85,12 @@ function layoutLabel(activeTab, id) {
     if (id === 2) return 'Classic';
     if (id === 3) return 'Minimalist';
     return 'Watermark';
+  }
+  if (activeTab === 'settings' || activeTab === 'ultimate') {
+    if (id === 2) return 'Classic';
+    if (id === 3) return 'Minimalist';
+    if (id === 4) return 'Formal';
+    return 'Standard';
   }
   if (id === 1) return 'Premium';
   if (id === 2) return 'Classic';
@@ -508,210 +513,218 @@ export default function SalesSettingsPage() {
                 <p>{layoutConfig.sectionDescription}</p>
               </div>
 
-              <div className="ss-form-block">
-                <h3 className="ss-form-block-title">Document layout</h3>
-                {layoutConfig.hideLayoutPicker ? (
-                  <>
-                    <div className="ss-layout-current">
-                      <span className="ss-layout-current-badge">In use</span>
-                      <div className="ss-layout-current-copy">
-                        <strong className="ss-layout-current-name">{selectedLayout.label}</strong>
-                        <span className="ss-layout-current-meta">
-                          Active layout for
-                          {' '}
-                          {layoutConfig.documentLabel}
-                          {' '}
-                          quotations and invoices
-                        </span>
-                      </div>
-                    </div>
-                    {selectedLayout.description ? (
-                      <p className="ss-field-help">{selectedLayout.description}</p>
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    <div className="ss-layout-pills" role="radiogroup" aria-label="Document layout">
-                      {layoutOptions.map((option) => {
-                        const selected = !option.comingSoon && Number(selectedLayoutId) === Number(option.id);
-                        const teaserActive = layoutTeaser && Number(layoutTeaser.id) === Number(option.id);
-                        return (
-                          <button
-                            key={option.id}
-                            type="button"
-                            role="radio"
-                            aria-checked={selected || Boolean(teaserActive)}
-                            aria-disabled={option.comingSoon || undefined}
-                            className={`ss-pill-choice${selected ? ' is-selected' : ''}${option.comingSoon ? ' is-coming-soon' : ''}${teaserActive ? ' is-teaser-active' : ''}`}
-                            onClick={() => handleLayoutSelect(activeTab, option)}
-                          >
-                            <span className="ss-pill-choice-label">{String(option.id)}</span>
-                            {option.comingSoon ? (
-                              <span className="ss-pill-soon-badge">Soon</span>
-                            ) : selected ? (
-                              <span className="ss-pill-choice-knob" aria-hidden="true" />
-                            ) : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="ss-field-help">
-                      {layoutTeaser ? (
-                        <>
-                          <strong>{layoutTeaser.label}</strong>
-                          {' '}
-                          layout is
-                          {' '}
-                          <span className="ss-coming-soon-inline">coming soon</span>
-                          .
-                        </>
-                      ) : (
-                        <>
-                          <strong>{selectedLayout.label}</strong>
-                          {' '}
-                          layout is active for
-                          {' '}
-                          {layoutConfig.documentLabel}
-                          {' '}
-                          documents.
-                          {selectedLayout.description ? (
-                            <>
+              <div className="ss-layout-workspace">
+                <div className="ss-layout-workspace-main">
+                  <div className="ss-card">
+                    <h3 className="ss-form-block-title">Document layout</h3>
+                    {layoutConfig.hideLayoutPicker ? (
+                      <>
+                        <div className="ss-layout-current">
+                          <span className="ss-layout-current-badge">In use</span>
+                          <div className="ss-layout-current-copy">
+                            <strong className="ss-layout-current-name">{selectedLayout.label}</strong>
+                            <span className="ss-layout-current-meta">
+                              Active layout for
                               {' '}
-                              {selectedLayout.description}
+                              {layoutConfig.documentLabel}
+                              {' '}
+                              quotations and invoices
+                            </span>
+                          </div>
+                        </div>
+                        {selectedLayout.description ? (
+                          <p className="ss-field-help">{selectedLayout.description}</p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <>
+                        <div className="ss-layout-pills" role="radiogroup" aria-label="Document layout">
+                          {layoutOptions.map((option) => {
+                            const selected = !option.comingSoon && Number(selectedLayoutId) === Number(option.id);
+                            const teaserActive = layoutTeaser && Number(layoutTeaser.id) === Number(option.id);
+                            return (
+                              <button
+                                key={option.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={selected || Boolean(teaserActive)}
+                                aria-disabled={option.comingSoon || undefined}
+                                className={`ss-pill-choice${selected ? ' is-selected' : ''}${option.comingSoon ? ' is-coming-soon' : ''}${teaserActive ? ' is-teaser-active' : ''}`}
+                                onClick={() => handleLayoutSelect(activeTab, option)}
+                              >
+                                <span className="ss-pill-choice-label">{String(option.id)}</span>
+                                {option.comingSoon ? (
+                                  <span className="ss-pill-soon-badge">Soon</span>
+                                ) : selected ? (
+                                  <span className="ss-pill-choice-knob" aria-hidden="true" />
+                                ) : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="ss-field-help">
+                          {layoutTeaser ? (
+                            <>
+                              <strong>{layoutTeaser.label}</strong>
+                              {' '}
+                              layout is
+                              {' '}
+                              <span className="ss-coming-soon-inline">coming soon</span>
+                              .
                             </>
-                          ) : null}
-                        </>
-                      )}
-                    </p>
-                  </>
-                )}
-
-                {(!layoutConfig.hideLayoutPicker && layoutTeaser) ? null : layoutPreviewUrl && (
-                  <div className="ss-layout-preview-block">
-                    <div className="ss-layout-live-preview">
-                      <iframe
-                        key={`${activeTab}-${selectedLayoutId}`}
-                        title={`${selectedLayout.label} layout preview`}
-                        src={layoutPreviewUrl}
-                        className="ss-layout-preview-frame"
-                        loading="lazy"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="ss-layout-preview-open"
-                      onClick={() => openLayoutPreviewPopup(layoutPreviewUrl)}
-                    >
-                      Preview layout
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="ss-editor-layout">
-                <div className="ss-form-block">
-                  <h3 className="ss-form-block-title">Footer content</h3>
-                  <div className="ss-form-stack">
-                    <div className="ss-field ss-field--full">
-                      <label className="ss-field-label" htmlFor={`${fieldPrefix}_payment_details`}>Payment instructions</label>
-                      <textarea
-                        id={`${fieldPrefix}_payment_details`}
-                        name={`${fieldPrefix}_payment_details`}
-                        className="ss-field-input ss-field-textarea"
-                        rows={4}
-                        value={settings[`${fieldPrefix}_payment_details`] ?? ''}
-                        onChange={handleInputChange}
-                        placeholder="Enter bank names and account numbers..."
-                      />
-                    </div>
-
-                    <div className="ss-field ss-field--full">
-                      <label className="ss-field-label" htmlFor={`${fieldPrefix}_terms`}>Terms &amp; policy</label>
-                      <textarea
-                        id={`${fieldPrefix}_terms`}
-                        name={`${fieldPrefix}_terms`}
-                        className="ss-field-input ss-field-textarea"
-                        rows={4}
-                        value={settings[`${fieldPrefix}_terms`] ?? ''}
-                        onChange={handleInputChange}
-                        placeholder="Standard terms and conditions..."
-                      />
-                    </div>
-
-                    <div className="ss-form-grid">
-                      <div className="ss-field">
-                        <label className="ss-field-label" htmlFor={`${fieldPrefix}_validity`}>Quote validity</label>
-                        <input
-                          id={`${fieldPrefix}_validity`}
-                          name={`${fieldPrefix}_validity`}
-                          className="ss-field-input"
-                          value={settings[`${fieldPrefix}_validity`] ?? ''}
-                          onChange={handleInputChange}
-                          placeholder="e.g. Valid for 10 days"
-                        />
-                      </div>
-                      <div className="ss-field">
-                        <label className="ss-field-label" htmlFor={`${fieldPrefix}_thanks_note`}>Closing note</label>
-                        <input
-                          id={`${fieldPrefix}_thanks_note`}
-                          name={`${fieldPrefix}_thanks_note`}
-                          className="ss-field-input"
-                          value={settings[`${fieldPrefix}_thanks_note`] ?? ''}
-                          onChange={handleInputChange}
-                          placeholder={activeTab === 'settings' ? 'e.g. Thank you for your business' : 'e.g. Thank you for choosing Roadmaster'}
-                        />
-                      </div>
-                      <div className="ss-field ss-field--full">
-                        <label className="ss-field-label" htmlFor={`${fieldPrefix}_return_policy`}>Return policy</label>
-                        <input
-                          id={`${fieldPrefix}_return_policy`}
-                          name={`${fieldPrefix}_return_policy`}
-                          className="ss-field-input"
-                          value={settings[`${fieldPrefix}_return_policy`] ?? ''}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                    </div>
-
-                    {layoutConfig.showTruckRemarks && (
-                      <div className="ss-field ss-field--full">
-                        <label className="ss-field-label" htmlFor="truck_remarks">Truck remarks</label>
-                        <textarea
-                          id="truck_remarks"
-                          name="truck_remarks"
-                          className="ss-field-input ss-field-textarea"
-                          rows={4}
-                          value={settings.truck_remarks ?? ''}
-                          onChange={handleInputChange}
-                          placeholder="Appears on the second page of truck documents..."
-                        />
-                      </div>
+                          ) : (
+                            <>
+                              <strong>{selectedLayout.label}</strong>
+                              {' '}
+                              layout is active for
+                              {' '}
+                              {layoutConfig.documentLabel}
+                              {' '}
+                              documents.
+                              {selectedLayout.description ? (
+                                <>
+                                  {' '}
+                                  {selectedLayout.description}
+                                </>
+                              ) : null}
+                            </>
+                          )}
+                        </p>
+                      </>
                     )}
                   </div>
+
+                  <div className="ss-card">
+                    <h3 className="ss-form-block-title">Footer content</h3>
+                    <div className="ss-form-stack">
+                      <div className="ss-field ss-field--full">
+                        <label className="ss-field-label" htmlFor={`${fieldPrefix}_payment_details`}>Payment instructions</label>
+                        <textarea
+                          id={`${fieldPrefix}_payment_details`}
+                          name={`${fieldPrefix}_payment_details`}
+                          className="ss-field-input ss-field-textarea"
+                          rows={4}
+                          value={settings[`${fieldPrefix}_payment_details`] ?? ''}
+                          onChange={handleInputChange}
+                          placeholder="Enter bank names and account numbers..."
+                        />
+                      </div>
+
+                      <div className="ss-field ss-field--full">
+                        <label className="ss-field-label" htmlFor={`${fieldPrefix}_terms`}>Terms &amp; policy</label>
+                        <textarea
+                          id={`${fieldPrefix}_terms`}
+                          name={`${fieldPrefix}_terms`}
+                          className="ss-field-input ss-field-textarea"
+                          rows={4}
+                          value={settings[`${fieldPrefix}_terms`] ?? ''}
+                          onChange={handleInputChange}
+                          placeholder="Standard terms and conditions..."
+                        />
+                      </div>
+
+                      <div className="ss-form-grid">
+                        <div className="ss-field">
+                          <label className="ss-field-label" htmlFor={`${fieldPrefix}_validity`}>Quote validity</label>
+                          <input
+                            id={`${fieldPrefix}_validity`}
+                            name={`${fieldPrefix}_validity`}
+                            className="ss-field-input"
+                            value={settings[`${fieldPrefix}_validity`] ?? ''}
+                            onChange={handleInputChange}
+                            placeholder="e.g. Valid for 10 days"
+                          />
+                        </div>
+                        <div className="ss-field">
+                          <label className="ss-field-label" htmlFor={`${fieldPrefix}_thanks_note`}>Closing note</label>
+                          <input
+                            id={`${fieldPrefix}_thanks_note`}
+                            name={`${fieldPrefix}_thanks_note`}
+                            className="ss-field-input"
+                            value={settings[`${fieldPrefix}_thanks_note`] ?? ''}
+                            onChange={handleInputChange}
+                            placeholder={activeTab === 'settings' ? 'e.g. Thank you for your business' : 'e.g. Thank you for choosing Roadmaster'}
+                          />
+                        </div>
+                        <div className="ss-field ss-field--full">
+                          <label className="ss-field-label" htmlFor={`${fieldPrefix}_return_policy`}>Return policy</label>
+                          <input
+                            id={`${fieldPrefix}_return_policy`}
+                            name={`${fieldPrefix}_return_policy`}
+                            className="ss-field-input"
+                            value={settings[`${fieldPrefix}_return_policy`] ?? ''}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                      </div>
+
+                      {layoutConfig.showTruckRemarks && (
+                        <div className="ss-field ss-field--full">
+                          <label className="ss-field-label" htmlFor="truck_remarks">Truck remarks</label>
+                          <textarea
+                            id="truck_remarks"
+                            name="truck_remarks"
+                            className="ss-field-input ss-field-textarea"
+                            rows={4}
+                            value={settings.truck_remarks ?? ''}
+                            onChange={handleInputChange}
+                            placeholder="Appears on the second page of truck documents..."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="ss-preview-pane">
-                  <div className="ss-preview-label">Document footer preview</div>
-                  <div className="ss-mock-footer">
-                    <div className="ss-mock-payment-header">Payment details</div>
-                    <div className="ss-mock-payment-body">
-                      {settings[`${fieldPrefix}_payment_details`] || 'Select a payment method...'}
+                <aside className="ss-layout-workspace-aside">
+                  {(!layoutConfig.hideLayoutPicker && layoutTeaser) ? null : layoutPreviewUrl ? (
+                    <div className="ss-card ss-card--preview">
+                      <div className="ss-card-head">
+                        <h3 className="ss-form-block-title">Document preview</h3>
+                        <button
+                          type="button"
+                          className="ss-layout-preview-open"
+                          onClick={() => openLayoutPreviewPopup(layoutPreviewUrl)}
+                        >
+                          Open full
+                        </button>
+                      </div>
+                      <div className="ss-layout-live-preview ss-layout-live-preview--panel">
+                        <iframe
+                          key={`${activeTab}-${selectedLayoutId}`}
+                          title={`${selectedLayout.label} layout preview`}
+                          src={layoutPreviewUrl}
+                          className="ss-layout-preview-frame"
+                          loading="lazy"
+                        />
+                      </div>
+                      <p className="ss-preview-note">Shows the selected print layout</p>
                     </div>
-                    <div className="ss-mock-meta">
-                      <div>{settings[`${fieldPrefix}_terms`]}</div>
-                      <div className="ss-mock-meta-strong">{settings[`${fieldPrefix}_validity`]}</div>
-                    </div>
-                    <div className="ss-mock-thanks">
-                      {settings[`${fieldPrefix}_thanks_note`] || 'Thank you'}
-                      <div className="ss-mock-policy">
-                        {settings[`${fieldPrefix}_return_policy`]}
+                  ) : null}
+
+                  <div className="ss-card ss-preview-pane">
+                    <div className="ss-preview-label">Document footer preview</div>
+                    <div className="ss-mock-footer">
+                      <div className="ss-mock-payment-header">Payment details</div>
+                      <div className="ss-mock-payment-body">
+                        {settings[`${fieldPrefix}_payment_details`] || 'Select a payment method...'}
+                      </div>
+                      <div className="ss-mock-meta">
+                        <div>{settings[`${fieldPrefix}_terms`]}</div>
+                        <div className="ss-mock-meta-strong">{settings[`${fieldPrefix}_validity`]}</div>
+                      </div>
+                      <div className="ss-mock-thanks">
+                        {settings[`${fieldPrefix}_thanks_note`] || 'Thank you'}
+                        <div className="ss-mock-policy">
+                          {settings[`${fieldPrefix}_return_policy`]}
+                        </div>
                       </div>
                     </div>
+                    <div className="ss-preview-note">
+                      Preview updates as you type
+                    </div>
                   </div>
-                  <div className="ss-preview-note">
-                    Preview updates as you type
-                  </div>
-                </div>
+                </aside>
               </div>
             </section>
           )}

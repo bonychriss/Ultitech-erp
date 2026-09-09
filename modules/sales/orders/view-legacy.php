@@ -1289,7 +1289,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <div id="order-content">
         <?php 
         $layoutPath = function_exists('sales_branded_document_layout_inner_path')
-            ? sales_branded_document_layout_inner_path($isTruckOrder)
+            ? sales_branded_document_layout_inner_path($isTruckOrder, $company_settings, 'order')
             : null;
         if ($layoutPath !== null && file_exists($layoutPath)) {
             $invoice = $order;

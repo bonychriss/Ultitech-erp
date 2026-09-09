@@ -137,6 +137,9 @@ function sales_settings_sync_schema(PDO $pdo): void
         if (!in_array('document_footer_message', $columns, true)) {
             $missing[] = 'ADD COLUMN document_footer_message TEXT NULL';
         }
+        if (!in_array('invoice_remarks', $columns, true)) {
+            $missing[] = 'ADD COLUMN invoice_remarks TEXT NULL';
+        }
         if (!in_array('truck_remarks', $columns, true)) {
             $missing[] = 'ADD COLUMN truck_remarks TEXT NULL';
         }
@@ -419,6 +422,24 @@ function sales_settings_layout_catalog(): array
                 'id' => 1,
                 'label' => 'Standard',
                 'description' => 'Classic Ultimate invoice layout used on quotations and invoices.',
+                'comingSoon' => false,
+            ],
+            [
+                'id' => 2,
+                'label' => 'Classic',
+                'description' => 'Boxed table borders with structured sections.',
+                'comingSoon' => false,
+            ],
+            [
+                'id' => 3,
+                'label' => 'Minimalist',
+                'description' => 'Teal header with white typography and clear grid lines.',
+                'comingSoon' => false,
+            ],
+            [
+                'id' => 4,
+                'label' => 'Formal',
+                'description' => 'Soft header band with refined ruled product table.',
                 'comingSoon' => false,
             ],
         ],

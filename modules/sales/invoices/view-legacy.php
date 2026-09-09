@@ -1521,7 +1521,7 @@ if ($brandingLogoUrl === '' && !empty($company_settings['company_logo'])) {
         <div id="invoice-content">
         <?php 
         $layoutPath = function_exists('sales_branded_document_layout_inner_path')
-            ? sales_branded_document_layout_inner_path($isTruckOrder)
+            ? sales_branded_document_layout_inner_path($isTruckOrder, $company_settings, 'invoice')
             : null;
         if ($layoutPath !== null && file_exists($layoutPath)) {
             include $layoutPath;

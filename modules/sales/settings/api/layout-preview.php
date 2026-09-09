@@ -29,9 +29,9 @@ $settings[$layoutField] = $layoutId;
 
 $isTruck = $type === 'truck';
 $layoutPath = function_exists('sales_branded_document_layout_inner_path')
-    ? sales_branded_document_layout_inner_path($isTruck)
+    ? sales_branded_document_layout_inner_path($isTruck, $settings, 'invoice')
     : null;
-if ($layoutPath === null && function_exists('isUltimate') && isUltimate()) {
+if ($layoutPath === null) {
     $layoutPath = function_exists('sales_standard_document_view_inner_path')
         ? sales_standard_document_view_inner_path('invoice')
         : null;

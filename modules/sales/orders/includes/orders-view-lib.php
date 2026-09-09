@@ -457,7 +457,7 @@ function salesOrderViewRenderDocumentHtml(
     ob_start();
     echo '<div id="order-content">';
     $layoutPath = function_exists('sales_branded_document_layout_inner_path')
-        ? sales_branded_document_layout_inner_path($isTruckOrder)
+        ? sales_branded_document_layout_inner_path($isTruckOrder, $company_settings, 'order')
         : null;
     if ($layoutPath !== null && is_file($layoutPath)) {
         include $layoutPath;

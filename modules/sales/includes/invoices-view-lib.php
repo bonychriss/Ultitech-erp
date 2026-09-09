@@ -354,7 +354,7 @@ function salesInvoiceViewRenderDocumentHtml(
     ob_start();
     echo '<div id="invoice-content">';
     $layoutPath = function_exists('sales_branded_document_layout_inner_path')
-        ? sales_branded_document_layout_inner_path($isTruckOrder)
+        ? sales_branded_document_layout_inner_path($isTruckOrder, $company_settings, 'invoice')
         : null;
     if ($layoutPath !== null && is_file($layoutPath)) {
         include $layoutPath;

@@ -9,7 +9,7 @@ if (!isset($document_footer_closing)) {
     $document_footer_closing = true;
 }
 
-$layout = $company_settings['spare_part_layout'] ?? 1;
+$layout = (int) ($company_settings['spare_part_layout'] ?? 1);
 $headerBg = ($layout == 2 || $layout == 1) ? '#dbd7d2' : '#003366'; // Stone for Layout 1 & 2, Dark Blue for Layout 3
 $headerColor = ($layout == 3) ? '#fff' : '#000'; // White text for Layout 3, Black for others
 
@@ -20,6 +20,16 @@ $tdBorder = ($layout == 1) ? 'none' : '1px solid #000';
 $tdVerticalBorder = ($layout == 1) ? 'none' : '2px solid #000';
 // Visible line between each product row (layout 2/3 had none before; layout 1 was too faint on white/PDF).
 $rowSeparator = ($layout == 1) ? '1px solid #9e9e9e' : '1px solid #000';
+
+if ($layout === 4) {
+    $headerBg = '#e8eef2';
+    $headerColor = '#0f172a';
+    $tableBorder = '1px solid #94a3b8';
+    $thBorder = '1px solid #64748b';
+    $tdBorder = '1px solid #cbd5e1';
+    $tdVerticalBorder = '1px solid #94a3b8';
+    $rowSeparator = '1px solid #cbd5e1';
+}
 
 $isRoadmaster = isRoadmaster();
 $brandNavy = '#0D2A4A';
@@ -44,6 +54,10 @@ $docBrandAccent = (string) ($docBrand['accent'] ?? $brandYellow);
 if (!$isRoadmasterBrand && (int) $layout === 3) {
     $headerBg = '#008784';
     $headerColor = '#fff';
+}
+if (!$isRoadmasterBrand && (int) $layout === 4) {
+    $headerBg = '#eef6f6';
+    $headerColor = '#0f172a';
 }
 
 $spareDualMoney = null;

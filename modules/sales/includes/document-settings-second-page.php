@@ -53,10 +53,10 @@ $brandingLogoUrl = $brandingLogoUrl ?? (function_exists('getCompanyLogoUrl') ? g
         <?php foreach ($sections as $section): ?>
             <div class="doc-terms-section" style="margin-bottom: 18px; page-break-inside: avoid;">
                 <div style="font-weight: 700; font-size: 10pt; text-transform: uppercase; color: #111827; margin-bottom: 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">
-                    <?= htmlspecialchars($section['title']) ?>
+                    <?= htmlspecialchars((string) ($section['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
                 </div>
                 <div style="white-space: pre-wrap; color: #374151; line-height: 1.55; font-size: 10pt;">
-                    <?= nl2br(htmlspecialchars($section['body'])) ?>
+                    <?= nl2br(htmlspecialchars((string) ($section['body'] ?? ''), ENT_QUOTES, 'UTF-8')) ?>
                 </div>
             </div>
         <?php endforeach; ?>

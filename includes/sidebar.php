@@ -651,7 +651,7 @@ if (!function_exists('sidebar_link_is_current')) {
         ?>
         <li class="nav-item">
             <a href="<?php echo $isCategoryHub ? '#' : $item['path']; ?>"
-               class="nav-link <?php echo $activeClass; ?><?= $isCategoryHub ? ' sidebar-parent-toggle d-flex align-items-center' : '' ?><?= $isCategoryHub && $categoryChildrenOpen ? ' is-open' : '' ?>"
+               class="nav-link <?php echo $activeClass; ?><?= $isCategoryHub ? ' sidebar-parent-toggle d-flex align-items-center' : '' ?><?= $isCategoryHub && $categoryChildrenOpen ? ' is-open' : '' ?><?= (($active_module ?? '') === 'letter' && ($item['id'] ?? '') === 'inbox') ? ' letter-inbox-nav' : '' ?>"
                aria-current="<?php echo $isActive ? 'page' : 'false'; ?>"
                <?= $isCategoryHub ? 'onclick="toggleSidebarSubmenu(this); return false;"' : '' ?>>
                 <i class="<?php echo $iconClass; ?> me-2" style="width: 20px; text-align: center;"></i>
@@ -821,6 +821,23 @@ if (!function_exists('sidebar_link_is_current')) {
         background: #7c3aed;
         flex-shrink: 0;
         opacity: 0.75;
+    }
+    .letter-inbox-nav > i {
+        position: relative;
+    }
+    .letter-inbox-nav.has-inbox-mail > i::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        right: -4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #22c55e;
+        border: 2px solid #fff;
+        box-sizing: content-box;
+        pointer-events: none;
+        z-index: 1;
     }
     ul.nav .sidebar-nested-under-category:hover .sidebar-nested-dot,
     ul.nav .sidebar-nested-under-category.active .sidebar-nested-dot {

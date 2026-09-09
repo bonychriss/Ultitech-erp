@@ -46,6 +46,12 @@ export default function LetterInboxPage() {
     ensureDotLottiePlayer();
   }, []);
 
+  useEffect(() => {
+    if (typeof window.updateLetterInboxNavDot === 'function') {
+      window.updateLetterInboxNavDot();
+    }
+  }, [letters]);
+
   const handleOpen = (id) => {
     window.location.href = composeHref(cfg, id);
   };

@@ -136,6 +136,23 @@ export function listInboxLetters(cfg = readLetterCfg()) {
   );
 }
 
+export function syncLetterInboxNavDot(cfg = readLetterCfg()) {
+  if (typeof document === 'undefined') return;
+  const hasMail = listInboxLetters(cfg).length > 0;
+  if (typeof window !== 'undefined' && typeof window.updateLetterInboxNavDot === 'function') {
+    try {
+      window.updateLetterInboxNavDot();
+      return;
+    } catch {
+      /* fall through */
+    }
+  }
+  document.querySelectorAll('a.letter-inbox-nav, a.nav-link[href*="modules/letter/inbox"]').forEach((el) => {
+    el.classList.add('letter-inbox-nav');
+    el.classList.toggle('has-inbox-mail', hasMail);
+  });
+}
+
 function syncInboxLetter(letter, cfg) {
   const key = inboxStorageKey(cfg);
   const letters = readLibrary(key);

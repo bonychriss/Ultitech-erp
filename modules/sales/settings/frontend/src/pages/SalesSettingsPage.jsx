@@ -12,7 +12,7 @@ function getSettingsTabs(init) {
   if (init?.is_ultimate) {
     return [
       { key: 'financials', label: 'Tax & Finance' },
-      { key: 'settings', label: 'Settings' },
+      { key: 'settings', label: 'Document layout' },
     ];
   }
 
@@ -350,11 +350,6 @@ export default function SalesSettingsPage() {
 
   return (
     <div className="exp-create-shell ss-settings-shell">
-      <header className="ss-page-intro">
-        <h1 className="ss-page-title">Sales settings</h1>
-        <p className="ss-page-lead">Tax, currency, and document footer content for quotations and invoices.</p>
-      </header>
-
       <nav className="ss-settings-nav" aria-label="Settings sections">
         <ul>
           {settingsTabs.map((tab) => (
@@ -677,30 +672,27 @@ export default function SalesSettingsPage() {
                 </div>
 
                 <aside className="ss-layout-workspace-aside">
-                  {(!layoutConfig.hideLayoutPicker && layoutTeaser) ? null : layoutPreviewUrl ? (
+                  {(!layoutConfig.hideLayoutPicker && layoutTeaser) ? null : (
                     <div className="ss-card ss-card--preview">
                       <div className="ss-card-head">
                         <h3 className="ss-form-block-title">Document preview</h3>
-                        <button
-                          type="button"
-                          className="ss-layout-preview-open"
-                          onClick={() => openLayoutPreviewPopup(layoutPreviewUrl)}
-                        >
-                          Open full
-                        </button>
                       </div>
-                      <div className="ss-layout-live-preview ss-layout-live-preview--panel">
-                        <iframe
-                          key={`${activeTab}-${selectedLayoutId}`}
-                          title={`${selectedLayout.label} layout preview`}
-                          src={layoutPreviewUrl}
-                          className="ss-layout-preview-frame"
-                          loading="lazy"
-                        />
+                      <div className="ss-layout-live-preview ss-layout-live-preview--panel ss-layout-live-preview--soon">
+                        <div className="ss-coming-soon-card" role="status">
+                          <div className="ss-coming-soon-orbit" aria-hidden="true">
+                            <span />
+                            <span />
+                            <span />
+                          </div>
+                          <div className="ss-coming-soon-shimmer" aria-hidden="true" />
+                          <div className="ss-coming-soon-copy">
+                            <strong>Coming soon</strong>
+                            <p>Live document preview will appear here.</p>
+                          </div>
+                        </div>
                       </div>
-                      <p className="ss-preview-note">Shows the selected print layout</p>
                     </div>
-                  ) : null}
+                  )}
 
                   <div className="ss-card ss-preview-pane">
                     <div className="ss-preview-label">Document footer preview</div>

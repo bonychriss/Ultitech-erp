@@ -613,6 +613,11 @@ function sales_settings_init_data(): array
         ],
         'assets' => [
             'imagesBase' => $imagesBase,
+            'docPreviewSample' => function_exists('sales_app_url')
+                ? sales_app_url('/modules/sales/settings/assets/doc-preview-sample.png')
+                : (function_exists('app_url')
+                    ? app_url('/modules/sales/settings/assets/doc-preview-sample.png')
+                    : '/modules/sales/settings/assets/doc-preview-sample.png'),
         ],
     ];
 }

@@ -674,7 +674,7 @@ switch ($active_module) {
 
     case 'letter':
         addItem($menuItems, 'letters', 'Letters', 'envelope', $prefix . 'modules/letter/index.php?module=letter');
-        addItem($menuItems, 'inbox', 'Inbox', 'inbox', $prefix . 'modules/letter/inbox.php?module=letter');
+        addItem($menuItems, 'inbox', 'Inbox', 'inbox', $prefix . 'modules/letter/inbox.php?module=letter', null, 'letter-inbox-nav');
         $__letterSlug = strtolower(trim((string) ($_SESSION['company_slug'] ?? $currentSlug ?? '')));
         if ($__letterSlug === 'ultimate') {
             addItem($menuItems, 'stamp', 'Stamp', 'postage', $prefix . 'modules/letter/stamp.php?module=letter');
@@ -1271,6 +1271,36 @@ if (!isset($_GET['print'])) {
     body.sidebar-collapsed #native-sidebar .text-muted, 
     body.sidebar-collapsed #native-sidebar .badge {
         display: none !important;
+    }
+
+    .letter-inbox-nav > i.bi,
+    .letter-inbox-nav > i.fas,
+    .letter-inbox-nav > i.fa {
+        position: relative;
+    }
+
+    .letter-inbox-nav.has-inbox-mail > i.bi::after,
+    .letter-inbox-nav.has-inbox-mail > i.fas::after,
+    .letter-inbox-nav.has-inbox-mail > i.fa::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        right: -4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #22c55e;
+        border: 2px solid #fff;
+        box-sizing: content-box;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    body.sidebar-collapsed .letter-inbox-nav.has-inbox-mail > i.bi::after,
+    body.sidebar-collapsed .letter-inbox-nav.has-inbox-mail > i.fas::after,
+    body.sidebar-collapsed .letter-inbox-nav.has-inbox-mail > i.fa::after {
+        top: -1px;
+        right: -2px;
     }
     
     body.sidebar-collapsed #native-sidebar .nav-link {
@@ -2221,6 +2251,58 @@ if (!isset($_GET['print'])) {
             title: message
         });
     }
+
+    (function letterInboxNavDot() {
+        function readLibrary(key) {
+            try {
+                var raw = window.localStorage.getItem(key);
+                if (!raw) return [];
+                var parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed.filter(function (row) {
+                    return row && typeof row === 'object' && row.id;
+                }) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function hasInboxLetters() {
+            var cfg = window.__LETTER_CFG__ || {};
+            var slug = String(cfg.companySlug || '').trim() || 'company';
+            var me = Number((cfg.user && cfg.user.id) || 0) || 0;
+            var publicOnes = readLibrary('letter-inbox:v1:' + slug).filter(function (row) {
+                var vis = String(row.visibility || 'private').toLowerCase() === 'public';
+                if (!vis) return false;
+                if (me <= 0) return true;
+                return Number(row.authorId || 0) !== me;
+            });
+            var directOnes = readLibrary('letter-direct:v1:' + slug).filter(function (row) {
+                return me > 0 && Number(row.toUserId || 0) === me;
+            });
+            return publicOnes.length > 0 || directOnes.length > 0;
+        }
+
+        function update() {
+            var on = hasInboxLetters();
+            document.querySelectorAll('a.letter-inbox-nav, a.nav-link[href*="modules/letter/inbox"]').forEach(function (el) {
+                el.classList.add('letter-inbox-nav');
+                el.classList.toggle('has-inbox-mail', on);
+            });
+        }
+
+        window.updateLetterInboxNavDot = update;
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', update);
+        } else {
+            update();
+        }
+        window.addEventListener('storage', function (event) {
+            if (!event.key) return;
+            if (event.key.indexOf('letter-inbox:') === 0 || event.key.indexOf('letter-direct:') === 0) {
+                update();
+            }
+        });
+    })();
 
     <?php if (isset($_SESSION['flash_message'])): ?>
         showToast('<?= $_SESSION['flash_type'] ?? 'info' ?>', '<?= addslashes($_SESSION['flash_message']) ?>');

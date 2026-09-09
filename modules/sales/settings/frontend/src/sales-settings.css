@@ -736,6 +736,17 @@ html[data-theme="dark"] body.page-sales-settings .ss-layout-current-meta {
   pointer-events: none;
 }
 
+.ss-layout-preview-shot {
+  width: 100%;
+  height: auto;
+  max-height: 520px;
+  object-fit: contain;
+  object-position: top center;
+  display: block;
+  background: #fff;
+  border-radius: 8px;
+}
+
 .ss-layout-preview-open {
   padding: 0.55rem 1.25rem;
   border-radius: 9999px !important;

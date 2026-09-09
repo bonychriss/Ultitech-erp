@@ -37,6 +37,11 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
     onChange(key, value);
   };
 
+  const headerSrc = line(doc.letterheadHeaderUrl) || headerArt;
+  const footerSrc = line(doc.letterheadFooterUrl) || footerArt;
+  const stampSrc = line(doc.stampUrl) || line(doc.stampPreviewUrl) || ultimateStamp;
+  const showStamp = Boolean(doc.showStamp ?? doc.showUltimateStamp);
+
   const subjectRaw = String(doc.subject ?? '');
   const refValue = !subjectRaw
     ? ''
@@ -63,7 +68,7 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
   return (
     <article className={`lh-page lh-page--template${editable ? ' is-editable' : ''}`}>
       <header className="lh-template-header">
-        <img src={headerArt} alt="" className="lh-template-banner" />
+        <img src={headerSrc} alt="" className="lh-template-banner" />
       </header>
 
       <div className="lh-content lh-content--template">
@@ -240,11 +245,11 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
               <div className="lh-sign-title">{signTitle}</div>
             </>
           )}
-          {doc.showUltimateStamp ? (
+          {showStamp ? (
             <div className="lh-stamp-wrap">
               <img
-                src={ultimateStamp}
-                alt="Ultimate General Trading stamp"
+                src={stampSrc}
+                alt="Company stamp"
                 className="lh-stamp"
               />
             </div>
@@ -256,7 +261,7 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
         <div className="lh-page-number" aria-hidden="true">
           Page <span className="lh-page-number-current" /> of <span className="lh-page-number-total" />
         </div>
-        <img src={footerArt} alt="" className="lh-template-banner" />
+        <img src={footerSrc} alt="" className="lh-template-banner" />
       </footer>
     </article>
   );

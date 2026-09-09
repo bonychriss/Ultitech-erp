@@ -189,6 +189,11 @@ export default function ComposeLetterPage() {
   const doc = {
     ...form,
     showUltimateStamp: Boolean(cfg.showUltimateStamp || cfg.isUltimateCompany),
+    showStamp: Boolean(cfg.showStamp || cfg.showUltimateStamp || cfg.isUltimateCompany || cfg.isRoadmasterCompany),
+    stampUrl: cfg.stampPreviewUrl || '',
+    stampPreviewUrl: cfg.stampPreviewUrl || '',
+    letterheadHeaderUrl: cfg.letterheadHeaderUrl || '',
+    letterheadFooterUrl: cfg.letterheadFooterUrl || '',
     signatureUrl,
   };
 

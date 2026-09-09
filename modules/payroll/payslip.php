@@ -224,19 +224,25 @@ foreach ($fromLines as $line) {
 }
 $fromLines = $deduped;
 
-$letterheadHeaderUrl = function_exists('app_url')
-    ? rtrim((string) app_url('/letterhead/header.png'), '/')
-    : ($baseUrl . '/letterhead/header.png');
-$letterheadFooterUrl = function_exists('app_url')
-    ? rtrim((string) app_url('/letterhead/footer.png'), '/')
-    : ($baseUrl . '/letterhead/footer.png');
-$headerFs = dirname(__DIR__, 2) . '/letterhead/header.png';
-$footerFs = dirname(__DIR__, 2) . '/letterhead/footer.png';
-if (is_file($headerFs)) {
-    $letterheadHeaderUrl .= (strpos($letterheadHeaderUrl, '?') === false ? '?' : '&') . 'v=' . (int) filemtime($headerFs);
+if (!function_exists('letterheadResolveForCompany')) {
+    require_once dirname(__DIR__, 2) . '/includes/letterhead.php';
 }
-if (is_file($footerFs)) {
-    $letterheadFooterUrl .= (strpos($letterheadFooterUrl, '?') === false ? '?' : '&') . 'v=' . (int) filemtime($footerFs);
+$letterhead = letterheadResolveForCompany(
+    (string) ($_SESSION['company_slug'] ?? ($_GET['company_slug'] ?? '')),
+    $companyName
+);
+$letterheadHeaderUrl = (string) ($letterhead['headerUrl'] ?? '');
+$letterheadFooterUrl = (string) ($letterhead['footerUrl'] ?? '');
+$stampUrl = !empty($letterhead['showStamp']) ? (string) ($letterhead['stampUrl'] ?? '') : '';
+if ($letterheadHeaderUrl === '') {
+    $letterheadHeaderUrl = function_exists('app_url')
+        ? rtrim((string) app_url('/letterhead/header.png'), '/')
+        : ($baseUrl . '/letterhead/header.png');
+}
+if ($letterheadFooterUrl === '') {
+    $letterheadFooterUrl = function_exists('app_url')
+        ? rtrim((string) app_url('/letterhead/footer.png'), '/')
+        : ($baseUrl . '/letterhead/footer.png');
 }
 
 $periodLabel = date('F Y', mktime(0, 0, 0, (int) $slip['month'], 1, (int) $slip['year']));
@@ -293,26 +299,6 @@ if ($runnerPosition === '') {
     } elseif ($roleRaw !== '' && $roleRaw !== 'employee') {
         $runnerPosition = ucwords(str_replace('_', ' ', $roleRaw));
     }
-}
-
-$stampUrl = '';
-$stampCandidates = [
-    'letterhead/stamps/ultimate-stamp-white.png',
-    'letterhead/stamps/ultimate-stamp-upright.png',
-    'letterhead/stamps/ultimate-stamp-cutout.png',
-    'modules/letter/frontend/src/assets/ultimate-stamp.png',
-];
-$appRootFs = dirname(__DIR__, 2);
-foreach ($stampCandidates as $stampRel) {
-    $stampFs = $appRootFs . '/' . $stampRel;
-    if (!is_file($stampFs)) {
-        continue;
-    }
-    $stampUrl = function_exists('app_url')
-        ? rtrim((string) app_url('/' . $stampRel), '/')
-        : ($baseUrl . '/' . $stampRel);
-    $stampUrl .= (strpos($stampUrl, '?') === false ? '?' : '&') . 'v=' . (int) filemtime($stampFs);
-    break;
 }
 
 $bankName = trim((string) ($slip['bank_name'] ?? ''));

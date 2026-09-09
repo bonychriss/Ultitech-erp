@@ -137,28 +137,43 @@ function letterBuildClientCfg(array $erp = []): array
     $website = trim((string) ($settings['company_website'] ?? $settings['website'] ?? ''));
     $address = trim((string) ($settings['company_address'] ?? $settings['address'] ?? ''));
     $tagline = trim((string) ($settings['company_tagline'] ?? $settings['tagline'] ?? ''));
-    // Ultimate letterhead yellow (matches LETTER HEAD template).
-    $accent = '#FBC51C';
+
+    $slug = strtolower(trim((string) ($erp['company_slug'] ?? ($_SESSION['company_slug'] ?? ''))));
+    if (!function_exists('letterheadResolveForCompany')) {
+        require_once dirname(__DIR__, 3) . '/includes/letterhead.php';
+    }
+    $letterhead = letterheadResolveForCompany($slug, $companyName);
+    $accent = (string) ($letterhead['accentColor'] ?? '#FBC51C');
+    $defaults = is_array($letterhead['defaults'] ?? null) ? $letterhead['defaults'] : [];
 
     $userId = (int) ($erp['user_id'] ?? ($_SESSION['user_id'] ?? 0));
     $userName = trim((string) ($erp['full_name'] ?? $_SESSION['full_name'] ?? ''));
     $userTitle = trim((string) ($erp['department'] ?? $_SESSION['department'] ?? $_SESSION['job_title'] ?? ''));
     if ($phone === '') {
-        $phone = '+255 755 282 861';
+        $phone = (string) ($defaults['phone'] ?? '+255 755 282 861');
     }
     if ($email === '') {
-        $email = 'sales@ultimate.co.tz';
+        $email = (string) ($defaults['email'] ?? 'sales@ultimate.co.tz');
     }
     if ($website === '') {
-        $website = 'www.ultimate.co.tz';
+        $website = (string) ($defaults['website'] ?? 'www.ultimate.co.tz');
     }
     if ($address === '') {
-        $address = 'House No.14, Atisoko Street, Mikocheni B. P.O. Box 78004, Dar Es Salaam, TZ';
+        $address = (string) ($defaults['address'] ?? 'House No.14, Atisoko Street, Mikocheni B. P.O. Box 78004, Dar Es Salaam, TZ');
+    }
+    if ($tagline === '' && !empty($defaults['tagline'])) {
+        $tagline = (string) $defaults['tagline'];
+    }
+    if (($companyName === '' || $companyName === 'Company Name') && !empty($defaults['companyName'])) {
+        $companyName = (string) $defaults['companyName'];
     }
 
-    $slug = strtolower(trim((string) ($erp['company_slug'] ?? ($_SESSION['company_slug'] ?? ''))));
-    $isUltimate = ($slug === 'ultimate')
-        || (stripos($companyName, 'ultimate general') !== false);
+    $isUltimate = !empty($letterhead['isUltimate']);
+    $isRoadmaster = !empty($letterhead['isRoadmaster']);
+    $showStamp = !empty($letterhead['showStamp']);
+    $stampPreviewUrl = (string) ($letterhead['stampUrl'] ?? '');
+    $letterheadHeaderUrl = (string) ($letterhead['headerUrl'] ?? '');
+    $letterheadFooterUrl = (string) ($letterhead['footerUrl'] ?? '');
 
     $signatureUrl = '';
     if ($userId > 0 && function_exists('getUserSignaturePathById')) {
@@ -180,7 +195,6 @@ function letterBuildClientCfg(array $erp = []): array
     }
 
     $editorUrl = '';
-    $stampPreviewUrl = '';
     $listUrl = '';
     $composeUrl = '';
     $inboxUrl = '';
@@ -188,13 +202,6 @@ function letterBuildClientCfg(array $erp = []): array
     if (function_exists('app_url')) {
         $editorUrl = rtrim((string) app_url('/3D/dist/'), '/') . '/';
         $emptyAnimationUrl = rtrim((string) app_url('/assets/animations/nothing.lottie'), '/');
-        if ($isUltimate) {
-            $stampPreviewUrl = rtrim((string) app_url('/letterhead/stamps/ultimate-stamp-white.png'), '/');
-            $stampVer = @filemtime(dirname(__DIR__, 3) . '/letterhead/stamps/ultimate-stamp-white.png')
-                ?: @filemtime(__DIR__ . '/../frontend/src/assets/ultimate-stamp.png')
-                ?: time();
-            $stampPreviewUrl .= '?v=' . (int) $stampVer;
-        }
     }
     if ($emptyAnimationUrl === '') {
         $emptyAnimationUrl = '/assets/animations/nothing.lottie';
@@ -226,9 +233,13 @@ function letterBuildClientCfg(array $erp = []): array
         'inboxUrl' => $inboxUrl,
         'emptyAnimationUrl' => $emptyAnimationUrl,
         'isUltimateCompany' => $isUltimate,
-        'showUltimateStamp' => $isUltimate,
+        'isRoadmasterCompany' => $isRoadmaster,
+        'showUltimateStamp' => $isUltimate && $showStamp,
+        'showStamp' => $showStamp,
         'stampEditorUrl' => $editorUrl,
         'stampPreviewUrl' => $stampPreviewUrl,
+        'letterheadHeaderUrl' => $letterheadHeaderUrl,
+        'letterheadFooterUrl' => $letterheadFooterUrl,
         'signatureUrl' => $signatureUrl,
         'employees' => $employees,
         'branding' => [
@@ -240,7 +251,9 @@ function letterBuildClientCfg(array $erp = []): array
             'website' => $website,
             'address' => $address,
             'accentColor' => $accent,
-            'accentShades' => ['#F7E08A', '#E6B800', '#C9A227', '#8B6914'],
+            'accentShades' => $isRoadmaster
+                ? ['#5BB8B5', '#008784', '#066B68', '#0D2A4A']
+                : ['#F7E08A', '#E6B800', '#C9A227', '#8B6914'],
         ],
         'user' => [
             'id' => $userId,

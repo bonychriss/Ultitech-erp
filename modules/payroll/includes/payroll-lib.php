@@ -18,9 +18,50 @@ function payrollDeskBootstrap(): PDO
     return $pdo;
 }
 
+function payrollDeskIsApiRequest(): bool
+{
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    if (strpos($script, '/modules/payroll/api/') !== false) {
+        return true;
+    }
+    $accept = strtolower((string) ($_SERVER['HTTP_ACCEPT'] ?? ''));
+    if (strpos($accept, 'application/json') !== false) {
+        return true;
+    }
+    $requestedWith = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    return $requestedWith === 'xmlhttprequest';
+}
+
+function payrollDeskJsonExit(int $status, string $error): void
+{
+    if (!headers_sent()) {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode(['error' => $error], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 function payrollDeskRequireAccess(): void
 {
     payrollDeskBootstrap();
+
+    if (payrollDeskIsApiRequest()) {
+        if (!function_exists('isLoggedIn') || !isLoggedIn()) {
+            payrollDeskJsonExit(401, 'Not logged in. Please sign in again.');
+        }
+        $reqSlug = function_exists('getRequestedCompanySlug') ? strtolower(trim(getRequestedCompanySlug())) : '';
+        $sessionSlug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+        if ($reqSlug !== '' && $sessionSlug !== '' && $reqSlug !== $sessionSlug) {
+            payrollDeskJsonExit(401, 'Company session mismatch. Please sign in again.');
+        }
+        if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
+            $_GET['module'] = 'payroll';
+        }
+        $_SESSION['active_module'] = 'payroll';
+        return;
+    }
+
     requireLogin();
 
     if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
@@ -34,8 +75,15 @@ function payrollDeskRequireFinanceOrAdmin(): void
     payrollDeskRequireAccess();
 
     if (!isFinanceOrAdmin()) {
+        if (payrollDeskIsApiRequest()) {
+            payrollDeskJsonExit(403, 'Finance or admin access required.');
+        }
         $q = array_merge($_GET ?: [], ['module' => 'payroll']);
-        header('Location: my_payslips.php?' . http_build_query($q));
+        unset($q['desk']);
+        $target = function_exists('app_url')
+            ? app_url('/modules/payroll/my_payslips.php')
+            : 'my_payslips.php';
+        header('Location: ' . $target . '?' . http_build_query($q));
         exit;
     }
 }

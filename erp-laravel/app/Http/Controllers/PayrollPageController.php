@@ -16,9 +16,11 @@ class PayrollPageController extends Controller
     {
         $erp = $request->attributes->get('erp') ?? [];
 
-        $apiBase = function_exists('app_url')
-            ? rtrim((string) app_url('/modules/payroll/api'), '/')
-            : '/public_html/modules/payroll/api';
+        $apiBase = function_exists('company_url')
+            ? rtrim((string) company_url('modules/payroll/api', (string) ($erp['company_slug'] ?? '')), '/')
+            : (function_exists('app_url')
+                ? rtrim((string) app_url('/modules/payroll/api'), '/')
+                : '/public_html/modules/payroll/api');
 
         $viewData = (new PayrollShell())->viewData([
             'apiBase' => $apiBase,

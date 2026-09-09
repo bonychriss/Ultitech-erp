@@ -22,7 +22,10 @@ async function parseJson(response) {
 }
 
 export async function fetchDeskInit() {
-  const res = await fetch(`${getApiBase()}/desk-init.php`, { credentials: 'same-origin' });
+  const res = await fetch(`${getApiBase()}/desk-init.php`, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
   const data = await parseJson(res);
   if (!res.ok || data.error) {
     throw new Error(data.error || `Request failed (${res.status})`);

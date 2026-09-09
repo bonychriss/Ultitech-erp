@@ -42,9 +42,11 @@ class PayrollDeskPageController extends Controller
         $erp = $request->attributes->get('erp') ?? [];
         $meta = DeskShell::reactDesks()[$desk];
 
-        $apiBase = function_exists('app_url')
-            ? rtrim((string) app_url('/modules/payroll/api'), '/')
-            : '/public_html/modules/payroll/api';
+        $apiBase = function_exists('company_url')
+            ? rtrim((string) company_url('modules/payroll/api', (string) ($erp['company_slug'] ?? '')), '/')
+            : (function_exists('app_url')
+                ? rtrim((string) app_url('/modules/payroll/api'), '/')
+                : '/public_html/modules/payroll/api');
 
         $payslipId = (int) ($request->query('id') ?: ($erp['payslip_id'] ?? 0));
         $payslipMeta = null;

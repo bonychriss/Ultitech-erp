@@ -6,6 +6,12 @@ require_once __DIR__ . '/../../../includes/config.php';
 require_once __DIR__ . '/../../../includes/functions.php';
 
 if (!isset($pdo)) {
+    if (PHP_SAPI !== 'cli' && strpos(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '')), '/modules/payroll/api/') !== false) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['error' => 'Database connection failed.']);
+        exit;
+    }
     die('Database connection failed.');
 }
 

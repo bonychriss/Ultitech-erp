@@ -1088,6 +1088,7 @@ function payrollDeskGetPayslipViewMeta(PDO $pdo, int $payslipId): array
         'embedUrl' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString([
             'id' => $payslipId,
             'embed' => 1,
+            'v' => (string) (@filemtime(__DIR__ . '/../payslip.php') ?: time()),
         ]),
     ];
 }

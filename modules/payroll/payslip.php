@@ -8,10 +8,13 @@ $id = intval($_GET['id']);
 
 // Fetch Payslip Data
 $stmt = $pdo->prepare("
-    SELECT p.*, pr.month, pr.year, pr.run_date, pr.run_by, 
+    SELECT p.*, pr.month, pr.year, pr.run_date, pr.run_by,
            u.full_name, u.email, u.role, u.department,
            es.bank_name, es.account_number, es.nssf_number, es.tin_number,
-           runner.full_name as runner_name, runner.role as runner_role
+           runner.full_name as runner_name,
+           runner.department as runner_department,
+           runner.role as runner_role,
+           runner.signature_path as runner_signature_path
     FROM " . payroll_table('payslips') . " p
     JOIN " . payroll_table('payroll_runs') . " pr ON p.payroll_run_id = pr.id
     JOIN users u ON p.user_id = u.id
@@ -44,6 +47,12 @@ if (!isFinanceOrAdmin() && !$is_owner) {
 
 $isPrintMode = isset($_GET['print_mode']);
 $isEmbed = isset($_GET['embed']) && !$isPrintMode;
+
+if ($isEmbed || $isPrintMode || isset($_GET['download'])) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
 
 /**
  * Prefer Admin → Company Settings (companies row + company_settings KV).
@@ -128,23 +137,92 @@ $isDownload = isset($_GET['download']);
 $companyBox = $pickCompanyValue(['po_box', 'postal_box', 'p_o_box', 'box']);
 $companyCity = $pickCompanyValue(['city', 'company_city']);
 $companyCountry = $pickCompanyValue(['country', 'company_country']);
-if ($companyCity !== '' && $companyCountry !== '') {
-    $companyCityLine = strtoupper($companyCity . ', ' . $companyCountry . '.');
-} elseif ($companyAddress !== '') {
-    $companyCityLine = strtoupper($companyAddress);
-} else {
-    $companyCityLine = '';
+$companyStreet = $pickCompanyValue(['street', 'street_address', 'physical_address']);
+
+// Build right-aligned from-block lines (letterhead style: one item per line).
+$fromLines = [];
+$companyNameLine = strtoupper(trim($companyName));
+if ($companyNameLine !== '') {
+    if (substr($companyNameLine, -1) !== ',') {
+        $companyNameLine .= ',';
+    }
+    $fromLines[] = $companyNameLine;
 }
-$companyBoxLine = $companyBox !== ''
-    ? strtoupper(preg_match('/^\s*p\.?\s*o\.?\s*box/i', $companyBox) ? $companyBox : ('P.O.BOX ' . $companyBox))
-    : '';
-if ($companyBoxLine !== '' && substr($companyBoxLine, -1) !== ',') {
-    $companyBoxLine .= ',';
+
+$normalizeFromLine = static function (string $line): string {
+    $line = strtoupper(trim($line));
+    $line = preg_replace('/\s+/', ' ', $line) ?? $line;
+    return rtrim($line, " \t.,;") . ',';
+};
+
+if ($companyStreet !== '') {
+    $fromLines[] = $normalizeFromLine($companyStreet);
 }
-$companyNameLine = strtoupper($companyName);
-if ($companyNameLine !== '' && substr($companyNameLine, -1) !== ',') {
-    $companyNameLine .= ',';
+
+if ($companyBox !== '') {
+    $boxLine = preg_match('/^\s*p\.?\s*o\.?\s*box/i', $companyBox)
+        ? $companyBox
+        : ('P.O. BOX ' . $companyBox);
+    $fromLines[] = $normalizeFromLine($boxLine);
 }
+
+$cityCountry = trim(implode(', ', array_filter([$companyCity, $companyCountry], static fn ($p) => trim((string) $p) !== '')));
+if ($cityCountry !== '') {
+    $fromLines[] = strtoupper(rtrim($cityCountry, " \t.,;")) . '.';
+}
+
+// If structured fields are sparse, split the stored address into vertical lines.
+if (count($fromLines) <= 1 && $companyAddress !== '') {
+    $rawAddress = trim($companyAddress);
+    $parts = preg_split('/\s*,\s*/', $rawAddress) ?: [];
+    $parts = array_values(array_filter(array_map('trim', $parts), static fn ($p) => $p !== ''));
+
+    $streetParts = [];
+    $boxPart = '';
+    $cityParts = [];
+    foreach ($parts as $part) {
+        if ($boxPart === '' && preg_match('/p\.?\s*o\.?\s*box/i', $part)) {
+            $boxPart = $part;
+            continue;
+        }
+        if ($boxPart !== '' || preg_match('/\b(dar\s*es\s*salaam|tanzania|tz)\b/i', $part)) {
+            $cityParts[] = $part;
+            continue;
+        }
+        $streetParts[] = $part;
+    }
+
+    if ($streetParts !== []) {
+        $fromLines[] = $normalizeFromLine(implode(', ', $streetParts));
+    }
+    if ($boxPart !== '') {
+        $fromLines[] = $normalizeFromLine($boxPart);
+    }
+    if ($cityParts !== []) {
+        $fromLines[] = strtoupper(rtrim(implode(', ', $cityParts), " \t.,;")) . '.';
+    } elseif ($streetParts === [] && $boxPart === '') {
+        // Fallback: one comma-separated chunk per line.
+        foreach ($parts as $idx => $part) {
+            $isLast = ($idx === count($parts) - 1);
+            $fromLines[] = $isLast
+                ? (strtoupper(rtrim($part, " \t.,;")) . '.')
+                : $normalizeFromLine($part);
+        }
+    }
+}
+
+$letterDateLabel = date('d-m-Y', strtotime((string) $slip['run_date']));
+$fromLines[] = $letterDateLabel . '.';
+// De-dupe consecutive identical lines.
+$deduped = [];
+foreach ($fromLines as $line) {
+    $prev = $deduped[count($deduped) - 1] ?? null;
+    if ($prev !== null && strcasecmp((string) $prev, (string) $line) === 0) {
+        continue;
+    }
+    $deduped[] = $line;
+}
+$fromLines = $deduped;
 
 $letterheadHeaderUrl = function_exists('app_url')
     ? rtrim((string) app_url('/letterhead/header.png'), '/')
@@ -162,23 +240,141 @@ if (is_file($footerFs)) {
 }
 
 $periodLabel = date('F Y', mktime(0, 0, 0, (int) $slip['month'], 1, (int) $slip['year']));
-$payslipRef = 'REF: PAYSLIP NO. '
+$payslipRef = 'PAYSLIP NO. '
     . str_pad((string) $slip['payroll_run_id'], 3, '0', STR_PAD_LEFT)
     . '-'
     . str_pad((string) $slip['id'], 5, '0', STR_PAD_LEFT);
-$letterDateLabel = date('d-m-Y', strtotime((string) $slip['run_date']));
 
 $sigUrl = '';
-$sigPath = function_exists('getUserSignaturePathById') ? getUserSignaturePathById($slip['run_by']) : null;
-if (is_string($sigPath) && $sigPath !== '') {
-    $sigFs = dirname(__DIR__, 2) . '/' . ltrim(str_replace('\\', '/', $sigPath), '/');
-    if (is_file($sigFs)) {
-        if (function_exists('mediaUrlFromPath')) {
-            $sigUrl = (string) mediaUrlFromPath($sigPath);
-        } else {
-            $sigUrl = $baseUrl . '/' . ltrim(str_replace('\\', '/', $sigPath), '/');
+$runnerId = (int) ($slip['run_by'] ?? 0);
+$sigPath = trim((string) ($slip['runner_signature_path'] ?? ''));
+if ($sigPath === '' && $runnerId > 0 && function_exists('getUserSignaturePathById')) {
+    $fromHelper = getUserSignaturePathById($runnerId);
+    $sigPath = is_string($fromHelper) ? trim($fromHelper) : '';
+}
+if ($sigPath !== '') {
+    $sigRel = ltrim(str_replace('\\', '/', $sigPath), '/');
+    $sigFsCandidates = [
+        dirname(__DIR__, 2) . '/' . $sigRel,
+        dirname(__DIR__, 2) . '/assets/signatures/' . basename($sigRel),
+    ];
+    $sigFs = '';
+    foreach ($sigFsCandidates as $candidate) {
+        if (is_file($candidate)) {
+            $sigFs = $candidate;
+            break;
         }
-        $sigUrl .= (strpos($sigUrl, '?') === false ? '?' : '&') . 'v=' . (int) filemtime($sigFs);
+    }
+    if ($sigFs !== '') {
+        if (function_exists('mediaUrlFromPath')) {
+            $sigUrl = (string) mediaUrlFromPath($sigRel);
+        } elseif (function_exists('app_url')) {
+            $sigUrl = rtrim((string) app_url('/' . $sigRel), '/');
+        } else {
+            $sigUrl = $baseUrl . '/' . $sigRel;
+        }
+        if ($sigUrl !== '') {
+            $sigUrl .= (strpos($sigUrl, '?') === false ? '?' : '&') . 'v=' . (int) filemtime($sigFs);
+        }
+    }
+}
+
+$runnerName = trim((string) ($slip['runner_name'] ?? ''));
+if ($runnerName === '') {
+    $runnerName = 'Authorized Signatory';
+}
+$runnerPosition = trim((string) ($slip['runner_department'] ?? ''));
+if ($runnerPosition === '') {
+    $roleRaw = strtolower(trim((string) ($slip['runner_role'] ?? '')));
+    if ($roleRaw === 'admin') {
+        $runnerPosition = 'Administrator';
+    } elseif ($roleRaw === 'finance') {
+        $runnerPosition = 'Finance';
+    } elseif ($roleRaw !== '' && $roleRaw !== 'employee') {
+        $runnerPosition = ucwords(str_replace('_', ' ', $roleRaw));
+    }
+}
+
+$stampUrl = '';
+$stampCandidates = [
+    'letterhead/stamps/ultimate-stamp-white.png',
+    'letterhead/stamps/ultimate-stamp-upright.png',
+    'letterhead/stamps/ultimate-stamp-cutout.png',
+    'modules/letter/frontend/src/assets/ultimate-stamp.png',
+];
+$appRootFs = dirname(__DIR__, 2);
+foreach ($stampCandidates as $stampRel) {
+    $stampFs = $appRootFs . '/' . $stampRel;
+    if (!is_file($stampFs)) {
+        continue;
+    }
+    $stampUrl = function_exists('app_url')
+        ? rtrim((string) app_url('/' . $stampRel), '/')
+        : ($baseUrl . '/' . $stampRel);
+    $stampUrl .= (strpos($stampUrl, '?') === false ? '?' : '&') . 'v=' . (int) filemtime($stampFs);
+    break;
+}
+
+$bankName = trim((string) ($slip['bank_name'] ?? ''));
+$bankLogoFile = '';
+$bankLogoAlt = $bankName !== '' ? $bankName : 'Bank';
+$bankNameLower = strtolower($bankName);
+$bankLogoCatalog = [
+    ['file' => 'uba.png', 'alt' => 'UBA', 'match' => ['united bank for africa', 'united bank of africa', 'uba']],
+    ['file' => 'crdb.png', 'alt' => 'CRDB', 'match' => ['crdb']],
+    ['file' => 'nmb.jpg', 'alt' => 'NMB', 'match' => ['nmb']],
+    ['file' => 'nbc.svg', 'alt' => 'NBC', 'match' => ['nbc']],
+    ['file' => 'equity.png', 'alt' => 'Equity Bank', 'match' => ['equity']],
+    ['file' => 'absa.svg', 'alt' => 'Absa', 'match' => ['absa', 'barclays']],
+    ['file' => 'standard-chartered.svg', 'alt' => 'Standard Chartered', 'match' => ['standard chartered']],
+    ['file' => 'kcb.png', 'alt' => 'KCB', 'match' => ['kcb']],
+    ['file' => 'dtb.png', 'alt' => 'DTB', 'match' => ['diamond trust', 'dtb']],
+    ['file' => 'exim.png', 'alt' => 'Exim Bank', 'match' => ['exim']],
+    ['file' => 'azania.png', 'alt' => 'Azania Bank', 'match' => ['azania']],
+    ['file' => 'boa.png', 'alt' => 'Bank of Africa', 'match' => ['bank of africa', 'boa']],
+    ['file' => 'access.png', 'alt' => 'Access Bank', 'match' => ['access bank', 'access']],
+    ['file' => 'ecobank.svg', 'alt' => 'Ecobank', 'match' => ['ecobank']],
+    ['file' => 'tpb.png', 'alt' => 'TPB', 'match' => ['tpb']],
+    ['file' => 'amana.png', 'alt' => 'Amana Bank', 'match' => ['amana']],
+    ['file' => 'im.png', 'alt' => 'I&M Bank', 'match' => ['i&m', 'i and m']],
+    ['file' => 'maendeleo.png', 'alt' => 'Maendeleo Bank', 'match' => ['maendeleo']],
+    ['file' => 'pbz.png', 'alt' => 'PBZ', 'match' => ['pbz', 'people\'s bank of zanzibar']],
+    ['file' => 'baroda.png', 'alt' => 'Bank of Baroda', 'match' => ['baroda']],
+    ['file' => 'ubl.svg', 'alt' => 'UBL', 'match' => ['ubl']],
+    ['file' => 'citi.svg', 'alt' => 'Citibank', 'match' => ['citi']],
+    ['file' => 'canara.svg', 'alt' => 'Canara Bank', 'match' => ['canara']],
+    ['file' => 'icici.svg', 'alt' => 'ICICI', 'match' => ['icici']],
+    ['file' => 'hsbc.svg', 'alt' => 'HSBC', 'match' => ['hsbc']],
+    ['file' => 'fnb.svg', 'alt' => 'FNB', 'match' => ['fnb', 'first national']],
+    ['file' => 'letshego.png', 'alt' => 'Letshego', 'match' => ['letshego']],
+    ['file' => 'gtbank.svg', 'alt' => 'GTBank', 'match' => ['guaranty trust', 'gtbank', 'gt bank']],
+    ['file' => 'dcb.svg', 'alt' => 'DCB', 'match' => ['dcb']],
+    ['file' => 'mwanga.png', 'alt' => 'Mwanga Hakika', 'match' => ['mwanga']],
+    ['file' => 'mufindi.png', 'alt' => 'Mufindi', 'match' => ['mufindi', 'muco']],
+    ['file' => 'mwalimu.svg', 'alt' => 'Mwalimu', 'match' => ['mwalimu']],
+    ['file' => 'yetu.png', 'alt' => 'Yetu', 'match' => ['yetu']],
+];
+if ($bankNameLower !== '') {
+    foreach ($bankLogoCatalog as $bankMeta) {
+        foreach ($bankMeta['match'] as $needle) {
+            if ($bankNameLower === $needle || strpos($bankNameLower, $needle) !== false) {
+                $bankLogoFile = $bankMeta['file'];
+                $bankLogoAlt = $bankMeta['alt'];
+                break 2;
+            }
+        }
+    }
+}
+
+$bankLogoUrl = '';
+if ($bankLogoFile !== '') {
+    $bankLogoRel = 'modules/payroll/frontend/src/assets/banks/' . $bankLogoFile;
+    $bankLogoFs = dirname(__DIR__, 2) . '/' . $bankLogoRel;
+    if (is_file($bankLogoFs)) {
+        $bankLogoUrl = function_exists('app_url')
+            ? rtrim((string) app_url('/' . $bankLogoRel), '/')
+            : ($baseUrl . '/' . $bankLogoRel);
+        $bankLogoUrl .= (strpos($bankLogoUrl, '?') === false ? '?' : '&') . 'v=' . (int) filemtime($bankLogoFs);
     }
 }
 
@@ -264,14 +460,29 @@ if (
         }
 
         .lh-from-block {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
             text-align: right;
             margin-bottom: 1.5rem;
             text-transform: uppercase;
             font-size: 14px;
-            line-height: 1.45;
+            line-height: 1.4;
         }
 
-        .lh-from-block div + div { margin-top: 0.08rem; }
+        .lh-from-block div {
+            display: block;
+            max-width: 100%;
+        }
+
+        .lh-from-block div + div { margin-top: 0.12rem; }
+
+        .lh-from-ref {
+            font-weight: 700;
+            text-decoration: none;
+            margin-bottom: 0.45rem !important;
+            letter-spacing: 0.02em;
+        }
 
         .lh-recipient {
             margin-bottom: 1.1rem;
@@ -298,19 +509,6 @@ if (
         .lh-meta-row + .lh-meta-row { margin-top: 0.15rem; }
         .lh-meta-label { color: var(--muted); }
         .lh-meta-val { font-weight: 600; }
-
-        .lh-subject {
-            text-align: center;
-            margin: 0 0 1.25rem;
-        }
-
-        .lh-subject-text {
-            font-weight: 700;
-            text-transform: uppercase;
-            text-decoration: underline;
-            text-underline-offset: 4px;
-            letter-spacing: 0.02em;
-        }
 
         .pay-table {
             width: 100%;
@@ -365,9 +563,28 @@ if (
         }
 
         .payment-method {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
             font-weight: 700;
-            margin-bottom: 0.9rem;
-            font-size: 15px;
+            margin: 0;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .payslip-bank-logo {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            flex: 0 0 18px;
+            display: block;
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            outline: none !important;
+            padding: 0 !important;
+            margin: 0;
+            border-radius: 0 !important;
         }
 
         .bank-row {
@@ -376,27 +593,30 @@ if (
             gap: 0.35rem;
             font-size: 13px;
             margin-bottom: 0.35rem;
+            align-items: center;
         }
 
         .bank-label { color: var(--muted); }
         .bank-val { font-weight: 600; }
 
-        .totals-box { padding-top: 0.15rem; }
+        .totals-box { padding-top: 0; }
 
         .total-row {
             display: flex;
             justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: 0.55rem;
+            gap: 0.75rem;
+            margin: 0;
+            padding: 0.12rem 0;
             font-size: 13px;
+            line-height: 1.25;
         }
 
         .total-row.final {
-            margin-top: 0.75rem;
-            padding-top: 0.75rem;
+            margin-top: 0.2rem;
+            padding-top: 0.35rem;
             border-top: 1px solid #bbb;
             font-weight: 700;
-            font-size: 16px;
+            font-size: 13px;
             align-items: center;
         }
 
@@ -405,42 +625,58 @@ if (
             display: flex;
             justify-content: flex-end;
             text-align: left;
+            margin-right: -0.75rem;
         }
 
-        .signature-block { width: 220px; }
-
-        .signer-name {
-            font-weight: 700;
-            font-size: 14px;
-            margin-bottom: 0.15rem;
+        .signature-block {
+            width: 220px;
+            margin-left: auto;
         }
 
-        .signer-title {
-            font-size: 12px;
-            color: var(--muted);
-            margin-bottom: 0.35rem;
+        .payslip-stamp-wrap {
+            width: 108px;
+            height: 108px;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .payslip-stamp {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            background: transparent;
         }
 
         .signature-image-wrap {
+            min-height: 48px;
             height: 56px;
             display: flex;
             align-items: flex-end;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.2rem;
         }
 
         .signature-image-wrap img {
             max-height: 56px;
             max-width: 100%;
             object-fit: contain;
+            display: block;
         }
 
-        .signature-line {
-            border-top: 1px solid #111;
-            padding-top: 0.4rem;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #333;
+        .signer-name {
+            font-weight: 700;
+            font-size: 13px;
+            margin: 0 0 0.1rem;
+            color: #111;
+            text-transform: none;
+        }
+
+        .signer-title {
+            font-size: 12px;
+            color: #111;
+            margin: 0;
         }
 
         .controls {
@@ -484,7 +720,7 @@ if (
             body { padding: 10px 0; }
             .lh-content { padding: 18px 18px 24px; }
             .footer-grid { grid-template-columns: 1fr; gap: 1.25rem; }
-            .lh-from-block { text-align: left; }
+            .lh-from-block { text-align: left; align-items: flex-start; }
         }
 
         @media print {
@@ -515,10 +751,10 @@ if (
 
         <div class="lh-content">
             <div class="lh-from-block">
-                <?php if ($companyNameLine !== ''): ?><div><?= htmlspecialchars($companyNameLine) ?></div><?php endif; ?>
-                <?php if ($companyBoxLine !== ''): ?><div><?= htmlspecialchars($companyBoxLine) ?></div><?php endif; ?>
-                <?php if ($companyCityLine !== ''): ?><div><?= htmlspecialchars($companyCityLine) ?></div><?php endif; ?>
-                <div><?= htmlspecialchars($letterDateLabel) ?>.</div>
+                <div class="lh-from-ref"><?= htmlspecialchars($payslipRef) ?></div>
+                <?php foreach ($fromLines as $fromLine): ?>
+                <div><?= htmlspecialchars((string) $fromLine) ?></div>
+                <?php endforeach; ?>
             </div>
 
             <div class="lh-recipient">
@@ -542,10 +778,6 @@ if (
                     <span class="lh-meta-label">Run Date</span>
                     <span class="lh-meta-val"><?= htmlspecialchars(date('M d, Y', strtotime((string) $slip['run_date']))) ?></span>
                 </div>
-            </div>
-
-            <div class="lh-subject">
-                <span class="lh-subject-text"><?= htmlspecialchars($payslipRef) ?></span>
             </div>
 
             <table class="pay-table">
@@ -605,11 +837,22 @@ if (
 
             <div class="footer-grid">
                 <div class="payment-info">
-                    <h4>Payment Method :</h4>
-                    <div class="payment-method">Bank Transfer</div>
+                    <div class="bank-row">
+                        <span class="bank-label">Payment Method :</span>
+                        <span class="bank-val payment-method">
+                            <?php if ($bankLogoUrl !== ''): ?>
+                            <img
+                                class="payslip-bank-logo"
+                                src="<?= htmlspecialchars($bankLogoUrl, ENT_QUOTES, 'UTF-8') ?>"
+                                alt="<?= htmlspecialchars($bankLogoAlt, ENT_QUOTES, 'UTF-8') ?>"
+                            >
+                            <?php endif; ?>
+                            <span>Bank Transfer</span>
+                        </span>
+                    </div>
                     <div class="bank-row">
                         <span class="bank-label">Bank Name :</span>
-                        <span class="bank-val"><?= htmlspecialchars((string) ($slip['bank_name'] ?? 'N/A')) ?></span>
+                        <span class="bank-val"><?= htmlspecialchars($bankName !== '' ? $bankName : 'N/A') ?></span>
                     </div>
                     <div class="bank-row">
                         <span class="bank-label">Account Name :</span>
@@ -619,6 +862,15 @@ if (
                         <span class="bank-label">Account Number :</span>
                         <span class="bank-val"><?= htmlspecialchars((string) ($slip['account_number'] ?? 'N/A')) ?></span>
                     </div>
+                    <?php if ($stampUrl !== ''): ?>
+                    <div class="payslip-stamp-wrap" aria-hidden="true">
+                        <img
+                            class="payslip-stamp"
+                            src="<?= htmlspecialchars($stampUrl, ENT_QUOTES, 'UTF-8') ?>"
+                            alt=""
+                        >
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <div>
@@ -639,14 +891,15 @@ if (
 
                     <div class="signature-section">
                         <div class="signature-block">
-                            <div class="signer-name"><?= htmlspecialchars((string) ($slip['runner_name'] ?? 'Authorized Signatory')) ?></div>
-                            <div class="signer-title"><?= htmlspecialchars((string) ($slip['runner_role'] ?? 'Finance Director')) ?></div>
                             <div class="signature-image-wrap">
                                 <?php if ($sigUrl !== ''): ?>
-                                <img src="<?= htmlspecialchars($sigUrl, ENT_QUOTES, 'UTF-8') ?>" alt="Signature">
+                                <img src="<?= htmlspecialchars($sigUrl, ENT_QUOTES, 'UTF-8') ?>" alt="Signature of <?= htmlspecialchars($runnerName, ENT_QUOTES, 'UTF-8') ?>">
                                 <?php endif; ?>
                             </div>
-                            <div class="signature-line">Authorized Signature</div>
+                            <div class="signer-name"><?= htmlspecialchars($runnerName) ?></div>
+                            <?php if ($runnerPosition !== ''): ?>
+                            <div class="signer-title"><?= htmlspecialchars($runnerPosition) ?></div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -667,6 +920,12 @@ if (
             const element = document.getElementById('payslipContent');
             const btn = document.getElementById('downloadBtn');
             const originalText = btn ? btn.innerHTML : '';
+            if (!element) {
+                return Promise.reject(new Error('Payslip content not found.'));
+            }
+            if (typeof html2pdf !== 'function') {
+                return Promise.reject(new Error('PDF library not loaded.'));
+            }
             if (btn) {
                 btn.innerHTML = 'Generating...';
                 btn.disabled = true;
@@ -674,29 +933,39 @@ if (
 
             const opt = {
                 margin: 0,
-                filename: 'Payslip_<?= str_replace("'", "\\'", $slip['full_name']) ?>_<?= date('M_Y', mktime(0,0,0,$slip['month'], 1, $slip['year'])) ?>.pdf',
+                filename: 'Payslip_<?= str_replace(["\\", "'"], ["\\\\", "\\'"], (string) $slip['full_name']) ?>_<?= date('M_Y', mktime(0,0,0,$slip['month'], 1, $slip['year'])) ?>.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, letterRendering: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            html2pdf().from(element).set(opt).save().then(() => {
-                if (btn) {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }
-            }).catch(() => {
-                if (btn) {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }
-            });
+            return html2pdf()
+                .from(element)
+                .set(opt)
+                .save()
+                .then(() => {
+                    if (btn) {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                })
+                .catch((err) => {
+                    if (btn) {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                    throw err;
+                });
         }
+
+        window.downloadPayslipPdf = downloadPDF;
 
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('download')) {
-                setTimeout(downloadPDF, 1000);
+                setTimeout(() => {
+                    downloadPDF().catch(() => {});
+                }, 800);
             }
         });
     </script>

@@ -299,7 +299,10 @@ switch ($active_module) {
 
     case 'letter':
         addItem($menuItems, 'compose', 'Compose letter', 'document-text', $prefix . 'modules/letter/index.php?module=letter');
-        addItem($menuItems, 'stamp', 'Stamp', 'certificate', $prefix . 'modules/letter/stamp.php?module=letter');
+        $__letterSlugInc = strtolower(trim((string) ($_SESSION['company_slug'] ?? $__sidebarSlug ?? '')));
+        if ($__letterSlugInc === 'ultimate') {
+            addItem($menuItems, 'stamp', 'Stamp', 'certificate', $prefix . 'modules/letter/stamp.php?module=letter');
+        }
         break;
 
     case 'deliveries':

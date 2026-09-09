@@ -13,10 +13,6 @@
   padding-bottom: 2rem;
 }
 
-.letter-workspace.is-editing {
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-}
-
 .letter-topbar {
   grid-column: 1 / -1;
   margin: 0;
@@ -110,10 +106,67 @@
   border-color: var(--lh-accent);
 }
 
+.letter-sig-preview {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  background: #fff;
+}
+
+.letter-sig-preview img {
+  max-height: 56px;
+  max-width: 100%;
+  width: auto;
+  object-fit: contain;
+}
+
+.letter-field-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
 .letter-toolbar {
   margin-top: 1rem;
   display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.letter-topbar.letter-toolbar {
+  margin-top: 0;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.letter-topbar-spacer {
+  flex: 1;
+}
+
+.letter-topbar-actions {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+  margin-left: auto;
+}
+
+.letter-save-status {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #64748b;
+}
+
+.letter-save-status.is-typing {
+  color: #7c3aed;
+}
+
+.letter-save-status.is-saved {
+  color: #15803d;
 }
 
 .letter-btn {
@@ -141,10 +194,9 @@
   border-radius: 9999px !important;
 }
 
-.letter-btn-primary {
-  background: #7c3aed;
-  border-color: #7c3aed;
-  color: #fff !important;
+.letter-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 .letter-btn-primary:hover {
@@ -178,16 +230,31 @@
   font-family: 'Times New Roman', Times, serif;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }
 
 .lh-template-header,
 .lh-template-footer {
+  position: relative;
   width: 100%;
   line-height: 0;
   flex-shrink: 0;
+}
+
+.lh-page-number {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1.15rem;
+  text-align: center;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 10px;
+  line-height: 1;
+  color: #555;
+  letter-spacing: 0.02em;
 }
 
 .lh-template-banner {
@@ -281,21 +348,116 @@
   height: 52px;
 }
 
+.lh-signature-wrap {
+  margin: 0.25rem 0 0.15rem;
+  min-height: 42px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.lh-signature {
+  max-height: 42px;
+  max-width: 160px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
 .lh-sign-name {
   font-weight: 700;
   text-transform: none;
   color: #111;
-  font-size: 15px;
+  font-size: 12px;
 }
 
 .lh-sign-title {
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
   color: #111;
-  font-size: 15px;
+  font-size: 12px;
+}
+
+/* Inline letter editing */
+.lh-page.is-editable .lh-edit {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.05rem 0.15rem;
+  border: 1px dashed transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  text-decoration: inherit;
+  text-underline-offset: inherit;
+  resize: none;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.lh-page.is-editable .lh-edit:hover {
+  border-color: color-mix(in srgb, var(--lh-accent) 55%, #cbd5e1);
+  background: color-mix(in srgb, var(--lh-accent) 8%, transparent);
+}
+
+.lh-page.is-editable .lh-edit:focus {
+  border-color: var(--lh-accent);
+  background: color-mix(in srgb, var(--lh-accent) 12%, #fff);
+}
+
+.lh-page.is-editable .lh-edit::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+  text-decoration: none;
+  opacity: 1;
+}
+
+.lh-page.is-editable .lh-edit--area {
+  min-height: 280px;
+  white-space: pre-wrap;
+}
+
+.lh-page.is-editable .lh-edit--subject {
+  font-weight: 700;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  width: auto;
+  min-width: 12rem;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.lh-page.is-editable .lh-from-block .lh-edit + .lh-edit {
+  margin-top: 0.1rem;
+}
+
+.lh-page.is-editable .lh-recipient--template .lh-edit + .lh-edit {
+  margin-top: 0.1rem;
+}
+
+.lh-page.is-editable .lh-sign-name.lh-edit,
+.lh-page.is-editable .lh-sign-title.lh-edit {
+  width: auto;
+  max-width: 100%;
+  font-size: 12px;
+}
+
+.lh-page.is-editable .lh-sign-name.lh-edit {
+  font-weight: 700;
 }
 
 .lh-stamp-wrap {
   margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
   width: 160px;
   height: 160px;
   display: flex;
@@ -400,8 +562,7 @@
 }
 
 @media (max-width: 980px) {
-  .letter-workspace,
-  .letter-workspace.is-editing {
+  .letter-workspace {
     grid-template-columns: 1fr;
   }
 
@@ -415,8 +576,22 @@
   }
 }
 
+.lh-page.is-pdf-capture,
+.lh-page.is-pdf-capture .lh-edit {
+  box-shadow: none !important;
+}
+
+.lh-page.is-pdf-capture .lh-edit {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.lh-page.is-pdf-capture .lh-edit::placeholder {
+  color: transparent !important;
+}
+
 @media print {
-  .letter-composer-sidebar,
   .letter-preview-label,
   .letter-toolbar,
   .letter-topbar {
@@ -430,9 +605,57 @@
 
   .lh-page {
     width: 210mm;
-    min-height: 297mm;
+    min-height: auto;
+    height: auto;
     box-shadow: none;
     margin: 0;
+    overflow: visible;
+    display: block;
+  }
+
+  .lh-template-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 210mm;
+    z-index: 20;
+  }
+
+  .lh-template-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 210mm;
+    z-index: 20;
+  }
+
+  .lh-page-number {
+    display: block;
+  }
+
+  .lh-page-number-current::before {
+    content: counter(page);
+  }
+
+  .lh-page-number-total::before {
+    content: counter(pages);
+  }
+
+  .lh-content--template {
+    /* Reserve space so body never sits under fixed letterhead bands */
+    padding-top: 22mm;
+    padding-bottom: 42mm;
+  }
+
+  .lh-page.is-editable .lh-edit {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .lh-page.is-editable .lh-edit::placeholder {
+    color: transparent !important;
   }
 
   * {

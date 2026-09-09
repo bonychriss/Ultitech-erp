@@ -10,16 +10,28 @@ function readCfg() {
 
 export default function StampEditorPage() {
   const cfg = useMemo(() => readCfg(), []);
+  const isUltimate = Boolean(cfg.showUltimateStamp || cfg.isUltimateCompany);
   const editorUrl = String(cfg.stampEditorUrl || '').trim();
   const stampPreviewUrl = String(cfg.stampPreviewUrl || '').trim();
   const [showEditor, setShowEditor] = useState(true);
+
+  if (!isUltimate) {
+    return (
+      <div className="letter-stamp-page">
+        <div className="letter-card letter-stamp-missing">
+          <h2>Stamp</h2>
+          <p>The company stamp is available for Ultimate General Trading only.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="letter-stamp-page">
       <div className="letter-stamp-toolbar">
         <div className="letter-stamp-toolbar-copy">
           <h2>Stamp</h2>
-          <p>Edit company stamp with the BCUT image editor (remove background, clean, export).</p>
+          <p>Edit Ultimate company stamp with the BCUT image editor (remove background, clean, export).</p>
         </div>
         <div className="letter-stamp-toolbar-actions">
           <button

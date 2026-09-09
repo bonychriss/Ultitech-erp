@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { FilePlus2, Printer, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Download, Save } from 'lucide-react';
 import LetterheadDocument from '../components/LetterheadDocument.jsx';
 
 function readCfg() {
@@ -18,15 +18,18 @@ function formatDisplayDate(iso) {
   return `${dd}-${mm}-${d.getFullYear()}.`;
 }
 
-export default function ComposeLetterPage() {
-  const cfg = useMemo(() => readCfg(), []);
+function draftStorageKey(cfg) {
+  const slug = String(cfg.companySlug || 'company').trim() || 'company';
+  const uid = Number(cfg.user?.id || 0) || 0;
+  return `letter-draft:v1:${slug}:${uid}`;
+}
+
+function buildDefaults(cfg, today) {
   const branding = cfg.branding || {};
-
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const [editing, setEditing] = useState(false);
-
-  const [form, setForm] = useState({
+  const user = cfg.user || {};
+  return {
     letterDate: today,
+    letterDateLabel: formatDisplayDate(today),
     fromCompany: `${branding.companyName || 'ULTIMATE GENERAL TRADING'},`.toUpperCase(),
     fromBox: 'P.O.BOX 78004,',
     fromCity: 'DAR ES SALAAM, TANZANIA.',
@@ -38,130 +41,165 @@ export default function ComposeLetterPage() {
     salutation: '',
     body: '',
     closing: '',
-    signName: '',
-    signTitle: '',
+    signName: user.name || '',
+    signTitle: user.title || '',
     companyName: branding.companyName || 'ULTIMATE GENERAL TRADING',
-  });
+  };
+}
+
+function loadDraft(key, defaults) {
+  if (typeof window === 'undefined') return defaults;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return defaults;
+    return { ...defaults, ...parsed };
+  } catch {
+    return defaults;
+  }
+}
+
+function saveDraft(key, form) {
+  if (typeof window === 'undefined') return false;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(form));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export default function ComposeLetterPage() {
+  const cfg = useMemo(() => readCfg(), []);
+  const branding = cfg.branding || {};
+  const user = cfg.user || {};
+  const signatureUrl = String(cfg.signatureUrl || user.signatureUrl || '').trim();
+  const storageKey = useMemo(() => draftStorageKey(cfg), [cfg]);
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const [form, setForm] = useState(() => loadDraft(storageKey, buildDefaults(cfg, today)));
+  const [saveState, setSaveState] = useState('idle');
+  const [downloading, setDownloading] = useState(false);
+  const savedTimerRef = useRef(null);
+  const formRef = useRef(form);
+  formRef.current = form;
 
   const accent = branding.accentColor || '#FBC51C';
 
-  const update = (key) => (event) => {
-    setForm((prev) => ({ ...prev, [key]: event.target.value }));
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) {
+        window.clearTimeout(savedTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const flush = () => {
+      saveDraft(storageKey, formRef.current);
+    };
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', onHide);
+      flush();
+    };
+  }, [storageKey]);
+
+  const onChange = (key, value) => {
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      saveDraft(storageKey, next);
+      return next;
+    });
+    setSaveState('typing');
+    if (savedTimerRef.current) {
+      window.clearTimeout(savedTimerRef.current);
+    }
+    savedTimerRef.current = window.setTimeout(() => {
+      setSaveState('saved');
+    }, 700);
   };
 
   const doc = {
     ...form,
-    letterDateLabel: formatDisplayDate(form.letterDate),
+    showUltimateStamp: Boolean(cfg.showUltimateStamp || cfg.isUltimateCompany),
+    signatureUrl,
+  };
+
+  const statusLabel =
+    saveState === 'typing' ? 'Typing...' : saveState === 'saved' ? 'Saved' : '';
+
+  const handleSaveLetter = () => {
+    const ok = saveDraft(storageKey, formRef.current);
+    if (savedTimerRef.current) {
+      window.clearTimeout(savedTimerRef.current);
+    }
+    setSaveState(ok ? 'saved' : 'idle');
+  };
+
+  const handleDownloadLetter = async () => {
+    if (downloading) return;
+    saveDraft(storageKey, formRef.current);
+    setDownloading(true);
+    try {
+      const { downloadLetterAsPdf } = await import('../utils/letterPdf.js');
+      const subject = String(formRef.current.subject || '').trim();
+      const stamp = String(formRef.current.letterDateLabel || today).replace(/\./g, '');
+      const filename = subject
+        ? `letter-${subject}`
+        : `letter-${stamp || today}`;
+      await downloadLetterAsPdf(document.querySelector('.lh-page'), { filename });
+    } catch (err) {
+      const msg = err && err.message ? err.message : 'Failed to download PDF.';
+      window.alert(msg);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
-    <div
-      className={`letter-workspace${editing ? ' is-editing' : ''}`}
-      style={{ '--lh-accent': accent }}
-    >
+    <div className="letter-workspace" style={{ '--lh-accent': accent }}>
       <div className="letter-topbar letter-toolbar">
-        {!editing ? (
+        {statusLabel ? (
+          <span
+            className={`letter-save-status${saveState === 'typing' ? ' is-typing' : ' is-saved'}`}
+            aria-live="polite"
+          >
+            {statusLabel}
+          </span>
+        ) : (
+          <span className="letter-topbar-spacer" aria-hidden="true" />
+        )}
+        <div className="letter-topbar-actions">
           <button
             type="button"
             className="letter-btn letter-btn-primary letter-btn--pill"
-            onClick={() => setEditing(true)}
+            onClick={handleSaveLetter}
           >
-            <FilePlus2 size={16} />
-            Create letter
+            <Save size={16} />
+            Save letter
           </button>
-        ) : null}
+          <button
+            type="button"
+            className="letter-btn letter-btn--pill"
+            onClick={handleDownloadLetter}
+            disabled={downloading}
+          >
+            <Download size={16} />
+            {downloading ? 'Preparing PDF...' : 'Download letter'}
+          </button>
+        </div>
       </div>
 
-      {editing ? (
-        <aside className="letter-composer-sidebar letter-card">
-          <div className="letter-card-head">
-            <div className="letter-card-head-row">
-              <div>
-                <h2>Letter details</h2>
-                <p>Official letter on Ultimate letterhead template.</p>
-              </div>
-              <button
-                type="button"
-                className="letter-icon-btn"
-                aria-label="Close letter details"
-                onClick={() => setEditing(false)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-          </div>
-
-          <div className="letter-form-stack">
-            <label className="letter-field">
-              <span>Date</span>
-              <input type="date" value={form.letterDate} onChange={update('letterDate')} />
-            </label>
-            <label className="letter-field">
-              <span>From (company)</span>
-              <input value={form.fromCompany} onChange={update('fromCompany')} />
-            </label>
-            <label className="letter-field">
-              <span>From (P.O. Box)</span>
-              <input value={form.fromBox} onChange={update('fromBox')} />
-            </label>
-            <label className="letter-field">
-              <span>From (city)</span>
-              <input value={form.fromCity} onChange={update('fromCity')} />
-            </label>
-            <label className="letter-field">
-              <span>Recipient name / title</span>
-              <input value={form.recipientName} onChange={update('recipientName')} placeholder="e.g. DIRECT GENERAL," />
-            </label>
-            <label className="letter-field">
-              <span>Recipient company</span>
-              <input value={form.recipientCompany} onChange={update('recipientCompany')} />
-            </label>
-            <label className="letter-field">
-              <span>Recipient address</span>
-              <input value={form.recipientAddress} onChange={update('recipientAddress')} placeholder="P.O.BOX ..." />
-            </label>
-            <label className="letter-field">
-              <span>City, country</span>
-              <input value={form.recipientCity} onChange={update('recipientCity')} placeholder="DAR ES SALAAM, TANZANIA." />
-            </label>
-            <label className="letter-field">
-              <span>Subject / REF</span>
-              <input value={form.subject} onChange={update('subject')} />
-            </label>
-            <label className="letter-field">
-              <span>Salutation</span>
-              <input value={form.salutation} onChange={update('salutation')} />
-            </label>
-            <label className="letter-field">
-              <span>Letter body</span>
-              <textarea rows={12} value={form.body} onChange={update('body')} />
-            </label>
-            <label className="letter-field">
-              <span>Closing</span>
-              <input value={form.closing} onChange={update('closing')} />
-            </label>
-            <label className="letter-field">
-              <span>Signatory name</span>
-              <input value={form.signName} onChange={update('signName')} />
-            </label>
-            <label className="letter-field">
-              <span>Signatory title</span>
-              <input value={form.signTitle} onChange={update('signTitle')} />
-            </label>
-          </div>
-
-          <div className="letter-toolbar">
-            <button type="button" className="letter-btn letter-btn-primary letter-btn--pill" onClick={() => window.print()}>
-              <Printer size={16} />
-              Print letter
-            </button>
-          </div>
-        </aside>
-      ) : null}
-
       <section className="letter-preview-pane">
-        <div className="letter-preview-label">Official letter preview</div>
-        <LetterheadDocument doc={doc} />
+        <div className="letter-preview-label">Click any line on the letter to edit</div>
+        <LetterheadDocument doc={doc} editable onChange={onChange} />
       </section>
     </div>
   );

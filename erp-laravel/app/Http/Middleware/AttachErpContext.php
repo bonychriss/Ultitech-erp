@@ -18,6 +18,7 @@ class AttachErpContext
             ?? $GLOBALS['ERP_SUGGEST_CONTEXT']
             ?? $GLOBALS['ERP_STOCK_CONTEXT']
             ?? $GLOBALS['ERP_PAYROLL_CONTEXT']
+            ?? $GLOBALS['ERP_LETTER_CONTEXT']
             ?? null;
         if (!is_array($erp) || empty($erp['user_id'])) {
             abort(401, 'ERP login required. Open this page from the ERP menu.');

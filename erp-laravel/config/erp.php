@@ -39,6 +39,11 @@ return [
             'legacy_api' => true, // desk APIs stay under modules/payroll/api
             'entry' => 'payroll.php',
         ],
+        'letter' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'letter.php',
+        ],
     ],
 
     'react_dist' => [
@@ -54,6 +59,7 @@ return [
         'suggest' => 'suggest-laravel/frontend/dist',
         'stock' => 'stock/stock-ui/dist',
         'payroll' => 'modules/payroll/frontend/dist',
+        'letter' => 'modules/letter/frontend/dist',
     ],
 
     'sales_laravel_desks' => [

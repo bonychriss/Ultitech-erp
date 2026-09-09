@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Boot Laravel for ERP (HTML page or JSON API).
- * Expects $GLOBALS['ERP_CONTEXT'] / ERP_SALES_CONTEXT / ERP_SUGGEST_CONTEXT / ERP_STOCK_CONTEXT / ERP_PAYROLL_CONTEXT
+ * Expects $GLOBALS['ERP_CONTEXT'] / ERP_SALES_CONTEXT / ERP_SUGGEST_CONTEXT / ERP_STOCK_CONTEXT / ERP_PAYROLL_CONTEXT / ERP_LETTER_CONTEXT
  * and optional $GLOBALS['ERP_ROUTE'] (or ERP_*_ROUTE variants).
  */
 
@@ -39,6 +39,7 @@ $route = (string) (
     ?? $GLOBALS['ERP_SUGGEST_ROUTE']
     ?? $GLOBALS['ERP_STOCK_ROUTE']
     ?? $GLOBALS['ERP_PAYROLL_ROUTE']
+    ?? $GLOBALS['ERP_LETTER_ROUTE']
     ?? '/api/dashboard'
 );
 $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));

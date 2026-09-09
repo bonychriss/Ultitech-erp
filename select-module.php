@@ -289,6 +289,15 @@ $push([
     'color' => '#6366f1',
 ]);
 
+$push([
+    'id' => 'letter',
+    'label' => 'Letter',
+    'desc' => 'Compose official letters on company letterhead',
+    'href' => $companyRoute('modules/letter/index') . '?module=letter',
+    'icon' => 'letter',
+    'color' => '#E6B800',
+]);
+
 if ($isAdmin) {
     $push([
         'id' => 'letters',
@@ -296,15 +305,6 @@ if ($isAdmin) {
         'desc' => 'View Internal Correspondence',
         'href' => $companyRoute('manage-letters'),
         'icon' => 'inbox',
-        'color' => '#4338ca',
-    ]);
-} else {
-    $push([
-        'id' => 'letters',
-        'label' => 'Write Letter',
-        'desc' => 'Draft Official Requests',
-        'href' => $companyRoute('write-letter'),
-        'icon' => 'letter',
         'color' => '#4338ca',
     ]);
 }

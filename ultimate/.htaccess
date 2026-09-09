@@ -16,6 +16,12 @@ RewriteRule ^modules/payroll/run_payroll\.php$ payroll.php?desk=run-payroll [L,Q
 RewriteRule ^modules/payroll/edit_payslip\.php$ payroll.php?desk=edit-payslip [L,QSA,NC]
 RewriteRule ^modules/payroll/settings\.php$ payroll.php?desk=settings [L,QSA,NC]
 RewriteRule ^modules/payroll/my_payslips\.php$ payroll.php?desk=my-payslips [L,QSA,NC]
+# Letter → Laravel+React letter bridge
+RewriteRule ^letter/?$ letter.php [L,QSA,NC]
+RewriteRule ^letter/(compose)/?$ letter.php?desk=$1 [L,QSA,NC]
+RewriteRule ^modules/letter/?$ letter.php [L,QSA,NC]
+RewriteRule ^modules/letter/index(\.php)?/?$ letter.php [L,QSA,NC]
+RewriteRule ^modules/letter/compose\.php$ letter.php?desk=compose [L,QSA,NC]
 RewriteRule ^sales/?$ sales.php [L,QSA,NC]
 RewriteRule ^sales/(invoices|orders|customers|my-sales|catalogue|customer-catalogue|pricelist|settings|quotations|quote-create|invoice-create|payment-create|admin-targets|admin-reassign|products-view|send-doc|order-view|invoice-view|quote-edit|delivery-note)/?$ sales.php?desk=$1 [L,QSA,NC]
 RewriteRule ^sales/order/([0-9]+)/?$ sales.php?desk=order-view&id=$1 [L,QSA,NC]

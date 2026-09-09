@@ -42,6 +42,9 @@ if (strpos($script_name, '/modules/finance/') !== false) {
 if (strpos($script_name, '/modules/payroll/') !== false) {
     $active_module = 'payroll';
 }
+if (strpos($script_name, '/modules/letter/') !== false || basename($script_name) === 'letter.php') {
+    $active_module = 'letter';
+}
 if (strpos($script_name, '/accounting/') !== false) {
     $active_module = 'finance';
 }
@@ -111,6 +114,8 @@ function addItem(&$arr, $id, $label, $icon, $path, $badge = null, $children = nu
         $moduleKey = 'stock';
     } elseif (strpos($pathStr, '/modules/payroll/') !== false) {
         $moduleKey = 'payroll';
+    } elseif (strpos($pathStr, '/modules/letter/') !== false) {
+        $moduleKey = 'letter';
     } elseif (strpos($pathStr, '/modules/finance/') !== false || strpos($pathStr, '/modules/expenses/') !== false) {
         $moduleKey = 'finance';
     } elseif (strpos($pathStr, '/modules/balances/') !== false || strpos($pathStr, '/accounting/') !== false) {
@@ -290,6 +295,10 @@ switch ($active_module) {
         addItem($menuItems, 'salaries', 'Employees', 'users', $prefix . 'modules/payroll/salaries.php?module=payroll');
         addItem($menuItems, 'settings', 'Settings', 'cog', $prefix . 'modules/payroll/settings.php?module=payroll');
         addItem($menuItems, 'help', 'User Manual', 'question-circle', $prefix . 'modules/payroll/help.php?module=payroll');
+        break;
+
+    case 'letter':
+        addItem($menuItems, 'compose', 'Compose letter', 'document-text', $prefix . 'modules/letter/index.php?module=letter');
         break;
 
     case 'deliveries':

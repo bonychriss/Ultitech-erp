@@ -72,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_company'])) {
                 ['finance', 'Finance'],
                 ['accounting', 'Accounting'],
                 ['payroll', 'Payroll'],
+                ['letter', 'Letter'],
                 ['attendance', 'Attendance'],
                 ['revenue', 'Revenue'],
                 ['logistics', 'Logistics'],

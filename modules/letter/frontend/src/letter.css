@@ -1,0 +1,503 @@
+:root {
+  --lh-accent: #e6b800;
+  --lh-dark: #2f3542;
+  --letter-ink: #1a1a1a;
+  --letter-muted: #6b7280;
+  --letter-paper: #ffffff;
+  --letter-canvas: #e8edf3;
+}
+
+.letter-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+  padding-bottom: 2rem;
+}
+
+.letter-workspace.is-editing {
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+}
+
+.letter-topbar {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.letter-card-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.letter-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.letter-icon-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.letter-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.1rem 1.15rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.letter-card-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.letter-card-head p {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.letter-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.letter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.letter-field span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.letter-field input,
+.letter-field textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: #0f172a;
+  background: #fff;
+  resize: vertical;
+}
+
+.letter-field input:focus,
+.letter-field textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--lh-accent) 35%, transparent);
+  border-color: var(--lh-accent);
+}
+
+.letter-toolbar {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.letter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.6rem 1.1rem;
+  cursor: pointer;
+}
+
+.letter-btn-primary {
+  background: var(--lh-accent);
+  border-color: var(--lh-accent);
+  color: #fff;
+}
+
+.letter-btn-primary:hover {
+  filter: brightness(0.95);
+}
+
+.letter-preview-pane {
+  min-width: 0;
+}
+
+.letter-preview-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-bottom: 0.65rem;
+}
+
+/* Official A4 letter */
+.lh-page {
+  --lh-accent: #e6b800;
+  --lh-dark: #2f3542;
+  position: relative;
+  width: min(100%, 794px);
+  margin: 0 auto;
+  min-height: 1123px;
+  background: var(--letter-paper);
+  color: var(--letter-ink);
+  font-family: 'Open Sans', 'Segoe UI', sans-serif;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.lh-header-art {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 160px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.lh-shape-gold {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48%;
+  height: 100px;
+  background: var(--lh-accent);
+  clip-path: polygon(0 0, 100% 0, 85% 100%, 0% 100%);
+}
+
+.lh-shape-dark {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 45%;
+  height: 40px;
+  background: var(--lh-dark);
+  clip-path: polygon(10% 0, 100% 0, 100% 100%, 0% 100%);
+}
+
+.lh-header-meta {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 28px 40px 0;
+  min-height: 150px;
+}
+
+.lh-meta-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.lh-ref {
+  padding-top: 6px;
+}
+
+.lh-ref-value {
+  font-family: Montserrat, 'Segoe UI', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.lh-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 0.55rem;
+}
+
+.lh-logo-img {
+  height: 80px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.lh-logo-fallback {
+  width: 72px;
+  height: 72px;
+  border-radius: 4px;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-family: Montserrat, sans-serif;
+  font-weight: 800;
+  font-size: 1.5rem;
+}
+
+.lh-date-value {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #333;
+}
+
+.lh-content {
+  position: relative;
+  z-index: 5;
+  flex: 1 1 auto;
+  padding: 24px 56px 120px;
+}
+
+.lh-company-line {
+  margin-bottom: 1.5rem;
+  font-family: Montserrat, 'Segoe UI', sans-serif;
+}
+
+.lh-company-line strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--lh-dark);
+  letter-spacing: 0.02em;
+}
+
+.lh-company-line span {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lh-accent);
+}
+
+.lh-recipient {
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #111;
+}
+
+.lh-to-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #333;
+  margin-bottom: 0.35rem;
+}
+
+.lh-recipient-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.lh-subject {
+  text-align: center;
+  margin: 1.75rem 0 2rem;
+}
+
+.lh-subject-text {
+  display: inline-block;
+  font-family: Montserrat, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  text-decoration-color: var(--lh-dark);
+  color: #111;
+  max-width: 100%;
+}
+
+.lh-salutation {
+  font-weight: 600;
+  margin-bottom: 0.9rem;
+  font-size: 0.95rem;
+}
+
+.lh-body {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: #374151;
+  text-align: justify;
+  min-height: 220px;
+}
+
+.lh-body p {
+  margin: 0 0 1rem;
+}
+
+.lh-body-placeholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.lh-signoff {
+  margin-top: 2.75rem;
+  page-break-inside: avoid;
+}
+
+.lh-closing {
+  margin-bottom: 2.5rem;
+  font-size: 0.95rem;
+}
+
+.lh-sig-line {
+  width: 220px;
+  border-top: 2px solid #333;
+  padding-top: 0.5rem;
+  margin-top: 2.5rem;
+}
+
+.lh-sign-name {
+  font-family: Montserrat, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--lh-dark);
+  font-size: 0.9rem;
+}
+
+.lh-sign-title {
+  font-size: 0.8125rem;
+  color: #666;
+  margin-top: 0.15rem;
+}
+
+.lh-footer-official {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 90px;
+  z-index: 4;
+}
+
+.lh-footer-left {
+  position: absolute;
+  bottom: 30px;
+  left: 50px;
+  z-index: 6;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--lh-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lh-footer-left i {
+  color: var(--lh-accent);
+}
+
+.lh-footer-dark {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 20px;
+  background: var(--lh-dark);
+}
+
+.lh-footer-gold {
+  position: absolute;
+  bottom: 20px;
+  right: 0;
+  width: 80%;
+  height: 50px;
+  background: var(--lh-accent);
+  clip-path: polygon(5% 0, 100% 0, 100% 100%, 0% 100%);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.5rem;
+  padding-right: 50px;
+  color: #fff;
+  font-size: 0.7rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 980px) {
+  .letter-workspace,
+  .letter-workspace.is-editing {
+    grid-template-columns: 1fr;
+  }
+
+  .lh-page {
+    min-height: auto;
+  }
+
+  .lh-content {
+    padding-bottom: 140px;
+  }
+
+  .lh-footer-gold {
+    width: 90%;
+    gap: 0.75rem;
+    padding-right: 1rem;
+    font-size: 0.65rem;
+  }
+}
+
+@media print {
+  .letter-composer-sidebar,
+  .letter-preview-label,
+  .letter-toolbar,
+  .letter-topbar {
+    display: none !important;
+  }
+
+  .letter-workspace {
+    display: block;
+    padding: 0;
+  }
+
+  .lh-page {
+    width: 210mm;
+    min-height: 297mm;
+    box-shadow: none;
+    margin: 0;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    margin: 0;
+    size: A4;
+  }
+}

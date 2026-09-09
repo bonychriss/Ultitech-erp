@@ -4,6 +4,7 @@ use App\Domains\Sales\DeskShell;
 use App\Domains\Sales\LegacyApiBridge;
 use App\Domains\Stock\DeskShell as StockDeskShell;
 use App\Domains\Payroll\DeskShell as PayrollDeskShell;
+use App\Domains\Letter\DeskShell as LetterDeskShell;
 use App\Http\Controllers\HomePageController;
 use App\Http\Controllers\TrialPageController;
 use App\Http\Controllers\SalesDashboardApiController;
@@ -14,6 +15,8 @@ use App\Http\Controllers\StockDeskPageController;
 use App\Http\Controllers\StockPageController;
 use App\Http\Controllers\PayrollDeskPageController;
 use App\Http\Controllers\PayrollPageController;
+use App\Http\Controllers\LetterDeskPageController;
+use App\Http\Controllers\LetterPageController;
 use App\Http\Controllers\SuggestApiController;
 use App\Http\Controllers\SuggestPageController;
 use App\Http\Middleware\AttachErpContext;
@@ -56,6 +59,12 @@ Route::middleware([AttachErpContext::class])->group(function () {
     Route::match(['get', 'post'], '/payroll/desk/{desk}', [PayrollDeskPageController::class, 'show'])
         ->where('desk', PayrollDeskShell::deskRegex())
         ->name('payroll.page.desk');
+
+    // Letter
+    Route::get('/letter', [LetterPageController::class, 'show'])->name('letter.page');
+    Route::match(['get', 'post'], '/letter/desk/{desk}', [LetterDeskPageController::class, 'show'])
+        ->where('desk', LetterDeskShell::deskRegex())
+        ->name('letter.page.desk');
 
     // Stock (full module via legacy desk bridge)
     Route::match(['get', 'post'], '/stock', [StockPageController::class, 'show'])->name('stock.page');

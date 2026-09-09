@@ -18,23 +18,27 @@ function run_query($pdo, $sql, $description, &$status) {
     }
 }
 
-// 1. payroll_settings
+// 1. payroll_settings (matches app: setting_key / setting_value)
 $sql1 = "CREATE TABLE IF NOT EXISTS " . payroll_table('payroll_settings') . " (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `meta_key` varchar(100) NOT NULL,
-  `meta_value` text DEFAULT NULL,
+  `setting_key` varchar(50) NOT NULL,
+  `setting_value` text DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `meta_key` (`meta_key`)
+  UNIQUE KEY `setting_key` (`setting_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;";
 run_query($pdo, $sql1, "Payroll Settings Table", $status);
 
 // Insert default settings
 try {
-    $stmt = $pdo->prepare("INSERT IGNORE INTO " . payroll_table('payroll_settings') . " (`meta_key`, `meta_value`) VALUES
-    ('nssf_rate', '0.05'),
-    ('tax_rate', '0.10'),
-    ('pay_day', '25')");
+    $stmt = $pdo->prepare("INSERT IGNORE INTO " . payroll_table('payroll_settings') . " (`setting_key`, `setting_value`, `description`) VALUES
+    ('currency', 'TZS', 'Default currency'),
+    ('pay_day', '30', 'Day of month to run payroll'),
+    ('tax_rate', '0', 'Flat tax rate (if applicable), else 0 for graduated'),
+    ('nssf_rate', '0.10', 'NSSF percentage (employee)'),
+    ('social_security_rate', '10', 'NSSF percentage (employee)'),
+    ('employer_social_security_rate', '10', 'NSSF percentage (employer)')");
     $stmt->execute();
     $status[] = ['desc' => 'Default Settings', 'status' => 'success', 'msg' => 'Default NSSF, Tax, and Pay Day values initialized.'];
 } catch (PDOException $e) {
@@ -95,6 +99,36 @@ $sql4 = "CREATE TABLE IF NOT EXISTS " . payroll_table('payslips') . " (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;";
 run_query($pdo, $sql4, "Payslips Table", $status);
 
+// 5. payroll_tax_bands
+$sql5 = "CREATE TABLE IF NOT EXISTS " . payroll_table('payroll_tax_bands') . " (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `min_salary` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `max_salary` decimal(15,2) DEFAULT NULL,
+  `tax_rate` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `offset_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `description` varchar(255) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;";
+run_query($pdo, $sql5, "Payroll Tax Bands Table", $status);
+
+try {
+    $count = (int) $pdo->query('SELECT COUNT(*) FROM ' . payroll_table('payroll_tax_bands'))->fetchColumn();
+    if ($count === 0) {
+        $pdo->exec("INSERT INTO " . payroll_table('payroll_tax_bands') . " (`min_salary`, `max_salary`, `tax_rate`, `offset_amount`, `description`, `is_active`) VALUES
+            (0, 270000, 0, 0, '0% (No tax)', 1),
+            (270000, 520000, 8, 0, '8% of amount above 270,000', 1),
+            (520000, 760000, 20, 20000, '20,000 + 20% of amount above 520,000', 1),
+            (760000, 1000000, 25, 68000, '68,000 + 25% of amount above 760,000', 1),
+            (1000000, NULL, 30, 128000, '128,000 + 30% of amount above 1,000,000', 1)");
+        $status[] = ['desc' => 'Default Tax Bands', 'status' => 'success', 'msg' => 'Tanzania PAYE bands initialized.'];
+    } else {
+        $status[] = ['desc' => 'Default Tax Bands', 'status' => 'success', 'msg' => 'Tax bands already present.'];
+    }
+} catch (PDOException $e) {
+    $status[] = ['desc' => 'Default Tax Bands', 'status' => 'error', 'msg' => $e->getMessage()];
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -124,6 +158,21 @@ run_query($pdo, $sql4, "Payslips Table", $status);
                         </div>
                         <h2 class="fw-bold">Payroll Setup</h2>
                         <p class="text-muted">Initializing database components for the live site.</p>
+                        <?php
+                        $setupSchema = function_exists('payroll_resolved_schema') ? payroll_resolved_schema() : '';
+                        $setupConnDb = '';
+                        try {
+                            $setupConnDb = trim((string) $pdo->query('SELECT DATABASE()')->fetchColumn());
+                        } catch (Throwable $e) {
+                            $setupConnDb = '';
+                        }
+                        ?>
+                        <p class="small text-muted mb-0">
+                            Target DB: <code><?= htmlspecialchars($setupSchema !== '' ? $setupSchema : '(unqualified)', ENT_QUOTES, 'UTF-8') ?></code>
+                            <?php if ($setupConnDb !== ''): ?>
+                                · Connected as: <code><?= htmlspecialchars($setupConnDb, ENT_QUOTES, 'UTF-8') ?></code>
+                            <?php endif; ?>
+                        </p>
                     </div>
 
                     <div class="list-group">

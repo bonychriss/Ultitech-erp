@@ -27,6 +27,11 @@ if (!function_exists('payroll_meta_pdo')) {
 }
 
 if (!function_exists('payroll_resolved_schema')) {
+    /**
+     * Resolve the tenant schema for payroll tables.
+     * Always prefer the active company DB connection — never "steal" Ultimate's
+     * DATA_DB_NAME just because it already has payroll_* tables.
+     */
     function payroll_resolved_schema(): string
     {
         static $resolved = null;
@@ -34,21 +39,21 @@ if (!function_exists('payroll_resolved_schema')) {
             return $resolved;
         }
 
-        $conn = payroll_meta_pdo();
-        if (!($conn instanceof PDO)) {
-            $resolved = '';
-            return $resolved;
+        global $pdo, $control_pdo;
+
+        $tenantDb = '';
+        if (($pdo ?? null) instanceof PDO) {
+            try {
+                $tenantDb = trim((string) $pdo->query('SELECT DATABASE()')->fetchColumn());
+            } catch (Throwable $e) {
+                $tenantDb = '';
+            }
         }
 
-        $candidates = [];
-        try {
-            $currentDb = trim((string) $conn->query('SELECT DATABASE()')->fetchColumn());
-            if ($currentDb !== '') {
-                $candidates[] = $currentDb;
-            }
-        } catch (Throwable $e) {
-            $currentDb = '';
-        }
+        $companyDb = '';
+        $meta = (($control_pdo ?? null) instanceof PDO)
+            ? $control_pdo
+            : ((($pdo ?? null) instanceof PDO) ? $pdo : null);
 
         $cid = 0;
         try {
@@ -60,53 +65,18 @@ if (!function_exists('payroll_resolved_schema')) {
             $cid = (int) $_SESSION['company_id'];
         }
 
-        if ($cid > 0 && function_exists('tableExists') && tableExists('companies', $conn)) {
+        if ($cid > 0 && $meta instanceof PDO && function_exists('tableExists') && tableExists('companies', $meta)) {
             try {
-                $stmt = $conn->prepare('SELECT db_name FROM companies WHERE id = ? LIMIT 1');
+                $stmt = $meta->prepare('SELECT db_name FROM companies WHERE id = ? LIMIT 1');
                 $stmt->execute([$cid]);
                 $companyDb = trim((string) ($stmt->fetchColumn() ?: ''));
-                if ($companyDb !== '') {
-                    $candidates[] = $companyDb;
-                }
             } catch (Throwable $e) {
+                $companyDb = '';
             }
         }
 
-        if (defined('DATA_DB_NAME') && trim((string) DATA_DB_NAME) !== '') {
-            $candidates[] = trim((string) DATA_DB_NAME);
-        }
-        if (defined('SALES_DB_NAME') && trim((string) SALES_DB_NAME) !== '') {
-            $candidates[] = trim((string) SALES_DB_NAME);
-        }
-
-        $candidates = array_values(array_unique(array_filter($candidates, static function ($dbName) {
-            return trim((string) $dbName) !== '';
-        })));
-
-        $bestSchema = '';
-        $bestScore = -1;
-        $tables = ['employee_salary', 'payroll_runs', 'payslips', 'payroll_settings', 'payroll_tax_bands'];
-        foreach ($candidates as $dbName) {
-            $score = 0;
-            foreach ($tables as $tableName) {
-                try {
-                    $stmt = $conn->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?');
-                    $stmt->execute([$dbName, $tableName]);
-                    if ((int) $stmt->fetchColumn() > 0) {
-                        $score++;
-                    }
-                } catch (Throwable $e) {
-                }
-            }
-            if ($score > $bestScore) {
-                $bestScore = $score;
-                $bestSchema = $dbName;
-            }
-        }
-
-        if ($bestSchema === '' && !empty($currentDb)) {
-            $bestSchema = $currentDb;
-        }
+        // Prefer the live tenant connection; fall back to companies.db_name.
+        $bestSchema = $tenantDb !== '' ? $tenantDb : $companyDb;
 
         $resolved = $bestSchema;
         $GLOBALS['payroll_database_name'] = $bestSchema;

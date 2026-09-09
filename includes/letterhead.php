@@ -42,10 +42,6 @@ function letterheadResolveForCompany(?string $slug = null, ?string $companyName 
     if ($isRoadmaster) {
         $headerUrl = $urlFor('letterhead/roadmaster/header.png');
         $footerUrl = $urlFor('letterhead/roadmaster/footer.png');
-        $stampUrl = $urlFor('letterhead/stamps/roadmaster-stamp.png');
-        if ($stampUrl === '') {
-            $stampUrl = $urlFor('assets/images/roadmaster-logo.png');
-        }
         return [
             'companyKey' => 'roadmaster',
             'isUltimate' => false,
@@ -53,8 +49,8 @@ function letterheadResolveForCompany(?string $slug = null, ?string $companyName 
             'accentColor' => '#B7312C',
             'headerUrl' => $headerUrl,
             'footerUrl' => $footerUrl,
-            'stampUrl' => $stampUrl,
-            'showStamp' => ($stampUrl !== ''),
+            'stampUrl' => '',
+            'showStamp' => false,
             'defaults' => [
                 'companyName' => 'ROADMASTER SPARES LIMITED',
                 'tagline' => 'PARTS THAT LAST, BACKED BY MASTERS',

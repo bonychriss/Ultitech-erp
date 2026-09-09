@@ -729,6 +729,19 @@ a.pay-desk-kpi-card:hover {
   color: #64748b;
 }
 
+.pay-desk-empty-lottie {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 0.25rem;
+}
+
+.pay-desk-empty-lottie dotlottie-wc {
+  display: block;
+}
+
 .pay-desk-empty-icon {
   width: 2.5rem;
   height: 2.5rem;

@@ -97,16 +97,44 @@ if (!function_exists('payroll_table')) {
 }
 
 if (!function_exists('payroll_table_exists')) {
+    /**
+     * Check whether a payroll table exists in the active tenant DB.
+     * Uses the tenant $pdo (not control_pdo) — StackCP control users often
+     * cannot see other tenants' schemas via information_schema.
+     */
     function payroll_table_exists(string $tableName): bool
     {
-        $conn = payroll_meta_pdo();
+        global $pdo;
+
+        $safeTable = preg_replace('/[^a-zA-Z0-9_]/', '', $tableName);
+        if ($safeTable === '') {
+            return false;
+        }
+
+        $conn = (($pdo ?? null) instanceof PDO) ? $pdo : payroll_meta_pdo();
+        if (!($conn instanceof PDO)) {
+            return false;
+        }
+
+        try {
+            // Prefer SHOW TABLES on the connected DB (works without cross-schema grants).
+            $stmt = $conn->query('SHOW TABLES LIKE ' . $conn->quote($safeTable));
+            if ($stmt && $stmt->fetchColumn()) {
+                return true;
+            }
+        } catch (Throwable $e) {
+            // Fall through to information_schema.
+        }
+
         $schema = payroll_resolved_schema();
-        if (!($conn instanceof PDO) || $schema === '') {
+        if ($schema === '') {
             return false;
         }
         try {
-            $stmt = $conn->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?');
-            $stmt->execute([$schema, preg_replace('/[^a-zA-Z0-9_]/', '', $tableName)]);
+            $stmt = $conn->prepare(
+                'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?'
+            );
+            $stmt->execute([$schema, $safeTable]);
             return ((int) $stmt->fetchColumn()) > 0;
         } catch (Throwable $e) {
             return false;

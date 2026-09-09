@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {
   CalendarCheck,
   CheckCircle2,
   History,
-  Inbox,
   Loader2,
   Plus,
   Search,
@@ -22,6 +22,7 @@ import {
   formatMoney,
 } from '../api/payrollDesk';
 import RunPayrollModal from '../components/RunPayrollModal';
+import nothingLottieUrl from '../assets/nothing.lottie?url';
 
 function StatusBadge({ status }) {
   const cls = {
@@ -362,7 +363,14 @@ export default function PayrollDeskPage() {
           </div>
         ) : runs.length === 0 ? (
           <div className="pay-desk-empty">
-            <Inbox className="pay-desk-empty-icon" aria-hidden="true" />
+            <div className="pay-desk-empty-lottie" aria-hidden="true">
+              <DotLottieReact
+                src={nothingLottieUrl}
+                autoplay
+                loop
+                style={{ width: '220px', height: '220px' }}
+              />
+            </div>
             <p className="pay-desk-empty-title">No payroll runs found</p>
             <p className="pay-desk-empty-sub">
               {search

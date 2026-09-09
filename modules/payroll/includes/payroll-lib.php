@@ -1225,8 +1225,14 @@ function payrollDeskRenderReactEntry(string $pageTitle, string $headerTitle, str
     $employeeHeaderExtraClass = 'employee-header--pay-desk';
     $bodyExtraClass = 'page-pay-desk';
 
+    $emptyAnimUrl = '/assets/animations/nothing.lottie';
+    if (function_exists('app_url')) {
+        $emptyAnimUrl = rtrim((string) app_url('/assets/animations/nothing.lottie'), '/');
+    }
+
     $windowScript = 'window.__PAYROLL_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES)
-        . ';window.__PAYROLL_PAGE__ = ' . json_encode($payrollPage, JSON_UNESCAPED_SLASHES);
+        . ';window.__PAYROLL_PAGE__ = ' . json_encode($payrollPage, JSON_UNESCAPED_SLASHES)
+        . ';window.__PAYROLL_EMPTY_ANIM__ = ' . json_encode($emptyAnimUrl, JSON_UNESCAPED_SLASHES);
     foreach ($extraWindowVars as $key => $value) {
         $windowScript .= ';window.' . $key . ' = ' . json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }

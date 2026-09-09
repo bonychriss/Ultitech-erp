@@ -303,7 +303,7 @@ if ($isAdmin) {
         'id' => 'letters',
         'label' => 'Inbox',
         'desc' => 'View Internal Correspondence',
-        'href' => $companyRoute('manage-letters'),
+        'href' => $companyRoute('modules/letter/inbox') . '?module=letter',
         'icon' => 'inbox',
         'color' => '#4338ca',
     ]);

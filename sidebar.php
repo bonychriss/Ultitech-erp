@@ -673,11 +673,11 @@ switch ($active_module) {
         break;
 
     case 'letter':
-        addItem($menuItems, 'letters', 'Letters', 'envelope', $prefix . 'modules/letter/index.php?module=letter');
-        addItem($menuItems, 'inbox', 'Inbox', 'inbox', $prefix . 'modules/letter/inbox.php?module=letter', null, 'letter-inbox-nav');
+        addItem($menuItems, 'letters', 'Letters', 'envelope', $prefix . 'letter?module=letter');
+        addItem($menuItems, 'inbox', 'Inbox', 'inbox', $prefix . 'letter/inbox?module=letter', null, 'letter-inbox-nav');
         $__letterSlug = strtolower(trim((string) ($_SESSION['company_slug'] ?? $currentSlug ?? '')));
         if ($__letterSlug === 'ultimate') {
-            addItem($menuItems, 'stamp', 'Stamp', 'postage', $prefix . 'modules/letter/stamp.php?module=letter');
+            addItem($menuItems, 'stamp', 'Stamp', 'postage', $prefix . 'letter/stamp?module=letter');
         }
         break;
 
@@ -849,14 +849,14 @@ switch ($active_module) {
 
     case 'letters':
         if ($is_admin) {
-            addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=letters');
+            addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=letter');
         } else {
-            addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=letters');
+            addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=letter');
         }
-        addItem($menuItems, 'write-letter', 'Write Letter', 'pencil-square', $prefix . 'write-letter.php');
-        addItem($menuItems, 'letter-records', 'My Records', 'folder2-open', $prefix . 'letter-records.php');
-        if($is_admin) {
-            addItem($menuItems, 'manage-letters', 'Manage Letters', 'kanban', $prefix . 'manage-letters.php');
+        addItem($menuItems, 'write-letter', 'Write Letter', 'pencil-square', $prefix . 'letter/compose?module=letter');
+        addItem($menuItems, 'letter-records', 'My Records', 'folder2-open', $prefix . 'letter?module=letter');
+        if ($is_admin) {
+            addItem($menuItems, 'manage-letters', 'Manage Letters', 'kanban', $prefix . 'letter/inbox?module=letter');
         }
         break;
 

@@ -127,7 +127,7 @@ if (strpos($script, 'notifications.php') !== false) {
 if (strpos($script, 'meetings.php') !== false) {
     $active_module = 'meetings';
 }
-if (strpos($script, 'write-letter') !== false || strpos($script, 'letter-records') !== false || strpos($script, 'manage-letters') !== false) {
+if (strpos($script, 'write-letter') !== false || strpos($script, 'letter-records') !== false || strpos($script, 'manage-letters') !== false || strpos($script, '/modules/letter/') !== false || strpos($script, 'letter.php') !== false) {
     $active_module = 'letters';
 }
 if (strpos($script, '/modules/email/') !== false) {
@@ -565,11 +565,11 @@ switch ($active_module) {
     case 'letters':
         $lettersActionBi = $isAdmin ? 'kanban' : 'pencil-square';
         $links = [
-            ['slug' => 'home', 'url' => $modUrl('write-letter.php?module=letters'), 'label' => 'Write', 'bi' => 'pencil-square'],
-            ['slug' => 'cart', 'url' => $modUrl('letter-records.php?module=letters'), 'label' => 'Records', 'bi' => 'folder2-open'],
+            ['slug' => 'home', 'url' => $modUrl('modules/letter/compose.php?module=letter'), 'label' => 'Write', 'bi' => 'pencil-square'],
+            ['slug' => 'cart', 'url' => $modUrl('modules/letter/index.php?module=letter'), 'label' => 'Records', 'bi' => 'folder2-open'],
             ['slug' => 'modules', 'url' => $modUrl('select-module.php'), 'label' => 'Modules', 'bi' => 'grid'],
-            ['slug' => 'account', 'url' => $modUrl($accountPath . '?module=letters'), 'label' => 'Account', 'bi' => $mfBiAccount],
-            ['slug' => 'settings', 'url' => $isAdmin ? $modUrl('manage-letters.php?module=letters') : $modUrl('write-letter.php?module=letters'), 'label' => $isAdmin ? 'Manage' : 'New', 'bi' => $lettersActionBi],
+            ['slug' => 'account', 'url' => $modUrl($accountPath . '?module=letter'), 'label' => 'Account', 'bi' => $mfBiAccount],
+            ['slug' => 'settings', 'url' => $isAdmin ? $modUrl('modules/letter/inbox.php?module=letter') : $modUrl('modules/letter/compose.php?module=letter'), 'label' => $isAdmin ? 'Manage' : 'New', 'bi' => $lettersActionBi],
         ];
         if (strpos($script, 'select-module') !== false) {
             $mf_active_slug = 'modules';

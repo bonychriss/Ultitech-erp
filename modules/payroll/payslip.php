@@ -244,9 +244,16 @@ if (
             letter-spacing: 0.5px;
         }
 
-        .company-block { text-align: right; }
+        .company-block { text-align: right; max-width: 280px; margin-left: auto; }
         .company-logo-img { height: 50px; width: auto; object-fit: contain; margin-bottom: 5px; }
         .company-name { font-family: var(--header-font); font-size: 18px; font-weight: 700; }
+        .company-details {
+            margin-top: 6px;
+            font-size: 11px;
+            line-height: 1.45;
+            color: #555;
+        }
+        .company-details div + div { margin-top: 2px; }
 
         /* --- Info Section --- */
         .info-section { margin-bottom: 50px; }
@@ -260,13 +267,6 @@ if (
         .meta-row + .meta-row { margin-top: 5px; }
         .meta-label { color: #666; min-width: 72px; }
         .meta-val { font-weight: 600; }
-        .company-details {
-            margin-top: 14px;
-            font-size: 11px;
-            line-height: 1.45;
-            color: #555;
-        }
-        .company-details div + div { margin-top: 2px; }
 
         /* --- Table --- */
         .pay-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
@@ -311,11 +311,11 @@ if (
         .bank-label { color: #666; }
         .bank-val { font-weight: 600; color: #000; }
 
-        /* Totals Box */
-        .totals-box { 
-            border: 1px solid #dcdcdc; 
-            padding: 20px; 
-            background: rgba(255,255,255,0.3); /* Subtle highlight */
+        /* Totals */
+        .totals-box {
+            border: none;
+            padding: 0;
+            background: transparent;
         }
         .total-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
         .total-row.final { 
@@ -383,6 +383,13 @@ if (
                 <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>" class="company-logo-img">
                 <?php endif; ?>
                 <div class="company-name"><?= htmlspecialchars($companyName) ?></div>
+                <?php if ($companyAddress !== '' || $companyPhone !== '' || $companyEmail !== ''): ?>
+                <div class="company-details">
+                    <?php if ($companyAddress !== ''): ?><div><?= htmlspecialchars($companyAddress) ?></div><?php endif; ?>
+                    <?php if ($companyPhone !== ''): ?><div><?= htmlspecialchars($companyPhone) ?></div><?php endif; ?>
+                    <?php if ($companyEmail !== ''): ?><div><?= htmlspecialchars($companyEmail) ?></div><?php endif; ?>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -408,13 +415,6 @@ if (
                         <span class="meta-val"><?= date('M d, Y', strtotime($slip['run_date'])) ?></span>
                     </div>
                 </div>
-                <?php if ($companyAddress !== '' || $companyPhone !== '' || $companyEmail !== ''): ?>
-                <div class="company-details">
-                    <?php if ($companyAddress !== ''): ?><div><?= htmlspecialchars($companyAddress) ?></div><?php endif; ?>
-                    <?php if ($companyPhone !== ''): ?><div><?= htmlspecialchars($companyPhone) ?></div><?php endif; ?>
-                    <?php if ($companyEmail !== ''): ?><div><?= htmlspecialchars($companyEmail) ?></div><?php endif; ?>
-                </div>
-                <?php endif; ?>
             </div>
         </div>
 

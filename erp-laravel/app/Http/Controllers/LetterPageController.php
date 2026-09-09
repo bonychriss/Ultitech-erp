@@ -14,7 +14,7 @@ class LetterPageController extends Controller
 {
     public function show(Request $request): View|Response
     {
-        return $this->render($request, 'compose', 'Letter', 'Letter');
+        return $this->render($request, 'list', 'Letters', 'Letters');
     }
 
     /**

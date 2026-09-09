@@ -1,11 +1,12 @@
 import ComposeLetterPage from './pages/ComposeLetterPage.jsx';
+import LettersListPage from './pages/LettersListPage.jsx';
 import StampEditorPage from './pages/StampEditorPage.jsx';
 
 function resolvePage() {
   if (typeof window !== 'undefined' && window.__LETTER_PAGE__) {
     return String(window.__LETTER_PAGE__);
   }
-  return 'compose';
+  return 'list';
 }
 
 export default function App() {
@@ -13,5 +14,8 @@ export default function App() {
   if (page === 'stamp') {
     return <StampEditorPage />;
   }
-  return <ComposeLetterPage />;
+  if (page === 'compose') {
+    return <ComposeLetterPage />;
+  }
+  return <LettersListPage />;
 }

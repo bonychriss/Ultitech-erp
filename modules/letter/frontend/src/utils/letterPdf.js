@@ -11,16 +11,112 @@ function safeFilename(name) {
   return (base || 'letter') + '.pdf';
 }
 
-function prepareEdits(root) {
-  root.querySelectorAll('.lh-edit').forEach((node) => {
-    node.style.border = 'none';
-    node.style.background = 'transparent';
-    node.style.boxShadow = 'none';
-    node.style.outline = 'none';
-    if (!String(node.value || '').trim()) {
-      node.style.color = 'transparent';
+function fieldShouldUppercase(node) {
+  return Boolean(
+    node.closest('.lh-from-block')
+    || node.closest('.lh-recipient')
+    || node.closest('.lh-subject')
+  );
+}
+
+function replaceEditWithText(node) {
+  const raw = String(node.value || '');
+  const text = fieldShouldUppercase(node) ? raw.toUpperCase() : raw;
+  const isArea = node.tagName === 'TEXTAREA' || node.classList.contains('lh-edit--area');
+  const isSubject = node.classList.contains('lh-edit--subject') || node.closest('.lh-subject');
+
+  const replacement = node.ownerDocument.createElement(isArea ? 'div' : 'div');
+  replacement.className = `${node.className} lh-edit-print`.trim();
+
+  if (!text.trim()) {
+    replacement.style.display = 'none';
+    node.replaceWith(replacement);
+    return;
+  }
+
+  if (isArea) {
+    // Preserve paragraphs like the on-screen letter body.
+    const blocks = text
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (!blocks.length) {
+      replacement.textContent = text;
+    } else {
+      blocks.forEach((block, index) => {
+        const p = node.ownerDocument.createElement('p');
+        p.textContent = block;
+        p.style.margin = index === blocks.length - 1 ? '0' : '0 0 0.95rem';
+        p.style.whiteSpace = 'pre-wrap';
+        p.style.wordBreak = 'break-word';
+        replacement.appendChild(p);
+      });
     }
+    replacement.style.whiteSpace = 'normal';
+    replacement.style.minHeight = '0';
+    replacement.style.height = 'auto';
+    replacement.style.width = '100%';
+    replacement.style.display = 'block';
+  } else if (isSubject) {
+    replacement.textContent = text;
+    replacement.style.display = 'block';
+    replacement.style.width = '100%';
+    replacement.style.maxWidth = '100%';
+    replacement.style.whiteSpace = 'normal';
+    replacement.style.wordBreak = 'break-word';
+    replacement.style.overflowWrap = 'anywhere';
+    replacement.style.textAlign = 'center';
+    replacement.style.fontWeight = '700';
+    replacement.style.textTransform = 'uppercase';
+    replacement.style.textDecoration = 'underline';
+    replacement.style.textUnderlineOffset = '4px';
+  } else {
+    replacement.textContent = text;
+    replacement.style.whiteSpace = 'pre-wrap';
+    replacement.style.wordBreak = 'break-word';
+    replacement.style.overflowWrap = 'anywhere';
+    replacement.style.width = '100%';
+    replacement.style.maxWidth = '100%';
+    replacement.style.display = 'block';
+    if (fieldShouldUppercase(node)) {
+      replacement.style.textTransform = 'uppercase';
+    }
+  }
+
+  replacement.style.border = 'none';
+  replacement.style.background = 'transparent';
+  replacement.style.boxShadow = 'none';
+  replacement.style.outline = 'none';
+  replacement.style.padding = '0';
+  replacement.style.margin = '0';
+  replacement.style.font = 'inherit';
+  replacement.style.fontSize = 'inherit';
+  replacement.style.lineHeight = 'inherit';
+  replacement.style.color = '#111';
+  if (!isSubject && node.style.textAlign) {
+    replacement.style.textAlign = node.style.textAlign;
+  }
+
+  node.replaceWith(replacement);
+}
+
+function prepareEdits(root) {
+  // Replace inputs/textareas with real text nodes so html2canvas captures full wrapping content.
+  root.querySelectorAll('.lh-edit').forEach((node) => {
+    replaceEditWithText(node);
   });
+
+  const body = root.querySelector('.lh-body--template');
+  if (body) {
+    body.style.minHeight = '0';
+    body.style.height = 'auto';
+    body.classList.remove('is-empty');
+  }
+  const subject = root.querySelector('.lh-subject--ref');
+  if (subject) {
+    subject.style.minHeight = '0';
+    subject.classList.remove('is-empty');
+  }
 }
 
 async function captureElement(el) {

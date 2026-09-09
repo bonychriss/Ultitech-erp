@@ -82,6 +82,8 @@ function letterBuildClientCfg(array $erp = []): array
 
     $editorUrl = '';
     $stampPreviewUrl = '';
+    $listUrl = '';
+    $composeUrl = '';
     if (function_exists('app_url')) {
         $editorUrl = rtrim((string) app_url('/3D/dist/'), '/') . '/';
         if ($isUltimate) {
@@ -92,12 +94,21 @@ function letterBuildClientCfg(array $erp = []): array
             $stampPreviewUrl .= '?v=' . (int) $stampVer;
         }
     }
+    if ($slug !== '' && function_exists('company_url')) {
+        $listUrl = company_url('modules/letter/index.php', $slug) . '?module=letter';
+        $composeUrl = company_url('modules/letter/compose.php', $slug) . '?module=letter';
+    } elseif (function_exists('app_url')) {
+        $listUrl = rtrim((string) app_url('/modules/letter/index.php'), '/') . '?module=letter';
+        $composeUrl = rtrim((string) app_url('/modules/letter/compose.php'), '/') . '?module=letter';
+    }
 
     return [
         'module' => 'letter',
         'engine' => 'erp-laravel Domains/Letter',
         'companySlug' => $slug,
         'backUrl' => (string) ($erp['back_url'] ?? ''),
+        'listUrl' => $listUrl,
+        'composeUrl' => $composeUrl,
         'isUltimateCompany' => $isUltimate,
         'showUltimateStamp' => $isUltimate,
         'stampEditorUrl' => $editorUrl,

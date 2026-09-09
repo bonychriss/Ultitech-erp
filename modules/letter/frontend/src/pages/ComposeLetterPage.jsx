@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, Save } from 'lucide-react';
+import { ArrowLeft, Download, Save } from 'lucide-react';
 import LetterheadDocument from '../components/LetterheadDocument.jsx';
-
-function readCfg() {
-  if (typeof window !== 'undefined' && window.__LETTER_CFG__ && typeof window.__LETTER_CFG__ === 'object') {
-    return window.__LETTER_CFG__;
-  }
-  return {};
-}
+import {
+  createLetterId,
+  getLetter,
+  letterDisplayTitle,
+  listHref,
+  readLetterCfg,
+  upsertLetter,
+} from '../utils/letterStore.js';
 
 function formatDisplayDate(iso) {
   if (!iso) return '';
@@ -16,12 +17,6 @@ function formatDisplayDate(iso) {
   const dd = String(d.getDate()).padStart(2, '0');
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   return `${dd}-${mm}-${d.getFullYear()}.`;
-}
-
-function draftStorageKey(cfg) {
-  const slug = String(cfg.companySlug || 'company').trim() || 'company';
-  const uid = Number(cfg.user?.id || 0) || 0;
-  return `letter-draft:v1:${slug}:${uid}`;
 }
 
 function buildDefaults(cfg, today) {
@@ -47,38 +42,52 @@ function buildDefaults(cfg, today) {
   };
 }
 
-function loadDraft(key, defaults) {
-  if (typeof window === 'undefined') return defaults;
+function readLetterIdFromUrl() {
   try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return defaults;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return defaults;
-    return { ...defaults, ...parsed };
+    return String(new URLSearchParams(window.location.search).get('id') || '').trim();
   } catch {
-    return defaults;
+    return '';
   }
 }
 
-function saveDraft(key, form) {
-  if (typeof window === 'undefined') return false;
+function ensureLetterIdInUrl(letterId) {
   try {
-    window.localStorage.setItem(key, JSON.stringify(form));
-    return true;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('id') === letterId) return;
+    url.searchParams.set('id', letterId);
+    window.history.replaceState({}, '', url.pathname + '?' + url.searchParams.toString() + url.hash);
   } catch {
-    return false;
+    /* ignore */
   }
 }
 
 export default function ComposeLetterPage() {
-  const cfg = useMemo(() => readCfg(), []);
+  const cfg = useMemo(() => readLetterCfg(), []);
   const branding = cfg.branding || {};
   const user = cfg.user || {};
   const signatureUrl = String(cfg.signatureUrl || user.signatureUrl || '').trim();
-  const storageKey = useMemo(() => draftStorageKey(cfg), [cfg]);
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const defaults = useMemo(() => buildDefaults(cfg, today), [cfg, today]);
 
-  const [form, setForm] = useState(() => loadDraft(storageKey, buildDefaults(cfg, today)));
+  const boot = useMemo(() => {
+    let id = readLetterIdFromUrl();
+    let createdAt = new Date().toISOString();
+    let form = defaults;
+    if (id) {
+      const existing = getLetter(id, cfg);
+      if (existing?.form) {
+        form = { ...defaults, ...existing.form };
+        createdAt = existing.createdAt || createdAt;
+      }
+    } else {
+      id = createLetterId();
+    }
+    return { id, form, createdAt };
+  }, [cfg, defaults]);
+
+  const [letterId] = useState(boot.id);
+  const [createdAt] = useState(boot.createdAt);
+  const [form, setForm] = useState(boot.form);
   const [saveState, setSaveState] = useState('idle');
   const [downloading, setDownloading] = useState(false);
   const savedTimerRef = useRef(null);
@@ -86,6 +95,24 @@ export default function ComposeLetterPage() {
   formRef.current = form;
 
   const accent = branding.accentColor || '#FBC51C';
+
+  const persist = (nextForm) => {
+    return upsertLetter(
+      {
+        id: letterId,
+        form: nextForm,
+        createdAt,
+        title: letterDisplayTitle(nextForm),
+      },
+      cfg
+    );
+  };
+
+  useEffect(() => {
+    ensureLetterIdInUrl(letterId);
+    persist(formRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [letterId]);
 
   useEffect(() => {
     return () => {
@@ -97,7 +124,7 @@ export default function ComposeLetterPage() {
 
   useEffect(() => {
     const flush = () => {
-      saveDraft(storageKey, formRef.current);
+      persist(formRef.current);
     };
     const onHide = () => {
       if (document.visibilityState === 'hidden') flush();
@@ -109,12 +136,13 @@ export default function ComposeLetterPage() {
       document.removeEventListener('visibilitychange', onHide);
       flush();
     };
-  }, [storageKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [letterId, createdAt, cfg]);
 
   const onChange = (key, value) => {
     setForm((prev) => {
       const next = { ...prev, [key]: value };
-      saveDraft(storageKey, next);
+      persist(next);
       return next;
     });
     setSaveState('typing');
@@ -136,7 +164,7 @@ export default function ComposeLetterPage() {
     saveState === 'typing' ? 'Typing...' : saveState === 'saved' ? 'Saved' : '';
 
   const handleSaveLetter = () => {
-    const ok = saveDraft(storageKey, formRef.current);
+    const ok = persist(formRef.current);
     if (savedTimerRef.current) {
       window.clearTimeout(savedTimerRef.current);
     }
@@ -145,7 +173,7 @@ export default function ComposeLetterPage() {
 
   const handleDownloadLetter = async () => {
     if (downloading) return;
-    saveDraft(storageKey, formRef.current);
+    persist(formRef.current);
     setDownloading(true);
     try {
       const { downloadLetterAsPdf } = await import('../utils/letterPdf.js');
@@ -166,6 +194,10 @@ export default function ComposeLetterPage() {
   return (
     <div className="letter-workspace" style={{ '--lh-accent': accent }}>
       <div className="letter-topbar letter-toolbar">
+        <a className="letter-back-link" href={listHref(cfg)}>
+          <ArrowLeft size={16} />
+          Letters
+        </a>
         {statusLabel ? (
           <span
             className={`letter-save-status${saveState === 'typing' ? ' is-typing' : ' is-saved'}`}

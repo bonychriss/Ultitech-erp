@@ -139,8 +139,9 @@
 
 .letter-topbar.letter-toolbar {
   margin-top: 0;
-  justify-content: space-between;
+  justify-content: flex-start;
   width: 100%;
+  gap: 0.75rem;
 }
 
 .letter-topbar-spacer {
@@ -152,6 +153,138 @@
   align-items: center;
   gap: 0.5rem;
   margin-left: auto;
+}
+
+.letter-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  margin-right: 0.25rem;
+}
+
+.letter-back-link:hover {
+  color: #0f172a;
+}
+
+.letter-list-page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 0.25rem 0 2rem;
+}
+
+.letter-list-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.letter-list-head h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.letter-list-head p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.letter-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.65rem;
+  padding: 2.5rem 1.5rem;
+  color: #64748b;
+}
+
+.letter-list-empty h2 {
+  margin: 0.25rem 0 0;
+  color: #0f172a;
+  font-size: 1.15rem;
+}
+
+.letter-list-empty p {
+  margin: 0 0 0.5rem;
+}
+
+.letter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.letter-list-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.95rem 1rem;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.letter-list-row:hover {
+  border-color: color-mix(in srgb, var(--lh-accent) 55%, #cbd5e1);
+  background: color-mix(in srgb, var(--lh-accent) 8%, #fff);
+}
+
+.letter-list-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.letter-list-title {
+  font-size: 0.98rem;
+  font-weight: 750;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.letter-list-meta {
+  font-size: 0.78rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.letter-list-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.letter-list-delete:hover {
+  color: #b91c1c;
+  background: #fef2f2;
 }
 
 .letter-save-status {

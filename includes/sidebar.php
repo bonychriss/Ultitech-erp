@@ -298,7 +298,8 @@ switch ($active_module) {
         break;
 
     case 'letter':
-        addItem($menuItems, 'compose', 'Compose letter', 'document-text', $prefix . 'modules/letter/index.php?module=letter');
+        addItem($menuItems, 'letters', 'Letters', 'mail', $prefix . 'modules/letter/index.php?module=letter');
+        addItem($menuItems, 'compose', 'Compose letter', 'document-text', $prefix . 'modules/letter/compose.php?module=letter');
         $__letterSlugInc = strtolower(trim((string) ($_SESSION['company_slug'] ?? $__sidebarSlug ?? '')));
         if ($__letterSlugInc === 'ultimate') {
             addItem($menuItems, 'stamp', 'Stamp', 'certificate', $prefix . 'modules/letter/stamp.php?module=letter');

@@ -673,7 +673,8 @@ switch ($active_module) {
         break;
 
     case 'letter':
-        addItem($menuItems, 'compose', 'Compose letter', 'file-earmark-text', $prefix . 'modules/letter/index.php?module=letter');
+        addItem($menuItems, 'letters', 'Letters', 'envelope', $prefix . 'modules/letter/index.php?module=letter');
+        addItem($menuItems, 'compose', 'Compose letter', 'file-earmark-text', $prefix . 'modules/letter/compose.php?module=letter');
         $__letterSlug = strtolower(trim((string) ($_SESSION['company_slug'] ?? $currentSlug ?? '')));
         if ($__letterSlug === 'ultimate') {
             addItem($menuItems, 'stamp', 'Stamp', 'postage', $prefix . 'modules/letter/stamp.php?module=letter');

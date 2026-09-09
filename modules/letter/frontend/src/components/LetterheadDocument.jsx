@@ -1,99 +1,86 @@
-function fallbackText(value, placeholder = '-') {
-  const text = String(value || '').trim();
-  return text !== '' ? text : placeholder;
+import headerArt from '../assets/letterhead-header.png';
+import footerArt from '../assets/letterhead-footer.png';
+import ultimateStamp from '../assets/ultimate-stamp.png';
+
+function line(value) {
+  return String(value || '').trim();
 }
 
 export default function LetterheadDocument({ doc }) {
-  const accent = doc.accentColor || '#E6B800';
-  const dark = doc.darkColor || '#2f3542';
   const paragraphs = String(doc.body || '')
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean);
 
+  const subject = line(doc.subject);
+  const refLine = !subject
+    ? ''
+    : subject.toUpperCase().startsWith('REF:')
+      ? subject
+      : `REF: ${subject}`;
+
+  const recipientName = line(doc.recipientName);
+  const recipientCompany = line(doc.recipientCompany);
+  const recipientAddress = line(doc.recipientAddress);
+  const recipientCity = line(doc.recipientCity);
+  const hasRecipient = recipientName || recipientCompany || recipientAddress || recipientCity;
+  const salutation = line(doc.salutation);
+  const closing = line(doc.closing);
+  const signName = line(doc.signName);
+  const signTitle = line(doc.signTitle);
+
   return (
-    <article
-      className="lh-page lh-page--official"
-      style={{ '--lh-accent': accent, '--lh-dark': dark }}
-    >
-      <div className="lh-header-art" aria-hidden="true">
-        <div className="lh-shape-gold" />
-        <div className="lh-shape-dark" />
-      </div>
+    <article className="lh-page lh-page--template">
+      <header className="lh-template-header">
+        <img src={headerArt} alt="" className="lh-template-banner" />
+      </header>
 
-      <div className="lh-header-meta">
-        <div className="lh-header-spacer" aria-hidden="true" />
+      <div className="lh-content lh-content--template">
+        <div className="lh-from-block">
+          <div>{line(doc.fromCompany) || line(doc.companyName)}</div>
+          <div>{line(doc.fromBox)}</div>
+          <div>{line(doc.fromCity)}</div>
+          <div>{doc.letterDateLabel}</div>
+        </div>
 
-        <div className="lh-header-right">
-          {doc.logoUrl ? (
-            <img className="lh-logo-img" src={doc.logoUrl} alt="" />
-          ) : (
-            <div className="lh-logo-fallback" style={{ background: accent }}>
-              {(doc.companyName || 'C').slice(0, 1).toUpperCase()}
-            </div>
-          )}
-          <div className="lh-date-block">
-            <span className="lh-meta-label">Date</span>
-            <div className="lh-date-value">{doc.letterDateLabel}</div>
+        <div className={`lh-recipient lh-recipient--template${hasRecipient ? '' : ' is-empty'}`}>
+          {recipientName ? <div className="lh-recipient-name">{recipientName}</div> : null}
+          {recipientCompany ? <div>{recipientCompany}</div> : null}
+          {recipientAddress ? <div>{recipientAddress}</div> : null}
+          {recipientCity ? <div>{recipientCity}</div> : null}
+        </div>
+
+        <div className={`lh-salutation${salutation ? '' : ' is-empty'}`}>
+          {salutation}
+        </div>
+
+        <div className={`lh-subject lh-subject--ref${refLine ? '' : ' is-empty'}`}>
+          {refLine ? <span className="lh-subject-text">{refLine}</span> : null}
+        </div>
+
+        <div className={`lh-body lh-body--template${paragraphs.length ? '' : ' is-empty'}`}>
+          {paragraphs.map((p) => (
+            <p key={p.slice(0, 48)}>{p}</p>
+          ))}
+        </div>
+
+        <div className="lh-signoff lh-signoff--template">
+          <div className={`lh-closing${closing ? '' : ' is-empty'}`}>{closing}</div>
+          <div className="lh-sign-space" aria-hidden="true" />
+          <div className="lh-sign-name">{signName}</div>
+          <div className="lh-sign-title">{signTitle}</div>
+          <div className="lh-stamp-wrap">
+            <img
+              src={ultimateStamp}
+              alt="Ultimate General Trading stamp"
+              className="lh-stamp"
+            />
           </div>
         </div>
       </div>
 
-      <div className="lh-content">
-        <div className="lh-company-line">
-          <strong>{doc.companyName || 'Company Name'}</strong>
-          {doc.tagline ? <span>{doc.tagline}</span> : null}
-        </div>
-
-        <div className="lh-recipient">
-          <span className="lh-to-label">To:</span>
-          <div className="lh-recipient-name">{fallbackText(doc.recipientName, '[Recipient Name / Title]')}</div>
-          {doc.recipientCompany ? <div>{doc.recipientCompany}</div> : null}
-          {doc.recipientAddress ? <div>{doc.recipientAddress}</div> : null}
-          {doc.recipientCity ? <div>{doc.recipientCity}</div> : null}
-        </div>
-
-        <div className="lh-subject">
-          <span className="lh-subject-text">{fallbackText(doc.subject, 'SUBJECT OF THE LETTER GOES HERE')}</span>
-        </div>
-
-        <div className="lh-salutation">{fallbackText(doc.salutation, 'Dear Sir/Madam,')}</div>
-
-        <div className="lh-body">
-          {paragraphs.length > 0 ? (
-            paragraphs.map((p) => <p key={p.slice(0, 48)}>{p}</p>)
-          ) : (
-            <p className="lh-body-placeholder">Start typing your letter content here...</p>
-          )}
-        </div>
-
-        <div className="lh-signoff">
-          <div className="lh-closing">{fallbackText(doc.closing, 'Sincerely,')}</div>
-          <div className="lh-sig-line">
-            <div className="lh-sign-name">{doc.signName}</div>
-            <div className="lh-sign-title">{doc.signTitle}</div>
-          </div>
-        </div>
-      </div>
-
-      <footer className="lh-footer-official">
-        <div className="lh-footer-left">
-          <i className="fa-solid fa-phone" aria-hidden="true" />
-          <span>{fallbackText(doc.footerPhone || doc.senderPhone, '+255 000 000 000')}</span>
-        </div>
-        <div className="lh-footer-dark" aria-hidden="true" />
-        <div className="lh-footer-gold">
-          <div>
-            <i className="fa-solid fa-envelope" aria-hidden="true" />
-            {' '}
-            {fallbackText(doc.footerEmail, 'info@company.com')}
-          </div>
-          <div>
-            <i className="fa-solid fa-location-dot" aria-hidden="true" />
-            {' '}
-            {fallbackText(doc.footerAddress || doc.senderAddress, 'Dar es Salaam, Tanzania')}
-          </div>
-        </div>
+      <footer className="lh-template-footer">
+        <img src={footerArt} alt="" className="lh-template-banner" />
       </footer>
     </article>
   );

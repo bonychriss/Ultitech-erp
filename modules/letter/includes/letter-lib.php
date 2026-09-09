@@ -38,11 +38,23 @@ function letterBuildClientCfg(array $erp = []): array
     $website = trim((string) ($settings['company_website'] ?? $settings['website'] ?? ''));
     $address = trim((string) ($settings['company_address'] ?? $settings['address'] ?? ''));
     $tagline = trim((string) ($settings['company_tagline'] ?? $settings['tagline'] ?? ''));
-    // Letter module uses Ultimate yellow letterhead theme.
-    $accent = '#E6B800';
+    // Ultimate letterhead yellow (matches LETTER HEAD template).
+    $accent = '#FBC51C';
 
     $userName = trim((string) ($erp['full_name'] ?? $_SESSION['full_name'] ?? ''));
     $userTitle = trim((string) ($erp['department'] ?? $_SESSION['department'] ?? $_SESSION['job_title'] ?? ''));
+    if ($phone === '') {
+        $phone = '+255 755 282 861';
+    }
+    if ($email === '') {
+        $email = 'sales@ultimate.co.tz';
+    }
+    if ($website === '') {
+        $website = 'www.ultimate.co.tz';
+    }
+    if ($address === '') {
+        $address = 'House No.14, Atisoko Street, Mikocheni B. P.O. Box 78004, Dar Es Salaam, TZ';
+    }
 
     return [
         'module' => 'letter',

@@ -13,46 +13,37 @@ function formatDisplayDate(iso) {
   if (!iso) return '';
   const d = new Date(`${iso}T12:00:00`);
   if (Number.isNaN(d.getTime())) return iso;
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
-  return `${mm} / ${dd} / ${d.getFullYear()}`;
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}-${mm}-${d.getFullYear()}.`;
 }
-
-const DEFAULT_BODY = `I am writing to formally communicate regarding the matter stated in the subject above.
-
-Please find below the details for your kind attention and necessary action. We look forward to your favourable response at the earliest convenience.
-
-Should you require any further information, please do not hesitate to contact the undersigned.`;
 
 export default function ComposeLetterPage() {
   const cfg = useMemo(() => readCfg(), []);
   const branding = cfg.branding || {};
-  const user = cfg.user || {};
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [editing, setEditing] = useState(false);
 
   const [form, setForm] = useState({
     letterDate: today,
+    fromCompany: `${branding.companyName || 'ULTIMATE GENERAL TRADING'},`.toUpperCase(),
+    fromBox: 'P.O.BOX 78004,',
+    fromCity: 'DAR ES SALAAM, TANZANIA.',
     recipientName: '',
     recipientCompany: '',
     recipientAddress: '',
     recipientCity: '',
     subject: '',
-    salutation: 'Dear Sir/Madam,',
-    body: DEFAULT_BODY,
-    closing: 'Sincerely,',
-    signName: user.name || 'Authorized Signatory',
-    signTitle: user.title || 'Manager',
-    senderPhone: user.phone || branding.phone || '',
-    companyName: branding.companyName || 'Company Name',
-    tagline: branding.tagline || 'Your tagline here',
-    footerPhone: branding.phone || '',
-    footerEmail: branding.email || '',
-    footerAddress: branding.address || '',
+    salutation: '',
+    body: '',
+    closing: '',
+    signName: '',
+    signTitle: '',
+    companyName: branding.companyName || 'ULTIMATE GENERAL TRADING',
   });
 
-  const accent = branding.accentColor || '#E6B800';
+  const accent = branding.accentColor || '#FBC51C';
 
   const update = (key) => (event) => {
     setForm((prev) => ({ ...prev, [key]: event.target.value }));
@@ -61,9 +52,6 @@ export default function ComposeLetterPage() {
   const doc = {
     ...form,
     letterDateLabel: formatDisplayDate(form.letterDate),
-    logoUrl: branding.logoUrl || '',
-    accentColor: accent,
-    darkColor: '#2f3542',
   };
 
   return (
@@ -75,7 +63,7 @@ export default function ComposeLetterPage() {
         {!editing ? (
           <button
             type="button"
-            className="letter-btn letter-btn-primary"
+            className="letter-btn letter-btn-primary letter-btn--pill"
             onClick={() => setEditing(true)}
           >
             <FilePlus2 size={16} />
@@ -90,7 +78,7 @@ export default function ComposeLetterPage() {
             <div className="letter-card-head-row">
               <div>
                 <h2>Letter details</h2>
-                <p>Official letter fields ù updates live on the preview.</p>
+                <p>Official letter on Ultimate letterhead template.</p>
               </div>
               <button
                 type="button"
@@ -109,8 +97,20 @@ export default function ComposeLetterPage() {
               <input type="date" value={form.letterDate} onChange={update('letterDate')} />
             </label>
             <label className="letter-field">
+              <span>From (company)</span>
+              <input value={form.fromCompany} onChange={update('fromCompany')} />
+            </label>
+            <label className="letter-field">
+              <span>From (P.O. Box)</span>
+              <input value={form.fromBox} onChange={update('fromBox')} />
+            </label>
+            <label className="letter-field">
+              <span>From (city)</span>
+              <input value={form.fromCity} onChange={update('fromCity')} />
+            </label>
+            <label className="letter-field">
               <span>Recipient name / title</span>
-              <input value={form.recipientName} onChange={update('recipientName')} placeholder="e.g. The Managing Director" />
+              <input value={form.recipientName} onChange={update('recipientName')} placeholder="e.g. DIRECT GENERAL," />
             </label>
             <label className="letter-field">
               <span>Recipient company</span>
@@ -118,15 +118,15 @@ export default function ComposeLetterPage() {
             </label>
             <label className="letter-field">
               <span>Recipient address</span>
-              <input value={form.recipientAddress} onChange={update('recipientAddress')} />
+              <input value={form.recipientAddress} onChange={update('recipientAddress')} placeholder="P.O.BOX ..." />
             </label>
             <label className="letter-field">
               <span>City, country</span>
-              <input value={form.recipientCity} onChange={update('recipientCity')} placeholder="Dar es Salaam, Tanzania" />
+              <input value={form.recipientCity} onChange={update('recipientCity')} placeholder="DAR ES SALAAM, TANZANIA." />
             </label>
             <label className="letter-field">
-              <span>Subject</span>
-              <input value={form.subject} onChange={update('subject')} placeholder="SUBJECT OF THE LETTER" />
+              <span>Subject / REF</span>
+              <input value={form.subject} onChange={update('subject')} />
             </label>
             <label className="letter-field">
               <span>Salutation</span>
@@ -134,7 +134,7 @@ export default function ComposeLetterPage() {
             </label>
             <label className="letter-field">
               <span>Letter body</span>
-              <textarea rows={10} value={form.body} onChange={update('body')} />
+              <textarea rows={12} value={form.body} onChange={update('body')} />
             </label>
             <label className="letter-field">
               <span>Closing</span>
@@ -151,7 +151,7 @@ export default function ComposeLetterPage() {
           </div>
 
           <div className="letter-toolbar">
-            <button type="button" className="letter-btn letter-btn-primary" onClick={() => window.print()}>
+            <button type="button" className="letter-btn letter-btn-primary letter-btn--pill" onClick={() => window.print()}>
               <Printer size={16} />
               Print letter
             </button>

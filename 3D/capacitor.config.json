@@ -1,0 +1,12 @@
+{
+  "appId": "com.bcut.app",
+  "appName": "BCUT",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0f172a"
+  }
+}

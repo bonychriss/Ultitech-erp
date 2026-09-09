@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Download, Save } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Download, Globe2, Lock, Save, Share2 } from 'lucide-react';
 import LetterheadDocument from '../components/LetterheadDocument.jsx';
+import ShareLetterModal from '../components/ShareLetterModal.jsx';
 import {
   createLetterId,
   getLetter,
   letterDisplayTitle,
   listHref,
+  normalizeVisibility,
+  notifyLetterSentAndGoToList,
   readLetterCfg,
   upsertLetter,
 } from '../utils/letterStore.js';
@@ -73,36 +76,47 @@ export default function ComposeLetterPage() {
     let id = readLetterIdFromUrl();
     let createdAt = new Date().toISOString();
     let form = defaults;
+    let visibility = 'private';
     if (id) {
       const existing = getLetter(id, cfg);
       if (existing?.form) {
         form = { ...defaults, ...existing.form };
         createdAt = existing.createdAt || createdAt;
+        visibility = normalizeVisibility(existing.visibility);
       }
     } else {
       id = createLetterId();
     }
-    return { id, form, createdAt };
+    return { id, form, createdAt, visibility };
   }, [cfg, defaults]);
 
   const [letterId] = useState(boot.id);
   const [createdAt] = useState(boot.createdAt);
   const [form, setForm] = useState(boot.form);
+  const [visibility, setVisibility] = useState(boot.visibility);
   const [saveState, setSaveState] = useState('idle');
   const [downloading, setDownloading] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const savedTimerRef = useRef(null);
+  const actionsRef = useRef(null);
   const formRef = useRef(form);
+  const visibilityRef = useRef(visibility);
   formRef.current = form;
+  visibilityRef.current = visibility;
 
   const accent = branding.accentColor || '#FBC51C';
 
-  const persist = (nextForm) => {
+  const persist = (nextForm, nextVisibility = visibilityRef.current) => {
     return upsertLetter(
       {
         id: letterId,
         form: nextForm,
         createdAt,
         title: letterDisplayTitle(nextForm),
+        visibility: nextVisibility,
+        authorName: String(nextForm.signName || user.name || '').trim(),
+        authorId: Number(user.id || 0) || 0,
       },
       cfg
     );
@@ -121,6 +135,24 @@ export default function ComposeLetterPage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!actionsOpen) return undefined;
+    const onPointerDown = (event) => {
+      if (actionsRef.current && !actionsRef.current.contains(event.target)) {
+        setActionsOpen(false);
+      }
+    };
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setActionsOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [actionsOpen]);
 
   useEffect(() => {
     const flush = () => {
@@ -169,10 +201,27 @@ export default function ComposeLetterPage() {
       window.clearTimeout(savedTimerRef.current);
     }
     setSaveState(ok ? 'saved' : 'idle');
+    setActionsOpen(false);
+  };
+
+  const handleSetVisibility = (nextVisibility) => {
+    const normalized = normalizeVisibility(nextVisibility);
+    setVisibility(normalized);
+    visibilityRef.current = normalized;
+    persist(formRef.current, normalized);
+    setSaveState('saved');
+    setActionsOpen(false);
+  };
+
+  const handleShareLetter = () => {
+    setActionsOpen(false);
+    persist(formRef.current);
+    setShareOpen(true);
   };
 
   const handleDownloadLetter = async () => {
     if (downloading) return;
+    setActionsOpen(false);
     persist(formRef.current);
     setDownloading(true);
     try {
@@ -208,24 +257,70 @@ export default function ComposeLetterPage() {
         ) : (
           <span className="letter-topbar-spacer" aria-hidden="true" />
         )}
-        <div className="letter-topbar-actions">
+        <div className="letter-topbar-actions" ref={actionsRef}>
           <button
             type="button"
-            className="letter-btn letter-btn-primary letter-btn--pill"
-            onClick={handleSaveLetter}
+            className={`letter-btn letter-btn-primary letter-btn--pill${actionsOpen ? ' is-open' : ''}`}
+            aria-haspopup="menu"
+            aria-expanded={actionsOpen}
+            onClick={() => setActionsOpen((open) => !open)}
           >
-            <Save size={16} />
-            Save letter
+            Actions
+            <ChevronDown size={16} />
           </button>
-          <button
-            type="button"
-            className="letter-btn letter-btn--pill"
-            onClick={handleDownloadLetter}
-            disabled={downloading}
-          >
-            <Download size={16} />
-            {downloading ? 'Preparing PDF...' : 'Download letter'}
-          </button>
+          {actionsOpen ? (
+            <div className="letter-actions-menu" role="menu">
+              <button
+                type="button"
+                className="letter-actions-item"
+                role="menuitem"
+                onClick={handleSaveLetter}
+              >
+                <Save size={16} />
+                Save letter
+              </button>
+              <button
+                type="button"
+                className="letter-actions-item"
+                role="menuitem"
+                onClick={handleDownloadLetter}
+                disabled={downloading}
+              >
+                <Download size={16} />
+                {downloading ? 'Preparing PDF...' : 'Download letter'}
+              </button>
+              <button
+                type="button"
+                className="letter-actions-item"
+                role="menuitem"
+                onClick={handleShareLetter}
+              >
+                <Share2 size={16} />
+                Share letter
+              </button>
+              {visibility === 'private' ? (
+                <button
+                  type="button"
+                  className="letter-actions-item"
+                  role="menuitem"
+                  onClick={() => handleSetVisibility('public')}
+                >
+                  <Globe2 size={16} />
+                  Make public
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="letter-actions-item"
+                  role="menuitem"
+                  onClick={() => handleSetVisibility('private')}
+                >
+                  <Lock size={16} />
+                  Make private
+                </button>
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -233,6 +328,32 @@ export default function ComposeLetterPage() {
         <div className="letter-preview-label">Click any line on the letter to edit</div>
         <LetterheadDocument doc={doc} editable onChange={onChange} />
       </section>
+
+      {shareOpen ? (
+        <ShareLetterModal
+          letter={{
+            id: letterId,
+            form,
+            createdAt,
+            title: letterDisplayTitle(form),
+            authorName: String(form.signName || user.name || '').trim(),
+            authorId: Number(user.id || 0) || 0,
+            visibility,
+          }}
+          onClose={() => setShareOpen(false)}
+          onShared={(result) => {
+            if (result?.type === 'employees') {
+              notifyLetterSentAndGoToList(cfg, result.count);
+              return;
+            }
+            if (result?.type === 'public') {
+              setVisibility('public');
+              visibilityRef.current = 'public';
+              setSaveState('saved');
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }

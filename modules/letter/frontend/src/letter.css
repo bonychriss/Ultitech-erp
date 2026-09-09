@@ -149,10 +149,50 @@
 }
 
 .letter-topbar-actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-left: auto;
+}
+
+.letter-actions-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 40;
+  min-width: 12.5rem;
+  padding: 0.35rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+.letter-actions-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+}
+
+.letter-actions-item:hover {
+  background: #f8fafc;
+}
+
+.letter-actions-item:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 .letter-back-link {
@@ -176,6 +216,17 @@
   padding: 0.25rem 0 2rem;
 }
 
+.letter-flash-ok {
+  margin: 0 0 0.85rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #a7f3d0;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 .letter-list-head {
   display: flex;
   align-items: flex-start;
@@ -184,16 +235,8 @@
   margin-bottom: 1.25rem;
 }
 
-.letter-list-head h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.02em;
-}
-
 .letter-list-head p {
-  margin: 0.35rem 0 0;
+  margin: 0;
   color: #64748b;
   font-size: 0.9rem;
 }
@@ -206,6 +249,19 @@
   gap: 0.65rem;
   padding: 2.5rem 1.5rem;
   color: #64748b;
+}
+
+.letter-empty-lottie {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 0.25rem;
+}
+
+.letter-empty-lottie dotlottie-wc {
+  display: block;
 }
 
 .letter-list-empty h2 {
@@ -225,6 +281,356 @@
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+}
+
+.letter-table-wrap {
+  padding: 0;
+  overflow: auto;
+}
+
+.letter-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.letter-table th,
+.letter-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.letter-table th {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.letter-table tbody tr {
+  cursor: pointer;
+}
+
+.letter-table tbody tr:hover {
+  background: color-mix(in srgb, var(--lh-accent) 8%, #fff);
+}
+
+.letter-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.letter-col-sn {
+  width: 3.25rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.letter-col-name {
+  font-weight: 700;
+  color: #0f172a;
+  max-width: 18rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.letter-col-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.letter-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.15rem;
+}
+
+.letter-col-share {
+  width: 3rem;
+  text-align: center;
+}
+
+.letter-share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #64748b;
+  padding: 0;
+  cursor: pointer;
+}
+
+.letter-share-btn:hover {
+  color: #7c3aed;
+}
+
+.letter-share-btn.is-shared {
+  color: #15803d;
+}
+
+.letter-share-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.letter-share-modal {
+  width: min(520px, 100%);
+  max-height: min(88vh, 720px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem 1.1rem;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
+}
+
+.letter-share-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.letter-share-modal-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.letter-share-modal-head p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.letter-share-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.letter-share-search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  color: #0f172a;
+}
+
+.letter-share-section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.letter-share-employees {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 280px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-right: 0.15rem;
+}
+
+.letter-share-empty {
+  margin: 0.75rem 0;
+  font-size: 0.875rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.letter-share-employee {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.letter-share-employee.is-selected {
+  border-color: color-mix(in srgb, var(--lh-accent, #FBC51C) 65%, #cbd5e1);
+  background: color-mix(in srgb, var(--lh-accent, #FBC51C) 14%, #fff);
+}
+
+.letter-share-employee input {
+  margin-top: 0.2rem;
+}
+
+.letter-share-employee-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.letter-share-employee-copy strong {
+  font-size: 0.875rem;
+  color: #0f172a;
+}
+
+.letter-share-employee-copy small {
+  font-size: 0.75rem;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.letter-share-message {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #15803d;
+}
+
+.letter-share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.letter-share-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #64748b;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.letter-share-action-btn:hover:not(:disabled) {
+  background: transparent;
+  color: #0f172a;
+}
+
+.letter-share-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.letter-share-action-btn--primary {
+  background: transparent;
+  color: #0f172a;
+}
+
+.letter-share-action-btn--primary:hover:not(:disabled) {
+  background: transparent;
+  color: #0f172a;
+}
+
+.letter-share-action-btn--primary.is-ready {
+  color: #7c3aed;
+  filter: drop-shadow(0 0 4px rgba(124, 58, 237, 0.55))
+    drop-shadow(0 0 10px rgba(167, 139, 250, 0.75));
+  animation: letter-send-glow 1.4s ease-in-out infinite;
+}
+
+.letter-share-action-btn--primary.is-ready:hover:not(:disabled) {
+  color: #6d28d9;
+}
+
+@keyframes letter-send-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px rgba(124, 58, 237, 0.45))
+      drop-shadow(0 0 8px rgba(167, 139, 250, 0.55));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgba(124, 58, 237, 0.85))
+      drop-shadow(0 0 14px rgba(196, 181, 253, 0.95));
+  }
+}
+
+.letter-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.letter-icon-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.letter-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #92400e;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.letter-status-pill.is-private {
+  border-color: transparent;
+  background: transparent;
+  color: #92400e;
+}
+
+.letter-status-pill.is-public {
+  border-color: transparent;
+  background: transparent;
+  color: transparent;
+}
+
+.letter-status-pill--empty:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+.letter-status-pill.is-private:hover {
+  color: #78350f;
 }
 
 .letter-list-row {
@@ -275,11 +681,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
   border-radius: 9999px;
+  background: transparent;
   color: #94a3b8;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .letter-list-delete:hover {

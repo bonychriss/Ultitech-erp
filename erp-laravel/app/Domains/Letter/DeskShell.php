@@ -18,6 +18,11 @@ final class DeskShell
                 'title' => 'Compose letter',
                 'header' => 'Compose letter',
             ],
+            'inbox' => [
+                'page' => 'inbox',
+                'title' => 'Inbox',
+                'header' => 'Inbox',
+            ],
             'stamp' => [
                 'page' => 'stamp',
                 'title' => 'Stamp editor',

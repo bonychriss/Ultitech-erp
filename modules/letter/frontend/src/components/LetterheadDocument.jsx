@@ -37,12 +37,12 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
     onChange(key, value);
   };
 
-  const subject = line(doc.subject);
-  const refValue = !subject
+  const subjectRaw = String(doc.subject ?? '');
+  const refValue = !subjectRaw
     ? ''
-    : subject.toUpperCase().startsWith('REF:')
-      ? subject
-      : `REF: ${subject}`;
+    : subjectRaw.toUpperCase().startsWith('REF:')
+      ? subjectRaw
+      : `REF: ${subjectRaw}`;
 
   const recipientName = line(doc.recipientName);
   const recipientCompany = line(doc.recipientCompany);
@@ -164,11 +164,13 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
               rows={2}
               value={refValue}
               onChange={(value) => {
-                const raw = String(value || '').replace(/\s+/g, ' ').trim();
-                const next = raw.toUpperCase().startsWith('REF:')
-                  ? raw.slice(4).trim()
-                  : raw;
-                set('subject')(next);
+                let raw = String(value || '');
+                // Keep spaces while typing; only strip the displayed REF: prefix.
+                if (raw.toUpperCase().startsWith('REF:')) {
+                  raw = raw.slice(4);
+                  if (raw.startsWith(' ')) raw = raw.slice(1);
+                }
+                set('subject')(raw);
               }}
               placeholder="REF: SUBJECT"
               align="center"

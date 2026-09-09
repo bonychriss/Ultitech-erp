@@ -1,4 +1,5 @@
 import ComposeLetterPage from './pages/ComposeLetterPage.jsx';
+import LetterInboxPage from './pages/LetterInboxPage.jsx';
 import LettersListPage from './pages/LettersListPage.jsx';
 import StampEditorPage from './pages/StampEditorPage.jsx';
 
@@ -16,6 +17,9 @@ export default function App() {
   }
   if (page === 'compose') {
     return <ComposeLetterPage />;
+  }
+  if (page === 'inbox') {
+    return <LetterInboxPage />;
   }
   return <LettersListPage />;
 }

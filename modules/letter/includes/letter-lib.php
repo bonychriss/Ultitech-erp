@@ -2,6 +2,105 @@
 declare(strict_types=1);
 
 /**
+ * Resolve the active company PDO for Letter (tenant or shared).
+ */
+function letterResolvePdo(): ?PDO
+{
+    $pdo = $GLOBALS['pdo'] ?? null;
+    if ($pdo instanceof PDO) {
+        return $pdo;
+    }
+    $control = $GLOBALS['control_pdo'] ?? null;
+    if ($control instanceof PDO) {
+        return $control;
+    }
+
+    $configPath = dirname(__DIR__, 3) . '/includes/config.php';
+    if (is_file($configPath)) {
+        require_once $configPath;
+    }
+
+    $pdo = $GLOBALS['pdo'] ?? null;
+    if ($pdo instanceof PDO) {
+        return $pdo;
+    }
+    $control = $GLOBALS['control_pdo'] ?? null;
+    return $control instanceof PDO ? $control : null;
+}
+
+/**
+ * Active company users available for share / send-to-inbox.
+ *
+ * @return list<array{id:int,name:string,email:string,phone:string,department:string}>
+ */
+function letterLoadShareEmployees(int $companyId, int $excludeUserId = 0): array
+{
+    $pdo = letterResolvePdo();
+    if (!($pdo instanceof PDO)) {
+        return [];
+    }
+
+    $isTenantDb = defined('IS_TENANT_DB') && IS_TENANT_DB;
+    $selects = [
+        'SELECT id, full_name, email, phone, whatsapp_number, department FROM users',
+        'SELECT id, full_name, email, phone, department FROM users',
+        'SELECT id, full_name, email, department FROM users',
+        'SELECT id, full_name, email FROM users',
+    ];
+
+    $rows = [];
+    foreach ($selects as $select) {
+        $queries = [];
+        if ($companyId > 0 && !$isTenantDb) {
+            $queries[] = [
+                $select . ' WHERE company_id = ? AND COALESCE(is_active, 1) = 1 ORDER BY full_name ASC LIMIT 500',
+                [$companyId],
+            ];
+        }
+        // Tenant DBs (and fallback) list everyone in the connected database.
+        $queries[] = [
+            $select . ' WHERE COALESCE(is_active, 1) = 1 ORDER BY full_name ASC LIMIT 500',
+            [],
+        ];
+
+        foreach ($queries as [$sql, $params]) {
+            try {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $fetched = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                if ($fetched || $params === []) {
+                    $rows = $fetched;
+                    break 2;
+                }
+            } catch (Throwable $inner) {
+                // try next select / query shape
+            }
+        }
+    }
+
+    $employees = [];
+    foreach ($rows as $row) {
+        $empId = (int) ($row['id'] ?? 0);
+        if ($empId <= 0 || ($excludeUserId > 0 && $empId === $excludeUserId)) {
+            continue;
+        }
+        $phone = trim((string) ($row['phone'] ?? ''));
+        if ($phone === '') {
+            $phone = trim((string) ($row['whatsapp_number'] ?? ''));
+        }
+        $employees[] = [
+            'id' => $empId,
+            'name' => trim((string) ($row['full_name'] ?? '')),
+            'email' => trim((string) ($row['email'] ?? '')),
+            'phone' => $phone,
+            'department' => trim((string) ($row['department'] ?? '')),
+        ];
+    }
+
+    return $employees;
+}
+
+/**
  * Build branding + user defaults for the Letter React shell.
  *
  * @return array<string,mixed>
@@ -12,7 +111,7 @@ function letterBuildClientCfg(array $erp = []): array
     $info = function_exists('getCompanyInfo') ? getCompanyInfo($companyId ?: null) : [];
     $settings = [];
     try {
-        global $pdo;
+        $pdo = letterResolvePdo();
         if ($pdo instanceof PDO && $companyId > 0 && function_exists('fetchCompanySettingsMap')) {
             $settings = fetchCompanySettingsMap($pdo, $companyId);
         }
@@ -84,8 +183,11 @@ function letterBuildClientCfg(array $erp = []): array
     $stampPreviewUrl = '';
     $listUrl = '';
     $composeUrl = '';
+    $inboxUrl = '';
+    $emptyAnimationUrl = '';
     if (function_exists('app_url')) {
         $editorUrl = rtrim((string) app_url('/3D/dist/'), '/') . '/';
+        $emptyAnimationUrl = rtrim((string) app_url('/assets/animations/nothing.lottie'), '/');
         if ($isUltimate) {
             $stampPreviewUrl = rtrim((string) app_url('/letterhead/stamps/ultimate-stamp-white.png'), '/');
             $stampVer = @filemtime(dirname(__DIR__, 3) . '/letterhead/stamps/ultimate-stamp-white.png')
@@ -94,12 +196,24 @@ function letterBuildClientCfg(array $erp = []): array
             $stampPreviewUrl .= '?v=' . (int) $stampVer;
         }
     }
+    if ($emptyAnimationUrl === '') {
+        $emptyAnimationUrl = '/assets/animations/nothing.lottie';
+    }
     if ($slug !== '' && function_exists('company_url')) {
         $listUrl = company_url('modules/letter/index.php', $slug) . '?module=letter';
         $composeUrl = company_url('modules/letter/compose.php', $slug) . '?module=letter';
+        $inboxUrl = company_url('modules/letter/inbox.php', $slug) . '?module=letter';
     } elseif (function_exists('app_url')) {
         $listUrl = rtrim((string) app_url('/modules/letter/index.php'), '/') . '?module=letter';
         $composeUrl = rtrim((string) app_url('/modules/letter/compose.php'), '/') . '?module=letter';
+        $inboxUrl = rtrim((string) app_url('/modules/letter/inbox.php'), '/') . '?module=letter';
+    }
+
+    $employees = [];
+    try {
+        $employees = letterLoadShareEmployees($companyId, $userId);
+    } catch (Throwable $e) {
+        $employees = [];
     }
 
     return [
@@ -109,11 +223,14 @@ function letterBuildClientCfg(array $erp = []): array
         'backUrl' => (string) ($erp['back_url'] ?? ''),
         'listUrl' => $listUrl,
         'composeUrl' => $composeUrl,
+        'inboxUrl' => $inboxUrl,
+        'emptyAnimationUrl' => $emptyAnimationUrl,
         'isUltimateCompany' => $isUltimate,
         'showUltimateStamp' => $isUltimate,
         'stampEditorUrl' => $editorUrl,
         'stampPreviewUrl' => $stampPreviewUrl,
         'signatureUrl' => $signatureUrl,
+        'employees' => $employees,
         'branding' => [
             'companyName' => $companyName,
             'tagline' => $tagline !== '' ? $tagline : 'Your tagline here',

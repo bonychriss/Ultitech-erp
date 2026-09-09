@@ -36,25 +36,53 @@ function Get-FtpRemoteBase {
 function Resolve-DeployUpload {
     param(
         [string]$RelPath,
-        [string]$RemoteBase
+        [string]$RemoteBase,
+        [string]$RepoRoot
     )
 
     $rel = ($RelPath -replace '\\', '/').TrimStart('/')
     $isUltimateRemote = $RemoteBase -match '/ultimate$'
+    $parentBase = ($RemoteBase -replace '/ultimate$', '')
 
     if ($isUltimateRemote) {
         if ($rel -eq '.htaccess') {
-            return $null  # never overwrite company .htaccess with monorepo root rules
+            return @()  # never overwrite company .htaccess with monorepo root rules
         }
         if ($rel -eq 'ultimate/.htaccess') {
-            return @{ Local = $rel; Remote = '.htaccess' }
+            return @(
+                @{ Local = $rel; RemoteBase = $RemoteBase; Remote = '.htaccess' }
+            )
         }
         if ($rel -match '^ultimate/([^/]+\.php)$') {
-            return @{ Local = $rel; Remote = $Matches[1] }
+            return @(
+                @{ Local = $rel; RemoteBase = $RemoteBase; Remote = $Matches[1] }
+            )
+        }
+
+        # Root entrypoints that have company stubs must not be uploaded as full apps
+        # into /ultimate/ (that loads ultimate/includes without env.php → localhost DB).
+        if ($rel -match '^([^/]+\.php)$') {
+            $stubRel = "ultimate/$rel"
+            $stubPath = Join-Path $RepoRoot ($stubRel -replace '/', [IO.Path]::DirectorySeparatorChar)
+            if (Test-Path $stubPath) {
+                return @(
+                    @{ Local = $stubRel; RemoteBase = $RemoteBase; Remote = $rel },
+                    @{ Local = $rel; RemoteBase = $parentBase; Remote = $rel }
+                )
+            }
+        }
+
+        # Keep shared PHP/config on the parent app root, not under /ultimate/.
+        if ($rel -match '^(includes|erp-laravel|modules|assets|vendor)/' -or $rel -match '^env(\.|$)') {
+            return @(
+                @{ Local = $rel; RemoteBase = $parentBase; Remote = $rel }
+            )
         }
     }
 
-    return @{ Local = $rel; Remote = $rel }
+    return @(
+        @{ Local = $rel; RemoteBase = $RemoteBase; Remote = $rel }
+    )
 }
 
 $prevEap = $ErrorActionPreference
@@ -83,9 +111,9 @@ if (-not $files) {
 $remoteBase = Get-FtpRemoteBase
 $uploads = @()
 foreach ($rel in $files) {
-    $mapped = Resolve-DeployUpload -RelPath $rel -RemoteBase $remoteBase
-    if ($null -eq $mapped) {
-        Write-Host "SKIP (protect company htaccess): $rel"
+    $mapped = @(Resolve-DeployUpload -RelPath $rel -RemoteBase $remoteBase -RepoRoot $root)
+    if ($mapped.Count -eq 0) {
+        Write-Host "SKIP (protect company paths): $rel"
         continue
     }
     $uploads += $mapped
@@ -96,7 +124,7 @@ if (-not $uploads) {
     exit 0
 }
 
-Write-Host "Deploying $($uploads.Count) file(s) to cPanel via FTPS ($remoteBase)..."
+Write-Host "Deploying $($uploads.Count) upload(s) to cPanel via FTPS..."
 $fail = 0
 $pass = ''
 $passFile = Join-Path $PSScriptRoot 'ftp-password.txt'
@@ -116,22 +144,19 @@ if (Test-Path $localCmd) {
 foreach ($item in $uploads) {
     $localRel = $item.Local
     $remoteRel = $item.Remote
+    $itemBase = if ($item.RemoteBase) { $item.RemoteBase } else { $remoteBase }
     $localPath = Join-Path $root ($localRel -replace '/', [IO.Path]::DirectorySeparatorChar)
     if (-not (Test-Path $localPath)) {
         Write-Host "SKIP (missing): $localRel"
         continue
     }
-    $url = "ftp://${hostName}${remoteBase}/$remoteRel"
+    $url = "ftp://${hostName}${itemBase}/$remoteRel"
     & curl.exe --ftp-create-dirs -sS -f -T $localPath -u "${user}:${pass}" $url
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "FAILED: $localRel -> $remoteRel"
+        Write-Host "FAILED: $localRel -> ${itemBase}/$remoteRel"
         $fail++
     } else {
-        if ($localRel -eq $remoteRel) {
-            Write-Host "OK:     $localRel"
-        } else {
-            Write-Host "OK:     $localRel -> $remoteRel"
-        }
+        Write-Host "OK:     $localRel -> ${itemBase}/$remoteRel"
     }
 }
 

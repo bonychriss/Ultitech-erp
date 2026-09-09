@@ -66,6 +66,7 @@ if (!is_file($laravelAutoload)) {
 $desk = strtolower(trim((string) ($_GET['desk'] ?? '')));
 $letterDesks = [
     'compose' => true,
+    'stamp' => true,
 ];
 
 if ($desk !== '' && isset($letterDesks[$desk])) {

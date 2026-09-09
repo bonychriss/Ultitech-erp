@@ -56,11 +56,24 @@ function letterBuildClientCfg(array $erp = []): array
         $address = 'House No.14, Atisoko Street, Mikocheni B. P.O. Box 78004, Dar Es Salaam, TZ';
     }
 
+    $editorUrl = '';
+    $stampPreviewUrl = '';
+    if (function_exists('app_url')) {
+        $editorUrl = rtrim((string) app_url('/3D/dist/'), '/') . '/';
+        $stampPreviewUrl = rtrim((string) app_url('/letterhead/stamps/ultimate-stamp-white.png'), '/');
+        $stampVer = @filemtime(dirname(__DIR__, 3) . '/letterhead/stamps/ultimate-stamp-white.png')
+            ?: @filemtime(__DIR__ . '/../frontend/src/assets/ultimate-stamp.png')
+            ?: time();
+        $stampPreviewUrl .= '?v=' . (int) $stampVer;
+    }
+
     return [
         'module' => 'letter',
         'engine' => 'erp-laravel Domains/Letter',
         'companySlug' => (string) ($erp['company_slug'] ?? ''),
         'backUrl' => (string) ($erp['back_url'] ?? ''),
+        'stampEditorUrl' => $editorUrl,
+        'stampPreviewUrl' => $stampPreviewUrl,
         'branding' => [
             'companyName' => $companyName,
             'tagline' => $tagline !== '' ? $tagline : 'Your tagline here',

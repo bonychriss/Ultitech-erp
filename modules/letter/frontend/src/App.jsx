@@ -1,4 +1,5 @@
 import ComposeLetterPage from './pages/ComposeLetterPage.jsx';
+import StampEditorPage from './pages/StampEditorPage.jsx';
 
 function resolvePage() {
   if (typeof window !== 'undefined' && window.__LETTER_PAGE__) {
@@ -9,8 +10,8 @@ function resolvePage() {
 
 export default function App() {
   const page = resolvePage();
-  if (page === 'compose') {
-    return <ComposeLetterPage />;
+  if (page === 'stamp') {
+    return <StampEditorPage />;
   }
   return <ComposeLetterPage />;
 }

@@ -66,6 +66,12 @@ if (strpos($script_name, '/accounting/') !== false && (isset($_GET['module']) &&
 if (strpos($script_name, '/modules/payroll/') !== false) {
     $active_module = 'payroll';
 }
+if (strpos($script_name, '/modules/letter/') !== false
+    || basename($script_name) === 'letter.php'
+    || (($_GET['module'] ?? '') === 'letter')
+) {
+    $active_module = 'letter';
+}
 if (strpos($script_name, '/weekly_tasks/') !== false) {
     $active_module = 'tasks';
 }
@@ -195,6 +201,8 @@ if (!function_exists('addItem')) {
             $moduleKey = 'stock';
         } elseif (strpos($pathStr, '/modules/payroll/') !== false) {
             $moduleKey = 'payroll';
+        } elseif (strpos($pathStr, '/modules/letter/') !== false) {
+            $moduleKey = 'letter';
         } elseif (strpos($pathStr, '/modules/finance/') !== false || strpos($pathStr, '/modules/expenses/') !== false) {
             $moduleKey = 'finance';
         } elseif (strpos($pathStr, '/modules/balances/') !== false || strpos($pathStr, '/accounting/') !== false) {
@@ -662,6 +670,11 @@ switch ($active_module) {
         } else {
             addItem($menuItems, 'my-payslips', 'My Payslips', 'file-text', $prefix . 'modules/payroll/my_payslips.php?module=payroll');
         }
+        break;
+
+    case 'letter':
+        addItem($menuItems, 'compose', 'Compose letter', 'file-earmark-text', $prefix . 'modules/letter/index.php?module=letter');
+        addItem($menuItems, 'stamp', 'Stamp', 'postage', $prefix . 'modules/letter/stamp.php?module=letter');
         break;
 
     case 'deliveries':

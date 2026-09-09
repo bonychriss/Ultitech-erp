@@ -299,6 +299,7 @@ switch ($active_module) {
 
     case 'letter':
         addItem($menuItems, 'compose', 'Compose letter', 'document-text', $prefix . 'modules/letter/index.php?module=letter');
+        addItem($menuItems, 'stamp', 'Stamp', 'certificate', $prefix . 'modules/letter/stamp.php?module=letter');
         break;
 
     case 'deliveries':

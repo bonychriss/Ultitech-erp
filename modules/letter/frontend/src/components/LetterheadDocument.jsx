@@ -160,9 +160,11 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
           {editable ? (
             <LhEdit
               className="lh-subject-text lh-edit--subject"
+              multiline
+              rows={2}
               value={refValue}
               onChange={(value) => {
-                const raw = String(value || '').trim();
+                const raw = String(value || '').replace(/\s+/g, ' ').trim();
                 const next = raw.toUpperCase().startsWith('REF:')
                   ? raw.slice(4).trim()
                   : raw;

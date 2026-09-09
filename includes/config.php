@@ -349,8 +349,9 @@ if (isset($control_pdo)) {
                     $reserved = [
                         'admin', 'api', 'assets', 'attendance', 'company', 'css', 'deliveries', 'dispatch',
                         'employee', 'erp', 'home', 'includes', 'js', 'logs', 'modules', 'public_html', 'public-html',
-                        'sites', 'stock', 'storage', 'uploads', 'vouchers', 'logout.php', 'login.php', 'select-module.php',
-                        'index.php', 'my-account.php', 'debug_login.php', 'debug_db_connections.php', 'debug_online.php',
+                        'sites', 'stock', 'storage', 'uploads', 'vouchers', 'logout', 'logout.php', 'login', 'login.php',
+                        'select-module', 'select-module.php', 'register', 'register.php', 'suggest', 'suggest.php',
+                        'payroll', 'index.php', 'my-account.php', 'debug_login.php', 'debug_db_connections.php', 'debug_online.php',
                         'debug_system_full.php', 'debug_create_voucher.php', 'debug_todo_index.php', 'hc.php', 'ping.php',
                         'store-management-system', 'reports', 'logistics', 'crm', 'accounting', 'banking',
                         'petty-cash', 'replenishments', 'replenishment', 'categories', 'expenses', 'sales', 'finance',

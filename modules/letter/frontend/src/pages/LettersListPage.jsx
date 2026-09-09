@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FilePlus2, FileText, Lock, Share2, Trash2 } from 'lucide-react';
+import { FilePlus2, Lock, Share2, Trash2 } from 'lucide-react';
 import ShareLetterModal from '../components/ShareLetterModal.jsx';
 import {
   composeHref,
@@ -11,6 +11,19 @@ import {
   readLetterCfg,
   upsertLetter,
 } from '../utils/letterStore.js';
+
+const EMPTY_LOTTIE_FALLBACK = '/assets/animations/nothing.lottie';
+
+function ensureDotLottiePlayer() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  if (customElements.get('dotlottie-wc')) return;
+  if (document.getElementById('letter-dotlottie-wc')) return;
+  const script = document.createElement('script');
+  script.id = 'letter-dotlottie-wc';
+  script.type = 'module';
+  script.src = 'https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js';
+  document.head.appendChild(script);
+}
 
 function recipientLabel(form = {}) {
   return String(form.recipientName || form.recipientCompany || '').trim() || '-';
@@ -31,8 +44,13 @@ export default function LettersListPage() {
   const [letters, setLetters] = useState(() => listLetters(cfg));
   const [shareRow, setShareRow] = useState(null);
   const [notice, setNotice] = useState('');
+  const emptyAnimSrc = String(cfg.emptyAnimationUrl || EMPTY_LOTTIE_FALLBACK).trim() || EMPTY_LOTTIE_FALLBACK;
 
   const refresh = () => setLetters(listLetters(cfg));
+
+  useEffect(() => {
+    ensureDotLottiePlayer();
+  }, []);
 
   useEffect(() => {
     const flash = consumeLetterFlash();
@@ -98,7 +116,15 @@ export default function LettersListPage() {
 
       {letters.length === 0 ? (
         <div className="letter-list-empty letter-card">
-          <FileText size={28} />
+          <div className="letter-empty-lottie" aria-hidden="true">
+            <dotlottie-wc
+              src={emptyAnimSrc}
+              autoplay
+              loop
+              speed="1"
+              style={{ width: '220px', height: '220px' }}
+            />
+          </div>
           <h2>No letters yet</h2>
           <p>Create a letter and it will appear here as you type.</p>
           <button type="button" className="letter-btn letter-btn-primary letter-btn--pill" onClick={handleNew}>

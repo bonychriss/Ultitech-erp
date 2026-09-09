@@ -125,6 +125,65 @@ if ($companyLogoUrl === '' && function_exists('getCompanyLogoUrl')) {
 
 $isDownload = isset($_GET['download']);
 
+$companyBox = $pickCompanyValue(['po_box', 'postal_box', 'p_o_box', 'box']);
+$companyCity = $pickCompanyValue(['city', 'company_city']);
+$companyCountry = $pickCompanyValue(['country', 'company_country']);
+if ($companyCity !== '' && $companyCountry !== '') {
+    $companyCityLine = strtoupper($companyCity . ', ' . $companyCountry . '.');
+} elseif ($companyAddress !== '') {
+    $companyCityLine = strtoupper($companyAddress);
+} else {
+    $companyCityLine = '';
+}
+$companyBoxLine = $companyBox !== ''
+    ? strtoupper(preg_match('/^\s*p\.?\s*o\.?\s*box/i', $companyBox) ? $companyBox : ('P.O.BOX ' . $companyBox))
+    : '';
+if ($companyBoxLine !== '' && substr($companyBoxLine, -1) !== ',') {
+    $companyBoxLine .= ',';
+}
+$companyNameLine = strtoupper($companyName);
+if ($companyNameLine !== '' && substr($companyNameLine, -1) !== ',') {
+    $companyNameLine .= ',';
+}
+
+$letterheadHeaderUrl = function_exists('app_url')
+    ? rtrim((string) app_url('/letterhead/header.png'), '/')
+    : ($baseUrl . '/letterhead/header.png');
+$letterheadFooterUrl = function_exists('app_url')
+    ? rtrim((string) app_url('/letterhead/footer.png'), '/')
+    : ($baseUrl . '/letterhead/footer.png');
+$headerFs = dirname(__DIR__, 2) . '/letterhead/header.png';
+$footerFs = dirname(__DIR__, 2) . '/letterhead/footer.png';
+if (is_file($headerFs)) {
+    $letterheadHeaderUrl .= (strpos($letterheadHeaderUrl, '?') === false ? '?' : '&') . 'v=' . (int) filemtime($headerFs);
+}
+if (is_file($footerFs)) {
+    $letterheadFooterUrl .= (strpos($letterheadFooterUrl, '?') === false ? '?' : '&') . 'v=' . (int) filemtime($footerFs);
+}
+
+$periodLabel = date('F Y', mktime(0, 0, 0, (int) $slip['month'], 1, (int) $slip['year']));
+$payslipRef = 'REF: PAYSLIP NO. '
+    . str_pad((string) $slip['payroll_run_id'], 3, '0', STR_PAD_LEFT)
+    . '-'
+    . str_pad((string) $slip['id'], 5, '0', STR_PAD_LEFT);
+$letterDateLabel = date('d-m-Y', strtotime((string) $slip['run_date']));
+
+$sigUrl = '';
+$sigPath = function_exists('getUserSignaturePathById') ? getUserSignaturePathById($slip['run_by']) : null;
+if (is_string($sigPath) && $sigPath !== '') {
+    $sigFs = dirname(__DIR__, 2) . '/' . ltrim(str_replace('\\', '/', $sigPath), '/');
+    if (is_file($sigFs)) {
+        if (function_exists('mediaUrlFromPath')) {
+            $sigUrl = (string) mediaUrlFromPath($sigPath);
+        } else {
+            $sigUrl = $baseUrl . '/' . ltrim(str_replace('\\', '/', $sigPath), '/');
+        }
+        $sigUrl .= (strpos($sigUrl, '?') === false ? '?' : '&') . 'v=' . (int) filemtime($sigFs);
+    }
+}
+
+$rowNo = 0;
+
 // Full-page Laravel + React document viewer (embed/download/print stay on legacy HTML).
 if (
     !$isPrintMode
@@ -147,412 +206,461 @@ if (
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payslip - <?= htmlspecialchars($slip['full_name']) ?></title>
-    <!-- Fonts: Playfair Display (Serif) & Inter (Sans) -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        /* Base Reset & Colors */
         :root {
             --bg-color: #ffffff;
-            --text-color: #1a1a1a;
-            --accent-color: #dcbfa4; /* Thin gold lines */
-            --header-font: 'Playfair Display', serif;
-            --body-font: 'Inter', sans-serif;
+            --text-color: #111111;
+            --accent: #FBC51C;
+            --muted: #555555;
+            --line: #d4d4d4;
+            --body-font: 'Times New Roman', Times, serif;
+            --ui-font: Georgia, 'Times New Roman', Times, serif;
         }
-        
-        body { 
+
+        * { box-sizing: border-box; }
+
+        body {
             background: <?= $isPrintMode ? 'white' : ($isEmbed ? '#ffffff' : '#525659') ?>;
-            font-family: var(--body-font); 
+            font-family: var(--body-font);
             color: var(--text-color);
             margin: 0;
             padding: <?= $isPrintMode ? '0' : ($isEmbed ? '0' : '40px 0') ?>;
             display: flex;
             justify-content: center;
-            <?= $isEmbed ? 'align-items: stretch; min-height: 100%; box-sizing: border-box; overflow-x: hidden;' : '' ?>
+            <?= $isEmbed ? 'align-items: stretch; min-height: 100%; overflow-x: hidden;' : '' ?>
         }
 
-        /* The "Paper" Sheet */
         .payslip-sheet {
             background: var(--bg-color);
             width: 100%;
             max-width: <?= $isEmbed ? 'none' : '210mm' ?>;
-            <?= $isPrintMode ? 'height: 297mm; overflow: hidden;' : ($isEmbed ? 'min-height: auto;' : 'min-height: 297mm;') ?>
-            padding: <?= $isEmbed ? '40px 42px' : '50px' ?>;
-            box-sizing: border-box;
+            <?= $isPrintMode ? 'min-height: 297mm; overflow: hidden;' : ($isEmbed ? 'min-height: auto;' : 'min-height: 297mm;') ?>
+            padding: 0;
             box-shadow: <?= ($isPrintMode || $isEmbed) ? 'none' : '0 0 25px rgba(0,0,0,0.2)' ?>;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
+
+        .lh-template-header,
+        .lh-template-footer {
+            width: 100%;
+            line-height: 0;
+            flex-shrink: 0;
+        }
+
+        .lh-template-banner {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .lh-content {
+            flex: 1 1 auto;
+            padding: 28px 54px 36px;
+            font-size: 15px;
+            line-height: 1.55;
+        }
+
+        .lh-from-block {
+            text-align: right;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .lh-from-block div + div { margin-top: 0.08rem; }
+
+        .lh-recipient {
+            margin-bottom: 1.1rem;
+            text-transform: uppercase;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .lh-recipient-name { font-weight: 700; }
+
+        .lh-meta {
+            margin: 0.85rem 0 1.15rem;
+            font-size: 13px;
+            line-height: 1.55;
+            text-transform: none;
+        }
+
+        .lh-meta-row {
+            display: grid;
+            grid-template-columns: 78px 1fr;
+            gap: 0.35rem;
+        }
+
+        .lh-meta-row + .lh-meta-row { margin-top: 0.15rem; }
+        .lh-meta-label { color: var(--muted); }
+        .lh-meta-val { font-weight: 600; }
+
+        .lh-subject {
+            text-align: center;
+            margin: 0 0 1.25rem;
+        }
+
+        .lh-subject-text {
+            font-weight: 700;
+            text-transform: uppercase;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            letter-spacing: 0.02em;
+        }
+
+        .pay-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 0 1.5rem;
+            font-size: 13px;
+        }
+
+        .pay-table th {
+            background: #111;
+            color: #fff;
+            padding: 10px 12px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            text-align: left;
+            font-weight: 600;
+            font-family: var(--ui-font);
+        }
+
+        .pay-table th.text-end,
+        .pay-table td.text-end { text-align: right; }
+
+        .pay-table td {
+            padding: 11px 12px;
+            border-bottom: 1px solid var(--line);
+            vertical-align: top;
+        }
+
+        .pay-table td:not(:last-child),
+        .pay-table th:not(:last-child) {
+            border-right: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .pay-table td:not(:last-child) {
+            border-right: 1px solid var(--line);
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1.35fr 1fr;
+            gap: 1.75rem;
+            margin-top: 0.35rem;
+        }
+
+        .payment-info h4 {
+            margin: 0 0 0.55rem;
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600;
+            text-transform: none;
+        }
+
+        .payment-method {
+            font-weight: 700;
+            margin-bottom: 0.9rem;
+            font-size: 15px;
+        }
+
+        .bank-row {
+            display: grid;
+            grid-template-columns: 118px 1fr;
+            gap: 0.35rem;
+            font-size: 13px;
+            margin-bottom: 0.35rem;
+        }
+
+        .bank-label { color: var(--muted); }
+        .bank-val { font-weight: 600; }
+
+        .totals-box { padding-top: 0.15rem; }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.55rem;
+            font-size: 13px;
+        }
+
+        .total-row.final {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #bbb;
+            font-weight: 700;
+            font-size: 16px;
+            align-items: center;
+        }
+
+        .signature-section {
+            margin-top: 1.75rem;
+            display: flex;
+            justify-content: flex-end;
+            text-align: left;
+        }
+
+        .signature-block { width: 220px; }
+
+        .signer-name {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 0.15rem;
+        }
+
+        .signer-title {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 0.35rem;
+        }
+
+        .signature-image-wrap {
+            height: 56px;
+            display: flex;
+            align-items: flex-end;
+            margin-bottom: 0.25rem;
+        }
+
+        .signature-image-wrap img {
+            max-height: 56px;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .signature-line {
+            border-top: 1px solid #111;
+            padding-top: 0.4rem;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #333;
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            font-family: system-ui, sans-serif;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .btn-success { background: #198754; color: white; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
 
 <?php if ($isEmbed): ?>
         html, body { height: auto; width: 100%; }
-        .signature-section { margin-top: 40px; }
-        .page-bottom { margin-top: 40px; }
+        .lh-content { padding: 22px 36px 28px; }
 <?php endif; ?>
-
-        /* Responsive Mobile Adjustments */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px 0;
-            }
-            .payslip-sheet {
-                padding: 30px 20px;
-                border-radius: 0;
-            }
-            .main-title {
-                font-size: 28px;
-            }
-            .info-section {
-                flex-direction: column;
-                gap: 25px;
-                margin-bottom: 30px;
-            }
-            .meta-block {
-                text-align: left;
-            }
-            .meta-row {
-                justify-content: flex-start;
-                gap: 20px;
-            }
-            .pay-table th, .pay-table td {
-                padding: 12px 10px;
-                font-size: 13px;
-            }
-        }
 
 <?php if ($isPrintMode): ?>
         @page { size: A4; margin: 0; }
-        .payslip-sheet { width: 210mm; height: 297mm; padding: 50px; }
+        .payslip-sheet { width: 210mm; min-height: 297mm; }
 <?php endif; ?>
 
-        /* --- Header Section --- */
-        .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
-        
-        .main-title {
-            font-family: var(--header-font);
-            font-size: 42px;
-            font-weight: 700;
-            margin: 0;
-            line-height: 1.1;
-            color: var(--text-color);
+        @media (max-width: 768px) {
+            body { padding: 10px 0; }
+            .lh-content { padding: 18px 18px 24px; }
+            .footer-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+            .lh-from-block { text-align: left; }
         }
-        
-        .ref-no {
-            font-size: 13px;
-            color: #666;
-            margin-top: 5px;
-            letter-spacing: 0.5px;
-        }
-
-        .company-block { text-align: right; max-width: 280px; margin-left: auto; }
-        .company-logo-img { height: 50px; width: auto; object-fit: contain; margin-bottom: 5px; }
-        .company-name { font-family: var(--header-font); font-size: 18px; font-weight: 700; }
-        .company-details {
-            margin-top: 6px;
-            font-size: 11px;
-            line-height: 1.45;
-            color: #555;
-        }
-        .company-details div + div { margin-top: 2px; }
-
-        /* --- Info Section --- */
-        .info-section { margin-bottom: 50px; }
-        
-        .to-block h3 { margin: 0 0 8px 0; font-size: 14px; color: #555; font-weight: 500; }
-        .recipient-name { font-family: var(--body-font); font-size: 20px; font-weight: 700; margin-bottom: 8px; }
-        .recipient-details { font-size: 13px; line-height: 1.6; color: #444; }
-
-        .meta-block { margin-top: 14px; font-size: 13px; line-height: 1.8; }
-        .meta-row { display: flex; gap: 16px; }
-        .meta-row + .meta-row { margin-top: 5px; }
-        .meta-label { color: #666; min-width: 72px; }
-        .meta-val { font-weight: 600; }
-
-        /* --- Table --- */
-        .pay-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-        
-        .pay-table th {
-            background: #1a1a1a;
-            color: white;
-            padding: 12px 15px;
-            font-family: var(--body-font);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            text-align: left;
-            font-weight: 500;
-        }
-        .pay-table th.text-end { text-align: right; }
-        
-        .pay-table td {
-            padding: 16px 15px;
-            border-bottom: 1px solid #e5e5e5;
-            font-size: 14px;
-            color: #333;
-            vertical-align: top;
-        }
-        
-        /* Grid Lines Style */
-        .pay-table td:not(:last-child), .pay-table th:not(:last-child) {
-            border-right: 1px solid rgba(255,255,255,0.1);
-        }
-        .pay-table td:not(:last-child) {
-            border-right: 1px solid #e0e0e0;
-        }
-        
-        .pay-table .text-end { text-align: right; }
-
-        /* --- Footer Section --- */
-        .footer-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; margin-top: 20px; }
-        
-        /* Bank Info */
-        .payment-info h4 { margin: 0 0 15px 0; font-size: 14px; color: #555; }
-        .bank-row { display: grid; grid-template-columns: 120px 1fr; font-size: 13px; margin-bottom: 8px; }
-        .bank-label { color: #666; }
-        .bank-val { font-weight: 600; color: #000; }
-
-        /* Totals */
-        .totals-box {
-            border: none;
-            padding: 0;
-            background: transparent;
-        }
-        .total-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
-        .total-row.final { 
-            margin-top: 15px; 
-            padding-top: 15px; 
-            border-top: 1px solid #ccc; 
-            font-weight: 700; 
-            font-size: 18px; 
-            align-items: center;
-        }
-        
-        /* Signature */
-        .signature-section { margin-top: 60px; display: flex; justify-content: flex-end; text-align: center; }
-        .signature-block { width: 220px; }
-        .signer-name { font-family: var(--header-font); font-size: 20px; font-weight: 700; margin-bottom: 5px; }
-        .signer-title { font-size: 12px; color: #666; margin-bottom: 40px; }
-        .signature-line { border-top: 1px solid #000; padding-top: 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-
-        /* Page Bottom Info */
-        .page-bottom { 
-            margin-top: 80px; 
-            font-size: 12px; 
-            color: #777; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 5px; 
-        }
-
-
-
-        /* Print Controls */
-        .controls { position: fixed; top: 20px; right: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); z-index: 1000; display: flex; gap: 10px; }
-        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; font-family: var(--body-font); text-decoration: none; }
-        .btn-primary { background: #1a1a1a; color: white; }
-        .btn-success { background: #198754; color: white; }
-        .btn-secondary { background: #f0f0f0; color: #333; }
 
         @media print {
             body { background: none; padding: 0; }
             .controls { display: none; }
-            .payslip-sheet { box-shadow: none; margin: 0; width: 100%; height: 100%; padding: 30px; }
+            .payslip-sheet { box-shadow: none; margin: 0; width: 100%; max-width: none; }
         }
     </style>
-    <!-- html2pdf.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
-    
+
     <?php if (!$isPrintMode && !$isEmbed): ?>
     <div class="controls no-print">
-        <button class="btn btn-success" id="downloadBtn" onclick="downloadPDF()">Download PDF</button>
-        <button class="btn btn-secondary" onclick="window.close()">Close</button>
+        <button class="btn btn-success" id="downloadBtn" onclick="downloadPDF()" type="button">Download PDF</button>
+        <button class="btn btn-secondary" onclick="window.close()" type="button">Close</button>
     </div>
     <?php endif; ?>
 
-    <div class="payslip-sheet" id="payslipContent">
-        <!-- Header -->
-        <div class="header-top">
-            <div>
-                <h1 class="main-title">Payslip</h1>
-                <div class="ref-no">No. <?= str_pad($slip['payroll_run_id'], 3, '0', STR_PAD_LEFT) ?>-<?= str_pad($slip['id'], 5, '0', STR_PAD_LEFT) ?></div>
+    <article class="payslip-sheet" id="payslipContent">
+        <header class="lh-template-header">
+            <img
+                src="<?= htmlspecialchars($letterheadHeaderUrl, ENT_QUOTES, 'UTF-8') ?>"
+                alt=""
+                class="lh-template-banner"
+            >
+        </header>
+
+        <div class="lh-content">
+            <div class="lh-from-block">
+                <?php if ($companyNameLine !== ''): ?><div><?= htmlspecialchars($companyNameLine) ?></div><?php endif; ?>
+                <?php if ($companyBoxLine !== ''): ?><div><?= htmlspecialchars($companyBoxLine) ?></div><?php endif; ?>
+                <?php if ($companyCityLine !== ''): ?><div><?= htmlspecialchars($companyCityLine) ?></div><?php endif; ?>
+                <div><?= htmlspecialchars($letterDateLabel) ?>.</div>
             </div>
-            <div class="company-block">
-                <?php if ($companyLogoUrl !== ''): ?>
-                <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8') ?>" class="company-logo-img">
+
+            <div class="lh-recipient">
+                <div class="lh-recipient-name"><?= htmlspecialchars(strtoupper((string) $slip['full_name'])) ?>,</div>
+                <?php if (trim((string) ($slip['department'] ?? '')) !== ''): ?>
+                <div><?= htmlspecialchars(strtoupper((string) $slip['department'])) ?></div>
                 <?php endif; ?>
-                <div class="company-name"><?= htmlspecialchars($companyName) ?></div>
-                <?php if ($companyAddress !== '' || $companyPhone !== '' || $companyEmail !== ''): ?>
-                <div class="company-details">
-                    <?php if ($companyAddress !== ''): ?><div><?= htmlspecialchars($companyAddress) ?></div><?php endif; ?>
-                    <?php if ($companyPhone !== ''): ?><div><?= htmlspecialchars($companyPhone) ?></div><?php endif; ?>
-                    <?php if ($companyEmail !== ''): ?><div><?= htmlspecialchars($companyEmail) ?></div><?php endif; ?>
-                </div>
-                <?php endif; ?>
+                <div>TIN: <?= htmlspecialchars((string) ($slip['tin_number'] ?? 'N/A')) ?></div>
             </div>
-        </div>
 
-        <!-- Info -->
-        <div class="info-section">
-            <div class="to-block">
-                <div class="recipient-name"><?= htmlspecialchars($slip['full_name']) ?></div>
-                <div class="recipient-details">
-                    <?= htmlspecialchars($slip['department']) ?><br>
-                    TIN: <?= htmlspecialchars($slip['tin_number'] ?? 'N/A') ?>
+            <div class="lh-meta">
+                <div class="lh-meta-row">
+                    <span class="lh-meta-label">Email</span>
+                    <span class="lh-meta-val"><?= htmlspecialchars((string) ($slip['email'] ?? 'Not set')) ?></span>
                 </div>
-                <div class="meta-block">
-                    <div class="meta-row">
-                        <span class="meta-label">Email</span>
-                        <span class="meta-val"><?= htmlspecialchars($slip['email'] ?? 'Not set') ?></span>
-                    </div>
-                    <div class="meta-row">
-                        <span class="meta-label">Period</span>
-                        <span class="meta-val"><?= date('F Y', mktime(0,0,0,$slip['month'], 1, $slip['year'])) ?></span>
-                    </div>
-                    <div class="meta-row">
-                        <span class="meta-label">Run Date</span>
-                        <span class="meta-val"><?= date('M d, Y', strtotime($slip['run_date'])) ?></span>
-                    </div>
+                <div class="lh-meta-row">
+                    <span class="lh-meta-label">Period</span>
+                    <span class="lh-meta-val"><?= htmlspecialchars($periodLabel) ?></span>
                 </div>
-            </div>
-        </div>
-
-        <!-- Table -->
-        <table class="pay-table">
-            <thead>
-                <tr>
-                    <th style="width: 5%;">No</th>
-                    <th style="width: 45%;">Item Description</th>
-                    <th style="width: 25%;" class="text-end">Earnings</th>
-                    <th style="width: 25%;" class="text-end">Deductions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Basic -->
-                <tr>
-                    <td>1.</td>
-                    <td>Basic Salary</td>
-                    <td class="text-end"><?= number_format($slip['basic_salary'], 2) ?></td>
-                    <td class="text-end">-</td>
-                </tr>
-                <!-- Allowances -->
-                <?php if($slip['total_allowances'] > 0): ?>
-                <tr>
-                    <td>2.</td>
-                    <td>Total Allowances</td>
-                    <td class="text-end"><?= number_format($slip['total_allowances'], 2) ?></td>
-                    <td class="text-end">-</td>
-                </tr>
-                <?php endif; ?>
-                <!-- Adjustments -->
-                <?php if($slip['monthly_adjustment'] != 0): ?>
-                <tr>
-                    <td>3.</td>
-                    <td>Monthly Adjustment</td>
-                    <td class="text-end"><?= $slip['monthly_adjustment'] > 0 ? number_format($slip['monthly_adjustment'], 2) : '-' ?></td>
-                    <td class="text-end"><?= $slip['monthly_adjustment'] < 0 ? number_format(abs($slip['monthly_adjustment']), 2) : '-' ?></td>
-                </tr>
-                <?php endif; ?>
-                
-                <!-- Spacer Lines to fill visual space if needed, or just specific items -->
-                
-                <!-- Deductions -->
-                <tr>
-                    <td>4.</td>
-                    <td>NSSF Contribution (10%)</td>
-                    <td class="text-end">-</td>
-                    <td class="text-end"><?= number_format($slip['nssf_deduction'], 2) ?></td>
-                </tr>
-                <tr>
-                    <td>5.</td>
-                    <td>P.A.Y.E (Tax)</td>
-                    <td class="text-end">-</td>
-                    <td class="text-end"><?= number_format($slip['tax_deduction'], 2) ?></td>
-                </tr>
-                <?php if($slip['other_deductions'] > 0): ?>
-                <tr>
-                    <td>6.</td>
-                    <td>Other Deductions</td>
-                    <td class="text-end">-</td>
-                    <td class="text-end"><?= number_format($slip['other_deductions'], 2) ?></td>
-                </tr>
-                <?php endif; ?>
-                
-                <!-- Empty Rows for visuals (Optional, to match height) -->
-                <tr>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <!-- Footer Grid -->
-        <div class="footer-grid">
-            
-            <!-- Left: Bank & Method -->
-            <div class="payment-info">
-                <h4>Payment Method :</h4>
-                <div style="font-weight: 700; margin-bottom: 20px; font-size: 15px;">Bank Transfer</div>
-
-                <div class="bank-row">
-                    <span class="bank-label">Bank Name :</span>
-                    <span class="bank-val"><?= htmlspecialchars($slip['bank_name'] ?? 'N/A') ?></span>
-                </div>
-                <div class="bank-row">
-                    <span class="bank-label">Account Name :</span>
-                    <span class="bank-val"><?= htmlspecialchars($slip['full_name']) ?></span>
-                </div>
-                <div class="bank-row">
-                    <span class="bank-label">Account Number :</span>
-                    <span class="bank-val"><?= htmlspecialchars($slip['account_number'] ?? 'N/A') ?></span>
+                <div class="lh-meta-row">
+                    <span class="lh-meta-label">Run Date</span>
+                    <span class="lh-meta-val"><?= htmlspecialchars(date('M d, Y', strtotime((string) $slip['run_date']))) ?></span>
                 </div>
             </div>
 
-            <!-- Right: Totals -->
-            <div>
-                <div class="totals-box">
-                    <div class="total-row">
-                        <span class="bank-label">Gross Salary</span>
-                        <span class="bank-val"><?= number_format($slip['gross_salary'], 2) ?></span>
+            <div class="lh-subject">
+                <span class="lh-subject-text"><?= htmlspecialchars($payslipRef) ?></span>
+            </div>
+
+            <table class="pay-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">No</th>
+                        <th style="width: 44%;">Item Description</th>
+                        <th style="width: 24%;" class="text-end">Earnings</th>
+                        <th style="width: 24%;" class="text-end">Deductions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><?= ++$rowNo ?>.</td>
+                        <td>Basic Salary</td>
+                        <td class="text-end"><?= number_format((float) $slip['basic_salary'], 2) ?></td>
+                        <td class="text-end">-</td>
+                    </tr>
+                    <?php if ((float) $slip['total_allowances'] > 0): ?>
+                    <tr>
+                        <td><?= ++$rowNo ?>.</td>
+                        <td>Total Allowances</td>
+                        <td class="text-end"><?= number_format((float) $slip['total_allowances'], 2) ?></td>
+                        <td class="text-end">-</td>
+                    </tr>
+                    <?php endif; ?>
+                    <?php if ((float) $slip['monthly_adjustment'] != 0): ?>
+                    <tr>
+                        <td><?= ++$rowNo ?>.</td>
+                        <td>Monthly Adjustment</td>
+                        <td class="text-end"><?= (float) $slip['monthly_adjustment'] > 0 ? number_format((float) $slip['monthly_adjustment'], 2) : '-' ?></td>
+                        <td class="text-end"><?= (float) $slip['monthly_adjustment'] < 0 ? number_format(abs((float) $slip['monthly_adjustment']), 2) : '-' ?></td>
+                    </tr>
+                    <?php endif; ?>
+                    <tr>
+                        <td><?= ++$rowNo ?>.</td>
+                        <td>NSSF Contribution (10%)</td>
+                        <td class="text-end">-</td>
+                        <td class="text-end"><?= number_format((float) $slip['nssf_deduction'], 2) ?></td>
+                    </tr>
+                    <tr>
+                        <td><?= ++$rowNo ?>.</td>
+                        <td>P.A.Y.E (Tax)</td>
+                        <td class="text-end">-</td>
+                        <td class="text-end"><?= number_format((float) $slip['tax_deduction'], 2) ?></td>
+                    </tr>
+                    <?php if ((float) $slip['other_deductions'] > 0): ?>
+                    <tr>
+                        <td><?= ++$rowNo ?>.</td>
+                        <td>Other Deductions</td>
+                        <td class="text-end">-</td>
+                        <td class="text-end"><?= number_format((float) $slip['other_deductions'], 2) ?></td>
+                    </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+
+            <div class="footer-grid">
+                <div class="payment-info">
+                    <h4>Payment Method :</h4>
+                    <div class="payment-method">Bank Transfer</div>
+                    <div class="bank-row">
+                        <span class="bank-label">Bank Name :</span>
+                        <span class="bank-val"><?= htmlspecialchars((string) ($slip['bank_name'] ?? 'N/A')) ?></span>
                     </div>
-                    <div class="total-row">
-                        <span class="bank-label">Total Deductions</span>
-                        <span class="bank-val text-danger">-<?= number_format($slip['nssf_deduction'] + $slip['tax_deduction'] + $slip['other_deductions'], 2) ?></span>
+                    <div class="bank-row">
+                        <span class="bank-label">Account Name :</span>
+                        <span class="bank-val"><?= htmlspecialchars((string) $slip['full_name']) ?></span>
                     </div>
-                    <div class="total-row final">
-                        <span>Total Net Pay</span>
-                        <span style="font-size: 20px;"><?= number_format($slip['net_salary'], 2) ?></span>
+                    <div class="bank-row">
+                        <span class="bank-label">Account Number :</span>
+                        <span class="bank-val"><?= htmlspecialchars((string) ($slip['account_number'] ?? 'N/A')) ?></span>
                     </div>
                 </div>
 
-                <!-- Signature -->
-                <div class="signature-section">
-                    <div class="signature-block">
-                        <div class="signer-name"><?= htmlspecialchars($slip['runner_name'] ?? 'Authorized Signatory') ?></div>
-                        <div class="signer-title"><?= htmlspecialchars($slip['runner_role'] ?? 'Finance Director') ?></div>
-                        
-                        <!-- Dynamic Signature Image -->
-                        <div style="height: 60px; display: flex; justify-content: center; align-items: flex-end; margin-bottom: 5px;">
-                            <?php 
-                                $sigPath = getUserSignaturePathById($slip['run_by']);
-                                if ($sigPath && file_exists('../../' . $sigPath)): 
-                            ?>
-                                <img src="<?= $baseUrl ?>/<?= htmlspecialchars($sigPath) ?>" alt="Signature" style="max-height: 80px; max-width: 100%; object-fit: contain;">
-                            <?php endif; ?>
+                <div>
+                    <div class="totals-box">
+                        <div class="total-row">
+                            <span class="bank-label">Gross Salary</span>
+                            <span class="bank-val"><?= number_format((float) $slip['gross_salary'], 2) ?></span>
                         </div>
+                        <div class="total-row">
+                            <span class="bank-label">Total Deductions</span>
+                            <span class="bank-val">-<?= number_format((float) $slip['nssf_deduction'] + (float) $slip['tax_deduction'] + (float) $slip['other_deductions'], 2) ?></span>
+                        </div>
+                        <div class="total-row final">
+                            <span>Total Net Pay</span>
+                            <span><?= number_format((float) $slip['net_salary'], 2) ?></span>
+                        </div>
+                    </div>
 
-                        <!-- Signature Line & Label -->
-                        <div class="signature-line">
-                            Authorized Signature
+                    <div class="signature-section">
+                        <div class="signature-block">
+                            <div class="signer-name"><?= htmlspecialchars((string) ($slip['runner_name'] ?? 'Authorized Signatory')) ?></div>
+                            <div class="signer-title"><?= htmlspecialchars((string) ($slip['runner_role'] ?? 'Finance Director')) ?></div>
+                            <div class="signature-image-wrap">
+                                <?php if ($sigUrl !== ''): ?>
+                                <img src="<?= htmlspecialchars($sigUrl, ENT_QUOTES, 'UTF-8') ?>" alt="Signature">
+                                <?php endif; ?>
+                            </div>
+                            <div class="signature-line">Authorized Signature</div>
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
+
+        <footer class="lh-template-footer">
+            <img
+                src="<?= htmlspecialchars($letterheadFooterUrl, ENT_QUOTES, 'UTF-8') ?>"
+                alt=""
+                class="lh-template-banner"
+            >
+        </footer>
+    </article>
 
     <script>
         function downloadPDF() {
@@ -585,15 +693,9 @@ if (
             });
         }
 
-<?php if ($isEmbed): ?>
-        // Embed mode fills the iframe width; vertical scroll shows the full document.
-<?php endif; ?>
-
-        // Auto-download if ?download=1 is present
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('download')) {
-                // Small delay to ensure styles are fully ready
                 setTimeout(downloadPDF, 1000);
             }
         });

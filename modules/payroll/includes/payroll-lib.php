@@ -356,6 +356,52 @@ function payrollDeskJsonResponse(bool $success, mixed $data = null, ?string $mes
     exit;
 }
 
+/**
+ * Send JSON now, then keep running (for long SMTP batches after the browser is free).
+ *
+ * @param callable():void $afterFlush
+ */
+function payrollDeskJsonResponseThen(bool $success, mixed $data, ?string $message, callable $afterFlush, int $code = 200): void
+{
+    ignore_user_abort(true);
+    if (function_exists('set_time_limit')) {
+        @set_time_limit(600);
+    }
+    if (function_exists('ini_set')) {
+        @ini_set('max_execution_time', '600');
+    }
+
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
+    }
+
+    $payload = json_encode([
+        'success' => $success,
+        'message' => $message,
+        'data' => $data,
+        'error' => $success ? null : ($message ?? 'Request failed'),
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+    http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Connection: close');
+    header('Content-Length: ' . (string) strlen((string) $payload));
+    echo $payload;
+
+    if (function_exists('fastcgi_finish_request')) {
+        @fastcgi_finish_request();
+    } else {
+        @flush();
+    }
+
+    try {
+        $afterFlush();
+    } catch (Throwable $e) {
+        error_log('payroll background email: ' . $e->getMessage());
+    }
+    exit;
+}
+
 function payrollDeskApproveRun(PDO $pdo, int $runId): void
 {
     if (!isAdmin()) {
@@ -1296,36 +1342,20 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
             throw new RuntimeException('Select at least one employee to email.');
         }
 
-        try {
-            $mail = payrollDeskSendPayslipEmails($pdo, $runId, null, $selectedIds);
-        } catch (Throwable $e) {
-            throw new RuntimeException('Email failed: ' . $e->getMessage());
-        }
+        $count = count($selectedIds);
+        $message = $count === 1
+            ? 'Sending payslip email…'
+            : sprintf('Sending %d payslip emails…', $count);
 
-        if (!empty($mail['disabled'])) {
-            throw new RuntimeException('Payroll email is off in Email settings.');
-        }
-        if ((int) ($mail['sent'] ?? 0) > 0) {
-            $sent = (int) $mail['sent'];
-            $message = $sent === 1
-                ? 'Payslip email sent.'
-                : sprintf('Payslip emails sent to %d employees.', $sent);
-            if ((int) ($mail['failed'] ?? 0) > 0) {
-                $message .= sprintf(' %d failed.', (int) $mail['failed']);
-            }
-            if ((int) ($mail['skipped'] ?? 0) > 0) {
-                $message .= sprintf(' %d skipped (no email).', (int) $mail['skipped']);
-            }
-        } elseif ((int) ($mail['failed'] ?? 0) > 0) {
-            $detail = trim((string) ($mail['error'] ?? ''));
-            throw new RuntimeException(
-                $detail !== ''
-                    ? ('Email send failed: ' . $detail)
-                    : 'Email send failed. Check SMTP / System from email in Email settings.'
-            );
-        } else {
-            throw new RuntimeException('No emails were sent. Selected employees may have no email address.');
-        }
+        return [
+            'deleted' => false,
+            'message' => $message,
+            'emailBackground' => [
+                'runId' => $runId,
+                'payslipIds' => $selectedIds,
+            ],
+            'data' => payrollDeskGetRunPayload($pdo, $runId),
+        ];
     } elseif ($action === 'remove_payslip') {
         $canRemove = (function_exists('isFinanceOrAdmin') && isFinanceOrAdmin())
             || (function_exists('isAdmin') && isAdmin())

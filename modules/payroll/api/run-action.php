@@ -31,7 +31,29 @@ try {
     }
 
     $result = payrollDeskRunAction($pdo, $runId, $action, $payslipId, $payslipIds);
-    payrollDeskJsonResponse(true, $result, (string) ($result['message'] ?? 'Updated.'));
+    $message = (string) ($result['message'] ?? 'Updated.');
+
+    if (!empty($result['emailBackground']) && is_array($result['emailBackground'])) {
+        $bg = $result['emailBackground'];
+        unset($result['emailBackground']);
+        $bgRunId = (int) ($bg['runId'] ?? $runId);
+        $bgIds = is_array($bg['payslipIds'] ?? null) ? $bg['payslipIds'] : [];
+
+        payrollDeskJsonResponseThen(
+            true,
+            $result,
+            $message,
+            static function () use ($pdo, $bgRunId, $bgIds): void {
+                try {
+                    payrollDeskSendPayslipEmails($pdo, $bgRunId, null, $bgIds);
+                } catch (Throwable $e) {
+                    error_log('payrollDeskSendPayslipEmails background: ' . $e->getMessage());
+                }
+            }
+        );
+    }
+
+    payrollDeskJsonResponse(true, $result, $message);
 } catch (Throwable $e) {
     payrollDeskJsonResponse(false, null, $e->getMessage(), 500);
 }

@@ -246,15 +246,20 @@ if (!function_exists('email_smtp_send_simple')) {
             }
         }
 
-        return (bool) $smtp->send(
-            $fromEmail,
-            $fromName !== '' ? $fromName : $fromEmail,
-            $to,
-            $subject,
-            $htmlBody,
-            true,
-            $attachments
-        );
+        try {
+            return (bool) $smtp->send(
+                $fromEmail,
+                $fromName !== '' ? $fromName : $fromEmail,
+                $to,
+                $subject,
+                $htmlBody,
+                true,
+                $attachments
+            );
+        } catch (Throwable $e) {
+            error_log('email_smtp_send_simple: ' . $e->getMessage());
+            return false;
+        }
     }
 }
 

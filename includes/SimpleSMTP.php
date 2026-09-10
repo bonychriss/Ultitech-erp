@@ -11,8 +11,10 @@ class SimpleSMTP {
     private $conn;
     private $debug = false; // Enabled debug
     private $logFile = __DIR__ . '/../smtp_debug.log';
-    private $connectTimeout = 5;
-    private $readTimeout = 8;
+    private $connectTimeout = 15;
+    private $readTimeout = 60;
+    private $lastResponse = '';
+    private $lastQueueId = '';
 
     public function __construct($host, $port, $user, $pass, $secure = 'tls') {
         $this->host = $host;
@@ -46,10 +48,19 @@ class SimpleSMTP {
         }
     }
 
-    public function send($fromEmail, $fromName, $toEmail, $subject, $body, $isHtml = true, $attachments = []) {
+    public function send($fromEmail, $fromName, $toEmail, $subject, $body, $isHtml = true, $attachments = [], $textBody = null) {
+        $this->lastResponse = '';
+        $this->lastQueueId = '';
         try {
             $this->connect();
             $this->auth();
+
+            $fromEmail = trim((string) $fromEmail);
+            $toEmail = trim((string) $toEmail);
+            $fromName = trim(str_replace(["\r", "\n"], '', (string) $fromName));
+            $fromHeader = $fromName !== ''
+                ? ($this->encodeMailboxName($fromName) . " <$fromEmail>")
+                : "<$fromEmail>";
 
             $this->command("MAIL FROM: <$fromEmail>");
             $this->command("RCPT TO: <$toEmail>");
@@ -58,6 +69,7 @@ class SimpleSMTP {
             $inline = [];
             $files = [];
             if (!empty($attachments) && is_array($attachments)) {
+                $seen = [];
                 foreach ($attachments as $att) {
                     if (!is_array($att)) {
                         continue;
@@ -65,25 +77,76 @@ class SimpleSMTP {
                     $isInline = !empty($att['inline']) || !empty($att['cid']);
                     if ($isInline) {
                         $inline[] = $att;
-                    } else {
-                        $files[] = $att;
+                        continue;
                     }
+                    // Deduplicate identical file attachments (same name + payload).
+                    $nameKey = strtolower(basename((string) ($att['name'] ?? $att['path'] ?? 'file.bin')));
+                    $payloadKey = '';
+                    if (isset($att['content'])) {
+                        $payloadKey = md5((string) $att['content']);
+                    } elseif (!empty($att['path']) && is_file((string) $att['path'])) {
+                        $payloadKey = md5_file((string) $att['path']) ?: '';
+                    }
+                    $dedupeKey = $nameKey . '|' . $payloadKey;
+                    if ($payloadKey !== '' && isset($seen[$dedupeKey])) {
+                        continue;
+                    }
+                    if ($payloadKey !== '') {
+                        $seen[$dedupeKey] = true;
+                    }
+                    $files[] = $att;
+                }
+            }
+
+            // Large PDF attachments need a longer wait for the final SMTP 250 response.
+            if ($files !== [] || $inline !== []) {
+                $this->readTimeout = max($this->readTimeout, 90);
+                if (is_resource($this->conn)) {
+                    stream_set_timeout($this->conn, $this->readTimeout);
                 }
             }
 
             $mixedBoundary = 'mix_' . md5(uniqid((string) mt_rand(), true));
+            $altBoundary = 'alt_' . md5(uniqid((string) mt_rand(), true));
             $relatedBoundary = 'rel_' . md5(uniqid((string) mt_rand(), true));
 
+            $domain = 'localhost';
+            if (strpos($fromEmail, '@') !== false) {
+                $domain = substr(strrchr($fromEmail, '@') ?: '@localhost', 1) ?: 'localhost';
+            }
+            $messageId = sprintf('<%s.%s@%s>', bin2hex(random_bytes(8)), time(), $domain);
+
+            $plain = is_string($textBody) && trim($textBody) !== ''
+                ? $textBody
+                : trim(html_entity_decode(strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>'], "\n", (string) $body)), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            if ($plain === '') {
+                $plain = (string) $subject;
+            }
+
             $headers  = "MIME-Version: 1.0\r\n";
-            $headers .= 'From: "' . str_replace(['"', "\r", "\n"], '', (string) $fromName) . "\" <$fromEmail>\r\n";
+            $headers .= 'Message-ID: ' . $messageId . "\r\n";
+            $headers .= 'Date: ' . date('r') . "\r\n";
+            $headers .= 'From: ' . $fromHeader . "\r\n";
+            $headers .= "Reply-To: <$fromEmail>\r\n";
+            $headers .= "Return-Path: <$fromEmail>\r\n";
             $headers .= "To: <$toEmail>\r\n";
             $headers .= 'Subject: ' . $this->encodeSubject((string) $subject) . "\r\n";
-            $headers .= 'Date: ' . date('r') . "\r\n";
-            $headers .= "X-Mailer: SimpleSMTP/1.1\r\n";
+            $headers .= "List-Unsubscribe: <mailto:$fromEmail?subject=unsubscribe>\r\n";
 
-            $htmlPart  = "Content-Type: " . ($isHtml ? 'text/html' : 'text/plain') . "; charset=UTF-8\r\n";
+            $textPart  = "Content-Type: text/plain; charset=UTF-8\r\n";
+            $textPart .= "Content-Transfer-Encoding: quoted-printable\r\n\r\n";
+            $textPart .= quoted_printable_encode($plain);
+
+            $htmlPart  = "Content-Type: text/html; charset=UTF-8\r\n";
             $htmlPart .= "Content-Transfer-Encoding: quoted-printable\r\n\r\n";
-            $htmlPart .= quoted_printable_encode((string) $body);
+            $htmlPart .= quoted_printable_encode($isHtml ? (string) $body : nl2br(htmlspecialchars((string) $body, ENT_QUOTES, 'UTF-8')));
+
+            $altInner  = "--$altBoundary\r\n" . $textPart . "\r\n";
+            $altInner .= "--$altBoundary\r\n" . $htmlPart . "\r\n";
+            $altInner .= "--$altBoundary--";
+
+            $altPart  = "Content-Type: multipart/alternative; boundary=\"$altBoundary\"\r\n\r\n";
+            $altPart .= $altInner;
 
             $message = '';
 
@@ -91,29 +154,35 @@ class SimpleSMTP {
                 $headers .= "Content-Type: multipart/mixed; boundary=\"$mixedBoundary\"\r\n";
                 $message .= "--$mixedBoundary\r\n";
                 $message .= "Content-Type: multipart/related; boundary=\"$relatedBoundary\"\r\n\r\n";
-                $message .= "--$relatedBoundary\r\n" . $htmlPart . "\r\n";
+                $message .= "--$relatedBoundary\r\n" . $altPart . "\r\n";
                 $message .= $this->buildInlineParts($relatedBoundary, $inline);
                 $message .= "--$relatedBoundary--\r\n";
                 $message .= $this->buildFileParts($mixedBoundary, $files);
                 $message .= "--$mixedBoundary--";
             } elseif ($inline !== []) {
                 $headers .= "Content-Type: multipart/related; boundary=\"$relatedBoundary\"\r\n";
-                $message .= "--$relatedBoundary\r\n" . $htmlPart . "\r\n";
+                $message .= "--$relatedBoundary\r\n" . $altPart . "\r\n";
                 $message .= $this->buildInlineParts($relatedBoundary, $inline);
                 $message .= "--$relatedBoundary--";
             } elseif ($files !== []) {
                 $headers .= "Content-Type: multipart/mixed; boundary=\"$mixedBoundary\"\r\n";
-                $message .= "--$mixedBoundary\r\n" . $htmlPart . "\r\n";
+                $message .= "--$mixedBoundary\r\n";
+                $message .= "Content-Type: multipart/alternative; boundary=\"$altBoundary\"\r\n";
+                $message .= "Content-Disposition: inline\r\n\r\n";
+                $message .= $altInner . "\r\n";
                 $message .= $this->buildFileParts($mixedBoundary, $files);
                 $message .= "--$mixedBoundary--";
             } else {
-                $headers .= 'Content-Type: ' . ($isHtml ? 'text/html' : 'text/plain') . "; charset=UTF-8\r\n";
-                $headers .= "Content-Transfer-Encoding: quoted-printable\r\n";
-                $message = quoted_printable_encode((string) $body);
+                $headers .= "Content-Type: multipart/alternative; boundary=\"$altBoundary\"\r\n";
+                $message = $altInner;
             }
 
             $data = $headers . "\r\n" . $message . "\r\n.";
-            $this->command($data);
+            $dataResponse = $this->command($data);
+            $this->lastResponse = trim((string) $dataResponse);
+            if (preg_match('/id=([A-Za-z0-9_-]+)/', $this->lastResponse, $m)) {
+                $this->lastQueueId = $m[1];
+            }
 
             $this->command('QUIT');
             $this->disconnect();
@@ -123,8 +192,19 @@ class SimpleSMTP {
             $this->disconnect();
             $this->log('ERROR: ' . $e->getMessage());
             error_log('SMTP Error: ' . $e->getMessage());
-            return false;
+            // Preserve message for mailer_last_error callers.
+            throw $e;
         }
+    }
+
+    public function getLastResponse(): string
+    {
+        return $this->lastResponse;
+    }
+
+    public function getLastQueueId(): string
+    {
+        return $this->lastQueueId;
     }
 
     private function encodeSubject($subject)
@@ -134,6 +214,28 @@ class SimpleSMTP {
             return '=?UTF-8?B?' . base64_encode($subject) . '?=';
         }
         return $subject;
+    }
+
+    /**
+     * Quote / encode a display name for From/To headers.
+     */
+    private function encodeMailboxName(string $name): string
+    {
+        $name = trim(str_replace(["\r", "\n"], '', $name));
+        if ($name === '') {
+            return '';
+        }
+        if (preg_match('/[^\x20-\x7E]/', $name)) {
+            return '=?UTF-8?B?' . base64_encode($name) . '?=';
+        }
+        if (preg_match('/[\\\\"]/', $name) || !preg_match('/^[A-Za-z0-9!#$%&\'*+\/=?^_`{|}~ .-]+$/', $name)) {
+            return '"' . addcslashes($name, '\\"') . '"';
+        }
+        // Spaces are common in company names — keep as quoted-string.
+        if (strpos($name, ' ') !== false) {
+            return '"' . $name . '"';
+        }
+        return $name;
     }
 
     /**
@@ -277,8 +379,19 @@ class SimpleSMTP {
         stream_set_timeout($this->conn, $this->readTimeout);
         
         $this->getResponse(); // Greeting
+
+        // Use mail domain for EHLO (helps deliverability vs local PC hostname).
+        $ehloHost = $this->host;
+        if (preg_match('/@([^>]+)$/', (string) $this->user, $m)) {
+            $ehloHost = 'mail.' . strtolower(trim($m[1]));
+        } elseif (strpos($this->host, '.') !== false) {
+            $ehloHost = $this->host;
+        } else {
+            $ehloHost = 'localhost';
+        }
+        $ehloHost = preg_replace('/[^A-Za-z0-9.-]/', '', $ehloHost) ?: 'localhost';
         
-        $this->command("EHLO " . gethostname());
+        $this->command("EHLO " . $ehloHost);
         
         if ($this->secure === 'tls') {
             $this->command("STARTTLS");
@@ -292,7 +405,7 @@ class SimpleSMTP {
                 throw new Exception("TLS negotiation failed. For cPanel mail, use Port 465 with SSL instead of Port 587 with TLS.");
             }
             stream_set_timeout($this->conn, $this->readTimeout);
-            $this->command("EHLO " . gethostname());
+            $this->command("EHLO " . $ehloHost);
         }
     }
 

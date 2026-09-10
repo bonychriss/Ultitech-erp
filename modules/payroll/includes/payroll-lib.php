@@ -118,6 +118,38 @@ function payrollDeskPublicUrl(string $relativePath): string
 }
 
 /**
+ * Absolute http(s) URL for email / external clients (never a root-relative path).
+ */
+function payrollDeskAbsolutePublicUrl(string $pathOrUrl): string
+{
+    $value = trim($pathOrUrl);
+    if ($value === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $value)) {
+        return $value;
+    }
+    if ($value[0] !== '/') {
+        $value = '/' . $value;
+    }
+
+    $scheme = 'http';
+    $xf = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+    if ($xf === 'https' || $xf === 'http') {
+        $scheme = $xf;
+    } elseif (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        $scheme = 'https';
+    }
+
+    $host = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host === '') {
+        $host = 'localhost';
+    }
+
+    return $scheme . '://' . $host . $value;
+}
+
+/**
  * Page/navigation URLs under the active company slug when available.
  * Assets/API must keep using payrollDeskPublicUrl() (app-root paths).
  */
@@ -380,7 +412,7 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT p.*, u.full_name, u.department
+        'SELECT p.*, u.full_name, u.department, u.email
          FROM ' . payroll_table('payslips') . ' p
          JOIN users u ON p.user_id = u.id
          WHERE p.payroll_run_id = ?
@@ -438,6 +470,7 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
             'id' => (int) ($row['id'] ?? 0),
             'userId' => (int) ($row['user_id'] ?? 0),
             'fullName' => $name,
+            'email' => trim((string) ($row['email'] ?? '')),
             'department' => (string) ($row['department'] ?? ''),
             'basicSalary' => $basic,
             'allowances' => $allowances,
@@ -491,6 +524,11 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
             'sendAll' => function_exists('isAdmin') && isAdmin()
                 && in_array($status, ['approved', 'paid'], true)
                 && empty($run['is_published']),
+            'email' => (
+                (function_exists('isAdmin') && isAdmin())
+                || (function_exists('isFinanceOrAdmin') && isFinanceOrAdmin())
+                || (function_exists('isFinance') && isFinance())
+            ) && in_array($status, ['approved', 'paid'], true),
             'editPayslip' => function_exists('isFinance') && isFinance() && $status === 'draft',
             'removePayslip' => $status === 'draft' && (
                 (function_exists('isFinanceOrAdmin') && isFinanceOrAdmin())
@@ -505,14 +543,640 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
             'emailAll' => payrollDeskPageUrl('email_run.php') . $qs,
             'payslipBase' => payrollDeskPageUrl('payslip.php') . payrollDeskQueryString(),
             'editPayslipBase' => payrollDeskPageUrl('edit_payslip.php') . payrollDeskQueryString(),
+            'emailSettings' => function_exists('company_url')
+                ? company_url('admin/email-settings.php?module=settings')
+                : (function_exists('app_url') ? app_url('/admin/email-settings.php?module=settings') : ''),
         ],
+        'mail' => payrollDeskMailMeta($pdo),
     ];
 }
 
 /**
+ * Whether payroll outbound mail should use the system mailbox (Email Settings → Payroll).
+ * Default true when the flag has never been saved.
+ */
+function payrollDeskSystemMailEnabled(PDO $pdo): bool
+{
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT setting_value FROM system_settings WHERE setting_key = 'email_use_system_payroll' LIMIT 1"
+        );
+        $stmt->execute();
+        $value = trim((string) ($stmt->fetchColumn() ?: ''));
+        return $value === '' || $value === '1';
+    } catch (Throwable $e) {
+        return true;
+    }
+}
+
+/**
+ * @return array{enabled:bool,fromEmail:string,fromName:string}
+ */
+function payrollDeskMailMeta(PDO $pdo): array
+{
+    $enabled = payrollDeskSystemMailEnabled($pdo);
+    $fromEmail = '';
+    $fromName = '';
+    try {
+        require_once dirname(__DIR__, 3) . '/includes/mailer.php';
+        if (function_exists('resolveSystemMailFrom')) {
+            $from = resolveSystemMailFrom('payroll');
+            $fromEmail = (string) ($from['email'] ?? '');
+            $fromName = (string) ($from['name'] ?? '');
+        }
+    } catch (Throwable $e) {
+        // ignore — UI can still show enabled flag
+    }
+
+    return [
+        'enabled' => $enabled,
+        'fromEmail' => $fromEmail,
+        'fromName' => $fromName,
+    ];
+}
+
+/**
+ * Resolve a local filesystem path for an app-relative asset (for mPDF).
+ */
+function payrollDeskAssetFsPath(string $relativeOrUrl): string
+{
+    $appRoot = dirname(__DIR__, 3);
+    $value = trim(str_replace('\\', '/', $relativeOrUrl));
+    if ($value === '') {
+        return '';
+    }
+    // Strip query string and known app URL prefixes.
+    $value = preg_replace('/[?#].*$/', '', $value) ?? $value;
+    $value = preg_replace('#^https?://[^/]+#i', '', $value) ?? $value;
+    $value = preg_replace('#^/public_html/#', '/', $value) ?? $value;
+    $value = ltrim($value, '/');
+    if (str_starts_with($value, 'public_html/')) {
+        $value = substr($value, strlen('public_html/'));
+    }
+    $fs = $appRoot . '/' . $value;
+    return is_file($fs) ? $fs : '';
+}
+
+/**
+ * Build a payslip PDF matching payslip.php layout (letterhead + earnings table).
+ *
+ * @param array<string,mixed> $slip
+ * @param array<string,mixed> $run
+ * @return array{content:string,name:string,type:string}
+ */
+function payrollDeskBuildPayslipPdfAttachment(PDO $pdo, array $slip, array $run): array
+{
+    $autoload = dirname(__DIR__, 3) . '/vendor/autoload.php';
+    if (!is_file($autoload)) {
+        throw new RuntimeException('PDF library missing (vendor/autoload.php).');
+    }
+    require_once $autoload;
+    if (!function_exists('letterheadResolveForCompany')) {
+        require_once dirname(__DIR__, 3) . '/includes/letterhead.php';
+    }
+
+    $payslipId = (int) ($slip['id'] ?? 0);
+    if ($payslipId > 0) {
+        $stmt = $pdo->prepare("
+            SELECT p.*, pr.month, pr.year, pr.run_date, pr.run_by, pr.id AS payroll_run_id,
+                   u.full_name, u.email, u.department,
+                   es.bank_name, es.account_number, es.nssf_number, es.tin_number,
+                   runner.full_name AS runner_name, runner.signature_path AS runner_signature_path,
+                   runner.role AS runner_role, runner.department AS runner_department
+            FROM " . payroll_table('payslips') . " p
+            JOIN " . payroll_table('payroll_runs') . " pr ON p.payroll_run_id = pr.id
+            JOIN users u ON p.user_id = u.id
+            LEFT JOIN " . payroll_table('employee_salary') . " es ON u.id = es.user_id
+            LEFT JOIN users runner ON pr.run_by = runner.id
+            WHERE p.id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$payslipId]);
+        $full = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (is_array($full) && $full !== []) {
+            $slip = $full;
+            $run = array_merge($run, [
+                'month' => $full['month'] ?? ($run['month'] ?? null),
+                'year' => $full['year'] ?? ($run['year'] ?? null),
+                'run_date' => $full['run_date'] ?? ($run['run_date'] ?? null),
+            ]);
+        }
+    }
+
+    $month = (int) ($slip['month'] ?? $run['month'] ?? 1);
+    $year = (int) ($slip['year'] ?? $run['year'] ?? (int) date('Y'));
+    $period = date('F Y', mktime(0, 0, 0, $month, 1, $year));
+    $companyName = defined('COMPANY_NAME') ? trim((string) COMPANY_NAME) : '';
+    if ($companyName === '' && function_exists('getCompanySetting')) {
+        $companyName = trim((string) getCompanySetting('company_name', ''));
+    }
+    if ($companyName === '') {
+        $companyName = 'Company';
+    }
+    $slug = (string) ($_SESSION['company_slug'] ?? ($_GET['company_slug'] ?? 'ultimate'));
+    $letterhead = letterheadResolveForCompany($slug, $companyName);
+    $defaults = is_array($letterhead['defaults'] ?? null) ? $letterhead['defaults'] : [];
+
+    $headerFs = payrollDeskAssetFsPath((string) ($letterhead['headerUrl'] ?? 'letterhead/header.png'));
+    if ($headerFs === '') {
+        $headerFs = payrollDeskAssetFsPath('letterhead/header.png');
+    }
+    $footerFs = payrollDeskAssetFsPath((string) ($letterhead['footerUrl'] ?? 'letterhead/footer.png'));
+    if ($footerFs === '') {
+        $footerFs = payrollDeskAssetFsPath('letterhead/footer.png');
+    }
+    $stampFs = '';
+    if (!empty($letterhead['showStamp'])) {
+        $stampFs = payrollDeskAssetFsPath((string) ($letterhead['stampUrl'] ?? ''));
+        if ($stampFs === '') {
+            $stampFs = payrollDeskAssetFsPath('letterhead/stamps/ultimate-stamp-white.png');
+        }
+        if ($stampFs === '') {
+            $stampFs = payrollDeskAssetFsPath('modules/letter/frontend/src/assets/ultimate-stamp.png');
+        }
+    }
+
+    $employee = (string) ($slip['full_name'] ?? 'Employee');
+    $department = (string) ($slip['department'] ?? '');
+    $email = (string) ($slip['email'] ?? '');
+    $tin = trim((string) ($slip['tin_number'] ?? ''));
+    if ($tin === '') {
+        $tin = 'N/A';
+    }
+    $bankName = trim((string) ($slip['bank_name'] ?? ''));
+    $accountNumber = (string) ($slip['account_number'] ?? 'N/A');
+    $runnerName = trim((string) ($slip['runner_name'] ?? ''));
+    if ($runnerName === '') {
+        $runnerName = 'Authorized Signatory';
+    }
+    $runnerTitle = trim((string) ($slip['runner_department'] ?? ''));
+    if ($runnerTitle === '') {
+        $roleRaw = strtolower(trim((string) ($slip['runner_role'] ?? '')));
+        if ($roleRaw === 'admin') {
+            $runnerTitle = 'Administrator';
+        } elseif ($roleRaw === 'finance') {
+            $runnerTitle = 'Finance';
+        } elseif ($roleRaw !== '' && $roleRaw !== 'employee') {
+            $runnerTitle = ucwords(str_replace('_', ' ', $roleRaw));
+        }
+    }
+    $runDate = (string) ($slip['run_date'] ?? $run['run_date'] ?? date('Y-m-d'));
+    $runDateLabel = $runDate !== '' ? date('M d, Y', strtotime($runDate)) : '-';
+    $letterDateLabel = $runDate !== '' ? date('d-m-Y', strtotime($runDate)) : date('d-m-Y');
+    $payslipRef = 'PAYSLIP NO. '
+        . str_pad((string) ($slip['payroll_run_id'] ?? $run['id'] ?? 0), 3, '0', STR_PAD_LEFT)
+        . '-'
+        . str_pad((string) ($slip['id'] ?? 0), 5, '0', STR_PAD_LEFT);
+
+    $sigFs = '';
+    $sigPath = trim((string) ($slip['runner_signature_path'] ?? ''));
+    if ($sigPath !== '') {
+        $sigFs = payrollDeskAssetFsPath($sigPath);
+        if ($sigFs === '') {
+            $sigFs = payrollDeskAssetFsPath('assets/signatures/' . basename(str_replace('\\', '/', $sigPath)));
+        }
+    }
+
+    // Bank logo (same catalog as payslip.php).
+    $bankLogoFs = '';
+    $bankNameLower = strtolower($bankName);
+    $bankLogoCatalog = [
+        ['file' => 'uba.png', 'match' => ['united bank for africa', 'united bank of africa', 'uba']],
+        ['file' => 'crdb.png', 'match' => ['crdb']],
+        ['file' => 'nmb.jpg', 'match' => ['nmb']],
+        ['file' => 'nbc.svg', 'match' => ['nbc']],
+        ['file' => 'equity.png', 'match' => ['equity']],
+        ['file' => 'absa.svg', 'match' => ['absa', 'barclays']],
+        ['file' => 'kcb.png', 'match' => ['kcb']],
+        ['file' => 'dtb.png', 'match' => ['diamond trust', 'dtb']],
+        ['file' => 'exim.png', 'match' => ['exim']],
+        ['file' => 'boa.png', 'match' => ['bank of africa', 'boa']],
+        ['file' => 'access.png', 'match' => ['access bank', 'access']],
+        ['file' => 'ecobank.svg', 'match' => ['ecobank']],
+        ['file' => 'pbz.png', 'match' => ['pbz', "people's bank of zanzibar"]],
+        ['file' => 'fnb.svg', 'match' => ['fnb', 'first national']],
+        ['file' => 'gtbank.svg', 'match' => ['guaranty trust', 'gtbank', 'gt bank']],
+    ];
+    if ($bankNameLower !== '') {
+        foreach ($bankLogoCatalog as $bankMeta) {
+            foreach ($bankMeta['match'] as $needle) {
+                if ($bankNameLower === $needle || strpos($bankNameLower, $needle) !== false) {
+                    $bankLogoFs = payrollDeskAssetFsPath('modules/payroll/frontend/src/assets/banks/' . $bankMeta['file']);
+                    break 2;
+                }
+            }
+        }
+    }
+
+    // Right-aligned from-block (company + address), matching payslip.php.
+    $fromLines = [];
+    $nameLine = strtoupper(trim((string) ($defaults['companyName'] ?? $companyName)));
+    if ($nameLine !== '') {
+        if (substr($nameLine, -1) !== ',') {
+            $nameLine .= ',';
+        }
+        $fromLines[] = $nameLine;
+    }
+    $addressRaw = trim((string) ($defaults['address'] ?? ''));
+    if ($addressRaw === '' && function_exists('getCompanySetting')) {
+        $addressRaw = trim((string) getCompanySetting('company_address', ''));
+    }
+    if ($addressRaw !== '') {
+        $parts = preg_split('/\s*,\s*/', $addressRaw) ?: [];
+        $parts = array_values(array_filter(array_map('trim', $parts), static fn ($p) => $p !== ''));
+        $streetParts = [];
+        $boxPart = '';
+        $cityParts = [];
+        foreach ($parts as $part) {
+            if ($boxPart === '' && preg_match('/p\.?\s*o\.?\s*box/i', $part)) {
+                $boxPart = $part;
+                continue;
+            }
+            if ($boxPart !== '' || preg_match('/\b(dar\s*es\s*salaam|tanzania|tz)\b/i', $part)) {
+                $cityParts[] = $part;
+                continue;
+            }
+            $streetParts[] = $part;
+        }
+        $norm = static function (string $line): string {
+            $line = strtoupper(trim($line));
+            $line = preg_replace('/\s+/', ' ', $line) ?? $line;
+            return rtrim($line, " \t.,;") . ',';
+        };
+        if ($streetParts !== []) {
+            $fromLines[] = $norm(implode(', ', $streetParts));
+        }
+        if ($boxPart !== '') {
+            $fromLines[] = $norm($boxPart);
+        }
+        if ($cityParts !== []) {
+            $fromLines[] = strtoupper(rtrim(implode(', ', $cityParts), " \t.,;")) . '.';
+        } elseif ($streetParts === [] && $boxPart === '') {
+            foreach ($parts as $idx => $part) {
+                $isLast = ($idx === count($parts) - 1);
+                $fromLines[] = $isLast
+                    ? (strtoupper(rtrim($part, " \t.,;")) . '.')
+                    : $norm($part);
+            }
+        }
+    }
+    $fromLines[] = $letterDateLabel . '.';
+
+    $safe = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+    $money = static fn ($v): string => number_format((float) $v, 2);
+    $imgSrc = static function (string $fs): string {
+        if ($fs === '' || !is_file($fs)) {
+            return '';
+        }
+        // mPDF accepts absolute filesystem paths best (Windows-safe).
+        return str_replace('\\', '/', $fs);
+    };
+    $imgTag = static function (string $fs, string $style = '') use ($safe, $imgSrc): string {
+        $src = $imgSrc($fs);
+        if ($src === '') {
+            return '';
+        }
+        return '<img src="' . $safe($src) . '" style="' . $safe($style) . '" alt="">';
+    };
+
+    $basic = (float) ($slip['basic_salary'] ?? 0);
+    $allowances = (float) ($slip['total_allowances'] ?? 0);
+    $bonus = (float) ($slip['bonus_commission'] ?? 0);
+    $adjustment = (float) ($slip['monthly_adjustment'] ?? 0);
+    $nssf = (float) ($slip['nssf_deduction'] ?? 0);
+    $tax = (float) ($slip['tax_deduction'] ?? 0);
+    $other = (float) ($slip['other_deductions'] ?? 0);
+    $gross = (float) ($slip['gross_salary'] ?? 0);
+    $net = (float) ($slip['net_salary'] ?? 0);
+    $totalDed = $nssf + $tax + $other;
+
+    $rows = '';
+    $n = 0;
+    $addRow = static function (string $label, string $earn, string $ded) use (&$rows, &$n, $safe): void {
+        $n++;
+        $rows .= '<tr><td class="c-no">' . $n . '.</td><td>' . $safe($label) . '</td>'
+            . '<td class="num">' . $safe($earn) . '</td><td class="num">' . $safe($ded) . '</td></tr>';
+    };
+    $addRow('Basic Salary', $money($basic), '-');
+    if ($allowances > 0) {
+        $addRow('Overtime & Allowances', $money($allowances), '-');
+    }
+    if ($bonus > 0) {
+        $addRow('Bonus / Commission', $money($bonus), '-');
+    }
+    if ($adjustment != 0.0) {
+        $addRow(
+            'Monthly Adjustment',
+            $adjustment > 0 ? $money($adjustment) : '-',
+            $adjustment < 0 ? $money(abs($adjustment)) : '-'
+        );
+    }
+    $addRow('NSSF Contribution (Employee)', '-', $money($nssf));
+    $addRow('P.A.Y.E (Tax)', '-', $money($tax));
+    if ($other > 0) {
+        $addRow('Other Deductions', '-', $money($other));
+    }
+
+    $fromHtml = '<div class="from-ref">' . $safe($payslipRef) . '</div>';
+    foreach ($fromLines as $line) {
+        $fromHtml .= '<div>' . $safe((string) $line) . '</div>';
+    }
+
+    $bankLogoHtml = $bankLogoFs !== ''
+        ? $imgTag($bankLogoFs, 'width:14px;height:14px;vertical-align:middle;margin-right:4px;')
+        : '';
+
+    $html = '<html><head><meta charset="UTF-8"><style>
+        body{font-family:times,serif;font-size:11pt;color:#111;margin:0;padding:0}
+        .banner{width:100%;margin:0;padding:0}
+        .content{padding:18px 28px 20px}
+        .from{text-align:right;text-transform:uppercase;font-size:10pt;line-height:1.4;margin:0 0 14px}
+        .from-ref{font-weight:700;letter-spacing:0.02em;margin-bottom:4px}
+        .recipient{text-transform:uppercase;font-size:10pt;line-height:1.45;margin:0 0 10px}
+        .recipient-name{font-weight:700}
+        .meta{width:100%;margin:0 0 12px;border-collapse:collapse;font-size:9.5pt}
+        .meta td{padding:1px 0;vertical-align:top}
+        .meta .lbl{width:78px;color:#555}
+        .meta .val{font-weight:600}
+        table.pay{width:100%;border-collapse:collapse;margin:0 0 16px;font-size:9.5pt}
+        table.pay th{background:#111;color:#fff;padding:7px 8px;text-align:left;font-size:8.5pt;
+            text-transform:uppercase;letter-spacing:0.05em;font-weight:600;border:none}
+        table.pay td{padding:7px 8px;border-bottom:1px solid #d4d4d4;vertical-align:top;border-right:1px solid #d4d4d4}
+        table.pay td:last-child{border-right:none}
+        table.pay .c-no{width:8%}
+        .num{text-align:right}
+        table.foot{width:100%;border-collapse:collapse;margin-top:4px}
+        table.foot > tbody > tr > td{vertical-align:top;padding:0}
+        table.foot .col-pay{width:58%;padding-right:12px}
+        table.foot .col-tot{width:42%}
+        table.bank{width:100%;border-collapse:collapse;font-size:9.5pt}
+        table.bank td{padding:2px 0;vertical-align:middle}
+        table.bank .lbl{width:118px;color:#555}
+        table.bank .val{font-weight:600}
+        .stamp{width:95px;height:auto;margin-top:12px}
+        table.totals{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:14px}
+        table.totals td{padding:2px 0}
+        table.totals .lbl{color:#555}
+        table.totals .val{text-align:right;font-weight:600}
+        table.totals tr.final td{border-top:1px solid #bbb;padding-top:6px;font-weight:700;color:#111}
+        .sig{text-align:left;margin-top:8px;width:170px;margin-left:auto}
+        .sig img{max-height:48px;max-width:170px}
+        .signer{font-weight:700;font-size:9.5pt;margin-top:2px}
+        .title{font-size:9pt;color:#111}
+    </style></head><body>'
+        . $imgTag($headerFs, 'width:100%;display:block;')
+        . '<div class="content">'
+        . '<div class="from">' . $fromHtml . '</div>'
+        . '<div class="recipient"><div class="recipient-name">' . $safe(strtoupper($employee)) . ',</div>'
+        . ($department !== '' ? '<div>' . $safe(strtoupper($department)) . '</div>' : '')
+        . '<div>TIN: ' . $safe($tin) . '</div></div>'
+        . '<table class="meta"><tr><td class="lbl">Email</td><td class="val">' . $safe($email !== '' ? $email : 'Not set') . '</td></tr>'
+        . '<tr><td class="lbl">Period</td><td class="val">' . $safe($period) . '</td></tr>'
+        . '<tr><td class="lbl">Run Date</td><td class="val">' . $safe($runDateLabel) . '</td></tr></table>'
+        . '<table class="pay"><thead><tr><th style="width:8%">No</th><th style="width:44%">Item Description</th>'
+        . '<th class="num" style="width:24%">Earnings</th><th class="num" style="width:24%">Deductions</th></tr></thead>'
+        . '<tbody>' . $rows . '</tbody></table>'
+        . '<table class="foot"><tr><td class="col-pay">'
+        . '<table class="bank">'
+        . '<tr><td class="lbl">Payment Method :</td><td class="val">' . $bankLogoHtml . 'Bank Transfer</td></tr>'
+        . '<tr><td class="lbl">Bank Name :</td><td class="val">' . $safe($bankName !== '' ? $bankName : 'N/A') . '</td></tr>'
+        . '<tr><td class="lbl">Account Name :</td><td class="val">' . $safe($employee) . '</td></tr>'
+        . '<tr><td class="lbl">Account Number :</td><td class="val">' . $safe($accountNumber) . '</td></tr>'
+        . '</table>'
+        . ($stampFs !== '' ? $imgTag($stampFs, 'width:95px;margin-top:12px;') : '')
+        . '</td><td class="col-tot">'
+        . '<table class="totals">'
+        . '<tr><td class="lbl">Gross Salary</td><td class="val">' . $safe($money($gross)) . '</td></tr>'
+        . '<tr><td class="lbl">Total Deductions</td><td class="val">-' . $safe($money($totalDed)) . '</td></tr>'
+        . '<tr class="final"><td>Total Net Pay</td><td class="val">' . $safe($money($net)) . '</td></tr>'
+        . '</table>'
+        . '<div class="sig">' . ($sigFs !== '' ? $imgTag($sigFs, 'max-height:48px;') : '')
+        . '<div class="signer">' . $safe($runnerName) . '</div>'
+        . ($runnerTitle !== '' ? '<div class="title">' . $safe($runnerTitle) . '</div>' : '')
+        . '</div></td></tr></table></div>'
+        . '</body></html>';
+
+    // Pin letterhead footer to the bottom of every page (A4 width 210mm).
+    $footerHeightMm = 0.0;
+    if ($footerFs !== '' && is_file($footerFs)) {
+        $footerInfo = @getimagesize($footerFs);
+        $fw = (int) ($footerInfo[0] ?? 0);
+        $fh = (int) ($footerInfo[1] ?? 0);
+        if ($fw > 0 && $fh > 0) {
+            $footerHeightMm = round(($fh / $fw) * 210, 2);
+        } else {
+            $footerHeightMm = 32.0;
+        }
+    }
+
+    $mpdf = new \Mpdf\Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A4',
+        'margin_left' => 0,
+        'margin_right' => 0,
+        'margin_top' => 0,
+        'margin_bottom' => $footerHeightMm > 0 ? $footerHeightMm : 0,
+        'margin_footer' => 0,
+        'tempDir' => sys_get_temp_dir(),
+        'default_font' => 'times',
+    ]);
+    $mpdf->SetTitle('Payslip ' . $period . ' - ' . $employee);
+    $mpdf->SetAuthor($companyName);
+    $mpdf->SetCreator($companyName . ' Payroll');
+    if ($footerFs !== '' && $footerHeightMm > 0) {
+        $mpdf->SetHTMLFooter(
+            '<div style="margin:0;padding:0;line-height:0;width:100%;">'
+            . $imgTag($footerFs, 'width:210mm;display:block;margin:0;padding:0;')
+            . '</div>'
+        );
+    }
+    $mpdf->WriteHTML($html);
+    $pdfBytes = $mpdf->Output('', 'S');
+
+    $fileSafeName = preg_replace('/[^A-Za-z0-9_-]+/', '_', $employee) ?: 'Employee';
+    $periodSafe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $period) ?: 'Period';
+
+    return [
+        'content' => (string) $pdfBytes,
+        'name' => 'Payslip_' . $fileSafeName . '_' . $periodSafe . '.pdf',
+        'type' => 'application/pdf',
+    ];
+}
+
+/**
+ * Email payslip notice(s) using system SMTP / From (module = payroll).
+ *
+ * @param list<int>|null $payslipIds When set, only these payslip ids are emailed.
+ * @return array{sent:int,failed:int,skipped:int,disabled:bool}
+ */
+function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = null, ?array $payslipIds = null): array
+{
+    // Bulk PDF emails can exceed default PHP/SMTP short limits.
+    if (function_exists('set_time_limit')) {
+        @set_time_limit(600);
+    }
+    if (function_exists('ini_set')) {
+        @ini_set('max_execution_time', '600');
+    }
+
+    $result = [
+        'sent' => 0,
+        'failed' => 0,
+        'skipped' => 0,
+        'disabled' => false,
+        'queueIds' => [],
+        'note' => '',
+    ];
+
+    if (!payrollDeskSystemMailEnabled($pdo)) {
+        $result['disabled'] = true;
+        return $result;
+    }
+
+    require_once dirname(__DIR__, 3) . '/includes/mailer.php';
+
+    $stmt = $pdo->prepare('SELECT * FROM ' . payroll_table('payroll_runs') . ' WHERE id = ? LIMIT 1');
+    $stmt->execute([$runId]);
+    $run = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$run) {
+        throw new RuntimeException('Payroll run not found.');
+    }
+
+    $sql = '
+        SELECT p.*, u.full_name, u.email, u.department
+        FROM ' . payroll_table('payslips') . ' p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.payroll_run_id = ?
+    ';
+    $params = [$runId];
+    if ($payslipId !== null && $payslipId > 0) {
+        $sql .= ' AND p.id = ?';
+        $params[] = $payslipId;
+    } elseif (is_array($payslipIds)) {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $payslipIds), static fn (int $id): bool => $id > 0)));
+        if ($ids === []) {
+            return $result;
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql .= " AND p.id IN ($placeholders)";
+        foreach ($ids as $id) {
+            $params[] = $id;
+        }
+    }
+    $fetch = $pdo->prepare($sql);
+    $fetch->execute($params);
+    $slips = $fetch->fetchAll(PDO::FETCH_ASSOC);
+
+    $period = date('F Y', mktime(0, 0, 0, (int) ($run['month'] ?? 1), 1, (int) ($run['year'] ?? (int) date('Y'))));
+    $companyName = '';
+    if (function_exists('mailer_active_company_name')) {
+        $companyName = mailer_active_company_name();
+    }
+    if ($companyName === '' && defined('COMPANY_NAME')) {
+        $companyName = trim((string) COMPANY_NAME);
+    }
+    if ($companyName === '') {
+        $companyName = 'Company';
+    }
+    $companyAddress = '';
+    if (function_exists('getCompanySetting')) {
+        $companyAddress = trim((string) getCompanySetting('company_address', ''));
+    }
+    if ($companyAddress === '' && defined('COMPANY_ADDRESS')) {
+        $companyAddress = trim((string) COMPANY_ADDRESS);
+    }
+    $loginPath = function_exists('company_login_url')
+        ? company_login_url()
+        : (function_exists('company_url')
+            ? company_url('login')
+            : (function_exists('app_url') ? app_url('/login.php') : '/login.php'));
+    $loginUrl = payrollDeskAbsolutePublicUrl((string) $loginPath);
+    $from = resolveSystemMailFrom('payroll');
+    if (trim((string) ($from['email'] ?? '')) === '') {
+        throw new RuntimeException(
+            'System From email is not configured. Set it under Admin → Email settings (System mailing identity).'
+        );
+    }
+    // Sign-off matches From display (company name).
+    $senderName = trim((string) ($from['name'] ?? ''));
+    if ($senderName === '') {
+        $senderName = $companyName;
+    }
+
+    foreach ($slips as $slip) {
+        $to = trim((string) ($slip['email'] ?? ''));
+        if ($to === '') {
+            $result['skipped']++;
+            continue;
+        }
+
+        $employeeName = trim((string) ($slip['full_name'] ?? 'Employee'));
+        $name = htmlspecialchars($employeeName, ENT_QUOTES, 'UTF-8');
+        $senderSafe = htmlspecialchars($senderName, ENT_QUOTES, 'UTF-8');
+        $loginSafe = htmlspecialchars($loginUrl, ENT_QUOTES, 'UTF-8');
+        $subject = 'Your payslip for ' . $period . ' - ' . $companyName;
+
+        $textBody = "Hi {$employeeName},\n\n"
+            . "Good news! Your payroll information is ready.\n\n"
+            . "You can now log in to the payroll system to view your latest payslip and salary details:\n"
+            . "{$loginUrl}\n\n"
+            . "Your payslip PDF is also attached to this email.\n\n"
+            . "Thank you for being part of the team. We appreciate your hard work and dedication!\n\n"
+            . "Best regards,\n"
+            . "{$senderName}\n";
+
+        $body = '<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#111;line-height:1.55;font-size:14px;">'
+            . '<p>Hi ' . $name . ',</p>'
+            . '<p>Good news! &#127881; Your payroll information is ready.</p>'
+            . '<p>You can now log in to the payroll system to view your latest payslip and salary details.</p>'
+            . '<p><a href="' . $loginSafe . '" style="color:#0b57d0;">' . $loginSafe . '</a></p>'
+            . '<p>Your payslip PDF is also attached to this email.</p>'
+            . '<p>Thank you for being part of the team. We appreciate your hard work and dedication! &#128153;</p>'
+            . '<p style="margin-top:1.25rem;">Best regards,<br>'
+            . $senderSafe . '</p>'
+            . '</body></html>';
+
+        $attachments = [];
+        try {
+            $attachments[] = payrollDeskBuildPayslipPdfAttachment($pdo, $slip, $run);
+        } catch (Throwable $e) {
+            $result['failed']++;
+            $result['error'] = 'PDF generation failed: ' . $e->getMessage();
+            continue;
+        }
+
+        // Temporary: pass plain text through a request-scoped flag for mailer.
+        $GLOBALS['MAILER_TEXT_BODY'] = $textBody;
+        $ok = sendEmail($to, $subject, $body, true, $attachments, 'payroll');
+        unset($GLOBALS['MAILER_TEXT_BODY']);
+
+        if ($ok) {
+            $result['sent']++;
+            $qid = function_exists('mailer_last_queue_id') ? mailer_last_queue_id() : '';
+            if ($qid !== '') {
+                $result['queueIds'][] = $qid;
+            }
+        } else {
+            $result['failed']++;
+            $err = function_exists('mailer_last_error') ? mailer_last_error() : '';
+            if ($err !== '') {
+                $result['error'] = $err;
+            }
+        }
+    }
+
+    if ((int) $result['sent'] > 0) {
+        $result['note'] = '';
+    }
+
+    return $result;
+}
+
+/**
+ * @param list<int>|null $payslipIds null = all eligible; [] = none; otherwise selected ids
  * @return array<string, mixed>
  */
-function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslipId = 0): array
+function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslipId = 0, ?array $payslipIds = null): array
 {
     if ($runId <= 0) {
         throw new RuntimeException('Run id is required.');
@@ -603,6 +1267,65 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
         $pdo->prepare('UPDATE ' . payroll_table('payslips') . ' SET is_published = 1 WHERE id = ? AND payroll_run_id = ?')
             ->execute([$payslipId, $runId]);
         $message = 'The payslip has been sent to the employee account.';
+    } elseif ($action === 'email_selected') {
+        $canEmail = (function_exists('isAdmin') && isAdmin())
+            || (function_exists('isFinanceOrAdmin') && isFinanceOrAdmin())
+            || (function_exists('isFinance') && isFinance());
+        if (!$canEmail) {
+            throw new RuntimeException('Unauthorized.');
+        }
+        if (!in_array((string) ($run['status'] ?? ''), ['approved', 'paid'], true)) {
+            throw new RuntimeException('Only approved or paid runs can be emailed.');
+        }
+        if (!payrollDeskSystemMailEnabled($pdo)) {
+            throw new RuntimeException('Payroll email is off. Enable Payroll under Admin → Email settings.');
+        }
+
+        $selectedIds = [];
+        if (is_array($payslipIds)) {
+            $selectedIds = array_values(array_unique(array_filter(
+                array_map('intval', $payslipIds),
+                static fn (int $id): bool => $id > 0
+            )));
+        }
+        if ($payslipId > 0) {
+            $selectedIds[] = $payslipId;
+            $selectedIds = array_values(array_unique($selectedIds));
+        }
+        if ($selectedIds === []) {
+            throw new RuntimeException('Select at least one employee to email.');
+        }
+
+        try {
+            $mail = payrollDeskSendPayslipEmails($pdo, $runId, null, $selectedIds);
+        } catch (Throwable $e) {
+            throw new RuntimeException('Email failed: ' . $e->getMessage());
+        }
+
+        if (!empty($mail['disabled'])) {
+            throw new RuntimeException('Payroll email is off in Email settings.');
+        }
+        if ((int) ($mail['sent'] ?? 0) > 0) {
+            $sent = (int) $mail['sent'];
+            $message = $sent === 1
+                ? 'Payslip email sent.'
+                : sprintf('Payslip emails sent to %d employees.', $sent);
+            if ((int) ($mail['failed'] ?? 0) > 0) {
+                $message .= sprintf(' %d failed.', (int) $mail['failed']);
+            }
+            if ((int) ($mail['skipped'] ?? 0) > 0) {
+                $message .= sprintf(' %d skipped (no email).', (int) $mail['skipped']);
+            }
+        } elseif ((int) ($mail['failed'] ?? 0) > 0) {
+            $detail = trim((string) ($mail['error'] ?? ''));
+            throw new RuntimeException(
+                $detail !== ''
+                    ? ('Email send failed: ' . $detail)
+                    : 'Email send failed. Check SMTP / System from email in Email settings.'
+            );
+        } else {
+            throw new RuntimeException('No emails were sent. Selected employees may have no email address.');
+        }
     } elseif ($action === 'remove_payslip') {
         $canRemove = (function_exists('isFinanceOrAdmin') && isFinanceOrAdmin())
             || (function_exists('isAdmin') && isAdmin())

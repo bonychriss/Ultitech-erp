@@ -685,6 +685,55 @@ a.pay-desk-kpi-card:hover {
 
 .pay-desk-confirm-modal {
   width: min(26rem, calc(100vw - 1.5rem));
+  position: relative;
+}
+
+.pay-desk-confirm-modal--recipients {
+  width: min(32rem, calc(100vw - 1.5rem));
+}
+
+.pay-desk-sending-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1.5rem 1.25rem;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(2px);
+  text-align: center;
+}
+
+.pay-desk-sending-lottie {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 180px;
+  height: 180px;
+  margin: 0 auto;
+}
+
+.pay-desk-sending-lottie dotlottie-wc {
+  display: block;
+}
+
+.pay-desk-sending-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pay-desk-sending-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+  line-height: 1.4;
+  max-width: 16rem;
 }
 
 .pay-desk-confirm-body {
@@ -696,6 +745,114 @@ a.pay-desk-kpi-card:hover {
   font-size: 0.875rem;
   color: #475569;
   line-height: 1.45;
+}
+
+.pay-desk-recipient-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  margin: 0 0 1rem;
+  overflow: hidden;
+}
+
+.pay-desk-recipient-head {
+  padding: 0.55rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #334155;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pay-desk-recipient-tools {
+  display: inline-flex;
+  gap: 0.55rem;
+  font-weight: 600;
+}
+
+.pay-desk-recipient-tool {
+  border: 0;
+  background: transparent;
+  color: #4f46e5;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pay-desk-recipient-tool:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pay-desk-recipient-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.pay-desk-recipient-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.pay-desk-recipient-list li:last-child {
+  border-bottom: none;
+}
+
+.pay-desk-recipient-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+.pay-desk-recipient-item input {
+  margin-top: 0.2rem;
+  flex: 0 0 auto;
+}
+
+.pay-desk-recipient-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pay-desk-recipient-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.pay-desk-recipient-email {
+  font-size: 0.75rem;
+  color: #64748b;
+  word-break: break-all;
+}
+
+.pay-desk-recipient-empty,
+.pay-desk-recipient-skip {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.pay-desk-recipient-skip {
+  border-top: 1px solid #e2e8f0;
+  color: #b45309;
+  background: #fffbeb;
 }
 
 .pay-desk-confirm-actions {

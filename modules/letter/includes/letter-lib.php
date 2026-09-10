@@ -159,7 +159,7 @@ function letterBuildClientCfg(array $erp = []): array
         $website = (string) ($defaults['website'] ?? 'www.ultimate.co.tz');
     }
     if ($address === '') {
-        $address = (string) ($defaults['address'] ?? 'House No.14, Atisoko Street, Mikocheni B. P.O. Box 78004, Dar Es Salaam, TZ');
+        $address = (string) ($defaults['address'] ?? 'House No.03, Manyara Street, Mikocheni B. P.O. Box 78004, Dar Es Salaam, TZ');
     }
     if ($tagline === '' && !empty($defaults['tagline'])) {
         $tagline = (string) $defaults['tagline'];

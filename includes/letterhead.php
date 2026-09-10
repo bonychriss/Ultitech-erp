@@ -85,7 +85,7 @@ function letterheadResolveForCompany(?string $slug = null, ?string $companyName 
             'phone' => '+255 755 282 861',
             'email' => 'sales@ultimate.co.tz',
             'website' => 'www.ultimate.co.tz',
-            'address' => 'House No.14, Atisoko Street, Mikocheni B. P.O. Box 78004, Dar Es Salaam, TZ',
+            'address' => 'House No.03, Manyara Street, Mikocheni B. P.O. Box 78004, Dar Es Salaam, TZ',
         ],
     ];
 }

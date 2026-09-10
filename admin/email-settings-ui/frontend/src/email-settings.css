@@ -1,0 +1,287 @@
+.es-page {
+  color: #0f172a;
+  font-family: var(--erp-font-family, Inter, system-ui, sans-serif);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.es-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 240px;
+  color: #64748b;
+}
+
+.es-spin { animation: es-spin 0.8s linear infinite; }
+@keyframes es-spin { to { transform: rotate(360deg); } }
+
+.es-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.es-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #475569;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.es-back:hover { color: #0f172a; }
+
+.es-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  border-radius: 10px;
+  padding: 0.5rem 0.95rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.es-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+.es-btn-primary {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #4f46e5 !important;
+  border-radius: 0 !important;
+  padding: 0.2rem 0.15rem !important;
+  box-shadow: none !important;
+  font-weight: 700;
+}
+.es-btn-primary:hover:not(:disabled) {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #3730a3 !important;
+  text-decoration: underline;
+}
+.es-btn-secondary {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #475569 !important;
+  border-radius: 0 !important;
+  padding: 0.2rem 0.15rem !important;
+  box-shadow: none !important;
+}
+.es-btn-secondary:hover:not(:disabled) {
+  background: transparent !important;
+  color: #0f172a !important;
+  text-decoration: underline;
+}
+
+/* Beat ERP global button chrome */
+.es-page button.es-btn.es-btn-primary,
+.es-page button.es-btn.es-btn-secondary,
+.es-page .es-btn-pair .es-btn,
+.es-page .es-card-save {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.es-flash {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+.es-flash-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+.es-flash-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-weight: 600; }
+
+.es-layout {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.es-nav {
+  position: sticky;
+  top: 5.5rem;
+}
+.es-nav ul { list-style: none; margin: 0; padding: 0; }
+.es-nav li + li { margin-top: 0.35rem; }
+.es-nav a {
+  display: block;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.es-nav a:hover { background: #eff6ff; color: #2563eb; }
+.es-nav a.is-active { background: #eef2ff; color: #4338ca; font-weight: 700; }
+
+.es-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 0.85rem;
+  overflow: hidden;
+}
+.es-card-head {
+  padding: 0.7rem 0.95rem 0.2rem;
+}
+.es-card-head h2 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+.es-card-head p {
+  margin: 0.15rem 0 0;
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+.es-card-body { padding: 0.45rem 0.95rem 0.75rem; }
+
+.es-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.75rem;
+}
+.es-grid--smtp {
+  grid-template-columns: minmax(0, 1.3fr) minmax(5rem, 0.4fr) minmax(9.5rem, 0.85fr);
+}
+.es-grid--system {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.9fr);
+}
+.es-grid--overrides { margin-top: 0.75rem; }
+
+.es-field { min-width: 0; }
+.es-field--action {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.es-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 0.2rem;
+  line-height: 1.2;
+}
+.es-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  font-family: inherit;
+  background: #fff;
+  color: #0f172a;
+}
+.es-btn-block {
+  width: 100%;
+  justify-content: center;
+  padding: 0.4rem 0.7rem;
+}
+.es-btn-pair {
+  display: flex;
+  gap: 0.65rem;
+  width: 100%;
+  justify-content: flex-end;
+  align-items: center;
+}
+.es-btn-pair .es-btn {
+  flex: 0 0 auto;
+  justify-content: center;
+  padding: 0.2rem 0.15rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+.es-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.65rem;
+}
+.es-card-save {
+  margin-left: auto;
+  padding: 0.2rem 0.15rem;
+}
+.es-input:focus {
+  outline: none;
+  border-color: #a5b4fc;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+.es-help {
+  margin: 0.2rem 0 0;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  line-height: 1.25;
+}
+.es-help--block {
+  margin: 0.45rem 0 0;
+  font-size: 0.72rem;
+}
+
+.es-checks {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+}
+.es-checks--system {
+  margin-top: 0.5rem;
+  gap: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.es-checks-modules {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.85rem;
+}
+.es-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: #334155;
+  white-space: nowrap;
+}
+.es-actions { margin-top: 0.55rem; }
+
+.es-bridge {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.85rem;
+  margin-top: 0.85rem;
+}
+.es-bridge:first-child {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+.es-bridge h3 {
+  margin: 0 0 0.55rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .es-layout { grid-template-columns: 1fr; }
+  .es-nav { position: static; display: flex; gap: 0.35rem; overflow-x: auto; }
+  .es-nav ul { display: flex; gap: 0.35rem; }
+  .es-nav li + li { margin-top: 0; }
+  .es-grid,
+  .es-grid--smtp,
+  .es-grid--system { grid-template-columns: 1fr; }
+}

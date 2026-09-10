@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {
   CheckCircle2,
   Download,
@@ -22,6 +23,7 @@ import {
 import EmployeeAvatar from '../components/EmployeeAvatar.jsx';
 import EditPayslipModal from '../components/EditPayslipModal.jsx';
 import editIcon from '../assets/edit-icon.png';
+import paperPlaneLottieUrl from '../assets/paper-plane.lottie?url';
 
 function isRowActionTarget(target) {
   if (!(target instanceof Element)) return false;
@@ -36,6 +38,7 @@ export default function ViewRunPage() {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState([]);
   const [search, setSearch] = useState('');
   const [editPayslipId, setEditPayslipId] = useState(0);
 
@@ -70,6 +73,8 @@ export default function ViewRunPage() {
   const links = init?.links || {};
   const run = init?.run || {};
   const can = init?.can || {};
+  const mail = init?.mail || {};
+  const mailEnabled = Boolean(mail.enabled);
   const allSlips = init?.slips || [];
   const totals = init?.totals || {};
 
@@ -79,35 +84,142 @@ export default function ViewRunPage() {
     return allSlips.filter((slip) => (
       String(slip.fullName || '').toLowerCase().includes(q)
       || String(slip.department || '').toLowerCase().includes(q)
+      || String(slip.email || '').toLowerCase().includes(q)
     ));
   }, [allSlips, search]);
 
-  async function performAction(action, payslipId = 0) {
+  const emailRecipients = useMemo(() => (
+    allSlips
+      .filter((slip) => String(slip.email || '').trim() !== '')
+      .map((slip) => ({
+        id: slip.id,
+        fullName: slip.fullName || 'Employee',
+        email: String(slip.email || '').trim(),
+        department: slip.department || '',
+      }))
+  ), [allSlips]);
+
+  const noEmailSlips = useMemo(() => (
+    allSlips.filter((slip) => String(slip.email || '').trim() === '')
+  ), [allSlips]);
+
+  function openSendAllConfirm() {
+    setConfirm({
+      action: 'send_to_account',
+      title: 'Send payslips to accounts?',
+      body: 'This will make them visible to employees in their accounts.',
+    });
+  }
+
+  function openEmailConfirm() {
+    if (!mailEnabled) {
+      if (links.emailSettings) {
+        window.location.href = links.emailSettings;
+      } else {
+        setError('Enable Payroll under Email settings first.');
+      }
+      return;
+    }
+    const recipients = emailRecipients;
+    setSelectedRecipientIds(recipients.map((person) => person.id).filter(Boolean));
+    const fromLabel = mail.fromName && mail.fromEmail
+      ? `${mail.fromName} <${mail.fromEmail}>`
+      : (mail.fromEmail || 'the system mailbox');
+    setConfirm({
+      action: 'email_selected',
+      title: 'Send via email?',
+      body: `Select employees to email from ${fromLabel}.`,
+      recipients,
+      skipped: noEmailSlips.map((slip) => slip.fullName || 'Employee'),
+      selectable: true,
+    });
+  }
+
+  function openSendSingleConfirm(slip) {
+    setConfirm({
+      action: 'send_single_to_account',
+      payslipId: slip.id,
+      title: 'Send this payslip?',
+      body: 'Make this payslip visible to the employee account.',
+    });
+  }
+
+  function openEmailSingleConfirm(slip) {
+    if (!mailEnabled) {
+      if (links.emailSettings) {
+        window.location.href = links.emailSettings;
+      } else {
+        setError('Enable Payroll under Email settings first.');
+      }
+      return;
+    }
+    const email = String(slip.email || '').trim();
+    const recipients = email
+      ? [{ id: slip.id, fullName: slip.fullName || 'Employee', email, department: slip.department || '' }]
+      : [];
+    setSelectedRecipientIds(recipients.map((person) => person.id).filter(Boolean));
+    const fromLabel = mail.fromName && mail.fromEmail
+      ? `${mail.fromName} <${mail.fromEmail}>`
+      : (mail.fromEmail || 'the system mailbox');
+    setConfirm({
+      action: 'email_selected',
+      payslipId: slip.id,
+      title: 'Send via email?',
+      body: email
+        ? `Email this payslip from ${fromLabel}.`
+        : 'This employee has no email address.',
+      recipients,
+      skipped: email ? [] : [slip.fullName || 'Employee'],
+      selectable: Boolean(email),
+    });
+  }
+
+  async function performAction(action, payslipId = 0, payslipIds = null) {
     setBusy(true);
     setError('');
     try {
-      const res = await runAction({ id: runId, action, payslipId });
-      const payload = res.data || {};
-      if (payload.deleted && payload.redirect) {
-        window.location.href = payload.redirect;
+      const payload = { id: runId, action, payslipId };
+      if (Array.isArray(payslipIds)) {
+        payload.payslipIds = payslipIds;
+      }
+      const res = await runAction(payload);
+      const next = res.data || {};
+      if (next.deleted && next.redirect) {
+        window.location.href = next.redirect;
         return;
       }
-      if (payload.data) {
-        setInit(payload.data);
+      if (next.data) {
+        setInit(next.data);
       } else {
         await loadData();
       }
-      setNotice(res.message || payload.message || 'Updated.');
+      setNotice(res.message || next.message || 'Updated.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action failed.');
     } finally {
       setBusy(false);
       setConfirm(null);
+      setSelectedRecipientIds([]);
     }
   }
 
   function openPayslip(slipId) {
     window.open(buildPayslipUrl(slipId, links), '_blank', 'noopener,noreferrer');
+  }
+
+  function toggleRecipient(id) {
+    setSelectedRecipientIds((prev) => (
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    ));
+  }
+
+  function selectAllRecipients() {
+    const ids = (confirm?.recipients || []).map((person) => person.id).filter(Boolean);
+    setSelectedRecipientIds(ids);
+  }
+
+  function clearRecipients() {
+    setSelectedRecipientIds([]);
   }
 
   if (loading && !init) {
@@ -215,11 +327,7 @@ export default function ViewRunPage() {
                 type="button"
                 className="pay-desk-btn pay-desk-btn-secondary"
                 disabled={busy}
-                onClick={() => setConfirm({
-                  action: 'send_to_account',
-                  title: 'Send payslips to accounts?',
-                  body: 'This will make them visible to employees.',
-                })}
+                onClick={openSendAllConfirm}
               >
                 <Send size={14} aria-hidden="true" />
                 Send to account
@@ -231,13 +339,20 @@ export default function ViewRunPage() {
                 Sent to accounts
               </span>
             )}
+            {can.email && (
+              <button
+                type="button"
+                className="pay-desk-btn pay-desk-btn-secondary"
+                disabled={busy}
+                onClick={openEmailConfirm}
+              >
+                <Mail size={14} aria-hidden="true" />
+                Send via email
+              </button>
+            )}
             <a href={links.exportExcel || '#'} className="pay-desk-btn pay-desk-btn-secondary">
               <FileSpreadsheet size={14} aria-hidden="true" />
               Export Excel
-            </a>
-            <a href={links.emailAll || '#'} className="pay-desk-btn pay-desk-btn-secondary">
-              <Mail size={14} aria-hidden="true" />
-              Email all
             </a>
           </div>
         </div>
@@ -367,14 +482,20 @@ export default function ViewRunPage() {
                             className="pay-desk-icon-btn pay-desk-icon-btn--approve"
                             title="Send to account"
                             disabled={busy}
-                            onClick={() => setConfirm({
-                              action: 'send_single_to_account',
-                              payslipId: slip.id,
-                              title: 'Send this payslip?',
-                              body: 'Make this payslip visible to the employee.',
-                            })}
+                            onClick={() => openSendSingleConfirm(slip)}
                           >
                             <Send size={15} aria-hidden="true" />
+                          </button>
+                        )}
+                        {can.email && (
+                          <button
+                            type="button"
+                            className="pay-desk-icon-btn pay-desk-icon-btn--approve"
+                            title="Send via email"
+                            disabled={busy}
+                            onClick={() => openEmailSingleConfirm(slip)}
+                          >
+                            <Mail size={15} aria-hidden="true" />
                           </button>
                         )}
                         {slip.isPublished && (
@@ -430,17 +551,39 @@ export default function ViewRunPage() {
       {confirm && (
         <div className="pay-desk-modal-backdrop" role="presentation" onClick={() => !busy && setConfirm(null)}>
           <div
-            className="pay-desk-modal pay-desk-confirm-modal"
+            className={`pay-desk-modal pay-desk-confirm-modal${Array.isArray(confirm.recipients) ? ' pay-desk-confirm-modal--recipients' : ''}`}
             role="dialog"
             aria-modal="true"
+            aria-busy={busy && confirm.action === 'email_selected' ? 'true' : undefined}
             onClick={(event) => event.stopPropagation()}
           >
+            {busy && confirm.action === 'email_selected' ? (
+              <div className="pay-desk-sending-overlay" role="status" aria-live="polite">
+                <div className="pay-desk-sending-lottie" aria-hidden="true">
+                  <DotLottieReact
+                    src={paperPlaneLottieUrl}
+                    autoplay
+                    loop
+                    style={{ width: '180px', height: '180px' }}
+                  />
+                </div>
+                <p className="pay-desk-sending-title">Sending emails…</p>
+                <p className="pay-desk-sending-sub">
+                  Please wait while payslips are delivered
+                  {confirm.selectable ? ` (${selectedRecipientIds.length})` : ''}.
+                </p>
+              </div>
+            ) : null}
             <div className="pay-salary-edit-modal-head">
               <h2 className="pay-salary-edit-modal-title">{confirm.title}</h2>
               <button
                 type="button"
                 className="pay-salary-edit-modal-close"
-                onClick={() => setConfirm(null)}
+                onClick={() => {
+                  if (busy) return;
+                  setConfirm(null);
+                  setSelectedRecipientIds([]);
+                }}
                 aria-label="Close"
                 disabled={busy}
               >
@@ -449,11 +592,71 @@ export default function ViewRunPage() {
             </div>
             <div className="pay-desk-confirm-body">
               <p>{confirm.body}</p>
+              {Array.isArray(confirm.recipients) ? (
+                <div className="pay-desk-recipient-box">
+                  <div className="pay-desk-recipient-head">
+                    <span>
+                      Email recipients ({confirm.selectable ? selectedRecipientIds.length : confirm.recipients.length}
+                      {confirm.selectable ? ` of ${confirm.recipients.length}` : ''})
+                    </span>
+                    {confirm.selectable && confirm.recipients.length > 0 ? (
+                      <span className="pay-desk-recipient-tools">
+                        <button type="button" className="pay-desk-recipient-tool" onClick={selectAllRecipients} disabled={busy}>
+                          Select all
+                        </button>
+                        <button type="button" className="pay-desk-recipient-tool" onClick={clearRecipients} disabled={busy}>
+                          Clear
+                        </button>
+                      </span>
+                    ) : null}
+                  </div>
+                  {confirm.recipients.length > 0 ? (
+                    <ul className="pay-desk-recipient-list">
+                      {confirm.recipients.map((person) => {
+                        const checked = selectedRecipientIds.includes(person.id);
+                        return (
+                          <li key={person.id || person.email}>
+                            {confirm.selectable ? (
+                              <label className="pay-desk-recipient-item">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  disabled={busy}
+                                  onChange={() => toggleRecipient(person.id)}
+                                />
+                                <span className="pay-desk-recipient-meta">
+                                  <span className="pay-desk-recipient-name">{person.fullName}</span>
+                                  <span className="pay-desk-recipient-email">{person.email}</span>
+                                </span>
+                              </label>
+                            ) : (
+                              <>
+                                <span className="pay-desk-recipient-name">{person.fullName}</span>
+                                <span className="pay-desk-recipient-email">{person.email}</span>
+                              </>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="pay-desk-recipient-empty">No employees with an email address.</p>
+                  )}
+                  {Array.isArray(confirm.skipped) && confirm.skipped.length > 0 ? (
+                    <p className="pay-desk-recipient-skip">
+                      Skipped (no email): {confirm.skipped.join(', ')}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="pay-desk-confirm-actions">
                 <button
                   type="button"
                   className="pay-desk-btn pay-desk-btn-secondary"
-                  onClick={() => setConfirm(null)}
+                  onClick={() => {
+                    setConfirm(null);
+                    setSelectedRecipientIds([]);
+                  }}
                   disabled={busy}
                 >
                   Cancel
@@ -462,9 +665,25 @@ export default function ViewRunPage() {
                   type="button"
                   className={`pay-desk-btn ${confirm.action === 'delete' || confirm.action === 'remove_payslip' ? 'pay-desk-btn-danger' : 'pay-desk-btn-success'} pay-desk-btn--pill`}
                   disabled={busy}
-                  onClick={() => performAction(confirm.action, confirm.payslipId || 0)}
+                  onClick={() => {
+                    if (confirm.action === 'email_selected' && confirm.selectable && selectedRecipientIds.length === 0) {
+                      setError('Select at least one employee to email.');
+                      return;
+                    }
+                    performAction(
+                      confirm.action,
+                      confirm.payslipId || 0,
+                      confirm.selectable ? selectedRecipientIds : null,
+                    );
+                  }}
                 >
-                  {busy ? 'Working...' : (confirm.action === 'remove_payslip' ? 'Remove' : 'Confirm')}
+                  {busy
+                    ? (confirm.action === 'email_selected' ? 'Sending…' : 'Working...')
+                    : (confirm.action === 'remove_payslip'
+                      ? 'Remove'
+                      : (confirm.action === 'email_selected'
+                        ? `Send email${confirm.selectable ? ` (${selectedRecipientIds.length})` : ''}`
+                        : 'Confirm'))}
                 </button>
               </div>
             </div>

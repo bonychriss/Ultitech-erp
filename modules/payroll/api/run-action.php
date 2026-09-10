@@ -18,8 +18,19 @@ try {
     $runId = (int) ($jsonBody['id'] ?? $jsonBody['runId'] ?? $_POST['id'] ?? 0);
     $action = (string) ($jsonBody['action'] ?? $_POST['action'] ?? '');
     $payslipId = (int) ($jsonBody['payslipId'] ?? $jsonBody['payslip_id'] ?? $_POST['payslip_id'] ?? 0);
+    $payslipIdsRaw = $jsonBody['payslipIds'] ?? $jsonBody['payslip_ids'] ?? null;
+    $payslipIds = null;
+    if (array_key_exists('payslipIds', $jsonBody) || array_key_exists('payslip_ids', $jsonBody)) {
+        $payslipIds = [];
+        if (is_array($payslipIdsRaw)) {
+            $payslipIds = array_values(array_unique(array_filter(
+                array_map('intval', $payslipIdsRaw),
+                static fn (int $id): bool => $id > 0
+            )));
+        }
+    }
 
-    $result = payrollDeskRunAction($pdo, $runId, $action, $payslipId);
+    $result = payrollDeskRunAction($pdo, $runId, $action, $payslipId, $payslipIds);
     payrollDeskJsonResponse(true, $result, (string) ($result['message'] ?? 'Updated.'));
 } catch (Throwable $e) {
     payrollDeskJsonResponse(false, null, $e->getMessage(), 500);

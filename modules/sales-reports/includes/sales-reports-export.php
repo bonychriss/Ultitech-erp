@@ -15,6 +15,15 @@ function salesReportsExportHtml(array $report, string $contentHtml, bool $forPri
     $company = htmlspecialchars((string) ($_SESSION['company_name'] ?? 'Company'), ENT_QUOTES, 'UTF-8');
     $title = htmlspecialchars((string) ($report['report_name'] ?? 'Sales Report'), ENT_QUOTES, 'UTF-8');
     $period = salesReportsFormatPeriod((string) ($report['start_date'] ?? ''), (string) ($report['end_date'] ?? ''));
+    $domain = function_exists('reportEngineReportDomain')
+        ? reportEngineReportDomain($report)
+        : strtolower((string) ($report['report_domain'] ?? 'sales'));
+    $footerLabel = match ($domain) {
+        'procurement', 'store_warehouse' => 'Confidential Store Report',
+        'finance' => 'Confidential Finance Report',
+        'fleet' => 'Confidential Fleet Report',
+        default => 'Confidential Sales Report',
+    };
 
     $printCss = $forPrint ? '@media print { body { margin: 0; } .no-print { display: none; } }' : '';
     $hasCover = str_contains($contentHtml, 'sr-cover-page');
@@ -26,11 +35,13 @@ function salesReportsExportHtml(array $report, string $contentHtml, bool $forPri
         . '<p>Reporting Period: ' . htmlspecialchars($period) . '</p></div>'
     );
 
+    // Prefer DejaVu for PDF engines; keep DM Sans name for browser print/Word where web fonts load.
+    $fontStack = '"DM Sans", DejaVu Sans, sans-serif';
+
     return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' . $title . '</title>'
         . salesReportsFontStylesheetTag()
         . '<style>
-            @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap");
-            body { font-family: "DM Sans", sans-serif; font-size: 11pt; color: #222; margin: 40px; line-height: 1.55; }
+            body { font-family: ' . $fontStack . '; font-size: 11pt; color: #222; margin: 40px; line-height: 1.55; }
             h1 { font-size: 22pt; color: #1a1a2e; }
             h1, h2, h3, h4 { border: none !important; border-bottom: none !important; padding-bottom: 0; }
             h2 { font-size: 12pt; color: #1a1a2e; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 28px; margin-bottom: 10px; font-weight: 700; }
@@ -51,29 +62,32 @@ function salesReportsExportHtml(array $report, string $contentHtml, bool $forPri
         </style></head><body>'
         . $headerBlock
         . $contentHtml
-        . '<div class="page-footer">' . $company . ' - Confidential Sales Report</div>'
+        . '<div class="page-footer">' . $company . ' - ' . htmlspecialchars($footerLabel, ENT_QUOTES, 'UTF-8') . '</div>'
         . '</body></html>';
 }
 
 function salesReportsExportPdf(array $report, string $contentHtml): void
 {
     $html = salesReportsExportHtml($report, $contentHtml);
+    $filename = preg_replace('/[^a-zA-Z0-9_-]+/', '_', (string) ($report['report_name'] ?? 'sales_report')) . '.pdf';
 
     $docLayouts = dirname(__DIR__, 3) . '/includes/document_layouts.php';
     if (is_file($docLayouts)) {
         require_once $docLayouts;
         if (function_exists('downloadHtmlPdf')) {
-            $filename = preg_replace('/[^a-zA-Z0-9_-]+/', '_', (string) ($report['report_name'] ?? 'sales_report')) . '.pdf';
             downloadHtmlPdf($html, $filename);
             return;
         }
     }
 
-    // Fallback: open print dialog; filename kept as .pdf for consistency
-    $filename = preg_replace('/[^a-zA-Z0-9_-]+/', '_', (string) ($report['report_name'] ?? 'sales_report')) . '.pdf';
+    // Fallback print view (HTML) — never label as .pdf
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
     header('Content-Type: text/html; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Disposition: inline; filename="' . preg_replace('/\.pdf$/i', '.html', $filename) . '"');
     echo $html . '<script>window.onload=function(){window.print();}</script>';
+    exit;
 }
 
 function salesReportsExportWord(array $report, string $contentHtml): void

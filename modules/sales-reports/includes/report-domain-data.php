@@ -96,7 +96,16 @@ function reportEngineFilterDefinitions(string $domain): array
     $domain = reportEngineNormalizeDomain($domain);
 
     return match ($domain) {
-        'procurement' => [],
+        'procurement' => [
+            ['key' => 'warehouse_id', 'label' => 'Warehouse', 'type' => 'select', 'options_source' => 'warehouses'],
+            ['key' => 'category_id', 'label' => 'Category', 'type' => 'select', 'options_source' => 'categories'],
+            ['key' => 'stock_status', 'label' => 'Stock Status', 'type' => 'select', 'options' => [
+                ['value' => '', 'label' => 'All items'],
+                ['value' => 'low', 'label' => 'Low stock'],
+                ['value' => 'out', 'label' => 'Out of stock'],
+                ['value' => 'ok', 'label' => 'Adequate stock'],
+            ]],
+        ],
         'finance' => [],
         'fleet' => [],
         'store_warehouse' => [
@@ -118,7 +127,7 @@ function reportEngineFilterOptions(PDO $pdo, string $domain): array
     $domain = reportEngineNormalizeDomain($domain);
     $out = ['filters' => reportEngineFilterDefinitions($domain), 'options' => []];
 
-    if ($domain === 'store_warehouse') {
+    if ($domain === 'store_warehouse' || $domain === 'procurement') {
         $out['options']['warehouses'] = reportDomainStoreWarehouseOptions($pdo);
         $out['options']['categories'] = reportDomainStoreCategoryOptions($pdo);
     }

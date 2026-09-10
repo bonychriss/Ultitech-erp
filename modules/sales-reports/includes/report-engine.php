@@ -22,10 +22,10 @@ function reportEngineDomains(): array
         ],
         'procurement' => [
             'key' => 'procurement',
-            'label' => 'Stock Report',
+            'label' => 'Store Report',
             'icon' => 'bi-box-seam',
-            'description' => 'Inventory levels, stock quantities, movements, valuation, and low-stock analysis.',
-            'department_default' => 'Warehouse',
+            'description' => 'Stock position, movements, purchases, suppliers, low stock, and replenishment.',
+            'department_default' => 'Store / Inventory',
             'color' => '#059669',
         ],
         'finance' => [
@@ -47,9 +47,9 @@ function reportEngineDomains(): array
         'store_warehouse' => [
             'key' => 'store_warehouse',
             'label' => 'Store / Warehouse Report',
-            'icon' => 'bi-box-seam',
-            'description' => 'Inventory levels, stock movements, valuation, and warehouse performance.',
-            'department_default' => 'Warehouse',
+            'icon' => 'bi-building',
+            'description' => 'Inventory levels, stock movements, valuation, suppliers, and warehouse performance.',
+            'department_default' => 'Store / Warehouse',
             'color' => '#7c3aed',
         ],
     ];
@@ -148,10 +148,17 @@ function reportEngineSectionCatalog(string $domain): array
     $extra = match ($domain) {
         'procurement' => [
             'inventory_overview' => 'Stock Overview',
-            'stock_movement_analysis' => 'Stock Movement Analysis',
-            'inventory_valuation' => 'Inventory Valuation',
+            'stock_movement_analysis' => 'Stock Movement',
+            'purchase_activity' => 'Purchase / Procurement Activity',
+            'stock_status_analysis' => 'Stock Status',
+            'inventory_valuation' => 'Inventory Valuation by Category',
+            'product_category_analysis' => 'Product / Category Analysis',
             'fast_slow_moving' => 'Fast & Slow Moving Items',
-            'low_stock_analysis' => 'Low Stock & Stockout Analysis',
+            'low_stock_analysis' => 'Low Stock & Replenishment',
+            'supplier_analysis' => 'Supplier Analysis',
+            'key_store_activities' => 'Key Store Activities',
+            'challenges_issues' => 'Challenges / Issues',
+            'period_comparison' => 'Period Comparison',
         ],
         'finance' => [
             'financial_overview' => 'Financial Overview',
@@ -178,11 +185,18 @@ function reportEngineSectionCatalog(string $domain): array
             'operational_challenges' => 'Operational Challenges Log',
         ],
         'store_warehouse' => [
-            'inventory_overview' => 'Inventory Overview',
-            'stock_movement_analysis' => 'Stock Movement Analysis',
-            'inventory_valuation' => 'Inventory Valuation',
+            'inventory_overview' => 'Stock Overview',
+            'stock_movement_analysis' => 'Stock Movement',
+            'purchase_activity' => 'Purchase / Procurement Activity',
+            'stock_status_analysis' => 'Stock Status',
+            'inventory_valuation' => 'Inventory Valuation by Category',
+            'product_category_analysis' => 'Product / Category Analysis',
             'fast_slow_moving' => 'Fast & Slow Moving Items',
-            'low_stock_analysis' => 'Low Stock & Stockout Analysis',
+            'low_stock_analysis' => 'Low Stock & Replenishment',
+            'supplier_analysis' => 'Supplier Analysis',
+            'key_store_activities' => 'Key Store Activities',
+            'challenges_issues' => 'Challenges / Issues',
+            'period_comparison' => 'Period Comparison',
         ],
         default => [],
     };
@@ -206,9 +220,11 @@ function reportEngineDefaultSections(string $domain): array
     return match ($domain) {
         'procurement' => [
             'cover', 'executive_summary', 'kpi_overview', 'inventory_overview',
-            'stock_movement_analysis', 'inventory_valuation', 'fast_slow_moving',
-            'low_stock_analysis', 'trend_analysis', 'exceptions_risks',
-            'key_findings', 'recommendations', 'action_plan', 'conclusion',
+            'stock_movement_analysis', 'purchase_activity', 'stock_status_analysis',
+            'inventory_valuation', 'product_category_analysis', 'fast_slow_moving',
+            'low_stock_analysis', 'supplier_analysis', 'key_store_activities',
+            'period_comparison', 'challenges_issues', 'key_findings',
+            'recommendations', 'action_plan', 'conclusion',
         ],
         'finance' => [
             'cover', 'executive_summary', 'kpi_overview', 'financial_overview',
@@ -225,9 +241,11 @@ function reportEngineDefaultSections(string $domain): array
         ],
         'store_warehouse' => [
             'cover', 'executive_summary', 'kpi_overview', 'inventory_overview',
-            'stock_movement_analysis', 'inventory_valuation', 'fast_slow_moving',
-            'low_stock_analysis', 'trend_analysis', 'exceptions_risks',
-            'key_findings', 'recommendations', 'action_plan', 'conclusion',
+            'stock_movement_analysis', 'purchase_activity', 'stock_status_analysis',
+            'inventory_valuation', 'product_category_analysis', 'fast_slow_moving',
+            'low_stock_analysis', 'supplier_analysis', 'key_store_activities',
+            'period_comparison', 'challenges_issues', 'key_findings',
+            'recommendations', 'action_plan', 'conclusion',
         ],
         default => salesReportsDepartmentSectionKeys(),
     };
@@ -272,6 +290,47 @@ function reportEngineBuildCoverHtml(string $domain, array $meta): string
     $domain = reportEngineNormalizeDomain($domain);
     if ($domain === 'sales') {
         return salesReportsBuildDepartmentCoverHtml($meta);
+    }
+
+    // Store report uses the same formal cover layout as Sales (design benchmark only).
+    if (in_array($domain, ['procurement', 'store_warehouse'], true)) {
+        $department = trim((string) ($meta['department'] ?? ''));
+        if ($department === '' || preg_match('/^(warehouse|store)$/i', $department)) {
+            $department = 'STORE / INVENTORY DEPARTMENT';
+        } else {
+            $department = strtoupper($department);
+        }
+        $company = htmlspecialchars((string) ($_SESSION['company_name'] ?? 'Company'), ENT_QUOTES, 'UTF-8');
+        $periodLabel = htmlspecialchars(
+            salesReportsFormatCoverPeriod(
+                (string) ($meta['start_date'] ?? ''),
+                (string) ($meta['end_date'] ?? '')
+            ),
+            ENT_QUOTES,
+            'UTF-8'
+        );
+        $year = htmlspecialchars(
+            salesReportsFormatCoverYear(
+                (string) ($meta['start_date'] ?? ''),
+                (string) ($meta['end_date'] ?? '')
+            ),
+            ENT_QUOTES,
+            'UTF-8'
+        );
+        $preparedLine = salesReportsPreparedByLine($meta, 'font-size:11pt; margin:0 0 64px;');
+        $preparedSpacer = $preparedLine === '' ? '<div style="margin-bottom:64px;"></div>' : '';
+
+        return '<div class="sr-cover-page" style="position:relative;text-align:center; page-break-after:always; padding:72px 32px 96px;">'
+            . salesReportsCompanyLogoHtml('72px', 'top-right')
+            . '<p style="font-size:13pt; letter-spacing:0.12em; margin:0 0 28px; font-weight:600;">'
+            . htmlspecialchars($department, ENT_QUOTES, 'UTF-8') . '</p>'
+            . '<p style="font-size:17pt; font-weight:700; margin:0 0 48px;">' . $company . '</p>'
+            . $preparedLine
+            . $preparedSpacer
+            . '<p style="font-size:15pt; font-weight:700; letter-spacing:0.06em; margin:0;">' . $periodLabel . '</p>'
+            . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:12px 0 4px;">STORE</p>'
+            . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:0;">REPORT ' . $year . '</p>'
+            . '</div>';
     }
 
     $title = htmlspecialchars((string) ($meta['report_name'] ?? reportEngineDomainLabel($domain)), ENT_QUOTES, 'UTF-8');

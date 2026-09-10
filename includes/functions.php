@@ -8087,10 +8087,19 @@ function erp_get_dark_theme_body_override_html(): string
     return "<style id=\"erp-dark-theme-final\">\n" . $css . "\n</style>\n";
 }
 
-/** Skip theme injection on print views. */
+/** Skip theme injection on print views / binary downloads. */
 function erp_should_inject_theme_assets(): bool
 {
     if (!empty($_GET['print'])) {
+        return false;
+    }
+    // PDF/Word/Excel exports must not get theme scripts injected into the payload.
+    $format = strtolower((string) ($_GET['format'] ?? ''));
+    if (in_array($format, ['pdf', 'word', 'docx', 'excel', 'csv'], true)) {
+        return false;
+    }
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    if (str_ends_with($script, '/api/export.php') || str_contains($script, '/sales-reports/api/export.php')) {
         return false;
     }
     return true;

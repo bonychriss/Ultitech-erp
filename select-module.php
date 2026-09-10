@@ -231,7 +231,7 @@ $push([
     'id' => 'performance',
     'label' => 'Performance',
     'desc' => 'Weekly Plans, Scoring & Leaderboard',
-    'href' => $companyRoute('weekly_tasks/index') . '?module=tasks',
+    'href' => $companyRoute('weekly_tasks/index.php') . '?module=tasks',
     'icon' => 'performance',
     'color' => '#e11d48',
 ]);
@@ -284,7 +284,7 @@ $push([
     'id' => 'analytics',
     'label' => 'Data Analysis & Reports',
     'desc' => 'KPIs, charts & business insights',
-    'href' => $companyRoute('modules/analytics/index') . '?module=analytics',
+    'href' => $companyRoute('modules/analytics/index.php') . '?module=analytics',
     'icon' => 'analytics',
     'color' => '#6366f1',
 ]);

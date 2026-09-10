@@ -260,9 +260,19 @@ function downloadHtmlPdf(string $html, string $fileName): void
         }
     }
 
+    // Strip remote font @imports / link tags that often break/timeout mPDF; keep local/system fonts.
+    $html = preg_replace(
+        '/@import\s+url\(["\']?https?:\/\/fonts\.googleapis\.com[^)]+\)\s*;?/i',
+        '',
+        $html
+    ) ?? $html;
+    $html = preg_replace('/<link[^>]+fonts\.googleapis\.com[^>]*>/i', '', $html) ?? $html;
+    $html = preg_replace('/<link[^>]+fonts\.gstatic\.com[^>]*>/i', '', $html) ?? $html;
+
     $autoloadCandidates = [
         __DIR__ . '/../vendor/autoload.php',
         __DIR__ . '/../meeting/vendor/autoload.php',
+        __DIR__ . '/../erp-laravel/vendor/autoload.php',
     ];
     foreach ($autoloadCandidates as $autoload) {
         if (file_exists($autoload)) {
@@ -281,6 +291,11 @@ function downloadHtmlPdf(string $html, string $fileName): void
         }
 
         try {
+            // Prevent theme/font OB from corrupting binary PDF output.
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
             $mpdf = new \Mpdf\Mpdf([
                 'mode' => 'utf-8',
                 'format' => 'A4',
@@ -289,6 +304,7 @@ function downloadHtmlPdf(string $html, string $fileName): void
                 'margin_top' => 10,
                 'margin_bottom' => 12,
                 'tempDir' => $tempDir,
+                'default_font' => 'dejavusans',
             ]);
             $mpdf->WriteHTML($html);
             $mpdf->Output($fileName, 'D');
@@ -298,8 +314,14 @@ function downloadHtmlPdf(string $html, string $fileName): void
         }
     }
 
+    // Never attach HTML as ".pdf" — browsers show "Failed to load PDF document".
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    $printName = preg_replace('/\.pdf$/i', '.html', $fileName) ?: 'report.html';
     header('Content-Type: text/html; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $fileName . '"');
+    header('Content-Disposition: inline; filename="' . $printName . '"');
+    header('X-ERP-PDF-Engine: unavailable');
     echo $html;
     echo '<script>window.onload=function(){window.print();}</script>';
     exit;

@@ -150,6 +150,15 @@ RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/todo/?$ todo/index.php?module=todo&company_slug=$1 [QSA,L,NC]
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/todo/index/?$ todo/index.php?module=todo&company_slug=$1 [QSA,L,NC]
+# /{company_slug}/weekly_tasks (Performance) — explicit for physical company dirs + extensionless
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/weekly_tasks/?$ weekly_tasks/index.php?module=tasks&company_slug=$1 [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/weekly_tasks/index(\.php)?/?$ weekly_tasks/index.php?module=tasks&company_slug=$1 [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([A-Za-z0-9-]+)/weekly_tasks/(.+)$ weekly_tasks/$2?company_slug=$1 [QSA,L,NC]
 # /{company_slug}/deliveries
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/deliveries/?$ deliveries/index.php?module=deliveries&company_slug=$1 [QSA,L,NC]

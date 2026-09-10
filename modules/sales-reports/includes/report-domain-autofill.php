@@ -19,21 +19,28 @@ function reportEngineSectionAutofillMap(string $domain): array
     return match ($domain) {
         'procurement' => [
             'cover' => ['type' => 'cover'],
-            'executive_summary' => $ai(),
+            'executive_summary' => ['store_prose' => true],
             'kpi_overview' => $erp(['inventory_summary']),
-            'inventory_overview' => $both(['inventory_summary']),
-            'stock_movement_analysis' => $both(['movement_summary']),
-            'inventory_valuation' => $both(['stock_by_category']),
-            'fast_slow_moving' => $erp(['fast_moving', 'slow_moving']),
-            'low_stock_analysis' => $both(['low_stock']),
-            'performance_overview' => $ai(['erp' => ['inventory_summary']]),
-            'detailed_analysis' => $both(['stock_by_category', 'movement_summary']),
+            'inventory_overview' => ['store_prose' => true, 'erp' => ['inventory_summary', 'stock_status']],
+            'stock_movement_analysis' => ['store_prose' => true, 'erp' => ['movement_summary', 'monthly_movements']],
+            'purchase_activity' => ['store_prose' => true, 'erp' => ['top_purchased_products', 'pending_purchases']],
+            'stock_status_analysis' => ['store_prose' => true, 'erp' => ['stock_status', 'low_stock', 'out_of_stock']],
+            'inventory_valuation' => ['store_prose' => true, 'store_prose_key' => 'product_category_analysis', 'erp' => ['stock_by_category']],
+            'product_category_analysis' => ['store_prose' => true, 'erp' => ['stock_by_category', 'top_purchased_products']],
+            'fast_slow_moving' => ['store_prose' => true, 'erp' => ['fast_moving', 'slow_moving']],
+            'low_stock_analysis' => ['store_prose' => true, 'erp' => ['low_stock', 'out_of_stock']],
+            'supplier_analysis' => ['store_prose' => true, 'erp' => ['purchases_by_supplier', 'pending_deliveries']],
+            'key_store_activities' => ['store_prose' => true, 'erp' => ['key_activities']],
+            'period_comparison' => ['store_prose' => true, 'erp' => ['period_comparison']],
+            'challenges_issues' => ['store_prose' => true],
+            'exceptions_risks' => ['store_prose' => true, 'store_prose_key' => 'challenges_issues'],
+            'performance_overview' => ['store_prose' => true, 'store_prose_key' => 'executive_summary', 'erp' => ['inventory_summary']],
+            'detailed_analysis' => ['erp' => ['stock_by_category', 'movement_summary']],
             'trend_analysis' => $erp(['monthly_movements']),
-            'exceptions_risks' => $ai(),
-            'key_findings' => $ai(),
-            'recommendations' => $ai(),
-            'action_plan' => $ai(),
-            'conclusion' => $ai(),
+            'key_findings' => ['store_prose' => true],
+            'recommendations' => ['store_prose' => true],
+            'action_plan' => ['store_prose' => true],
+            'conclusion' => ['store_prose' => true],
         ],
         'finance' => [
             'cover' => ['type' => 'cover'],
@@ -77,21 +84,28 @@ function reportEngineSectionAutofillMap(string $domain): array
         ],
         'store_warehouse' => [
             'cover' => ['type' => 'cover'],
-            'executive_summary' => $ai(),
+            'executive_summary' => ['store_prose' => true],
             'kpi_overview' => $erp(['inventory_summary']),
-            'inventory_overview' => $both(['inventory_summary']),
-            'stock_movement_analysis' => $both(['movement_summary']),
-            'inventory_valuation' => $both(['stock_by_category']),
-            'fast_slow_moving' => $erp(['fast_moving', 'slow_moving']),
-            'low_stock_analysis' => $both(['low_stock']),
-            'performance_overview' => $ai(['erp' => ['inventory_summary']]),
-            'detailed_analysis' => $both(['stock_by_category', 'movement_summary']),
+            'inventory_overview' => ['store_prose' => true, 'erp' => ['inventory_summary', 'stock_status']],
+            'stock_movement_analysis' => ['store_prose' => true, 'erp' => ['movement_summary', 'monthly_movements']],
+            'purchase_activity' => ['store_prose' => true, 'erp' => ['top_purchased_products', 'pending_purchases']],
+            'stock_status_analysis' => ['store_prose' => true, 'erp' => ['stock_status', 'low_stock', 'out_of_stock']],
+            'inventory_valuation' => ['store_prose' => true, 'store_prose_key' => 'product_category_analysis', 'erp' => ['stock_by_category']],
+            'product_category_analysis' => ['store_prose' => true, 'erp' => ['stock_by_category', 'top_purchased_products']],
+            'fast_slow_moving' => ['store_prose' => true, 'erp' => ['fast_moving', 'slow_moving']],
+            'low_stock_analysis' => ['store_prose' => true, 'erp' => ['low_stock', 'out_of_stock']],
+            'supplier_analysis' => ['store_prose' => true, 'erp' => ['purchases_by_supplier', 'pending_deliveries']],
+            'key_store_activities' => ['store_prose' => true, 'erp' => ['key_activities']],
+            'period_comparison' => ['store_prose' => true, 'erp' => ['period_comparison']],
+            'challenges_issues' => ['store_prose' => true],
+            'exceptions_risks' => ['store_prose' => true, 'store_prose_key' => 'challenges_issues'],
+            'performance_overview' => ['store_prose' => true, 'store_prose_key' => 'executive_summary', 'erp' => ['inventory_summary']],
+            'detailed_analysis' => ['erp' => ['stock_by_category', 'movement_summary']],
             'trend_analysis' => $erp(['monthly_movements']),
-            'exceptions_risks' => $ai(),
-            'key_findings' => $ai(),
-            'recommendations' => $ai(),
-            'action_plan' => $ai(),
-            'conclusion' => $ai(),
+            'key_findings' => ['store_prose' => true],
+            'recommendations' => ['store_prose' => true],
+            'action_plan' => ['store_prose' => true],
+            'conclusion' => ['store_prose' => true],
         ],
         default => [],
     };
@@ -118,7 +132,7 @@ function reportEngineAutofillSections(PDO $pdo, array $report, array $sections):
         }
 
         $key = (string) ($section['key'] ?? '');
-        $skipAvailability = in_array(reportEngineReportDomain($report), ['finance', 'fleet'], true);
+        $skipAvailability = in_array(reportEngineReportDomain($report), ['finance', 'fleet', 'procurement', 'store_warehouse'], true);
         if (!$skipAvailability && $available !== [] && !in_array($key, $available, true) && !in_array($key, ['cover', 'executive_summary', 'kpi_overview', 'kpi_fleet_overview', 'operational_challenges', 'key_findings', 'recommendations', 'action_plan', 'conclusion'], true)) {
             $filled[] = array_merge($section, ['content' => '']);
             continue;
@@ -137,6 +151,9 @@ function reportEngineAutofillSections(PDO $pdo, array $report, array $sections):
             if (!empty($cfg['fleet_prose'])) {
                 $proseKey = (string) ($cfg['fleet_prose_key'] ?? $key);
                 $parts[] = reportDomainFleetProseSection($pdo, $report, $proseKey);
+            } elseif (!empty($cfg['store_prose'])) {
+                $proseKey = (string) ($cfg['store_prose_key'] ?? $key);
+                $parts[] = reportDomainStoreProseSection($pdo, $report, $proseKey);
             } elseif (!empty($cfg['ai'])) {
                 $ai = reportEngineGenerateAiText($pdo, $report, $key);
                 $parts[] = (string) ($ai['text'] ?? '');
@@ -149,7 +166,7 @@ function reportEngineAutofillSections(PDO $pdo, array $report, array $sections):
                     error_log('reportEngineAutofillSections erp ' . $source . ': ' . $e->getMessage());
                 }
             }
-            if (empty($cfg['ai']) && empty($cfg['erp']) && empty($cfg['fleet_prose'])) {
+            if (empty($cfg['ai']) && empty($cfg['erp']) && empty($cfg['fleet_prose']) && empty($cfg['store_prose'])) {
                 $ai = reportEngineGenerateAiText($pdo, $report, $key);
                 $parts[] = (string) ($ai['text'] ?? '<p></p>');
             }

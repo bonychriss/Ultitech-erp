@@ -97,6 +97,14 @@ RewriteRule ^([^/]+\.php)$ ../$1?company_slug=ultimate [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^employee/(.+)$ ../employee/$1?company_slug=ultimate [L,QSA]
 
+# Performance / weekly_tasks (no physical ultimate/weekly_tasks — must proxy parent)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^weekly_tasks/?$ ../weekly_tasks/index.php?company_slug=ultimate&module=tasks [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^weekly_tasks/index(\.php)?/?$ ../weekly_tasks/index.php?company_slug=ultimate [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^weekly_tasks/(.+)$ ../weekly_tasks/$1?company_slug=ultimate [L,QSA]
+
 # Settings hub (extensionless select-module link → settings.php)
 RewriteRule ^admin/settings/?$ admin/settings.php [L,QSA,NC]
 
@@ -115,6 +123,13 @@ RewriteRule ^admin/(.+)$ ../admin/$1?company_slug=ultimate [L,QSA]
 # ultimate/modules only has a few stubs — proxy missing ERP module files to parent.
 # Do not gate on %{DOCUMENT_ROOT}/modules (fails when app lives in a subfolder / local XAMPP).
 # Keep !-d so real stub directories (balances/, email/, payroll/, sales/) are not rewritten away.
+# Extensionless .../index must map to index.php (otherwise Apache/Laravel catch-alls misfire).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^modules/(.+)/index/?$ ../modules/$1/index.php?company_slug=ultimate [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^modules/([^/]+)/?$ ../modules/$1/index.php?company_slug=ultimate [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^modules/(.+)$ ../modules/$1?company_slug=ultimate [L,QSA]

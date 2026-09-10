@@ -151,7 +151,8 @@ foreach ($item in $uploads) {
         continue
     }
     $url = "ftp://${hostName}${itemBase}/$remoteRel"
-    & curl.exe --ftp-create-dirs -sS -f -T $localPath -u "${user}:${pass}" $url
+    # StackCP requires FTPS; -k skips mismatched cert CN. Avoid "${pass}" so $ in passwords is preserved.
+    & curl.exe --ftp-create-dirs -sS -f -k --ssl-reqd -T $localPath -u ($user + ':' + $pass) $url
     if ($LASTEXITCODE -ne 0) {
         Write-Host "FAILED: $localRel -> ${itemBase}/$remoteRel"
         $fail++

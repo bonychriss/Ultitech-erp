@@ -1485,14 +1485,6 @@ function payrollDeskEnsureExcelPayrollSchema(PDO $pdo): void
             // Ignore seed failures.
         }
     }
-
-    if (function_exists('payroll_table_exists') && payroll_table_exists('payroll_tax_bands')) {
-        try {
-            $pdo->exec('UPDATE ' . payroll_table('payroll_tax_bands') . ' SET is_active = 1 WHERE is_active = 0');
-        } catch (Throwable $e) {
-            // Ignore.
-        }
-    }
 }
 
 /**
@@ -1723,7 +1715,19 @@ function payrollDeskSaveTaxBand(PDO $pdo, array $payload): array
     $max = ($maxRaw === null || $maxRaw === '') ? null : (float) $maxRaw;
     $rate = (float) ($payload['taxRate'] ?? $payload['tax_rate'] ?? 0);
     $offset = (float) ($payload['offsetAmount'] ?? $payload['offset_amount'] ?? 0);
-    $active = !empty($payload['isActive'] ?? $payload['is_active'] ?? true) ? 1 : 0;
+    if (array_key_exists('isActive', $payload) || array_key_exists('is_active', $payload)) {
+        $rawActive = $payload['isActive'] ?? $payload['is_active'];
+        if (is_bool($rawActive)) {
+            $active = $rawActive ? 1 : 0;
+        } elseif (is_numeric($rawActive)) {
+            $active = ((int) $rawActive) === 1 ? 1 : 0;
+        } else {
+            $norm = strtolower(trim((string) $rawActive));
+            $active = in_array($norm, ['1', 'true', 'yes', 'on'], true) ? 1 : 0;
+        }
+    } else {
+        $active = 1;
+    }
     $description = trim((string) ($payload['description'] ?? ''));
     if ($description === '') {
         $description = payrollDeskBuildTaxBandDescription([

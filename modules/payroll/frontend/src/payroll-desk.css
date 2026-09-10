@@ -546,6 +546,8 @@ a.pay-desk-kpi-card:hover {
 
 .pay-desk-table-wrap {
   overflow: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   background: #fff;
@@ -875,15 +877,110 @@ a.pay-desk-kpi-card:hover {
   font-variant-numeric: tabular-nums;
 }
 
+.pay-run-calc-hint {
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+/* Excel-style payroll register: many columns, horizontal scroll. */
+.pay-run-register-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pay-run-table.pay-run-register {
+  min-width: 1680px;
+  width: max-content;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.pay-run-table.pay-run-register th,
+.pay-run-table.pay-run-register td {
+  display: table-cell !important;
+  visibility: visible !important;
+  white-space: nowrap;
+  padding: 0.55rem 0.55rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  background: #fff;
+}
+
+.pay-run-table.pay-run-register thead th {
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pay-run-sn {
+  color: #64748b;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Keep SN + employee name visible while the register scrolls sideways. */
+.pay-run-table.pay-run-register th:nth-child(1),
+.pay-run-table.pay-run-register td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  max-width: 2.75rem;
+  box-shadow: none;
+}
+
+.pay-run-table.pay-run-register th:nth-child(2),
+.pay-run-table.pay-run-register td:nth-child(2) {
+  position: sticky;
+  left: 2.75rem;
+  z-index: 3;
+  min-width: 12rem;
+  box-shadow: none;
+}
+
+.pay-run-table.pay-run-register thead th:nth-child(1),
+.pay-run-table.pay-run-register thead th:nth-child(2) {
+  z-index: 4;
+  background: #f8fafc;
+}
+
+.pay-run-table.pay-run-register tbody tr:hover td:nth-child(1),
+.pay-run-table.pay-run-register tbody tr:hover td:nth-child(2) {
+  background: #fafafa;
+}
+
+.pay-run-table.pay-run-register tfoot td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+.pay-run-table.pay-run-register .pay-desk-employee-cell {
+  min-width: 11rem;
+}
+
+.pay-run-table.pay-run-register .pay-run-calc-hint {
+  display: none;
+}
+
 .pay-run-table tfoot td {
   background: #f8fafc;
   border-top: 1px solid #e2e8f0;
   font-weight: 600;
-  padding: 0.85rem;
+  padding: 0.7rem 0.55rem;
 }
 
 .pay-run-total-label {
-  text-align: right;
+  text-align: left;
   color: #64748b;
   font-size: 0.8125rem;
   text-transform: uppercase;

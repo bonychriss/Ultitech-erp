@@ -104,6 +104,21 @@ main.main-content.pay-desk-react-root #root {
     min-height: 320px;
     min-width: 0;
 }
+/* Hard override: never hide payroll register columns. */
+body.page-pay-desk .pay-run-table th,
+body.page-pay-desk .pay-run-table td,
+body.page-pay-desk .pay-desk-table th.pay-desk-hide-lg,
+body.page-pay-desk .pay-desk-table td.pay-desk-hide-lg,
+body.page-pay-desk .pay-desk-table th.pay-desk-hide-md,
+body.page-pay-desk .pay-desk-table td.pay-desk-hide-md {
+    display: table-cell !important;
+    visibility: visible !important;
+}
+body.page-pay-desk .pay-run-register {
+    min-width: 1680px !important;
+    width: max-content !important;
+    table-layout: auto !important;
+}
 @media (max-width: 767.98px) {
     body.page-pay-desk .employee-header.employee-header--pay-desk {
         padding: 0 0.75rem !important;

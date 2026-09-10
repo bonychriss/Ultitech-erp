@@ -49,6 +49,9 @@ export default function SettingsPage() {
   const [globalForm, setGlobalForm] = useState({
     payDay: '30',
     socialSecurityRate: '10',
+    employerSocialSecurityRate: '10',
+    sdlRate: '3.5',
+    wcfRate: '0.5',
     taxRate: '0',
   });
   const [bandModal, setBandModal] = useState(null);
@@ -63,6 +66,9 @@ export default function SettingsPage() {
       setGlobalForm({
         payDay: String(data.settings?.payDay ?? '30'),
         socialSecurityRate: String(data.settings?.socialSecurityRate ?? '10'),
+        employerSocialSecurityRate: String(data.settings?.employerSocialSecurityRate ?? '10'),
+        sdlRate: String(data.settings?.sdlRate ?? '3.5'),
+        wcfRate: String(data.settings?.wcfRate ?? '0.5'),
         taxRate: String(data.settings?.taxRate ?? '0'),
       });
     } catch (err) {
@@ -87,6 +93,9 @@ export default function SettingsPage() {
         setGlobalForm({
           payDay: String(res.data.settings.payDay ?? '30'),
           socialSecurityRate: String(res.data.settings.socialSecurityRate ?? '10'),
+          employerSocialSecurityRate: String(res.data.settings.employerSocialSecurityRate ?? '10'),
+          sdlRate: String(res.data.settings.sdlRate ?? '3.5'),
+          wcfRate: String(res.data.settings.wcfRate ?? '0.5'),
           taxRate: String(res.data.settings.taxRate ?? '0'),
         });
       }
@@ -105,6 +114,9 @@ export default function SettingsPage() {
       action: 'save_settings',
       payDay: globalForm.payDay,
       socialSecurityRate: globalForm.socialSecurityRate,
+      employerSocialSecurityRate: globalForm.employerSocialSecurityRate,
+      sdlRate: globalForm.sdlRate,
+      wcfRate: globalForm.wcfRate,
       taxRate: globalForm.taxRate,
     });
   }
@@ -244,7 +256,7 @@ export default function SettingsPage() {
         <div className="pay-settings-card-head">
           <div>
             <h2>Global settings</h2>
-            <p>Default payday, NSSF, and flat tax.</p>
+            <p>Default payday and statutory rates (NSSF, SDL, WCF).</p>
           </div>
         </div>
         <form className="pay-settings-form pay-settings-form--horizontal" onSubmit={handleSaveGlobal}>
@@ -262,7 +274,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="pay-settings-field">
-              <label className="pay-create-label" htmlFor="nssf_rate">Employee NSSF contribution (%)</label>
+              <label className="pay-create-label" htmlFor="nssf_rate">Employee NSSF (%)</label>
               <input
                 id="nssf_rate"
                 type="number"
@@ -270,6 +282,39 @@ export default function SettingsPage() {
                 className="pay-create-input"
                 value={globalForm.socialSecurityRate}
                 onChange={(e) => setGlobalForm((c) => ({ ...c, socialSecurityRate: e.target.value }))}
+              />
+            </div>
+            <div className="pay-settings-field">
+              <label className="pay-create-label" htmlFor="employer_nssf_rate">Employer NSSF (%)</label>
+              <input
+                id="employer_nssf_rate"
+                type="number"
+                step="0.01"
+                className="pay-create-input"
+                value={globalForm.employerSocialSecurityRate}
+                onChange={(e) => setGlobalForm((c) => ({ ...c, employerSocialSecurityRate: e.target.value }))}
+              />
+            </div>
+            <div className="pay-settings-field">
+              <label className="pay-create-label" htmlFor="sdl_rate">SDL (%)</label>
+              <input
+                id="sdl_rate"
+                type="number"
+                step="0.01"
+                className="pay-create-input"
+                value={globalForm.sdlRate}
+                onChange={(e) => setGlobalForm((c) => ({ ...c, sdlRate: e.target.value }))}
+              />
+            </div>
+            <div className="pay-settings-field">
+              <label className="pay-create-label" htmlFor="wcf_rate">WCF (%)</label>
+              <input
+                id="wcf_rate"
+                type="number"
+                step="0.01"
+                className="pay-create-input"
+                value={globalForm.wcfRate}
+                onChange={(e) => setGlobalForm((c) => ({ ...c, wcfRate: e.target.value }))}
               />
             </div>
             <div className="pay-settings-field">

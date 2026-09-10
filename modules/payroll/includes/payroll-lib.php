@@ -366,6 +366,8 @@ function payrollDeskDeleteRun(PDO $pdo, int $runId): void
  */
 function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
 {
+    payrollDeskEnsureExcelPayrollSchema($pdo);
+
     if ($runId <= 0) {
         throw new RuntimeException('Run id is required.');
     }
@@ -390,24 +392,45 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
     $totals = [
         'basic' => 0.0,
         'allowances' => 0.0,
+        'bonus' => 0.0,
         'gross' => 0.0,
+        'taxable' => 0.0,
         'tax' => 0.0,
         'nssf' => 0.0,
+        'employerNssf' => 0.0,
+        'sdl' => 0.0,
+        'wcf' => 0.0,
+        'employerCost' => 0.0,
+        'other' => 0.0,
         'net' => 0.0,
     ];
     $slips = [];
     foreach ($rows as $row) {
         $basic = (float) ($row['basic_salary'] ?? 0);
         $allowances = (float) ($row['total_allowances'] ?? 0);
+        $bonus = (float) ($row['bonus_commission'] ?? 0);
         $gross = (float) ($row['gross_salary'] ?? 0);
+        $taxable = (float) ($row['taxable_salary'] ?? max(0, $gross - (float) ($row['nssf_deduction'] ?? 0)));
         $tax = (float) ($row['tax_deduction'] ?? 0);
         $nssf = (float) ($row['nssf_deduction'] ?? 0);
+        $employerNssf = (float) ($row['employer_nssf'] ?? 0);
+        $sdl = (float) ($row['sdl_amount'] ?? 0);
+        $wcf = (float) ($row['wcf_amount'] ?? 0);
+        $employerCost = (float) ($row['employer_cost'] ?? ($gross + $employerNssf + $sdl + $wcf));
+        $other = (float) ($row['other_deductions'] ?? 0);
         $net = (float) ($row['net_salary'] ?? 0);
         $totals['basic'] += $basic;
         $totals['allowances'] += $allowances;
+        $totals['bonus'] += $bonus;
         $totals['gross'] += $gross;
+        $totals['taxable'] += $taxable;
         $totals['tax'] += $tax;
         $totals['nssf'] += $nssf;
+        $totals['employerNssf'] += $employerNssf;
+        $totals['sdl'] += $sdl;
+        $totals['wcf'] += $wcf;
+        $totals['employerCost'] += $employerCost;
+        $totals['other'] += $other;
         $totals['net'] += $net;
 
         $name = (string) ($row['full_name'] ?? '');
@@ -418,9 +441,18 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
             'department' => (string) ($row['department'] ?? ''),
             'basicSalary' => $basic,
             'allowances' => $allowances,
+            'overtimeAllowances' => (float) ($row['overtime_allowances'] ?? 0),
+            'bonusCommission' => $bonus,
+            'monthlyAdjustment' => (float) ($row['monthly_adjustment'] ?? 0),
             'grossSalary' => $gross,
+            'taxableSalary' => $taxable,
             'taxDeduction' => $tax,
             'nssfDeduction' => $nssf,
+            'employerNssf' => $employerNssf,
+            'sdlAmount' => $sdl,
+            'wcfAmount' => $wcf,
+            'employerCost' => $employerCost,
+            'otherDeductions' => $other,
             'netSalary' => $net,
             'remarks' => (string) ($row['remarks'] ?? ''),
             'isPublished' => !empty($row['is_published']),
@@ -707,6 +739,8 @@ function payrollDeskSalariesInitPayload(PDO $pdo): array
  */
 function payrollDeskGetSalaryEmployee(PDO $pdo, int $userId): array
 {
+    payrollDeskEnsureExcelPayrollSchema($pdo);
+
     if ($userId <= 0) {
         throw new RuntimeException('Employee id is required.');
     }
@@ -736,6 +770,8 @@ function payrollDeskGetSalaryEmployee(PDO $pdo, int $userId): array
             'basicSalary' => (float) ($salary['basic_salary'] ?? 0),
             'houseAllowance' => (float) ($salary['house_allowance'] ?? 0),
             'transportAllowance' => (float) ($salary['transport_allowance'] ?? 0),
+            'overtimeAllowances' => (float) ($salary['overtime_allowances'] ?? 0),
+            'bonusCommission' => (float) ($salary['bonus_commission'] ?? 0),
             'bankName' => (string) ($salary['bank_name'] ?? ''),
             'accountNumber' => (string) ($salary['account_number'] ?? ''),
             'tinNumber' => (string) ($salary['tin_number'] ?? ''),
@@ -752,6 +788,8 @@ function payrollDeskGetSalaryEmployee(PDO $pdo, int $userId): array
  */
 function payrollDeskSaveSalary(PDO $pdo, array $payload): void
 {
+    payrollDeskEnsureExcelPayrollSchema($pdo);
+
     $userId = (int) ($payload['user_id'] ?? $payload['userId'] ?? 0);
     if ($userId <= 0) {
         payrollDeskJsonResponse(false, null, 'Employee id is required.', 422);
@@ -766,6 +804,8 @@ function payrollDeskSaveSalary(PDO $pdo, array $payload): void
     $basic = (float) ($payload['basic_salary'] ?? $payload['basicSalary'] ?? 0);
     $house = (float) ($payload['house_allowance'] ?? $payload['houseAllowance'] ?? 0);
     $transport = (float) ($payload['transport_allowance'] ?? $payload['transportAllowance'] ?? 0);
+    $overtime = (float) ($payload['overtime_allowances'] ?? $payload['overtimeAllowances'] ?? 0);
+    $bonus = (float) ($payload['bonus_commission'] ?? $payload['bonusCommission'] ?? 0);
     $bank = trim((string) ($payload['bank_name'] ?? $payload['bankName'] ?? ''));
     $account = trim((string) ($payload['account_number'] ?? $payload['accountNumber'] ?? ''));
     $tin = trim((string) ($payload['tin_number'] ?? $payload['tinNumber'] ?? ''));
@@ -775,14 +815,18 @@ function payrollDeskSaveSalary(PDO $pdo, array $payload): void
     $stmt->execute([$userId]);
     if ($stmt->fetch()) {
         $sql = 'UPDATE ' . payroll_table('employee_salary') . ' SET basic_salary=?, house_allowance=?, transport_allowance=?,
+                overtime_allowances=?, bonus_commission=?,
                 bank_name=?, account_number=?, tin_number=?, nssf_number=? WHERE user_id=?';
+        $params = [$basic, $house, $transport, $overtime, $bonus, $bank, $account, $tin, $nssf, $userId];
     } else {
         $sql = 'INSERT INTO ' . payroll_table('employee_salary') . ' (basic_salary, house_allowance, transport_allowance,
-                bank_name, account_number, tin_number, nssf_number, user_id) VALUES (?,?,?,?,?,?,?,?)';
+                overtime_allowances, bonus_commission,
+                bank_name, account_number, tin_number, nssf_number, user_id) VALUES (?,?,?,?,?,?,?,?,?,?)';
+        $params = [$basic, $house, $transport, $overtime, $bonus, $bank, $account, $tin, $nssf, $userId];
     }
 
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$basic, $house, $transport, $bank, $account, $tin, $nssf, $userId]);
+    $stmt->execute($params);
 
     payrollDeskJsonResponse(true, payrollDeskGetSalaryEmployee($pdo, $userId), 'Salary details updated.');
 }
@@ -899,6 +943,8 @@ function payrollDeskRunInitPayload(PDO $pdo): array
  */
 function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserId): array
 {
+    payrollDeskEnsureExcelPayrollSchema($pdo);
+
     if ($month < 1 || $month > 12) {
         throw new InvalidArgumentException('Invalid month.');
     }
@@ -922,13 +968,8 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
         throw new RuntimeException('Payroll for this period already exists.');
     }
 
-    $settings = [];
-    $st = $pdo->query('SELECT * FROM ' . payroll_table('payroll_settings'));
-    while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
-        $settings[(string) $r['setting_key']] = $r['setting_value'];
-    }
-
-    $nssf_rate = floatval($settings['social_security_rate'] ?? 10) / 100;
+    $settings = payrollDeskLoadSettingsMap($pdo);
+    $rates = payrollDeskStatutoryRates($settings);
 
     $active_rules = [];
     if (function_exists('payroll_table_exists') && payroll_table_exists('erp_payroll_settings')) {
@@ -937,15 +978,12 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
         )->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
-    $tax_bands = [];
-    if (function_exists('payroll_table_exists') && payroll_table_exists('payroll_tax_bands')) {
-        $tax_bands = $pdo->query(
-            'SELECT * FROM ' . payroll_table('payroll_tax_bands') . ' WHERE is_active = 1 ORDER BY min_salary ASC'
-        )->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
+    $tax_bands = payrollDeskLoadActiveTaxBands($pdo);
 
     $users = $pdo->query('
-        SELECT u.id, es.basic_salary, es.house_allowance, es.transport_allowance, es.other_deductions, es.monthly_adjustment
+        SELECT u.id, es.basic_salary, es.house_allowance, es.transport_allowance,
+               es.overtime_allowances, es.bonus_commission,
+               es.other_deductions, es.monthly_adjustment
         FROM users u
         JOIN ' . payroll_table('employee_salary') . ' es ON u.id = es.user_id
         WHERE u.is_active = 1
@@ -968,21 +1006,27 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
         $total_payout = 0.0;
         $insertSlip = $pdo->prepare(
             'INSERT INTO ' . payroll_table('payslips') . '
-            (payroll_run_id, user_id, basic_salary, total_allowances, monthly_adjustment, gross_salary, tax_deduction, nssf_deduction, other_deductions, net_salary)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            (payroll_run_id, user_id, basic_salary, total_allowances, overtime_allowances, bonus_commission,
+             monthly_adjustment, gross_salary, taxable_salary, tax_deduction, nssf_deduction,
+             employer_nssf, sdl_amount, wcf_amount, employer_cost, other_deductions, net_salary)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
 
         foreach ($users as $user) {
-            $basic = floatval($user['basic_salary']);
-            $allowances = floatval($user['house_allowance']) + floatval($user['transport_allowance']);
+            $basic = (float) ($user['basic_salary'] ?? 0);
+            $house = (float) ($user['house_allowance'] ?? 0);
+            $transport = (float) ($user['transport_allowance'] ?? 0);
+            $overtime = (float) ($user['overtime_allowances'] ?? 0);
+            $bonus = (float) ($user['bonus_commission'] ?? 0);
+            $adj = (float) ($user['monthly_adjustment'] ?? 0);
 
             $dynamic_allowances = 0.0;
             $dynamic_deductions = 0.0;
 
             foreach ($active_rules as $rule) {
                 $val = !empty($rule['is_percentage'])
-                    ? ($basic * (floatval($rule['value']) / 100))
-                    : floatval($rule['value']);
+                    ? ($basic * ((float) $rule['value'] / 100))
+                    : (float) $rule['value'];
 
                 if (($rule['type'] ?? '') === 'allowance') {
                     $dynamic_allowances += $val;
@@ -991,44 +1035,34 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
                 }
             }
 
-            $allowances += $dynamic_allowances;
-            $adj = floatval($user['monthly_adjustment']);
-            $gross = $basic + $allowances + $adj;
-
-            $nssf = $gross * $nssf_rate;
-            $taxable_income = $gross - $nssf;
-
-            $tax = 0.0;
-            foreach ($tax_bands as $band) {
-                $max = $band['max_salary'] !== null ? floatval($band['max_salary']) : PHP_FLOAT_MAX;
-                $min = floatval($band['min_salary']);
-
-                if ($taxable_income >= $min && $taxable_income <= $max) {
-                    $threshold = $min > 0 ? $min - 1 : 0;
-                    $excess = $taxable_income - $threshold;
-                    $rate = floatval($band['tax_rate']) / 100;
-                    $tax = floatval($band['offset_amount']) + ($excess * $rate);
-                    break;
-                }
-            }
-
-            $other_deductions = floatval($user['other_deductions']) + $dynamic_deductions;
-            $net = $gross - $tax - $nssf - $other_deductions;
+            // Excel E = overtime & allowances (house + transport + OT + dynamic)
+            $totalAllowances = $house + $transport + $overtime + $dynamic_allowances;
+            // Excel G = D + E + F (+ monthly adjustment kept for legacy)
+            $gross = $basic + $totalAllowances + $bonus + $adj;
+            $other_deductions = (float) ($user['other_deductions'] ?? 0) + $dynamic_deductions;
+            $calc = payrollDeskComputeStatutoryAmounts($gross, $other_deductions, $tax_bands, $rates);
 
             $insertSlip->execute([
                 $runId,
                 (int) $user['id'],
                 $basic,
-                $allowances,
+                $totalAllowances,
+                $overtime,
+                $bonus,
                 $adj,
-                $gross,
-                $tax,
-                $nssf,
+                $calc['gross'],
+                $calc['taxable'],
+                $calc['paye'],
+                $calc['employeeNssf'],
+                $calc['employerNssf'],
+                $calc['sdl'],
+                $calc['wcf'],
+                $calc['employerCost'],
                 $other_deductions,
-                $net,
+                $calc['net'],
             ]);
 
-            $total_payout += $net;
+            $total_payout += $calc['net'];
         }
 
         $pdo->prepare('UPDATE ' . payroll_table('payroll_runs') . ' SET total_payout = ? WHERE id = ?')
@@ -1159,10 +1193,17 @@ function payrollDeskGetPayslipEditPayload(PDO $pdo, int $payslipId): array
             'runStatus' => $runStatus,
             'basicSalary' => (float) ($slip['basic_salary'] ?? 0),
             'totalAllowances' => (float) ($slip['total_allowances'] ?? 0),
+            'overtimeAllowances' => (float) ($slip['overtime_allowances'] ?? 0),
+            'bonusCommission' => (float) ($slip['bonus_commission'] ?? 0),
             'monthlyAdjustment' => (float) ($slip['monthly_adjustment'] ?? 0),
             'grossSalary' => (float) ($slip['gross_salary'] ?? 0),
+            'taxableSalary' => (float) ($slip['taxable_salary'] ?? 0),
             'nssfDeduction' => (float) ($slip['nssf_deduction'] ?? 0),
             'taxDeduction' => (float) ($slip['tax_deduction'] ?? 0),
+            'employerNssf' => (float) ($slip['employer_nssf'] ?? 0),
+            'sdlAmount' => (float) ($slip['sdl_amount'] ?? 0),
+            'wcfAmount' => (float) ($slip['wcf_amount'] ?? 0),
+            'employerCost' => (float) ($slip['employer_cost'] ?? 0),
             'otherDeductions' => (float) ($slip['other_deductions'] ?? 0),
             'netSalary' => (float) ($slip['net_salary'] ?? 0),
             'remarks' => (string) ($slip['remarks'] ?? ''),
@@ -1181,18 +1222,41 @@ function payrollDeskGetPayslipEditPayload(PDO $pdo, int $payslipId): array
  */
 function payrollDeskSavePayslip(PDO $pdo, int $payslipId, array $payload): array
 {
+    payrollDeskEnsureExcelPayrollSchema($pdo);
     $current = payrollDeskGetPayslipEditPayload($pdo, $payslipId);
     $runId = (int) ($current['payslip']['runId'] ?? 0);
 
     $basic = (float) ($payload['basic_salary'] ?? $payload['basicSalary'] ?? 0);
     $allowances = (float) ($payload['total_allowances'] ?? $payload['totalAllowances'] ?? 0);
+    $overtime = (float) ($payload['overtime_allowances'] ?? $payload['overtimeAllowances'] ?? 0);
+    $bonus = (float) ($payload['bonus_commission'] ?? $payload['bonusCommission'] ?? 0);
     $adjustment = (float) ($payload['monthly_adjustment'] ?? $payload['monthlyAdjustment'] ?? 0);
-    $nssf = (float) ($payload['nssf_deduction'] ?? $payload['nssfDeduction'] ?? 0);
-    $tax = (float) ($payload['tax_deduction'] ?? $payload['taxDeduction'] ?? 0);
     $other = (float) ($payload['other_deductions'] ?? $payload['otherDeductions'] ?? 0);
     $remarks = trim((string) ($payload['remarks'] ?? ''));
+    $manualNssf = array_key_exists('nssf_deduction', $payload) || array_key_exists('nssfDeduction', $payload);
+    $manualTax = array_key_exists('tax_deduction', $payload) || array_key_exists('taxDeduction', $payload);
 
-    $gross = $basic + $allowances + $adjustment;
+    // Excel: Gross = Basic + (OT & allowances) + Bonus (+ legacy adjustment)
+    $gross = $basic + $allowances + $bonus + $adjustment;
+
+    $settings = payrollDeskLoadSettingsMap($pdo);
+    $rates = payrollDeskStatutoryRates($settings);
+    $taxBands = payrollDeskLoadActiveTaxBands($pdo);
+    $calc = payrollDeskComputeStatutoryAmounts($gross, $other, $taxBands, $rates);
+
+    $nssf = $manualNssf
+        ? (float) ($payload['nssf_deduction'] ?? $payload['nssfDeduction'] ?? $calc['employeeNssf'])
+        : $calc['employeeNssf'];
+    $tax = $manualTax
+        ? (float) ($payload['tax_deduction'] ?? $payload['taxDeduction'] ?? $calc['paye'])
+        : $calc['paye'];
+
+    // If NSSF/PAYE were overridden manually, still recompute employer statutory from gross.
+    $employerNssf = $calc['employerNssf'];
+    $sdl = $calc['sdl'];
+    $wcf = $calc['wcf'];
+    $employerCost = $gross + $employerNssf + $sdl + $wcf;
+    $taxable = $gross - $nssf;
     $net = $gross - $nssf - $tax - $other;
 
     try {
@@ -1200,12 +1264,16 @@ function payrollDeskSavePayslip(PDO $pdo, int $payslipId, array $payload): array
 
         $stmt = $pdo->prepare(
             'UPDATE ' . payroll_table('payslips') . '
-             SET basic_salary = ?, total_allowances = ?, monthly_adjustment = ?,
-                 gross_salary = ?, nssf_deduction = ?, tax_deduction = ?,
-                 other_deductions = ?, net_salary = ?, remarks = ?
+             SET basic_salary = ?, total_allowances = ?, overtime_allowances = ?, bonus_commission = ?,
+                 monthly_adjustment = ?, gross_salary = ?, taxable_salary = ?,
+                 nssf_deduction = ?, tax_deduction = ?, employer_nssf = ?, sdl_amount = ?, wcf_amount = ?,
+                 employer_cost = ?, other_deductions = ?, net_salary = ?, remarks = ?
              WHERE id = ?'
         );
-        $stmt->execute([$basic, $allowances, $adjustment, $gross, $nssf, $tax, $other, $net, $remarks, $payslipId]);
+        $stmt->execute([
+            $basic, $allowances, $overtime, $bonus, $adjustment, $gross, $taxable,
+            $nssf, $tax, $employerNssf, $sdl, $wcf, $employerCost, $other, $net, $remarks, $payslipId,
+        ]);
 
         $stmt = $pdo->prepare(
             'UPDATE ' . payroll_table('payroll_runs') . '
@@ -1276,10 +1344,14 @@ function payrollDeskGetSettingsPayload(PDO $pdo): array
     }
 
     payrollDeskEnsureTaxBandDescriptionColumn($pdo);
+    payrollDeskEnsureExcelPayrollSchema($pdo);
 
     $settings = [
         'payDay' => '30',
         'socialSecurityRate' => '10',
+        'employerSocialSecurityRate' => '10',
+        'sdlRate' => '3.5',
+        'wcfRate' => '0.5',
         'taxRate' => '0',
     ];
     $st = $pdo->query('SELECT * FROM ' . payroll_table('payroll_settings'));
@@ -1302,6 +1374,12 @@ function payrollDeskGetSettingsPayload(PDO $pdo): array
             if ($key === 'social_security_rate' || $settings['socialSecurityRate'] === '10') {
                 $settings['socialSecurityRate'] = $val;
             }
+        } elseif ($key === 'employer_social_security_rate') {
+            $settings['employerSocialSecurityRate'] = $val;
+        } elseif ($key === 'sdl_rate') {
+            $settings['sdlRate'] = $val;
+        } elseif ($key === 'wcf_rate') {
+            $settings['wcfRate'] = $val;
         } elseif ($key === 'tax_rate') {
             $settings['taxRate'] = $val;
         }
@@ -1351,6 +1429,184 @@ function payrollDeskEnsureTaxBandDescriptionColumn(PDO $pdo): void
     } catch (Throwable $e) {
         // Keep going; description will fall back to generated text.
     }
+}
+
+/**
+ * Ensure Excel-register columns exist on salary/payslip tables and seed statutory rates.
+ */
+function payrollDeskEnsureExcelPayrollSchema(PDO $pdo): void
+{
+    static $checked = false;
+    if ($checked) {
+        return;
+    }
+    $checked = true;
+
+    $addColumn = static function (PDO $pdo, string $table, string $column, string $definition): void {
+        if (!function_exists('payroll_table_exists') || !payroll_table_exists($table)) {
+            return;
+        }
+        try {
+            $cols = $pdo->query('SHOW COLUMNS FROM ' . payroll_table($table))->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array($column, $cols, true)) {
+                $pdo->exec('ALTER TABLE ' . payroll_table($table) . ' ADD COLUMN `' . $column . '` ' . $definition);
+            }
+        } catch (Throwable $e) {
+            // Ignore — older DBs may lack ALTER rights; generate will fail loudly if needed.
+        }
+    };
+
+    $addColumn($pdo, 'employee_salary', 'overtime_allowances', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+    $addColumn($pdo, 'employee_salary', 'bonus_commission', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+
+    $addColumn($pdo, 'payslips', 'overtime_allowances', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+    $addColumn($pdo, 'payslips', 'bonus_commission', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+    $addColumn($pdo, 'payslips', 'taxable_salary', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+    $addColumn($pdo, 'payslips', 'employer_nssf', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+    $addColumn($pdo, 'payslips', 'sdl_amount', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+    $addColumn($pdo, 'payslips', 'wcf_amount', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+    $addColumn($pdo, 'payslips', 'employer_cost', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+
+    if (function_exists('payroll_table_exists') && payroll_table_exists('payroll_settings')) {
+        try {
+            $stmt = $pdo->prepare(
+                'INSERT IGNORE INTO ' . payroll_table('payroll_settings')
+                . ' (`setting_key`, `setting_value`, `description`) VALUES (?, ?, ?)'
+            );
+            $defaults = [
+                ['employer_social_security_rate', '10', 'NSSF percentage (employer)'],
+                ['sdl_rate', '3.5', 'Skills Development Levy % of gross'],
+                ['wcf_rate', '0.5', 'Workers Compensation Fund % of gross'],
+            ];
+            foreach ($defaults as $row) {
+                $stmt->execute($row);
+            }
+        } catch (Throwable $e) {
+            // Ignore seed failures.
+        }
+    }
+
+    if (function_exists('payroll_table_exists') && payroll_table_exists('payroll_tax_bands')) {
+        try {
+            $pdo->exec('UPDATE ' . payroll_table('payroll_tax_bands') . ' SET is_active = 1 WHERE is_active = 0');
+        } catch (Throwable $e) {
+            // Ignore.
+        }
+    }
+}
+
+/**
+ * @param array<string,string|float|int> $settings
+ * @return array{employeeNssfRate:float,employerNssfRate:float,sdlRate:float,wcfRate:float}
+ */
+function payrollDeskStatutoryRates(array $settings): array
+{
+    $employee = (float) ($settings['social_security_rate'] ?? $settings['nssf_rate'] ?? 10);
+    if ($employee > 0 && $employee < 1) {
+        $employee *= 100;
+    }
+    $employer = (float) ($settings['employer_social_security_rate'] ?? 10);
+    if ($employer > 0 && $employer < 1) {
+        $employer *= 100;
+    }
+    $sdl = (float) ($settings['sdl_rate'] ?? 3.5);
+    if ($sdl > 0 && $sdl < 1) {
+        $sdl *= 100;
+    }
+    $wcf = (float) ($settings['wcf_rate'] ?? 0.5);
+    if ($wcf > 0 && $wcf < 1) {
+        $wcf *= 100;
+    }
+
+    return [
+        'employeeNssfRate' => $employee / 100,
+        'employerNssfRate' => $employer / 100,
+        'sdlRate' => $sdl / 100,
+        'wcfRate' => $wcf / 100,
+    ];
+}
+
+/**
+ * @param list<array<string,mixed>> $taxBands
+ * @return array{
+ *   gross:float,employeeNssf:float,taxable:float,paye:float,employerNssf:float,
+ *   sdl:float,wcf:float,employerCost:float,net:float,totalDeductions:float
+ * }
+ */
+function payrollDeskComputeStatutoryAmounts(
+    float $gross,
+    float $otherDeductions,
+    array $taxBands,
+    array $rates
+): array {
+    $employeeNssf = $gross * (float) ($rates['employeeNssfRate'] ?? 0.1);
+    $taxable = $gross - $employeeNssf;
+
+    $paye = 0.0;
+    foreach ($taxBands as $band) {
+        $max = $band['max_salary'] !== null ? (float) $band['max_salary'] : PHP_FLOAT_MAX;
+        $min = (float) ($band['min_salary'] ?? 0);
+        if ($taxable >= $min && $taxable <= $max) {
+            $threshold = $min > 0 ? $min - 1 : 0;
+            $excess = $taxable - $threshold;
+            $rate = (float) ($band['tax_rate'] ?? 0) / 100;
+            $paye = (float) ($band['offset_amount'] ?? 0) + ($excess * $rate);
+            break;
+        }
+    }
+
+    $employerNssf = $gross * (float) ($rates['employerNssfRate'] ?? 0.1);
+    $sdl = $gross * (float) ($rates['sdlRate'] ?? 0.035);
+    $wcf = $gross * (float) ($rates['wcfRate'] ?? 0.005);
+    $employerCost = $gross + $employerNssf + $sdl + $wcf;
+    $totalDeductions = $employeeNssf + $paye + $otherDeductions;
+    $net = $gross - $totalDeductions;
+
+    return [
+        'gross' => $gross,
+        'employeeNssf' => $employeeNssf,
+        'taxable' => $taxable,
+        'paye' => $paye,
+        'employerNssf' => $employerNssf,
+        'sdl' => $sdl,
+        'wcf' => $wcf,
+        'employerCost' => $employerCost,
+        'net' => $net,
+        'totalDeductions' => $totalDeductions,
+    ];
+}
+
+/**
+ * @return array<string,string>
+ */
+function payrollDeskLoadSettingsMap(PDO $pdo): array
+{
+    $settings = [];
+    if (!function_exists('payroll_table_exists') || !payroll_table_exists('payroll_settings')) {
+        return $settings;
+    }
+    $st = $pdo->query('SELECT * FROM ' . payroll_table('payroll_settings'));
+    while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
+        $key = trim((string) ($r['setting_key'] ?? $r['meta_key'] ?? ''));
+        if ($key === '') {
+            continue;
+        }
+        $settings[$key] = (string) ($r['setting_value'] ?? $r['meta_value'] ?? '');
+    }
+    return $settings;
+}
+
+/**
+ * @return list<array<string,mixed>>
+ */
+function payrollDeskLoadActiveTaxBands(PDO $pdo): array
+{
+    if (!function_exists('payroll_table_exists') || !payroll_table_exists('payroll_tax_bands')) {
+        return [];
+    }
+    return $pdo->query(
+        'SELECT * FROM ' . payroll_table('payroll_tax_bands') . ' WHERE is_active = 1 ORDER BY min_salary ASC'
+    )->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
 
 /**
@@ -1433,6 +1689,9 @@ function payrollDeskSaveGlobalSettings(PDO $pdo, array $payload): array
     $map = [
         'pay_day' => (string) ($payload['payDay'] ?? $payload['pay_day'] ?? '30'),
         'social_security_rate' => (string) ($payload['socialSecurityRate'] ?? $payload['social_security_rate'] ?? '10'),
+        'employer_social_security_rate' => (string) ($payload['employerSocialSecurityRate'] ?? $payload['employer_social_security_rate'] ?? '10'),
+        'sdl_rate' => (string) ($payload['sdlRate'] ?? $payload['sdl_rate'] ?? '3.5'),
+        'wcf_rate' => (string) ($payload['wcfRate'] ?? $payload['wcf_rate'] ?? '0.5'),
         'tax_rate' => (string) ($payload['taxRate'] ?? $payload['tax_rate'] ?? '0'),
     ];
 

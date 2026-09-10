@@ -36,17 +36,10 @@
   color: #4f46e5;
 }
 
+/* Keep payroll amount columns visible; table wraps scroll horizontally. */
 .pay-desk-hide-lg,
 .pay-desk-hide-md {
-  display: table-cell;
-}
-
-@media (max-width: 991.98px) {
-  .pay-desk-hide-lg { display: none; }
-}
-
-@media (max-width: 767.98px) {
-  .pay-desk-hide-md { display: none; }
+  display: table-cell !important;
 }
 
 /* Edit salary form - matches expenses create layout */

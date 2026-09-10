@@ -2,6 +2,7 @@
 // modules/payroll/setup.php
 session_start();
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/payroll-lib.php';
 
 // We don't require login for the setup itself to allow initial deployment,
 // but we should check if payroll tables already exist or if we should restrict this.
@@ -38,9 +39,11 @@ try {
     ('tax_rate', '0', 'Flat tax rate (if applicable), else 0 for graduated'),
     ('nssf_rate', '0.10', 'NSSF percentage (employee)'),
     ('social_security_rate', '10', 'NSSF percentage (employee)'),
-    ('employer_social_security_rate', '10', 'NSSF percentage (employer)')");
+    ('employer_social_security_rate', '10', 'NSSF percentage (employer)'),
+    ('sdl_rate', '3.5', 'Skills Development Levy % of gross'),
+    ('wcf_rate', '0.5', 'Workers Compensation Fund % of gross')");
     $stmt->execute();
-    $status[] = ['desc' => 'Default Settings', 'status' => 'success', 'msg' => 'Default NSSF, Tax, and Pay Day values initialized.'];
+    $status[] = ['desc' => 'Default Settings', 'status' => 'success', 'msg' => 'Default NSSF, Tax, SDL, WCF, and Pay Day values initialized.'];
 } catch (PDOException $e) {
     $status[] = ['desc' => 'Default Settings', 'status' => 'error', 'msg' => $e->getMessage()];
 }
@@ -52,6 +55,8 @@ $sql2 = "CREATE TABLE IF NOT EXISTS " . payroll_table('employee_salary') . " (
   `basic_salary` decimal(15,2) NOT NULL DEFAULT 0.00,
   `house_allowance` decimal(15,2) DEFAULT 0.00,
   `transport_allowance` decimal(15,2) DEFAULT 0.00,
+  `overtime_allowances` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `bonus_commission` decimal(15,2) NOT NULL DEFAULT 0.00,
   `bank_name` varchar(100) DEFAULT NULL,
   `account_number` varchar(50) DEFAULT NULL,
   `tin_number` varchar(50) DEFAULT NULL,
@@ -85,10 +90,17 @@ $sql4 = "CREATE TABLE IF NOT EXISTS " . payroll_table('payslips') . " (
   `user_id` int(11) NOT NULL,
   `basic_salary` decimal(15,2) NOT NULL,
   `total_allowances` decimal(15,2) DEFAULT 0.00,
+  `overtime_allowances` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `bonus_commission` decimal(15,2) NOT NULL DEFAULT 0.00,
   `monthly_adjustment` decimal(15,2) DEFAULT 0.00,
   `gross_salary` decimal(15,2) NOT NULL,
+  `taxable_salary` decimal(15,2) NOT NULL DEFAULT 0.00,
   `tax_deduction` decimal(15,2) DEFAULT 0.00,
   `nssf_deduction` decimal(15,2) DEFAULT 0.00,
+  `employer_nssf` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `sdl_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `wcf_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `employer_cost` decimal(15,2) NOT NULL DEFAULT 0.00,
   `other_deductions` decimal(15,2) DEFAULT 0.00,
   `net_salary` decimal(15,2) NOT NULL,
   `status` enum('pending','paid') DEFAULT 'pending',
@@ -98,6 +110,15 @@ $sql4 = "CREATE TABLE IF NOT EXISTS " . payroll_table('payslips') . " (
   KEY `user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;";
 run_query($pdo, $sql4, "Payslips Table", $status);
+
+if (function_exists('payrollDeskEnsureExcelPayrollSchema')) {
+    try {
+        payrollDeskEnsureExcelPayrollSchema($pdo);
+        $status[] = ['desc' => 'Excel payroll columns', 'status' => 'success', 'msg' => 'OT/bonus and employer statutory columns ensured.'];
+    } catch (Throwable $e) {
+        $status[] = ['desc' => 'Excel payroll columns', 'status' => 'error', 'msg' => $e->getMessage()];
+    }
+}
 
 // 5. payroll_tax_bands
 $sql5 = "CREATE TABLE IF NOT EXISTS " . payroll_table('payroll_tax_bands') . " (

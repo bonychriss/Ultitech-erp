@@ -785,8 +785,16 @@ if (
                     <?php if ((float) $slip['total_allowances'] > 0): ?>
                     <tr>
                         <td><?= ++$rowNo ?>.</td>
-                        <td>Total Allowances</td>
+                        <td>Overtime &amp; Allowances</td>
                         <td class="text-end"><?= number_format((float) $slip['total_allowances'], 2) ?></td>
+                        <td class="text-end">-</td>
+                    </tr>
+                    <?php endif; ?>
+                    <?php if ((float) ($slip['bonus_commission'] ?? 0) > 0): ?>
+                    <tr>
+                        <td><?= ++$rowNo ?>.</td>
+                        <td>Bonus / Commission</td>
+                        <td class="text-end"><?= number_format((float) $slip['bonus_commission'], 2) ?></td>
                         <td class="text-end">-</td>
                     </tr>
                     <?php endif; ?>
@@ -800,7 +808,7 @@ if (
                     <?php endif; ?>
                     <tr>
                         <td><?= ++$rowNo ?>.</td>
-                        <td>NSSF Contribution (10%)</td>
+                        <td>NSSF Contribution (Employee)</td>
                         <td class="text-end">-</td>
                         <td class="text-end"><?= number_format((float) $slip['nssf_deduction'], 2) ?></td>
                     </tr>

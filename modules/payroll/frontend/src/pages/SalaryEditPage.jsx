@@ -13,6 +13,8 @@ const emptySalary = {
   basicSalary: '',
   houseAllowance: '',
   transportAllowance: '',
+  overtimeAllowances: '',
+  bonusCommission: '',
   bankName: '',
   accountNumber: '',
   tinNumber: '',
@@ -49,6 +51,8 @@ export default function SalaryEditPage({
         basicSalary: data.salary?.basicSalary ?? '',
         houseAllowance: data.salary?.houseAllowance ?? '',
         transportAllowance: data.salary?.transportAllowance ?? '',
+        overtimeAllowances: data.salary?.overtimeAllowances ?? '',
+        bonusCommission: data.salary?.bonusCommission ?? '',
         bankName: data.salary?.bankName ?? '',
         accountNumber: data.salary?.accountNumber ?? '',
         tinNumber: data.salary?.tinNumber ?? '',
@@ -88,6 +92,8 @@ export default function SalaryEditPage({
         basicSalary: Number(form.basicSalary) || 0,
         houseAllowance: Number(form.houseAllowance) || 0,
         transportAllowance: Number(form.transportAllowance) || 0,
+        overtimeAllowances: Number(form.overtimeAllowances) || 0,
+        bonusCommission: Number(form.bonusCommission) || 0,
         bankName: form.bankName,
         accountNumber: form.accountNumber,
         tinNumber: form.tinNumber,
@@ -118,7 +124,9 @@ export default function SalaryEditPage({
   const basic = Number(form.basicSalary) || 0;
   const house = Number(form.houseAllowance) || 0;
   const transport = Number(form.transportAllowance) || 0;
-  const gross = basic + house + transport;
+  const overtime = Number(form.overtimeAllowances) || 0;
+  const bonus = Number(form.bonusCommission) || 0;
+  const gross = basic + house + transport + overtime + bonus;
 
   if (loading && !init) {
     return (
@@ -229,6 +237,46 @@ export default function SalaryEditPage({
                       className="pay-create-input pay-create-input--price"
                       value={form.transportAllowance}
                       onChange={(e) => updateField('transportAllowance', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pay-create-row">
+                <label className="pay-create-label" htmlFor="overtime_allowances">
+                  Overtime &amp; allowances
+                </label>
+                <div>
+                  <div className="pay-create-input-group">
+                    <span>TZS</span>
+                    <input
+                      id="overtime_allowances"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="pay-create-input pay-create-input--price"
+                      value={form.overtimeAllowances}
+                      onChange={(e) => updateField('overtimeAllowances', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pay-create-row">
+                <label className="pay-create-label" htmlFor="bonus_commission">
+                  Bonus / commission
+                </label>
+                <div>
+                  <div className="pay-create-input-group">
+                    <span>TZS</span>
+                    <input
+                      id="bonus_commission"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="pay-create-input pay-create-input--price"
+                      value={form.bonusCommission}
+                      onChange={(e) => updateField('bonusCommission', e.target.value)}
                     />
                   </div>
                 </div>

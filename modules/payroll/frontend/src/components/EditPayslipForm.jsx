@@ -12,6 +12,8 @@ import EmployeeAvatar from '../components/EmployeeAvatar.jsx';
 const emptyForm = {
   basicSalary: '',
   totalAllowances: '',
+  overtimeAllowances: '',
+  bonusCommission: '',
   monthlyAdjustment: '',
   nssfDeduction: '',
   taxDeduction: '',
@@ -67,6 +69,8 @@ export default function EditPayslipForm({
       setForm({
         basicSalary: slip.basicSalary ?? '',
         totalAllowances: slip.totalAllowances ?? '',
+        overtimeAllowances: slip.overtimeAllowances ?? '',
+        bonusCommission: slip.bonusCommission ?? '',
         monthlyAdjustment: slip.monthlyAdjustment ?? '',
         nssfDeduction: slip.nssfDeduction ?? '',
         taxDeduction: slip.taxDeduction ?? '',
@@ -95,11 +99,12 @@ export default function EditPayslipForm({
   const netPreview = useMemo(() => {
     const basic = Number(form.basicSalary) || 0;
     const allowances = Number(form.totalAllowances) || 0;
+    const bonus = Number(form.bonusCommission) || 0;
     const adj = Number(form.monthlyAdjustment) || 0;
     const nssf = Number(form.nssfDeduction) || 0;
     const tax = Number(form.taxDeduction) || 0;
     const other = Number(form.otherDeductions) || 0;
-    return basic + allowances + adj - nssf - tax - other;
+    return basic + allowances + bonus + adj - nssf - tax - other;
   }, [form]);
 
   function updateField(key, value) {
@@ -117,6 +122,8 @@ export default function EditPayslipForm({
         id: payslipId,
         basicSalary: Number(form.basicSalary) || 0,
         totalAllowances: Number(form.totalAllowances) || 0,
+        overtimeAllowances: Number(form.overtimeAllowances) || 0,
+        bonusCommission: Number(form.bonusCommission) || 0,
         monthlyAdjustment: Number(form.monthlyAdjustment) || 0,
         nssfDeduction: Number(form.nssfDeduction) || 0,
         taxDeduction: Number(form.taxDeduction) || 0,
@@ -128,6 +135,8 @@ export default function EditPayslipForm({
       setForm({
         basicSalary: next.basicSalary ?? form.basicSalary,
         totalAllowances: next.totalAllowances ?? form.totalAllowances,
+        overtimeAllowances: next.overtimeAllowances ?? form.overtimeAllowances,
+        bonusCommission: next.bonusCommission ?? form.bonusCommission,
         monthlyAdjustment: next.monthlyAdjustment ?? form.monthlyAdjustment,
         nssfDeduction: next.nssfDeduction ?? form.nssfDeduction,
         taxDeduction: next.taxDeduction ?? form.taxDeduction,
@@ -189,7 +198,8 @@ export default function EditPayslipForm({
         <section className="pay-ca-section">
           <h3 className="pay-ca-section-title">Earnings</h3>
           <Field id="basic_salary" label="Basic salary" value={form.basicSalary} onChange={(v) => updateField('basicSalary', v)} />
-          <Field id="total_allowances" label="Allowances" value={form.totalAllowances} onChange={(v) => updateField('totalAllowances', v)} />
+          <Field id="total_allowances" label="Overtime & allowances" value={form.totalAllowances} onChange={(v) => updateField('totalAllowances', v)} />
+          <Field id="bonus_commission" label="Bonus / commission" value={form.bonusCommission} onChange={(v) => updateField('bonusCommission', v)} />
           <Field id="monthly_adjustment" label="Adjustments" value={form.monthlyAdjustment} onChange={(v) => updateField('monthlyAdjustment', v)} />
         </section>
 
@@ -199,6 +209,15 @@ export default function EditPayslipForm({
           <Field id="tax_deduction" label="PAYE (tax)" value={form.taxDeduction} onChange={(v) => updateField('taxDeduction', v)} />
           <Field id="other_deductions" label="Other deductions" value={form.otherDeductions} onChange={(v) => updateField('otherDeductions', v)} />
         </section>
+
+        {(Number(slip.employerNssf) > 0 || Number(slip.sdlAmount) > 0 || Number(slip.wcfAmount) > 0) && (
+          <section className="pay-ca-section">
+            <h3 className="pay-ca-section-title">Employer cost (auto)</h3>
+            <div className="pay-desk-cell-sub">
+              Employer NSSF {formatAmount(slip.employerNssf || 0)} · SDL {formatAmount(slip.sdlAmount || 0)} · WCF {formatAmount(slip.wcfAmount || 0)} · Total {formatAmount(slip.employerCost || 0)}
+            </div>
+          </section>
+        )}
 
         <section className="pay-ca-section">
           <div className="pay-ca-row">

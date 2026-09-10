@@ -251,23 +251,48 @@ export default function ViewRunPage() {
             </p>
           </div>
         ) : (
-          <div className="pay-desk-table-wrap">
-            <table className="pay-desk-table pay-run-table">
+          <div className="pay-desk-table-wrap pay-run-register-wrap">
+            <table className="pay-desk-table pay-run-table pay-run-register">
               <thead>
                 <tr>
-                  <th>Employee</th>
-                  <th className="pay-desk-hide-lg">Department</th>
-                  <th className="pay-desk-hide-lg">Basic</th>
-                  <th className="pay-desk-hide-lg">Allowances</th>
-                  <th className="pay-desk-hide-md">Gross</th>
-                  <th className="pay-desk-hide-md">Tax</th>
-                  <th className="pay-desk-hide-md">NSSF</th>
-                  <th>Net</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th scope="col">SN</th>
+                  <th scope="col">Name of the employee</th>
+                  <th scope="col">Department</th>
+                  <th scope="col">Basic salaries</th>
+                  <th scope="col">Overtime &amp; allowances</th>
+                  <th scope="col">Bonus / commission</th>
+                  <th scope="col">Gross salaries</th>
+                  <th scope="col">Employee NSSF 10%</th>
+                  <th scope="col">Taxable salary</th>
+                  <th scope="col">PAYE</th>
+                  <th scope="col">Total deductions</th>
+                  <th scope="col">Net salaries</th>
+                  <th scope="col">Employer NSSF 10%</th>
+                  <th scope="col">SDL 3.5%</th>
+                  <th scope="col">WCF 0.5%</th>
+                  <th scope="col">Employer cost</th>
+                  <th scope="col" style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {slips.map((slip) => (
+                {slips.map((slip, index) => {
+                  const basic = Number(slip.basicSalary) || 0;
+                  const overtimeAllowances = Number(slip.allowances) || 0;
+                  const bonus = Number(slip.bonusCommission) || 0;
+                  const adjustment = Number(slip.monthlyAdjustment) || 0;
+                  const gross = Number(slip.grossSalary) || (basic + overtimeAllowances + bonus + adjustment);
+                  const nssf = Number(slip.nssfDeduction) || 0;
+                  const taxable = Number(slip.taxableSalary) || Math.max(0, gross - nssf);
+                  const paye = Number(slip.taxDeduction) || 0;
+                  const other = Number(slip.otherDeductions) || 0;
+                  const totalDeductions = nssf + paye + other;
+                  const net = Number(slip.netSalary) || (gross - totalDeductions);
+                  const employerNssf = Number(slip.employerNssf) || 0;
+                  const sdl = Number(slip.sdlAmount) || 0;
+                  const wcf = Number(slip.wcfAmount) || 0;
+                  const employerCost = Number(slip.employerCost) || (gross + employerNssf + sdl + wcf);
+
+                  return (
                   <tr
                     key={slip.id}
                     className="pay-desk-row-clickable"
@@ -283,6 +308,7 @@ export default function ViewRunPage() {
                       }
                     }}
                   >
+                    <td className="pay-run-sn">{index + 1}</td>
                     <td>
                       <div className="pay-desk-employee-cell">
                         <EmployeeAvatar name={slip.fullName} id={slip.userId || slip.id} />
@@ -291,15 +317,22 @@ export default function ViewRunPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="pay-desk-hide-lg">
+                    <td>
                       <span className="pay-desk-dept">{String(slip.department || '-').toUpperCase()}</span>
                     </td>
-                    <td className="pay-desk-hide-lg">{formatAmount(slip.basicSalary)}</td>
-                    <td className="pay-desk-hide-lg">{formatAmount(slip.allowances)}</td>
-                    <td className="pay-desk-hide-md">{formatAmount(slip.grossSalary)}</td>
-                    <td className="pay-desk-hide-md pay-run-deduct">{formatAmount(slip.taxDeduction)}</td>
-                    <td className="pay-desk-hide-md pay-run-deduct">{formatAmount(slip.nssfDeduction)}</td>
-                    <td className="pay-desk-amt">{formatAmount(slip.netSalary)}</td>
+                    <td>{formatAmount(basic)}</td>
+                    <td>{formatAmount(overtimeAllowances)}</td>
+                    <td>{formatAmount(bonus)}</td>
+                    <td>{formatAmount(gross)}</td>
+                    <td className="pay-run-deduct">{formatAmount(nssf)}</td>
+                    <td>{formatAmount(taxable)}</td>
+                    <td className="pay-run-deduct">{formatAmount(paye)}</td>
+                    <td className="pay-run-deduct">{formatAmount(totalDeductions)}</td>
+                    <td className="pay-desk-amt">{formatAmount(net)}</td>
+                    <td>{formatAmount(employerNssf)}</td>
+                    <td>{formatAmount(sdl)}</td>
+                    <td>{formatAmount(wcf)}</td>
+                    <td className="pay-desk-amt">{formatAmount(employerCost)}</td>
                     <td style={{ textAlign: 'right' }} data-pay-row-ignore>
                       <div className="pay-desk-actions">
                         {can.editPayslip && (
@@ -361,12 +394,31 @@ export default function ViewRunPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={7} className="pay-run-total-label">Grand total net payout</td>
+                  <td colSpan={3} className="pay-run-total-label">Grand totals</td>
+                  <td>{formatAmount(totals.basic)}</td>
+                  <td>{formatAmount(totals.allowances)}</td>
+                  <td>{formatAmount(totals.bonus)}</td>
+                  <td>{formatAmount(totals.gross)}</td>
+                  <td className="pay-run-deduct">{formatAmount(totals.nssf)}</td>
+                  <td>{formatAmount(totals.taxable)}</td>
+                  <td className="pay-run-deduct">{formatAmount(totals.tax)}</td>
+                  <td className="pay-run-deduct">
+                    {formatAmount(
+                      (Number(totals.nssf) || 0)
+                      + (Number(totals.tax) || 0)
+                      + (Number(totals.other) || 0),
+                    )}
+                  </td>
                   <td className="pay-desk-amt">{formatAmount(totals.net)}</td>
+                  <td>{formatAmount(totals.employerNssf)}</td>
+                  <td>{formatAmount(totals.sdl)}</td>
+                  <td>{formatAmount(totals.wcf)}</td>
+                  <td className="pay-desk-amt">{formatAmount(totals.employerCost)}</td>
                   <td />
                 </tr>
               </tfoot>

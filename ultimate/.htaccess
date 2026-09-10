@@ -112,13 +112,11 @@ RewriteRule ^admin/([^./]+)/?$ ../admin/$1.php?company_slug=ultimate [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^admin/(.+)$ ../admin/$1?company_slug=ultimate [L,QSA]
 
-# ultimate/modules only has balances/email stubs — proxy missing ERP module files to parent.
+# ultimate/modules only has a few stubs — proxy missing ERP module files to parent.
+# Do not gate on %{DOCUMENT_ROOT}/modules (fails when app lives in a subfolder / local XAMPP).
+# Keep !-d so real stub directories (balances/, email/, payroll/, sales/) are not rewritten away.
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{DOCUMENT_ROOT}/public_html/modules/$1 -f
-RewriteRule ^modules/(.+)$ ../modules/$1?company_slug=ultimate [L,QSA]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{DOCUMENT_ROOT}/modules/$1 -f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^modules/(.+)$ ../modules/$1?company_slug=ultimate [L,QSA]
 
 # Real files/dirs under ultimate/ (todo, deliveries, attendance, stock/..., balances, �)

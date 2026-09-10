@@ -5,6 +5,17 @@ function getApiBase() {
   return './api';
 }
 
+function getPageBase() {
+  if (typeof window !== 'undefined' && window.__PAYROLL_PAGE_BASE__) {
+    return String(window.__PAYROLL_PAGE_BASE__).replace(/\/$/, '');
+  }
+  const api = getApiBase();
+  if (api.endsWith('/api')) {
+    return api.slice(0, -4);
+  }
+  return '.';
+}
+
 async function parseJson(response) {
   const text = await response.text();
   try {
@@ -63,7 +74,9 @@ export async function deleteRun(id) {
 
 export function deskPageUrl(file, extraParams = {}) {
   const params = new URLSearchParams({ module: 'payroll', ...extraParams });
-  return `./${file}?${params.toString()}`;
+  const base = getPageBase();
+  const path = `${base}/${String(file || '').replace(/^\.\//, '').replace(/^\//, '')}`;
+  return `${path}?${params.toString()}`;
 }
 
 export function buildViewRunUrl(runId, links = {}) {

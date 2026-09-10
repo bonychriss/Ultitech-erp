@@ -16,11 +16,11 @@ class PayrollPageController extends Controller
     {
         $erp = $request->attributes->get('erp') ?? [];
 
-        $apiBase = function_exists('company_url')
-            ? rtrim((string) company_url('modules/payroll/api', (string) ($erp['company_slug'] ?? '')), '/')
-            : (function_exists('app_url')
-                ? rtrim((string) app_url('/modules/payroll/api'), '/')
-                : '/public_html/modules/payroll/api');
+        // APIs live under app-root modules/payroll/api (not under /{slug}/modules/…).
+        // company_url() 404s on physical company folders and returns HTML → React "logged in" error.
+        $apiBase = function_exists('app_url')
+            ? rtrim((string) app_url('/modules/payroll/api'), '/')
+            : '/public_html/modules/payroll/api';
 
         $viewData = (new PayrollShell())->viewData([
             'apiBase' => $apiBase,

@@ -36,13 +36,26 @@ final class PayrollShell
         $cssUrl = $assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'];
         $jsUrl = $assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'];
 
+        $pageBase = function_exists('app_url')
+            ? rtrim((string) app_url('/modules/payroll'), '/')
+            : '/modules/payroll';
+        if (function_exists('company_url')) {
+            $slug = trim((string) ($cfg['companySlug'] ?? ''));
+            if ($slug !== '') {
+                $pageBase = rtrim((string) company_url('modules/payroll', $slug), '/');
+            }
+        }
+
         $windowScript = 'window.__PAYROLL_API_BASE__ = ' . json_encode($apiBase, JSON_UNESCAPED_SLASHES)
+            . ';window.__PAYROLL_PAGE_BASE__ = ' . json_encode($pageBase, JSON_UNESCAPED_SLASHES)
             . ';window.__PAYROLL_PAGE__ = ' . json_encode($payrollPage, JSON_UNESCAPED_SLASHES)
             . ';window.__PAYROLL_CFG__ = ' . json_encode([
                 'module' => 'payroll',
                 'engine' => 'erp-laravel Domains/Payroll',
                 'companySlug' => (string) ($cfg['companySlug'] ?? ''),
                 'backUrl' => (string) ($cfg['backUrl'] ?? ''),
+                'pageBase' => $pageBase,
+                'apiBase' => $apiBase,
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         $payslipId = (int) ($cfg['payslipId'] ?? 0);

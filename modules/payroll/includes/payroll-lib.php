@@ -90,8 +90,13 @@ function payrollDeskRequireFinanceOrAdmin(): void
 
 function payrollDeskWebBasePath(): string
 {
+    // Prefer canonical app path so /{slug}/payroll aliases do not break API/assets.
+    if (function_exists('app_url')) {
+        return rtrim((string) app_url('/modules/payroll'), '/');
+    }
+
     $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    if ($script !== '') {
+    if ($script !== '' && str_contains($script, '/modules/payroll')) {
         $base = rtrim(dirname($script), '/');
         // API handlers (api/*.php) - page assets and links live in the module root.
         if (str_ends_with($base, '/api')) {
@@ -101,11 +106,7 @@ function payrollDeskWebBasePath(): string
         return $base;
     }
 
-    if (function_exists('app_url')) {
-        return app_url('/modules/payroll');
-    }
-
-    return rtrim(str_replace('\\', '/', dirname(__DIR__)), '/');
+    return '/modules/payroll';
 }
 
 function payrollDeskPublicUrl(string $relativePath): string
@@ -114,6 +115,27 @@ function payrollDeskPublicUrl(string $relativePath): string
     $base = payrollDeskWebBasePath();
 
     return $base . '/' . $relativePath;
+}
+
+/**
+ * Page/navigation URLs under the active company slug when available.
+ * Assets/API must keep using payrollDeskPublicUrl() (app-root paths).
+ */
+function payrollDeskPageUrl(string $relativePath): string
+{
+    $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
+    $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+    if ($slug === '' && function_exists('getRequestedCompanySlug')) {
+        $slug = strtolower(trim((string) getRequestedCompanySlug()));
+    }
+    if ($slug !== '' && function_exists('company_url')) {
+        $path = $relativePath === '' ? 'modules/payroll' : ('modules/payroll/' . $relativePath);
+        return rtrim((string) company_url($path, $slug), '/');
+    }
+
+    return $relativePath === ''
+        ? payrollDeskWebBasePath()
+        : payrollDeskPublicUrl($relativePath);
 }
 
 function payrollDeskQueryString(array $extra = []): string
@@ -225,12 +247,12 @@ function payrollDeskDeskInitPayload(PDO $pdo): array
         'missingTables' => $dashboard['missingTables'],
         'runs' => $dashboard['runs'],
         'links' => [
-            'help' => payrollDeskPublicUrl('help.php') . payrollDeskQueryString(),
-            'setup' => payrollDeskPublicUrl('setup.php') . payrollDeskQueryString(),
-            'runPayroll' => payrollDeskPublicUrl('run_payroll.php') . payrollDeskQueryString(),
-            'salaries' => payrollDeskPublicUrl('salaries.php') . payrollDeskQueryString(),
-            'settings' => payrollDeskPublicUrl('settings.php') . payrollDeskQueryString(),
-            'viewRunBase' => payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(),
+            'help' => payrollDeskPageUrl('help.php') . payrollDeskQueryString(),
+            'setup' => payrollDeskPageUrl('setup.php') . payrollDeskQueryString(),
+            'runPayroll' => payrollDeskPageUrl('run_payroll.php') . payrollDeskQueryString(),
+            'salaries' => payrollDeskPageUrl('salaries.php') . payrollDeskQueryString(),
+            'settings' => payrollDeskPageUrl('settings.php') . payrollDeskQueryString(),
+            'viewRunBase' => payrollDeskPageUrl('view_run.php') . payrollDeskQueryString(),
         ],
     ];
 }
@@ -445,12 +467,12 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
             ),
         ],
         'links' => [
-            'payroll' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
-            'runPayroll' => payrollDeskPublicUrl('run_payroll.php') . payrollDeskQueryString(),
-            'exportExcel' => payrollDeskPublicUrl('export_run_xls.php') . $qs,
-            'emailAll' => payrollDeskPublicUrl('email_run.php') . $qs,
-            'payslipBase' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString(),
-            'editPayslipBase' => payrollDeskPublicUrl('edit_payslip.php') . payrollDeskQueryString(),
+            'payroll' => payrollDeskPageUrl('index.php') . payrollDeskQueryString(),
+            'runPayroll' => payrollDeskPageUrl('run_payroll.php') . payrollDeskQueryString(),
+            'exportExcel' => payrollDeskPageUrl('export_run_xls.php') . $qs,
+            'emailAll' => payrollDeskPageUrl('email_run.php') . $qs,
+            'payslipBase' => payrollDeskPageUrl('payslip.php') . payrollDeskQueryString(),
+            'editPayslipBase' => payrollDeskPageUrl('edit_payslip.php') . payrollDeskQueryString(),
         ],
     ];
 }
@@ -529,7 +551,7 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
 
         return [
             'deleted' => true,
-            'redirect' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(['success' => 'deleted']),
+            'redirect' => payrollDeskPageUrl('index.php') . payrollDeskQueryString(['success' => 'deleted']),
             'message' => 'Draft payroll run deleted.',
         ];
     } elseif ($action === 'send_to_account') {
@@ -672,10 +694,10 @@ function payrollDeskSalariesInitPayload(PDO $pdo): array
             'total_gross' => $totalGross,
         ],
         'links' => [
-            'payroll' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
-            'salaries' => payrollDeskPublicUrl('salaries.php') . payrollDeskQueryString(),
-            'runPayroll' => payrollDeskPublicUrl('run_payroll.php') . payrollDeskQueryString(),
-            'editSalaryBase' => payrollDeskPublicUrl('edit_salary.php') . payrollDeskQueryString(),
+            'payroll' => payrollDeskPageUrl('index.php') . payrollDeskQueryString(),
+            'salaries' => payrollDeskPageUrl('salaries.php') . payrollDeskQueryString(),
+            'runPayroll' => payrollDeskPageUrl('run_payroll.php') . payrollDeskQueryString(),
+            'editSalaryBase' => payrollDeskPageUrl('edit_salary.php') . payrollDeskQueryString(),
         ],
     ];
 }
@@ -720,7 +742,7 @@ function payrollDeskGetSalaryEmployee(PDO $pdo, int $userId): array
             'nssfNumber' => (string) ($salary['nssf_number'] ?? ''),
         ],
         'links' => [
-            'salaries' => payrollDeskPublicUrl('salaries.php') . payrollDeskQueryString(),
+            'salaries' => payrollDeskPageUrl('salaries.php') . payrollDeskQueryString(),
         ],
     ];
 }
@@ -826,7 +848,7 @@ function payrollDeskMyPayslipsPayload(PDO $pdo): array
         ],
         'payslips' => $slips,
         'links' => [
-            'payslipBase' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString(),
+            'payslipBase' => payrollDeskPageUrl('payslip.php') . payrollDeskQueryString(),
         ],
     ];
 }
@@ -861,10 +883,10 @@ function payrollDeskRunInitPayload(PDO $pdo): array
         ],
         'missingTables' => $dashboard['missingTables'],
         'links' => [
-            'dashboard' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
-            'salaries' => payrollDeskPublicUrl('salaries.php') . payrollDeskQueryString(),
-            'setup' => payrollDeskPublicUrl('setup.php') . payrollDeskQueryString(),
-            'viewRunBase' => payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(),
+            'dashboard' => payrollDeskPageUrl('index.php') . payrollDeskQueryString(),
+            'salaries' => payrollDeskPageUrl('salaries.php') . payrollDeskQueryString(),
+            'setup' => payrollDeskPageUrl('setup.php') . payrollDeskQueryString(),
+            'viewRunBase' => payrollDeskPageUrl('view_run.php') . payrollDeskQueryString(),
             'modules' => function_exists('app_url') ? app_url('/select-module.php') : '/select-module.php',
         ],
     ];
@@ -1021,7 +1043,7 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
     }
 
     $periodDate = sprintf('%04d-%02d-01', $year, $month);
-    $viewRunUrl = payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]);
+    $viewRunUrl = payrollDeskPageUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]);
 
     return [
         'runId' => $runId,
@@ -1029,7 +1051,7 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
         'employeeCount' => count($users),
         'periodLabel' => date('F Y', strtotime($periodDate)),
         'viewRunUrl' => $viewRunUrl,
-        'dashboardUrl' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
+        'dashboardUrl' => payrollDeskPageUrl('index.php') . payrollDeskQueryString(),
     ];
 }
 
@@ -1069,8 +1091,8 @@ function payrollDeskGetPayslipViewMeta(PDO $pdo, int $payslipId): array
 
     $periodLabel = date('F Y', mktime(0, 0, 0, (int) $slip['month'], 1, (int) $slip['year']));
     $backUrl = isFinanceOrAdmin()
-        ? payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(['id' => (int) $slip['payroll_run_id']])
-        : payrollDeskPublicUrl('my_payslips.php') . payrollDeskQueryString();
+        ? payrollDeskPageUrl('view_run.php') . payrollDeskQueryString(['id' => (int) $slip['payroll_run_id']])
+        : payrollDeskPageUrl('my_payslips.php') . payrollDeskQueryString();
 
     return [
         'id' => (int) $slip['id'],
@@ -1080,12 +1102,12 @@ function payrollDeskGetPayslipViewMeta(PDO $pdo, int $payslipId): array
         'runId' => (int) ($slip['payroll_run_id'] ?? 0),
         'statusLabel' => ((string) ($slip['status'] ?? '') === 'paid') ? 'Paid' : 'Approved',
         'backUrl' => $backUrl,
-        'myPayslipsUrl' => payrollDeskPublicUrl('my_payslips.php') . payrollDeskQueryString(),
-        'downloadUrl' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString([
+        'myPayslipsUrl' => payrollDeskPageUrl('my_payslips.php') . payrollDeskQueryString(),
+        'downloadUrl' => payrollDeskPageUrl('payslip.php') . payrollDeskQueryString([
             'id' => $payslipId,
             'download' => 1,
         ]),
-        'embedUrl' => payrollDeskPublicUrl('payslip.php') . payrollDeskQueryString([
+        'embedUrl' => payrollDeskPageUrl('payslip.php') . payrollDeskQueryString([
             'id' => $payslipId,
             'embed' => 1,
             'v' => (string) (@filemtime(__DIR__ . '/../payslip.php') ?: time()),
@@ -1146,9 +1168,9 @@ function payrollDeskGetPayslipEditPayload(PDO $pdo, int $payslipId): array
             'remarks' => (string) ($slip['remarks'] ?? ''),
         ],
         'links' => [
-            'dashboard' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
-            'viewRun' => payrollDeskPublicUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]),
-            'editPayslipBase' => payrollDeskPublicUrl('edit_payslip.php') . payrollDeskQueryString(),
+            'dashboard' => payrollDeskPageUrl('index.php') . payrollDeskQueryString(),
+            'viewRun' => payrollDeskPageUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]),
+            'editPayslipBase' => payrollDeskPageUrl('edit_payslip.php') . payrollDeskQueryString(),
         ],
     ];
 }
@@ -1231,9 +1253,9 @@ function payrollDeskRenderReactEntry(string $pageTitle, string $headerTitle, str
     }
 
     $windowScript = 'window.__PAYROLL_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES)
+        . ';window.__PAYROLL_PAGE_BASE__ = ' . json_encode(payrollDeskPageUrl(''), JSON_UNESCAPED_SLASHES)
         . ';window.__PAYROLL_PAGE__ = ' . json_encode($payrollPage, JSON_UNESCAPED_SLASHES)
-        . ';window.__PAYROLL_EMPTY_ANIM__ = ' . json_encode($emptyAnimUrl, JSON_UNESCAPED_SLASHES);
-    foreach ($extraWindowVars as $key => $value) {
+        . ';window.__PAYROLL_EMPTY_ANIM__ = ' . json_encode($emptyAnimUrl, JSON_UNESCAPED_SLASHES);    foreach ($extraWindowVars as $key => $value) {
         $windowScript .= ';window.' . $key . ' = ' . json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
@@ -1304,9 +1326,9 @@ function payrollDeskGetSettingsPayload(PDO $pdo): array
         'taxBands' => $taxBands,
         'rules' => $rules,
         'links' => [
-            'dashboard' => payrollDeskPublicUrl('index.php') . payrollDeskQueryString(),
-            'help' => payrollDeskPublicUrl('help.php') . payrollDeskQueryString(),
-            'setup' => payrollDeskPublicUrl('setup.php') . payrollDeskQueryString(),
+            'dashboard' => payrollDeskPageUrl('index.php') . payrollDeskQueryString(),
+            'help' => payrollDeskPageUrl('help.php') . payrollDeskQueryString(),
+            'setup' => payrollDeskPageUrl('setup.php') . payrollDeskQueryString(),
         ],
     ];
 }

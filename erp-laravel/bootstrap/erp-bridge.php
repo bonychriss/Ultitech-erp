@@ -13,6 +13,22 @@ use Illuminate\Http\Request;
 
 $laravelRoot = dirname(__DIR__);
 
+// Fresh clones / deploys often miss writable storage dirs (gitignored runtime paths).
+// Without them Blade fails with "Please provide a valid cache path" → HTTP 500.
+$storageDirs = [
+    $laravelRoot . '/storage/app/public',
+    $laravelRoot . '/storage/framework/cache/data',
+    $laravelRoot . '/storage/framework/sessions',
+    $laravelRoot . '/storage/framework/testing',
+    $laravelRoot . '/storage/framework/views',
+    $laravelRoot . '/storage/logs',
+];
+foreach ($storageDirs as $dir) {
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+}
+
 $autoload = $laravelRoot . '/vendor/autoload.php';
 if (!is_file($autoload)) {
     header('Content-Type: application/json; charset=utf-8');

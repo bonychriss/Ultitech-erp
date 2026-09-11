@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/dashboard/init',
             'api/desk/*',
             'api/suggestions',
+            'api/cashbook',
+            'api/cashbook/*',
             'stock',
             'stock/desk/*',
         ]);

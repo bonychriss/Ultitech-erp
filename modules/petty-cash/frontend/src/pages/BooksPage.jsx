@@ -75,7 +75,7 @@ export default function BooksPage() {
           <a className="cb-btn" href={deskUrl('reports')}>
             <BarChart3 size={16} /> Reports
           </a>
-          <button type="button" className="cb-btn cb-btn-primary" onClick={() => setShowCreate(true)}>
+          <button type="button" className="cb-btn cb-btn-primary cb-btn-pill" onClick={() => setShowCreate(true)}>
             <BookPlus size={16} /> New book
           </button>
         </div>
@@ -103,7 +103,7 @@ export default function BooksPage() {
       {books.length === 0 ? (
         <div className="cb-empty">
           <p>No cash books yet. Create one to start recording daily cash in and cash out.</p>
-          <button type="button" className="cb-btn cb-btn-primary" onClick={() => setShowCreate(true)}>
+          <button type="button" className="cb-btn cb-btn-primary cb-btn-pill" onClick={() => setShowCreate(true)}>
             <BookPlus size={16} /> Create cash book
           </button>
         </div>

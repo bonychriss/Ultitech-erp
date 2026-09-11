@@ -92,6 +92,13 @@ html[data-theme='dark'] {
   color: #fff;
 }
 
+/* Beat ERP global `button { border-radius: 0 !important; }` */
+button.cb-btn.cb-btn-pill,
+.cb-btn.cb-btn-pill {
+  border-radius: 999px !important;
+  padding: 0.65rem 1.35rem;
+}
+
 .cb-btn-in {
   background: var(--cb-in);
   border-color: var(--cb-in);

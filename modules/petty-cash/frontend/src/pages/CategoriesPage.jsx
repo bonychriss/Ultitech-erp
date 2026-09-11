@@ -57,8 +57,8 @@ export default function CategoriesPage() {
     <div className="cb-page">
       <div className="cb-toolbar">
         <div>
-          <a className="cb-btn cb-btn-ghost" href={booksUrl()} style={{ paddingLeft: 0 }}>
-            <ArrowLeft size={16} /> Cash books
+          <a className="cb-back-link" href={booksUrl()}>
+            <ArrowLeft size={16} /> All books
           </a>
           <h2 style={{ marginTop: '0.35rem' }}>Categories</h2>
         </div>

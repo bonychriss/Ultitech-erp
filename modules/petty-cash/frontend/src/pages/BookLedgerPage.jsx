@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, Loader2, Pencil, Trash2, ArrowLeft } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, Loader2, Pencil, Trash2, ArrowLeft, SlidersHorizontal, X } from 'lucide-react'
 import {
   booksUrl,
   createEntry,
@@ -40,6 +40,9 @@ export default function BookLedgerPage() {
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(false)
+
+  const filterActive = Boolean(filters.date_from || filters.date_to || filters.entry_type)
 
   const load = useCallback(async () => {
     if (bookId <= 0) {
@@ -149,18 +152,15 @@ export default function BookLedgerPage() {
   return (
     <div className="cb-page">
       <div className="cb-toolbar">
-        <div>
-          <a className="cb-btn cb-btn-ghost" href={booksUrl()} style={{ paddingLeft: 0 }}>
-            <ArrowLeft size={16} /> All books
-          </a>
-          <h2 style={{ marginTop: '0.35rem' }}>{book?.name || 'Cash book'}</h2>
-        </div>
+        <a className="cb-back-link" href={booksUrl()}>
+          <ArrowLeft size={16} /> All books
+        </a>
         <div className="cb-toolbar-actions">
-          <button type="button" className="cb-btn cb-btn-in" onClick={() => openModal('in')}>
-            <ArrowDownCircle size={16} /> Cash in
+          <button type="button" className="cb-btn cb-btn-in cb-btn-pill cb-btn-sm" onClick={() => openModal('in')}>
+            <ArrowDownCircle size={14} /> Cash in
           </button>
-          <button type="button" className="cb-btn cb-btn-out" onClick={() => openModal('out')}>
-            <ArrowUpCircle size={16} /> Cash out
+          <button type="button" className="cb-btn cb-btn-out cb-btn-pill cb-btn-sm" onClick={() => openModal('out')}>
+            <ArrowUpCircle size={14} /> Cash out
           </button>
         </div>
       </div>
@@ -184,30 +184,74 @@ export default function BookLedgerPage() {
         </div>
       ) : null}
 
-      <div className="cb-filters">
-        <input
-          type="date"
-          className="cb-input"
-          value={filters.date_from}
-          onChange={(e) => setFilters((f) => ({ ...f, date_from: e.target.value }))}
-          title="From"
-        />
-        <input
-          type="date"
-          className="cb-input"
-          value={filters.date_to}
-          onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value }))}
-          title="To"
-        />
-        <select
-          className="cb-select"
-          value={filters.entry_type}
-          onChange={(e) => setFilters((f) => ({ ...f, entry_type: e.target.value }))}
-        >
-          <option value="">All types</option>
-          <option value="in">Cash in</option>
-          <option value="out">Cash out</option>
-        </select>
+      <div className="cb-filter-bar">
+        <div className="cb-filter-anchor">
+          <button
+            type="button"
+            className={`cb-btn cb-btn-pill cb-btn-sm cb-filter-btn${filterActive || filterOpen ? ' is-active' : ''}`}
+            onClick={() => setFilterOpen((o) => !o)}
+          >
+            <SlidersHorizontal size={14} />
+            Filter
+            {filterActive ? <span className="cb-filter-dot" /> : null}
+          </button>
+          {filterOpen ? (
+            <div className="cb-filter-panel">
+              <div className="cb-filter-panel-head">
+                <strong>Filters</strong>
+                <button type="button" className="cb-filter-close" onClick={() => setFilterOpen(false)} aria-label="Close">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="cb-field">
+                <label>From</label>
+                <input
+                  type="date"
+                  className="cb-input"
+                  value={filters.date_from}
+                  onChange={(e) => setFilters((f) => ({ ...f, date_from: e.target.value }))}
+                />
+              </div>
+              <div className="cb-field">
+                <label>To</label>
+                <input
+                  type="date"
+                  className="cb-input"
+                  value={filters.date_to}
+                  onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value }))}
+                />
+              </div>
+              <div className="cb-field">
+                <label>Type</label>
+                <select
+                  className="cb-select"
+                  value={filters.entry_type}
+                  onChange={(e) => setFilters((f) => ({ ...f, entry_type: e.target.value }))}
+                >
+                  <option value="">All types</option>
+                  <option value="in">Cash in</option>
+                  <option value="out">Cash out</option>
+                </select>
+              </div>
+              <div className="cb-filter-panel-actions">
+                <button
+                  type="button"
+                  className="cb-btn cb-btn-sm"
+                  onClick={() => setFilters({ date_from: '', date_to: '', entry_type: '' })}
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  className="cb-btn cb-btn-primary cb-btn-pill cb-btn-sm"
+                  onClick={() => setFilterOpen(false)}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {entries.length === 0 ? (

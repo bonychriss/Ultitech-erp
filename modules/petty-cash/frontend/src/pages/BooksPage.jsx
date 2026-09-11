@@ -68,10 +68,10 @@ export default function BooksPage() {
     <div className="cb-page">
       <div className="cb-toolbar">
         <div className="cb-toolbar-actions" style={{ marginLeft: 'auto' }}>
-          <a className="cb-btn" href={deskUrl('categories')}>
+          <a className="cb-text-link" href={deskUrl('categories')}>
             <Tags size={16} /> Categories
           </a>
-          <a className="cb-btn" href={deskUrl('reports')}>
+          <a className="cb-text-link" href={deskUrl('reports')}>
             <BarChart3 size={16} /> Reports
           </a>
           <button type="button" className="cb-btn cb-btn-primary cb-btn-pill" onClick={() => setShowCreate(true)}>

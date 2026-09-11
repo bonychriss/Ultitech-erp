@@ -604,24 +604,24 @@ switch ($active_module) {
                 'path' => $prefix . 'modules/expenses/view.php?module=expenses',
             ],
         ], $__expensesModuleUpdateBadge);
-        addParentItem($menuItems, 'petty-cash-parent', 'Petty Cash', 'wallet2', [
+        addParentItem($menuItems, 'petty-cash-parent', 'Cash Book', 'wallet2', [
             [
                 'id' => 'petty-cash-dashboard',
-                'label' => 'Dashboard',
-                'icon' => 'speedometer2',
+                'label' => 'Cash Books',
+                'icon' => 'journal-bookmark',
                 'path' => $prefix . 'modules/petty-cash/index.php?module=petty_cash',
             ],
             [
-                'id' => 'petty-cash-voucher',
-                'label' => 'New Voucher',
-                'icon' => 'ticket-perforated',
-                'path' => $prefix . 'modules/petty-cash/create-voucher.php?module=petty_cash',
+                'id' => 'petty-cash-categories',
+                'label' => 'Categories',
+                'icon' => 'tags',
+                'path' => $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=categories',
             ],
             [
-                'id' => 'petty-cash-topup',
-                'label' => 'Top-up',
-                'icon' => 'plus-circle',
-                'path' => $prefix . 'modules/petty-cash/replenishments/index.php?module=petty_cash',
+                'id' => 'petty-cash-reports',
+                'label' => 'Reports',
+                'icon' => 'bar-chart',
+                'path' => $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=reports',
             ],
         ]);
         addParentItem($menuItems, 'journal-parent', 'Journal', 'journal-text', [
@@ -842,9 +842,9 @@ switch ($active_module) {
         } else {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=petty_cash');
         }
-        addItem($menuItems, 'dashboard', 'Petty Cash', 'wallet2', $prefix . 'modules/petty-cash/index.php?module=petty_cash');
-        addItem($menuItems, 'pc-voucher', 'New Voucher', 'ticket-perforated', $prefix . 'modules/petty-cash/create-voucher.php?module=petty_cash');
-        addItem($menuItems, 'pc-topup', 'Request Top-up', 'plus-circle', $prefix . 'modules/petty-cash/replenishments/index.php?module=petty_cash');
+        addItem($menuItems, 'dashboard', 'Cash Books', 'journal-bookmark', $prefix . 'modules/petty-cash/index.php?module=petty_cash');
+        addItem($menuItems, 'pc-categories', 'Categories', 'tags', $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=categories');
+        addItem($menuItems, 'pc-reports', 'Reports', 'bar-chart', $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=reports');
         break;
 
     case 'letters':

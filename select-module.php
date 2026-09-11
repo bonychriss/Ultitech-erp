@@ -139,8 +139,8 @@ $push([
 ]);
 $push([
     'id' => 'petty_cash',
-    'label' => 'Petty Cash',
-    'desc' => 'Custodian float, vouchers & Balances',
+    'label' => 'Cash Book',
+    'desc' => 'Daily cash in / cash out recording',
     'href' => $companyRoute('modules/petty-cash/index') . '?module=petty_cash',
     'icon' => 'petty_cash',
     'color' => '#0d9488',

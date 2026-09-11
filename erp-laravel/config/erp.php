@@ -44,6 +44,11 @@ return [
             'legacy_api' => false,
             'entry' => 'letter.php',
         ],
+        'cashbook' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'cashbook.php',
+        ],
     ],
 
     'react_dist' => [
@@ -60,6 +65,7 @@ return [
         'stock' => 'stock/stock-ui/dist',
         'payroll' => 'modules/payroll/frontend/dist',
         'letter' => 'modules/letter/frontend/dist',
+        'cashbook' => 'modules/petty-cash/frontend/dist',
     ],
 
     'sales_laravel_desks' => [

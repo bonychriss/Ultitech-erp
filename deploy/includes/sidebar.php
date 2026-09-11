@@ -277,12 +277,9 @@ switch ($active_module) {
         break;
         
      case 'petty_cash':
-        addItem($menuItems, 'dashboard', 'Dashboard', 'currency', $prefix . 'erp/petty-cash/index.php?module=petty_cash');
-        addItem($menuItems, 'new', 'New Request', 'document-text', $prefix . 'erp/petty-cash/replenishment.php?module=petty_cash');
-        addItem($menuItems, 'voucher', 'New Voucher', 'ticket', $prefix . 'erp/petty-cash/create-voucher.php?module=petty_cash');
-        addItem($menuItems, 'categories', 'Categories', 'folder', $prefix . 'erp/petty-cash/categories/index.php?module=petty_cash');
-        addItem($menuItems, 'category-new', 'New Category', 'folder-plus', $prefix . 'erp/petty-cash/categories/create.php?module=petty_cash');
-        addItem($menuItems, 'reports', 'Reports', 'presentation', $prefix . 'erp/petty-cash/reports.php?module=petty_cash');
+        addItem($menuItems, 'dashboard', 'Cash Books', 'journal-bookmark', $prefix . 'modules/petty-cash/index.php?module=petty_cash');
+        addItem($menuItems, 'categories', 'Categories', 'tags', $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=categories');
+        addItem($menuItems, 'reports', 'Reports', 'bar-chart', $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=reports');
         break;
         
      case 'revenue':

@@ -122,7 +122,8 @@ main.main-content.ov-react-root {
 }
 main.main-content.exp-desk-react-root #root,
 main.main-content.inv-desk-react-root #root,
-main.main-content.ov-react-root #root {
+main.main-content.ov-react-root #root,
+main.main-content.cashbook-react-root #root {
     width: 100%;
     min-height: 40vh;
 }

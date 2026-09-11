@@ -21,6 +21,10 @@ use App\Http\Controllers\LetterPageController;
 use App\Http\Controllers\AdminDeskPageController;
 use App\Http\Controllers\SuggestApiController;
 use App\Http\Controllers\SuggestPageController;
+use App\Http\Controllers\CashBookApiController;
+use App\Http\Controllers\CashBookDeskPageController;
+use App\Http\Controllers\CashBookPageController;
+use App\Domains\CashBook\DeskShell as CashBookDeskShell;
 use App\Http\Middleware\AttachErpContext;
 use Illuminate\Support\Facades\Route;
 
@@ -78,4 +82,14 @@ Route::middleware([AttachErpContext::class])->group(function () {
     Route::match(['get', 'post'], '/stock/desk/{desk}', [StockDeskPageController::class, 'show'])
         ->where('desk', StockDeskShell::deskRegex())
         ->name('stock.page.desk');
+
+    // Cash Book (replaces Petty Cash voucher workflow)
+    Route::get('/cashbook', [CashBookPageController::class, 'show'])->name('cashbook.page');
+    Route::match(['get', 'post'], '/cashbook/desk/{desk}', [CashBookDeskPageController::class, 'show'])
+        ->where('desk', CashBookDeskShell::deskRegex())
+        ->name('cashbook.page.desk');
+    Route::match(['get', 'post', 'put', 'delete'], '/api/cashbook/{resource}/{id?}', [CashBookApiController::class, 'handle'])
+        ->where('resource', 'init|books|entries|categories|reports')
+        ->where('id', '[0-9]+')
+        ->name('cashbook.api');
 });

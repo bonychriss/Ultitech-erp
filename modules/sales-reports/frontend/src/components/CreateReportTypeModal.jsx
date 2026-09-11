@@ -55,7 +55,10 @@ export default function CreateReportTypeModal({ open, onClose, onSelect, initial
     initForOpenRef.current = true
 
     const params = new URLSearchParams(window.location.search)
-    const domainKey = initialDomainKey || params.get('create') || params.get('report_domain') || ''
+    let domainKey = initialDomainKey || params.get('create') || params.get('report_domain') || ''
+    if (domainKey === 'stock' || domainKey === 'store') {
+      domainKey = 'store_warehouse'
+    }
     const domain = domains.find((d) => d.key === domainKey)
     if (domain) {
       setSkipDomainPicker(true)

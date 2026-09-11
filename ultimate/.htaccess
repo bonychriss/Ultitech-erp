@@ -88,14 +88,18 @@ RewriteRule ^revenue/?$ revenue.php [L,QSA,NC]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^customer_statement/(.*)$ ../customer_statement/$1?company_slug=ultimate [L,QSA]
 
+# PV tasks — always proxy to the real employee page (NC covers case typos on Linux).
+RewriteRule ^employee/pending-voucher-tasks\.php$ /employee/pending-voucher-tasks.php?company_slug=ultimate [L,QSA,NC]
+
 # Missing root-level *.php under ultimate/ → parent app (view-voucher.php, mark-paid.php, …)
 # Existing stubs (sales.php, login.php, …) still win via !-f.
+# Prefer docroot-absolute targets; relative ../ is unreliable on some StackCP vhosts.
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^([^/]+\.php)$ ../$1?company_slug=ultimate [L,QSA]
+RewriteRule ^([^/]+\.php)$ /$1?company_slug=ultimate [L,QSA]
 
 # Missing employee/* under ultimate/employee/ → parent employee/ (stubs like account.php still win via !-f)
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^employee/(.+)$ ../employee/$1?company_slug=ultimate [L,QSA]
+RewriteRule ^employee/(.+)$ /employee/$1?company_slug=ultimate [L,QSA]
 
 # Performance / weekly_tasks (no physical ultimate/weekly_tasks — must proxy parent)
 RewriteCond %{REQUEST_FILENAME} !-f

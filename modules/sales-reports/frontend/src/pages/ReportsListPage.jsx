@@ -35,7 +35,10 @@ export default function ReportsListPage() {
       loadReports()
     }
     const params = new URLSearchParams(window.location.search)
-    const create = params.get('create')
+    let create = params.get('create') || ''
+    if (create === 'stock' || create === 'store') {
+      create = 'store_warehouse'
+    }
     if (create && (CFG.permissions?.create || data?.permissions?.create)) {
       setCreateDomain(create)
       setShowCreateModal(true)

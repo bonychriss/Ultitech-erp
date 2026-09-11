@@ -19,7 +19,8 @@ function salesReportsExportHtml(array $report, string $contentHtml, bool $forPri
         ? reportEngineReportDomain($report)
         : strtolower((string) ($report['report_domain'] ?? 'sales'));
     $footerLabel = match ($domain) {
-        'procurement', 'store_warehouse' => 'Confidential Store Report',
+        'procurement' => 'Confidential Procurement Report',
+        'store_warehouse' => 'Confidential Store Report',
         'finance' => 'Confidential Finance Report',
         'fleet' => 'Confidential Fleet Report',
         default => 'Confidential Sales Report',
@@ -47,8 +48,9 @@ function salesReportsExportHtml(array $report, string $contentHtml, bool $forPri
             h2 { font-size: 12pt; color: #1a1a2e; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 28px; margin-bottom: 10px; font-weight: 700; }
             h3 { font-size: 11pt; color: #333; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; font-weight: 700; }
             table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-            th, td { border: 1px solid #bbb; padding: 5px 7px; }
-            th { background: #1a1a2e; color: #fff; font-size: 9pt; }
+            th, td { border: 1px solid #d7dbe3; padding: 7px 9px; vertical-align: top; }
+            th { background: #1a1a2e; color: #fff; font-size: 9pt; text-align: left; }
+            td.sr-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
             .report-header { position: relative; text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1a1a2e; padding-bottom: 20px; padding-top: 8px; min-height: 72px; }
             .sr-cover-page { position: relative; page-break-after: always; }
             .sr-company-logo--top-right { position: absolute; top: 0; right: 0; text-align: right; margin: 0; }
@@ -58,6 +60,34 @@ function salesReportsExportHtml(array $report, string $contentHtml, bool $forPri
             ul { margin: 8px 0 16px 20px; }
             li { margin-bottom: 6px; }
             .page-footer { margin-top: 40px; font-size: 9pt; color: #999; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; }
+            .sr-muted { color: #667085; }
+            .sr-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 14px 0 18px; }
+            .sr-kpi-card { border: 1px solid #d7dbe3; background: #f7f8fb; padding: 12px 14px; border-radius: 8px; }
+            .sr-kpi-card--primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+            .sr-kpi-card--ok { border-color: #86efac; background: #f0fdf4; }
+            .sr-kpi-card--warn { border-color: #fcd34d; background: #fffbeb; }
+            .sr-kpi-label { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.8; margin-bottom: 4px; }
+            .sr-kpi-value { font-size: 13pt; font-weight: 700; line-height: 1.2; }
+            .sr-row-total td { font-weight: 700; background: #eef1f6; }
+            .sr-notes { margin-top: 12px; padding: 10px 12px; background: #f8fafc; border-left: 3px solid #1a1a2e; }
+            .sr-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 8.5pt; font-weight: 600; white-space: nowrap; }
+            .sr-badge--ok { background: #dcfce7; color: #166534; }
+            .sr-badge--warn { background: #fef3c7; color: #92400e; }
+            .sr-badge--danger { background: #fee2e2; color: #991b1b; }
+            .sr-badge--info { background: #e0e7ff; color: #3730a3; }
+            .sr-pct-cell { position: relative; min-width: 72px; }
+            .sr-pct-bar { position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 8px; background: #94a3b8; border-radius: 4px; opacity: 0.35; max-width: 100%; }
+            .sr-pct-label { position: relative; z-index: 1; }
+            .sr-change-up { color: #166534; font-weight: 600; }
+            .sr-change-down { color: #991b1b; font-weight: 600; }
+            .sr-proc-activities td:nth-child(2) { font-size: 10pt; }
+            @media print {
+              .sr-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+              .sr-kpi-card { break-inside: avoid; }
+            }
+            @media (max-width: 900px) {
+              .sr-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            }
             ' . $printCss . '
         </style></head><body>'
         . $headerBlock

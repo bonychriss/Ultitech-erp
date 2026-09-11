@@ -21,17 +21,6 @@ function reportEngineAiSectionInstruction(string $domain, string $section): stri
     $common = 'Write professional management-report HTML (p, ul, li only). Use ONLY figures from the data snapshot. Do not invent numbers. Skip topics with no supporting data.';
 
     return match ($domain) {
-        'procurement' => match ($section) {
-            'executive_summary' => $common . ' Summarize inventory value, stock levels, movements, and stockout risk.',
-            'inventory_overview' => $common . ' Describe overall stock position using KPI figures.',
-            'inventory_valuation' => $common . ' Analyze inventory value by category if data exists.',
-            'stock_movement_analysis' => $common . ' Interpret stock inflows/outflows and movement types.',
-            'fast_slow_moving' => $common . ' Comment on fast and slow moving SKUs from snapshot lists.',
-            'low_stock_analysis' => $common . ' Highlight low stock and out-of-stock items requiring replenishment.',
-            'exceptions_risks' => $common . ' Describe stockout/low stock exceptions only.',
-            'key_findings', 'recommendations', 'action_plan', 'conclusion' => $common,
-            default => $common . " Write content for the {$label} section.",
-        },
         'finance' => match ($section) {
             'executive_summary' => $common . ' Summarize income, expenses, net profit, cash position, receivables, and payables.',
             'financial_overview' => $common . ' Provide a high-level view of financial performance for the period.',
@@ -89,20 +78,6 @@ function reportEngineAiRulesFallback(string $domain, string $section, array $sna
     $cur = htmlspecialchars($snapshot['currency'] ?? 'TZS');
     $period = htmlspecialchars($snapshot['period'] ?? '');
 
-    if ($domain === 'procurement') {
-        return match ($section) {
-            'executive_summary' => '<p>Stock position for ' . $period . ': '
-                . number_format((int) ($kpis['total_products'] ?? 0)) . ' products, '
-                . number_format((float) ($kpis['total_units'] ?? 0), 0) . ' units on hand, valued at '
-                . $cur . ' ' . number_format((float) ($kpis['inventory_value'] ?? 0), 0) . '.</p>',
-            'key_findings' => '<ul><li>Low stock items: ' . number_format((int) ($kpis['low_stock_count'] ?? 0)) . '</li>'
-                . '<li>Out of stock items: ' . number_format((int) ($kpis['out_of_stock_count'] ?? 0)) . '</li>'
-                . '<li>Stock movements in period: ' . number_format((int) ($kpis['movement_count'] ?? 0)) . '</li></ul>',
-            'recommendations' => '<ul><li>Replenish low and out-of-stock items</li><li>Review slow-moving stock for clearance or reorder adjustment</li></ul>',
-            default => '<p>Stock analysis for ' . $period . ' based on ERP inventory data.</p>',
-        };
-    }
-
     if ($domain === 'finance') {
         return match ($section) {
             'executive_summary' => '<p>Financial performance for ' . $period . ': income '
@@ -142,11 +117,15 @@ function reportEngineAiRulesFallback(string $domain, string $section, array $sna
 
     if ($domain === 'store_warehouse') {
         return match ($section) {
-            'executive_summary' => '<p>Inventory position: '
+            'executive_summary' => '<p>Stock position for ' . $period . ': '
                 . number_format((int) ($kpis['total_products'] ?? 0)) . ' products, '
                 . number_format((float) ($kpis['total_units'] ?? 0), 0) . ' units on hand, valued at '
                 . $cur . ' ' . number_format((float) ($kpis['inventory_value'] ?? 0), 0) . '.</p>',
-            default => '<p>Store and warehouse analysis for ' . $period . ' based on ERP inventory data.</p>',
+            'key_findings' => '<ul><li>Low stock items: ' . number_format((int) ($kpis['low_stock_count'] ?? 0)) . '</li>'
+                . '<li>Out of stock items: ' . number_format((int) ($kpis['out_of_stock_count'] ?? 0)) . '</li>'
+                . '<li>Stock movements in period: ' . number_format((int) ($kpis['movement_count'] ?? 0)) . '</li></ul>',
+            'recommendations' => '<ul><li>Replenish low and out-of-stock items</li><li>Review slow-moving stock for clearance or reorder adjustment</li></ul>',
+            default => '<p>Store analysis for ' . $period . ' based on ERP inventory data.</p>',
         };
     }
 

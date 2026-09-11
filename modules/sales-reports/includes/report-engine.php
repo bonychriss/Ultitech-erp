@@ -22,11 +22,11 @@ function reportEngineDomains(): array
         ],
         'procurement' => [
             'key' => 'procurement',
-            'label' => 'Store Report',
-            'icon' => 'bi-box-seam',
-            'description' => 'Stock position, movements, purchases, suppliers, low stock, and replenishment.',
-            'department_default' => 'Store / Inventory',
-            'color' => '#059669',
+            'label' => 'Procurement Report',
+            'icon' => 'bi-cart-check',
+            'description' => 'Purchase orders, suppliers, import vs domestic spend, customs, and delivery follow-up.',
+            'department_default' => 'Procurement',
+            'color' => '#0f766e',
         ],
         'finance' => [
             'key' => 'finance',
@@ -46,11 +46,11 @@ function reportEngineDomains(): array
         ],
         'store_warehouse' => [
             'key' => 'store_warehouse',
-            'label' => 'Store / Warehouse Report',
-            'icon' => 'bi-building',
-            'description' => 'Inventory levels, stock movements, valuation, suppliers, and warehouse performance.',
-            'department_default' => 'Store / Warehouse',
-            'color' => '#7c3aed',
+            'label' => 'Store Report',
+            'icon' => 'bi-box-seam',
+            'description' => 'Stock position, movements, purchases, suppliers, low stock, and replenishment.',
+            'department_default' => 'Store / Inventory',
+            'color' => '#059669',
         ],
     ];
 }
@@ -58,6 +58,10 @@ function reportEngineDomains(): array
 function reportEngineNormalizeDomain(?string $domain): string
 {
     $domain = strtolower(trim((string) $domain));
+    // Legacy aliases for Store Report only (not Procurement).
+    if (in_array($domain, ['stock', 'store'], true)) {
+        $domain = 'store_warehouse';
+    }
     $allowed = array_keys(reportEngineDomains());
 
     return in_array($domain, $allowed, true) ? $domain : 'sales';
@@ -147,18 +151,15 @@ function reportEngineSectionCatalog(string $domain): array
 
     $extra = match ($domain) {
         'procurement' => [
-            'inventory_overview' => 'Stock Overview',
-            'stock_movement_analysis' => 'Stock Movement',
-            'purchase_activity' => 'Purchase / Procurement Activity',
-            'stock_status_analysis' => 'Stock Status',
-            'inventory_valuation' => 'Inventory Valuation by Category',
-            'product_category_analysis' => 'Product / Category Analysis',
-            'fast_slow_moving' => 'Fast & Slow Moving Items',
-            'low_stock_analysis' => 'Low Stock & Replenishment',
-            'supplier_analysis' => 'Supplier Analysis',
-            'key_store_activities' => 'Key Store Activities',
-            'challenges_issues' => 'Challenges / Issues',
-            'period_comparison' => 'Period Comparison',
+            'procurement_activities' => 'Procurement Activities',
+            'key_procurement_activities' => 'Key Procurement Activities',
+            'suppliers_analysis' => 'Suppliers – Selected Period',
+            'order_status_analysis' => 'Procurement / Order Status',
+            'key_achievements' => 'Key Achievements',
+            'challenges_issues' => 'Challenges',
+            'period_comparison' => 'Previous Period Comparison',
+            'procurement_trend' => 'Procurement Trend / Summary',
+            'pending_deliveries' => 'Pending / Delayed Shipments',
         ],
         'finance' => [
             'financial_overview' => 'Financial Overview',
@@ -182,7 +183,17 @@ function reportEngineSectionCatalog(string $domain): array
         ],
         'fleet' => [
             'kpi_fleet_overview' => 'Key Performance Indicators & Fleet Overview',
-            'operational_challenges' => 'Operational Challenges Log',
+            'driver_performance' => 'Driver Performance',
+            'trip_status_analysis' => 'Trip Status Analysis',
+            'delivery_status_analysis' => 'Delivery Order Status Analysis',
+            'fleet_status_analysis' => 'Trip & Delivery Status Analysis',
+            'key_fleet_activities' => 'Key Fleet Activities',
+            'period_comparison' => 'Period Comparison',
+            'overdue_orders' => 'Overdue Delivery Orders',
+            'operational_challenges' => 'Operational Challenges',
+            'challenges_issues' => 'Challenges / Issues',
+            'vehicle_utilization' => 'Vehicle Utilization',
+            'trend_analysis' => 'Trip Trend Analysis',
         ],
         'store_warehouse' => [
             'inventory_overview' => 'Stock Overview',
@@ -207,7 +218,8 @@ function reportEngineSectionCatalog(string $domain): array
         $catalog['key_findings'] = 'Key Findings & Exceptions';
     }
     if ($domain === 'fleet') {
-        $catalog['action_plan'] = 'Simple Driver Action Plan';
+        $catalog['action_plan'] = 'Fleet Action Plan';
+        $catalog['kpi_overview'] = 'Key Performance Indicators';
     }
 
     return $catalog;
@@ -219,12 +231,10 @@ function reportEngineDefaultSections(string $domain): array
 
     return match ($domain) {
         'procurement' => [
-            'cover', 'executive_summary', 'kpi_overview', 'inventory_overview',
-            'stock_movement_analysis', 'purchase_activity', 'stock_status_analysis',
-            'inventory_valuation', 'product_category_analysis', 'fast_slow_moving',
-            'low_stock_analysis', 'supplier_analysis', 'key_store_activities',
-            'period_comparison', 'challenges_issues', 'key_findings',
-            'recommendations', 'action_plan', 'conclusion',
+            'cover', 'executive_summary', 'procurement_activities',
+            'key_procurement_activities', 'suppliers_analysis', 'order_status_analysis',
+            'key_achievements', 'challenges_issues', 'recommendations',
+            'period_comparison', 'procurement_trend', 'conclusion',
         ],
         'finance' => [
             'cover', 'executive_summary', 'kpi_overview', 'financial_overview',
@@ -236,8 +246,11 @@ function reportEngineDefaultSections(string $domain): array
             'key_findings', 'recommendations', 'action_plan', 'conclusion',
         ],
         'fleet' => [
-            'cover', 'executive_summary', 'kpi_fleet_overview', 'operational_challenges',
-            'key_findings', 'recommendations', 'action_plan', 'conclusion',
+            'cover', 'executive_summary', 'kpi_fleet_overview',
+            'driver_performance', 'trip_status_analysis', 'delivery_status_analysis',
+            'key_fleet_activities', 'period_comparison',
+            'operational_challenges', 'key_findings', 'recommendations',
+            'action_plan', 'conclusion',
         ],
         'store_warehouse' => [
             'cover', 'executive_summary', 'kpi_overview', 'inventory_overview',
@@ -292,13 +305,30 @@ function reportEngineBuildCoverHtml(string $domain, array $meta): string
         return salesReportsBuildDepartmentCoverHtml($meta);
     }
 
-    // Store report uses the same formal cover layout as Sales (design benchmark only).
-    if (in_array($domain, ['procurement', 'store_warehouse'], true)) {
+    // Procurement / Store / Fleet use the formal cover layout (design benchmark only).
+    if (in_array($domain, ['procurement', 'store_warehouse', 'fleet'], true)) {
         $department = trim((string) ($meta['department'] ?? ''));
-        if ($department === '' || preg_match('/^(warehouse|store)$/i', $department)) {
-            $department = 'STORE / INVENTORY DEPARTMENT';
+        if ($domain === 'fleet') {
+            if ($department === '' || preg_match('/^(logistics|fleet|driver|drivers)$/i', $department)) {
+                $department = 'DRIVER / FLEET DEPARTMENT';
+            } else {
+                $department = strtoupper($department);
+            }
+            $heroLine1 = 'DRIVER &amp; FLEET';
+        } elseif ($domain === 'procurement') {
+            if ($department === '' || preg_match('/^(procurement|purchasing)$/i', $department)) {
+                $department = 'PROCUREMENT DEPARTMENT';
+            } else {
+                $department = strtoupper($department);
+            }
+            $heroLine1 = 'PROCUREMENT';
         } else {
-            $department = strtoupper($department);
+            if ($department === '' || preg_match('/^(warehouse|store|inventory)$/i', $department)) {
+                $department = 'STORE / INVENTORY DEPARTMENT';
+            } else {
+                $department = strtoupper($department);
+            }
+            $heroLine1 = 'STORE';
         }
         $company = htmlspecialchars((string) ($_SESSION['company_name'] ?? 'Company'), ENT_QUOTES, 'UTF-8');
         $periodLabel = htmlspecialchars(
@@ -328,7 +358,7 @@ function reportEngineBuildCoverHtml(string $domain, array $meta): string
             . $preparedLine
             . $preparedSpacer
             . '<p style="font-size:15pt; font-weight:700; letter-spacing:0.06em; margin:0;">' . $periodLabel . '</p>'
-            . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:12px 0 4px;">STORE</p>'
+            . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:12px 0 4px;">' . $heroLine1 . '</p>'
             . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:0;">REPORT ' . $year . '</p>'
             . '</div>';
     }

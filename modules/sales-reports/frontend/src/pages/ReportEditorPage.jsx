@@ -35,10 +35,10 @@ function buildContentHtml(sections) {
 
 const DOMAIN_LABELS = {
   sales: 'Sales Report',
-  procurement: 'Stock Report',
+  procurement: 'Procurement Report',
   finance: 'Finance Report',
   fleet: 'Driver / Fleet Report',
-  store_warehouse: 'Store / Warehouse Report',
+  store_warehouse: 'Store Report',
 }
 
 function resolveReportTypeLabel(report, defaults = null) {

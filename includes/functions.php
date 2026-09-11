@@ -6609,6 +6609,22 @@ function requireLogin()
     global $pdo;
     ensureMultiCompanyControlSchema();
     $requestedCompanySlug = getRequestedCompanySlug();
+    $loginNext = '';
+    $requestUri = trim((string) ($_SERVER['REQUEST_URI'] ?? ''));
+    if ($requestUri !== ''
+        && str_starts_with($requestUri, '/')
+        && !str_starts_with($requestUri, '//')
+        && !str_contains($requestUri, '..')
+    ) {
+        $loginNext = $requestUri;
+    }
+    $appendNext = static function (string $url) use ($loginNext): string {
+        if ($loginNext === '') {
+            return $url;
+        }
+
+        return $url . (str_contains($url, '?') ? '&' : '?') . 'next=' . rawurlencode($loginNext);
+    };
     if (!isLoggedIn()) {
         global $pdo;
         $needRegister = false;
@@ -6624,9 +6640,9 @@ function requireLogin()
             header('Location: ' . app_url('/register.php'));
         } else {
             if ($requestedCompanySlug !== '') {
-                header('Location: ' . company_login_url($requestedCompanySlug));
+                header('Location: ' . $appendNext(company_login_url($requestedCompanySlug)));
             } else {
-                header('Location: ' . app_url('/login.php'));
+                header('Location: ' . $appendNext(app_url('/login.php')));
             }
         }
         exit;

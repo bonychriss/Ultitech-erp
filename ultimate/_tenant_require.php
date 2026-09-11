@@ -7,10 +7,17 @@ function ultimate_tenant_require(string $appRelativeFile): void
 {
     // This file lives in ultimate/; app root is its parent.
     $appRoot = dirname(__DIR__);
-    $full = $appRoot . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, ltrim($appRelativeFile, '/\\'));
+    $rel = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, ltrim($appRelativeFile, '/\\'));
+    $full = $appRoot . DIRECTORY_SEPARATOR . $rel;
     if (!is_file($full)) {
-        http_response_code(404);
-        echo 'Not found.';
+        // Avoid Apache ErrorDocument "Oops! Page not found" — bounce to the real app path.
+        if (empty($_GET['company_slug'])) {
+            $_GET['company_slug'] = 'ultimate';
+        }
+        $target = '/' . str_replace('\\', '/', $rel);
+        $qs = $_GET;
+        $query = http_build_query($qs);
+        header('Location: ' . $target . ($query !== '' ? ('?' . $query) : ''), true, 302);
         exit;
     }
     if (empty($_GET['company_slug'])) {

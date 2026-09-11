@@ -97,17 +97,31 @@ function reportEngineFilterDefinitions(string $domain): array
 
     return match ($domain) {
         'procurement' => [
-            ['key' => 'warehouse_id', 'label' => 'Warehouse', 'type' => 'select', 'options_source' => 'warehouses'],
-            ['key' => 'category_id', 'label' => 'Category', 'type' => 'select', 'options_source' => 'categories'],
-            ['key' => 'stock_status', 'label' => 'Stock Status', 'type' => 'select', 'options' => [
-                ['value' => '', 'label' => 'All items'],
-                ['value' => 'low', 'label' => 'Low stock'],
-                ['value' => 'out', 'label' => 'Out of stock'],
-                ['value' => 'ok', 'label' => 'Adequate stock'],
+            ['key' => 'purchase_type', 'label' => 'Purchase Type', 'type' => 'select', 'options' => [
+                ['value' => '', 'label' => 'All types'],
+                ['value' => 'domestic', 'label' => 'Internal / Domestic'],
+                ['value' => 'import', 'label' => 'International / Import'],
+            ]],
+            ['key' => 'order_status', 'label' => 'Order Status', 'type' => 'select', 'options' => [
+                ['value' => '', 'label' => 'All statuses'],
+                ['value' => 'Received', 'label' => 'Received'],
+                ['value' => 'Approved', 'label' => 'Approved'],
+                ['value' => 'Supplier Responded', 'label' => 'Supplier Responded'],
+                ['value' => 'Pending', 'label' => 'Pending'],
+                ['value' => 'Cancelled', 'label' => 'Cancelled'],
             ]],
         ],
         'finance' => [],
-        'fleet' => [],
+        'fleet' => [
+            ['key' => 'driver_id', 'label' => 'Driver', 'type' => 'select', 'options_source' => 'drivers'],
+            ['key' => 'trip_status', 'label' => 'Trip Status', 'type' => 'select', 'options' => [
+                ['value' => '', 'label' => 'All statuses'],
+                ['value' => 'planned', 'label' => 'Planned'],
+                ['value' => 'in_transit', 'label' => 'In transit'],
+                ['value' => 'completed', 'label' => 'Completed'],
+            ]],
+            ['key' => 'vehicle', 'label' => 'Vehicle', 'type' => 'select', 'options_source' => 'vehicles'],
+        ],
         'store_warehouse' => [
             ['key' => 'warehouse_id', 'label' => 'Warehouse', 'type' => 'select', 'options_source' => 'warehouses'],
             ['key' => 'category_id', 'label' => 'Category', 'type' => 'select', 'options_source' => 'categories'],
@@ -127,9 +141,13 @@ function reportEngineFilterOptions(PDO $pdo, string $domain): array
     $domain = reportEngineNormalizeDomain($domain);
     $out = ['filters' => reportEngineFilterDefinitions($domain), 'options' => []];
 
-    if ($domain === 'store_warehouse' || $domain === 'procurement') {
+    if ($domain === 'store_warehouse') {
         $out['options']['warehouses'] = reportDomainStoreWarehouseOptions($pdo);
         $out['options']['categories'] = reportDomainStoreCategoryOptions($pdo);
+    }
+    if ($domain === 'fleet') {
+        $out['options']['drivers'] = reportDomainFleetDriverOptions($pdo);
+        $out['options']['vehicles'] = reportDomainFleetVehicleOptions($pdo);
     }
 
     return $out;
@@ -182,7 +200,7 @@ function reportEngineRenderDataTable(array $headers, array $rows): string
     foreach ($rows as $row) {
         $html .= '<tr>';
         foreach ($row as $cell) {
-            $html .= '<td>' . htmlspecialchars((string) $cell) . '</td>';
+            $html .= '<td>' . htmlspecialchars((string) $cell, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</td>';
         }
         $html .= '</tr>';
     }

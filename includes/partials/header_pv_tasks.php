@@ -11,8 +11,10 @@ if (empty($_SESSION['user_id'])) {
 }
 
 $pvTasksUrl = function_exists('company_url')
-    ? company_url('employee/pending-voucher-tasks.php?module=voucher')
-    : (function_exists('app_url') ? app_url('/employee/pending-voucher-tasks.php?module=voucher') : '/employee/pending-voucher-tasks.php?module=voucher');
+    ? (company_url('employee/pending-voucher-tasks.php') . '?module=voucher')
+    : (function_exists('app_url')
+        ? (app_url('/employee/pending-voucher-tasks.php') . '?module=voucher')
+        : '/employee/pending-voucher-tasks.php?module=voucher');
 
 $pvTaskCount = 0;
 try {

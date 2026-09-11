@@ -213,16 +213,31 @@ html[data-theme='dark'] .cb-badge-warn {
   border-color: #9a3412;
 }
 
+.cb-badge-ok {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #6ee7b7;
+}
+
+html[data-theme='dark'] .cb-badge-ok {
+  background: #064e3b;
+  color: #6ee7b7;
+  border-color: #059669;
+}
+
 .cb-col-actions {
   width: 1%;
   white-space: nowrap;
   text-align: right;
+  vertical-align: middle;
 }
 
 .cb-row-actions {
   display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.15rem;
   justify-content: flex-end;
 }
 
@@ -233,11 +248,11 @@ html[data-theme='dark'] .cb-badge-warn {
 }
 
 .cb-table tr.is-pending-delete td {
-  background: #fffbeb;
+  background: #ecfdf5;
 }
 
 html[data-theme='dark'] .cb-table tr.is-pending-delete td {
-  background: #422006;
+  background: #064e3b;
 }
 
 .cb-modal-copy {

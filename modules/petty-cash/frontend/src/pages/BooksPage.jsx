@@ -199,7 +199,7 @@ export default function BooksPage() {
                     <td>
                       <strong>{b.name}</strong>
                       {pending ? (
-                        <span className="cb-badge cb-badge-warn">Pending delete</span>
+                        <span className="cb-badge cb-badge-ok">Pending delete</span>
                       ) : null}
                     </td>
                     <td>{b.entry_count}</td>

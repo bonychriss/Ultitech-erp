@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2, Pencil, Trash2, ArrowLeft, SlidersHorizontal, X } from 'lucide-react'
+import { Loader2, Pencil, Trash2, ArrowLeft, SlidersHorizontal, X, Plus } from 'lucide-react'
 import {
   booksUrl,
   createEntry,
@@ -42,8 +42,10 @@ export default function BookLedgerPage() {
   const [editingId, setEditingId] = useState(0)
   const [saving, setSaving] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
 
   const filterActive = Boolean(filters.date_from || filters.date_to || filters.entry_type)
+  const formVisible = createOpen || editingId > 0
 
   const load = useCallback(async () => {
     if (bookId <= 0) {
@@ -96,6 +98,16 @@ export default function BookLedgerPage() {
     setForm({ ...emptyForm, entry_date: todayISO() })
     setEditingId(0)
     setEntryType('in')
+    setCreateOpen(false)
+  }
+
+  function openCreate() {
+    setEditingId(0)
+    setForm({ ...emptyForm, entry_date: todayISO() })
+    setEntryType('in')
+    setError('')
+    setCreateOpen(true)
+    setFilterOpen(false)
   }
 
   async function onSave(e) {
@@ -137,6 +149,8 @@ export default function BookLedgerPage() {
       remark: entry.remark || '',
     })
     setError('')
+    setCreateOpen(true)
+    setFilterOpen(false)
   }
 
   async function onDelete(entry) {
@@ -167,72 +181,82 @@ export default function BookLedgerPage() {
         <a className="cb-back-link" href={booksUrl()}>
           <ArrowLeft size={16} /> All books
         </a>
-        <div className="cb-filter-anchor">
+        <div className="cb-toolbar-actions">
           <button
             type="button"
-            className={`cb-btn cb-btn-pill cb-btn-sm cb-filter-btn${filterActive || filterOpen ? ' is-active' : ''}`}
-            onClick={() => setFilterOpen((o) => !o)}
+            className={`cb-btn cb-btn-primary cb-btn-pill cb-btn-sm${formVisible ? ' is-active' : ''}`}
+            onClick={() => (formVisible ? resetForm() : openCreate())}
           >
-            <SlidersHorizontal size={14} />
-            Filter
-            {filterActive ? <span className="cb-filter-dot" /> : null}
+            <Plus size={14} />
+            Create
           </button>
-          {filterOpen ? (
-            <div className="cb-filter-panel">
-              <div className="cb-filter-panel-head">
-                <strong>Filters</strong>
-                <button type="button" className="cb-filter-close" onClick={() => setFilterOpen(false)} aria-label="Close">
-                  <X size={16} />
-                </button>
+          <div className="cb-filter-anchor">
+            <button
+              type="button"
+              className={`cb-btn cb-btn-pill cb-btn-sm cb-filter-btn${filterActive || filterOpen ? ' is-active' : ''}`}
+              onClick={() => setFilterOpen((o) => !o)}
+            >
+              <SlidersHorizontal size={14} />
+              Filter
+              {filterActive ? <span className="cb-filter-dot" /> : null}
+            </button>
+            {filterOpen ? (
+              <div className="cb-filter-panel">
+                <div className="cb-filter-panel-head">
+                  <strong>Filters</strong>
+                  <button type="button" className="cb-filter-close" onClick={() => setFilterOpen(false)} aria-label="Close">
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="cb-field">
+                  <label>From</label>
+                  <input
+                    type="date"
+                    className="cb-input"
+                    value={filters.date_from}
+                    onChange={(e) => setFilters((f) => ({ ...f, date_from: e.target.value }))}
+                  />
+                </div>
+                <div className="cb-field">
+                  <label>To</label>
+                  <input
+                    type="date"
+                    className="cb-input"
+                    value={filters.date_to}
+                    onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value }))}
+                  />
+                </div>
+                <div className="cb-field">
+                  <label>Type</label>
+                  <select
+                    className="cb-select"
+                    value={filters.entry_type}
+                    onChange={(e) => setFilters((f) => ({ ...f, entry_type: e.target.value }))}
+                  >
+                    <option value="">All types</option>
+                    <option value="in">Cash in</option>
+                    <option value="out">Cash out</option>
+                  </select>
+                </div>
+                <div className="cb-filter-panel-actions">
+                  <button
+                    type="button"
+                    className="cb-btn cb-btn-sm"
+                    onClick={() => setFilters({ date_from: '', date_to: '', entry_type: '' })}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    className="cb-btn cb-btn-primary cb-btn-pill cb-btn-sm"
+                    onClick={() => setFilterOpen(false)}
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
-              <div className="cb-field">
-                <label>From</label>
-                <input
-                  type="date"
-                  className="cb-input"
-                  value={filters.date_from}
-                  onChange={(e) => setFilters((f) => ({ ...f, date_from: e.target.value }))}
-                />
-              </div>
-              <div className="cb-field">
-                <label>To</label>
-                <input
-                  type="date"
-                  className="cb-input"
-                  value={filters.date_to}
-                  onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value }))}
-                />
-              </div>
-              <div className="cb-field">
-                <label>Type</label>
-                <select
-                  className="cb-select"
-                  value={filters.entry_type}
-                  onChange={(e) => setFilters((f) => ({ ...f, entry_type: e.target.value }))}
-                >
-                  <option value="">All types</option>
-                  <option value="in">Cash in</option>
-                  <option value="out">Cash out</option>
-                </select>
-              </div>
-              <div className="cb-filter-panel-actions">
-                <button
-                  type="button"
-                  className="cb-btn cb-btn-sm"
-                  onClick={() => setFilters({ date_from: '', date_to: '', entry_type: '' })}
-                >
-                  Clear
-                </button>
-                <button
-                  type="button"
-                  className="cb-btn cb-btn-primary cb-btn-pill cb-btn-sm"
-                  onClick={() => setFilterOpen(false)}
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -255,12 +279,19 @@ export default function BookLedgerPage() {
         </div>
       ) : null}
 
-      <div className="cb-split">
-        <section className="cb-split-card">
-          <div className="cb-split-card-head">
-            <h3>{editingId ? 'Edit entry' : 'Create'}</h3>
-          </div>
-          <form className="cb-create-form" onSubmit={onSave}>
+      {formVisible ? (
+        <div className="cb-modal-backdrop" onClick={() => !saving && resetForm()}>
+          <form
+            className="cb-modal"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={onSave}
+          >
+            <div className="cb-modal-head">
+              <h3>{editingId ? 'Edit entry' : 'Create'}</h3>
+              <button type="button" className="cb-filter-close" onClick={resetForm} aria-label="Close" disabled={saving}>
+                <X size={16} />
+              </button>
+            </div>
             <div className="cb-type-toggle">
               <button
                 type="button"
@@ -330,14 +361,13 @@ export default function BookLedgerPage() {
                 rows={2}
                 value={form.remark}
                 onChange={(e) => setForm((f) => ({ ...f, remark: e.target.value }))}
+                placeholder="Optional"
               />
             </div>
-            <div className="cb-create-actions">
-              {editingId > 0 ? (
-                <button type="button" className="cb-btn cb-btn-pill cb-btn-sm" disabled={saving} onClick={resetForm}>
-                  Cancel
-                </button>
-              ) : null}
+            <div className="cb-modal-actions">
+              <button type="button" className="cb-btn cb-btn-pill cb-btn-sm" disabled={saving} onClick={resetForm}>
+                Cancel
+              </button>
               <button
                 type="submit"
                 className={`cb-btn cb-btn-pill cb-btn-sm ${entryType === 'in' ? 'cb-btn-in' : 'cb-btn-out'}`}
@@ -347,62 +377,62 @@ export default function BookLedgerPage() {
               </button>
             </div>
           </form>
-        </section>
+        </div>
+      ) : null}
 
-        <section className="cb-split-card">
-          <div className="cb-split-card-head">
-            <h3>Record</h3>
-          </div>
-          {entries.length === 0 ? (
-            <div className="cb-empty cb-empty-compact">No entries yet. Create one on the left.</div>
-          ) : (
-            <div className="cb-table-wrap cb-table-wrap-flush">
-              <table className="cb-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Category</th>
-                    <th>Particulars</th>
-                    <th>Amount</th>
-                    <th>Balance</th>
-                    <th />
+      <section className="cb-split-card">
+        <div className="cb-split-card-head">
+          <h3>Record</h3>
+        </div>
+        {entries.length === 0 ? (
+          <div className="cb-empty cb-empty-compact">No entries yet. Create one above.</div>
+        ) : (
+          <div className="cb-table-wrap cb-table-wrap-flush">
+            <table className="cb-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Category</th>
+                  <th>Particulars</th>
+                  <th>Amount</th>
+                  <th>Balance</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((row) => (
+                  <tr key={row.id} className={editingId === row.id ? 'is-editing' : ''}>
+                    <td>{formatDate(row.entry_date)}</td>
+                    <td>
+                      <span className={`cb-entry-type ${row.entry_type}`}>
+                        {row.entry_type === 'in' ? 'Cash in' : 'Cash out'}
+                      </span>
+                    </td>
+                    <td>{row.category_name || '-'}</td>
+                    <td>{[row.party_name, row.remark].filter(Boolean).join(' - ') || '-'}</td>
+                    <td className={`cb-entry-amt ${row.entry_type}`}>
+                      {row.entry_type === 'in' ? '+' : '-'}
+                      {formatMoney(row.amount)}
+                    </td>
+                    <td>{formatMoney(row.balance_after)}</td>
+                    <td>
+                      <div className="cb-entry-actions-inline">
+                        <button type="button" className="cb-icon-btn" onClick={() => onEdit(row)} title="Edit" aria-label="Edit">
+                          <Pencil size={16} />
+                        </button>
+                        <button type="button" className="cb-icon-btn" onClick={() => onDelete(row)} title="Delete" aria-label="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {entries.map((row) => (
-                    <tr key={row.id} className={editingId === row.id ? 'is-editing' : ''}>
-                      <td>{formatDate(row.entry_date)}</td>
-                      <td>
-                        <span className={`cb-entry-type ${row.entry_type}`}>
-                          {row.entry_type === 'in' ? 'Cash in' : 'Cash out'}
-                        </span>
-                      </td>
-                      <td>{row.category_name || '-'}</td>
-                      <td>{[row.party_name, row.remark].filter(Boolean).join(' - ') || '-'}</td>
-                      <td className={`cb-entry-amt ${row.entry_type}`}>
-                        {row.entry_type === 'in' ? '+' : '-'}
-                        {formatMoney(row.amount)}
-                      </td>
-                      <td>{formatMoney(row.balance_after)}</td>
-                      <td>
-                        <div className="cb-entry-actions-inline">
-                          <button type="button" className="cb-icon-btn" onClick={() => onEdit(row)} title="Edit" aria-label="Edit">
-                            <Pencil size={16} />
-                          </button>
-                          <button type="button" className="cb-icon-btn" onClick={() => onDelete(row)} title="Delete" aria-label="Delete">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

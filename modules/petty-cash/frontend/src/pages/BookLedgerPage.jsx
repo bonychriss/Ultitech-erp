@@ -257,38 +257,49 @@ export default function BookLedgerPage() {
       {entries.length === 0 ? (
         <div className="cb-empty">No entries in this period. Record cash in or cash out to begin.</div>
       ) : (
-        <div className="cb-entry-list">
-          {entries.map((row) => (
-            <div key={row.id} className="cb-entry">
-              <div className="cb-entry-top">
-                <span className={`cb-entry-type ${row.entry_type}`}>
-                  {row.entry_type === 'in' ? 'Cash in' : 'Cash out'}
-                </span>
-                <span>{formatDate(row.entry_date)}</span>
-                {row.category_name ? <span className="cb-book-meta">{row.category_name}</span> : null}
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div className={`cb-entry-amt ${row.entry_type}`}>
-                  {row.entry_type === 'in' ? '+' : '-'}
-                  {formatMoney(row.amount)}
-                </div>
-                <div className="cb-entry-bal">Bal {formatMoney(row.balance_after)}</div>
-              </div>
-              {(row.party_name || row.remark) && (
-                <div className="cb-entry-remark">
-                  {[row.party_name, row.remark].filter(Boolean).join(' - ')}
-                </div>
-              )}
-              <div className="cb-entry-actions">
-                <button type="button" className="cb-btn" onClick={() => openModal('edit', row)}>
-                  <Pencil size={14} /> Edit
-                </button>
-                <button type="button" className="cb-btn" onClick={() => onDelete(row)}>
-                  <Trash2 size={14} /> Delete
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="cb-table-wrap">
+          <table className="cb-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Particulars</th>
+                <th>Amount</th>
+                <th>Balance</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((row) => (
+                <tr key={row.id}>
+                  <td>{formatDate(row.entry_date)}</td>
+                  <td>
+                    <span className={`cb-entry-type ${row.entry_type}`}>
+                      {row.entry_type === 'in' ? 'Cash in' : 'Cash out'}
+                    </span>
+                  </td>
+                  <td>{row.category_name || '-'}</td>
+                  <td>{[row.party_name, row.remark].filter(Boolean).join(' - ') || '-'}</td>
+                  <td className={`cb-entry-amt ${row.entry_type}`}>
+                    {row.entry_type === 'in' ? '+' : '-'}
+                    {formatMoney(row.amount)}
+                  </td>
+                  <td>{formatMoney(row.balance_after)}</td>
+                  <td>
+                    <div className="cb-entry-actions-inline">
+                      <button type="button" className="cb-btn cb-btn-sm" onClick={() => openModal('edit', row)}>
+                        <Pencil size={14} /> Edit
+                      </button>
+                      <button type="button" className="cb-btn cb-btn-sm" onClick={() => onDelete(row)}>
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

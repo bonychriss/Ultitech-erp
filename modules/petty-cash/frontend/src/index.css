@@ -477,11 +477,15 @@ a.cb-text-link:hover {
   grid-column: 1 / -1;
 }
 
-.cb-entry-actions {
+.cb-entry-actions-inline {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
-  justify-content: flex-end;
-  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
+.cb-table .cb-entry-type {
+  display: inline-flex;
 }
 
 .cb-empty {

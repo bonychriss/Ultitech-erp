@@ -33,6 +33,11 @@ final class DeskShell
                 'title' => 'Reports',
                 'header' => 'Reports',
             ],
+            'import' => [
+                'page' => 'import',
+                'title' => 'Import Excel',
+                'header' => 'Import Excel',
+            ],
         ];
     }
 

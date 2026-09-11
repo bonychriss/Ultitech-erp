@@ -609,6 +609,13 @@ a.cb-text-link:hover {
   background: var(--cb-accent-soft);
 }
 
+.cb-import-errors {
+  margin: 0.75rem 0 1rem;
+  padding-left: 1.1rem;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
 .cb-empty {
   text-align: center;
   padding: 2.5rem 1rem;

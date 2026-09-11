@@ -278,6 +278,7 @@ switch ($active_module) {
         
      case 'petty_cash':
         addItem($menuItems, 'dashboard', 'Cash Books', 'journal-bookmark', $prefix . 'modules/petty-cash/index.php?module=petty_cash');
+        addItem($menuItems, 'pc-import', 'Import Excel', 'upload', $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=import');
         addItem($menuItems, 'categories', 'Categories', 'tags', $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=categories');
         addItem($menuItems, 'reports', 'Reports', 'bar-chart', $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=reports');
         break;

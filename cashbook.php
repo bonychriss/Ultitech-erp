@@ -80,6 +80,7 @@ $cashDesks = [
     'book' => true,
     'categories' => true,
     'reports' => true,
+    'import' => true,
 ];
 
 if ($desk !== '' && isset($cashDesks[$desk])) {

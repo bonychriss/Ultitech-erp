@@ -498,6 +498,192 @@ final class CashBookService
     }
 
     /**
+     * Import spreadsheet rows into a cash book.
+     *
+     * Expected headers (case-insensitive): date, type, amount, category, party, remark
+     * type accepts: in/out, cash in/cash out, +/ -
+     *
+     * @param array<string,mixed> $file
+     * @return array{imported:int,skipped:int,errors:list<string>}
+     */
+    public function importFromSpreadsheet(int $bookId, array $file, int $userId): array
+    {
+        if ($this->getBook($bookId) === null) {
+            throw new InvalidArgumentException('Cash book not found.');
+        }
+
+        $parsed = (new SpreadsheetReader())->readUpload($file);
+        if (!($parsed['ok'] ?? false)) {
+            throw new InvalidArgumentException((string) ($parsed['error'] ?? 'Could not read file.'));
+        }
+
+        $headers = array_map(
+            static fn ($h) => strtolower(trim((string) $h)),
+            $parsed['headers'] ?? []
+        );
+        $map = $this->mapImportHeaders($headers);
+        if (!isset($map['date'], $map['type'], $map['amount'])) {
+            throw new InvalidArgumentException(
+                'Spreadsheet must include date, type, and amount columns.'
+            );
+        }
+
+        $categories = [];
+        foreach ($this->listCategories() as $cat) {
+            $categories[strtolower((string) $cat['name'])] = (int) $cat['id'];
+        }
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+        $rows = $parsed['rows'] ?? [];
+
+        foreach ($rows as $i => $row) {
+            $lineNo = $i + 2;
+            try {
+                $dateRaw = trim((string) ($row[$map['date']] ?? ''));
+                $typeRaw = trim((string) ($row[$map['type']] ?? ''));
+                $amountRaw = trim((string) ($row[$map['amount']] ?? ''));
+                if ($dateRaw === '' && $typeRaw === '' && $amountRaw === '') {
+                    $skipped++;
+                    continue;
+                }
+
+                $date = $this->normalizeImportDate($dateRaw);
+                $type = $this->normalizeImportType($typeRaw);
+                $amount = $this->normalizeImportAmount($amountRaw);
+                if ($amount <= 0) {
+                    throw new InvalidArgumentException('Amount must be greater than zero.');
+                }
+
+                $categoryId = null;
+                if (isset($map['category'])) {
+                    $catName = trim((string) ($row[$map['category']] ?? ''));
+                    if ($catName !== '') {
+                        $key = strtolower($catName);
+                        if (!isset($categories[$key])) {
+                            $created = $this->createCategory([
+                                'name' => $catName,
+                                'entry_type' => 'both',
+                            ]);
+                            $categories[$key] = (int) $created['id'];
+                        }
+                        $categoryId = $categories[$key];
+                    }
+                }
+
+                $party = isset($map['party']) ? trim((string) ($row[$map['party']] ?? '')) : '';
+                $remark = isset($map['remark']) ? trim((string) ($row[$map['remark']] ?? '')) : '';
+
+                $this->createEntry([
+                    'book_id' => $bookId,
+                    'entry_type' => $type,
+                    'entry_date' => $date,
+                    'amount' => $amount,
+                    'category_id' => $categoryId,
+                    'party_name' => $party,
+                    'remark' => $remark,
+                ], $userId);
+                $imported++;
+            } catch (Throwable $e) {
+                $skipped++;
+                if (count($errors) < 20) {
+                    $errors[] = 'Row ' . $lineNo . ': ' . $e->getMessage();
+                }
+            }
+        }
+
+        return [
+            'imported' => $imported,
+            'skipped' => $skipped,
+            'errors' => $errors,
+        ];
+    }
+
+    /**
+     * @param list<string> $headers
+     * @return array<string,int>
+     */
+    private function mapImportHeaders(array $headers): array
+    {
+        $aliases = [
+            'date' => ['date', 'entry_date', 'entry date', 'txn_date', 'transaction date'],
+            'type' => ['type', 'entry_type', 'entry type', 'cash type', 'in_out', 'inout'],
+            'amount' => ['amount', 'value', 'money', 'sum'],
+            'category' => ['category', 'cat', 'category name'],
+            'party' => ['party', 'party_name', 'payee', 'payer', 'name'],
+            'remark' => ['remark', 'remarks', 'note', 'notes', 'description', 'narration'],
+        ];
+        $map = [];
+        foreach ($headers as $idx => $header) {
+            $h = strtolower(trim(str_replace('_', ' ', $header)));
+            foreach ($aliases as $key => $names) {
+                if (isset($map[$key])) {
+                    continue;
+                }
+                if (in_array($h, $names, true) || in_array(str_replace(' ', '_', $h), $names, true)) {
+                    $map[$key] = $idx;
+                }
+            }
+        }
+
+        return $map;
+    }
+
+    private function normalizeImportDate(string $raw): string
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            throw new InvalidArgumentException('Date is required.');
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
+            return $raw;
+        }
+        if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $raw)) {
+            [$a, $b, $y] = array_map('intval', explode('/', $raw));
+            // Prefer DD/MM/YYYY when day > 12, else assume MM/DD/YYYY for Excel-ish sheets
+            if ($a > 12) {
+                return sprintf('%04d-%02d-%02d', $y, $b, $a);
+            }
+            if ($b > 12) {
+                return sprintf('%04d-%02d-%02d', $y, $a, $b);
+            }
+
+            return sprintf('%04d-%02d-%02d', $y, $a, $b);
+        }
+        $ts = strtotime($raw);
+        if ($ts === false) {
+            throw new InvalidArgumentException('Invalid date "' . $raw . '".');
+        }
+
+        return date('Y-m-d', $ts);
+    }
+
+    private function normalizeImportType(string $raw): string
+    {
+        $v = strtolower(trim($raw));
+        $v = str_replace(['_', '-'], ' ', $v);
+        if (in_array($v, ['in', 'cash in', 'credit', 'cr', '+', 'income', 'receive', 'received'], true)) {
+            return 'in';
+        }
+        if (in_array($v, ['out', 'cash out', 'debit', 'dr', '-', 'expense', 'pay', 'paid'], true)) {
+            return 'out';
+        }
+        throw new InvalidArgumentException('Type must be cash in or cash out.');
+    }
+
+    private function normalizeImportAmount(string $raw): float
+    {
+        $v = trim($raw);
+        $v = str_replace([',', ' '], '', $v);
+        if ($v === '' || !is_numeric($v)) {
+            throw new InvalidArgumentException('Invalid amount.');
+        }
+
+        return round(abs((float) $v), 2);
+    }
+
+    /**
      * @param array<string,mixed> $row
      * @return array<string,mixed>
      */

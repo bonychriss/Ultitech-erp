@@ -10,7 +10,7 @@ use InvalidArgumentException;
 use Throwable;
 
 /**
- * Cash Book JSON API — Domains/CashBook.
+ * Cash Book JSON API  Domains/CashBook.
  */
 class CashBookApiController extends Controller
 {
@@ -34,6 +34,7 @@ class CashBookApiController extends Controller
                 'entries' => $this->entries($request, $svc, $userId, $id, $method),
                 'categories' => $this->categories($request, $svc, $id, $method),
                 'reports' => $this->reports($request, $svc),
+                'import' => $this->import($request, $svc, $userId, $method),
                 default => response()->json(['ok' => false, 'error' => 'Unknown resource.'], 404),
             };
         } catch (InvalidArgumentException $e) {
@@ -186,6 +187,39 @@ class CashBookApiController extends Controller
         );
 
         return response()->json(['ok' => true, 'report' => $report]);
+    }
+
+    private function import(Request $request, CashBookService $svc, int $userId, string $method): JsonResponse
+    {
+        if ($method !== 'POST') {
+            return response()->json(['ok' => false, 'error' => 'POST required.'], 405);
+        }
+
+        $bookId = (int) $request->input('book_id', 0);
+        if ($bookId <= 0) {
+            return response()->json(['ok' => false, 'error' => 'Select a cash book.'], 422);
+        }
+
+        $file = $request->file('file');
+        if ($file === null) {
+            $uploaded = $_FILES['file'] ?? null;
+            if (!is_array($uploaded)) {
+                return response()->json(['ok' => false, 'error' => 'Please choose an Excel or CSV file.'], 422);
+            }
+            $result = $svc->importFromSpreadsheet($bookId, $uploaded, $userId);
+        } else {
+            $result = $svc->importFromSpreadsheet($bookId, [
+                'name' => $file->getClientOriginalName(),
+                'tmp_name' => $file->getRealPath(),
+                'error' => UPLOAD_ERR_OK,
+            ], $userId);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Import finished.',
+            'result' => $result,
+        ]);
     }
 
     private function optionalDate(mixed $value): ?string

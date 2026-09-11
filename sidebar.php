@@ -612,6 +612,12 @@ switch ($active_module) {
                 'path' => $prefix . 'modules/petty-cash/index.php?module=petty_cash',
             ],
             [
+                'id' => 'petty-cash-import',
+                'label' => 'Import Excel',
+                'icon' => 'upload',
+                'path' => $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=import',
+            ],
+            [
                 'id' => 'petty-cash-categories',
                 'label' => 'Categories',
                 'icon' => 'tags',
@@ -843,6 +849,7 @@ switch ($active_module) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=petty_cash');
         }
         addItem($menuItems, 'dashboard', 'Cash Books', 'journal-bookmark', $prefix . 'modules/petty-cash/index.php?module=petty_cash');
+        addItem($menuItems, 'pc-import', 'Import Excel', 'upload', $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=import');
         addItem($menuItems, 'pc-categories', 'Categories', 'tags', $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=categories');
         addItem($menuItems, 'pc-reports', 'Reports', 'bar-chart', $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=reports');
         break;

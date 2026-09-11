@@ -89,7 +89,7 @@ Route::middleware([AttachErpContext::class])->group(function () {
         ->where('desk', CashBookDeskShell::deskRegex())
         ->name('cashbook.page.desk');
     Route::match(['get', 'post', 'put', 'delete'], '/api/cashbook/{resource}/{id?}', [CashBookApiController::class, 'handle'])
-        ->where('resource', 'init|books|entries|categories|reports')
+        ->where('resource', 'init|books|entries|categories|reports|import')
         ->where('id', '[0-9]+')
         ->name('cashbook.api');
 });

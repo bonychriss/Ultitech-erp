@@ -2,6 +2,7 @@ import BooksPage from './pages/BooksPage.jsx'
 import BookLedgerPage from './pages/BookLedgerPage.jsx'
 import CategoriesPage from './pages/CategoriesPage.jsx'
 import ReportsPage from './pages/ReportsPage.jsx'
+import ImportPage from './pages/ImportPage.jsx'
 
 function pageKey() {
   if (typeof window === 'undefined') return 'books'
@@ -16,6 +17,8 @@ export default function App() {
       return <CategoriesPage />
     case 'reports':
       return <ReportsPage />
+    case 'import':
+      return <ImportPage />
     case 'books':
     default:
       return <BooksPage />

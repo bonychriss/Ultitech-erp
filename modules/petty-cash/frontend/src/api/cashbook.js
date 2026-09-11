@@ -66,6 +66,26 @@ export const deleteCategory = (id) => request('categories', { id, method: 'DELET
 
 export const fetchReport = (query = {}) => request('reports', { query })
 
+export async function importSpreadsheet(bookId, file) {
+  const base = apiBase()
+  const params = new URLSearchParams({ resource: 'import' })
+  const body = new FormData()
+  body.append('book_id', String(bookId))
+  body.append('file', file)
+
+  const res = await fetch(`${base}/index.php?${params.toString()}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+    body,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.error || `Request failed (${res.status})`)
+  }
+  return data
+}
+
 export function formatMoney(n) {
   const v = Number(n) || 0
   return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })

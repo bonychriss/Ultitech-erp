@@ -369,12 +369,12 @@ export default function BookLedgerPage() {
               />
             </div>
             <div className="cb-modal-actions">
-              <button type="button" className="cb-btn" disabled={saving} onClick={() => setModal(null)}>
+              <button type="button" className="cb-btn cb-btn-pill cb-btn-sm" disabled={saving} onClick={() => setModal(null)}>
                 Cancel
               </button>
               <button
                 type="submit"
-                className={`cb-btn ${modal.entry_type === 'in' ? 'cb-btn-in' : 'cb-btn-out'}`}
+                className={`cb-btn cb-btn-pill cb-btn-sm ${modal.entry_type === 'in' ? 'cb-btn-in' : 'cb-btn-out'}`}
                 disabled={saving}
               >
                 {saving ? 'Saving...' : 'Save'}

@@ -89,7 +89,7 @@ export default function ReportsPage() {
 
       {loading ? (
         <div className="cb-loading">
-          <Loader2 className="cb-spin" size={20} /> Loading report…
+          <Loader2 className="cb-spin" size={20} /> Loading report...
         </div>
       ) : (
         <>
@@ -116,54 +116,58 @@ export default function ReportsPage() {
               No entries in this range.
             </div>
           ) : (
-            <table className="cb-table" style={{ marginBottom: '1.5rem' }}>
-              <thead>
-                <tr>
-                  <th>Book</th>
-                  <th>In</th>
-                  <th>Out</th>
-                  <th>Net</th>
-                  <th>Entries</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.by_book.map((r) => (
-                  <tr key={r.book_id}>
-                    <td>{r.book_name}</td>
-                    <td className="cb-entry-amt in">{formatMoney(r.total_in)}</td>
-                    <td className="cb-entry-amt out">{formatMoney(r.total_out)}</td>
-                    <td>{formatMoney(r.net)}</td>
-                    <td>{r.entry_count}</td>
+            <div className="cb-table-wrap" style={{ marginBottom: '1.5rem' }}>
+              <table className="cb-table">
+                <thead>
+                  <tr>
+                    <th>Book</th>
+                    <th>In</th>
+                    <th>Out</th>
+                    <th>Net</th>
+                    <th>Entries</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {report.by_book.map((r) => (
+                    <tr key={r.book_id}>
+                      <td>{r.book_name}</td>
+                      <td className="cb-entry-amt in">{formatMoney(r.total_in)}</td>
+                      <td className="cb-entry-amt out">{formatMoney(r.total_out)}</td>
+                      <td>{formatMoney(r.net)}</td>
+                      <td>{r.entry_count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           <h2 style={{ fontSize: '1rem', margin: '0 0 0.75rem' }}>By category</h2>
           {(report?.by_category || []).length === 0 ? (
             <div className="cb-empty">No category breakdown.</div>
           ) : (
-            <table className="cb-table">
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th>Type</th>
-                  <th>Total</th>
-                  <th>Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.by_category.map((r, i) => (
-                  <tr key={`${r.category_name}-${r.entry_type}-${i}`}>
-                    <td>{r.category_name}</td>
-                    <td>{r.entry_type === 'in' ? 'Cash in' : 'Cash out'}</td>
-                    <td className={`cb-entry-amt ${r.entry_type}`}>{formatMoney(r.total)}</td>
-                    <td>{r.count}</td>
+            <div className="cb-table-wrap">
+              <table className="cb-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Total</th>
+                    <th>Count</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {report.by_category.map((r, i) => (
+                    <tr key={`${r.category_name}-${r.entry_type}-${i}`}>
+                      <td>{r.category_name}</td>
+                      <td>{r.entry_type === 'in' ? 'Cash in' : 'Cash out'}</td>
+                      <td className={`cb-entry-amt ${r.entry_type}`}>{formatMoney(r.total)}</td>
+                      <td>{r.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

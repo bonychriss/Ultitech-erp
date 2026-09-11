@@ -37,7 +37,7 @@ export default function BookLedgerPage() {
   const [summary, setSummary] = useState(null)
   const [categories, setCategories] = useState([])
   const [filters, setFilters] = useState({ date_from: '', date_to: '', entry_type: '' })
-  const [modal, setModal] = useState(null) // { mode: 'in'|'out'|'edit', entry? }
+  const [modal, setModal] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
@@ -140,7 +140,7 @@ export default function BookLedgerPage() {
     return (
       <div className="cb-page">
         <div className="cb-loading">
-          <Loader2 className="cb-spin" size={20} /> Loading ledger…
+          <Loader2 className="cb-spin" size={20} /> Loading ledger...
         </div>
       </div>
     )
@@ -225,14 +225,14 @@ export default function BookLedgerPage() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div className={`cb-entry-amt ${row.entry_type}`}>
-                  {row.entry_type === 'in' ? '+' : '?'}
+                  {row.entry_type === 'in' ? '+' : '-'}
                   {formatMoney(row.amount)}
                 </div>
                 <div className="cb-entry-bal">Bal {formatMoney(row.balance_after)}</div>
               </div>
               {(row.party_name || row.remark) && (
                 <div className="cb-entry-remark">
-                  {[row.party_name, row.remark].filter(Boolean).join(' — ')}
+                  {[row.party_name, row.remark].filter(Boolean).join(' - ')}
                 </div>
               )}
               <div className="cb-entry-actions">
@@ -287,7 +287,7 @@ export default function BookLedgerPage() {
                 value={form.category_id}
                 onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
               >
-                <option value="">— None —</option>
+                <option value="">- None -</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -322,7 +322,7 @@ export default function BookLedgerPage() {
                 className={`cb-btn ${modal.entry_type === 'in' ? 'cb-btn-in' : 'cb-btn-out'}`}
                 disabled={saving}
               >
-                {saving ? 'Saving…' : 'Save'}
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </form>

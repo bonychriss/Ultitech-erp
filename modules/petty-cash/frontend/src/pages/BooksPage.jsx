@@ -67,8 +67,7 @@ export default function BooksPage() {
   return (
     <div className="cb-page">
       <div className="cb-toolbar">
-        <h2>My cash books</h2>
-        <div className="cb-toolbar-actions">
+        <div className="cb-toolbar-actions" style={{ marginLeft: 'auto' }}>
           <a className="cb-btn" href={deskUrl('categories')}>
             <Tags size={16} /> Categories
           </a>
@@ -108,21 +107,35 @@ export default function BooksPage() {
           </button>
         </div>
       ) : (
-        <div className="cb-book-list">
-          {books.map((b) => (
-            <a key={b.id} className="cb-book-card" href={deskUrl('book', { id: b.id })}>
-              <div>
-                <h3>{b.name}</h3>
-                <div className="cb-book-meta">
-                  {b.entry_count} entries ù Opening {formatMoney(b.opening_balance)}
-                </div>
-              </div>
-              <div className="cb-book-bal">
-                <strong>{formatMoney(b.balance)}</strong>
-                <div className="cb-book-meta">Balance</div>
-              </div>
-            </a>
-          ))}
+        <div className="cb-table-wrap">
+          <table className="cb-table">
+            <thead>
+              <tr>
+                <th>Book</th>
+                <th>Entries</th>
+                <th>Opening</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {books.map((b) => (
+                <tr
+                  key={b.id}
+                  className="cb-table-row-link"
+                  onClick={() => { window.location.href = deskUrl('book', { id: b.id }) }}
+                >
+                  <td>
+                    <strong>{b.name}</strong>
+                  </td>
+                  <td>{b.entry_count}</td>
+                  <td>{formatMoney(b.opening_balance)}</td>
+                  <td>
+                    <strong>{formatMoney(b.balance)}</strong>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

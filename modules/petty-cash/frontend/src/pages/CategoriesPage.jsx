@@ -83,7 +83,7 @@ export default function CategoriesPage() {
           onChange={(e) => setName(e.target.value)}
         />
         <select className="cb-select" value={entryType} onChange={(e) => setEntryType(e.target.value)}>
-          <option value="both">In &amp; out</option>
+          <option value="both">In and out</option>
           <option value="in">Cash in</option>
           <option value="out">Cash out</option>
         </select>
@@ -94,33 +94,35 @@ export default function CategoriesPage() {
 
       {loading ? (
         <div className="cb-loading">
-          <Loader2 className="cb-spin" size={20} /> Loading…
+          <Loader2 className="cb-spin" size={20} /> Loading...
         </div>
       ) : categories.length === 0 ? (
         <div className="cb-empty">No categories yet.</div>
       ) : (
-        <table className="cb-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {categories.map((c) => (
-              <tr key={c.id}>
-                <td>{c.name}</td>
-                <td>{c.entry_type === 'both' ? 'In & out' : c.entry_type === 'in' ? 'Cash in' : 'Cash out'}</td>
-                <td style={{ textAlign: 'right' }}>
-                  <button type="button" className="cb-btn" onClick={() => onDelete(c.id)}>
-                    <Trash2 size={14} />
-                  </button>
-                </td>
+        <div className="cb-table-wrap">
+          <table className="cb-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {categories.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.name}</td>
+                  <td>{c.entry_type === 'both' ? 'In and out' : c.entry_type === 'in' ? 'Cash in' : 'Cash out'}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button type="button" className="cb-btn" onClick={() => onDelete(c.id)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

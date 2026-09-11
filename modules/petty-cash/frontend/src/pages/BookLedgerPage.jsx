@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, Loader2, Pencil, Trash2, ArrowLeft, SlidersHorizontal, X } from 'lucide-react'
+import { Loader2, Pencil, Trash2, ArrowLeft, SlidersHorizontal, X } from 'lucide-react'
 import {
   booksUrl,
   createEntry,
@@ -37,8 +37,9 @@ export default function BookLedgerPage() {
   const [summary, setSummary] = useState(null)
   const [categories, setCategories] = useState([])
   const [filters, setFilters] = useState({ date_from: '', date_to: '', entry_type: '' })
-  const [modal, setModal] = useState(null)
+  const [entryType, setEntryType] = useState('in')
   const [form, setForm] = useState(emptyForm)
+  const [editingId, setEditingId] = useState(0)
   const [saving, setSaving] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
 
@@ -76,28 +77,25 @@ export default function BookLedgerPage() {
     load()
   }, [load])
 
-  async function openModal(mode, entry = null) {
-    setError('')
-    const type = mode === 'edit' ? entry?.entry_type : mode
-    try {
-      const cats = await fetchCategories(type === 'in' || type === 'out' ? type : undefined)
-      setCategories(cats.categories || [])
-    } catch {
-      setCategories([])
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const cats = await fetchCategories(entryType)
+        if (!cancelled) setCategories(cats.categories || [])
+      } catch {
+        if (!cancelled) setCategories([])
+      }
+    })()
+    return () => {
+      cancelled = true
     }
-    if (mode === 'edit' && entry) {
-      setForm({
-        entry_date: entry.entry_date || todayISO(),
-        amount: String(entry.amount ?? ''),
-        category_id: entry.category_id ? String(entry.category_id) : '',
-        party_name: entry.party_name || '',
-        remark: entry.remark || '',
-      })
-      setModal({ mode: 'edit', entry, entry_type: entry.entry_type })
-    } else {
-      setForm({ ...emptyForm, entry_date: todayISO() })
-      setModal({ mode, entry_type: mode })
-    }
+  }, [entryType])
+
+  function resetForm() {
+    setForm({ ...emptyForm, entry_date: todayISO() })
+    setEditingId(0)
+    setEntryType('in')
   }
 
   async function onSave(e) {
@@ -107,19 +105,19 @@ export default function BookLedgerPage() {
     try {
       const payload = {
         book_id: bookId,
-        entry_type: modal.entry_type,
+        entry_type: entryType,
         entry_date: form.entry_date,
         amount: Number(form.amount),
         category_id: form.category_id ? Number(form.category_id) : null,
         party_name: form.party_name,
         remark: form.remark,
       }
-      if (modal.mode === 'edit') {
-        await updateEntry(modal.entry.id, payload)
+      if (editingId > 0) {
+        await updateEntry(editingId, payload)
       } else {
         await createEntry(payload)
       }
-      setModal(null)
+      resetForm()
       await load()
     } catch (err) {
       setError(err.message || 'Could not save entry')
@@ -128,11 +126,25 @@ export default function BookLedgerPage() {
     }
   }
 
+  function onEdit(entry) {
+    setEditingId(entry.id)
+    setEntryType(entry.entry_type === 'out' ? 'out' : 'in')
+    setForm({
+      entry_date: entry.entry_date || todayISO(),
+      amount: String(entry.amount ?? ''),
+      category_id: entry.category_id ? String(entry.category_id) : '',
+      party_name: entry.party_name || '',
+      remark: entry.remark || '',
+    })
+    setError('')
+  }
+
   async function onDelete(entry) {
     if (!window.confirm('Delete this entry?')) return
     setError('')
     try {
       await deleteEntry(entry.id)
+      if (editingId === entry.id) resetForm()
       await load()
     } catch (err) {
       setError(err.message || 'Could not delete entry')
@@ -141,7 +153,7 @@ export default function BookLedgerPage() {
 
   if (loading && !book) {
     return (
-      <div className="cb-page">
+      <div className="cb-page cb-page-wide">
         <div className="cb-loading">
           <Loader2 className="cb-spin" size={20} /> Loading ledger...
         </div>
@@ -150,41 +162,11 @@ export default function BookLedgerPage() {
   }
 
   return (
-    <div className="cb-page">
+    <div className="cb-page cb-page-wide">
       <div className="cb-toolbar">
         <a className="cb-back-link" href={booksUrl()}>
           <ArrowLeft size={16} /> All books
         </a>
-        <div className="cb-toolbar-actions">
-          <button type="button" className="cb-btn cb-btn-in cb-btn-pill cb-btn-sm" onClick={() => openModal('in')}>
-            <ArrowDownCircle size={14} /> Cash in
-          </button>
-          <button type="button" className="cb-btn cb-btn-out cb-btn-pill cb-btn-sm" onClick={() => openModal('out')}>
-            <ArrowUpCircle size={14} /> Cash out
-          </button>
-        </div>
-      </div>
-
-      {error ? <div className="cb-error">{error}</div> : null}
-
-      {summary ? (
-        <div className="cb-summary">
-          <div className="cb-kpi">
-            <span className="cb-kpi-label">Cash in</span>
-            <div className="cb-kpi-value in">{formatMoney(summary.total_in)}</div>
-          </div>
-          <div className="cb-kpi">
-            <span className="cb-kpi-label">Cash out</span>
-            <div className="cb-kpi-value out">{formatMoney(summary.total_out)}</div>
-          </div>
-          <div className="cb-kpi">
-            <span className="cb-kpi-label">Balance</span>
-            <div className="cb-kpi-value">{formatMoney(summary.closing_balance)}</div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="cb-filter-bar">
         <div className="cb-filter-anchor">
           <button
             type="button"
@@ -254,65 +236,47 @@ export default function BookLedgerPage() {
         </div>
       </div>
 
-      {entries.length === 0 ? (
-        <div className="cb-empty">No entries in this period. Record cash in or cash out to begin.</div>
-      ) : (
-        <div className="cb-table-wrap">
-          <table className="cb-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Category</th>
-                <th>Particulars</th>
-                <th>Amount</th>
-                <th>Balance</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((row) => (
-                <tr key={row.id}>
-                  <td>{formatDate(row.entry_date)}</td>
-                  <td>
-                    <span className={`cb-entry-type ${row.entry_type}`}>
-                      {row.entry_type === 'in' ? 'Cash in' : 'Cash out'}
-                    </span>
-                  </td>
-                  <td>{row.category_name || '-'}</td>
-                  <td>{[row.party_name, row.remark].filter(Boolean).join(' - ') || '-'}</td>
-                  <td className={`cb-entry-amt ${row.entry_type}`}>
-                    {row.entry_type === 'in' ? '+' : '-'}
-                    {formatMoney(row.amount)}
-                  </td>
-                  <td>{formatMoney(row.balance_after)}</td>
-                  <td>
-                    <div className="cb-entry-actions-inline">
-                      <button type="button" className="cb-icon-btn" onClick={() => openModal('edit', row)} title="Edit" aria-label="Edit">
-                        <Pencil size={16} />
-                      </button>
-                      <button type="button" className="cb-icon-btn" onClick={() => onDelete(row)} title="Delete" aria-label="Delete">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {error ? <div className="cb-error">{error}</div> : null}
 
-      {modal ? (
-        <div className="cb-modal-backdrop" onClick={() => !saving && setModal(null)}>
-          <form className="cb-modal" onClick={(e) => e.stopPropagation()} onSubmit={onSave}>
-            <h3>
-              {modal.mode === 'edit'
-                ? 'Edit entry'
-                : modal.entry_type === 'in'
-                  ? 'Cash in'
-                  : 'Cash out'}
-            </h3>
+      {summary ? (
+        <div className="cb-summary">
+          <div className="cb-kpi">
+            <span className="cb-kpi-label">Cash in</span>
+            <div className="cb-kpi-value in">{formatMoney(summary.total_in)}</div>
+          </div>
+          <div className="cb-kpi">
+            <span className="cb-kpi-label">Cash out</span>
+            <div className="cb-kpi-value out">{formatMoney(summary.total_out)}</div>
+          </div>
+          <div className="cb-kpi">
+            <span className="cb-kpi-label">Balance</span>
+            <div className="cb-kpi-value">{formatMoney(summary.closing_balance)}</div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="cb-split">
+        <section className="cb-split-card">
+          <div className="cb-split-card-head">
+            <h3>{editingId ? 'Edit entry' : 'Create'}</h3>
+          </div>
+          <form className="cb-create-form" onSubmit={onSave}>
+            <div className="cb-type-toggle">
+              <button
+                type="button"
+                className={`cb-type-btn${entryType === 'in' ? ' is-active in' : ''}`}
+                onClick={() => setEntryType('in')}
+              >
+                Cash in
+              </button>
+              <button
+                type="button"
+                className={`cb-type-btn${entryType === 'out' ? ' is-active out' : ''}`}
+                onClick={() => setEntryType('out')}
+              >
+                Cash out
+              </button>
+            </div>
             <div className="cb-field">
               <label>Date</label>
               <input
@@ -368,21 +332,77 @@ export default function BookLedgerPage() {
                 onChange={(e) => setForm((f) => ({ ...f, remark: e.target.value }))}
               />
             </div>
-            <div className="cb-modal-actions">
-              <button type="button" className="cb-btn cb-btn-pill cb-btn-sm" disabled={saving} onClick={() => setModal(null)}>
-                Cancel
-              </button>
+            <div className="cb-create-actions">
+              {editingId > 0 ? (
+                <button type="button" className="cb-btn cb-btn-pill cb-btn-sm" disabled={saving} onClick={resetForm}>
+                  Cancel
+                </button>
+              ) : null}
               <button
                 type="submit"
-                className={`cb-btn cb-btn-pill cb-btn-sm ${modal.entry_type === 'in' ? 'cb-btn-in' : 'cb-btn-out'}`}
+                className={`cb-btn cb-btn-pill cb-btn-sm ${entryType === 'in' ? 'cb-btn-in' : 'cb-btn-out'}`}
                 disabled={saving}
               >
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? 'Saving...' : editingId ? 'Update' : 'Save'}
               </button>
             </div>
           </form>
-        </div>
-      ) : null}
+        </section>
+
+        <section className="cb-split-card">
+          <div className="cb-split-card-head">
+            <h3>Record</h3>
+          </div>
+          {entries.length === 0 ? (
+            <div className="cb-empty cb-empty-compact">No entries yet. Create one on the left.</div>
+          ) : (
+            <div className="cb-table-wrap cb-table-wrap-flush">
+              <table className="cb-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Particulars</th>
+                    <th>Amount</th>
+                    <th>Balance</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((row) => (
+                    <tr key={row.id} className={editingId === row.id ? 'is-editing' : ''}>
+                      <td>{formatDate(row.entry_date)}</td>
+                      <td>
+                        <span className={`cb-entry-type ${row.entry_type}`}>
+                          {row.entry_type === 'in' ? 'Cash in' : 'Cash out'}
+                        </span>
+                      </td>
+                      <td>{row.category_name || '-'}</td>
+                      <td>{[row.party_name, row.remark].filter(Boolean).join(' - ') || '-'}</td>
+                      <td className={`cb-entry-amt ${row.entry_type}`}>
+                        {row.entry_type === 'in' ? '+' : '-'}
+                        {formatMoney(row.amount)}
+                      </td>
+                      <td>{formatMoney(row.balance_after)}</td>
+                      <td>
+                        <div className="cb-entry-actions-inline">
+                          <button type="button" className="cb-icon-btn" onClick={() => onEdit(row)} title="Edit" aria-label="Edit">
+                            <Pencil size={16} />
+                          </button>
+                          <button type="button" className="cb-icon-btn" onClick={() => onDelete(row)} title="Delete" aria-label="Delete">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   )
 }

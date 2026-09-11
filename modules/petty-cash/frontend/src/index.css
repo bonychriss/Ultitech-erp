@@ -34,6 +34,10 @@ html[data-theme='dark'] {
   font-family: var(--erp-font-family, 'Segoe UI', system-ui, sans-serif);
 }
 
+.cb-page-wide {
+  max-width: 1180px;
+}
+
 .cb-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -504,6 +508,105 @@ a.cb-text-link:hover {
 
 .cb-table .cb-entry-type {
   display: inline-flex;
+}
+
+.cb-split {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .cb-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cb-split-card {
+  background: var(--cb-surface);
+  border: 1px solid var(--cb-border);
+  border-radius: var(--cb-radius);
+  box-shadow: var(--cb-shadow);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.cb-split-card-head {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--cb-border);
+  background: var(--cb-bg);
+}
+
+.cb-split-card-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.cb-create-form {
+  padding: 1rem;
+}
+
+.cb-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
+}
+
+.cb-type-btn {
+  border: 1px solid var(--cb-border);
+  background: var(--cb-bg);
+  color: var(--cb-muted);
+  border-radius: 999px !important;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cb-type-btn.is-active.in {
+  background: var(--cb-in);
+  border-color: var(--cb-in);
+  color: #fff;
+}
+
+.cb-type-btn.is-active.out {
+  background: var(--cb-out);
+  border-color: var(--cb-out);
+  color: #fff;
+}
+
+.cb-type-btn:hover {
+  background: var(--cb-bg);
+}
+
+.cb-type-btn.is-active.in:hover,
+.cb-type-btn.is-active.out:hover {
+  filter: none;
+}
+
+.cb-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.cb-empty-compact {
+  margin: 1rem;
+  padding: 1.5rem 1rem;
+}
+
+.cb-table-wrap-flush {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cb-table tr.is-editing td {
+  background: var(--cb-accent-soft);
 }
 
 .cb-empty {

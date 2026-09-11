@@ -10,7 +10,7 @@ use InvalidArgumentException;
 use Throwable;
 
 /**
- * Cash Book JSON API  Domains/CashBook.
+ * Cash Book JSON API — Domains/CashBook.
  */
 class CashBookApiController extends Controller
 {
@@ -35,6 +35,7 @@ class CashBookApiController extends Controller
                 'categories' => $this->categories($request, $svc, $id, $method),
                 'reports' => $this->reports($request, $svc),
                 'import' => $this->import($request, $svc, $userId, $method),
+                'delete-requests' => $this->deleteRequests($request, $svc, $erp, $userId, $id, $method),
                 default => response()->json(['ok' => false, 'error' => 'Unknown resource.'], 404),
             };
         } catch (InvalidArgumentException $e) {
@@ -44,6 +45,16 @@ class CashBookApiController extends Controller
 
             return response()->json(['ok' => false, 'error' => 'Server error.'], 500);
         }
+    }
+
+    /** @param array<string,mixed> $erp */
+    private function isAdmin(array $erp): bool
+    {
+        if (array_key_exists('is_admin', $erp)) {
+            return (bool) $erp['is_admin'];
+        }
+
+        return function_exists('isAdmin') && isAdmin();
     }
 
     /** @param array<string,mixed> $erp */
@@ -59,14 +70,22 @@ class CashBookApiController extends Controller
             $totalOut += (float) ($b['total_out'] ?? 0);
         }
 
+        $isAdmin = $this->isAdmin($erp);
+
         return response()->json([
             'ok' => true,
             'engine' => 'erp-laravel Domains/CashBook',
             'user' => [
                 'id' => (int) ($erp['user_id'] ?? 0),
                 'name' => (string) ($erp['full_name'] ?? ''),
+                'is_admin' => $isAdmin,
+            ],
+            'capabilities' => [
+                'approve_delete' => $isAdmin,
+                'request_delete' => true,
             ],
             'books' => $books,
+            'pending_deletes' => $svc->listPendingDeleteRequests(),
             'summary' => [
                 'book_count' => count($books),
                 'total_balance' => round($totalBalance, 2),
@@ -106,13 +125,89 @@ class CashBookApiController extends Controller
             return response()->json(['ok' => true, 'book' => $book, 'message' => 'Cash book updated.']);
         }
 
+        // DELETE no longer hard-deletes — it queues an admin-approval request.
         if ($method === 'DELETE' && $id) {
-            $svc->deleteBook($id);
+            $reason = trim((string) $request->input('reason', ''));
+            $req = $svc->requestDeleteBook($id, $userId, $reason);
 
-            return response()->json(['ok' => true, 'message' => 'Cash book deleted.']);
+            return response()->json([
+                'ok' => true,
+                'delete_request' => $req,
+                'message' => 'Delete requested. Waiting for admin approval.',
+            ]);
         }
 
         return response()->json(['ok' => false, 'error' => 'Unsupported books action.'], 405);
+    }
+
+    /** @param array<string,mixed> $erp */
+    private function deleteRequests(
+        Request $request,
+        CashBookService $svc,
+        array $erp,
+        int $userId,
+        ?int $id,
+        string $method
+    ): JsonResponse {
+        if ($method === 'GET') {
+            return response()->json([
+                'ok' => true,
+                'requests' => $svc->listPendingDeleteRequests(),
+            ]);
+        }
+
+        // Create request via POST { book_id, reason }
+        if ($method === 'POST' && !$id) {
+            $bookId = (int) $request->input('book_id', 0);
+            if ($bookId <= 0) {
+                return response()->json(['ok' => false, 'error' => 'book_id is required.'], 422);
+            }
+            $reason = trim((string) $request->input('reason', ''));
+            $req = $svc->requestDeleteBook($bookId, $userId, $reason);
+
+            return response()->json([
+                'ok' => true,
+                'delete_request' => $req,
+                'message' => 'Delete requested. Waiting for admin approval.',
+            ], 201);
+        }
+
+        if (($method === 'POST' || $method === 'PUT') && $id) {
+            $action = strtolower(trim((string) (
+                $request->input('action')
+                ?? $request->query('action')
+                ?? ''
+            )));
+
+            if ($action === 'approve') {
+                if (!$this->isAdmin($erp)) {
+                    return response()->json(['ok' => false, 'error' => 'Admin approval required.'], 403);
+                }
+                $result = $svc->approveDeleteBook($id, $userId);
+
+                return response()->json([
+                    'ok' => true,
+                    'delete_request' => $result['request'],
+                    'deleted_book_id' => $result['deleted_book_id'],
+                    'message' => 'Cash book and its records deleted.',
+                ]);
+            }
+
+            if ($action === 'reject' || $action === 'cancel') {
+                $asAdmin = $this->isAdmin($erp);
+                $req = $svc->rejectDeleteBook($id, $userId, $asAdmin);
+
+                return response()->json([
+                    'ok' => true,
+                    'delete_request' => $req,
+                    'message' => $action === 'cancel' ? 'Delete request cancelled.' : 'Delete request rejected.',
+                ]);
+            }
+
+            return response()->json(['ok' => false, 'error' => 'action must be approve, reject, or cancel.'], 422);
+        }
+
+        return response()->json(['ok' => false, 'error' => 'Unsupported delete-requests action.'], 405);
     }
 
     private function entries(Request $request, CashBookService $svc, int $userId, ?int $id, string $method): JsonResponse

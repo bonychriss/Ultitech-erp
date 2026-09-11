@@ -47,12 +47,13 @@ $GLOBALS['ERP_CASHBOOK_CONTEXT'] = [
     'cashbook_url' => '',
     'app_root' => rtrim((string) (function_exists('app_url') ? app_url('/') : '/public_html'), '/'),
     'db_name' => $dbName !== '' ? $dbName : (defined('DB_NAME') ? (string) DB_NAME : ''),
+    'is_admin' => function_exists('isAdmin') && isAdmin(),
 ];
 $GLOBALS['ERP_CONTEXT'] = $GLOBALS['ERP_CASHBOOK_CONTEXT'];
 $GLOBALS['ERP_CONTEXT']['module'] = 'petty_cash';
 
 $resource = strtolower(trim((string) ($_GET['resource'] ?? 'init')));
-$allowed = ['init', 'books', 'entries', 'categories', 'reports', 'import'];
+$allowed = ['init', 'books', 'entries', 'categories', 'reports', 'import', 'delete-requests'];
 if (!in_array($resource, $allowed, true)) {
     http_response_code(404);
     echo json_encode(['ok' => false, 'error' => 'Unknown resource.']);

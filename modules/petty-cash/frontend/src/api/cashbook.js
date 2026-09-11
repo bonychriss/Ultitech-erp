@@ -51,7 +51,16 @@ export const fetchInit = () => request('init')
 export const fetchBooks = (status = 'active') => request('books', { query: { status } })
 export const createBook = (body) => request('books', { method: 'POST', body })
 export const updateBook = (id, body) => request('books', { id, method: 'PUT', body })
-export const deleteBook = (id) => request('books', { id, method: 'DELETE', body: {} })
+/** Queues a delete request — does not remove the book until an admin approves. */
+export const requestDeleteBook = (id, reason = '') =>
+  request('books', { id, method: 'DELETE', body: { reason } })
+
+export const approveDeleteRequest = (id) =>
+  request('delete-requests', { id, method: 'POST', body: { action: 'approve' } })
+export const rejectDeleteRequest = (id) =>
+  request('delete-requests', { id, method: 'POST', body: { action: 'reject' } })
+export const cancelDeleteRequest = (id) =>
+  request('delete-requests', { id, method: 'POST', body: { action: 'cancel' } })
 
 export const fetchEntries = (bookId, query = {}) =>
   request('entries', { query: { book_id: bookId, ...query } })

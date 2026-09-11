@@ -53,6 +53,26 @@ final class Schema
                 INDEX idx_cbe_category (category_id),
                 CONSTRAINT fk_cbe_book FOREIGN KEY (book_id) REFERENCES cash_books(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            DB::statement("CREATE TABLE IF NOT EXISTS cash_book_delete_requests (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                book_id INT UNSIGNED NULL,
+                book_name VARCHAR(120) NOT NULL,
+                entry_count INT UNSIGNED NOT NULL DEFAULT 0,
+                opening_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+                balance_snapshot DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+                reason VARCHAR(500) NULL,
+                status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                requested_by INT UNSIGNED NOT NULL,
+                reviewed_by INT UNSIGNED NULL,
+                reviewed_at TIMESTAMP NULL,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_cbdr_status (status),
+                INDEX idx_cbdr_book (book_id),
+                INDEX idx_cbdr_requested_by (requested_by),
+                CONSTRAINT fk_cbdr_book FOREIGN KEY (book_id) REFERENCES cash_books(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         } catch (Throwable $e) {
             error_log('CashBook Schema::ensure: ' . $e->getMessage());
         }

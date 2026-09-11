@@ -116,6 +116,185 @@ final class CashBookService
     }
 
     /**
+     * Request deletion of a cash book (and its entries). Requires admin approval.
+     *
+     * @return array<string,mixed>
+     */
+    public function requestDeleteBook(int $bookId, int $userId, string $reason = ''): array
+    {
+        $book = $this->getBook($bookId);
+        if ($book === null) {
+            throw new InvalidArgumentException('Cash book not found.');
+        }
+        if ($userId <= 0) {
+            throw new InvalidArgumentException('Not authenticated.');
+        }
+
+        $existing = DB::table('cash_book_delete_requests')
+            ->where('book_id', $bookId)
+            ->where('status', 'pending')
+            ->first();
+        if ($existing) {
+            throw new InvalidArgumentException('A delete request for this cash book is already pending admin approval.');
+        }
+
+        $reason = trim($reason);
+        $id = (int) DB::table('cash_book_delete_requests')->insertGetId([
+            'book_id' => $bookId,
+            'book_name' => (string) $book['name'],
+            'entry_count' => (int) ($book['entry_count'] ?? 0),
+            'opening_balance' => (float) ($book['opening_balance'] ?? 0),
+            'balance_snapshot' => (float) ($book['balance'] ?? 0),
+            'reason' => $reason !== '' ? mb_substr($reason, 0, 500) : null,
+            'status' => 'pending',
+            'requested_by' => $userId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $this->formatDeleteRequest(
+            (array) DB::table('cash_book_delete_requests')->where('id', $id)->first()
+        );
+    }
+
+    /**
+     * Admin: approve pending delete ù removes the book and all its entries.
+     *
+     * @return array{request:array<string,mixed>,deleted_book_id:int}
+     */
+    public function approveDeleteBook(int $requestId, int $adminUserId): array
+    {
+        if ($adminUserId <= 0) {
+            throw new InvalidArgumentException('Not authenticated.');
+        }
+
+        $req = DB::table('cash_book_delete_requests')->where('id', $requestId)->first();
+        if (!$req) {
+            throw new InvalidArgumentException('Delete request not found.');
+        }
+        if ((string) ($req->status ?? '') !== 'pending') {
+            throw new InvalidArgumentException('This delete request is no longer pending.');
+        }
+
+        $bookId = isset($req->book_id) && $req->book_id !== null ? (int) $req->book_id : 0;
+        if ($bookId <= 0) {
+            throw new InvalidArgumentException('The cash book for this request no longer exists.');
+        }
+
+        DB::transaction(function () use ($requestId, $adminUserId, $bookId) {
+            DB::table('cash_book_delete_requests')->where('id', $requestId)->update([
+                'status' => 'approved',
+                'reviewed_by' => $adminUserId,
+                'reviewed_at' => now(),
+                'updated_at' => now(),
+            ]);
+            // Entries cascade via FK.
+            $deleted = DB::table('cash_books')->where('id', $bookId)->delete();
+            if ($deleted < 1) {
+                throw new InvalidArgumentException('Cash book not found.');
+            }
+        });
+
+        $fresh = DB::table('cash_book_delete_requests')->where('id', $requestId)->first();
+
+        return [
+            'request' => $this->formatDeleteRequest($fresh ? (array) $fresh : [
+                'id' => $requestId,
+                'status' => 'approved',
+                'book_id' => null,
+                'book_name' => (string) ($req->book_name ?? ''),
+            ]),
+            'deleted_book_id' => $bookId,
+        ];
+    }
+
+    /**
+     * Admin (or requester): reject / cancel a pending delete request.
+     *
+     * @return array<string,mixed>
+     */
+    public function rejectDeleteBook(int $requestId, int $userId, bool $asAdmin): array
+    {
+        if ($userId <= 0) {
+            throw new InvalidArgumentException('Not authenticated.');
+        }
+
+        $req = DB::table('cash_book_delete_requests')->where('id', $requestId)->first();
+        if (!$req) {
+            throw new InvalidArgumentException('Delete request not found.');
+        }
+        if ((string) ($req->status ?? '') !== 'pending') {
+            throw new InvalidArgumentException('This delete request is no longer pending.');
+        }
+
+        $requestedBy = (int) ($req->requested_by ?? 0);
+        if (!$asAdmin && $requestedBy !== $userId) {
+            throw new InvalidArgumentException('Only an admin or the requester can cancel this delete request.');
+        }
+
+        DB::table('cash_book_delete_requests')->where('id', $requestId)->update([
+            'status' => 'rejected',
+            'reviewed_by' => $userId,
+            'reviewed_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $fresh = DB::table('cash_book_delete_requests')->where('id', $requestId)->first();
+
+        return $this->formatDeleteRequest($fresh ? (array) $fresh : ['id' => $requestId, 'status' => 'rejected']);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function listPendingDeleteRequests(): array
+    {
+        $rows = DB::table('cash_book_delete_requests')
+            ->where('status', 'pending')
+            ->orderByDesc('id')
+            ->get();
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = $this->formatDeleteRequest((array) $row);
+        }
+
+        return $out;
+    }
+
+    /** @return array<string,mixed>|null */
+    public function pendingDeleteForBook(int $bookId): ?array
+    {
+        $row = DB::table('cash_book_delete_requests')
+            ->where('book_id', $bookId)
+            ->where('status', 'pending')
+            ->orderByDesc('id')
+            ->first();
+
+        return $row ? $this->formatDeleteRequest((array) $row) : null;
+    }
+
+    /**
+     * @param array<string,mixed> $row
+     * @return array<string,mixed>
+     */
+    private function formatDeleteRequest(array $row): array
+    {
+        return [
+            'id' => (int) ($row['id'] ?? 0),
+            'book_id' => isset($row['book_id']) && $row['book_id'] !== null ? (int) $row['book_id'] : null,
+            'book_name' => (string) ($row['book_name'] ?? ''),
+            'entry_count' => (int) ($row['entry_count'] ?? 0),
+            'opening_balance' => round((float) ($row['opening_balance'] ?? 0), 2),
+            'balance_snapshot' => round((float) ($row['balance_snapshot'] ?? 0), 2),
+            'reason' => (string) ($row['reason'] ?? ''),
+            'status' => (string) ($row['status'] ?? 'pending'),
+            'requested_by' => (int) ($row['requested_by'] ?? 0),
+            'reviewed_by' => isset($row['reviewed_by']) && $row['reviewed_by'] !== null ? (int) $row['reviewed_by'] : null,
+            'reviewed_at' => (string) ($row['reviewed_at'] ?? ''),
+            'created_at' => (string) ($row['created_at'] ?? ''),
+            'updated_at' => (string) ($row['updated_at'] ?? ''),
+        ];
+    }
+
+    /**
      * @return array{entries:list<array<string,mixed>>,summary:array<string,mixed>,book:array<string,mixed>}
      */
     public function listEntries(int $bookId, ?string $dateFrom = null, ?string $dateTo = null, ?string $type = null): array
@@ -802,6 +981,14 @@ final class CashBookService
         $totalIn = round((float) ($agg->total_in ?? 0), 2);
         $totalOut = round((float) ($agg->total_out ?? 0), 2);
 
+        $balance = round($opening + $totalIn - $totalOut, 2);
+        $pendingDelete = null;
+        try {
+            $pendingDelete = $this->pendingDeleteForBook($id);
+        } catch (Throwable $e) {
+            $pendingDelete = null;
+        }
+
         return [
             'id' => $id,
             'name' => (string) ($row['name'] ?? ''),
@@ -811,8 +998,9 @@ final class CashBookService
             'created_by' => isset($row['created_by']) && $row['created_by'] !== null ? (int) $row['created_by'] : null,
             'total_in' => $totalIn,
             'total_out' => $totalOut,
-            'balance' => round($opening + $totalIn - $totalOut, 2),
+            'balance' => $balance,
             'entry_count' => (int) ($agg->entry_count ?? 0),
+            'delete_request' => $pendingDelete,
             'created_at' => (string) ($row['created_at'] ?? ''),
             'updated_at' => (string) ($row['updated_at'] ?? ''),
         ];

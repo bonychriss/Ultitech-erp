@@ -35,7 +35,16 @@ $fullPath = resolveStoredMediaFilePath($file, $companyId);
 
 if ($fullPath === '') {
     http_response_code(404);
-    echo 'File not found via PHP proxy: ' . htmlspecialchars(mediaPathProjectRoot() . '/' . $file, ENT_QUOTES, 'UTF-8');
+    header('Content-Type: text/html; charset=utf-8');
+    $safeName = htmlspecialchars(basename($file), ENT_QUOTES, 'UTF-8');
+    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+        . '<title>Attachment missing</title>'
+        . '<style>body{font-family:Segoe UI,sans-serif;background:#f8fafc;color:#0f172a;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem}'
+        . '.box{max-width:28rem;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.25rem 1.4rem;box-shadow:0 8px 24px rgba(15,23,42,.06)}'
+        . 'h1{font-size:1.15rem;margin:0 0 .5rem}p{margin:0;color:#64748b;line-height:1.5}.name{margin-top:.75rem;font-weight:600;color:#0f172a;word-break:break-all}</style>'
+        . '</head><body><div class="box"><h1>Attachment file not found</h1>'
+        . '<p>This voucher still has an attachment record, but the file is not present on this server. Re-upload it, or sync uploads from the live environment.</p>'
+        . '<div class="name">' . $safeName . '</div></div></body></html>';
     exit;
 }
 

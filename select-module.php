@@ -426,6 +426,11 @@ $selectModuleConfig = [
     <script>
         window.__SELECT_MODULE_CFG__ = <?= json_encode($selectModuleConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     </script>
+    <?php if (function_exists('erp_get_nav_back_script_html')) {
+        echo erp_get_nav_back_script_html();
+    } elseif (is_file(__DIR__ . '/includes/nav-back-script.php')) {
+        require __DIR__ . '/includes/nav-back-script.php';
+    } ?>
 </head>
 <body>
     <noscript><div style="padding:2rem;font-family:sans-serif;">JavaScript is required to select a module.</div></noscript>

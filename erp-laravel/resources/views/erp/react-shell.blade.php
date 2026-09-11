@@ -13,6 +13,16 @@
     @if (!empty($headMarkup))
         {!! $headMarkup !!}
     @endif
+    @php
+        if (function_exists('erp_get_nav_back_script_html')) {
+            echo erp_get_nav_back_script_html();
+        } else {
+            $navBackPartial = rtrim((string) config('erp.app_root'), '\\/') . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'nav-back-script.php';
+            if (is_file($navBackPartial)) {
+                include $navBackPartial;
+            }
+        }
+    @endphp
 </head>
 @php
     $bodyClass = trim((string) ($bodyClass ?? 'page-exp-desk exp-dashboard-page'));

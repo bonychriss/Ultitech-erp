@@ -259,6 +259,13 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     }
 
     // Format attachments for frontend
+    if (!function_exists('resolveStoredMediaFilePath')) {
+        $resolver = dirname(__DIR__) . '/includes/media_path_resolver.php';
+        if (is_file($resolver)) {
+            require_once $resolver;
+        }
+    }
+    $attachmentCompanyId = (int) ($_SESSION['company_id'] ?? ($voucher['company_id'] ?? 0));
     $attachmentRows = [];
     foreach ($attachments as $att) {
         $rel = ltrim((string) ($att['file_path'] ?? ''), '/');
@@ -266,21 +273,34 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         $mime = strtolower((string) ($att['mime_type'] ?? ''));
         $isImg = strpos($mime, 'image/') === 0 || preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $rel);
         $ext = strtoupper(pathinfo($name, PATHINFO_EXTENSION) ?: ($isImg ? 'IMG' : 'FILE'));
-        $diskPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+        $diskPath = '';
+        if (function_exists('resolveStoredMediaFilePath')) {
+            $diskPath = resolveStoredMediaFilePath($rel, $attachmentCompanyId);
+        }
+        if ($diskPath === '') {
+            $fallbackDisk = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+            if (is_file($fallbackDisk)) {
+                $diskPath = $fallbackDisk;
+            }
+        }
+        $missing = ($diskPath === '' || !is_file($diskPath));
         $fileSizeLabel = '';
-        if (is_file($diskPath)) {
+        if (!$missing) {
             $bytes = (int) filesize($diskPath);
             if ($bytes > 0) {
                 $fileSizeLabel = $bytes < 1024 ? ($bytes . ' B') : ($bytes < 1048576 ? ((int) round($bytes / 1024) . ' KB') : (number_format($bytes / 1048576, 1) . ' MB'));
             }
+        } else {
+            $fileSizeLabel = 'File missing on this server';
         }
         $attachmentRows[] = [
             'id' => (int) ($att['id'] ?? 0),
             'name' => $name,
-            'proxyLink' => app_url('/proxy_pdf.php') . '?file=' . urlencode($rel),
+            'proxyLink' => $missing ? null : (app_url('/proxy_pdf.php') . '?file=' . urlencode($rel)),
             'isImage' => $isImg,
             'typeLabel' => $isImg ? 'Image' : ($ext === 'PDF' ? 'PDF' : $ext),
             'fileSizeLabel' => $fileSizeLabel,
+            'missing' => $missing,
         ];
     }
 

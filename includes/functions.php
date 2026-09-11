@@ -313,14 +313,34 @@ if (!defined('APP_BASE_PATH')) {
 }
 
 // Build a full URL path using APP_BASE_PATH.
-// Example: app_url('/employee/dashboard.php') â†’ '/payment-voucher-system/employee/dashboard.php' (local) or '/employee/dashboard.php' (prod)
+// Example: app_url('/employee/dashboard.php') → '/payment-voucher-system/employee/dashboard.php' (local) or '/employee/dashboard.php' (prod)
 if (!function_exists('app_url')) {
     function app_url($path = '/')
     {
-        $base = '/' . trim((string)APP_BASE_PATH, '/');
-        if ($base === '/') $base = '';
-        $p = '/' . ltrim((string)$path, '/');
-        return $base . $p;
+        $base = '/' . trim((string) APP_BASE_PATH, '/');
+        if ($base === '/') {
+            $base = '';
+        }
+
+        $raw = str_replace('\\', '/', (string) $path);
+        $suffix = '';
+        if (preg_match('/([?#].*)$/', $raw, $m)) {
+            $suffix = $m[1];
+            $raw = substr($raw, 0, -strlen($suffix));
+        }
+
+        $p = '/' . ltrim($raw, '/');
+        if ($p === '/') {
+            return ($base !== '' ? $base : '/') . $suffix;
+        }
+
+        // Never double-prefix when callers pass a path that already includes APP_BASE_PATH
+        // (e.g. REQUEST_URI used as ?next= → /ultitech_erp/ultimate/...).
+        if ($base !== '' && ($p === $base || str_starts_with($p, $base . '/'))) {
+            return $p . $suffix;
+        }
+
+        return $base . $p . $suffix;
     }
 }
 
@@ -5143,12 +5163,13 @@ function resolvePostLoginRedirectUrl(string $companySlug = '', string $next = ''
 {
     $next = trim($next);
     if ($next !== '') {
-        if (preg_match('#^https?://#i', $next) || strpos($next, '//') === 0) {
+        if (preg_match('#^https?://#i', $next) || str_starts_with($next, '//')) {
             $next = '';
         } else {
-            $next = ltrim(str_replace('\\', '/', $next), '/');
-            if ($next !== '' && strpos($next, '..') === false) {
-                return app_url('/' . $next);
+            $next = str_replace('\\', '/', $next);
+            if ($next !== '' && !str_contains($next, '..')) {
+                // app_url() strips an existing APP_BASE_PATH prefix so REQUEST_URI next= is safe.
+                return app_url($next);
             }
         }
     }
@@ -8124,6 +8145,58 @@ function erp_should_inject_theme_assets(): bool
 /**
  * Inject font + dark theme on every HTML page (head assets + final body override).
  */
+function erp_get_nav_back_script_html(): string
+{
+    if (defined('ERP_SKIP_NAV_BACK') && ERP_SKIP_NAV_BACK) {
+        return '';
+    }
+    if (defined('ERP_SKIP_SYSTEM_FONT_OB') && ERP_SKIP_SYSTEM_FONT_OB) {
+        // Login / register / expired pages opt out of global chrome.
+        return '';
+    }
+    static $html = null;
+    if ($html !== null) {
+        return $html;
+    }
+    $fs = dirname(__DIR__) . '/assets/js/nav-back.js';
+    if (!is_file($fs)) {
+        $html = '';
+
+        return $html;
+    }
+    $src = function_exists('app_url') ? app_url('/assets/js/nav-back.js') : '/assets/js/nav-back.js';
+    $ver = (string) filemtime($fs);
+    $fallback = '';
+    if (function_exists('company_url')) {
+        try {
+            $fallback = company_url('select-module');
+        } catch (Throwable $e) {
+            $fallback = '';
+        }
+    }
+    if ($fallback === '' && function_exists('app_url')) {
+        $fallback = app_url('/select-module.php');
+    }
+    if ($fallback === '') {
+        $fallback = '/select-module.php';
+    }
+    $appBase = '';
+    if (defined('APP_BASE_PATH')) {
+        $appBase = '/' . trim((string) APP_BASE_PATH, '/');
+        if ($appBase === '/') {
+            $appBase = '';
+        }
+    }
+    $cfg = json_encode([
+        'fallbackUrl' => $fallback,
+        'appBasePath' => $appBase,
+    ], JSON_UNESCAPED_SLASHES);
+    $html = '<script>window.__ERP_NAV_BACK_CFG__=' . ($cfg !== false ? $cfg : '{}') . ';</script>'
+        . '<script src="' . htmlspecialchars($src . '?v=' . $ver, ENT_QUOTES, 'UTF-8') . '"></script>';
+
+    return $html;
+}
+
 function erp_inject_system_font_into_html_buffer(string $buffer): string
 {
     if ($buffer === '' || (stripos($buffer, '<html') === false && stripos($buffer, '<!DOCTYPE') === false)) {
@@ -8153,6 +8226,10 @@ function erp_inject_system_font_into_html_buffer(string $buffer): string
         if (stripos($buffer, 'id="erp-dark-theme"') === false) {
             $headMarkup .= erp_get_dark_theme_head_html();
         }
+        // System-wide one-step-back (skip if page already included it).
+        if (stripos($buffer, 'nav-back.js') === false && stripos($buffer, 'erpNavBack') === false) {
+            $headMarkup .= erp_get_nav_back_script_html();
+        }
         if ($headMarkup !== '') {
             $replaced = preg_replace('/<\/head>/i', $headMarkup . '</head>', $buffer, 1);
             if (is_string($replaced)) {
@@ -8168,6 +8245,10 @@ function erp_inject_system_font_into_html_buffer(string $buffer): string
         }
         if (stripos($buffer, 'erp-dark-theme-final') === false) {
             $bodyMarkup .= erp_get_dark_theme_body_override_html();
+        }
+        // Late safety net for pages that build head without going through a second inject.
+        if (stripos($buffer, 'nav-back.js') === false && stripos($buffer, '__ERP_NAV_BACK_CFG__') === false) {
+            $bodyMarkup .= erp_get_nav_back_script_html();
         }
         if ($bodyMarkup !== '') {
             $replaced = preg_replace('/<\/body>/i', $bodyMarkup . '</body>', $buffer, 1);

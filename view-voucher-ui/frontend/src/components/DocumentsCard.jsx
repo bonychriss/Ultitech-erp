@@ -1,4 +1,11 @@
-function DocCardFoot({ onView, viewHref, downloadHref }) {
+function DocCardFoot({ onView, viewHref, downloadHref, missing }) {
+  if (missing) {
+    return (
+      <div className="vv-doc-card-foot vv-doc-card-foot--missing">
+        <span className="vv-doc-missing-label">Unavailable</span>
+      </div>
+    )
+  }
   return (
     <div className="vv-doc-card-foot">
       {viewHref ? (
@@ -18,10 +25,10 @@ function DocCardFoot({ onView, viewHref, downloadHref }) {
   )
 }
 
-function DocCard({ iconClass, name, sub, onView, viewHref, downloadHref, onDelete, canDelete }) {
+function DocCard({ iconClass, name, sub, onView, viewHref, downloadHref, onDelete, canDelete, missing }) {
   const isImage = iconClass.includes('fa-file-image')
   return (
-    <article className="vv-doc-card">
+    <article className={`vv-doc-card${missing ? ' vv-doc-card--missing' : ''}`}>
       {canDelete && onDelete ? (
         <button
           type="button"
@@ -34,15 +41,15 @@ function DocCard({ iconClass, name, sub, onView, viewHref, downloadHref, onDelet
         </button>
       ) : null}
       <div className="vv-doc-card-body">
-        <div className={`vv-doc-icon${isImage ? ' vv-doc-icon--image' : ''}`}>
-          <i className={`fas ${iconClass}`} aria-hidden="true" />
+        <div className={`vv-doc-icon${isImage ? ' vv-doc-icon--image' : ''}${missing ? ' vv-doc-icon--missing' : ''}`}>
+          <i className={`fas ${missing ? 'fa-exclamation-triangle' : iconClass}`} aria-hidden="true" />
         </div>
         <div className="vv-doc-meta">
           <div className="vv-doc-name" title={name}>{name}</div>
           {sub ? <div className="vv-doc-sub">{sub}</div> : null}
         </div>
       </div>
-      <DocCardFoot onView={onView} viewHref={viewHref} downloadHref={downloadHref} />
+      <DocCardFoot onView={onView} viewHref={viewHref} downloadHref={downloadHref} missing={missing} />
     </article>
   )
 }
@@ -80,8 +87,9 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
               iconClass={att.isImage ? 'fa-file-image' : 'fa-file-pdf'}
               name={att.name}
               sub={att.fileSizeLabel || att.typeLabel}
-              onView={() => onPreview(att.proxyLink, 'supporting', att.isImage)}
-              downloadHref={att.proxyLink}
+              missing={!!att.missing}
+              onView={att.missing ? undefined : () => onPreview(att.proxyLink, 'supporting', att.isImage)}
+              downloadHref={att.missing ? undefined : att.proxyLink}
               canDelete={permissions.canDeleteAttachment}
               onDelete={() => onDeleteAttachment(att.id)}
             />

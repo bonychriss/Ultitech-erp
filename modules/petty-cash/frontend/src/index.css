@@ -484,6 +484,24 @@ a.cb-text-link:hover {
   justify-content: flex-start;
 }
 
+.cb-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0.2rem;
+  color: var(--cb-muted);
+  cursor: pointer;
+}
+
+.cb-icon-btn:hover {
+  color: var(--cb-text);
+  background: transparent !important;
+}
+
 .cb-table .cb-entry-type {
   display: inline-flex;
 }

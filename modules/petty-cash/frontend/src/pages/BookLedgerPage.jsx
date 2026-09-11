@@ -288,11 +288,11 @@ export default function BookLedgerPage() {
                   <td>{formatMoney(row.balance_after)}</td>
                   <td>
                     <div className="cb-entry-actions-inline">
-                      <button type="button" className="cb-btn cb-btn-sm" onClick={() => openModal('edit', row)}>
-                        <Pencil size={14} /> Edit
+                      <button type="button" className="cb-icon-btn" onClick={() => openModal('edit', row)} title="Edit" aria-label="Edit">
+                        <Pencil size={16} />
                       </button>
-                      <button type="button" className="cb-btn cb-btn-sm" onClick={() => onDelete(row)}>
-                        <Trash2 size={14} /> Delete
+                      <button type="button" className="cb-icon-btn" onClick={() => onDelete(row)} title="Delete" aria-label="Delete">
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>

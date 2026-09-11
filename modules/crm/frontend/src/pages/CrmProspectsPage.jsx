@@ -187,7 +187,7 @@ export default function CrmProspectsPage() {
         </form>
         <div className="crm-desk-page-header-actions">
           <a
-            className="crm-desk-btn crm-desk-btn-secondary"
+            className="crm-desk-btn crm-desk-btn-secondary erp-nav-back-ignore"
             href={customersUrl}
             onClick={(e) => {
               e.preventDefault();

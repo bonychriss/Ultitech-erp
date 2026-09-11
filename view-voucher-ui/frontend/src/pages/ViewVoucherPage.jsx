@@ -121,6 +121,7 @@ export default function ViewVoucherPage() {
       <div className="vv-react-error">
         <h2>{error || 'Voucher unavailable'}</h2>
         <a
+          className="erp-nav-back-ignore"
           href={data?.actions?.backUrl || 'employee/dashboard.php'}
           onClick={(e) => {
             const fallback = data?.actions?.backUrl || 'employee/dashboard.php'

@@ -15,10 +15,13 @@ import {
 import {
   buildPayslipUrl,
   deskPageUrl,
+  fetchEmailJobStatus,
   fetchRun,
   formatAmount,
   resolveRunId,
   runAction,
+  startEmailJob,
+  waitForEmailJob,
 } from '../api/payrollDesk';
 import EmployeeAvatar from '../components/EmployeeAvatar.jsx';
 import EditPayslipModal from '../components/EditPayslipModal.jsx';
@@ -37,6 +40,7 @@ export default function ViewRunPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [sendingLabel, setSendingLabel] = useState('Sending emails…');
   const [confirm, setConfirm] = useState(null);
   const [selectedRecipientIds, setSelectedRecipientIds] = useState([]);
   const [search, setSearch] = useState('');
@@ -177,6 +181,13 @@ export default function ViewRunPage() {
   async function performAction(action, payslipId = 0, payslipIds = null) {
     setBusy(true);
     setError('');
+    if (action === 'email_selected') {
+      setSendingLabel(
+        Array.isArray(payslipIds) && payslipIds.length > 1
+          ? `Sending ${payslipIds.length} payslip emails…`
+          : 'Sending payslip email…',
+      );
+    }
     try {
       const payload = { id: runId, action, payslipId };
       if (Array.isArray(payslipIds)) {
@@ -184,6 +195,40 @@ export default function ViewRunPage() {
       }
       const res = await runAction(payload);
       const next = res.data || {};
+
+      const jobId = String(next.emailJobId || res.emailJobId || '').trim();
+      if (action === 'email_selected' && jobId) {
+        // Server already spawned the worker; this is a same-browser backup.
+        // Start polling immediately so labels update even if startEmailJob is slow.
+        const pollPromise = waitForEmailJob(jobId, {
+          onProgress: (status) => {
+            if (status?.message) {
+              setSendingLabel(String(status.message));
+            }
+          },
+        });
+        try {
+          await startEmailJob(jobId);
+        } catch (startErr) {
+          // Ignore if server-side spawn already claimed the job / is running.
+          const status = await fetchEmailJobStatus(jobId).catch(() => null);
+          if (!status || String(status.status) === 'queued') {
+            throw startErr;
+          }
+        }
+        const job = await pollPromise;
+        if (String(job.status) === 'failed') {
+          throw new Error(job.error || job.message || 'Email send failed.');
+        }
+        if (next.data) {
+          setInit(next.data);
+        } else {
+          await loadData();
+        }
+        setNotice(job.message || 'Payslip email sent.');
+        return;
+      }
+
       if (next.deleted && next.redirect) {
         window.location.href = next.redirect;
         return;
@@ -198,6 +243,7 @@ export default function ViewRunPage() {
       setError(err instanceof Error ? err.message : 'Action failed.');
     } finally {
       setBusy(false);
+      setSendingLabel('Sending emails…');
       setConfirm(null);
       setSelectedRecipientIds([]);
     }
@@ -567,7 +613,7 @@ export default function ViewRunPage() {
                     style={{ width: '180px', height: '180px' }}
                   />
                 </div>
-                <p className="pay-desk-sending-title">Sending emails…</p>
+                <p className="pay-desk-sending-title">{sendingLabel}</p>
                 <p className="pay-desk-sending-sub">
                   Please wait while payslips are delivered
                   {confirm.selectable ? ` (${selectedRecipientIds.length})` : ''}.

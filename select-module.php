@@ -129,10 +129,13 @@ $push([
     'id' => 'email',
     'label' => 'Mail',
     'desc' => 'Manage Communications',
-    'href' => $companyRoute('modules/email/index') . '?module=email',
+    'href' => (strtolower(trim($currentCompanySlug)) === 'ultimate')
+        ? 'https://ultimate.co.tz/staff/mail/frontend/web/'
+        : ($companyRoute('modules/email/index') . '?module=email'),
     'icon' => 'email',
     'color' => '#2563eb',
     'badge' => $emailModuleUpdateBadge ? (string) ($emailModuleUpdateBadge['label'] ?? 'New') : null,
+    'external' => strtolower(trim($currentCompanySlug)) === 'ultimate',
 ]);
 $push([
     'id' => 'petty_cash',

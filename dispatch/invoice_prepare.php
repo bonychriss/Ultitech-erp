@@ -76,7 +76,7 @@ $footer = [
     'ac_name' => 'ULTIMATE GENERAL TRADING COMPANY',
     'bank_name' => 'UNITED BANK FOR AFRICA (UBA)',
     'phones' => '+255 758 767 749 | +255 656 336 024',
-    'address_line' => 'House No 14, Atisoko Street, Mikocheni B, Dar es Salaam',
+    'address_line' => 'House No 03, Manyara Street, Mikocheni B, Dar es Salaam',
     'website' => 'www.ultimate.co.tz',
 ];
 try {

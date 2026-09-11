@@ -121,6 +121,74 @@ export async function runAction(payload) {
   return data;
 }
 
+export async function fetchEmailJobStatus(jobId) {
+  const res = await fetch(
+    `${getApiBase()}/email-job-status.php?id=${encodeURIComponent(String(jobId))}`,
+    {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    },
+  );
+  const data = await parseJson(res);
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+/**
+ * Start background payslip email processing.
+ * The endpoint acknowledges quickly (status=running); SMTP continues after that.
+ */
+export async function startEmailJob(jobId) {
+  const res = await fetch(`${getApiBase()}/email-job-process.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ id: String(jobId) }),
+  });
+  const data = await parseJson(res).catch(() => ({}));
+  if (!res.ok || data.error || data.success === false) {
+    throw new Error(data.error || data.message || `Email worker failed (${res.status})`);
+  }
+  return data;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+/**
+ * Poll background payslip email job until done/failed (keeps UI busy for animation).
+ */
+export async function waitForEmailJob(jobId, { intervalMs = 700, timeoutMs = 10 * 60 * 1000, onProgress } = {}) {
+  const started = Date.now();
+  let last = null;
+  let stalledQueuedMs = 0;
+  while (Date.now() - started < timeoutMs) {
+    last = await fetchEmailJobStatus(jobId);
+    if (typeof onProgress === 'function') {
+      onProgress(last);
+    }
+    const status = String(last.status || '');
+    if (status === 'done' || status === 'failed') {
+      return last;
+    }
+    if (status === 'queued') {
+      stalledQueuedMs += intervalMs;
+      if (stalledQueuedMs >= 45000) {
+        throw new Error('Email worker did not start. Please try again.');
+      }
+    } else {
+      stalledQueuedMs = 0;
+    }
+    await sleep(intervalMs);
+  }
+  throw new Error(last?.message || 'Email send is taking too long. Check your inbox and try again if needed.');
+}
+
 export function buildPayslipUrl(payslipId, links = {}, extra = {}) {
   const base = links.payslipBase || deskPageUrl('payslip.php');
   try {

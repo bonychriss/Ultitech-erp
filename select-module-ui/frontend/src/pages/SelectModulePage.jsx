@@ -739,9 +739,10 @@ export default function SelectModulePage() {
   }, [rateDone])
 
   const mailHref = useMemo(() => {
-    if (mailUpdate?.mailHref) return mailUpdate.mailHref
     const mailMod = modules.find((m) => m.id === 'email')
-    return mailMod?.href || '#'
+    if (mailMod?.href) return mailMod.href
+    if (mailUpdate?.mailHref) return mailUpdate.mailHref
+    return '#'
   }, [mailUpdate, modules])
 
   const dismissGuide = () => {
@@ -752,6 +753,10 @@ export default function SelectModulePage() {
   const reviewMail = () => {
     writeFlag('guideline', version, userId)
     setShowGuide(false)
+    if (/^https?:\/\//i.test(mailHref)) {
+      window.open(mailHref, '_blank', 'noopener,noreferrer')
+      return
+    }
     window.location.href = mailHref
   }
 
@@ -824,6 +829,9 @@ export default function SelectModulePage() {
               href={mod.href}
               className="sm-card"
               style={{ '--module-glow-color': mod.color || '#111' }}
+              {...(mod.external || /^https?:\/\//i.test(String(mod.href || ''))
+                ? { target: '_blank', rel: 'noopener noreferrer' }
+                : {})}
               onClick={() => {
                 if (mod.id === 'email' && mailUpdate?.active) {
                   writeFlag('guideline', version, userId)

@@ -1050,13 +1050,322 @@ function payrollDeskBuildPayslipPdfAttachment(PDO $pdo, array $slip, array $run)
 }
 
 /**
+ * Directory for ephemeral payslip email job status files.
+ */
+function payrollDeskEmailJobDir(): string
+{
+    $dir = dirname(__DIR__, 3) . '/storage/payroll_email_jobs';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+    return $dir;
+}
+
+/**
+ * Make job payload JSON-safe (SMTP errors often contain invalid UTF-8 bytes).
+ *
+ * @param mixed $value
+ * @return mixed
+ */
+function payrollDeskJsonSafeValue(mixed $value): mixed
+{
+    if (is_string($value)) {
+        if ($value === '') {
+            return '';
+        }
+        if (function_exists('mb_check_encoding') && mb_check_encoding($value, 'UTF-8')) {
+            return $value;
+        }
+        if (function_exists('mb_convert_encoding')) {
+            $converted = @mb_convert_encoding($value, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+            if (is_string($converted) && $converted !== '') {
+                return $converted;
+            }
+        }
+        if (function_exists('iconv')) {
+            $converted = @iconv('UTF-8', 'UTF-8//IGNORE', $value);
+            if (is_string($converted)) {
+                return $converted;
+            }
+        }
+        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value) ?? '';
+    }
+    if (is_array($value)) {
+        $out = [];
+        foreach ($value as $key => $item) {
+            $safeKey = is_string($key) ? (string) payrollDeskJsonSafeValue($key) : $key;
+            $out[$safeKey] = payrollDeskJsonSafeValue($item);
+        }
+        return $out;
+    }
+    if (is_float($value) && (is_nan($value) || is_infinite($value))) {
+        return 0;
+    }
+    return $value;
+}
+
+/**
+ * @param array<string,mixed> $job
+ */
+function payrollDeskWriteEmailJob(string $jobId, array $job): void
+{
+    $jobId = preg_replace('/[^a-zA-Z0-9_-]/', '', $jobId) ?? '';
+    if ($jobId === '') {
+        return;
+    }
+    $dir = payrollDeskEmailJobDir();
+    $path = $dir . '/' . $jobId . '.json';
+    $job['updatedAt'] = date('c');
+    $safeJob = payrollDeskJsonSafeValue($job);
+    if (!is_array($safeJob)) {
+        $safeJob = ['id' => $jobId, 'status' => 'failed', 'message' => 'Invalid job payload.', 'error' => 'Invalid job payload.'];
+    }
+
+    $flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+    if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+        $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+    }
+    if (defined('JSON_PARTIAL_OUTPUT_ON_ERROR')) {
+        $flags |= JSON_PARTIAL_OUTPUT_ON_ERROR;
+    }
+
+    $json = json_encode($safeJob, $flags);
+    if ($json === false) {
+        // Last-resort minimal status so the UI is not stuck on a hard encode failure.
+        $json = json_encode([
+            'id' => $jobId,
+            'status' => (string) ($safeJob['status'] ?? 'failed'),
+            'total' => (int) ($safeJob['total'] ?? 0),
+            'processed' => (int) ($safeJob['processed'] ?? 0),
+            'sent' => (int) ($safeJob['sent'] ?? 0),
+            'failed' => (int) ($safeJob['failed'] ?? 0),
+            'skipped' => (int) ($safeJob['skipped'] ?? 0),
+            'message' => 'Email job status update failed.',
+            'error' => json_last_error_msg(),
+            'updatedAt' => date('c'),
+        ], JSON_UNESCAPED_SLASHES);
+    }
+    if ($json === false) {
+        throw new RuntimeException('Could not encode email job status: ' . json_last_error_msg());
+    }
+    $ok = @file_put_contents($path, $json, LOCK_EX);
+    if ($ok === false) {
+        throw new RuntimeException('Could not write email job status under storage/payroll_email_jobs.');
+    }
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function payrollDeskReadEmailJob(string $jobId): ?array
+{
+    $jobId = preg_replace('/[^a-zA-Z0-9_-]/', '', $jobId) ?? '';
+    if ($jobId === '') {
+        return null;
+    }
+    $path = payrollDeskEmailJobDir() . '/' . $jobId . '.json';
+    if (!is_file($path)) {
+        return null;
+    }
+    $raw = @file_get_contents($path);
+    if ($raw === false || $raw === '') {
+        return null;
+    }
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : null;
+}
+
+/**
+ * @param list<int> $payslipIds
+ */
+function payrollDeskCreateEmailJob(int $runId, array $payslipIds): string
+{
+    $jobId = 'pej_' . bin2hex(random_bytes(8));
+    $ids = array_values(array_unique(array_filter(
+        array_map('intval', $payslipIds),
+        static fn (int $id): bool => $id > 0
+    )));
+    $total = count($ids);
+    payrollDeskWriteEmailJob($jobId, [
+        'id' => $jobId,
+        'runId' => $runId,
+        'payslipIds' => $ids,
+        'status' => 'queued',
+        'total' => $total,
+        'processed' => 0,
+        'sent' => 0,
+        'failed' => 0,
+        'skipped' => 0,
+        'message' => $total === 1 ? 'Sending payslip email…' : sprintf('Sending %d payslip emails…', $total),
+        'error' => '',
+        'createdAt' => date('c'),
+    ]);
+    return $jobId;
+}
+
+/**
+ * Release the PHP session lock so status polls can run while mail is sending.
+ */
+function payrollDeskReleaseSessionLock(): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        @session_write_close();
+    }
+}
+
+/**
+ * Fire email-job-process.php in the background (does not wait for SMTP).
+ * Uses a short-lived HTTP call; the worker keeps running via ignore_user_abort.
+ */
+function payrollDeskSpawnEmailJobWorker(string $jobId): void
+{
+    $jobId = preg_replace('/[^a-zA-Z0-9_-]/', '', $jobId) ?? '';
+    if ($jobId === '') {
+        return;
+    }
+
+    payrollDeskReleaseSessionLock();
+
+    $path = payrollDeskPublicUrl('api/email-job-process.php');
+    $url = payrollDeskAbsolutePublicUrl($path);
+    if ($url === '') {
+        return;
+    }
+
+    $payload = json_encode(['id' => $jobId], JSON_UNESCAPED_SLASHES);
+    if ($payload === false) {
+        return;
+    }
+
+    $headers = [
+        'Content-Type: application/json',
+        'Accept: application/json',
+        'Connection: close',
+    ];
+    $sessionId = session_id();
+    if (is_string($sessionId) && $sessionId !== '') {
+        $headers[] = 'Cookie: ' . session_name() . '=' . $sessionId;
+    }
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return;
+        }
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 3,
+            // Do not wait for SMTP — worker continues after this client disconnects.
+            CURLOPT_TIMEOUT => 2,
+            CURLOPT_NOSIGNAL => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+        ]);
+        @curl_exec($ch);
+        @curl_close($ch);
+        return;
+    }
+
+    $headerLines = '';
+    foreach ($headers as $header) {
+        $headerLines .= $header . "\r\n";
+    }
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => $headerLines,
+            'content' => $payload,
+            'timeout' => 2,
+            'ignore_errors' => true,
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+        ],
+    ]);
+    @file_get_contents($url, false, $context);
+}
+
+/**
+ * Process a queued payslip email job (intended for a dedicated HTTP request).
+ *
+ * @return array<string,mixed>
+ */
+function payrollDeskProcessEmailJob(PDO $pdo, string $jobId): array
+{
+    if (function_exists('ignore_user_abort')) {
+        ignore_user_abort(true);
+    }
+    if (function_exists('set_time_limit')) {
+        @set_time_limit(600);
+    }
+    payrollDeskReleaseSessionLock();
+
+    $job = payrollDeskReadEmailJob($jobId);
+    if ($job === null) {
+        throw new RuntimeException('Email job not found.');
+    }
+
+    $status = (string) ($job['status'] ?? '');
+    if ($status === 'done' || $status === 'failed') {
+        return $job;
+    }
+    if ($status === 'running') {
+        // Another worker is already sending.
+        return $job;
+    }
+
+    $runId = (int) ($job['runId'] ?? 0);
+    $payslipIds = is_array($job['payslipIds'] ?? null) ? $job['payslipIds'] : [];
+    if ($runId <= 0 || $payslipIds === []) {
+        payrollDeskWriteEmailJob($jobId, array_merge($job, [
+            'status' => 'failed',
+            'message' => 'Email job is missing recipients.',
+            'error' => 'Email job is missing recipients.',
+        ]));
+        throw new RuntimeException('Email job is missing recipients.');
+    }
+
+    payrollDeskWriteEmailJob($jobId, array_merge($job, [
+        'status' => 'running',
+        'message' => count($payslipIds) === 1
+            ? 'Sending payslip email…'
+            : sprintf('Sending %d payslip emails…', count($payslipIds)),
+    ]));
+
+    try {
+        payrollDeskSendPayslipEmails($pdo, $runId, null, $payslipIds, $jobId);
+    } catch (Throwable $e) {
+        $current = payrollDeskReadEmailJob($jobId) ?: $job;
+        payrollDeskWriteEmailJob($jobId, array_merge($current, [
+            'status' => 'failed',
+            'message' => 'Email send failed.',
+            'error' => $e->getMessage(),
+        ]));
+        throw $e;
+    }
+
+    $done = payrollDeskReadEmailJob($jobId);
+    return is_array($done) ? $done : ['id' => $jobId, 'status' => 'done'];
+}
+
+/**
  * Email payslip notice(s) using system SMTP / From (module = payroll).
  *
  * @param list<int>|null $payslipIds When set, only these payslip ids are emailed.
  * @return array{sent:int,failed:int,skipped:int,disabled:bool}
  */
-function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = null, ?array $payslipIds = null): array
-{
+function payrollDeskSendPayslipEmails(
+    PDO $pdo,
+    int $runId,
+    ?int $payslipId = null,
+    ?array $payslipIds = null,
+    ?string $jobId = null
+): array {
     // Bulk PDF emails can exceed default PHP/SMTP short limits.
     if (function_exists('set_time_limit')) {
         @set_time_limit(600);
@@ -1074,8 +1383,25 @@ function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = nu
         'note' => '',
     ];
 
+    $updateJob = static function (array $patch) use (&$result, $jobId): void {
+        if ($jobId === null || $jobId === '') {
+            return;
+        }
+        $current = payrollDeskReadEmailJob($jobId) ?: ['id' => $jobId];
+        payrollDeskWriteEmailJob($jobId, array_merge($current, $patch, [
+            'sent' => (int) ($result['sent'] ?? 0),
+            'failed' => (int) ($result['failed'] ?? 0),
+            'skipped' => (int) ($result['skipped'] ?? 0),
+        ]));
+    };
+
     if (!payrollDeskSystemMailEnabled($pdo)) {
         $result['disabled'] = true;
+        $updateJob([
+            'status' => 'failed',
+            'message' => 'Payroll email is off in Email settings.',
+            'error' => 'Payroll email is off in Email settings.',
+        ]);
         return $result;
     }
 
@@ -1085,6 +1411,11 @@ function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = nu
     $stmt->execute([$runId]);
     $run = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$run) {
+        $updateJob([
+            'status' => 'failed',
+            'message' => 'Payroll run not found.',
+            'error' => 'Payroll run not found.',
+        ]);
         throw new RuntimeException('Payroll run not found.');
     }
 
@@ -1101,6 +1432,11 @@ function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = nu
     } elseif (is_array($payslipIds)) {
         $ids = array_values(array_unique(array_filter(array_map('intval', $payslipIds), static fn (int $id): bool => $id > 0)));
         if ($ids === []) {
+            $updateJob([
+                'status' => 'done',
+                'processed' => 0,
+                'message' => 'No emails were sent.',
+            ]);
             return $result;
         }
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
@@ -1112,6 +1448,13 @@ function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = nu
     $fetch = $pdo->prepare($sql);
     $fetch->execute($params);
     $slips = $fetch->fetchAll(PDO::FETCH_ASSOC);
+    $total = count($slips);
+    $updateJob([
+        'status' => 'running',
+        'total' => $total,
+        'processed' => 0,
+        'message' => $total === 1 ? 'Sending payslip email…' : sprintf('Sending %d payslip emails…', $total),
+    ]);
 
     $period = date('F Y', mktime(0, 0, 0, (int) ($run['month'] ?? 1), 1, (int) ($run['year'] ?? (int) date('Y'))));
     $companyName = '';
@@ -1124,13 +1467,6 @@ function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = nu
     if ($companyName === '') {
         $companyName = 'Company';
     }
-    $companyAddress = '';
-    if (function_exists('getCompanySetting')) {
-        $companyAddress = trim((string) getCompanySetting('company_address', ''));
-    }
-    if ($companyAddress === '' && defined('COMPANY_ADDRESS')) {
-        $companyAddress = trim((string) COMPANY_ADDRESS);
-    }
     $loginPath = function_exists('company_login_url')
         ? company_login_url()
         : (function_exists('company_url')
@@ -1139,20 +1475,30 @@ function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = nu
     $loginUrl = payrollDeskAbsolutePublicUrl((string) $loginPath);
     $from = resolveSystemMailFrom('payroll');
     if (trim((string) ($from['email'] ?? '')) === '') {
+        $updateJob([
+            'status' => 'failed',
+            'message' => 'System From email is not configured.',
+            'error' => 'System From email is not configured.',
+        ]);
         throw new RuntimeException(
             'System From email is not configured. Set it under Admin → Email settings (System mailing identity).'
         );
     }
-    // Sign-off matches From display (company name).
     $senderName = trim((string) ($from['name'] ?? ''));
     if ($senderName === '') {
         $senderName = $companyName;
     }
 
+    $processed = 0;
     foreach ($slips as $slip) {
         $to = trim((string) ($slip['email'] ?? ''));
         if ($to === '') {
             $result['skipped']++;
+            $processed++;
+            $updateJob([
+                'processed' => $processed,
+                'message' => sprintf('Sending emails… %d of %d', $processed, max(1, $total)),
+            ]);
             continue;
         }
 
@@ -1166,21 +1512,22 @@ function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = nu
             . "Good news! Your payroll information is ready.\n\n"
             . "You can now log in to the payroll system to view your latest payslip and salary details:\n"
             . "{$loginUrl}\n\n"
-            . "Your payslip PDF is also attached to this email.\n\n"
+            . "Your payslip PDF is attached to this email.\n\n"
             . "Thank you for being part of the team. We appreciate your hard work and dedication!\n\n"
             . "Best regards,\n"
             . "{$senderName}\n";
 
-        $body = '<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#111;line-height:1.55;font-size:14px;">'
-            . '<p>Hi ' . $name . ',</p>'
-            . '<p>Good news! &#127881; Your payroll information is ready.</p>'
-            . '<p>You can now log in to the payroll system to view your latest payslip and salary details.</p>'
-            . '<p><a href="' . $loginSafe . '" style="color:#0b57d0;">' . $loginSafe . '</a></p>'
-            . '<p>Your payslip PDF is also attached to this email.</p>'
-            . '<p>Thank you for being part of the team. We appreciate your hard work and dedication! &#128153;</p>'
-            . '<p style="margin-top:1.25rem;">Best regards,<br>'
-            . $senderSafe . '</p>'
-            . '</body></html>';
+        // Compact fragment only (no full html/body) — full documents often stretch to the
+        // viewport in Gmail/Apple Mail and leave a large blank gap above the attachment.
+        $body = '<div style="font-family:Arial,Helvetica,sans-serif;color:#111111;font-size:14px;line-height:1.45;margin:0;padding:0;max-width:560px;">'
+            . '<p style="margin:0 0 10px 0;">Hi ' . $name . ',</p>'
+            . '<p style="margin:0 0 10px 0;">Good news! &#127881; Your payroll information is ready.</p>'
+            . '<p style="margin:0 0 10px 0;">You can now log in to the payroll system to view your latest payslip and salary details:</p>'
+            . '<p style="margin:0 0 10px 0;"><a href="' . $loginSafe . '" style="color:#0b57d0;">' . $loginSafe . '</a></p>'
+            . '<p style="margin:0 0 10px 0;">Your payslip PDF is attached to this email.</p>'
+            . '<p style="margin:0 0 10px 0;">Thank you for being part of the team. We appreciate your hard work and dedication! &#128153;</p>'
+            . '<p style="margin:0;">Best regards,<br>' . $senderSafe . '</p>'
+            . '</div>';
 
         $attachments = [];
         try {
@@ -1188,10 +1535,15 @@ function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = nu
         } catch (Throwable $e) {
             $result['failed']++;
             $result['error'] = 'PDF generation failed: ' . $e->getMessage();
+            $processed++;
+            $updateJob([
+                'processed' => $processed,
+                'message' => sprintf('Sending emails… %d of %d', $processed, max(1, $total)),
+                'error' => (string) $result['error'],
+            ]);
             continue;
         }
 
-        // Temporary: pass plain text through a request-scoped flag for mailer.
         $GLOBALS['MAILER_TEXT_BODY'] = $textBody;
         $ok = sendEmail($to, $subject, $body, true, $attachments, 'payroll');
         unset($GLOBALS['MAILER_TEXT_BODY']);
@@ -1209,10 +1561,44 @@ function payrollDeskSendPayslipEmails(PDO $pdo, int $runId, ?int $payslipId = nu
                 $result['error'] = $err;
             }
         }
+
+        $processed++;
+        $updateJob([
+            'processed' => $processed,
+            'message' => sprintf('Sending emails… %d of %d', $processed, max(1, $total)),
+            'error' => (string) ($result['error'] ?? ''),
+        ]);
     }
 
     if ((int) $result['sent'] > 0) {
         $result['note'] = '';
+    }
+
+    $finalMessage = ((int) $result['sent'] === 1)
+        ? 'Payslip email sent.'
+        : sprintf('Payslip emails sent to %d employees.', (int) $result['sent']);
+    if ((int) $result['failed'] > 0) {
+        $finalMessage .= sprintf(' %d failed.', (int) $result['failed']);
+    }
+    if ((int) $result['skipped'] > 0) {
+        $finalMessage .= sprintf(' %d skipped (no email).', (int) $result['skipped']);
+    }
+    if ((int) $result['sent'] === 0 && (int) $result['failed'] > 0) {
+        $finalMessage = trim((string) ($result['error'] ?? '')) !== ''
+            ? ('Email send failed: ' . $result['error'])
+            : 'Email send failed.';
+        $updateJob([
+            'status' => 'failed',
+            'processed' => $processed,
+            'message' => $finalMessage,
+            'error' => (string) ($result['error'] ?? $finalMessage),
+        ]);
+    } else {
+        $updateJob([
+            'status' => 'done',
+            'processed' => $processed,
+            'message' => $finalMessage !== 'Payslip emails sent to 0 employees.' ? $finalMessage : 'No emails were sent.',
+        ]);
     }
 
     return $result;
@@ -1343,17 +1729,16 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
         }
 
         $count = count($selectedIds);
+        $jobId = payrollDeskCreateEmailJob($runId, $selectedIds);
         $message = $count === 1
             ? 'Sending payslip email…'
             : sprintf('Sending %d payslip emails…', $count);
 
+        // Return immediately; frontend starts a separate process request + polls status.
         return [
             'deleted' => false,
             'message' => $message,
-            'emailBackground' => [
-                'runId' => $runId,
-                'payslipIds' => $selectedIds,
-            ],
+            'emailJobId' => $jobId,
             'data' => payrollDeskGetRunPayload($pdo, $runId),
         ];
     } elseif ($action === 'remove_payslip') {

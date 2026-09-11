@@ -167,8 +167,7 @@ class SimpleSMTP {
             } elseif ($files !== []) {
                 $headers .= "Content-Type: multipart/mixed; boundary=\"$mixedBoundary\"\r\n";
                 $message .= "--$mixedBoundary\r\n";
-                $message .= "Content-Type: multipart/alternative; boundary=\"$altBoundary\"\r\n";
-                $message .= "Content-Disposition: inline\r\n\r\n";
+                $message .= "Content-Type: multipart/alternative; boundary=\"$altBoundary\"\r\n\r\n";
                 $message .= $altInner . "\r\n";
                 $message .= $this->buildFileParts($mixedBoundary, $files);
                 $message .= "--$mixedBoundary--";
@@ -278,8 +277,8 @@ class SimpleSMTP {
             list($bytes, $filename, $type) = $payload;
             $out .= "--$boundary\r\n";
             $out .= "Content-Type: $type; name=\"$filename\"\r\n";
-            $out .= "Content-Disposition: attachment; filename=\"$filename\"\r\n";
-            $out .= "Content-Transfer-Encoding: base64\r\n\r\n";
+            $out .= "Content-Transfer-Encoding: base64\r\n";
+            $out .= "Content-Disposition: attachment; filename=\"$filename\"\r\n\r\n";
             $out .= chunk_split(base64_encode($bytes)) . "\r\n";
         }
         return $out;

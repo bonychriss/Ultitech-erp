@@ -352,7 +352,7 @@ function pricelistInitData(): array
         }
         // Official Ultimate General Trading address (ultimate.co.tz).
         if ($resolved === '') {
-            $resolved = 'House No.14, Atisoko Street, Mikocheni B, P.O. Box 78004, Dar es Salaam, Tanzania';
+            $resolved = 'House No.03, Manyara Street, Mikocheni B, P.O. Box 78004, Dar es Salaam, Tanzania';
         }
         $companySettings['company_address'] = $resolved;
     }

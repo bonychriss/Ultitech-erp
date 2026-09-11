@@ -33,24 +33,11 @@ try {
     $result = payrollDeskRunAction($pdo, $runId, $action, $payslipId, $payslipIds);
     $message = (string) ($result['message'] ?? 'Updated.');
 
-    if (!empty($result['emailBackground']) && is_array($result['emailBackground'])) {
-        $bg = $result['emailBackground'];
-        unset($result['emailBackground']);
-        $bgRunId = (int) ($bg['runId'] ?? $runId);
-        $bgIds = is_array($bg['payslipIds'] ?? null) ? $bg['payslipIds'] : [];
-
-        payrollDeskJsonResponseThen(
-            true,
-            $result,
-            $message,
-            static function () use ($pdo, $bgRunId, $bgIds): void {
-                try {
-                    payrollDeskSendPayslipEmails($pdo, $bgRunId, null, $bgIds);
-                } catch (Throwable $e) {
-                    error_log('payrollDeskSendPayslipEmails background: ' . $e->getMessage());
-                }
-            }
-        );
+    $jobId = trim((string) ($result['emailJobId'] ?? ''));
+    if ($jobId !== '') {
+        // Unlock session, kick worker via short HTTP call, return JSON immediately.
+        payrollDeskSpawnEmailJobWorker($jobId);
+        // Browser also starts the worker as a backup (see frontend startEmailJob).
     }
 
     payrollDeskJsonResponse(true, $result, $message);

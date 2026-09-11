@@ -83,11 +83,16 @@ function email_module_update_campaign(bool $returnedFromEmail = false): ?array
             ? app_url('/modules/email/api/rate_update.php')
             : 'modules/email/api/rate_update.php');
 
-    $mailHref = function_exists('company_url')
-        ? (company_url('modules/email/index') . '?module=email&folder=inbox')
-        : (function_exists('app_url')
-            ? (app_url('/modules/email/index.php') . '?module=email&folder=inbox')
-            : 'modules/email/index.php?module=email&folder=inbox');
+    $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? (function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : ''))));
+    if ($slug === 'ultimate') {
+        $mailHref = 'https://ultimate.co.tz/staff/mail/frontend/web/';
+    } else {
+        $mailHref = function_exists('company_url')
+            ? (company_url('modules/email/index') . '?module=email&folder=inbox')
+            : (function_exists('app_url')
+                ? (app_url('/modules/email/index.php') . '?module=email&folder=inbox')
+                : 'modules/email/index.php?module=email&folder=inbox');
+    }
 
     return [
         'active' => true,

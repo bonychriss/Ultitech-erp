@@ -54,76 +54,93 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="cb-page">
+    <div className="cb-page cb-page-wide">
       <div className="cb-toolbar">
-        <div>
-          <a className="cb-back-link" href={booksUrl()}>
-            <ArrowLeft size={16} /> All books
-          </a>
-          <h2 style={{ marginTop: '0.35rem' }}>Categories</h2>
-        </div>
+        <a className="cb-back-link" href={booksUrl()}>
+          <ArrowLeft size={16} /> All books
+        </a>
       </div>
 
       {error ? <div className="cb-error">{error}</div> : null}
 
-      <form
-        onSubmit={onAdd}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr auto auto',
-          gap: '0.5rem',
-          marginBottom: '1.25rem',
-        }}
-      >
-        <input
-          className="cb-input"
-          required
-          placeholder="Category name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <select className="cb-select" value={entryType} onChange={(e) => setEntryType(e.target.value)}>
-          <option value="both">In and out</option>
-          <option value="in">Cash in</option>
-          <option value="out">Cash out</option>
-        </select>
-        <button type="submit" className="cb-btn cb-btn-primary" disabled={saving}>
-          <Plus size={16} /> Add
-        </button>
-      </form>
+      <div className="cb-split">
+        <section className="cb-split-card">
+          <div className="cb-split-card-head">
+            <h3>Create</h3>
+          </div>
+          <form className="cb-create-form" onSubmit={onAdd}>
+            <div className="cb-field">
+              <label>Category name</label>
+              <input
+                className="cb-input"
+                required
+                placeholder="Category name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="cb-field">
+              <label>Type</label>
+              <select className="cb-select" value={entryType} onChange={(e) => setEntryType(e.target.value)}>
+                <option value="both">In and out</option>
+                <option value="in">Cash in</option>
+                <option value="out">Cash out</option>
+              </select>
+            </div>
+            <div className="cb-create-actions">
+              <button type="submit" className="cb-btn cb-btn-primary cb-btn-pill cb-btn-sm" disabled={saving}>
+                <Plus size={14} /> {saving ? 'Saving...' : 'Add'}
+              </button>
+            </div>
+          </form>
+        </section>
 
-      {loading ? (
-        <div className="cb-loading">
-          <Loader2 className="cb-spin" size={20} /> Loading...
-        </div>
-      ) : categories.length === 0 ? (
-        <div className="cb-empty">No categories yet.</div>
-      ) : (
-        <div className="cb-table-wrap">
-          <table className="cb-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map((c) => (
-                <tr key={c.id}>
-                  <td>{c.name}</td>
-                  <td>{c.entry_type === 'both' ? 'In and out' : c.entry_type === 'in' ? 'Cash in' : 'Cash out'}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button type="button" className="cb-btn" onClick={() => onDelete(c.id)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        <section className="cb-split-card">
+          <div className="cb-split-card-head">
+            <h3>Categories</h3>
+          </div>
+          {loading ? (
+            <div className="cb-loading">
+              <Loader2 className="cb-spin" size={20} /> Loading...
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="cb-empty cb-empty-compact">No categories yet. Create one on the left.</div>
+          ) : (
+            <div className="cb-table-wrap cb-table-wrap-flush">
+              <table className="cb-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {categories.map((c) => (
+                    <tr key={c.id}>
+                      <td>{c.name}</td>
+                      <td>{c.entry_type === 'both' ? 'In and out' : c.entry_type === 'in' ? 'Cash in' : 'Cash out'}</td>
+                      <td>
+                        <div className="cb-entry-actions-inline">
+                          <button
+                            type="button"
+                            className="cb-icon-btn"
+                            onClick={() => onDelete(c.id)}
+                            title="Delete"
+                            aria-label="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   )
 }

@@ -70,15 +70,17 @@ if ($override !== '' && in_array($override, ['PUT', 'PATCH', 'DELETE'], true)) {
     $method = $override;
 }
 
-$input = $method === 'POST' ? $_POST : $query;
-if ($method === 'POST') {
-    $raw = file_get_contents('php://input');
-    if (is_string($raw) && $raw !== '') {
-        $json = json_decode($raw, true);
-        if (is_array($json)) {
-            $input = array_merge($input, $json);
-        }
+$input = is_array($_POST) ? $_POST : [];
+// Always merge JSON body (including when ?_method=DELETE changed the verb).
+$raw = file_get_contents('php://input');
+if (is_string($raw) && $raw !== '') {
+    $json = json_decode($raw, true);
+    if (is_array($json)) {
+        $input = array_merge($input, $json);
     }
+}
+if ($method === 'GET' || $method === 'HEAD') {
+    $input = array_merge($query, $input);
 }
 
 $request = Request::create(

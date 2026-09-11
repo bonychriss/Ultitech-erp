@@ -60,10 +60,18 @@ final class CashBookShell
                 'bookId' => $bookId,
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
+        $bootJson = json_encode([
+            'apiBase' => $apiBase,
+            'pageBase' => $pageBase,
+            'page' => $page,
+            'bookId' => $bookId,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
         $headMarkup = $this->commonHeadExtras()
             . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' . "\n"
             . '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n"
             . $this->deskChromeCss() . "\n"
+            . '<script type="application/json" id="cashbook-boot-config">' . $bootJson . '</script>' . "\n"
             . '<script>' . $windowScript . ';</script>';
 
         $footerScripts = '<script type="module" crossorigin src="'

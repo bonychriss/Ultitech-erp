@@ -1,11 +1,52 @@
+function readBootConfig() {
+  try {
+    const el = typeof document !== 'undefined' ? document.getElementById('cashbook-boot-config') : null
+    if (!el) return {}
+    return JSON.parse(el.textContent || '{}') || {}
+  } catch {
+    return {}
+  }
+}
+
 function apiBase() {
-  const raw = typeof window !== 'undefined' ? window.__CASHBOOK_API_BASE__ : ''
-  return String(raw || '').replace(/\/$/, '')
+  const boot = readBootConfig()
+  const configured = typeof window !== 'undefined' ? window.__CASHBOOK_API_BASE__ : ''
+  let base = String(configured || boot.apiBase || '').trim().replace(/\/$/, '')
+
+  // Never call company-folder API roots — they 404 as HTML on physical /ultimate/.
+  if (/\/[^/]+\/modules\/petty-cash\/api$/i.test(base)) {
+    base = base.replace(/\/[^/]+\/modules\/petty-cash\/api$/i, '/modules/petty-cash/api')
+  }
+
+  if (base) return base
+
+  const page = String(
+    (typeof window !== 'undefined' ? window.__CASHBOOK_PAGE_BASE__ : '') || boot.pageBase || '',
+  )
+    .trim()
+    .replace(/\/$/, '')
+
+  if (page) {
+    const stripped = page.replace(/\/[^/]+\/modules\/petty-cash$/i, '/modules/petty-cash')
+    if (stripped.includes('/modules/petty-cash')) {
+      return `${stripped}/api`.replace(/\/$/, '')
+    }
+    return `${page}/api`.replace(/\/$/, '')
+  }
+
+  // Relative fallback (works under /ultimate via modules proxy rewrite).
+  return './api'
 }
 
 function pageBase() {
-  const raw = typeof window !== 'undefined' ? window.__CASHBOOK_PAGE_BASE__ : ''
-  return String(raw || '').replace(/\/$/, '')
+  const boot = readBootConfig()
+  const raw =
+    (typeof window !== 'undefined' ? window.__CASHBOOK_PAGE_BASE__ : '') || boot.pageBase || ''
+  const base = String(raw || '').replace(/\/$/, '')
+  if (base) return base
+  const api = apiBase()
+  if (api.endsWith('/api')) return api.slice(0, -4)
+  return '.'
 }
 
 export function deskUrl(desk, params = {}) {
@@ -17,12 +58,47 @@ export function booksUrl() {
   return `${pageBase()}/index.php?module=petty_cash`
 }
 
-async function request(resource, { id, method = 'GET', query, body } = {}) {
-  const base = apiBase()
+function buildUrl(resource, { id, query, methodOverride } = {}) {
   const params = new URLSearchParams({ resource, ...(query || {}) })
   if (id) params.set('id', String(id))
+  if (methodOverride) params.set('_method', methodOverride)
 
+  const base = apiBase()
+  const path = `${base}/index.php?${params.toString()}`
+  try {
+    // Resolve relative bases (./api) against the current page URL.
+    return new URL(path, typeof window !== 'undefined' ? window.location.href : 'http://localhost').toString()
+  } catch {
+    return path
+  }
+}
+
+async function parseJson(response) {
+  const text = await response.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    const snippet = text.replace(/\s+/g, ' ').trim().slice(0, 160)
+    throw new Error(
+      snippet.startsWith('<!')
+        ? 'API returned HTML instead of JSON. Check that you are still logged in.'
+        : snippet === ''
+          ? 'API returned an empty response.'
+          : `Invalid API response: ${snippet}`,
+    )
+  }
+}
+
+async function request(resource, { id, method = 'GET', query, body } = {}) {
   let httpMethod = method
+  let methodOverride = ''
+  // Some PHP hosts reject PUT/DELETE — send POST + _method
+  if (method === 'PUT' || method === 'DELETE') {
+    httpMethod = 'POST'
+    methodOverride = method
+  }
+
+  const url = buildUrl(resource, { id, query, methodOverride })
   const opts = {
     method: httpMethod,
     credentials: 'same-origin',
@@ -30,17 +106,19 @@ async function request(resource, { id, method = 'GET', query, body } = {}) {
   }
 
   if (body != null) {
-    // Some PHP hosts reject PUT/DELETE — send POST + _method
-    if (method === 'PUT' || method === 'DELETE') {
-      opts.method = 'POST'
-      params.set('_method', method)
-    }
     opts.headers['Content-Type'] = 'application/json'
     opts.body = JSON.stringify(body)
   }
 
-  const res = await fetch(`${base}/index.php?${params.toString()}`, opts)
-  const data = await res.json().catch(() => ({}))
+  let res
+  try {
+    res = await fetch(url, opts)
+  } catch (err) {
+    const detail = err && err.message ? err.message : 'Failed to fetch'
+    throw new Error(`Cash Book API unreachable (${url}). ${detail}`)
+  }
+
+  const data = await parseJson(res)
   if (!res.ok || data.ok === false) {
     throw new Error(data.error || `Request failed (${res.status})`)
   }
@@ -51,9 +129,10 @@ export const fetchInit = () => request('init')
 export const fetchBooks = (status = 'active') => request('books', { query: { status } })
 export const createBook = (body) => request('books', { method: 'POST', body })
 export const updateBook = (id, body) => request('books', { id, method: 'PUT', body })
+
 /** Queues a delete request — does not remove the book until an admin approves. */
 export const requestDeleteBook = (id, reason = '') =>
-  request('books', { id, method: 'DELETE', body: { reason } })
+  request('delete-requests', { method: 'POST', body: { book_id: id, reason } })
 
 export const approveDeleteRequest = (id) =>
   request('delete-requests', { id, method: 'POST', body: { action: 'approve' } })
@@ -76,19 +155,25 @@ export const deleteCategory = (id) => request('categories', { id, method: 'DELET
 export const fetchReport = (query = {}) => request('reports', { query })
 
 export async function importSpreadsheet(bookId, file) {
-  const base = apiBase()
-  const params = new URLSearchParams({ resource: 'import' })
+  const url = buildUrl('import')
   const body = new FormData()
   body.append('book_id', String(bookId))
   body.append('file', file)
 
-  const res = await fetch(`${base}/index.php?${params.toString()}`, {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { Accept: 'application/json' },
-    body,
-  })
-  const data = await res.json().catch(() => ({}))
+  let res
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+      body,
+    })
+  } catch (err) {
+    const detail = err && err.message ? err.message : 'Failed to fetch'
+    throw new Error(`Cash Book API unreachable (${url}). ${detail}`)
+  }
+
+  const data = await parseJson(res)
   if (!res.ok || data.ok === false) {
     throw new Error(data.error || `Request failed (${res.status})`)
   }

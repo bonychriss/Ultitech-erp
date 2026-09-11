@@ -72,6 +72,14 @@ class CashBookApiController extends Controller
 
         $isAdmin = $this->isAdmin($erp);
 
+        $pendingDeletes = [];
+        try {
+            $pendingDeletes = $svc->listPendingDeleteRequests();
+        } catch (Throwable $e) {
+            error_log('CashBook init pending deletes: ' . $e->getMessage());
+            $pendingDeletes = [];
+        }
+
         return response()->json([
             'ok' => true,
             'engine' => 'erp-laravel Domains/CashBook',
@@ -85,7 +93,7 @@ class CashBookApiController extends Controller
                 'request_delete' => true,
             ],
             'books' => $books,
-            'pending_deletes' => $svc->listPendingDeleteRequests(),
+            'pending_deletes' => $pendingDeletes,
             'summary' => [
                 'book_count' => count($books),
                 'total_balance' => round($totalBalance, 2),

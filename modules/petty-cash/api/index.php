@@ -11,6 +11,16 @@ declare(strict_types=1);
  *   POST /modules/petty-cash/api/index.php?resource=books&id=3&_method=DELETE
  */
 require_once dirname(__DIR__, 3) . '/includes/functions.php';
+
+// JSON clients must never receive an HTML login redirect.
+$accept = (string) ($_SERVER['HTTP_ACCEPT'] ?? '');
+if (stripos($accept, 'application/json') !== false && !isLoggedIn()) {
+    header('Content-Type: application/json; charset=utf-8');
+    http_response_code(401);
+    echo json_encode(['ok' => false, 'error' => 'Not authenticated. Please log in again.']);
+    exit;
+}
+
 requireLogin();
 
 header('Content-Type: application/json; charset=utf-8');

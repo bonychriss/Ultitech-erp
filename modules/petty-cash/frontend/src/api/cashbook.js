@@ -8,33 +8,21 @@ function readBootConfig() {
   }
 }
 
+/**
+ * Prefer the PHP-provided app-root API base (e.g. /public_html/modules/petty-cash/api).
+ * Do NOT strip the first path segment — on XAMPP that segment is APP_BASE_PATH (public_html),
+ * not a company slug.
+ */
 function apiBase() {
   const boot = readBootConfig()
   const configured = typeof window !== 'undefined' ? window.__CASHBOOK_API_BASE__ : ''
-  let base = String(configured || boot.apiBase || '').trim().replace(/\/$/, '')
-
-  // Never call company-folder API roots — they 404 as HTML on physical /ultimate/.
-  if (/\/[^/]+\/modules\/petty-cash\/api$/i.test(base)) {
-    base = base.replace(/\/[^/]+\/modules\/petty-cash\/api$/i, '/modules/petty-cash/api')
-  }
-
-  if (base) return base
-
-  const page = String(
-    (typeof window !== 'undefined' ? window.__CASHBOOK_PAGE_BASE__ : '') || boot.pageBase || '',
-  )
+  const base = String(configured || boot.apiBase || '')
     .trim()
     .replace(/\/$/, '')
 
-  if (page) {
-    const stripped = page.replace(/\/[^/]+\/modules\/petty-cash$/i, '/modules/petty-cash')
-    if (stripped.includes('/modules/petty-cash')) {
-      return `${stripped}/api`.replace(/\/$/, '')
-    }
-    return `${page}/api`.replace(/\/$/, '')
-  }
+  if (base) return base
 
-  // Relative fallback (works under /ultimate via modules proxy rewrite).
+  // Relative fallback under /{company}/modules/petty-cash/ (proxied by ultimate/.htaccess).
   return './api'
 }
 
@@ -66,7 +54,6 @@ function buildUrl(resource, { id, query, methodOverride } = {}) {
   const base = apiBase()
   const path = `${base}/index.php?${params.toString()}`
   try {
-    // Resolve relative bases (./api) against the current page URL.
     return new URL(path, typeof window !== 'undefined' ? window.location.href : 'http://localhost').toString()
   } catch {
     return path
@@ -79,6 +66,9 @@ async function parseJson(response) {
     return JSON.parse(text)
   } catch {
     const snippet = text.replace(/\s+/g, ' ').trim().slice(0, 160)
+    if (response.redirected || response.status === 401 || response.status === 302) {
+      throw new Error('Session expired. Please refresh and log in again.')
+    }
     throw new Error(
       snippet.startsWith('<!')
         ? 'API returned HTML instead of JSON. Check that you are still logged in.'
@@ -92,7 +82,6 @@ async function parseJson(response) {
 async function request(resource, { id, method = 'GET', query, body } = {}) {
   let httpMethod = method
   let methodOverride = ''
-  // Some PHP hosts reject PUT/DELETE — send POST + _method
   if (method === 'PUT' || method === 'DELETE') {
     httpMethod = 'POST'
     methodOverride = method

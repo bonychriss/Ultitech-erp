@@ -153,16 +153,24 @@ button.cb-btn.cb-btn-pill.cb-btn-sm,
   filter: brightness(0.95);
 }
 
-.cb-btn-danger-outline {
-  background: transparent;
-  border-color: #fca5a5;
+.cb-btn-danger-outline,
+button.cb-btn.cb-btn-danger-outline {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   color: var(--cb-out);
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
 }
 
-.cb-btn-danger-outline:hover {
-  background: var(--cb-out-bg);
-  border-color: var(--cb-out);
-  color: var(--cb-out);
+.cb-btn-danger-outline:hover,
+button.cb-btn.cb-btn-danger-outline:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  color: #b91c1c;
+  text-decoration: underline;
 }
 
 .cb-info {

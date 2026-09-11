@@ -442,17 +442,20 @@ a.cb-text-link:hover {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
+  padding: 0;
+  border-radius: 0;
+  white-space: nowrap;
+  display: inline-block;
+  background: transparent;
 }
 
 .cb-entry-type.in {
-  background: var(--cb-in-bg);
+  background: transparent;
   color: var(--cb-in);
 }
 
 .cb-entry-type.out {
-  background: var(--cb-out-bg);
+  background: transparent;
   color: var(--cb-out);
 }
 
@@ -507,7 +510,8 @@ a.cb-text-link:hover {
 }
 
 .cb-table .cb-entry-type {
-  display: inline-flex;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .cb-split {

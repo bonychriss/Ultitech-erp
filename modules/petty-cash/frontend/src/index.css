@@ -604,9 +604,10 @@ a.cb-text-link:hover {
   justify-content: center;
   border: none !important;
   background: transparent !important;
+  background-color: transparent !important;
   box-shadow: none !important;
   border-radius: 0 !important;
-  padding: 0.2rem;
+  padding: 0.25rem;
   color: var(--cb-muted);
   cursor: pointer;
 }
@@ -614,6 +615,28 @@ a.cb-text-link:hover {
 .cb-icon-btn:hover {
   color: var(--cb-text);
   background: transparent !important;
+  background-color: transparent !important;
+}
+
+.cb-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cb-icon-btn-ok {
+  color: var(--cb-in);
+}
+
+.cb-icon-btn-ok:hover {
+  color: #047857;
+}
+
+.cb-icon-btn-danger {
+  color: var(--cb-out);
+}
+
+.cb-icon-btn-danger:hover {
+  color: #b91c1c;
 }
 
 .cb-table .cb-entry-type {

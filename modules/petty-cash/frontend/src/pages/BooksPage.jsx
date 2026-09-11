@@ -214,31 +214,35 @@ export default function BooksPage() {
                             <>
                               <button
                                 type="button"
-                                className="cb-btn cb-btn-sm cb-btn-danger"
+                                className="cb-icon-btn cb-icon-btn-ok"
                                 disabled={saving}
                                 title="Approve and permanently delete"
+                                aria-label="Approve delete"
                                 onClick={() => onApprove(pending.id)}
                               >
-                                <Check size={14} /> Approve
+                                <Check size={18} />
                               </button>
                               <button
                                 type="button"
-                                className="cb-btn cb-btn-sm"
+                                className="cb-icon-btn cb-icon-btn-danger"
                                 disabled={saving}
                                 title="Reject delete request"
+                                aria-label="Reject delete"
                                 onClick={() => onRejectOrCancel(pending.id, false)}
                               >
-                                <X size={14} /> Reject
+                                <X size={18} />
                               </button>
                             </>
                           ) : canCancel ? (
                             <button
                               type="button"
-                              className="cb-btn cb-btn-sm"
+                              className="cb-icon-btn cb-icon-btn-danger"
                               disabled={saving}
+                              title="Cancel delete request"
+                              aria-label="Cancel delete request"
                               onClick={() => onRejectOrCancel(pending.id, true)}
                             >
-                              <X size={14} /> Cancel request
+                              <X size={18} />
                             </button>
                           ) : (
                             <span className="cb-muted-hint">Awaiting admin</span>
@@ -247,9 +251,10 @@ export default function BooksPage() {
                       ) : (
                         <button
                           type="button"
-                          className="cb-btn cb-btn-sm cb-btn-danger-outline"
+                          className="cb-icon-btn cb-icon-btn-danger"
                           disabled={saving}
                           title="Request delete (needs admin approval)"
+                          aria-label="Request delete"
                           onClick={() => {
                             setDeleteTarget(b)
                             setDeleteReason('')
@@ -257,7 +262,7 @@ export default function BooksPage() {
                             setInfo('')
                           }}
                         >
-                          <Trash2 size={14} /> Delete
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </td>

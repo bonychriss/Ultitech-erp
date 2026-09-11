@@ -203,14 +203,19 @@ final class SpreadsheetReader
 
     /**
      * @param list<list<string>> $matrix
-     * @return array{ok:bool,error?:string,headers?:list<string>,rows?:list<list<string>>}
+     * @return array{ok:bool,error?:string,matrix?:list<list<string>>}
      */
     private function matrixToTable(array $matrix): array
     {
-        $matrix = array_values(array_filter($matrix, static function ($row) {
+        $matrix = array_values(array_map(static function ($row) {
             if (!is_array($row)) {
-                return false;
+                return [];
             }
+
+            return array_map(static fn ($c) => trim((string) $c), $row);
+        }, $matrix));
+
+        $matrix = array_values(array_filter($matrix, static function ($row) {
             foreach ($row as $cell) {
                 if (trim((string) $cell) !== '') {
                     return true;
@@ -219,13 +224,11 @@ final class SpreadsheetReader
 
             return false;
         }));
+
         if ($matrix === []) {
             return ['ok' => false, 'error' => 'Spreadsheet is empty.'];
         }
 
-        $headers = array_map(static fn ($h) => trim((string) $h), $matrix[0]);
-        $rows = array_slice($matrix, 1);
-
-        return ['ok' => true, 'headers' => $headers, 'rows' => $rows];
+        return ['ok' => true, 'matrix' => $matrix];
     }
 }

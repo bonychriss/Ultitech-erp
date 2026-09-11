@@ -4,9 +4,11 @@ import { booksUrl, deskUrl, fetchBooks, importSpreadsheet } from '../api/cashboo
 
 function downloadTemplate() {
   const csv = [
-    'date,type,amount,category,party,remark',
-    '2026-09-11,in,20000,Sales cash,MOMO,Opening top-up',
-    '2026-09-11,out,1500,Transport,Boda,Office trip',
+    'Date,Notes,Cash In,Cash Out,Balance',
+    ',Previous Balance,,,0',
+    '08-Jul-2026,petty cash,"1,000,000",0,"1,000,000"',
+    '08-Jul-2026,wages to charity,0,"200,000","800,000"',
+    '09-Jul-2026,water for office,0,"7,000","793,000"',
   ].join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
@@ -125,7 +127,7 @@ export default function ImportPage() {
                 />
               </div>
               <p className="cb-book-meta" style={{ marginBottom: '0.85rem' }}>
-                Columns: date, type (in/out), amount, category, party, remark
+                Use the Cash Book Excel format: Date, Notes, Cash In, Cash Out, Balance
               </p>
               <div className="cb-create-actions">
                 <button type="submit" className="cb-btn cb-btn-primary cb-btn-pill cb-btn-sm" disabled={saving}>

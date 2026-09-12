@@ -17,8 +17,9 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { deleteInvoices, fetchInvoicesInit } from '../api/invoicesListDesk';
+import { deleteInvoices, fetchInvoicesInit, resolveInvoiceRevenueEntry } from '../api/invoicesListDesk';
 import InvoiceKpiTraceModal from '../components/InvoiceKpiTraceModal';
+import InvoiceRegisterPaymentModal from '../components/InvoiceRegisterPaymentModal.jsx';
 import { resolveInvoiceKpiTrace } from '../utils/invoiceKpiTrace';
 
 const AVATAR_STYLES = [
@@ -110,6 +111,12 @@ function isInvoiceDueDateOverdue(invoice) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return due.getTime() <= today.getTime();
+}
+
+function canPayInvoice(invoice) {
+  const status = (invoice?.status || '').toLowerCase().trim();
+  if (['paid', 'cancelled', 'canceled', 'draft'].includes(status)) return false;
+  return (parseFloat(invoice?.balance_due) || 0) > 0.005;
 }
 
 function formatDueDateRelative(dateStr) {
@@ -225,6 +232,8 @@ export default function InvoicesListPage() {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [filterPanelStyle, setFilterPanelStyle] = useState(null);
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
+  const [payEntryId, setPayEntryId] = useState(null);
+  const [payBusyId, setPayBusyId] = useState(null);
 
   const filterDropdownRef = useRef(null);
   const filterBtnRef = useRef(null);
@@ -335,6 +344,7 @@ export default function InvoicesListPage() {
   const currentUserId = init?.current_user_id || 0;
   const isRoadmaster = !!init?.is_roadmaster;
   const isAdmin = !!init?.is_admin;
+  const canRegisterPayment = !!init?.can_register_payment;
   const supportsTruckInvoices = !!init?.supports_truck_invoices;
   const supportsOrderTypeSplit = !!init?.supports_order_type_split;
   const useRmShell = !!init?.use_rm_shell_layout;
@@ -504,6 +514,60 @@ export default function InvoicesListPage() {
 
   function goView(id) {
     window.location.href = buildUrl(urls.view || 'view.php', id);
+  }
+
+  async function handlePayInvoice(inv, event) {
+    event?.stopPropagation?.();
+    setOpenMenuId(null);
+    if (!canRegisterPayment || !canPayInvoice(inv) || payBusyId) return;
+
+    setPayBusyId(inv.id);
+    try {
+      const data = await resolveInvoiceRevenueEntry(inv.id);
+      const entryId = Number(data.revenue_entry_id || 0);
+      if (entryId <= 0) {
+        throw new Error('Could not prepare payment for this invoice.');
+      }
+      setPayEntryId(entryId);
+    } catch (err) {
+      if (typeof window.Swal !== 'undefined') {
+        window.Swal.fire({
+          icon: 'error',
+          title: 'Could not open payment',
+          text: err instanceof Error ? err.message : 'Payment form failed to load.',
+        });
+      } else {
+        window.alert(err instanceof Error ? err.message : 'Payment form failed to load.');
+      }
+    } finally {
+      setPayBusyId(null);
+    }
+  }
+
+  async function handlePaymentSuccess(result) {
+    setPayEntryId(null);
+    if (typeof window.Swal !== 'undefined') {
+      window.Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: result?.message || 'Payment recorded successfully.',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      });
+    }
+    try {
+      await loadInit();
+    } catch (err) {
+      if (typeof window.Swal !== 'undefined') {
+        window.Swal.fire({
+          icon: 'warning',
+          title: 'Payment saved',
+          text: err instanceof Error ? err.message : 'List could not refresh.',
+        });
+      }
+    }
   }
 
   function toggleFilters() {
@@ -931,6 +995,16 @@ export default function InvoicesListPage() {
                           <div className="qt-actions-dropdown">
                             <a href={buildUrl(urls.view, inv.id)}><i className="fas fa-eye" style={{ width: 20, color: '#94a3b8' }} /> View</a>
                             <a href={buildUrl(urls.print, inv.id)} target="_blank" rel="noopener noreferrer"><i className="fas fa-print" style={{ width: 20, color: '#94a3b8' }} /> Print</a>
+                            {canRegisterPayment && canPayInvoice(inv) ? (
+                              <button
+                                type="button"
+                                onClick={(e) => handlePayInvoice(inv, e)}
+                                disabled={payBusyId === inv.id}
+                              >
+                                <i className={`fas ${payBusyId === inv.id ? 'fa-spinner fa-spin' : 'fa-money-bill-wave'}`} style={{ width: 20, color: '#94a3b8' }} />
+                                {payBusyId === inv.id ? 'Opening...' : 'Pay'}
+                              </button>
+                            ) : null}
                             {isAdmin && (
                               <button type="button" className="qt-actions-delete" onClick={(e) => handleDeleteInvoice(inv, e)}>
                                 <i className="fas fa-trash-alt" style={{ width: 20, color: '#94a3b8' }} /> Delete
@@ -947,6 +1021,15 @@ export default function InvoicesListPage() {
           </div>
         )}
       </section>
+
+      {payEntryId ? createPortal(
+        <InvoiceRegisterPaymentModal
+          entryId={payEntryId}
+          onClose={() => setPayEntryId(null)}
+          onSuccess={handlePaymentSuccess}
+        />,
+        document.body,
+      ) : null}
     </div>
   );
 }

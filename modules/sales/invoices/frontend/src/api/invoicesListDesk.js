@@ -48,3 +48,15 @@ export async function deleteInvoices(ids, deleteUrl) {
   }
   return data;
 }
+
+export async function resolveInvoiceRevenueEntry(invoiceId) {
+  const id = encodeURIComponent(String(invoiceId));
+  const res = await fetch(`${getApiBase()}/revenue-payment-resolve.php?invoice_id=${id}`, {
+    credentials: 'same-origin',
+  });
+  const data = await parseJson(res);
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}

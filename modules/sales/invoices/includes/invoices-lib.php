@@ -706,6 +706,8 @@ function sales_invoices_list_init_data(): array
         'invoices' => invoices_desk_invoices_for_api($invoices),
         'current_user_id' => (int) ($_SESSION['user_id'] ?? 0),
         'is_admin' => function_exists('isAdmin') && isAdmin(),
+        'can_register_payment' => (function_exists('isFinance') && isFinance())
+            || (function_exists('isAdmin') && isAdmin()),
         'is_roadmaster' => $isRoadmaster,
         'is_ultimate' => $isUltimate,
         'supports_order_type_split' => $supportsOrderTypeSplit,

@@ -17,8 +17,10 @@ export default function InvoiceViewToolbar({
   onDownloadPdf,
   onDownloadDeliveryNote,
   onEmail,
+  onRegisterPayment,
 }) {
   const showPrimaryDivider = flags.can_edit || flags.can_ship;
+  const canRegisterPayment = Boolean(flags.can_register_payment && (onRegisterPayment || urls.register_payment));
 
   return (
     <header className="ov-chrome ov-no-print">
@@ -99,11 +101,22 @@ export default function InvoiceViewToolbar({
                   <i className="fas fa-caret-down" aria-hidden="true" />
                 </summary>
                 <div className="ov-actions-panel">
-                  {flags.can_register_payment && urls.register_payment ? (
-                    <a className="ov-actions-item" href={urls.register_payment} onClick={onCloseDesktopActions}>
-                      <i className="fas fa-money-bill-wave" aria-hidden="true" />
-                      Register Payment
-                    </a>
+                  {canRegisterPayment ? (
+                    onRegisterPayment ? (
+                      <button
+                        type="button"
+                        className="ov-actions-item"
+                        onClick={() => { onCloseDesktopActions(); onRegisterPayment(); }}
+                      >
+                        <i className="fas fa-money-bill-wave" aria-hidden="true" />
+                        Register Payment
+                      </button>
+                    ) : (
+                      <a className="ov-actions-item" href={urls.register_payment} onClick={onCloseDesktopActions}>
+                        <i className="fas fa-money-bill-wave" aria-hidden="true" />
+                        Register Payment
+                      </a>
+                    )
                   ) : null}
                   {flags.has_order && urls.order_view ? (
                     <a className="ov-actions-item" href={urls.order_view} onClick={onCloseDesktopActions}>
@@ -179,11 +192,22 @@ export default function InvoiceViewToolbar({
                   Edit Invoice
                 </a>
               ) : null}
-              {flags.can_register_payment && urls.register_payment ? (
-                <a className="ov-mobile-item ov-mobile-item--confirm" href={urls.register_payment}>
-                  <i className="fas fa-money-bill-wave" aria-hidden="true" />
-                  Register Payment
-                </a>
+              {canRegisterPayment ? (
+                onRegisterPayment ? (
+                  <button
+                    type="button"
+                    className="ov-mobile-item ov-mobile-item--confirm"
+                    onClick={() => { onMobileActionsToggle(false); onRegisterPayment(); }}
+                  >
+                    <i className="fas fa-money-bill-wave" aria-hidden="true" />
+                    Register Payment
+                  </button>
+                ) : (
+                  <a className="ov-mobile-item ov-mobile-item--confirm" href={urls.register_payment}>
+                    <i className="fas fa-money-bill-wave" aria-hidden="true" />
+                    Register Payment
+                  </a>
+                )
               ) : null}
               {flags.can_ship ? (
                 <button

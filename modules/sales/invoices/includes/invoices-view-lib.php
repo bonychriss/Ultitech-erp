@@ -528,10 +528,11 @@ function salesInvoiceViewLoadContext(int $id): array
         : '';
 
     $paymentUrl = '';
+    $revEntryId = 0;
     if (!in_array($status, ['paid', 'draft'], true)) {
         require_once dirname(__DIR__, 4) . '/includes/revenue_sync.php';
-        $revEntryId = syncInvoiceToRevenue($salesDb, $id);
-        if ($revEntryId) {
+        $revEntryId = (int) syncInvoiceToRevenue($salesDb, $id);
+        if ($revEntryId > 0) {
             $paymentUrl = function_exists('app_url')
                 ? app_url('/revenue_record_payment.php?id=' . $revEntryId)
                 : '/revenue_record_payment.php?id=' . $revEntryId;
@@ -597,11 +598,12 @@ function salesInvoiceViewLoadContext(int $id): array
         'flags' => [
             'can_edit' => $status === 'draft',
             'can_ship' => $invoiceShowShip,
-            'can_register_payment' => !in_array($status, ['paid', 'draft'], true) && $paymentUrl !== '',
+            'can_register_payment' => !in_array($status, ['paid', 'draft'], true) && $revEntryId > 0,
             'has_order' => $orderId > 0,
             'has_products' => !empty($items),
             'show_catalogue' => (bool) $share['show_catalogue'],
         ],
+        'revenue_entry_id' => $revEntryId,
         'document_html' => salesInvoiceViewRenderDocumentHtml(
             $invoice,
             $items,
@@ -716,13 +718,19 @@ function salesInvoiceViewRenderReactShell(int $invoiceId): void
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--invoice-view';
 
+    $revenueApiBase = function_exists('app_url')
+        ? rtrim((string) app_url('/modules/revenue/api'), '/')
+        : '/modules/revenue/api';
+
     $cfg = [
         'module' => $module,
         'invoice_id' => $invoiceId,
+        'revenue_api_base' => $revenueApiBase,
     ];
 
     $invoicesHeadMarkup = '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') . '">'
         . "\n" . '<script>window.__INVOICES_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
+        . 'window.__REVENUE_API_BASE__ = ' . json_encode($revenueApiBase, JSON_UNESCAPED_SLASHES) . ';'
         . 'window.__INVOICES_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';'
         . 'window.__INVOICES_PAGE__ = ' . json_encode('invoice_view', JSON_UNESCAPED_SLASHES) . ';</script>';
 

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import './invoice-create.css';
+import './invoice-pay-modal.css';
 import '../../../../expenses/frontend/src/expenses-desk.css';
 import '../../../orders/frontend/src/quotations-list.css';
 import '../../../orders/frontend/src/order-view.css';

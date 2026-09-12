@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   fetchInvoiceViewInit,
   fetchDeliveryNoteDownloadPayload,
@@ -20,6 +21,7 @@ import { downloadDeliveryNotePdfFromHtml } from '../utils/deliveryNoteOffscreenP
 import InvoiceViewToolbar from '../components/InvoiceViewToolbar.jsx';
 import InvoiceDownloadModal from '../components/InvoiceDownloadModal.jsx';
 import InvoiceDocumentPane from '../components/InvoiceDocumentPane.jsx';
+import InvoiceRegisterPaymentModal from '../components/InvoiceRegisterPaymentModal.jsx';
 
 function getDeskCfg() {
   if (typeof window === 'undefined') return {};
@@ -61,6 +63,7 @@ export default function InvoiceViewPage() {
   const [pdfProgress, setPdfProgress] = useState(0);
   const [pdfMessage, setPdfMessage] = useState('Preparing document...');
   const [pdfFileName, setPdfFileName] = useState('');
+  const [payEntryId, setPayEntryId] = useState(null);
   const pdfCloseTimer = useRef(null);
   const desktopDropdownRef = useRef(null);
   const createFlashShown = useRef(false);
@@ -323,6 +326,35 @@ export default function InvoiceViewPage() {
     setDesktopActionsOpen(false);
   };
 
+  const revenueEntryId = Number(data?.revenue_entry_id || 0);
+
+  const openRegisterPayment = () => {
+    if (revenueEntryId > 0) {
+      setPayEntryId(revenueEntryId);
+      return;
+    }
+    if (urls.register_payment) {
+      window.location.href = urls.register_payment;
+    }
+  };
+
+  const handlePaymentSuccess = async (result) => {
+    setPayEntryId(null);
+    showToast('success', result?.message || 'Payment recorded successfully.');
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('module') && deskCfg.module) {
+      params.set('module', deskCfg.module);
+    }
+    if (!params.get('id') && deskCfg.invoice_id) {
+      params.set('id', String(deskCfg.invoice_id));
+    }
+    try {
+      await loadData(params);
+    } catch (err) {
+      showToast('error', err.message || 'Payment saved but invoice could not refresh.', 5000);
+    }
+  };
+
   if (loading && !data) {
     return (
       <div className="ov-boot-loading" role="status">
@@ -379,12 +411,22 @@ export default function InvoiceViewPage() {
         onDownloadPdf={handleDownloadPdf}
         onDownloadDeliveryNote={handleDownloadDeliveryNote}
         onEmail={handleEmail}
+        onRegisterPayment={flags.can_register_payment && revenueEntryId > 0 ? openRegisterPayment : undefined}
       />
 
       <InvoiceDocumentPane
         html={documentHtml}
         fontFamily={documentFontFamily}
       />
+
+      {payEntryId ? createPortal(
+        <InvoiceRegisterPaymentModal
+          entryId={payEntryId}
+          onClose={() => setPayEntryId(null)}
+          onSuccess={handlePaymentSuccess}
+        />,
+        document.body,
+      ) : null}
 
       {catalogHtml ? (
         <InvoiceDocumentPane

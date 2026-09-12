@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, Pencil, Trash2, X } from 'lucide-react';
 import ExpenseStatusBadge, { canDeleteDraftExpense } from './ExpenseStatusBadge';
-import { deskPageUrl } from '../api/expensesDesk';
 
 function formatCurrency(value, currencyCode) {
   const code = String(currencyCode || 'TZS').replace(/^TSh$/i, 'TZS');
@@ -35,6 +34,7 @@ export default function ExpenseQuickViewModal({
   onClose,
   onDeleteDraft,
   onPostDraft,
+  onEditDraft,
   deleting = false,
   posting = false,
 }) {
@@ -119,17 +119,15 @@ export default function ExpenseQuickViewModal({
               <CheckCircle2 size={16} aria-hidden="true" />
               {posting ? 'Posting…' : 'Post expense'}
             </button>
-            <a
-              href={busy ? undefined : deskPageUrl('edit.php', { id: expense.id })}
-              className={`exp-desk-btn exp-desk-btn-secondary exp-desk-quick-action-btn${busy ? ' is-disabled' : ''}`}
-              aria-disabled={busy}
-              onClick={(event) => {
-                if (busy) event.preventDefault();
-              }}
+            <button
+              type="button"
+              className="exp-desk-btn exp-desk-btn-secondary exp-desk-quick-action-btn"
+              onClick={() => onEditDraft?.(expense)}
+              disabled={busy}
             >
               <Pencil size={16} aria-hidden="true" />
               Edit draft
-            </a>
+            </button>
             <button
               type="button"
               className="exp-desk-btn exp-desk-btn-secondary exp-desk-quick-action-btn exp-desk-quick-action-btn--danger"

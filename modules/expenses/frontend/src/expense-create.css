@@ -594,3 +594,105 @@ body.page-exp-desk button.exp-create-btn-save {
     justify-content: center;
   }
 }
+
+/* Record / edit expense popup */
+.exp-create-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.25rem 1rem 1.5rem;
+  overflow: auto;
+  background: rgba(15, 23, 42, 0.45);
+  box-sizing: border-box;
+}
+
+.exp-create-modal {
+  width: min(520px, 100%);
+  max-height: calc(100vh - 2.5rem);
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+}
+
+.exp-create-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.15rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+  flex: 0 0 auto;
+}
+
+.exp-create-modal-head h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.exp-create-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #475569;
+  cursor: pointer;
+}
+
+.exp-create-modal-close:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.exp-create-modal-close:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.exp-create-modal-body {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 0.25rem 1.15rem 1.15rem;
+  min-height: 0;
+}
+
+.exp-create-shell--modal {
+  max-width: none;
+  margin: 0;
+  padding: 0.75rem 0 0;
+}
+
+.exp-create-shell--modal .exp-create-actions {
+  position: sticky;
+  bottom: 0;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), #fff 35%);
+}
+
+@media (max-width: 640px) {
+  .exp-create-modal-backdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .exp-create-modal {
+    width: 100%;
+    max-height: none;
+    min-height: 100%;
+    border-radius: 0;
+  }
+}

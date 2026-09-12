@@ -4,6 +4,7 @@ import { Inbox, Loader2, Pencil, Search, Trash2, X } from 'lucide-react';
 import ExpenseQuickViewModal from '../components/ExpenseQuickViewModal';
 import ExpensePostConfirmModal from '../components/ExpensePostConfirmModal';
 import ExpenseKpiTraceModal from '../components/ExpenseKpiTraceModal';
+import ExpenseCreatePage from './ExpenseCreatePage';
 import ExpenseStatusBadge, { canDeleteDraftExpense, expenseStatusLabel } from '../components/ExpenseStatusBadge';
 import {
   deleteDraftExpense,
@@ -119,6 +120,7 @@ export default function ExpensesDeskPage() {
   const [postingDraftId, setPostingDraftId] = useState(null);
   const [postConfirm, setPostConfirm] = useState(null);
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
+  const [recordModal, setRecordModal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exportState, setExportState] = useState('idle');
@@ -798,6 +800,10 @@ export default function ExpensesDeskPage() {
           onClose={() => setPreviewExpense(null)}
           onDeleteDraft={handleDeleteDraft}
           onPostDraft={handlePostDraft}
+          onEditDraft={(expense) => {
+            setPreviewExpense(null);
+            setRecordModal({ editId: expense.id });
+          }}
           deleting={deletingDraftId === previewExpense.id}
           posting={postingDraftId === previewExpense.id}
         />
@@ -900,14 +906,15 @@ export default function ExpensesDeskPage() {
               <span>Export</span>
             )}
           </button>
-          <a
-            href={deskPageUrl('create.php')}
+          <button
+            type="button"
             className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
             aria-label="Record expense"
+            onClick={() => setRecordModal({ editId: null })}
           >
             <span className="exp-desk-btn-label-desktop">Record expense</span>
             <span className="exp-desk-btn-label-mobile">New</span>
-          </a>
+          </button>
           </div>
         </div>
       </div>
@@ -1081,15 +1088,20 @@ export default function ExpensesDeskPage() {
                       <td className="exp-desk-row-actions" data-exp-row-ignore>
                         {canDeleteDraftExpense(expense) ? (
                           <div className="exp-desk-row-actions-inner">
-                            <a
-                              href={deskPageUrl('edit.php', { id: expense.id })}
+                            <button
+                              type="button"
                               className="exp-desk-row-action"
                               title="Edit draft"
                               aria-label={`Edit ${expense.expense_number || 'draft'}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setPreviewExpense(null);
+                                setRecordModal({ editId: expense.id });
+                              }}
                             >
                               <Pencil size={15} aria-hidden="true" />
                               <span className="exp-desk-row-action-label">Edit</span>
-                            </a>
+                            </button>
                             <button
                               type="button"
                               className="exp-desk-row-action exp-desk-row-action--danger"
@@ -1116,6 +1128,19 @@ export default function ExpensesDeskPage() {
           </div>
         )}
       </section>
+
+      {recordModal ? (
+        <ExpenseCreatePage
+          key={recordModal.editId ? `edit-${recordModal.editId}` : 'create'}
+          asModal
+          editId={recordModal.editId || null}
+          onClose={() => setRecordModal(null)}
+          onSaved={async () => {
+            setRecordModal(null);
+            await loadData(filters, true);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

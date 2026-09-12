@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Trash2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Loader2, Trash2, X } from 'lucide-react';
 import {
   deleteDraftExpense,
   deskPageUrl,
@@ -11,7 +12,6 @@ import {
   submitUpdateExpense,
   submitUpdateExpenseDraftOnLeave,
 } from '../api/expensesDesk';
-
 const FLAG_BASE = 'https://flagcdn.com/w40/';
 
 function normalizeCurrencyIso(code) {
@@ -76,8 +76,17 @@ function isExpenseFormFilled(fields) {
   return false;
 }
 
-export default function ExpenseCreatePage() {
-  const editId = useMemo(() => resolveEditId(), []);
+export default function ExpenseCreatePage({
+  asModal = false,
+  editId: editIdProp = null,
+  onClose = null,
+  onSaved = null,
+} = {}) {
+  const editId = useMemo(() => {
+    const fromProp = editIdProp != null ? parseInt(String(editIdProp), 10) : 0;
+    if (fromProp > 0) return fromProp;
+    return resolveEditId();
+  }, [editIdProp]);
   const isEditing = editId != null;
   const [init, setInit] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -89,6 +98,26 @@ export default function ExpenseCreatePage() {
   const rateFetchToken = useRef(0);
   const exitHandledRef = useRef(false);
   const formSnapshotRef = useRef({});
+
+  const leaveToDesk = useCallback(() => {
+    if (typeof onClose === 'function') {
+      onClose();
+      return;
+    }
+    window.location.href = deskPageUrl('index.php');
+  }, [onClose]);
+
+  const finishSaved = useCallback((redirectUrl) => {
+    if (typeof onSaved === 'function') {
+      onSaved(redirectUrl);
+      return;
+    }
+    if (typeof onClose === 'function') {
+      onClose({ saved: true, redirect: redirectUrl });
+      return;
+    }
+    window.location.href = redirectUrl || deskPageUrl('index.php');
+  }, [onClose, onSaved]);
 
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [date, setDate] = useState(todayIso());
@@ -365,7 +394,7 @@ export default function ExpenseCreatePage() {
     try {
       exitHandledRef.current = true;
       const result = await saveExpense('post');
-      window.location.href = result.redirect || deskPageUrl('index.php');
+      finishSaved(result.redirect || deskPageUrl('index.php'));
     } catch (err) {
       exitHandledRef.current = false;
       setErrors([err instanceof Error ? err.message : 'Failed to save expense.']);
@@ -385,7 +414,7 @@ export default function ExpenseCreatePage() {
     } else {
       exitHandledRef.current = true;
     }
-    window.location.href = deskPageUrl('index.php');
+    leaveToDesk();
   }
 
   async function handleDeleteDraft() {
@@ -398,7 +427,7 @@ export default function ExpenseCreatePage() {
     try {
       await deleteDraftExpense(editId, init.csrf_token);
       exitHandledRef.current = true;
-      window.location.href = deskPageUrl('index.php');
+      finishSaved(deskPageUrl('index.php'));
     } catch (err) {
       setErrors([err instanceof Error ? err.message : 'Failed to delete draft.']);
     } finally {
@@ -406,22 +435,81 @@ export default function ExpenseCreatePage() {
     }
   }
 
+  useEffect(() => {
+    if (!asModal) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape' && !saving && !deleting) {
+        handleCancel();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cancel uses latest form state via closure on Escape only
+  }, [asModal, saving, deleting]);
+
   if (loading) {
-    return (
+    const loadingBody = (
       <div className="exp-create-loading">
         <Loader2 size={22} className="exp-create-spinner" aria-hidden />
         Loading form...
       </div>
     );
+    if (!asModal) return loadingBody;
+    return createPortal(
+      <div className="exp-create-modal-backdrop" role="presentation">
+        <div className="exp-create-modal" role="dialog" aria-modal="true" aria-label="Record expense">
+          <div className="exp-create-modal-head">
+            <h2>Record expense</h2>
+          </div>
+          <div className="exp-create-modal-body">{loadingBody}</div>
+        </div>
+      </div>,
+      document.body,
+    );
   }
 
   if (!init) {
-    return (
+    const errorBody = (
       <div className="exp-create-shell">
         <div className="exp-create-alert exp-create-alert--error">
           {errors[0] || 'Could not load the expense form.'}
         </div>
+        {asModal ? (
+          <div className="exp-create-actions">
+            <button type="button" className="exp-create-btn-cancel" onClick={leaveToDesk}>
+              Close
+            </button>
+          </div>
+        ) : null}
       </div>
+    );
+    if (!asModal) return errorBody;
+    return createPortal(
+      <div className="exp-create-modal-backdrop" onClick={leaveToDesk} role="presentation">
+        <div
+          className="exp-create-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Record expense"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="exp-create-modal-head">
+            <h2>Record expense</h2>
+            <button type="button" className="exp-create-modal-close" onClick={leaveToDesk} aria-label="Close">
+              <X size={18} />
+            </button>
+          </div>
+          <div className="exp-create-modal-body">{errorBody}</div>
+        </div>
+      </div>,
+      document.body,
     );
   }
 
@@ -436,9 +524,10 @@ export default function ExpenseCreatePage() {
 
   const sourceLabel = paymentMethod === 'cash' ? 'Cash Account' : 'Bank Account';
   const isTzs = normalizeCurrencyIso(currency) === 'TZS';
+  const modalTitle = isEditing ? 'Edit expense' : 'Record expense';
 
-  return (
-    <div className="exp-create-shell">
+  const formBody = (
+    <div className={`exp-create-shell${asModal ? ' exp-create-shell--modal' : ''}`}>
       {errors.length > 0 && (
         <div className="exp-create-alert exp-create-alert--error" role="alert">
           {errors.map((msg) => (
@@ -872,5 +961,40 @@ export default function ExpenseCreatePage() {
           </div>
       </form>
     </div>
+  );
+
+  if (!asModal) {
+    return formBody;
+  }
+
+  return createPortal(
+    <div
+      className="exp-create-modal-backdrop"
+      onClick={saving || deleting ? undefined : () => { void handleCancel(); }}
+      role="presentation"
+    >
+      <div
+        className="exp-create-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exp-create-modal-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="exp-create-modal-head">
+          <h2 id="exp-create-modal-title">{modalTitle}</h2>
+          <button
+            type="button"
+            className="exp-create-modal-close"
+            onClick={() => { void handleCancel(); }}
+            disabled={saving || deleting}
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="exp-create-modal-body">{formBody}</div>
+      </div>
+    </div>,
+    document.body,
   );
 }

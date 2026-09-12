@@ -18,12 +18,14 @@ final class Schema
                 name VARCHAR(120) NOT NULL,
                 opening_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
                 notes TEXT NULL,
+                financial_account_id INT UNSIGNED NULL,
                 status ENUM('active','archived') NOT NULL DEFAULT 'active',
                 created_by INT UNSIGNED NULL,
                 created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_cash_books_status (status),
-                INDEX idx_cash_books_created_by (created_by)
+                INDEX idx_cash_books_created_by (created_by),
+                INDEX idx_cash_books_fa (financial_account_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
             DB::statement("CREATE TABLE IF NOT EXISTS cash_book_categories (
@@ -77,7 +79,29 @@ final class Schema
             error_log('CashBook Schema::ensure: ' . $e->getMessage());
         }
 
+        self::ensureBookWalletColumn();
         self::seedDefaultCategories();
+    }
+
+    /**
+     * Optional link from a cash book to a Balances deposit wallet (cash/bank/mobile).
+     * Additive only — existing books keep financial_account_id NULL (no Balances sync).
+     */
+    private static function ensureBookWalletColumn(): void
+    {
+        try {
+            $cols = DB::select("SHOW COLUMNS FROM cash_books LIKE 'financial_account_id'");
+            if (!empty($cols)) {
+                return;
+            }
+            DB::statement(
+                'ALTER TABLE cash_books
+                 ADD COLUMN financial_account_id INT UNSIGNED NULL AFTER notes,
+                 ADD INDEX idx_cash_books_fa (financial_account_id)'
+            );
+        } catch (Throwable $e) {
+            error_log('CashBook ensureBookWalletColumn: ' . $e->getMessage());
+        }
     }
 
     private static function seedDefaultCategories(): void

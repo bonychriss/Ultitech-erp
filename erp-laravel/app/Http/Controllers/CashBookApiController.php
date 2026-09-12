@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domains\CashBook\BalancesBridge;
 use App\Domains\CashBook\CashBookService;
 use App\Domains\CashBook\Schema;
 use Illuminate\Http\JsonResponse;
@@ -10,7 +11,7 @@ use InvalidArgumentException;
 use Throwable;
 
 /**
- * Cash Book JSON API — Domains/CashBook.
+ * Cash Book JSON API  Domains/CashBook.
  */
 class CashBookApiController extends Controller
 {
@@ -101,6 +102,7 @@ class CashBookApiController extends Controller
                 'total_out' => round($totalOut, 2),
             ],
             'categories' => $svc->listCategories(),
+            'deposit_accounts' => BalancesBridge::depositAccounts(),
         ]);
     }
 
@@ -133,7 +135,7 @@ class CashBookApiController extends Controller
             return response()->json(['ok' => true, 'book' => $book, 'message' => 'Cash book updated.']);
         }
 
-        // DELETE no longer hard-deletes — it queues an admin-approval request.
+        // DELETE no longer hard-deletes  it queues an admin-approval request.
         if ($method === 'DELETE' && $id) {
             $reason = trim((string) $request->input('reason', ''));
             $req = $svc->requestDeleteBook($id, $userId, $reason);
@@ -286,7 +288,8 @@ class CashBookApiController extends Controller
         $report = $svc->report(
             $this->optionalDate($request->query('date_from')),
             $this->optionalDate($request->query('date_to')),
-            $bookId > 0 ? $bookId : null
+            $bookId > 0 ? $bookId : null,
+            $this->optionalType($request->query('entry_type'))
         );
 
         return response()->json(['ok' => true, 'report' => $report]);

@@ -6,9 +6,11 @@ import {
   deleteEntry,
   fetchCategories,
   fetchEntries,
+  fetchInit,
   formatDate,
   formatMoney,
   todayISO,
+  updateBook,
   updateEntry,
 } from '../api/cashbook.js'
 
@@ -36,6 +38,8 @@ export default function BookLedgerPage() {
   const [entries, setEntries] = useState([])
   const [summary, setSummary] = useState(null)
   const [categories, setCategories] = useState([])
+  const [depositAccounts, setDepositAccounts] = useState([])
+  const [walletSaving, setWalletSaving] = useState(false)
   const [filters, setFilters] = useState({ date_from: '', date_to: '', entry_type: '' })
   const [entryType, setEntryType] = useState('in')
   const [form, setForm] = useState(emptyForm)
@@ -83,6 +87,21 @@ export default function BookLedgerPage() {
     let cancelled = false
     ;(async () => {
       try {
+        const init = await fetchInit()
+        if (!cancelled) setDepositAccounts(init.deposit_accounts || [])
+      } catch {
+        if (!cancelled) setDepositAccounts([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
         const cats = await fetchCategories(entryType)
         if (!cancelled) setCategories(cats.categories || [])
       } catch {
@@ -94,17 +113,33 @@ export default function BookLedgerPage() {
     }
   }, [entryType])
 
+  async function onLinkWallet(accountId) {
+    if (bookId <= 0) return
+    setWalletSaving(true)
+    setError('')
+    try {
+      await updateBook(bookId, {
+        financial_account_id: accountId ? Number(accountId) : null,
+      })
+      await load()
+    } catch (err) {
+      setError(err.message || 'Could not update wallet link')
+    } finally {
+      setWalletSaving(false)
+    }
+  }
+
   function resetForm() {
     setForm({ ...emptyForm, entry_date: todayISO() })
     setEditingId(0)
-    setEntryType('in')
+    setEntryType('out')
     setCreateOpen(false)
   }
 
   function openCreate() {
     setEditingId(0)
     setForm({ ...emptyForm, entry_date: todayISO() })
-    setEntryType('in')
+    setEntryType('out')
     setError('')
     setCreateOpen(true)
     setFilterOpen(false)
@@ -234,8 +269,8 @@ export default function BookLedgerPage() {
                     onChange={(e) => setFilters((f) => ({ ...f, entry_type: e.target.value }))}
                   >
                     <option value="">All types</option>
+                    <option value="out">Expense (cash out)</option>
                     <option value="in">Cash in</option>
-                    <option value="out">Cash out</option>
                   </select>
                 </div>
                 <div className="cb-filter-panel-actions">
@@ -262,6 +297,30 @@ export default function BookLedgerPage() {
 
       {error ? <div className="cb-error">{error}</div> : null}
 
+      {book ? (
+        <div className="cb-field" style={{ maxWidth: 420, marginBottom: '0.75rem' }}>
+          <label>Balances wallet</label>
+          <select
+            className="cb-select"
+            disabled={walletSaving}
+            value={book.financial_account_id ? String(book.financial_account_id) : ''}
+            onChange={(e) => onLinkWallet(e.target.value)}
+          >
+            <option value="">Do not sync to Balances</option>
+            {depositAccounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.type})
+              </option>
+            ))}
+          </select>
+          <p className="cb-muted-hint" style={{ marginTop: '0.35rem' }}>
+            {book.financial_account_id
+              ? 'New entries update this wallet. Past entries are not backfilled.'
+              : 'Link a cash/bank/mobile account so new expenses debit Balances. Existing data stays as-is.'}
+          </p>
+        </div>
+      ) : null}
+
       {summary ? (
         <div className="cb-summary">
           <div className="cb-kpi">
@@ -269,7 +328,7 @@ export default function BookLedgerPage() {
             <div className="cb-kpi-value in">{formatMoney(summary.total_in)}</div>
           </div>
           <div className="cb-kpi">
-            <span className="cb-kpi-label">Cash out</span>
+            <span className="cb-kpi-label">Expenses (out)</span>
             <div className="cb-kpi-value out">{formatMoney(summary.total_out)}</div>
           </div>
           <div className="cb-kpi">
@@ -295,17 +354,17 @@ export default function BookLedgerPage() {
             <div className="cb-type-toggle">
               <button
                 type="button"
+                className={`cb-type-btn${entryType === 'out' ? ' is-active out' : ''}`}
+                onClick={() => setEntryType('out')}
+              >
+                Expense
+              </button>
+              <button
+                type="button"
                 className={`cb-type-btn${entryType === 'in' ? ' is-active in' : ''}`}
                 onClick={() => setEntryType('in')}
               >
                 Cash in
-              </button>
-              <button
-                type="button"
-                className={`cb-type-btn${entryType === 'out' ? ' is-active out' : ''}`}
-                onClick={() => setEntryType('out')}
-              >
-                Cash out
               </button>
             </div>
             <div className="cb-field">
@@ -406,7 +465,7 @@ export default function BookLedgerPage() {
                     <td>{formatDate(row.entry_date)}</td>
                     <td>
                       <span className={`cb-entry-type ${row.entry_type}`}>
-                        {row.entry_type === 'in' ? 'Cash in' : 'Cash out'}
+                        {row.entry_type === 'in' ? 'Cash in' : 'Expense'}
                       </span>
                     </td>
                     <td>{row.category_name || '-'}</td>

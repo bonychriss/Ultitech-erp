@@ -17,6 +17,7 @@ export default function ReportsPage() {
     date_from: monthStart(),
     date_to: todayISO(),
     book_id: '',
+    entry_type: 'out',
   })
 
   async function load() {
@@ -29,6 +30,7 @@ export default function ReportsPage() {
           date_from: filters.date_from || undefined,
           date_to: filters.date_to || undefined,
           book_id: filters.book_id || undefined,
+          entry_type: filters.entry_type || undefined,
         }),
       ])
       setBooks(booksRes.books || [])
@@ -43,7 +45,7 @@ export default function ReportsPage() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.date_from, filters.date_to, filters.book_id])
+  }, [filters.date_from, filters.date_to, filters.book_id, filters.entry_type])
 
   const summary = report?.summary
 
@@ -54,7 +56,7 @@ export default function ReportsPage() {
           <a className="cb-back-link" href={booksUrl()}>
             <ArrowLeft size={16} /> All books
           </a>
-          <h2 style={{ marginTop: '0.35rem' }}>Reports</h2>
+          <h2 style={{ marginTop: '0.35rem' }}>Expense & cash reports</h2>
         </div>
       </div>
 
@@ -83,6 +85,15 @@ export default function ReportsPage() {
             </option>
           ))}
         </select>
+        <select
+          className="cb-select"
+          value={filters.entry_type}
+          onChange={(e) => setFilters((f) => ({ ...f, entry_type: e.target.value }))}
+        >
+          <option value="out">Expenses only</option>
+          <option value="in">Cash in only</option>
+          <option value="">All types</option>
+        </select>
       </div>
 
       {error ? <div className="cb-error">{error}</div> : null}
@@ -100,7 +111,7 @@ export default function ReportsPage() {
                 <div className="cb-kpi-value in">{formatMoney(summary.total_in)}</div>
               </div>
               <div className="cb-kpi">
-                <span className="cb-kpi-label">Cash out</span>
+                <span className="cb-kpi-label">Expenses (out)</span>
                 <div className="cb-kpi-value out">{formatMoney(summary.total_out)}</div>
               </div>
               <div className="cb-kpi">
@@ -160,7 +171,7 @@ export default function ReportsPage() {
                   {report.by_category.map((r, i) => (
                     <tr key={`${r.category_name}-${r.entry_type}-${i}`}>
                       <td>{r.category_name}</td>
-                      <td>{r.entry_type === 'in' ? 'Cash in' : 'Cash out'}</td>
+                      <td>{r.entry_type === 'in' ? 'Cash in' : 'Expense'}</td>
                       <td className={`cb-entry-amt ${r.entry_type}`}>{formatMoney(r.total)}</td>
                       <td>{r.count}</td>
                     </tr>

@@ -55,10 +55,12 @@ final class CashBookService
         }
         $opening = round((float) ($data['opening_balance'] ?? 0), 2);
         $notes = trim((string) ($data['notes'] ?? ''));
+        $walletId = $this->normalizeWalletId($data['financial_account_id'] ?? null);
         $id = (int) DB::table('cash_books')->insertGetId([
             'name' => mb_substr($name, 0, 120),
             'opening_balance' => $opening,
             'notes' => $notes !== '' ? $notes : null,
+            'financial_account_id' => $walletId > 0 ? $walletId : null,
             'status' => 'active',
             'created_by' => $userId > 0 ? $userId : null,
             'created_at' => now(),
@@ -100,6 +102,11 @@ final class CashBookService
                 throw new InvalidArgumentException('Invalid book status.');
             }
             $patch['status'] = $status;
+        }
+        if (array_key_exists('financial_account_id', $data)) {
+            // Linking only affects future entries ? never backfills historical rows into Balances.
+            $walletId = $this->normalizeWalletId($data['financial_account_id']);
+            $patch['financial_account_id'] = $walletId > 0 ? $walletId : null;
         }
 
         DB::table('cash_books')->where('id', $id)->update($patch);
@@ -158,7 +165,7 @@ final class CashBookService
     }
 
     /**
-     * Admin: approve pending delete ù removes the book and all its entries.
+     * Admin: approve pending delete ? removes the book and all its entries.
      *
      * @return array{request:array<string,mixed>,deleted_book_id:int}
      */
@@ -182,6 +189,13 @@ final class CashBookService
         }
 
         DB::transaction(function () use ($requestId, $adminUserId, $bookId) {
+            $book = $this->getBook($bookId);
+            $walletId = (int) ($book['financial_account_id'] ?? 0);
+            $entryIds = DB::table('cash_book_entries')->where('book_id', $bookId)->pluck('id')->all();
+            if ($walletId > 0 && $entryIds !== []) {
+                BalancesBridge::removeEntries($walletId, array_map('intval', $entryIds));
+            }
+
             DB::table('cash_book_delete_requests')->where('id', $requestId)->update([
                 'status' => 'approved',
                 'reviewed_by' => $adminUserId,
@@ -419,35 +433,44 @@ final class CashBookService
         $party = mb_substr(trim((string) ($data['party_name'] ?? '')), 0, 180);
         $remark = mb_substr(trim((string) ($data['remark'] ?? '')), 0, 500);
 
-        $id = (int) DB::table('cash_book_entries')->insertGetId([
-            'book_id' => $bookId,
-            'entry_date' => $date,
-            'entry_type' => $type,
-            'amount' => $amount,
-            'category_id' => $categoryId,
-            'party_name' => $party !== '' ? $party : null,
-            'remark' => $remark !== '' ? $remark : null,
-            'created_by' => $userId > 0 ? $userId : null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        return DB::transaction(function () use ($bookId, $type, $amount, $date, $categoryId, $party, $remark, $userId) {
+            $id = (int) DB::table('cash_book_entries')->insertGetId([
+                'book_id' => $bookId,
+                'entry_date' => $date,
+                'entry_type' => $type,
+                'amount' => $amount,
+                'category_id' => $categoryId,
+                'party_name' => $party !== '' ? $party : null,
+                'remark' => $remark !== '' ? $remark : null,
+                'created_by' => $userId > 0 ? $userId : null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        $catName = '';
-        if ($categoryId) {
-            $catName = (string) (DB::table('cash_book_categories')->where('id', $categoryId)->value('name') ?? '');
-        }
+            $catName = '';
+            if ($categoryId) {
+                $catName = (string) (DB::table('cash_book_categories')->where('id', $categoryId)->value('name') ?? '');
+            }
 
-        return [
-            'id' => $id,
-            'book_id' => $bookId,
-            'entry_date' => $date,
-            'entry_type' => $type,
-            'amount' => $amount,
-            'category_id' => $categoryId,
-            'category_name' => $catName,
-            'party_name' => $party,
-            'remark' => $remark,
-        ];
+            $entry = [
+                'id' => $id,
+                'book_id' => $bookId,
+                'entry_date' => $date,
+                'entry_type' => $type,
+                'amount' => $amount,
+                'category_id' => $categoryId,
+                'category_name' => $catName,
+                'party_name' => $party,
+                'remark' => $remark,
+            ];
+
+            $walletId = (int) (($this->getBook($bookId)['financial_account_id'] ?? 0));
+            if ($walletId > 0) {
+                BalancesBridge::syncEntry($walletId, $entry);
+            }
+
+            return $entry;
+        });
     }
 
     /**
@@ -505,7 +528,7 @@ final class CashBookService
 
         $arr = (array) $fresh;
 
-        return [
+        $entry = [
             'id' => (int) $arr['id'],
             'book_id' => (int) $arr['book_id'],
             'entry_date' => (string) $arr['entry_date'],
@@ -516,13 +539,34 @@ final class CashBookService
             'party_name' => (string) ($arr['party_name'] ?? ''),
             'remark' => (string) ($arr['remark'] ?? ''),
         ];
+
+        $book = $this->getBook((int) $entry['book_id']);
+        $walletId = (int) ($book['financial_account_id'] ?? 0);
+        if ($walletId > 0) {
+            BalancesBridge::syncEntry($walletId, $entry);
+        }
+
+        return $entry;
     }
 
     public function deleteEntry(int $id): void
     {
+        $row = DB::table('cash_book_entries')->where('id', $id)->first();
+        if (!$row) {
+            throw new InvalidArgumentException('Entry not found.');
+        }
+
+        $bookId = (int) ($row->book_id ?? 0);
+        $book = $bookId > 0 ? $this->getBook($bookId) : null;
+        $walletId = (int) ($book['financial_account_id'] ?? 0);
+
         $deleted = DB::table('cash_book_entries')->where('id', $id)->delete();
         if ($deleted < 1) {
             throw new InvalidArgumentException('Entry not found.');
+        }
+
+        if ($walletId > 0) {
+            BalancesBridge::removeEntry($walletId, $id);
         }
     }
 
@@ -597,7 +641,7 @@ final class CashBookService
     /**
      * @return array<string,mixed>
      */
-    public function report(?string $dateFrom = null, ?string $dateTo = null, ?int $bookId = null): array
+    public function report(?string $dateFrom = null, ?string $dateTo = null, ?int $bookId = null, ?string $entryType = null): array
     {
         $q = DB::table('cash_book_entries as e')
             ->join('cash_books as b', 'b.id', '=', 'e.book_id')
@@ -611,6 +655,9 @@ final class CashBookService
         }
         if ($dateTo) {
             $q->where('e.entry_date', '<=', $dateTo);
+        }
+        if ($entryType === 'in' || $entryType === 'out') {
+            $q->where('e.entry_type', $entryType);
         }
 
         $totals = (clone $q)->selectRaw("
@@ -665,6 +712,7 @@ final class CashBookService
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
             'book_id' => $bookId,
+            'entry_type' => $entryType,
             'summary' => [
                 'total_in' => $totalIn,
                 'total_out' => $totalOut,
@@ -994,6 +1042,12 @@ final class CashBookService
             'name' => (string) ($row['name'] ?? ''),
             'opening_balance' => $opening,
             'notes' => (string) ($row['notes'] ?? ''),
+            'financial_account_id' => isset($row['financial_account_id']) && $row['financial_account_id'] !== null
+                ? (int) $row['financial_account_id']
+                : null,
+            'financial_account_name' => isset($row['financial_account_id']) && (int) $row['financial_account_id'] > 0
+                ? BalancesBridge::accountLabel((int) $row['financial_account_id'])
+                : '',
             'status' => (string) ($row['status'] ?? 'active'),
             'created_by' => isset($row['created_by']) && $row['created_by'] !== null ? (int) $row['created_by'] : null,
             'total_in' => $totalIn,
@@ -1004,5 +1058,19 @@ final class CashBookService
             'created_at' => (string) ($row['created_at'] ?? ''),
             'updated_at' => (string) ($row['updated_at'] ?? ''),
         ];
+    }
+
+    private function normalizeWalletId(mixed $raw): int
+    {
+        if ($raw === null || $raw === '' || $raw === false) {
+            return 0;
+        }
+        $id = (int) $raw;
+        if ($id <= 0) {
+            return 0;
+        }
+        BalancesBridge::assertDepositAccountId($id);
+
+        return $id;
     }
 }

@@ -23,7 +23,8 @@ export default function BooksPage() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteReason, setDeleteReason] = useState('')
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', opening_balance: '0', notes: '' })
+  const [depositAccounts, setDepositAccounts] = useState([])
+  const [form, setForm] = useState({ name: '', opening_balance: '0', notes: '', financial_account_id: '' })
 
   async function load() {
     setLoading(true)
@@ -32,6 +33,7 @@ export default function BooksPage() {
       const data = await fetchInit()
       setBooks(data.books || [])
       setSummary(data.summary || null)
+      setDepositAccounts(data.deposit_accounts || [])
       setIsAdmin(Boolean(data.user?.is_admin || data.capabilities?.approve_delete))
       setUserId(Number(data.user?.id) || 0)
     } catch (e) {
@@ -55,9 +57,10 @@ export default function BooksPage() {
         name: form.name,
         opening_balance: Number(form.opening_balance) || 0,
         notes: form.notes,
+        financial_account_id: form.financial_account_id ? Number(form.financial_account_id) : null,
       })
       setShowCreate(false)
-      setForm({ name: '', opening_balance: '0', notes: '' })
+      setForm({ name: '', opening_balance: '0', notes: '', financial_account_id: '' })
       await load()
     } catch (err) {
       setError(err.message || 'Could not create book')
@@ -156,7 +159,7 @@ export default function BooksPage() {
             <div className="cb-kpi-value in">{formatMoney(summary.total_in)}</div>
           </div>
           <div className="cb-kpi">
-            <span className="cb-kpi-label">Cash out</span>
+            <span className="cb-kpi-label">Expenses (out)</span>
             <div className="cb-kpi-value out">{formatMoney(summary.total_out)}</div>
           </div>
           <div className="cb-kpi">
@@ -179,6 +182,7 @@ export default function BooksPage() {
             <thead>
               <tr>
                 <th>Book</th>
+                <th>Wallet</th>
                 <th>Entries</th>
                 <th>Opening</th>
                 <th>Balance</th>
@@ -202,6 +206,7 @@ export default function BooksPage() {
                         <span className="cb-badge cb-badge-ok">Pending delete</span>
                       ) : null}
                     </td>
+                    <td>{b.financial_account_name || <span className="cb-muted-hint">Not linked</span>}</td>
                     <td>{b.entry_count}</td>
                     <td>{formatMoney(b.opening_balance)}</td>
                     <td>
@@ -303,6 +308,25 @@ export default function BooksPage() {
                 value={form.opening_balance}
                 onChange={(e) => setForm((f) => ({ ...f, opening_balance: e.target.value }))}
               />
+            </div>
+            <div className="cb-field">
+              <label htmlFor="cb-wallet">Balances wallet (optional)</label>
+              <select
+                id="cb-wallet"
+                className="cb-select"
+                value={form.financial_account_id}
+                onChange={(e) => setForm((f) => ({ ...f, financial_account_id: e.target.value }))}
+              >
+                <option value="">Do not sync to Balances</option>
+                {depositAccounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.type})
+                  </option>
+                ))}
+              </select>
+              <p className="cb-muted-hint" style={{ marginTop: '0.35rem' }}>
+                Link a cash/bank/mobile account so new cash out posts as expenses on that wallet. Existing entries stay unchanged.
+              </p>
             </div>
             <div className="cb-field">
               <label htmlFor="cb-notes">Notes</label>

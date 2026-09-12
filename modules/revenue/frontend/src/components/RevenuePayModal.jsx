@@ -159,7 +159,7 @@ export default function RevenuePayModal({ entryId, onClose, onSuccess }) {
             <h2 id="rev-pay-title">Record payment</h2>
             <p className="rev-pay-sub">
               {entry.voucher_number || `#${entryId}`}
-              {entry.customer_name ? ` · ${entry.customer_name}` : ''}
+              {entry.customer_name ? ` - ${entry.customer_name}` : ''}
             </p>
           </div>
           <button type="button" className="rev-pay-close" onClick={onClose} aria-label="Close">
@@ -170,7 +170,7 @@ export default function RevenuePayModal({ entryId, onClose, onSuccess }) {
         {loading ? (
           <div className="rev-pay-loading">
             <Loader2 size={22} className="rev-pay-spin" aria-hidden="true" />
-            <span>Loading…</span>
+            <span>Loading...</span>
           </div>
         ) : (
           <form className="rev-pay-form" onSubmit={handleSubmit}>
@@ -300,7 +300,7 @@ export default function RevenuePayModal({ entryId, onClose, onSuccess }) {
                 ) : (
                   <Wallet size={16} aria-hidden="true" />
                 )}
-                {saving ? 'Posting…' : 'Confirm payment'}
+                {saving ? 'Posting...' : 'Confirm payment'}
               </button>
             </div>
           </form>

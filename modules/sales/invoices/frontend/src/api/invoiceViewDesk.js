@@ -95,19 +95,14 @@ export async function fetchDeliveryNoteDownloadPayload(deliveryNoteUrl) {
 }
 
 function getRevenueApiBase() {
-  if (typeof window !== 'undefined' && window.__REVENUE_API_BASE__) {
-    return String(window.__REVENUE_API_BASE__).replace(/\/$/, '');
-  }
-  const cfg = getConfig();
-  if (cfg.revenue_api_base) {
-    return String(cfg.revenue_api_base).replace(/\/$/, '');
-  }
-  return '/modules/revenue/api';
+  // Prefer the invoices API base (company-scoped) — direct /modules/revenue/api
+  // without the tenant slug often redirects to HTML login under /{company}/...
+  return getApiBase();
 }
 
 export async function fetchRevenuePaymentInit(entryId) {
   const id = encodeURIComponent(String(entryId));
-  const res = await fetch(`${getRevenueApiBase()}/payment-init.php?id=${id}`, {
+  const res = await fetch(`${getRevenueApiBase()}/revenue-payment-init.php?id=${id}`, {
     credentials: 'same-origin',
   });
   const data = await parseJson(res);
@@ -118,7 +113,7 @@ export async function fetchRevenuePaymentInit(entryId) {
 }
 
 export async function submitRevenuePayment(formData) {
-  const res = await fetch(`${getRevenueApiBase()}/record-payment.php`, {
+  const res = await fetch(`${getRevenueApiBase()}/revenue-record-payment.php`, {
     method: 'POST',
     body: formData,
     credentials: 'same-origin',

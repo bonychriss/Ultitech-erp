@@ -7,24 +7,65 @@ declare(strict_types=1);
  */
 
 /**
- * @return array<string, mixed>
+ * Deposit wallets only (cash / bank / mobile) — not COA headers like Assets / Liabilities / Equity.
+ *
+ * @return list<array{id:int,name:string,currency:string,type:string,bucket:string}>
  */
 function revenue_payment_fetch_accounts(PDO $pdo): array
 {
+    if (is_file(dirname(__DIR__, 3) . '/modules/balances/functions.php')) {
+        require_once dirname(__DIR__, 3) . '/modules/balances/functions.php';
+    }
+
     $accounts = [];
+
+    if (function_exists('balancesFetchDepositAccounts')) {
+        $rows = balancesFetchDepositAccounts($pdo);
+        foreach ($rows as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            $name = trim((string) ($row['name'] ?? $row['account_name'] ?? ''));
+            if ($id <= 0 || $name === '') {
+                continue;
+            }
+            $type = (string) ($row['type'] ?? 'bank');
+            $bucket = function_exists('balancesAccountLiquidityBucket')
+                ? balancesAccountLiquidityBucket($type)
+                : 'bank';
+            $accounts[] = [
+                'id' => $id,
+                'name' => $name,
+                'currency' => (string) ($row['currency'] ?? 'TZS'),
+                'type' => $type,
+                'bucket' => $bucket,
+            ];
+        }
+        if ($accounts !== []) {
+            usort($accounts, static fn ($a, $b) => strcasecmp($a['name'], $b['name']));
+            return $accounts;
+        }
+    }
+
+    // Fallback when Balances helpers are unavailable: filter active FA rows by deposit type.
     try {
         $rows = $pdo->query(
             "SELECT id, name, currency, type FROM financial_accounts WHERE status = 'active' ORDER BY name ASC"
         )->fetchAll(PDO::FETCH_ASSOC) ?: [];
         foreach ($rows as $row) {
+            $type = (string) ($row['type'] ?? '');
+            $isDeposit = function_exists('balancesIsDepositAccountType')
+                ? balancesIsDepositAccountType($type)
+                : !in_array(strtolower(trim($type)), ['asset', 'liability', 'equity', 'revenue', 'expense', ''], true);
+            if (!$isDeposit) {
+                continue;
+            }
             $bucket = function_exists('balancesAccountLiquidityBucket')
-                ? balancesAccountLiquidityBucket((string) ($row['type'] ?? 'bank'))
+                ? balancesAccountLiquidityBucket($type !== '' ? $type : 'bank')
                 : 'bank';
             $accounts[] = [
                 'id' => (int) ($row['id'] ?? 0),
                 'name' => (string) ($row['name'] ?? ''),
                 'currency' => (string) ($row['currency'] ?? 'TZS'),
-                'type' => (string) ($row['type'] ?? ''),
+                'type' => $type,
                 'bucket' => $bucket,
             ];
         }
@@ -212,6 +253,12 @@ function revenue_payment_process(PDO $pdo, array $post, ?array $files = null): a
     }
     if ($accountId <= 0) {
         return ['ok' => false, 'errors' => ['Please select a deposit account.']];
+    }
+
+    $depositAccounts = revenue_payment_fetch_accounts($pdo);
+    $depositIds = array_map(static fn ($acc) => (int) ($acc['id'] ?? 0), $depositAccounts);
+    if (!in_array($accountId, $depositIds, true)) {
+        return ['ok' => false, 'errors' => ['Please select a valid cash, bank, or mobile deposit account.']];
     }
 
     $loaded = revenue_payment_load_entry($pdo, $entryId);

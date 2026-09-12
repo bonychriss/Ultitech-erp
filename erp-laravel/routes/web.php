@@ -24,6 +24,7 @@ use App\Http\Controllers\SuggestPageController;
 use App\Http\Controllers\CashBookApiController;
 use App\Http\Controllers\CashBookDeskPageController;
 use App\Http\Controllers\CashBookPageController;
+use App\Http\Controllers\AccountingPageController;
 use App\Domains\CashBook\DeskShell as CashBookDeskShell;
 use App\Http\Middleware\AttachErpContext;
 use Illuminate\Support\Facades\Route;
@@ -92,4 +93,7 @@ Route::middleware([AttachErpContext::class])->group(function () {
         ->where('resource', 'init|books|entries|categories|reports|import|delete-requests')
         ->where('id', '[0-9]+')
         ->name('cashbook.api');
+
+    // Accounting hub
+    Route::get('/accounting', [AccountingPageController::class, 'show'])->name('accounting.page');
 });

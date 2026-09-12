@@ -8,4 +8,5 @@ if (empty($_GET['company_slug'])) {
 if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
     $_GET['module'] = 'accounting';
 }
-require dirname(__DIR__) . '/modules/accounting/index.php';
+
+require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'accounting.php';

@@ -49,6 +49,11 @@ return [
             'legacy_api' => false,
             'entry' => 'cashbook.php',
         ],
+        'accounting' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'accounting.php',
+        ],
     ],
 
     'react_dist' => [
@@ -66,6 +71,7 @@ return [
         'payroll' => 'modules/payroll/frontend/dist',
         'letter' => 'modules/letter/frontend/dist',
         'cashbook' => 'modules/petty-cash/frontend/dist',
+        'accounting' => 'modules/accounting/frontend/dist',
     ],
 
     'sales_laravel_desks' => [

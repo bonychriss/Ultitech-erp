@@ -149,7 +149,7 @@ RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/stock/settings\.php$ stock.php?module=stocks&company_slug=$1&desk=settings [QSA,L,NC]
 # /{company_slug}/accounting
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
-RewriteRule ^([A-Za-z0-9-]+)/accounting/?$ modules/accounting/index.php?module=accounting&company_slug=$1 [QSA,L,NC]
+RewriteRule ^([A-Za-z0-9-]+)/accounting/?$ accounting.php?module=accounting&company_slug=$1 [QSA,L,NC]
 # /{company_slug}/todo
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/todo/?$ todo/index.php?module=todo&company_slug=$1 [QSA,L,NC]

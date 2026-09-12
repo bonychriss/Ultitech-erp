@@ -1,6 +1,6 @@
 <?php
 /**
- * Physical alias so /ultimate/revenue works (on-disk ultimate/ folder).
+ * Physical alias so /ultimate/revenue_entries works.
  */
 if (empty($_GET['company_slug'])) {
     $_GET['company_slug'] = 'ultimate';

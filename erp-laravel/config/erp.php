@@ -54,6 +54,11 @@ return [
             'legacy_api' => false,
             'entry' => 'accounting.php',
         ],
+        'revenue' => [
+            'enabled' => true,
+            'legacy_api' => true, // desk APIs stay under modules/revenue/api
+            'entry' => 'revenue_entries.php',
+        ],
     ],
 
     'react_dist' => [
@@ -72,6 +77,7 @@ return [
         'letter' => 'modules/letter/frontend/dist',
         'cashbook' => 'modules/petty-cash/frontend/dist',
         'accounting' => 'modules/accounting/frontend/dist',
+        'revenue' => 'modules/revenue/frontend/dist',
     ],
 
     'sales_laravel_desks' => [

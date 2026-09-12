@@ -25,7 +25,10 @@ use App\Http\Controllers\CashBookApiController;
 use App\Http\Controllers\CashBookDeskPageController;
 use App\Http\Controllers\CashBookPageController;
 use App\Http\Controllers\AccountingPageController;
+use App\Http\Controllers\RevenueDeskPageController;
+use App\Http\Controllers\RevenuePageController;
 use App\Domains\CashBook\DeskShell as CashBookDeskShell;
+use App\Domains\Revenue\DeskShell as RevenueDeskShell;
 use App\Http\Middleware\AttachErpContext;
 use Illuminate\Support\Facades\Route;
 
@@ -96,4 +99,10 @@ Route::middleware([AttachErpContext::class])->group(function () {
 
     // Accounting hub
     Route::get('/accounting', [AccountingPageController::class, 'show'])->name('accounting.page');
+
+    // Revenue (existing React UI via Laravel shell; APIs stay under modules/revenue/api)
+    Route::get('/revenue', [RevenuePageController::class, 'show'])->name('revenue.page');
+    Route::match(['get', 'post'], '/revenue/desk/{desk}', [RevenueDeskPageController::class, 'show'])
+        ->where('desk', RevenueDeskShell::deskRegex())
+        ->name('revenue.page.desk');
 });

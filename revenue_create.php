@@ -1,5 +1,11 @@
 <?php
+declare(strict_types=1);
+
 /**
- * Create revenue entry — React shell.
+ * Create revenue — Laravel Revenue desk.
  */
-require_once __DIR__ . '/modules/revenue/create.php';
+$_GET['desk'] = 'create';
+if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
+    $_GET['module'] = 'revenue';
+}
+require __DIR__ . '/revenue_entries.php';

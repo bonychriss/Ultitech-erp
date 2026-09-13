@@ -1433,6 +1433,31 @@ function expenses_build_desk_form_init(PDO $pdo): array
     $paymentFlat = expenses_fetch_payment_accounts($pdo);
     $expenseFlat = expenses_fetch_expense_sub_accounts($pdo);
 
+    $simpleWallets = [];
+    foreach ($paymentFlat as $row) {
+        $kind = strtolower((string) ($row['kind'] ?? 'bank'));
+        if ($kind === 'petty') {
+            continue;
+        }
+        $simpleWallets[] = [
+            'id' => (int) ($row['id'] ?? 0),
+            'label' => (string) ($row['label'] ?? $row['name'] ?? ''),
+            'name' => (string) ($row['name'] ?? ''),
+            'kind' => $kind === 'cash' ? 'cash' : ($kind === 'mobile' ? 'mobile' : 'bank'),
+            'parent_id' => (int) ($row['parent_id'] ?? 0),
+        ];
+    }
+
+    $simpleCategories = [];
+    foreach ($expenseFlat as $row) {
+        $simpleCategories[] = [
+            'id' => (int) ($row['id'] ?? 0),
+            'label' => (string) ($row['label'] ?? $row['name'] ?? ''),
+            'name' => (string) ($row['name'] ?? ''),
+            'parent_id' => (int) ($row['parent_id'] ?? 0),
+        ];
+    }
+
     $currencyCatalog = expenses_currency_catalog();
     $currencies = [];
     foreach ($currencyCatalog as $currencyOpt) {
@@ -1473,6 +1498,9 @@ function expenses_build_desk_form_init(PDO $pdo): array
             'childrenByParent' => $paymentChildren,
             'flat' => $paymentFlat,
         ],
+        'simple_wallets' => $simpleWallets,
+        'simple_categories' => $simpleCategories,
+        'require_receipt' => false,
         'balances_url' => '../balances/accounts.php?module=balances',
         'list_url' => 'index.php?module=expenses',
     ];

@@ -121,7 +121,7 @@ if ($hasAttachment) {
     } else {
         $errors[] = 'Failed to upload file.';
     }
-} elseif (!$isDraft && $attachmentPath === null) {
+} elseif (!$isDraft && $attachmentPath === null && !empty($_POST['require_receipt'])) {
     $errors[] = 'Receipt attachment is required.';
 }
 

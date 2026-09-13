@@ -110,8 +110,11 @@ body,
 }
 
 .erp-hero-title {
-  font-size: clamp(1.35rem, 2.3vw, 1.8rem);
+  font-size: clamp(1.45rem, 2.5vw, 1.95rem);
   letter-spacing: -0.02em;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--erp-ink);
 }
 
 .erp-hero-lead {
@@ -119,6 +122,8 @@ body,
   line-height: 1.55;
   max-width: 30rem;
 }
+
+.mt-3 { margin-top: 0.75rem; }
 
 .erp-btn-ghost-light {
   border: 1px solid rgba(255, 255, 255, 0.45);

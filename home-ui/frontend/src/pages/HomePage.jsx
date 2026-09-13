@@ -162,16 +162,12 @@ export default function HomePage() {
         <div className="erp-hero-scrim" aria-hidden="true" />
         <div className="erp-hero-copy max-w-screen-xl px-8 mx-auto">
           <div className="max-w-xl text-left erp-hero-copy-panel">
-            <p data-aos="fade-down" className="erp-brand-mark erp-brand-mark--on-media">
-              UltiTech ERP
-            </p>
-            <h1 data-aos="fade-up" className="my-3 erp-hero-title font-bold leading-tight text-darken">
-              Run finance, sales, and operations from{' '}
-              <span className="text-yellow-500">one live system</span>
+            <h1 data-aos="fade-up" className="erp-brand-mark erp-brand-mark--on-media erp-hero-title">
+              One platform. Every part of your business.
             </h1>
-            <p data-aos="fade-up" data-aos-delay="150" className="leading-normal erp-hero-lead mb-6 text-gray-600">
-              Balances, invoices, stock, payroll, and reports stay connected - so every team works from
-              the same numbers.
+            <p data-aos="fade-up" data-aos-delay="150" className="leading-normal erp-hero-lead mt-3 mb-6 text-gray-600">
+              Connect finance, sales, inventory, payroll, and operations in one system built to keep
+              your business moving.
             </p>
             <div
               data-aos="fade-up"

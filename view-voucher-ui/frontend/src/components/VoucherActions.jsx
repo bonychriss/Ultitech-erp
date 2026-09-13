@@ -85,7 +85,7 @@ export default function VoucherActions({
 
           <a
             href={actions.backUrl}
-            className="dropdown-item"
+            className="dropdown-item erp-nav-back-ignore"
             onClick={(e) => {
               e.preventDefault()
               if (actions.returnFinance) {

@@ -61,7 +61,7 @@ export default function CrmContactViewPage() {
     <div className="crm-page crm-page--view">
       <div className="crm-view-actions">
         <a
-          className="crm-link-back crm-view-back"
+          className="crm-link-back crm-view-back erp-nav-back-ignore"
           href={customersListUrl}
           onClick={(e) => {
             e.preventDefault();

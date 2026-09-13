@@ -124,6 +124,7 @@ export default function OrderDetailsPage() {
           <h2 style={{ color: '#991b1b' }}>Order not found</h2>
           <div className="cv-success-links">
             <a
+              className="erp-nav-back-ignore"
               href={urls.dashboard || urls.myDeliveries || 'index'}
               onClick={(e) => goListBack(e, urls.dashboard || urls.myDeliveries || 'index')}
             >&larr; Back</a>
@@ -143,7 +144,7 @@ export default function OrderDetailsPage() {
         </div>
         <a
           href={urls.dashboard || urls.myDeliveries || 'index'}
-          className="cv-link-back"
+          className="cv-link-back erp-nav-back-ignore"
           onClick={(e) => goListBack(e, urls.dashboard || urls.myDeliveries || 'index')}
         >
           &larr; Back
@@ -247,7 +248,7 @@ export default function OrderDetailsPage() {
           <div className="cv-actions">
             <a
               href={urls.dashboard || urls.myDeliveries || 'index'}
-              className="cv-btn-cancel"
+              className="cv-btn-cancel erp-nav-back-ignore"
               onClick={(e) => goListBack(e, urls.dashboard || urls.myDeliveries || 'index')}
             >
               Back

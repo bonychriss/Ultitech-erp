@@ -301,17 +301,21 @@ export default function RevenueDeskPage() {
 
   function handleEntryRowClick(event, row) {
     if (isRowActionTarget(event.target)) return;
-    rememberList(row.id);
+    markListSelection(row.id);
     setPreviewEntry(row);
   }
 
-  function rememberList(id) {
+  function markListSelection(id) {
     const selected = Number(id) || 0;
     setHighlightedId(selected);
     writeListStateToUrl(draftSearch || filters.search, filters, selected);
     try {
       sessionStorage.setItem('rev.lastSelectedId', String(selected));
     } catch { /* ignore */ }
+  }
+
+  function rememberList(id) {
+    markListSelection(id);
     if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.push === 'function') {
       window.erpNavBack.push({
         href: window.location.href,
@@ -325,7 +329,7 @@ export default function RevenueDeskPage() {
             status: filters.status,
             payment: filters.payment,
           },
-          selectedId: selected,
+          selectedId: Number(id) || 0,
         },
       });
     }
@@ -650,7 +654,7 @@ export default function RevenueDeskPage() {
                   onMouseDown={(e) => {
                     e.preventDefault();
                     setSuggestOpen(false);
-                    rememberList(row.id);
+                    markListSelection(row.id);
                     setPreviewEntry(row);
                   }}
                 >
@@ -1173,7 +1177,7 @@ export default function RevenueDeskPage() {
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    rememberList(row.id);
+                    markListSelection(row.id);
                     setPreviewEntry(row);
                   }
                 }}

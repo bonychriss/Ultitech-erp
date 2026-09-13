@@ -197,9 +197,9 @@ $GLOBALS['_erp_header_style_linked'] = true;
 $vvBreadcrumbHome = $vvData['breadcrumbs']['home'];
 $vvBreadcrumbAll = $vvData['breadcrumbs']['all'];
 $employeeHeaderSubtitle = '<nav class="vv-breadcrumb" aria-label="Breadcrumb">'
-    . '<a class="vv-breadcrumb-link" href="' . htmlspecialchars($vvBreadcrumbHome) . '">Home</a>'
+    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($vvBreadcrumbHome) . '">Home</a>'
     . '<span class="vv-breadcrumb-sep">/</span>'
-    . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active" href="' . htmlspecialchars($vvBreadcrumbAll) . '">Vouchers</a>'
+    . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="' . htmlspecialchars($vvBreadcrumbAll) . '">Vouchers</a>'
     . '<span class="vv-breadcrumb-sep">/</span>'
     . '<span class="vv-breadcrumb-current">' . htmlspecialchars($vvData['voucher']['voucher_no'] ?? '') . '</span>'
     . '</nav>';

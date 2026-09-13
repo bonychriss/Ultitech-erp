@@ -27,6 +27,158 @@ body,
   color: inherit;
 }
 
+.erp-nav {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  backdrop-filter: blur(10px);
+  background: rgba(248, 250, 252, 0.88);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.erp-brand-mark {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--erp-ink);
+  line-height: 1.1;
+}
+
+.erp-brand-mark::after {
+  content: '';
+  display: block;
+  width: 3.5rem;
+  height: 4px;
+  margin: 0.85rem auto 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--erp-primary), var(--erp-teal));
+}
+
+.erp-hero-stage {
+  position: relative;
+  margin: 0 auto;
+  max-width: 1080px;
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
+  box-shadow:
+    0 30px 60px -20px rgba(15, 23, 42, 0.28),
+    0 0 0 1px rgba(15, 23, 42, 0.06);
+  background: #0f172a;
+}
+
+.erp-hero-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+.erp-module-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  max-width: 7.5rem;
+  padding: 0.85rem 0.5rem;
+  border-radius: 14px;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--erp-ink);
+  line-height: 1.25;
+}
+
+.erp-feature {
+  background: var(--erp-surface);
+  border: 1px solid var(--erp-line);
+  border-radius: 16px;
+  padding: 1.5rem 1.25rem 1.75rem;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.erp-shot {
+  border: 1px solid var(--erp-line);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+}
+
+.erp-shot-wrap {
+  overflow: hidden;
+  border-radius: 1rem;
+}
+
+.erp-shot-caption {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 1.5rem;
+  background: linear-gradient(180deg, transparent 35%, rgba(15, 23, 42, 0.72) 100%);
+  border-radius: 1rem;
+}
+
+.erp-shot-caption--accent {
+  background: linear-gradient(180deg, transparent 35%, rgba(79, 70, 229, 0.78) 100%);
+}
+
+.erp-btn-soft {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+.erp-btn-ghost {
+  border: 1px solid var(--erp-line);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.erp-link-login {
+  border-bottom: 2px solid var(--erp-primary-soft);
+}
+
+.erp-accent-block {
+  background: var(--erp-teal);
+}
+
+.erp-dual-shots {
+  position: relative;
+  padding-bottom: 2.5rem;
+}
+
+.erp-shot-float {
+  position: absolute;
+  width: 58%;
+  right: -4%;
+  bottom: -8%;
+  z-index: 5;
+}
+
+.erp-pricing {
+  padding: 2.5rem 1.5rem;
+  border-radius: 20px;
+  background:
+    radial-gradient(600px 200px at 50% 0%, rgba(79, 70, 229, 0.12), transparent 70%),
+    #f8fafc;
+  border: 1px solid var(--erp-line);
+}
+
+.erp-footer {
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+  border-top: 1px solid var(--erp-line);
+}
+
+.brightness-0 { filter: brightness(0); }
+.invert { filter: brightness(0) invert(1); }
+.brightness-0.invert { filter: brightness(0) invert(1); }
+
+.flex-row-reverse { flex-direction: row-reverse; }
+.gap-4 { gap: 1rem; }
+.pt-10 { padding-top: 2.5rem; }
+.-mt-6 { margin-top: -1.5rem; }
+.-mt-8 { margin-top: -2rem; }
+
 /* Minimal Tailwind-like utilities used by the Skilline layout */
 .antialiased { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 .w-full { width: 100%; }
@@ -197,11 +349,18 @@ body,
   .sm\:h-16 { height: 4rem; }
   .sm\:h-28 { height: 7rem; }
   .sm\:flex { display: flex; }
+  .sm\:flex-row { flex-direction: row; }
   .sm\:w-1\/2 { width: 50%; }
   .sm\:mt-0 { margin-top: 0; }
   .sm\:space-x-8 > * + * { margin-left: 2rem; }
   .-mt-14.sm\:-mt-24,
   .sm\:-mt-24 { margin-top: -6rem; }
+  .sm\:-mt-12 { margin-top: -3rem; }
+}
+
+@media (min-width: 1024px) {
+  .lg\:pt-16 { padding-top: 4rem; }
+  .lg\:pl-6 { padding-left: 1.5rem; }
 }
 
 @media (min-width: 768px) {

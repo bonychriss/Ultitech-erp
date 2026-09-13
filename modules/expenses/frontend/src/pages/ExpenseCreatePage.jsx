@@ -76,6 +76,48 @@ function isExpenseFormFilled(fields) {
   return false;
 }
 
+function buildDraftFormDataFromSnapshot(snap) {
+  const formData = new FormData();
+  formData.append('csrf_token', snap.init.csrf_token);
+  formData.append('save_mode', 'draft');
+  formData.append('date', snap.date || todayIso());
+  formData.append('payment_method', snap.paymentMethod || 'cash');
+  formData.append('currency', snap.currency || 'TZS');
+  formData.append('exchange_rate', snap.exchangeRate || '1.0000');
+  formData.append('amount', snap.amount || '0');
+  formData.append('description', snap.description || '');
+  if (snap.mainAccountId) formData.append('main_account_id', snap.mainAccountId);
+  if (snap.accountId) formData.append('account_id', snap.accountId);
+  if (snap.mainPaymentAccountId) formData.append('main_payment_account_id', snap.mainPaymentAccountId);
+  if (snap.sourceAccountId) formData.append('source_account_id', snap.sourceAccountId);
+  if (snap.attachment) formData.append('attachment', snap.attachment);
+  if (snap.editId) formData.append('expense_id', String(snap.editId));
+  return formData;
+}
+
+function persistDraftBeaconFromSnapshot(snap) {
+  if (!snap?.init || snap.saving) return false;
+  if (!isExpenseFormFilled({
+    amount: snap.amount,
+    description: snap.description,
+    accountId: snap.accountId,
+    sourceAccountId: snap.sourceAccountId,
+    mainAccountId: snap.mainAccountId,
+    mainPaymentAccountId: snap.mainPaymentAccountId,
+    attachment: snap.attachment,
+    existingAttachment: snap.existingAttachment,
+    currency: snap.currency,
+    defaultCurrency: snap.init.default_currency || 'TZS',
+  })) {
+    return false;
+  }
+  const formData = buildDraftFormDataFromSnapshot(snap);
+  if (snap.editId) {
+    return submitUpdateExpenseDraftOnLeave(formData);
+  }
+  return submitCreateExpenseDraftOnLeave(formData);
+}
+
 export default function ExpenseCreatePage({
   asModal = false,
   editId: editIdProp = null,
@@ -375,47 +417,18 @@ export default function ExpenseCreatePage({
   useEffect(() => {
     function handlePageHide() {
       if (exitHandledRef.current) return;
-      const snap = formSnapshotRef.current;
-      if (!snap.init || snap.saving) return;
-      if (!isExpenseFormFilled({
-        amount: snap.amount,
-        description: snap.description,
-        accountId: snap.accountId,
-        sourceAccountId: snap.sourceAccountId,
-        mainAccountId: snap.mainAccountId,
-        mainPaymentAccountId: snap.mainPaymentAccountId,
-        attachment: snap.attachment,
-        existingAttachment: snap.existingAttachment,
-        currency: snap.currency,
-        defaultCurrency: snap.init.default_currency || 'TZS',
-      })) {
-        return;
-      }
-      exitHandledRef.current = true;
-      const formData = new FormData();
-      formData.append('csrf_token', snap.init.csrf_token);
-      formData.append('save_mode', 'draft');
-      formData.append('date', snap.date);
-      formData.append('payment_method', snap.paymentMethod);
-      formData.append('currency', snap.currency);
-      formData.append('exchange_rate', snap.exchangeRate);
-      formData.append('amount', snap.amount);
-      formData.append('description', snap.description);
-      if (snap.mainAccountId) formData.append('main_account_id', snap.mainAccountId);
-      if (snap.accountId) formData.append('account_id', snap.accountId);
-      if (snap.mainPaymentAccountId) formData.append('main_payment_account_id', snap.mainPaymentAccountId);
-      if (snap.sourceAccountId) formData.append('source_account_id', snap.sourceAccountId);
-      if (snap.attachment) formData.append('attachment', snap.attachment);
-      if (snap.editId) {
-        formData.append('expense_id', String(snap.editId));
-        submitUpdateExpenseDraftOnLeave(formData);
-      } else {
-        submitCreateExpenseDraftOnLeave(formData);
+      if (persistDraftBeaconFromSnapshot(formSnapshotRef.current)) {
+        exitHandledRef.current = true;
       }
     }
 
     window.addEventListener('pagehide', handlePageHide);
-    return () => window.removeEventListener('pagehide', handlePageHide);
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      if (!exitHandledRef.current) {
+        persistDraftBeaconFromSnapshot(formSnapshotRef.current);
+      }
+    };
   }, []);
 
   async function handleSubmit(event) {
@@ -437,19 +450,32 @@ export default function ExpenseCreatePage({
   }
 
   async function handleCancel() {
+    let savedDraft = false;
     if (shouldAutoSaveDraft()) {
       setSaving(true);
       exitHandledRef.current = true;
       try {
         await saveExpense('draft');
+        savedDraft = true;
       } catch {
-        // Leave anyway; pagehide may have already queued a draft save.
+        // Leave anyway; unmount / pagehide may still queue a draft.
+        persistDraftBeaconFromSnapshot(formSnapshotRef.current);
+      } finally {
+        setSaving(false);
       }
     } else {
       exitHandledRef.current = true;
     }
-    leaveToDesk();
+
+    if (savedDraft) {
+      finishSaved(deskPageUrl('index.php'));
+    } else {
+      leaveToDesk();
+    }
   }
+
+  const handleCancelRef = useRef(handleCancel);
+  handleCancelRef.current = handleCancel;
 
   async function handleDeleteDraft() {
     if (!isEditing || !editId || !init?.csrf_token) return;
@@ -476,7 +502,7 @@ export default function ExpenseCreatePage({
 
     function handleKeyDown(event) {
       if (event.key === 'Escape' && !saving && !deleting) {
-        handleCancel();
+        void handleCancelRef.current();
       }
     }
 
@@ -485,7 +511,6 @@ export default function ExpenseCreatePage({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- cancel uses latest form state via closure on Escape only
   }, [asModal, saving, deleting]);
 
   if (loading) {
@@ -838,6 +863,9 @@ export default function ExpenseCreatePage({
               Record expense
             </button>
           </div>
+          <p className="exp-create-actions-hint">
+            If you close or cancel after starting this form, it is saved as a draft automatically.
+          </p>
         </div>
       </form>
     </div>

@@ -1134,7 +1134,10 @@ export default function ExpensesDeskPage() {
           key={recordModal.editId ? `edit-${recordModal.editId}` : 'create'}
           asModal
           editId={recordModal.editId || null}
-          onClose={() => setRecordModal(null)}
+          onClose={async () => {
+            setRecordModal(null);
+            await loadData(filters, true);
+          }}
           onSaved={async () => {
             setRecordModal(null);
             await loadData(filters, true);

@@ -614,7 +614,7 @@ body.page-exp-desk button.exp-create-btn-save {
 }
 
 .exp-create-modal {
-  width: min(520px, 100%);
+  width: min(460px, 100%);
   max-height: calc(100vh - 2.5rem);
   display: flex;
   flex-direction: column;

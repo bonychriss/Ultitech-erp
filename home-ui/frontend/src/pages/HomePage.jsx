@@ -153,17 +153,23 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section id="home" className="bg-cream erp-hero">
-        <div className="max-w-screen-xl px-8 mx-auto pt-10 lg:pt-16">
-          <div className="max-w-3xl mx-auto text-center mb-10 lg:mb-14">
-            <p data-aos="fade-down" className="erp-brand-mark">
+      <section
+        id="home"
+        className="erp-hero erp-hero--bleed"
+        style={{ '--hero-bg-image': `url(${heroDashboard})` }}
+      >
+        <div className="erp-hero-media" aria-hidden="true" />
+        <div className="erp-hero-scrim" aria-hidden="true" />
+        <div className="erp-hero-copy max-w-screen-xl px-8 mx-auto">
+          <div className="max-w-3xl mx-auto text-center">
+            <p data-aos="fade-down" className="erp-brand-mark erp-brand-mark--on-media">
               UltiTech ERP
             </p>
-            <h1 data-aos="fade-up" className="my-4 text-5xl font-bold leading-tight text-darken">
+            <h1 data-aos="fade-up" className="my-4 text-5xl font-bold leading-tight text-white">
               Run finance, sales, and operations from{' '}
-              <span className="text-yellow-500">one live system</span>
+              <span className="erp-hero-accent">one live system</span>
             </h1>
-            <p data-aos="fade-up" data-aos-delay="150" className="leading-normal text-xl mb-8 text-gray-600">
+            <p data-aos="fade-up" data-aos-delay="150" className="leading-normal text-xl mb-8 erp-hero-lead">
               Balances, invoices, stock, payroll, and reports stay connected - so every team works from
               the same numbers.
             </p>
@@ -180,35 +186,27 @@ export default function HomePage() {
               </a>
               <a
                 href={loginUrl}
-                className="inline-block px-8 py-4 text-lg font-semibold text-darken erp-link-login focus:outline-none transform transition hover:scale-105 duration-300"
+                className="inline-block px-8 py-4 text-lg font-semibold text-white erp-btn-ghost-light focus:outline-none transform transition hover:scale-105 duration-300"
               >
                 Sign in to your company
               </a>
             </div>
           </div>
-
-          <div data-aos="fade-up" data-aos-delay="200" className="erp-hero-stage">
-            <img
-              className="erp-hero-shot"
-              src={heroDashboard}
-              alt="UltiTech overview dashboard with KPIs and business reports"
-            />
-          </div>
-        </div>
-
-        <div className="text-white -mt-8 sm:-mt-12 z-40 relative">
-          <svg className="xl:h-40 xl:w-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
-            <path
-              d="M600,112.77C268.63,112.77,0,65.52,0,7.23V120H1200V7.23C1200,65.52,931.37,112.77,600,112.77Z"
-              fill="currentColor"
-            />
-          </svg>
-          <div className="bg-white w-full h-20 -mt-px" />
         </div>
       </section>
 
+      <div className="text-white -mt-1 z-40 relative">
+        <svg className="xl:h-40 xl:w-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+          <path
+            d="M600,112.77C268.63,112.77,0,65.52,0,7.23V120H1200V7.23C1200,65.52,931.37,112.77,600,112.77Z"
+            fill="currentColor"
+          />
+        </svg>
+        <div className="bg-white w-full h-12 -mt-px" />
+      </div>
+
       <div className="container px-4 lg:px-8 mx-auto max-w-screen-xl overflow-x-hidden">
-        <div className="max-w-4xl mx-auto -mt-6">
+        <div className="max-w-4xl mx-auto">
           <h2 className="text-center mb-6 text-gray-400 font-medium">Built for every department</h2>
           <div className="grid grid-cols-3 lg:grid-cols-6 gap-4 justify-items-center">
             {MODULES.map((mod) => (

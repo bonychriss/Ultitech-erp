@@ -55,23 +55,80 @@ body,
   background: linear-gradient(90deg, var(--erp-primary), var(--erp-teal));
 }
 
-.erp-hero-stage {
+.erp-brand-mark--on-media {
+  color: #ffffff;
+}
+
+.erp-brand-mark--on-media::after {
+  background: linear-gradient(90deg, #a5b4fc, #5eead4);
+}
+
+.erp-hero--bleed {
   position: relative;
-  margin: 0 auto;
-  max-width: 1080px;
-  border-radius: 18px 18px 0 0;
+  isolation: isolate;
+  min-height: min(92vh, 760px);
+  display: flex;
+  align-items: center;
   overflow: hidden;
-  box-shadow:
-    0 30px 60px -20px rgba(15, 23, 42, 0.28),
-    0 0 0 1px rgba(15, 23, 42, 0.06);
   background: #0f172a;
 }
 
-.erp-hero-shot {
-  display: block;
+.erp-hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--hero-bg-image);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  transform: scale(1.02);
+  animation: erp-hero-pan 18s ease-in-out infinite alternate;
+}
+
+.erp-hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.72) 0%, rgba(15, 23, 42, 0.55) 45%, rgba(15, 23, 42, 0.82) 100%),
+    linear-gradient(90deg, rgba(79, 70, 229, 0.28), rgba(13, 148, 136, 0.18));
+}
+
+.erp-hero-copy {
+  position: relative;
+  z-index: 2;
   width: 100%;
-  height: auto;
-  vertical-align: middle;
+  padding-top: 4.5rem;
+  padding-bottom: 5rem;
+}
+
+.erp-hero-accent {
+  color: #a5b4fc;
+}
+
+.erp-hero-lead {
+  color: rgba(248, 250, 252, 0.88);
+}
+
+.erp-btn-ghost-light {
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+}
+
+.erp-btn-ghost-light:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+@keyframes erp-hero-pan {
+  from { transform: scale(1.02) translate3d(0, 0, 0); }
+  to { transform: scale(1.06) translate3d(0, -1.5%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-hero-media {
+    animation: none;
+  }
 }
 
 .erp-module-chip {

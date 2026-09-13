@@ -970,9 +970,6 @@ export default function ExpenseCreatePage({
               Record expense
             </button>
           </div>
-          <p className="exp-create-actions-hint">
-            If you close or cancel after starting this form, it is saved as a draft automatically.
-          </p>
         </div>
       </form>
     </div>

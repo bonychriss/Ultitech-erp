@@ -1,85 +1,38 @@
-import ErpOrbitDiagram, { ERP_MODULES } from '../components/ErpOrbitDiagram.jsx'
-
+import { useEffect, useState } from 'react'
 import logoIcon from '../assets/ui/dashboard.png'
 
 function getCfg() {
   return window.__HOME_CFG__ || {}
 }
 
-const MODULE_POINTS = {
-  finance: ['Budgets & cashflow', 'Reconciliations', 'Expense control'],
-  sales: ['Quotations & orders', 'Invoicing', 'Price lists'],
-  inventory: ['Stock levels', 'Warehouses', 'Stocktaking'],
-  hr: ['Attendance', 'Payroll', 'Staff records'],
-  voucher: ['Create & review', 'Approvals', 'Audit trail'],
-  logistics: ['Dispatch notes', 'Delivery routes', 'Handover tracking'],
-  reports: ['Live KPIs', 'Department views', 'Export-ready'],
-  ops: ['Workflows', 'Approvals', 'Cross-team tasks'],
+function imgUrl(path) {
+  const cfg = getCfg()
+  const base = String(cfg.imgBase || './skilline/img/').replace(/\/?$/, '/')
+  return `${base}${String(path || '').replace(/^\//, '')}`
 }
 
-const INDUSTRIES = [
-  { title: 'Retail & Trading', text: 'Counter sales, stock, and invoicing in one flow.' },
-  { title: 'Business Services', text: 'Quotes, jobs, and collections without extra tools.' },
-  { title: 'Logistics', text: 'Dispatch, delivery notes, and shipment follow-up.' },
-  { title: 'Manufacturing', text: 'Materials, stock movement, and shop-floor control.' },
-  { title: 'Construction', text: 'Project costs, vouchers, and site operations.' },
-  { title: 'Automotive', text: 'Parts inventory, workshop jobs, and customer billing.' },
-  { title: 'Hospitality', text: 'Bookings, expenses, and day-to-day cash control.' },
-  { title: 'Education', text: 'Fees, staff payroll, and operational reporting.' },
-]
-
-const FEATURE_BANDS = [
+const FEATURE_CARDS = [
   {
-    id: 'sales',
-    kicker: 'Sales',
-    title: 'Track orders, invoices, and payments',
-    text: 'Move from quote to cash without switching systems. Teams see the same numbers in sales, stock, and finance.',
-    bullets: ['Quotes convert to invoices', 'Live balances and collections', 'Customer history in one place'],
-    cta: 'Start selling',
+    title: 'Sales, invoicing & collections',
+    text: 'Quotes, orders, and invoices in one flow so cash in stays tied to the books.',
+    color: '#5B72EE',
   },
   {
-    id: 'finance',
-    kicker: 'Finance',
-    title: 'Run books without a second system',
-    text: 'Accounting stays connected to sales, vouchers, and payroll so reports match what actually happened.',
-    bullets: ['Balances, revenue, and journals', 'Expense and petty-cash control', 'Trial balance and reconciliation'],
-    cta: 'Manage finance',
-    flip: true,
+    title: 'Finance, expenses & cash',
+    text: 'Balances, expenses, VAT, and cash books that match what your teams actually post.',
+    color: '#F48C06',
   },
   {
-    id: 'ops',
-    kicker: 'Inventory',
-    title: 'Stock, people, and delivery on one desk',
-    text: 'Warehouse health, restock alerts, and purchasing stay linked to the same product records.',
-    bullets: ['Live stock health', 'Restock alerts', 'Purchases and suppliers'],
-    cta: 'Explore stock',
+    title: 'Stock, HR & operations',
+    text: 'Inventory, payroll, attendance, and delivery stay connected to the same company data.',
+    color: '#29B9E7',
   },
 ]
 
-const WHY = [
-  {
-    title: 'One platform, all modules',
-    text: 'Sales, finance, stock, HR, and logistics share one database. No extra licenses per app.',
-  },
-  {
-    title: 'Secure by design',
-    text: 'Role-based access, company isolation, and encrypted sessions keep tenant data separate.',
-  },
-  {
-    title: 'Work from anywhere',
-    text: 'Sign in from the office or the field. The same live records follow every user.',
-  },
-  {
-    title: 'Setup that stays simple',
-    text: 'Start with the modules you need, then add workflows as the team grows.',
-  },
-]
-
-const TRUST = [
-  'Free 14-Day Trial',
-  'No Credit Card Required',
-  'Easy Setup',
-  'All Modules Included',
+const WHY_POINTS = [
+  'One platform for every department - no extra app per team.',
+  'Role-based access and company isolation keep tenant data separate.',
+  'Start with what you need, then grow into the rest of the suite.',
 ]
 
 export default function HomePage() {
@@ -87,197 +40,342 @@ export default function HomePage() {
   const loginUrl = cfg.loginUrl || 'login.php'
   const trialUrl = cfg.trialUrl || 'free-trial.php'
   const year = cfg.year || new Date().getFullYear()
+  const [navOpen, setNavOpen] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        if (!window.AOS) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script')
+            s.src = 'https://unpkg.com/aos@next/dist/aos.js'
+            s.onload = resolve
+            s.onerror = reject
+            document.body.appendChild(s)
+          })
+        }
+        if (!cancelled && window.AOS) {
+          window.AOS.init({ once: true, duration: 700, easing: 'ease-out-cubic' })
+        }
+      } catch {
+        // Animation library is optional.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
-    <div className="home-page">
-      <div className="float-shape shape-1" aria-hidden="true" />
-      <div className="float-shape shape-2" aria-hidden="true" />
-      <div className="float-shape shape-3" aria-hidden="true" />
-
-      <header className="home-nav">
-        <a href={cfg.homeUrl || './'} className="home-logo">
-          <img src={logoIcon} alt="" className="ui-icon ui-icon-logo" aria-hidden="true" /> UltiTech ERP
-        </a>
-        <nav className="home-nav-menu">
-          <a href="#modules">Modules</a>
-          <a href="#industries">Industries</a>
-          <a href="#features">Features</a>
-          <a href="#pricing">Pricing</a>
-          <a href={loginUrl}>Login</a>
-        </nav>
-        <a href={trialUrl} className="btn-account">
-          Try for Free
-        </a>
-      </header>
-
-      <section className="home-hero">
-        <p className="home-hero-kicker">Cloud ERP for growing companies</p>
-        <h1 className="home-hero-title">All your business on one platform</h1>
-        <p className="home-hero-subtitle">
-          UltiTech ERP brings finance, sales, inventory, HR, logistics, and operations together so
-          every team works from the same live numbers.
-        </p>
-        <div className="home-hero-actions">
-          <a href={trialUrl} className="start-trial-btn">
-            Start Free Trial <span className="btn-arrow" aria-hidden="true">→</span>
-          </a>
-          <a href={loginUrl} className="ghost-btn">
-            Sign in
-          </a>
-        </div>
-        <div className="home-trust">
-          {TRUST.map((label) => (
-            <div key={label} className="item">
-              {label}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="home-platform">
-        <h2>Simple, connected, and ready to run</h2>
-        <p className="sub">
-          One workspace for every department — with real-time visibility across the organization.
-        </p>
-        <ErpOrbitDiagram />
-      </section>
-
-      <section id="modules" className="home-section">
-        <div className="home-section-head">
-          <p className="kicker">Modules</p>
-          <h2>Apps for every part of the business</h2>
-          <p>Pick up where each team already works. Everything posts back to the same company books.</p>
-        </div>
-        <div className="module-grid">
-          {ERP_MODULES.map((mod) => (
-            <article key={mod.key} className="module-card">
-              <div className="module-card-icon" style={{ background: `${mod.color}14`, borderColor: `${mod.color}33` }}>
-                <img src={mod.icon} alt="" />
-              </div>
-              <h3>{mod.label}</h3>
-              <p>{mod.detail}</p>
-              <ul>
-                {(MODULE_POINTS[mod.key] || []).map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-              <a href={trialUrl}>
-                Open module <span aria-hidden="true">→</span>
+    <div className="sk-page antialiased text-gray-700">
+      <div className="w-full bg-cream">
+        <div className="flex flex-col max-w-screen-xl px-8 mx-auto md:items-center md:justify-between md:flex-row">
+          <div className="flex flex-row items-center justify-between py-6">
+            <div className="relative md:mt-8">
+              <a
+                href={cfg.homeUrl || './'}
+                className="text-lg relative z-50 font-bold tracking-wide text-gray-900 rounded-lg focus:outline-none inline-flex items-center gap-2"
+              >
+                <img src={logoIcon} alt="" className="w-7 h-7" aria-hidden="true" />
+                UltiTech
               </a>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="industries" className="home-band">
-        <div className="home-section">
-          <div className="home-section-head">
-            <p className="kicker">Industries</p>
-            <h2>Built around how your sector actually operates</h2>
-            <p>Start with a setup that matches your workflow, then grow into the rest of the platform.</p>
-          </div>
-          <div className="industry-grid">
-            {INDUSTRIES.map((item) => (
-              <article key={item.title} className="industry-card">
-                <h3>{item.title}</h3>
-                <p>{item.text}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="features" className="home-section home-features">
-        <div className="home-section-head">
-          <p className="kicker">Features</p>
-          <h2>Level up everyday work</h2>
-          <p>Less re-entry, faster handoffs, and reports that stay in sync with the floor.</p>
-        </div>
-        {FEATURE_BANDS.map((band) => (
-          <article key={band.id} className={`feature-band${band.flip ? ' is-flip' : ''}`}>
-            <div className="feature-band-copy">
-              <p className="kicker">{band.kicker}</p>
-              <h3>{band.title}</h3>
-              <p>{band.text}</p>
-              <ul className="feature-bullets">
-                {band.bullets.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
-                ))}
-              </ul>
-              <a href={trialUrl} className="text-link">
-                {band.cta} <span aria-hidden="true">→</span>
-              </a>
+              <svg className="h-11 z-40 absolute -top-2 -left-3" viewBox="0 0 79 79" fill="none" aria-hidden="true">
+                <path
+                  d="M35.2574 2.24264C37.6005 -0.100501 41.3995 -0.100505 43.7426 2.24264L76.7574 35.2574C79.1005 37.6005 79.1005 41.3995 76.7574 43.7426L43.7426 76.7574C41.3995 79.1005 37.6005 79.1005 35.2574 76.7574L2.24264 43.7426C-0.100501 41.3995 -0.100505 37.6005 2.24264 35.2574L35.2574 2.24264Z"
+                  fill="#65DAFF"
+                />
+              </svg>
             </div>
-          </article>
-        ))}
-      </section>
-
-      <section className="home-band">
-        <div className="home-section">
-          <div className="home-section-head">
-            <p className="kicker">Why UltiTech</p>
-            <h2>Enterprise software, without the extra weight</h2>
+            <button
+              type="button"
+              className="rounded-lg md:hidden focus:outline-none"
+              aria-label="Menu"
+              onClick={() => setNavOpen((o) => !o)}
+            >
+              <svg fill="currentColor" viewBox="0 0 20 20" className="w-6 h-6">
+                {navOpen ? (
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                ) : (
+                  <path
+                    fillRule="evenodd"
+                    d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM9 15a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1z"
+                    clipRule="evenodd"
+                  />
+                )}
+              </svg>
+            </button>
           </div>
-          <div className="why-grid">
-            {WHY.map((item) => (
-              <article key={item.title} className="why-card">
-                <h3>{item.title}</h3>
-                <p>{item.text}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="pricing" className="home-section">
-        <div className="pricing-card">
-          <p className="kicker">Pricing</p>
-          <h2>All modules. One trial. No surprises.</h2>
-          <p>
-            Use the full platform for 14 days. No card up front, no per-app upsell during the trial —
-            finance, sales, stock, HR, and operations are included.
-          </p>
-          <ul>
-            <li>All core modules included</li>
-            <li>Company users and roles</li>
-            <li>Live reports from day one</li>
-          </ul>
-          <a href={trialUrl} className="start-trial-btn pricing-cta">
-            Start now — it&apos;s free
-          </a>
-        </div>
-      </section>
-
-      <section className="home-cta">
-        <h2>Unleash the next stage of your operations</h2>
-        <p>Create an account, pick your company, and start posting real work in minutes.</p>
-        <a href={trialUrl} className="start-trial-btn">
-          Get started for free
-        </a>
-      </section>
-
-      <footer className="home-footer">
-        <div className="home-footer-grid">
-          <div>
-            <a href={cfg.homeUrl || './'} className="home-logo">
-              <img src={logoIcon} alt="" className="ui-icon ui-icon-logo" aria-hidden="true" /> UltiTech ERP
+          <nav
+            className={`h-0 md:h-auto flex flex-col flex-grow md:items-center pb-4 md:pb-0 md:flex md:justify-end md:flex-row origin-top duration-300 ${
+              navOpen ? 'h-full scale-y-100' : 'scale-y-0 md:scale-y-100'
+            }`}
+          >
+            <a className="px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900" href="#home">
+              Home
             </a>
-            <p>One platform for finance, sales, stock, people, and delivery.</p>
+            <a className="px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900" href="#modules">
+              Modules
+            </a>
+            <a className="px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900" href="#why">
+              Why UltiTech
+            </a>
+            <a className="px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900" href="#pricing">
+              Pricing
+            </a>
+            <a
+              className="px-10 py-3 mt-2 text-sm text-center bg-white text-gray-800 rounded-full md:mt-8 md:ml-4"
+              href={loginUrl}
+            >
+              Login
+            </a>
+            <a
+              className="px-10 py-3 mt-2 text-sm text-center bg-yellow-500 text-white rounded-full md:mt-8 md:ml-4"
+              href={trialUrl}
+            >
+              Free trial
+            </a>
+          </nav>
+        </div>
+      </div>
+
+      <div id="home" className="bg-cream">
+        <div className="max-w-screen-xl px-8 mx-auto flex flex-col lg:flex-row items-start">
+          <div className="flex flex-col w-full lg:w-6/12 justify-center lg:pt-24 items-start text-center lg:text-left mb-5 md:mb-0">
+            <h1 data-aos="fade-right" className="my-4 text-5xl font-bold leading-tight text-darken">
+              <span className="text-yellow-500">Running</span> your business is now much easier
+            </h1>
+            <p data-aos="fade-down" data-aos-delay="300" className="leading-normal text-2xl mb-8">
+              UltiTech ERP brings finance, sales, stock, HR, and operations together so every team
+              works from the same live numbers.
+            </p>
+            <div
+              data-aos="fade-up"
+              data-aos-delay="700"
+              className="w-full md:flex items-center justify-center lg:justify-start md:space-x-5"
+            >
+              <a
+                href={trialUrl}
+                className="inline-block lg:mx-0 bg-yellow-500 text-white text-xl font-bold rounded-full py-4 px-9 focus:outline-none transform transition hover:scale-110 duration-300 ease-in-out"
+              >
+                Start free trial
+              </a>
+              <a
+                href={loginUrl}
+                className="flex items-center justify-center space-x-3 mt-5 md:mt-0 focus:outline-none transform transition hover:scale-110 duration-300 ease-in-out"
+              >
+                <span className="bg-white w-14 h-14 rounded-full flex items-center justify-center shadow">
+                  <svg className="w-5 h-5 ml-1" viewBox="0 0 24 28" fill="none" aria-hidden="true">
+                    <path
+                      d="M22.5751 12.8097C23.2212 13.1983 23.2212 14.135 22.5751 14.5236L1.51538 27.1891C0.848878 27.5899 5.91205e-07 27.1099 6.25202e-07 26.3321L1.73245e-06 1.00123C1.76645e-06 0.223477 0.848877 -0.256572 1.51538 0.14427L22.5751 12.8097Z"
+                      fill="#23BDEE"
+                    />
+                  </svg>
+                </span>
+                <span>Sign in to your company</span>
+              </a>
+            </div>
           </div>
-          <div>
-            <strong>Product</strong>
-            <a href="#modules">Modules</a>
-            <a href="#industries">Industries</a>
-            <a href="#features">Features</a>
-            <a href="#pricing">Pricing</a>
-          </div>
-          <div>
-            <strong>Account</strong>
-            <a href={loginUrl}>Login</a>
-            <a href={trialUrl}>Try for free</a>
+
+          <div className="w-full lg:w-6/12 lg:-mt-10 relative">
+            <img
+              data-aos="fade-up"
+              className="w-10/12 mx-auto 2xl:-mb-20"
+              src={imgUrl('girl.png')}
+              alt="UltiTech ERP"
+            />
+            <div
+              data-aos="fade-up"
+              data-aos-delay="300"
+              className="absolute top-20 -left-6 sm:top-32 sm:left-10 md:top-40 md:left-16 lg:-left-0 lg:top-52 floating-4"
+            >
+              <img className="bg-white bg-opacity-80 rounded-lg h-12 sm:h-16" src={imgUrl('calendar.svg')} alt="" />
+            </div>
+            <div
+              data-aos="fade-up"
+              data-aos-delay="500"
+              className="absolute bottom-14 -left-4 sm:left-2 sm:bottom-20 lg:bottom-24 lg:-left-4 floating"
+            >
+              <img className="bg-white bg-opacity-80 rounded-lg h-20 sm:h-28" src={imgUrl('ux-class.svg')} alt="" />
+            </div>
+            <div
+              data-aos="fade-up"
+              data-aos-delay="600"
+              className="absolute bottom-20 md:bottom-48 lg:bottom-52 -right-6 lg:right-8 floating-4"
+            >
+              <img className="bg-white bg-opacity-80 rounded-lg h-12 sm:h-16" src={imgUrl('congrat.svg')} alt="" />
+            </div>
           </div>
         </div>
-        <p className="home-foot">&copy; {year} Ultimate General Trading</p>
+
+        <div className="text-white -mt-14 sm:-mt-24 lg:-mt-36 z-40 relative">
+          <svg className="xl:h-40 xl:w-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path
+              d="M600,112.77C268.63,112.77,0,65.52,0,7.23V120H1200V7.23C1200,65.52,931.37,112.77,600,112.77Z"
+              fill="currentColor"
+            />
+          </svg>
+          <div className="bg-white w-full h-20 -mt-px" />
+        </div>
+      </div>
+
+      <div className="container px-4 lg:px-8 mx-auto max-w-screen-xl overflow-x-hidden">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-center mb-3 text-gray-400 font-medium">Trusted by growing companies</h2>
+          <div className="grid grid-cols-3 lg:grid-cols-6 gap-4 justify-items-center opacity-70">
+            {['google', 'netflix', 'airbnb', 'amazon', 'facebook', 'grab'].map((name) => (
+              <img key={name} className="h-7" src={imgUrl(`company/${name}.svg`)} alt="" />
+            ))}
+          </div>
+        </div>
+
+        <div id="modules" data-aos="flip-up" className="max-w-xl mx-auto text-center mt-24">
+          <h2 className="font-bold text-darken my-3 text-2xl">
+            All-In-One <span className="text-yellow-500">Cloud ERP.</span>
+          </h2>
+          <p className="leading-relaxed text-gray-500">
+            One powerful suite that combines the tools needed to run finance, sales, stock, and people
+            without juggling spreadsheets.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-14 md:gap-5 mt-20">
+          {FEATURE_CARDS.map((card, index) => (
+            <div
+              key={card.title}
+              data-aos="fade-up"
+              data-aos-delay={index * 150}
+              className="bg-white shadow-xl p-6 text-center rounded-xl"
+            >
+              <div
+                style={{ background: card.color }}
+                className="rounded-full w-16 h-16 flex items-center justify-center mx-auto shadow-lg transform -translate-y-12 text-white text-2xl font-bold"
+              >
+                {index + 1}
+              </div>
+              <h3 className="font-medium text-xl mb-3 lg:px-8 text-darken">{card.title}</h3>
+              <p className="px-4 text-gray-500">{card.text}</p>
+            </div>
+          ))}
+        </div>
+
+        <div id="why" className="mt-28">
+          <div data-aos="flip-down" className="text-center max-w-screen-md mx-auto">
+            <h2 className="text-3xl font-bold mb-4">
+              What is <span className="text-yellow-500">UltiTech?</span>
+            </h2>
+            <p className="text-gray-500">
+              UltiTech ERP is a multi-company platform for recording sales, expenses, cash movements,
+              stock, payroll, and reports - so owners and teams see the same truth in real time.
+            </p>
+          </div>
+          <div data-aos="fade-up" className="flex flex-col md:flex-row justify-center space-y-5 md:space-y-0 md:space-x-6 lg:space-x-10 mt-7">
+            <div className="relative md:w-5/12">
+              <img className="rounded-2xl w-full" src={imgUrl('Rectangle 19.png')} alt="" />
+              <div className="absolute bg-black bg-opacity-20 inset-0 rounded-2xl flex items-center justify-center">
+                <div className="text-center px-6">
+                  <h3 className="uppercase text-white font-bold text-sm lg:text-xl mb-3">For owners</h3>
+                  <a
+                    href={trialUrl}
+                    className="inline-block rounded-full text-white border text-xs lg:text-base px-6 py-3 font-medium transform transition hover:scale-110 duration-300"
+                  >
+                    Start today
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div className="relative md:w-5/12">
+              <img className="rounded-2xl w-full" src={imgUrl('Rectangle 21.png')} alt="" />
+              <div className="absolute bg-black bg-opacity-20 inset-0 rounded-2xl flex items-center justify-center">
+                <div className="text-center px-6">
+                  <h3 className="uppercase text-white font-bold text-sm lg:text-xl mb-3">For teams</h3>
+                  <a
+                    href={loginUrl}
+                    className="inline-block rounded-full text-white text-xs lg:text-base px-6 py-3 font-medium transform transition hover:scale-110 duration-300"
+                    style={{ background: 'rgba(35, 189, 238, 0.9)' }}
+                  >
+                    Sign in
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="sm:flex items-center sm:space-x-8 mt-36">
+          <div data-aos="fade-right" className="sm:w-1/2 relative">
+            <div className="bg-yellow-500 rounded-full absolute w-12 h-12 z-0 -left-4 -top-3 animate-pulse" />
+            <h2 className="font-semibold text-2xl relative z-50 text-darken lg:pr-10">
+              Everything you used to do in separate tools,{' '}
+              <span className="text-yellow-500">you can do in UltiTech</span>
+            </h2>
+            <p className="py-5 lg:pr-32 text-gray-500">
+              Manage invoices, expenses, cash books, stock, and payroll in one secure cloud workspace -
+              with reports that stay in sync with day-to-day posting.
+            </p>
+            <ul className="space-y-3 text-gray-600">
+              {WHY_POINTS.map((point) => (
+                <li key={point} className="flex gap-3">
+                  <span className="text-yellow-500 font-bold">•</span>
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div data-aos="fade-left" className="sm:w-1/2 relative mt-10 sm:mt-0">
+            <div style={{ background: '#23BDEE' }} className="floating w-24 h-24 absolute rounded-lg z-0 -top-3 -left-3" />
+            <img className="rounded-xl z-40 relative w-full" src={imgUrl('teacher-explaining.png')} alt="" />
+            <div className="bg-yellow-500 w-40 h-40 floating absolute rounded-lg z-10 -bottom-3 -right-3" />
+          </div>
+        </div>
+
+        <div id="pricing" data-aos="zoom-in" className="mt-28 mb-10 text-center max-w-3xl mx-auto">
+          <h2 className="text-darken text-2xl font-semibold">
+            All modules. <span className="text-yellow-500">One free trial.</span>
+          </h2>
+          <p className="text-gray-500 my-5">
+            Use the full platform for 14 days. No card up front - finance, sales, stock, HR, and
+            operations are included.
+          </p>
+          <a
+            href={trialUrl}
+            className="inline-block px-8 py-4 bg-yellow-500 text-white font-semibold rounded-full transform transition hover:scale-110 duration-300"
+          >
+            Start now - it&apos;s free
+          </a>
+        </div>
+      </div>
+
+      <footer className="bg-cream mt-10">
+        <div className="max-w-screen-xl mx-auto px-8 py-12 flex flex-col md:flex-row md:justify-between gap-8">
+          <div>
+            <a href={cfg.homeUrl || './'} className="font-bold text-darken text-lg inline-flex items-center gap-2">
+              <img src={logoIcon} alt="" className="w-6 h-6" aria-hidden="true" />
+              UltiTech ERP
+            </a>
+            <p className="text-gray-500 mt-3 max-w-sm">
+              One platform for finance, sales, stock, people, and delivery.
+            </p>
+          </div>
+          <div className="flex gap-12 text-sm">
+            <div className="flex flex-col gap-2">
+              <strong className="text-darken">Product</strong>
+              <a href="#modules">Modules</a>
+              <a href="#why">Why UltiTech</a>
+              <a href="#pricing">Pricing</a>
+            </div>
+            <div className="flex flex-col gap-2">
+              <strong className="text-darken">Account</strong>
+              <a href={loginUrl}>Login</a>
+              <a href={trialUrl}>Free trial</a>
+            </div>
+          </div>
+        </div>
+        <p className="text-center text-sm text-gray-500 pb-8">&copy; {year} Ultimate General Trading</p>
       </footer>
     </div>
   )

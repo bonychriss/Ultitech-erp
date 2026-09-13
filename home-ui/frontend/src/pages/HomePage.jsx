@@ -184,7 +184,7 @@ export default function HomePage() {
           <div className="w-full lg:w-6/12 lg:-mt-10 relative">
             <img
               data-aos="fade-up"
-              className="w-10/12 mx-auto 2xl:-mb-20"
+              className="w-10/12 mx-auto hero-img-offset"
               src={imgUrl('girl.png')}
               alt="UltiTech ERP"
             />

@@ -28,6 +28,9 @@ final class HomeShell
             'loginUrl' => (string) ($cfg['loginUrl'] ?? (function_exists('app_url') ? app_url('/login.php') : '/login.php')),
             'accountUrl' => (string) ($cfg['accountUrl'] ?? (function_exists('app_url') ? app_url('/my-account.php') : '/my-account.php')),
             'trialUrl' => (string) ($cfg['trialUrl'] ?? (function_exists('app_url') ? app_url('/free-trial.php') : '/free-trial.php')),
+            'imgBase' => (string) ($cfg['imgBase'] ?? (function_exists('app_url')
+                ? rtrim((string) app_url('/home-ui/frontend/dist/skilline/img'), '/') . '/'
+                : '/home-ui/frontend/dist/skilline/img/')),
             'year' => (int) ($cfg['year'] ?? date('Y')),
             'engine' => 'erp-laravel Domains/Home',
         ];
@@ -37,8 +40,8 @@ final class HomeShell
 
         $headMarkup = '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n"
             . '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n"
-            . '<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">' . "\n"
-            . '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">' . "\n";
+            . '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">' . "\n"
+            . '<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css">' . "\n";
         if ($assets['cssFile'] !== '') {
             $headMarkup .= '<link rel="stylesheet" crossorigin href="'
                 . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n";

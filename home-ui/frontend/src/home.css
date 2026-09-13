@@ -264,5 +264,5 @@ body,
 }
 
 @media (min-width: 1536px) {
-  .2xl\:-mb-20 { margin-bottom: -5rem; }
+  .hero-img-offset { margin-bottom: -5rem; }
 }

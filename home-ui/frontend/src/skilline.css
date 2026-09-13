@@ -1,14 +1,14 @@
 /* UltiTech ERP landing tokens (aligned with product UI) */
 :root {
   --erp-bg: #f4f6fb;
-  --erp-bg-deep: #e8ecf7;
+  --erp-bg-deep: #f3f0ff;
   --erp-surface: #ffffff;
   --erp-ink: #0f172a;
   --erp-muted: #64748b;
   --erp-line: #e2e8f0;
-  --erp-primary: #4f46e5;
-  --erp-primary-soft: #eef2ff;
-  --erp-primary-deep: #3730a3;
+  --erp-primary: #a78bfa;
+  --erp-primary-soft: #f5f3ff;
+  --erp-primary-deep: #8b5cf6;
   --erp-teal: #0d9488;
   --erp-amber: #d97706;
   --erp-rose: #e11d48;
@@ -17,17 +17,18 @@
 
 .bg-cream {
   background:
-    radial-gradient(1200px 500px at 85% -10%, rgba(79, 70, 229, 0.16), transparent 55%),
-    radial-gradient(900px 420px at 10% 0%, rgba(13, 148, 136, 0.1), transparent 50%),
-    linear-gradient(180deg, #f8fafc 0%, var(--erp-bg) 55%, #ffffff 100%);
+    radial-gradient(1200px 500px at 85% -10%, rgba(167, 139, 250, 0.22), transparent 55%),
+    radial-gradient(900px 420px at 10% 0%, rgba(13, 148, 136, 0.08), transparent 50%),
+    linear-gradient(180deg, #faf9ff 0%, var(--erp-bg) 55%, #ffffff 100%);
 }
 
 .bg-yellow-500 {
   background-color: var(--erp-primary);
+  color: #312e81;
 }
 
 .text-yellow-500 {
-  color: var(--erp-primary);
+  color: var(--erp-primary-deep);
 }
 
 .text-darken {

@@ -6,7 +6,7 @@ import stockIcon from '../assets/modules/stock-icon.png'
 import payrollIcon from '../assets/modules/payroll-icon.png'
 import deliveryIcon from '../assets/modules/delivery-icon.png'
 import statementIcon from '../assets/modules/statement-icon.png'
-import heroDashboard from '../assets/screens/reports-dashboard.jpg'
+import heroHandCards from '../assets/hero/hand-cards.png'
 import financeScreen from '../assets/screens/finance-dashboard.jpg'
 import salesScreen from '../assets/screens/sales-invoices.jpg'
 import stockScreen from '../assets/screens/inventory-stock.jpg'
@@ -36,7 +36,7 @@ const FEATURE_CARDS = [
   {
     title: 'Finance, expenses & cash',
     text: 'Balances, expenses, VAT, and cash books that match what your teams actually post.',
-    color: '#4f46e5',
+    color: '#a78bfa',
     icon: accountingIcon,
   },
   {
@@ -138,13 +138,13 @@ export default function HomePage() {
               Pricing
             </a>
             <a
-              className="px-10 py-3 mt-2 text-sm text-center bg-white text-gray-800 rounded-full md:mt-8 md:ml-4 erp-btn-ghost"
+              className="px-4 py-1.5 mt-2 text-xs text-center bg-white text-gray-800 rounded-full md:mt-8 md:ml-4 erp-btn-ghost erp-nav-btn"
               href={loginUrl}
             >
               Login
             </a>
             <a
-              className="px-10 py-3 mt-2 text-sm text-center bg-yellow-500 text-white rounded-full md:mt-8 md:ml-4"
+              className="px-4 py-1.5 mt-2 text-xs text-center bg-yellow-500 rounded-full md:mt-8 md:ml-4 erp-btn-primary erp-nav-btn"
               href={trialUrl}
             >
               Free trial
@@ -156,37 +156,37 @@ export default function HomePage() {
       <section
         id="home"
         className="erp-hero erp-hero--bleed"
-        style={{ '--hero-bg-image': `url(${heroDashboard})` }}
+        style={{ '--hero-bg-image': `url(${heroHandCards})` }}
       >
         <div className="erp-hero-media" aria-hidden="true" />
         <div className="erp-hero-scrim" aria-hidden="true" />
         <div className="erp-hero-copy max-w-screen-xl px-8 mx-auto">
-          <div className="max-w-3xl mx-auto text-center">
+          <div className="max-w-xl text-left erp-hero-copy-panel">
             <p data-aos="fade-down" className="erp-brand-mark erp-brand-mark--on-media">
               UltiTech ERP
             </p>
-            <h1 data-aos="fade-up" className="my-4 text-5xl font-bold leading-tight text-white">
+            <h1 data-aos="fade-up" className="my-3 erp-hero-title font-bold leading-tight text-darken">
               Run finance, sales, and operations from{' '}
-              <span className="erp-hero-accent">one live system</span>
+              <span className="text-yellow-500">one live system</span>
             </h1>
-            <p data-aos="fade-up" data-aos-delay="150" className="leading-normal text-xl mb-8 erp-hero-lead">
+            <p data-aos="fade-up" data-aos-delay="150" className="leading-normal erp-hero-lead mb-6 text-gray-600">
               Balances, invoices, stock, payroll, and reports stay connected - so every team works from
               the same numbers.
             </p>
             <div
               data-aos="fade-up"
               data-aos-delay="300"
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+              className="flex flex-col sm:flex-row items-start sm:items-center gap-3"
             >
               <a
                 href={trialUrl}
-                className="inline-block bg-yellow-500 text-white text-lg font-bold rounded-full py-4 px-9 focus:outline-none transform transition hover:scale-105 duration-300 ease-in-out"
+                className="inline-block bg-yellow-500 text-base font-bold rounded-full py-3 px-7 erp-btn-primary focus:outline-none transform transition hover:scale-105 duration-300 ease-in-out"
               >
                 Start free trial
               </a>
               <a
                 href={loginUrl}
-                className="inline-block px-8 py-4 text-lg font-semibold text-white erp-btn-ghost-light focus:outline-none transform transition hover:scale-105 duration-300"
+                className="inline-block px-6 py-3 text-base font-semibold text-darken erp-link-login focus:outline-none transform transition hover:scale-105 duration-300"
               >
                 Sign in to your company
               </a>
@@ -343,7 +343,7 @@ export default function HomePage() {
           </p>
           <a
             href={trialUrl}
-            className="inline-block px-8 py-4 bg-yellow-500 text-white font-semibold rounded-full transform transition hover:scale-105 duration-300"
+            className="inline-block px-8 py-4 bg-yellow-500 font-semibold rounded-full erp-btn-primary transform transition hover:scale-105 duration-300"
           >
             Start now - it&apos;s free
           </a>

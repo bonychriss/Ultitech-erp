@@ -32,7 +32,12 @@ $date = trim((string) ($_POST['date'] ?? ''));
 $main_account_id = !empty($_POST['main_account_id']) ? (int) $_POST['main_account_id'] : null;
 $account_id = !empty($_POST['account_id']) ? (int) $_POST['account_id'] : null;
 $amount = (float) ($_POST['amount'] ?? 0);
-$tax_amount = 0.0;
+$tax_amount = round((float) ($_POST['tax_amount'] ?? 0), 2);
+if ($tax_amount < 0) {
+    $errors[] = 'VAT amount cannot be negative.';
+} elseif ($amount > 0 && $tax_amount > $amount) {
+    $errors[] = 'VAT amount cannot be greater than the expense amount.';
+}
 $currency_input = trim((string) ($_POST['currency'] ?? $_POST['currency_code'] ?? 'TZS'));
 $currency_code = expenses_currency_display_code($currency_input);
 $payment_method = $_POST['payment_method'] ?? 'cash';

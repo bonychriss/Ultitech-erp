@@ -55,6 +55,14 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Extract VAT from a VAT-inclusive gross amount. */
+function vatFromInclusive(gross, ratePercent) {
+  const amount = parseFloat(gross) || 0;
+  const rate = parseFloat(ratePercent) || 0;
+  if (amount <= 0 || rate <= 0) return 0;
+  return Math.round(((amount * rate) / (100 + rate)) * 100) / 100;
+}
+
 function resolveEditId() {
   if (typeof window !== 'undefined' && window.__EXPENSES_EDIT_ID__) {
     const id = parseInt(String(window.__EXPENSES_EDIT_ID__), 10);
@@ -85,6 +93,7 @@ function buildDraftFormDataFromSnapshot(snap) {
   formData.append('currency', snap.currency || 'TZS');
   formData.append('exchange_rate', snap.exchangeRate || '1.0000');
   formData.append('amount', snap.amount || '0');
+  formData.append('tax_amount', snap.taxAmount || '0');
   formData.append('description', snap.description || '');
   if (snap.mainAccountId) formData.append('main_account_id', snap.mainAccountId);
   if (snap.accountId) formData.append('account_id', snap.accountId);
@@ -175,6 +184,10 @@ export default function ExpenseCreatePage({
   const [attachment, setAttachment] = useState(null);
   const [existingAttachment, setExistingAttachment] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [includesVat, setIncludesVat] = useState(false);
+  const [vatRate, setVatRate] = useState('18');
+  const [taxAmount, setTaxAmount] = useState('0');
+  const vatManualRef = useRef(false);
 
   function applyDraftToForm(draft) {
     if (!draft) return;
@@ -188,6 +201,17 @@ export default function ExpenseCreatePage({
     setAmount(draft.amount != null && draft.amount !== '' ? String(draft.amount) : '');
     setDescription(draft.description || '');
     setExistingAttachment(draft.attachment_name || '');
+    const draftTax = parseFloat(draft.tax_amount) || 0;
+    if (draftTax > 0) {
+      setIncludesVat(true);
+      setTaxAmount(String(draftTax));
+      vatManualRef.current = true;
+      setAdvancedOpen(true);
+    } else {
+      setIncludesVat(false);
+      setTaxAmount('0');
+      vatManualRef.current = false;
+    }
     if (draft.currency && normalizeCurrencyIso(draft.currency) !== 'TZS') {
       setAdvancedOpen(true);
     }
@@ -293,6 +317,16 @@ export default function ExpenseCreatePage({
     setSourceAccountId('');
   }
 
+  useEffect(() => {
+    if (!includesVat) {
+      setTaxAmount('0');
+      vatManualRef.current = false;
+      return;
+    }
+    if (vatManualRef.current) return;
+    setTaxAmount(String(vatFromInclusive(amount, vatRate)));
+  }, [amount, vatRate, includesVat]);
+
   function buildFormData(saveMode) {
     const formData = new FormData();
     formData.append('csrf_token', init.csrf_token);
@@ -302,6 +336,7 @@ export default function ExpenseCreatePage({
     formData.append('currency', currency);
     formData.append('exchange_rate', exchangeRate);
     formData.append('amount', amount);
+    formData.append('tax_amount', includesVat ? (taxAmount || '0') : '0');
     formData.append('description', description);
     if (init.require_receipt) formData.append('require_receipt', '1');
     if (mainAccountId) formData.append('main_account_id', mainAccountId);
@@ -383,6 +418,7 @@ export default function ExpenseCreatePage({
       init,
       editId,
       amount,
+      taxAmount: includesVat ? taxAmount : '0',
       description,
       accountId,
       sourceAccountId,
@@ -400,6 +436,8 @@ export default function ExpenseCreatePage({
     init,
     editId,
     amount,
+    taxAmount,
+    includesVat,
     description,
     accountId,
     sourceAccountId,
@@ -819,8 +857,77 @@ export default function ExpenseCreatePage({
                   </div>
                 </div>
 
+                <div className="exp-create-row">
+                  <label className="exp-create-label">VAT</label>
+                  <div>
+                    <label className="exp-create-pay-method" style={{ marginBottom: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={includesVat}
+                        onChange={(e) => {
+                          const on = e.target.checked;
+                          setIncludesVat(on);
+                          vatManualRef.current = false;
+                          if (on) {
+                            setTaxAmount(String(vatFromInclusive(amount, vatRate)));
+                          } else {
+                            setTaxAmount('0');
+                          }
+                        }}
+                      />
+                      Amount includes VAT
+                    </label>
+                    {includesVat ? (
+                      <>
+                        <div className="exp-create-vat-grid">
+                          <div>
+                            <label className="exp-create-help" htmlFor="vat_rate">Rate %</label>
+                            <input
+                              id="vat_rate"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              className="exp-create-input"
+                              value={vatRate}
+                              onChange={(e) => {
+                                vatManualRef.current = false;
+                                setVatRate(e.target.value);
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="exp-create-help" htmlFor="tax_amount">VAT amount</label>
+                            <input
+                              id="tax_amount"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              className="exp-create-input"
+                              value={taxAmount}
+                              onChange={(e) => {
+                                vatManualRef.current = true;
+                                setTaxAmount(e.target.value);
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="exp-create-help">
+                          Amount is VAT-inclusive. Exclusive:{' '}
+                          {((parseFloat(amount) || 0) - (parseFloat(taxAmount) || 0)).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          . Default rate 18%.
+                        </div>
+                      </>
+                    ) : (
+                      <div className="exp-create-help">Leave off if this expense has no recoverable VAT.</div>
+                    )}
+                  </div>
+                </div>
+
                 <p className="exp-create-help" style={{ margin: '0.25rem 0 0.75rem' }}>
-                  For multi-currency or accounting review. Category and Paid from already post to the ledger.
+                  For multi-currency or VAT-registered businesses. Category and Paid from already post to the ledger.
                 </p>
               </div>
             ) : null}

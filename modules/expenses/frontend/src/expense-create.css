@@ -737,6 +737,13 @@ body.page-exp-desk button.exp-create-btn-save {
   border-top: 1px solid #e2e8f0;
 }
 
+.exp-create-vat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
 .exp-create-shell--modal .exp-create-btn-draft {
   padding: 0.4rem 1rem;
   font-size: 0.8125rem;

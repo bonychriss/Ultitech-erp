@@ -1563,6 +1563,7 @@ function expenses_draft_to_form_fields(PDO $pdo, array $draft): array
         'source_account_id' => $sourceId > 0 ? (string) $sourceId : '',
         'currency' => expenses_currency_iso((string) ($draft['currency_code'] ?? 'TZS')),
         'amount' => (string) ($draft['amount'] ?? ''),
+        'tax_amount' => (string) ($draft['tax_amount'] ?? '0'),
         'description' => (string) ($draft['description'] ?? ''),
         'attachment' => $attachment,
         'attachment_name' => $attachment !== '' ? basename($attachment) : '',

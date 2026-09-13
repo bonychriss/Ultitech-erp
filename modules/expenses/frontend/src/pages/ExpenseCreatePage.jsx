@@ -954,7 +954,7 @@ export default function ExpenseCreatePage({
                 Cancel
               </button>
               <button type="submit" className="exp-create-btn-save" disabled={saving || deleting}>
-                {saving && <Loader2 size={18} className="exp-create-spinner" aria-hidden />}
+                {saving && <Loader2 size={14} className="exp-create-spinner" aria-hidden />}
                 Record expense
               </button>
             </div>

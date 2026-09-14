@@ -18,15 +18,10 @@ import newsFeatured from '../assets/news/featured.png'
 import newsFinance from '../assets/news/finance.png'
 import newsPayroll from '../assets/news/payroll.png'
 import newsStock from '../assets/news/stock.png'
+import testimonialPortrait from '../assets/testimonials/portrait.png'
 
 function getCfg() {
   return window.__HOME_CFG__ || {}
-}
-
-function imgUrl(path) {
-  const cfg = getCfg()
-  const base = String(cfg.imgBase || './skilline/img/').replace(/\/?$/, '/')
-  return `${base}${String(path || '').replace(/^\//, '')}`
 }
 
 const PRODUCT_CARDS = [
@@ -345,7 +340,34 @@ export default function HomePage() {
             </a>
           </div>
           <div data-aos="zoom-in-left" className="erp-testimonial-media">
-            <img src={imgUrl('testimonials.png')} alt="Customer testimonial for UltiTech" />
+            <div className="erp-testimonial-card">
+              <div className="erp-testimonial-photo">
+                <img src={testimonialPortrait} alt="UltiTech customer" />
+                <button type="button" className="erp-testimonial-next" aria-label="Next testimonial">
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path
+                      fillRule="evenodd"
+                      d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <blockquote className="erp-testimonial-quote">
+                <p>
+                  Thank you so much for your help. It&apos;s exactly what I&apos;ve been looking for.
+                  You won&apos;t regret it. It really saves me time and effort. UltiTech is exactly
+                  what our business has been lacking.
+                </p>
+                <footer>
+                  <cite>Gloria Rose</cite>
+                  <div className="erp-testimonial-rating">
+                    <span aria-hidden="true">★★★★★</span>
+                    <small>12 reviews from UltiTech customers</small>
+                  </div>
+                </footer>
+              </blockquote>
+            </div>
           </div>
         </div>
 

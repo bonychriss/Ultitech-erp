@@ -35,12 +35,15 @@ html[data-theme="dark"] {
     --input-border: #334155;
 }
 
-/* ?? Theme toggle ?? */
-html[data-theme="dark"] .theme-toggle-btn {
+/* Theme toggle (icon-only legacy); glass control styled in theme-toggle-glass.css */
+html[data-theme="dark"] .theme-toggle-btn:not(.theme-toggle-glass) {
     color: #a5b4fc;
 }
-html[data-theme="dark"] .theme-toggle-btn:hover {
+html[data-theme="dark"] .theme-toggle-btn:not(.theme-toggle-glass):hover {
     background-color: rgba(255, 255, 255, 0.05);
+}
+html[data-theme="dark"] .theme-toggle-btn.theme-toggle-glass:hover {
+    background: transparent !important;
 }
 
 /* ?? Layout & backgrounds (beat style.css white !important) ?? */

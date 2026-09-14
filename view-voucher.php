@@ -294,10 +294,17 @@ $vvCssV = (string) time();
         body.dashboard.vv-view-voucher-page .header-actions-tray .theme-toggle-btn {
             grid-column: 1;
             grid-row: 1;
+            margin: 0 !important;
+        }
+        body.dashboard.vv-view-voucher-page .header-actions-tray .theme-toggle-btn:not(.theme-toggle-glass) {
             width: 36px !important;
             height: 36px !important;
             min-width: 36px !important;
-            margin: 0 !important;
+        }
+        body.dashboard.vv-view-voucher-page .header-actions-tray .theme-toggle-btn.theme-toggle-glass {
+            width: auto !important;
+            height: auto !important;
+            min-width: 0 !important;
         }
         body.dashboard.vv-view-voucher-page .header-actions-tray .notif {
             grid-column: 2;

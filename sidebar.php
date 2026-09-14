@@ -1743,7 +1743,7 @@ if (!isset($_GET['print'])) {
         margin-bottom: 0.25rem;
     }
 
-    #native-sidebar .sidebar-theme-toggle {
+    #native-sidebar .sidebar-theme-toggle:not(.theme-toggle-glass) {
         display: flex;
         align-items: center;
         gap: 0.75rem;
@@ -1754,12 +1754,23 @@ if (!isset($_GET['print'])) {
         cursor: pointer;
     }
 
-    #native-sidebar .sidebar-theme-toggle:hover,
+    #native-sidebar .sidebar-theme-toggle.theme-toggle-glass {
+        display: inline-flex !important;
+        width: 112px !important;
+        min-width: 112px !important;
+        height: 46px !important;
+        margin: 0.35rem 0.85rem;
+        padding: 0 !important;
+        gap: 0;
+        opacity: 1;
+    }
+
+    #native-sidebar .sidebar-theme-toggle:not(.theme-toggle-glass):hover,
     #native-sidebar .sidebar-notif-trigger:hover {
         opacity: 0.85;
     }
 
-    #native-sidebar .sidebar-theme-toggle i {
+    #native-sidebar .sidebar-theme-toggle:not(.theme-toggle-glass) i {
         width: 1.25rem;
         text-align: center;
         flex-shrink: 0;
@@ -1767,6 +1778,11 @@ if (!isset($_GET['print'])) {
 
     body.sidebar-collapsed #native-sidebar .sidebar-theme-toggle .sidebar-text {
         display: none;
+    }
+
+    body.sidebar-collapsed #native-sidebar .sidebar-theme-toggle.theme-toggle-glass {
+        margin-left: auto;
+        margin-right: auto;
     }
 
     /* Mobile: move Logout under Appearance */
@@ -2077,10 +2093,16 @@ if (!isset($_GET['print'])) {
             ?>
         </li>
         <li class="nav-item">
-            <button type="button" id="themeToggleBtn" class="nav-link sidebar-theme-toggle w-100 text-start border-0 bg-transparent" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
-                <i class="fas fa-moon" id="themeToggleIcon"></i>
-                <span class="sidebar-text">Dark / Light</span>
-            </button>
+            <?php
+            $themeToggleExtraClass = 'sidebar-theme-toggle';
+            $themeToggleId = 'themeToggleBtnSidebar';
+            if (function_exists('erp_render_theme_toggle_html')) {
+                echo erp_render_theme_toggle_html($themeToggleExtraClass, $themeToggleId);
+            } else {
+                require __DIR__ . '/includes/partials/theme_toggle.php';
+            }
+            unset($themeToggleExtraClass, $themeToggleId);
+            ?>
         </li>
     </ul>
     <?php endif; ?>

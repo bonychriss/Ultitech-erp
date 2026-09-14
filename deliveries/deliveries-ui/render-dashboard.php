@@ -159,14 +159,16 @@ body.page-dlv-dashboard .employee-header--deliveries .header-actions-tray #theme
     flex-shrink: 0;
     visibility: visible !important;
     opacity: 1 !important;
-    width: 38px;
-    height: 38px;
     margin: 0;
     padding: 0;
     border: none;
     background: transparent;
-    border-radius: 50%;
-    color: #64748b;
+}
+body.page-dlv-dashboard .employee-header--deliveries .header-actions-tray #themeToggleBtn.theme-toggle-glass {
+    width: auto;
+    height: auto;
+    border-radius: 999px;
+    color: inherit;
 }
 body.page-dlv-dashboard .employee-header--deliveries .header-notif-bell-btn {
     align-self: flex-start;

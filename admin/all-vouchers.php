@@ -457,9 +457,14 @@ $employeeHeaderRightHtml = null;
             gap: 10px !important;
             flex-wrap: nowrap !important;
         }
-        body.dashboard .header.admin-header .theme-toggle-btn {
+        body.dashboard .header.admin-header .theme-toggle-btn:not(.theme-toggle-glass) {
             width: 36px;
             height: 36px;
+            flex-shrink: 0;
+        }
+        body.dashboard .header.admin-header .theme-toggle-btn.theme-toggle-glass {
+            width: auto;
+            height: auto;
             flex-shrink: 0;
         }
 

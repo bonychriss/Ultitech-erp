@@ -8088,6 +8088,94 @@ function erp_dark_theme_css_url(): string
     return '/assets/css/dark-theme.css?v=' . $v;
 }
 
+/** Absolute path to glass theme-toggle stylesheet. */
+function erp_theme_toggle_css_path(): string
+{
+    return dirname(__DIR__) . '/assets/css/theme-toggle-glass.css';
+}
+
+/** Cache-busted URL for glass theme-toggle CSS. */
+function erp_theme_toggle_css_url(): string
+{
+    $path = erp_theme_toggle_css_path();
+    $v = is_file($path) ? (int) filemtime($path) : time();
+    if (function_exists('app_url')) {
+        return app_url('/assets/css/theme-toggle-glass.css') . '?v=' . $v;
+    }
+    return '/assets/css/theme-toggle-glass.css?v=' . $v;
+}
+
+/** Cache-busted URL for theme-toggle.js. */
+function erp_theme_toggle_js_url(): string
+{
+    $path = dirname(__DIR__) . '/assets/js/theme-toggle.js';
+    $v = is_file($path) ? (int) filemtime($path) : time();
+    if (function_exists('app_url')) {
+        return app_url('/assets/js/theme-toggle.js') . '?v=' . $v;
+    }
+    return '/assets/js/theme-toggle.js?v=' . $v;
+}
+
+/** Script tag for theme-toggle.js (once per response). */
+function erp_get_theme_toggle_script_html(): string
+{
+    static $done = false;
+    if ($done) {
+        return '';
+    }
+    $done = true;
+
+    return '<script src="' . htmlspecialchars(erp_theme_toggle_js_url(), ENT_QUOTES, 'UTF-8') . '" defer></script>' . "\n";
+}
+
+/** Stylesheet link for glass theme toggle (once per response). */
+function erp_get_theme_toggle_css_link_html(): string
+{
+    static $done = false;
+    if ($done || !is_file(erp_theme_toggle_css_path())) {
+        return '';
+    }
+    $done = true;
+
+    return '<link rel="stylesheet" id="erp-theme-toggle-glass" href="'
+        . htmlspecialchars(erp_theme_toggle_css_url(), ENT_QUOTES, 'UTF-8') . '">' . "\n";
+}
+
+/** Inline glass toggle CSS before &lt;/body&gt; when the external link never made it into &lt;head&gt;. */
+function erp_get_theme_toggle_css_body_override_html(): string
+{
+    static $done = false;
+    if ($done) {
+        return '';
+    }
+    $path = erp_theme_toggle_css_path();
+    if (!is_file($path)) {
+        return '';
+    }
+    $css = file_get_contents($path);
+    if (!is_string($css) || trim($css) === '') {
+        return '';
+    }
+    $done = true;
+
+    return "<style id=\"erp-theme-toggle-glass-final\">\n" . $css . "\n</style>\n";
+}
+
+/** Markup for the shared glass Light/Dark toggle. */
+function erp_render_theme_toggle_html(string $extraClass = '', string $id = 'themeToggleBtn'): string
+{
+    $themeToggleExtraClass = $extraClass;
+    $themeToggleId = $id;
+    // Prefer external stylesheet; always also emit once-only inline CSS so the
+    // pill/bubble styles apply even when &lt;head&gt; never linked the file.
+    $prefix = erp_get_theme_toggle_css_link_html()
+        . erp_get_theme_toggle_css_body_override_html();
+    ob_start();
+    require __DIR__ . '/partials/theme_toggle.php';
+
+    return $prefix . (string) ob_get_clean();
+}
+
 /** Inline script: apply saved theme before first paint (prevents flash). */
 function erp_get_theme_init_html(): string
 {
@@ -8103,8 +8191,11 @@ function erp_get_dark_theme_head_html(): string
     }
     $rendered = true;
 
-    return '<link rel="stylesheet" id="erp-dark-theme" href="'
+    $html = '<link rel="stylesheet" id="erp-dark-theme" href="'
         . htmlspecialchars(erp_dark_theme_css_url(), ENT_QUOTES, 'UTF-8') . '">' . "\n";
+    $html .= erp_get_theme_toggle_css_link_html();
+
+    return $html;
 }
 
 /** Final dark-theme block before &lt;/body&gt; (beats page-local light &lt;style&gt;). */
@@ -8226,6 +8317,12 @@ function erp_inject_system_font_into_html_buffer(string $buffer): string
         if (stripos($buffer, 'id="erp-dark-theme"') === false) {
             $headMarkup .= erp_get_dark_theme_head_html();
         }
+        // Glass toggle CSS must load even when dark-theme was already linked by headers.
+        if (stripos($buffer, 'id="erp-theme-toggle-glass"') === false
+            && stripos($buffer, 'theme-toggle-glass.css') === false
+        ) {
+            $headMarkup .= erp_get_theme_toggle_css_link_html();
+        }
         // System-wide one-step-back (skip if page already included it).
         if (stripos($buffer, 'nav-back.js') === false && stripos($buffer, 'erpNavBack') === false) {
             $headMarkup .= erp_get_nav_back_script_html();
@@ -8245,6 +8342,16 @@ function erp_inject_system_font_into_html_buffer(string $buffer): string
         }
         if (stripos($buffer, 'erp-dark-theme-final') === false) {
             $bodyMarkup .= erp_get_dark_theme_body_override_html();
+        }
+        // Guarantee glass toggle styles even if &lt;head&gt; link was skipped.
+        if (stripos($buffer, 'theme-toggle-glass') !== false
+            && stripos($buffer, 'erp-theme-toggle-glass-final') === false
+        ) {
+            $bodyMarkup .= erp_get_theme_toggle_css_body_override_html();
+        }
+        // Glass theme toggle behavior (shared by all headers/sidebars).
+        if (stripos($buffer, 'theme-toggle.js') === false && stripos($buffer, 'erpThemeToggle') === false) {
+            $bodyMarkup .= erp_get_theme_toggle_script_html();
         }
         // Late safety net for pages that build head without going through a second inject.
         if (stripos($buffer, 'nav-back.js') === false && stripos($buffer, '__ERP_NAV_BACK_CFG__') === false) {

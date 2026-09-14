@@ -48,9 +48,13 @@ if (!isset($_GET['print'])) {
         </div>
         
         <div class="header-right header-actions-tray">
-            <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
-                <i class="fas fa-moon" id="themeToggleIcon"></i>
-            </button>
+            <?php
+            if (function_exists('erp_render_theme_toggle_html')) {
+                echo erp_render_theme_toggle_html();
+            } else {
+                require __DIR__ . '/includes/partials/theme_toggle.php';
+            }
+            ?>
             <a href="<?= $rootPath ?>logout.php" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
@@ -228,73 +232,11 @@ if (!isset($_GET['print'])) {
         }
     });
 </script>
-<script>
-(function() {
-    var btn = document.getElementById('themeToggleBtn');
-    var icon = document.getElementById('themeToggleIcon');
-    if (!btn || !icon) return;
-
-    function updateIcon(theme) {
-        if (theme === 'dark') {
-            icon.className = 'fas fa-sun';
-        } else {
-            icon.className = 'fas fa-moon';
-        }
-    }
-
-    function showToast(message) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: message,
-                showConfirmButton: false,
-                timer: 2000,
-                timerProgressBar: true
-            });
-        } else {
-            var toast = document.createElement('div');
-            toast.textContent = message;
-            toast.style.position = 'fixed';
-            toast.style.top = '20px';
-            toast.style.right = '20px';
-            toast.style.backgroundColor = '#10b981';
-            toast.style.color = '#fff';
-            toast.style.padding = '12px 24px';
-            toast.style.borderRadius = '8px';
-            toast.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)';
-            toast.style.zIndex = '99999';
-            toast.style.fontFamily = 'sans-serif';
-            toast.style.fontSize = '14px';
-            toast.style.fontWeight = '600';
-            toast.style.transition = 'opacity 0.3s ease';
-            document.body.appendChild(toast);
-            setTimeout(function() {
-                toast.style.opacity = '0';
-                setTimeout(function() {
-                    document.body.removeChild(toast);
-                }, 300);
-            }, 2000);
-        }
-    }
-
-    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-    updateIcon(currentTheme);
-
-    btn.addEventListener('click', function() {
-        var activeTheme = document.documentElement.getAttribute('data-theme') || 'light';
-        var newTheme = activeTheme === 'dark' ? 'light' : 'dark';
-        
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        updateIcon(newTheme);
-        
-        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: newTheme } }));
-        showToast(newTheme === 'dark' ? 'Dark theme activated' : 'Light theme activated');
-    });
-})();
-</script>
+<?php
+if (function_exists('erp_get_theme_toggle_script_html')) {
+    echo erp_get_theme_toggle_script_html();
+}
+?>
 
 <script src="<?= $logoBase ?>../assets/js/responsive-table.js"></script>
 <?php require_once __DIR__ . '/mobile_footer.php'; ?>

@@ -3282,7 +3282,7 @@ body.sidebar-mobile-open .mobile-backdrop {
    Dark Mode Theme System
    ========================================================================== */
 
-/* Theme Toggle Button */
+/* Theme Toggle Button (legacy icon); glass override in theme-toggle-glass.css */
 .theme-toggle-btn {
     background: transparent;
     border: none;
@@ -3306,15 +3306,26 @@ body.sidebar-mobile-open .mobile-backdrop {
 .header-actions-tray .theme-toggle-btn {
     color: #f59e0b;
 }
+.theme-toggle-btn.theme-toggle-glass,
+.header-actions-tray .theme-toggle-btn.theme-toggle-glass {
+    color: inherit;
+    width: auto;
+    height: auto;
+    border-radius: 999px;
+}
+.theme-toggle-btn.theme-toggle-glass:hover {
+    background: transparent;
+    transform: none;
+}
 
 /* Dark Theme Overrides */
 html[data-theme="dark"] {
     color-scheme: dark;
 }
-html[data-theme="dark"] .theme-toggle-btn {
+html[data-theme="dark"] .theme-toggle-btn:not(.theme-toggle-glass) {
     color: #a5b4fc; /* Indigo moon */
 }
-html[data-theme="dark"] .theme-toggle-btn:hover {
+html[data-theme="dark"] .theme-toggle-btn:not(.theme-toggle-glass):hover {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -4027,17 +4038,17 @@ html[data-theme="dark"] .header-notif-dot {
     background: #22c55e !important;
 }
 
-/* Refine Theme Toggle Switch Button Colors */
-.theme-toggle-btn {
+/* Refine Theme Toggle Switch Button Colors (legacy icon only) */
+.theme-toggle-btn:not(.theme-toggle-glass) {
     color: #475569 !important; /* Dark moon in light mode */
 }
-.theme-toggle-btn:hover {
+.theme-toggle-btn:not(.theme-toggle-glass):hover {
     background-color: rgba(15, 23, 42, 0.08) !important;
 }
-html[data-theme="dark"] .theme-toggle-btn {
+html[data-theme="dark"] .theme-toggle-btn:not(.theme-toggle-glass) {
     color: #fbbf24 !important; /* Golden sun in dark mode */
 }
-html[data-theme="dark"] .theme-toggle-btn:hover {
+html[data-theme="dark"] .theme-toggle-btn:not(.theme-toggle-glass):hover {
     background-color: rgba(255, 255, 255, 0.08) !important;
 }
 

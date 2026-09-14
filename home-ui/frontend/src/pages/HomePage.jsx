@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import logoIcon from '../assets/ui/dashboard.png'
 import salesIcon from '../assets/modules/sales-icon.png'
 import accountingIcon from '../assets/modules/accounting-icon.png'
 import stockIcon from '../assets/modules/stock-icon.png'
@@ -113,9 +112,8 @@ export default function HomePage() {
           <div className="flex flex-row items-center justify-between py-6">
             <a
               href={cfg.homeUrl || './'}
-              className="text-lg font-bold tracking-wide text-gray-900 rounded-lg focus:outline-none inline-flex items-center gap-2"
+              className="text-lg font-bold tracking-wide text-gray-900 rounded-lg focus:outline-none"
             >
-              <img src={logoIcon} alt="" className="w-7 h-7" aria-hidden="true" />
               UltiTech
             </a>
             <button
@@ -365,31 +363,9 @@ export default function HomePage() {
       </div>
 
       <footer className="erp-footer mt-10">
-        <div className="max-w-screen-xl mx-auto px-8 py-12 flex flex-col md:flex-row md:justify-between gap-8">
-          <div>
-            <a href={cfg.homeUrl || './'} className="font-bold text-darken text-lg inline-flex items-center gap-2">
-              <img src={logoIcon} alt="" className="w-6 h-6" aria-hidden="true" />
-              UltiTech ERP
-            </a>
-            <p className="text-gray-500 mt-3 max-w-sm">
-              One platform for finance, sales, stock, people, and delivery.
-            </p>
-          </div>
-          <div className="flex gap-12 text-sm">
-            <div className="flex flex-col gap-2">
-              <strong className="text-darken">Product</strong>
-              <a href="#modules">Modules</a>
-              <a href="#product">Product</a>
-              <a href="#pricing">Pricing</a>
-            </div>
-            <div className="flex flex-col gap-2">
-              <strong className="text-darken">Account</strong>
-              <a href={loginUrl}>Login</a>
-              <a href={trialUrl}>Free trial</a>
-            </div>
-          </div>
-        </div>
-        <p className="text-center text-sm text-gray-500 pb-8">&copy; {year} Ultimate General Trading</p>
+        <p className="text-center text-sm text-gray-500 py-8">
+          UltiTech &copy; {year} Ultimate General Trading
+        </p>
       </footer>
     </div>
   )

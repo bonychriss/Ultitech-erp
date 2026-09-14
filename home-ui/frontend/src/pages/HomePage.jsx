@@ -328,7 +328,7 @@ export default function HomePage() {
             </p>
             <p className="text-gray-500 my-5">Are you too? Please give your assessment</p>
             <a href={trialUrl} className="erp-testimonial-cta">
-              <span>Write your assessment</span>
+              <span>Write your review</span>
               <span className="erp-testimonial-cta-icon" aria-hidden="true">
                 <svg className="w-5 h-5" viewBox="0 0 26 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path

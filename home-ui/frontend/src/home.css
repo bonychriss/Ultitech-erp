@@ -31,8 +31,7 @@ body,
   position: sticky;
   top: 0;
   z-index: 60;
-  backdrop-filter: blur(10px);
-  background: rgba(248, 250, 252, 0.88);
+  background: rgba(248, 250, 252, 0.96);
   border-bottom: 1px solid rgba(226, 232, 240, 0.8);
 }
 
@@ -93,8 +92,8 @@ body,
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 38%, rgba(255, 255, 255, 0.28) 62%, rgba(255, 255, 255, 0.08) 100%),
-    linear-gradient(180deg, rgba(248, 250, 252, 0.35) 0%, transparent 35%, rgba(248, 250, 252, 0.45) 100%);
+    linear-gradient(90deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.42) 36%, rgba(255, 255, 255, 0.08) 62%, transparent 100%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.12) 0%, transparent 40%, rgba(248, 250, 252, 0.2) 100%);
 }
 
 .erp-hero-copy {
@@ -127,8 +126,7 @@ body,
 
 .erp-btn-ghost-light {
   border: 1px solid rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .erp-btn-ghost-light:hover {
@@ -149,11 +147,11 @@ body,
 @media (max-width: 767px) {
   .erp-hero-media {
     background-position: 70% center;
-    opacity: 0.35;
+    opacity: 0.55;
   }
 
   .erp-hero-scrim {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.94));
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.82));
   }
 
   .erp-hero-copy-panel {
@@ -228,7 +226,7 @@ body,
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.72) 38%, rgba(255, 255, 255, 0.96) 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.35) 45%, rgba(255, 255, 255, 0.88) 100%);
 }
 
 .erp-feature-content {
@@ -322,7 +320,7 @@ body,
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.7) 40%, rgba(255, 255, 255, 0.96) 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.32) 48%, rgba(255, 255, 255, 0.88) 100%);
 }
 
 .erp-product-content {

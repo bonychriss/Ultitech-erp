@@ -88,6 +88,14 @@ RewriteRule ^revenue/?$ revenue.php [L,QSA,NC]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^customer_statement/(.*)$ ../customer_statement/$1?company_slug=ultimate [L,QSA]
 
+# store-management-system lives at app root (no physical ultimate/store-management-system).
+# Without this proxy, /ultimate/store-management-system/* is a hard Apache 404.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^store-management-system/?$ ../store-management-system/index.php?company_slug=ultimate [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^store-management-system/(.*)$ ../store-management-system/$1?company_slug=ultimate [L,QSA]
+
 # PV tasks — always proxy to the real employee page (NC covers case typos on Linux).
 # Use ../ relative to ultimate/ so local /ultitech_erp installs work (absolute /employee fails on XAMPP).
 RewriteRule ^employee/pending-voucher-tasks\.php$ ../employee/pending-voucher-tasks.php?company_slug=ultimate [L,QSA,NC]

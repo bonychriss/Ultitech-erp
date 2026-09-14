@@ -180,6 +180,11 @@ RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/customer_statement/?$ customer_statement/index.php?company_slug=$1 [QSA,L,NC]
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/customer_statement/(.+)$ customer_statement/$2?company_slug=$1 [QSA,L,NC]
+# /{company_slug}/store-management-system (explicit: physical /ultimate/ breaks generic !-d proxy)
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/store-management-system/?$ store-management-system/index.php?company_slug=$1 [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/store-management-system/(.+)$ store-management-system/$2?company_slug=$1 [QSA,L,NC]
 # /{company_slug} -> dashboard
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/?$ select-module.php?company_slug=$1 [QSA,L,NC]

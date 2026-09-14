@@ -24,7 +24,9 @@ final class HomeShell
         }
 
         $bootCfg = [
+            'page' => (string) ($cfg['page'] ?? 'home'),
             'homeUrl' => (string) ($cfg['homeUrl'] ?? (function_exists('app_url') ? app_url('/') : '/')),
+            'pricingUrl' => (string) ($cfg['pricingUrl'] ?? (function_exists('app_url') ? app_url('/pricing.php') : '/pricing.php')),
             'loginUrl' => (string) ($cfg['loginUrl'] ?? (function_exists('app_url') ? app_url('/login.php') : '/login.php')),
             'accountUrl' => (string) ($cfg['accountUrl'] ?? (function_exists('app_url') ? app_url('/my-account.php') : '/my-account.php')),
             'trialUrl' => (string) ($cfg['trialUrl'] ?? (function_exists('app_url') ? app_url('/free-trial.php') : '/free-trial.php')),
@@ -34,6 +36,11 @@ final class HomeShell
             'year' => (int) ($cfg['year'] ?? date('Y')),
             'engine' => 'erp-laravel Domains/Home',
         ];
+
+        $pageKey = strtolower((string) $bootCfg['page']);
+        $pageTitle = $pageKey === 'pricing'
+            ? 'UltiTech ERP | Pricing'
+            : 'UltiTech ERP | Welcome';
 
         $cssUrl = $assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'];
         $jsUrl = $assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'];
@@ -55,7 +62,7 @@ final class HomeShell
             . '"></script>';
 
         return [
-            'pageTitle' => 'UltiTech ERP | Welcome',
+            'pageTitle' => $pageTitle,
             'bodyClass' => 'home-ui-page',
             'headMarkup' => $headMarkup,
             'footerScripts' => $footerScripts,

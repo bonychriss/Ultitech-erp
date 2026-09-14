@@ -40,6 +40,7 @@ use Illuminate\Support\Facades\Route;
 
 // Public marketing homepage (no ERP session required)
 Route::get('/home', [HomePageController::class, 'show'])->name('home.page');
+Route::get('/pricing', [HomePageController::class, 'show'])->name('home.pricing');
 
 // Public free-trial signup (POST stays on free-trial.php; GET shell via Laravel)
 Route::get('/free-trial', [TrialPageController::class, 'show'])->name('trial.page');

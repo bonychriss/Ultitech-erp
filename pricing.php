@@ -2,17 +2,6 @@
 define('ERP_SKIP_SYSTEM_FONT_OB', true);
 require_once __DIR__ . '/includes/functions.php';
 
-if (isset($_SESSION['user_id'])) {
-    if (isSuperAdmin()) {
-        header('Location: ' . app_url('/admin/companies.php'));
-        exit;
-    }
-
-    $sessionSlug = trim((string) ($_SESSION['company_slug'] ?? ''));
-    header('Location: ' . company_dashboard_url($sessionSlug !== '' ? $sessionSlug : null));
-    exit;
-}
-
 $laravelRoot = __DIR__ . '/erp-laravel';
 $laravelAutoload = $laravelRoot . '/vendor/autoload.php';
 if (!is_file($laravelAutoload)) {
@@ -25,7 +14,7 @@ if (!is_file($laravelAutoload)) {
 }
 
 $GLOBALS['ERP_HOME_CONTEXT'] = [
-    'page' => 'home',
+    'page' => 'pricing',
     'homeUrl' => app_url('/'),
     'pricingUrl' => app_url('/pricing.php'),
     'loginUrl' => app_url('/login.php'),
@@ -33,6 +22,6 @@ $GLOBALS['ERP_HOME_CONTEXT'] = [
     'trialUrl' => app_url('/free-trial.php'),
     'year' => (int) date('Y'),
 ];
-$GLOBALS['ERP_HOME_ROUTE'] = '/home';
+$GLOBALS['ERP_HOME_ROUTE'] = '/pricing';
 
 require $laravelRoot . '/bootstrap/erp-bridge.php';

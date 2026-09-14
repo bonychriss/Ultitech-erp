@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import SiteChrome from '../components/SiteChrome.jsx'
 import salesIcon from '../assets/modules/sales-icon.png'
 import accountingIcon from '../assets/modules/accounting-icon.png'
 import stockIcon from '../assets/modules/stock-icon.png'
@@ -73,20 +74,10 @@ const WHY_POINTS = [
   'Start with what you need, then grow into the rest of the suite.',
 ]
 
-const TRIAL_FEATURES = [
-  'Full access to finance, sales, stock, HR, and operations',
-  'Multi-company setup with role-based access',
-  'Invoices, expenses, cash books, and live reports',
-  'No card required to start',
-  '14 days to try the full platform',
-]
-
 export default function HomePage() {
   const cfg = getCfg()
   const loginUrl = cfg.loginUrl || 'login.php'
   const trialUrl = cfg.trialUrl || 'free-trial.php'
-  const year = cfg.year || new Date().getFullYear()
-  const [navOpen, setNavOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -114,72 +105,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="sk-page antialiased text-gray-700">
-      <header className="w-full erp-nav">
-        <div className="flex flex-col max-w-screen-xl px-8 mx-auto md:items-center md:justify-between md:flex-row">
-          <div className="flex flex-row items-center justify-between py-6">
-            <a
-              href={cfg.homeUrl || './'}
-              className="text-lg font-bold tracking-wide text-gray-900 rounded-lg focus:outline-none"
-            >
-              UltiTech
-            </a>
-            <button
-              type="button"
-              className="rounded-lg md:hidden focus:outline-none"
-              aria-label="Menu"
-              onClick={() => setNavOpen((o) => !o)}
-            >
-              <svg fill="currentColor" viewBox="0 0 20 20" className="w-6 h-6">
-                {navOpen ? (
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                ) : (
-                  <path
-                    fillRule="evenodd"
-                    d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM9 15a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1z"
-                    clipRule="evenodd"
-                  />
-                )}
-              </svg>
-            </button>
-          </div>
-          <nav
-            className={`h-0 md:h-auto flex flex-col flex-grow md:items-center pb-4 md:pb-0 md:flex md:justify-end md:flex-row origin-top duration-300 ${
-              navOpen ? 'h-full scale-y-100' : 'scale-y-0 md:scale-y-100'
-            }`}
-          >
-            <a className="px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900" href="#home">
-              Home
-            </a>
-            <a className="px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900" href="#modules">
-              Modules
-            </a>
-            <a className="px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900" href="#product">
-              Product
-            </a>
-            <a className="px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900" href="#pricing">
-              Pricing
-            </a>
-            <a
-              className="px-4 py-1.5 mt-2 text-xs text-center bg-white text-gray-800 rounded-full md:mt-8 md:ml-4 erp-btn-ghost erp-nav-btn"
-              href={loginUrl}
-            >
-              Login
-            </a>
-            <a
-              className="px-4 py-1.5 mt-2 text-xs text-center bg-yellow-500 rounded-full md:mt-8 md:ml-4 erp-btn-primary erp-nav-btn"
-              href={trialUrl}
-            >
-              Free trial
-            </a>
-          </nav>
-        </div>
-      </header>
-
+    <SiteChrome active="home">
       <section
         id="home"
         className="erp-hero erp-hero--bleed"
@@ -338,7 +264,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="sm:flex items-center sm:space-x-8 mt-36 flex-row-reverse">
+        <div className="sm:flex items-center sm:space-x-8 mt-36 flex-row-reverse mb-16">
           <div data-aos="fade-left" className="sm:w-1/2 relative">
             <h2 className="font-semibold text-2xl text-darken lg:pl-6">
               Payroll, payments, and reports that{' '}
@@ -352,56 +278,7 @@ export default function HomePage() {
             <img className="rounded-xl w-full erp-shot" src={payrollScreen} alt="Payroll runs in UltiTech" />
           </div>
         </div>
-
-        <section id="pricing" data-aos="zoom-in" className="erp-pricing-section mt-28 mb-10">
-          <div className="erp-pricing-header text-center max-w-2xl mx-auto">
-            <h2 className="text-darken text-3xl font-bold">Pricing</h2>
-            <p className="text-gray-500 mt-3">
-              Start with a free trial of the full UltiTech ERP suite - no card up front.
-            </p>
-          </div>
-
-          <article className="erp-price-card erp-price-card--featured">
-            <div className="erp-price-card-top">
-              <h3 className="erp-price-card-name">Free trial</h3>
-              <p className="erp-price-card-desc">Everything you need to run your business in one place.</p>
-              <div className="erp-price-card-amount">
-                <span className="erp-price-card-value">Free</span>
-                <span className="erp-price-card-cadence">/ 14 days</span>
-              </div>
-            </div>
-            <div className="erp-price-card-sep" />
-            <p className="erp-price-card-features-label">What&apos;s included</p>
-            <ul className="erp-price-card-features">
-              {TRIAL_FEATURES.map((feature) => (
-                <li key={feature}>
-                  <svg className="erp-price-check" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="1.75" />
-                    <path
-                      d="M8.5 12.5l2.2 2.2 4.8-5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.75"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-            <a href={trialUrl} className="erp-price-card-cta">
-              Start free trial
-            </a>
-          </article>
-        </section>
       </div>
-
-      <footer className="erp-footer mt-10">
-        <p className="text-center text-sm text-gray-500 py-8">
-          UltiTech &copy; {year} Ultimate General Trading
-        </p>
-      </footer>
-    </div>
+    </SiteChrome>
   )
 }

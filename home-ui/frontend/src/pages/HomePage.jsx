@@ -19,6 +19,12 @@ function getCfg() {
   return window.__HOME_CFG__ || {}
 }
 
+function imgUrl(path) {
+  const cfg = getCfg()
+  const base = String(cfg.imgBase || './skilline/img/').replace(/\/?$/, '/')
+  return `${base}${String(path || '').replace(/^\//, '')}`
+}
+
 const PRODUCT_CARDS = [
   {
     label: 'For owners',
@@ -264,7 +270,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="sm:flex items-center sm:space-x-8 mt-36 flex-row-reverse mb-16">
+        <div className="sm:flex items-center sm:space-x-8 mt-36 flex-row-reverse">
           <div data-aos="fade-left" className="sm:w-1/2 relative">
             <h2 className="font-semibold text-2xl text-darken lg:pl-6">
               Payroll, payments, and reports that{' '}
@@ -276,6 +282,37 @@ export default function HomePage() {
           </div>
           <div data-aos="fade-right" className="sm:w-1/2 relative mt-10 sm:mt-0">
             <img className="rounded-xl w-full erp-shot" src={payrollScreen} alt="Payroll runs in UltiTech" />
+          </div>
+        </div>
+
+        <div id="testimonials" className="erp-testimonial mt-24 mb-16">
+          <div data-aos="zoom-in-right" className="erp-testimonial-copy">
+            <div className="erp-testimonial-label">
+              <span className="erp-testimonial-rule" aria-hidden="true" />
+              <p>TESTIMONIAL</p>
+            </div>
+            <h2 className="font-semibold text-darken text-2xl">What They Say?</h2>
+            <p className="text-gray-500 my-5">
+              UltiTech has got more than 100k positive ratings from our users around the world.
+            </p>
+            <p className="text-gray-500 my-5">
+              Some of the owners and teams were greatly helped by UltiTech.
+            </p>
+            <p className="text-gray-500 my-5">Are you too? Please give your assessment</p>
+            <a href={trialUrl} className="erp-testimonial-cta">
+              <span>Write your assessment</span>
+              <span className="erp-testimonial-cta-icon" aria-hidden="true">
+                <svg className="w-5 h-5" viewBox="0 0 26 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M25.7071 8.70711C26.0976 8.31658 26.0976 7.68342 25.7071 7.2929L19.3431 0.928934C18.9526 0.538409 18.3195 0.538409 17.9289 0.928934C17.5384 1.31946 17.5384 1.95262 17.9289 2.34315L23.5858 8L17.9289 13.6569C17.5384 14.0474 17.5384 14.6805 17.9289 15.0711C18.3195 15.4616 18.9526 15.4616 19.3431 15.0711L25.7071 8.70711ZM-8.74228e-08 9L25 9L25 7L8.74228e-08 7L-8.74228e-08 9Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
+            </a>
+          </div>
+          <div data-aos="zoom-in-left" className="erp-testimonial-media">
+            <img src={imgUrl('testimonials.png')} alt="Customer testimonial for UltiTech" />
           </div>
         </div>
       </div>

@@ -450,13 +450,120 @@ body,
   z-index: 5;
 }
 
-.erp-pricing {
-  padding: 2.5rem 1.5rem;
-  border-radius: 20px;
-  background:
-    radial-gradient(600px 200px at 50% 0%, rgba(167, 139, 250, 0.18), transparent 70%),
-    #faf9ff;
+.erp-pricing-section {
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.erp-pricing-header {
+  margin-bottom: 2rem;
+}
+
+.erp-price-card {
+  background: #ffffff;
   border: 1px solid var(--erp-line);
+  border-radius: 14px;
+  padding: 1.75rem 1.5rem 1.5rem;
+  text-align: left;
+}
+
+.erp-price-card--featured {
+  border: 2px solid var(--erp-primary);
+  box-shadow: 0 16px 40px rgba(139, 92, 246, 0.12);
+}
+
+.erp-price-card-name {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--erp-ink);
+}
+
+.erp-price-card-desc {
+  margin: 0.45rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--erp-muted);
+}
+
+.erp-price-card-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-top: 1.25rem;
+}
+
+.erp-price-card-value {
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--erp-ink);
+}
+
+.erp-price-card-cadence {
+  font-size: 0.95rem;
+  color: var(--erp-muted);
+}
+
+.erp-price-card-sep {
+  height: 1px;
+  margin: 1.25rem 0 1rem;
+  background: var(--erp-line);
+}
+
+.erp-price-card-features-label {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--erp-ink);
+}
+
+.erp-price-card-features {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.erp-price-card-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.erp-price-check {
+  flex-shrink: 0;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.12rem;
+  color: var(--erp-primary-deep);
+}
+
+.erp-price-card-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: var(--erp-primary);
+  color: #312e81 !important;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.erp-price-card-cta:hover {
+  background: var(--erp-primary-deep);
+  color: #ffffff !important;
 }
 
 .erp-footer {

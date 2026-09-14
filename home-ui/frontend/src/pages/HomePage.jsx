@@ -73,6 +73,14 @@ const WHY_POINTS = [
   'Start with what you need, then grow into the rest of the suite.',
 ]
 
+const TRIAL_FEATURES = [
+  'Full access to finance, sales, stock, HR, and operations',
+  'Multi-company setup with role-based access',
+  'Invoices, expenses, cash books, and live reports',
+  'No card required to start',
+  '14 days to try the full platform',
+]
+
 export default function HomePage() {
   const cfg = getCfg()
   const loginUrl = cfg.loginUrl || 'login.php'
@@ -345,21 +353,48 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div id="pricing" data-aos="zoom-in" className="mt-28 mb-10 text-center max-w-3xl mx-auto erp-pricing">
-          <h2 className="text-darken text-2xl font-semibold">
-            All modules. <span className="text-yellow-500">One free trial.</span>
-          </h2>
-          <p className="text-gray-500 my-5">
-            Use the full platform for 14 days. No card up front - finance, sales, stock, HR, and
-            operations are included.
-          </p>
-          <a
-            href={trialUrl}
-            className="inline-block px-8 py-4 bg-yellow-500 font-semibold rounded-full erp-btn-primary transform transition hover:scale-105 duration-300"
-          >
-            Start now - it&apos;s free
-          </a>
-        </div>
+        <section id="pricing" data-aos="zoom-in" className="erp-pricing-section mt-28 mb-10">
+          <div className="erp-pricing-header text-center max-w-2xl mx-auto">
+            <h2 className="text-darken text-3xl font-bold">Pricing</h2>
+            <p className="text-gray-500 mt-3">
+              Start with a free trial of the full UltiTech ERP suite - no card up front.
+            </p>
+          </div>
+
+          <article className="erp-price-card erp-price-card--featured">
+            <div className="erp-price-card-top">
+              <h3 className="erp-price-card-name">Free trial</h3>
+              <p className="erp-price-card-desc">Everything you need to run your business in one place.</p>
+              <div className="erp-price-card-amount">
+                <span className="erp-price-card-value">Free</span>
+                <span className="erp-price-card-cadence">/ 14 days</span>
+              </div>
+            </div>
+            <div className="erp-price-card-sep" />
+            <p className="erp-price-card-features-label">What&apos;s included</p>
+            <ul className="erp-price-card-features">
+              {TRIAL_FEATURES.map((feature) => (
+                <li key={feature}>
+                  <svg className="erp-price-check" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="1.75" />
+                    <path
+                      d="M8.5 12.5l2.2 2.2 4.8-5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
+            <a href={trialUrl} className="erp-price-card-cta">
+              Start free trial
+            </a>
+          </article>
+        </section>
       </div>
 
       <footer className="erp-footer mt-10">

@@ -88,7 +88,7 @@ const FEATURED_NEWS = {
   tag: 'NEWS',
   title: 'UltiTech unifies finance, sales, and stock in one cloud ERP workspace',
   excerpt:
-    'Growing companies are consolidating invoices, expenses, cash books, and inventory into UltiTech so every department posts to the same live books...',
+    'Companies are consolidating invoices, expenses, cash books, and inventory into UltiTech so every team posts to the same live books...',
   image: newsFeatured,
 }
 
@@ -96,22 +96,19 @@ const NEWS_ITEMS = [
   {
     tag: 'PRESS RELEASE',
     title: 'UltiTech opens a 14-day full-suite free trial with no card required',
-    excerpt:
-      'Businesses can now try finance, sales, HR, and operations together before committing to a paid plan...',
+    excerpt: 'Try finance, sales, HR, and operations together before committing to a paid plan...',
     image: newsFinance,
   },
   {
     tag: 'NEWS',
     title: 'Payroll and payments now post straight into UltiTech cash books',
-    excerpt:
-      'Teams run payroll cycles and collect customer payments without exporting data into a separate tool...',
+    excerpt: 'Run payroll and collect payments without exporting data into another tool...',
     image: newsPayroll,
   },
   {
     tag: 'NEWS',
     title: 'Live stock and delivery reports keep operations aligned with the books',
-    excerpt:
-      'Warehouse movements and delivery status now feed the same reports finance teams use for month-end...',
+    excerpt: 'Warehouse moves and delivery status feed the same reports finance uses at month-end...',
     image: newsStock,
   },
 ]
@@ -196,7 +193,7 @@ export default function HomePage() {
         <div className="bg-white w-full h-12 -mt-px" />
       </div>
 
-      <div className="container px-4 lg:px-8 mx-auto max-w-screen-xl overflow-x-hidden">
+      <div className="container px-4 lg:px-8 mx-auto max-w-screen-xl">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-center mb-6 text-gray-400 font-medium">Built for every department</h2>
           <div className="grid grid-cols-3 lg:grid-cols-6 gap-4 justify-items-center">

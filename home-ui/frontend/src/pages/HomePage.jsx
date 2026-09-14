@@ -8,7 +8,6 @@ import deliveryIcon from '../assets/modules/delivery-icon.png'
 import statementIcon from '../assets/modules/statement-icon.png'
 import heroHandCards from '../assets/hero/hand-cards.png'
 import financeScreen from '../assets/screens/finance-dashboard.jpg'
-import reportsScreen from '../assets/screens/reports-dashboard.jpg'
 import salesScreen from '../assets/screens/sales-invoices.jpg'
 import stockScreen from '../assets/screens/inventory-stock.jpg'
 import payrollScreen from '../assets/screens/hr-payroll.jpg'
@@ -18,30 +17,25 @@ function getCfg() {
   return window.__HOME_CFG__ || {}
 }
 
-const OWNER_SCREENS = [
+const PRODUCT_CARDS = [
   {
+    label: 'For owners',
     title: 'Accounting hub',
     text: 'Balances, expenses, journal, and reconciliation in one place.',
     image: financeScreen,
     alt: 'UltiTech accounting modules',
     cta: 'See finance',
+    href: 'trial',
   },
   {
-    title: 'Overview dashboard',
-    text: 'Live KPIs across sales, finance, stock, and operations.',
-    image: reportsScreen,
-    alt: 'UltiTech overview dashboard with business reports',
-    cta: 'View reports',
-  },
-]
-
-const TEAM_SCREENS = [
-  {
+    label: 'For teams',
     title: 'Sales desk',
     text: 'Invoices, orders, targets, and collections on one screen.',
     image: salesScreen,
     alt: 'UltiTech sales dashboard',
     cta: 'Open sales desk',
+    href: 'login',
+    teams: true,
   },
 ]
 
@@ -283,54 +277,33 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="erp-product-columns mt-12">
-            <div data-aos="fade-right" className="erp-product-column">
-              <p className="erp-product-column-label">For owners</p>
-              <div className="erp-product-stack">
-                {OWNER_SCREENS.map((item) => (
-                  <article key={item.title} className="erp-product-card">
-                    <div className="erp-product-shot-wrap">
-                      <img className="erp-product-shot" src={item.image} alt={item.alt} />
-                    </div>
-                    <div className="erp-product-body">
-                      <h3 className="erp-product-title">{item.title}</h3>
-                      <p className="erp-product-text">{item.text}</p>
-                      <a href={trialUrl} className="erp-product-link">
-                        {item.cta}
-                      </a>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            <div data-aos="fade-left" className="erp-product-column">
-              <p className="erp-product-column-label erp-product-column-label--teams">For teams</p>
-              <div className="erp-product-stack">
-                {TEAM_SCREENS.map((item) => (
-                  <article key={item.title} className="erp-product-card">
-                    <div className="erp-product-shot-wrap">
-                      <img className="erp-product-shot" src={item.image} alt={item.alt} />
-                    </div>
-                    <div className="erp-product-body">
-                      <h3 className="erp-product-title">{item.title}</h3>
-                      <p className="erp-product-text">{item.text}</p>
-                      <a href={loginUrl} className="erp-product-link erp-product-link--teams">
-                        {item.cta}
-                      </a>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div data-aos="fade-up" className="erp-product-strip mt-10">
-            <img className="erp-product-strip-shot" src={paymentsScreen} alt="UltiTech sales payments desk" />
-            <div className="erp-product-strip-copy">
-              <h3>Payments tied to invoices</h3>
-              <p>Record collections and keep receivables aligned with the books.</p>
-            </div>
+          <div className="erp-product-two mt-12">
+            {PRODUCT_CARDS.map((item, index) => (
+              <article
+                key={item.title}
+                data-aos={index === 0 ? 'fade-right' : 'fade-left'}
+                className="erp-product-card"
+              >
+                <p
+                  className={`erp-product-column-label${item.teams ? ' erp-product-column-label--teams' : ''}`}
+                >
+                  {item.label}
+                </p>
+                <div className="erp-product-shot-wrap">
+                  <img className="erp-product-shot" src={item.image} alt={item.alt} />
+                </div>
+                <div className="erp-product-body">
+                  <h3 className="erp-product-title">{item.title}</h3>
+                  <p className="erp-product-text">{item.text}</p>
+                  <a
+                    href={item.href === 'login' ? loginUrl : trialUrl}
+                    className={`erp-product-link${item.teams ? ' erp-product-link--teams' : ''}`}
+                  >
+                    {item.cta}
+                  </a>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
 

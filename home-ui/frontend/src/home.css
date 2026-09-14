@@ -223,17 +223,24 @@ body,
   background: linear-gradient(180deg, transparent 35%, rgba(167, 139, 250, 0.72) 100%);
 }
 
-.erp-product-columns {
+.erp-product-two {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
+  gap: 1.5rem;
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-@media (min-width: 1024px) {
-  .erp-product-columns {
+@media (min-width: 768px) {
+  .erp-product-two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 2.5rem;
+    gap: 1.75rem;
   }
+}
+
+.erp-product-two .erp-product-column-label {
+  padding: 1rem 1.25rem 0;
 }
 
 .erp-product-column-label {

@@ -204,12 +204,38 @@ body,
 }
 
 .erp-feature {
-  background: var(--erp-surface);
+  position: relative;
+  isolation: isolate;
   border: 1px solid var(--erp-line);
   border-radius: 16px;
-  padding: 1.75rem 1.25rem 1.75rem;
+  min-height: 100%;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
-  overflow: visible;
+  overflow: hidden;
+}
+
+.erp-feature-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--feature-bg);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  transform: scale(1.02);
+}
+
+.erp-feature-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.88) 42%, rgba(255, 255, 255, 0.97) 100%);
+}
+
+.erp-feature-content {
+  position: relative;
+  z-index: 2;
+  padding: 1.35rem 1.25rem 1.75rem;
 }
 
 .erp-feature-icon {
@@ -221,7 +247,9 @@ body,
   margin-bottom: 1.15rem;
   border-radius: 18px;
   border: 2px solid;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
 }
 
 .erp-feature-icon-img {

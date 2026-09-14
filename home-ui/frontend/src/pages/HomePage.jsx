@@ -59,6 +59,7 @@ const FEATURE_CARDS = [
     accent: '#e11d48',
     tint: '#fff1f2',
     icon: salesIcon,
+    bg: salesScreen,
   },
   {
     title: 'Finance, expenses & cash',
@@ -66,6 +67,7 @@ const FEATURE_CARDS = [
     accent: '#8b5cf6',
     tint: '#f5f3ff',
     icon: accountingIcon,
+    bg: financeScreen,
   },
   {
     title: 'Stock, HR & operations',
@@ -73,6 +75,7 @@ const FEATURE_CARDS = [
     accent: '#0d9488',
     tint: '#ecfdf5',
     icon: stockIcon,
+    bg: stockScreen,
   },
 ]
 
@@ -255,21 +258,26 @@ export default function HomePage() {
 
         <div className="erp-feature-grid mt-20">
           {FEATURE_CARDS.map((card, index) => (
-            <div
+            <article
               key={card.title}
               data-aos="fade-up"
               data-aos-delay={index * 150}
-              className="erp-feature text-center"
+              className="erp-feature"
+              style={{ '--feature-bg': `url(${card.bg})` }}
             >
-              <div
-                className="erp-feature-icon mx-auto"
-                style={{ background: card.tint, borderColor: card.accent }}
-              >
-                <img src={card.icon} alt="" className="erp-feature-icon-img" />
+              <div className="erp-feature-bg" aria-hidden="true" />
+              <div className="erp-feature-scrim" aria-hidden="true" />
+              <div className="erp-feature-content text-center">
+                <div
+                  className="erp-feature-icon mx-auto"
+                  style={{ background: card.tint, borderColor: card.accent }}
+                >
+                  <img src={card.icon} alt="" className="erp-feature-icon-img" />
+                </div>
+                <h3 className="font-medium text-xl mb-3 text-darken">{card.title}</h3>
+                <p className="text-gray-600">{card.text}</p>
               </div>
-              <h3 className="font-medium text-xl mb-3 lg:px-4 text-darken">{card.title}</h3>
-              <p className="px-2 text-gray-500">{card.text}</p>
-            </div>
+            </article>
           ))}
         </div>
 

@@ -43,15 +43,6 @@ const TEAM_SCREENS = [
     alt: 'UltiTech sales dashboard',
     cta: 'Open sales desk',
   },
-  {
-    title: 'Stock & payroll',
-    text: 'Inventory health, purchases, and payroll runs stay in sync.',
-    image: stockScreen,
-    alt: 'UltiTech stock control dashboard',
-    cta: 'Open operations',
-    secondaryImage: payrollScreen,
-    secondaryAlt: 'UltiTech payroll runs',
-  },
 ]
 
 const MODULES = [
@@ -318,15 +309,8 @@ export default function HomePage() {
               <div className="erp-product-stack">
                 {TEAM_SCREENS.map((item) => (
                   <article key={item.title} className="erp-product-card">
-                    <div className={`erp-product-shot-wrap${item.secondaryImage ? ' erp-product-shot-wrap--dual' : ''}`}>
+                    <div className="erp-product-shot-wrap">
                       <img className="erp-product-shot" src={item.image} alt={item.alt} />
-                      {item.secondaryImage ? (
-                        <img
-                          className="erp-product-shot erp-product-shot-secondary"
-                          src={item.secondaryImage}
-                          alt={item.secondaryAlt}
-                        />
-                      ) : null}
                     </div>
                     <div className="erp-product-body">
                       <h3 className="erp-product-title">{item.title}</h3>

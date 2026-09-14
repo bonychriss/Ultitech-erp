@@ -223,6 +223,149 @@ body,
   background: linear-gradient(180deg, transparent 35%, rgba(167, 139, 250, 0.72) 100%);
 }
 
+.erp-product-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .erp-product-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem;
+  }
+}
+
+.erp-product-column-label {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-primary-deep);
+}
+
+.erp-product-column-label--teams {
+  color: var(--erp-teal);
+}
+
+.erp-product-stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.erp-product-card {
+  overflow: hidden;
+  border: 1px solid var(--erp-line);
+  border-radius: 18px;
+  background: var(--erp-surface);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+}
+
+.erp-product-shot-wrap {
+  position: relative;
+  background: #eef2ff;
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.erp-product-shot-wrap--dual {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 0.65rem;
+  padding: 0.65rem;
+}
+
+.erp-product-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.erp-product-shot-wrap:not(.erp-product-shot-wrap--dual) .erp-product-shot {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.erp-product-shot-secondary {
+  align-self: end;
+}
+
+.erp-product-body {
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+
+.erp-product-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--erp-ink);
+}
+
+.erp-product-text {
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--erp-muted);
+}
+
+.erp-product-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--erp-primary-deep);
+}
+
+.erp-product-link--teams {
+  color: var(--erp-teal);
+}
+
+.erp-product-link:hover {
+  text-decoration: underline;
+}
+
+.erp-product-strip {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid var(--erp-line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+@media (min-width: 768px) {
+  .erp-product-strip {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.9fr);
+    padding: 1rem 1.25rem;
+  }
+}
+
+.erp-product-strip-shot {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--erp-line);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.erp-product-strip-copy h3 {
+  margin: 0 0 0.45rem;
+  font-size: 1.05rem;
+  color: var(--erp-ink);
+}
+
+.erp-product-strip-copy p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--erp-muted);
+}
+
 .erp-btn-soft {
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.55);

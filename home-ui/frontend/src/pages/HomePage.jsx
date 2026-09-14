@@ -8,6 +8,7 @@ import deliveryIcon from '../assets/modules/delivery-icon.png'
 import statementIcon from '../assets/modules/statement-icon.png'
 import heroHandCards from '../assets/hero/hand-cards.png'
 import financeScreen from '../assets/screens/finance-dashboard.jpg'
+import reportsScreen from '../assets/screens/reports-dashboard.jpg'
 import salesScreen from '../assets/screens/sales-invoices.jpg'
 import stockScreen from '../assets/screens/inventory-stock.jpg'
 import payrollScreen from '../assets/screens/hr-payroll.jpg'
@@ -16,6 +17,42 @@ import paymentsScreen from '../assets/screens/sales-payments.jpg'
 function getCfg() {
   return window.__HOME_CFG__ || {}
 }
+
+const OWNER_SCREENS = [
+  {
+    title: 'Accounting hub',
+    text: 'Balances, expenses, journal, and reconciliation in one place.',
+    image: financeScreen,
+    alt: 'UltiTech accounting modules',
+    cta: 'See finance',
+  },
+  {
+    title: 'Overview dashboard',
+    text: 'Live KPIs across sales, finance, stock, and operations.',
+    image: reportsScreen,
+    alt: 'UltiTech overview dashboard with business reports',
+    cta: 'View reports',
+  },
+]
+
+const TEAM_SCREENS = [
+  {
+    title: 'Sales desk',
+    text: 'Invoices, orders, targets, and collections on one screen.',
+    image: salesScreen,
+    alt: 'UltiTech sales dashboard',
+    cta: 'Open sales desk',
+  },
+  {
+    title: 'Stock & payroll',
+    text: 'Inventory health, purchases, and payroll runs stay in sync.',
+    image: stockScreen,
+    alt: 'UltiTech stock control dashboard',
+    cta: 'Open operations',
+    secondaryImage: payrollScreen,
+    secondaryAlt: 'UltiTech payroll runs',
+  },
+]
 
 const MODULES = [
   { title: 'Sales & invoices', icon: salesIcon, tint: '#fee2e2' },
@@ -254,30 +291,61 @@ export default function HomePage() {
               stock, payroll, and reports - so owners and teams see the same truth in real time.
             </p>
           </div>
-          <div data-aos="fade-up" className="flex flex-col md:flex-row justify-center space-y-5 md:space-y-0 md:space-x-6 lg:space-x-10 mt-10">
-            <div className="relative md:w-5/12 erp-shot-wrap">
-              <img className="rounded-2xl w-full erp-shot" src={financeScreen} alt="Accounting modules in UltiTech" />
-              <div className="erp-shot-caption">
-                <h3 className="uppercase text-white font-bold text-sm lg:text-xl mb-3">For owners</h3>
-                <a
-                  href={trialUrl}
-                  className="inline-block rounded-full text-white border text-xs lg:text-base px-6 py-3 font-medium transform transition hover:scale-105 duration-300"
-                >
-                  See finance
-                </a>
+
+          <div className="erp-product-columns mt-12">
+            <div data-aos="fade-right" className="erp-product-column">
+              <p className="erp-product-column-label">For owners</p>
+              <div className="erp-product-stack">
+                {OWNER_SCREENS.map((item) => (
+                  <article key={item.title} className="erp-product-card">
+                    <div className="erp-product-shot-wrap">
+                      <img className="erp-product-shot" src={item.image} alt={item.alt} />
+                    </div>
+                    <div className="erp-product-body">
+                      <h3 className="erp-product-title">{item.title}</h3>
+                      <p className="erp-product-text">{item.text}</p>
+                      <a href={trialUrl} className="erp-product-link">
+                        {item.cta}
+                      </a>
+                    </div>
+                  </article>
+                ))}
               </div>
             </div>
-            <div className="relative md:w-5/12 erp-shot-wrap">
-              <img className="rounded-2xl w-full erp-shot" src={salesScreen} alt="Sales dashboard in UltiTech" />
-              <div className="erp-shot-caption erp-shot-caption--accent">
-                <h3 className="uppercase text-white font-bold text-sm lg:text-xl mb-3">For teams</h3>
-                <a
-                  href={loginUrl}
-                  className="inline-block rounded-full text-white text-xs lg:text-base px-6 py-3 font-medium transform transition hover:scale-105 duration-300 erp-btn-soft"
-                >
-                  Open sales desk
-                </a>
+
+            <div data-aos="fade-left" className="erp-product-column">
+              <p className="erp-product-column-label erp-product-column-label--teams">For teams</p>
+              <div className="erp-product-stack">
+                {TEAM_SCREENS.map((item) => (
+                  <article key={item.title} className="erp-product-card">
+                    <div className={`erp-product-shot-wrap${item.secondaryImage ? ' erp-product-shot-wrap--dual' : ''}`}>
+                      <img className="erp-product-shot" src={item.image} alt={item.alt} />
+                      {item.secondaryImage ? (
+                        <img
+                          className="erp-product-shot erp-product-shot-secondary"
+                          src={item.secondaryImage}
+                          alt={item.secondaryAlt}
+                        />
+                      ) : null}
+                    </div>
+                    <div className="erp-product-body">
+                      <h3 className="erp-product-title">{item.title}</h3>
+                      <p className="erp-product-text">{item.text}</p>
+                      <a href={loginUrl} className="erp-product-link erp-product-link--teams">
+                        {item.cta}
+                      </a>
+                    </div>
+                  </article>
+                ))}
               </div>
+            </div>
+          </div>
+
+          <div data-aos="fade-up" className="erp-product-strip mt-10">
+            <img className="erp-product-strip-shot" src={paymentsScreen} alt="UltiTech sales payments desk" />
+            <div className="erp-product-strip-copy">
+              <h3>Payments tied to invoices</h3>
+              <p>Record collections and keep receivables aligned with the books.</p>
             </div>
           </div>
         </div>

@@ -234,28 +234,11 @@ body,
 .erp-feature-content {
   position: relative;
   z-index: 2;
-  padding: 1.35rem 1.25rem 1.75rem;
-}
-
-.erp-feature-icon {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 4.75rem;
-  height: 4.75rem;
-  margin-bottom: 1.15rem;
-  border-radius: 18px;
-  border: 2px solid;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(4px);
-}
-
-.erp-feature-icon-img {
-  display: block;
-  width: 2.85rem;
-  height: 2.85rem;
-  object-fit: contain;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 14rem;
+  padding: 1.35rem 1.25rem 1.75rem;
 }
 
 .erp-shot {

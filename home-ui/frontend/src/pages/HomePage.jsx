@@ -27,8 +27,6 @@ const PRODUCT_CARDS = [
     text: 'Balances, expenses, journal, and reconciliation in one place.',
     image: financeScreen,
     alt: 'UltiTech accounting modules',
-    icon: accountingIcon,
-    iconTint: '#fce7f3',
     cta: 'See finance',
     href: 'trial',
   },
@@ -38,8 +36,6 @@ const PRODUCT_CARDS = [
     text: 'Invoices, orders, targets, and collections on one screen.',
     image: salesScreen,
     alt: 'UltiTech sales dashboard',
-    icon: salesIcon,
-    iconTint: '#fee2e2',
     cta: 'Open sales desk',
     href: 'login',
     teams: true,
@@ -59,25 +55,16 @@ const FEATURE_CARDS = [
   {
     title: 'Sales, invoicing & collections',
     text: 'Quotes, orders, and invoices in one flow so cash in stays tied to the books.',
-    accent: '#e11d48',
-    tint: '#fff1f2',
-    icon: salesIcon,
     bg: featureSalesBg,
   },
   {
     title: 'Finance, expenses & cash',
     text: 'Balances, expenses, VAT, and cash books that match what your teams actually post.',
-    accent: '#8b5cf6',
-    tint: '#f5f3ff',
-    icon: accountingIcon,
     bg: featureFinanceBg,
   },
   {
     title: 'Stock, HR & operations',
     text: 'Inventory, payroll, attendance, and delivery stay connected to the same company data.',
-    accent: '#0d9488',
-    tint: '#ecfdf5',
-    icon: stockIcon,
     bg: featureOperationsBg,
   },
 ]
@@ -271,12 +258,6 @@ export default function HomePage() {
               <div className="erp-feature-bg" aria-hidden="true" />
               <div className="erp-feature-scrim" aria-hidden="true" />
               <div className="erp-feature-content text-center">
-                <div
-                  className="erp-feature-icon mx-auto"
-                  style={{ background: card.tint, borderColor: card.accent }}
-                >
-                  <img src={card.icon} alt="" className="erp-feature-icon-img" />
-                </div>
                 <h3 className="font-medium text-xl mb-3 text-darken">{card.title}</h3>
                 <p className="text-gray-600">{card.text}</p>
               </div>
@@ -311,16 +292,7 @@ export default function HomePage() {
                   <img className="erp-product-shot" src={item.image} alt={item.alt} />
                 </div>
                 <div className="erp-product-body">
-                  <div className="erp-product-title-row">
-                    <span
-                      className="erp-product-icon"
-                      style={{ background: item.iconTint }}
-                      aria-hidden="true"
-                    >
-                      <img src={item.icon} alt="" />
-                    </span>
-                    <h3 className="erp-product-title">{item.title}</h3>
-                  </div>
+                  <h3 className="erp-product-title">{item.title}</h3>
                   <p className="erp-product-text">{item.text}</p>
                   <a
                     href={item.href === 'login' ? loginUrl : trialUrl}

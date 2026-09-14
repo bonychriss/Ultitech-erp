@@ -24,6 +24,8 @@ const PRODUCT_CARDS = [
     text: 'Balances, expenses, journal, and reconciliation in one place.',
     image: financeScreen,
     alt: 'UltiTech accounting modules',
+    icon: accountingIcon,
+    iconTint: '#fce7f3',
     cta: 'See finance',
     href: 'trial',
   },
@@ -33,6 +35,8 @@ const PRODUCT_CARDS = [
     text: 'Invoices, orders, targets, and collections on one screen.',
     image: salesScreen,
     alt: 'UltiTech sales dashboard',
+    icon: salesIcon,
+    iconTint: '#fee2e2',
     cta: 'Open sales desk',
     href: 'login',
     teams: true,
@@ -52,19 +56,22 @@ const FEATURE_CARDS = [
   {
     title: 'Sales, invoicing & collections',
     text: 'Quotes, orders, and invoices in one flow so cash in stays tied to the books.',
-    color: '#e11d48',
+    accent: '#e11d48',
+    tint: '#fff1f2',
     icon: salesIcon,
   },
   {
     title: 'Finance, expenses & cash',
     text: 'Balances, expenses, VAT, and cash books that match what your teams actually post.',
-    color: '#a78bfa',
+    accent: '#8b5cf6',
+    tint: '#f5f3ff',
     icon: accountingIcon,
   },
   {
     title: 'Stock, HR & operations',
     text: 'Inventory, payroll, attendance, and delivery stay connected to the same company data.',
-    color: '#0d9488',
+    accent: '#0d9488',
+    tint: '#ecfdf5',
     icon: stockIcon,
   },
 ]
@@ -246,7 +253,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-14 md:gap-5 mt-20">
+        <div className="erp-feature-grid mt-20">
           {FEATURE_CARDS.map((card, index) => (
             <div
               key={card.title}
@@ -255,13 +262,13 @@ export default function HomePage() {
               className="erp-feature text-center"
             >
               <div
-                style={{ background: card.color }}
-                className="rounded-full w-16 h-16 flex items-center justify-center mx-auto shadow-lg transform -translate-y-12"
+                className="erp-feature-icon mx-auto"
+                style={{ background: card.tint, borderColor: card.accent }}
               >
-                <img src={card.icon} alt="" className="w-8 h-8 brightness-0 invert" />
+                <img src={card.icon} alt="" className="erp-feature-icon-img" />
               </div>
-              <h3 className="font-medium text-xl mb-3 lg:px-8 text-darken">{card.title}</h3>
-              <p className="px-4 text-gray-500">{card.text}</p>
+              <h3 className="font-medium text-xl mb-3 lg:px-4 text-darken">{card.title}</h3>
+              <p className="px-2 text-gray-500">{card.text}</p>
             </div>
           ))}
         </div>
@@ -293,7 +300,16 @@ export default function HomePage() {
                   <img className="erp-product-shot" src={item.image} alt={item.alt} />
                 </div>
                 <div className="erp-product-body">
-                  <h3 className="erp-product-title">{item.title}</h3>
+                  <div className="erp-product-title-row">
+                    <span
+                      className="erp-product-icon"
+                      style={{ background: item.iconTint }}
+                      aria-hidden="true"
+                    >
+                      <img src={item.icon} alt="" />
+                    </span>
+                    <h3 className="erp-product-title">{item.title}</h3>
+                  </div>
                   <p className="erp-product-text">{item.text}</p>
                   <a
                     href={item.href === 'login' ? loginUrl : trialUrl}

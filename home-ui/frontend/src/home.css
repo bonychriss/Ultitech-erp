@@ -219,9 +219,8 @@ body,
   z-index: 0;
   background-image: var(--feature-bg);
   background-size: cover;
-  background-position: center top;
+  background-position: center center;
   background-repeat: no-repeat;
-  transform: scale(1.02);
 }
 
 .erp-feature-scrim {
@@ -229,7 +228,7 @@ body,
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.88) 42%, rgba(255, 255, 255, 0.97) 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.72) 38%, rgba(255, 255, 255, 0.96) 100%);
 }
 
 .erp-feature-content {

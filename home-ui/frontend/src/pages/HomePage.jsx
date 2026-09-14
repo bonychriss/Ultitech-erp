@@ -7,6 +7,9 @@ import payrollIcon from '../assets/modules/payroll-icon.png'
 import deliveryIcon from '../assets/modules/delivery-icon.png'
 import statementIcon from '../assets/modules/statement-icon.png'
 import heroHandCards from '../assets/hero/hand-cards.png'
+import featureSalesBg from '../assets/features/sales-invoice.jpg'
+import featureFinanceBg from '../assets/features/finance.png'
+import featureOperationsBg from '../assets/features/operations.png'
 import financeScreen from '../assets/screens/finance-dashboard.jpg'
 import salesScreen from '../assets/screens/sales-invoices.jpg'
 import stockScreen from '../assets/screens/inventory-stock.jpg'
@@ -59,7 +62,7 @@ const FEATURE_CARDS = [
     accent: '#e11d48',
     tint: '#fff1f2',
     icon: salesIcon,
-    bg: salesScreen,
+    bg: featureSalesBg,
   },
   {
     title: 'Finance, expenses & cash',
@@ -67,7 +70,7 @@ const FEATURE_CARDS = [
     accent: '#8b5cf6',
     tint: '#f5f3ff',
     icon: accountingIcon,
-    bg: financeScreen,
+    bg: featureFinanceBg,
   },
   {
     title: 'Stock, HR & operations',
@@ -75,7 +78,7 @@ const FEATURE_CARDS = [
     accent: '#0d9488',
     tint: '#ecfdf5',
     icon: stockIcon,
-    bg: stockScreen,
+    bg: featureOperationsBg,
   },
 ]
 

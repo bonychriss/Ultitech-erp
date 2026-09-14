@@ -10,11 +10,10 @@ import heroHandCards from '../assets/hero/hand-cards.png'
 import featureSalesBg from '../assets/features/sales-invoice.jpg'
 import featureFinanceBg from '../assets/features/finance.png'
 import featureOperationsBg from '../assets/features/operations.png'
-import financeScreen from '../assets/screens/finance-dashboard.jpg'
-import salesScreen from '../assets/screens/sales-invoices.jpg'
+import productOwnersBg from '../assets/features/product-owners.png'
+import productTeamsBg from '../assets/features/product-teams.png'
 import stockScreen from '../assets/screens/inventory-stock.jpg'
 import payrollScreen from '../assets/screens/hr-payroll.jpg'
-import paymentsScreen from '../assets/screens/sales-payments.jpg'
 
 function getCfg() {
   return window.__HOME_CFG__ || {}
@@ -25,8 +24,8 @@ const PRODUCT_CARDS = [
     label: 'For owners',
     title: 'Accounting hub',
     text: 'Balances, expenses, journal, and reconciliation in one place.',
-    image: financeScreen,
-    alt: 'UltiTech accounting modules',
+    image: productOwnersBg,
+    alt: 'UltiTech accounting and finance illustration',
     cta: 'See finance',
     href: 'trial',
   },
@@ -34,8 +33,8 @@ const PRODUCT_CARDS = [
     label: 'For teams',
     title: 'Sales desk',
     text: 'Invoices, orders, targets, and collections on one screen.',
-    image: salesScreen,
-    alt: 'UltiTech sales dashboard',
+    image: productTeamsBg,
+    alt: 'UltiTech sales team illustration',
     cta: 'Open sales desk',
     href: 'login',
     teams: true,
@@ -281,17 +280,17 @@ export default function HomePage() {
               <article
                 key={item.title}
                 data-aos={index === 0 ? 'fade-right' : 'fade-left'}
-                className="erp-product-card"
+                className={`erp-product-card erp-product-card--illustrated${item.teams ? ' erp-product-card--teams' : ''}`}
+                style={{ '--product-bg': `url(${item.image})` }}
               >
-                <p
-                  className={`erp-product-column-label${item.teams ? ' erp-product-column-label--teams' : ''}`}
-                >
-                  {item.label}
-                </p>
-                <div className="erp-product-shot-wrap">
-                  <img className="erp-product-shot" src={item.image} alt={item.alt} />
-                </div>
-                <div className="erp-product-body">
+                <div className="erp-product-bg" aria-hidden="true" />
+                <div className="erp-product-scrim" aria-hidden="true" />
+                <div className="erp-product-content">
+                  <p
+                    className={`erp-product-column-label${item.teams ? ' erp-product-column-label--teams' : ''}`}
+                  >
+                    {item.label}
+                  </p>
                   <h3 className="erp-product-title">{item.title}</h3>
                   <p className="erp-product-text">{item.text}</p>
                   <a
@@ -343,13 +342,8 @@ export default function HomePage() {
               Run payroll, collect payments, and review live KPIs without exporting to another tool.
             </p>
           </div>
-          <div data-aos="fade-right" className="sm:w-1/2 relative mt-10 sm:mt-0 erp-dual-shots">
+          <div data-aos="fade-right" className="sm:w-1/2 relative mt-10 sm:mt-0">
             <img className="rounded-xl w-full erp-shot" src={payrollScreen} alt="Payroll runs in UltiTech" />
-            <img
-              className="rounded-xl erp-shot erp-shot-float floating-4"
-              src={paymentsScreen}
-              alt="Sales payments desk"
-            />
           </div>
         </div>
 

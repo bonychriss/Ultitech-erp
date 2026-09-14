@@ -671,6 +671,163 @@ body,
   }
 }
 
+.erp-news {
+  margin-top: 4rem;
+  margin-bottom: 4rem;
+}
+
+.erp-news-header {
+  text-align: center;
+}
+
+.erp-news-header h2 {
+  margin: 0;
+}
+
+.erp-news-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  margin-top: 3.5rem;
+}
+
+.erp-news-featured img {
+  display: block;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  border-radius: 0.75rem;
+}
+
+.erp-news-tag {
+  display: inline-block;
+  background: #fde68a;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.15rem 1rem;
+  border-radius: 9999px;
+}
+
+.erp-news-featured h3 {
+  margin: 0.75rem 0;
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.erp-news-featured p {
+  margin: 0 0 0.75rem;
+  color: #6b7280;
+}
+
+.erp-news-featured a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.erp-news-list {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.erp-news-item {
+  display: flex;
+  gap: 0.875rem;
+  align-items: flex-start;
+}
+
+.erp-news-item-media {
+  position: relative;
+  width: 30%;
+  max-width: 7.5rem;
+  flex-shrink: 0;
+}
+
+.erp-news-item-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.erp-news-tag--overlay {
+  display: none;
+  position: absolute;
+  right: 0.35rem;
+  bottom: 0.35rem;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.55rem;
+}
+
+.erp-news-item-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-news-item-copy h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.erp-news-item-copy p {
+  margin: 0.35rem 0 0;
+  color: #6b7280;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+  .erp-news-tag--overlay {
+    display: inline-block;
+  }
+
+  .erp-news-item-copy h3 {
+    font-size: 0.9375rem;
+  }
+
+  .erp-news-item-copy p {
+    margin-top: 0.4rem;
+    font-size: 0.8125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .erp-news-grid {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 2rem;
+  }
+
+  .erp-news-featured {
+    flex: 1 1 48%;
+    width: auto;
+    min-width: 0;
+  }
+
+  .erp-news-list {
+    flex: 1 1 48%;
+    width: auto;
+    min-width: 0;
+    gap: 1.25rem;
+  }
+
+  .erp-news-item-copy h3 {
+    font-size: 0.9rem;
+  }
+
+  .erp-news-item-copy p {
+    font-size: 0.78rem;
+  }
+}
+
 .erp-footer {
   background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
   border-top: 1px solid var(--erp-line);

@@ -14,6 +14,10 @@ import productOwnersBg from '../assets/features/product-owners.png'
 import productTeamsBg from '../assets/features/product-teams.png'
 import stockScreen from '../assets/screens/inventory-stock.jpg'
 import payrollScreen from '../assets/screens/hr-payroll.jpg'
+import newsFeatured from '../assets/news/featured.png'
+import newsFinance from '../assets/news/finance.png'
+import newsPayroll from '../assets/news/payroll.png'
+import newsStock from '../assets/news/stock.png'
 
 function getCfg() {
   return window.__HOME_CFG__ || {}
@@ -78,6 +82,38 @@ const WHY_POINTS = [
   'One platform for every department - no extra app per team.',
   'Role-based access and company isolation keep tenant data separate.',
   'Start with what you need, then grow into the rest of the suite.',
+]
+
+const FEATURED_NEWS = {
+  tag: 'NEWS',
+  title: 'UltiTech unifies finance, sales, and stock in one cloud ERP workspace',
+  excerpt:
+    'Growing companies are consolidating invoices, expenses, cash books, and inventory into UltiTech so every department posts to the same live books...',
+  image: newsFeatured,
+}
+
+const NEWS_ITEMS = [
+  {
+    tag: 'PRESS RELEASE',
+    title: 'UltiTech opens a 14-day full-suite free trial with no card required',
+    excerpt:
+      'Businesses can now try finance, sales, HR, and operations together before committing to a paid plan...',
+    image: newsFinance,
+  },
+  {
+    tag: 'NEWS',
+    title: 'Payroll and payments now post straight into UltiTech cash books',
+    excerpt:
+      'Teams run payroll cycles and collect customer payments without exporting data into a separate tool...',
+    image: newsPayroll,
+  },
+  {
+    tag: 'NEWS',
+    title: 'Live stock and delivery reports keep operations aligned with the books',
+    excerpt:
+      'Warehouse movements and delivery status now feed the same reports finance teams use for month-end...',
+    image: newsStock,
+  },
 ]
 
 export default function HomePage() {
@@ -313,6 +349,40 @@ export default function HomePage() {
           </div>
           <div data-aos="zoom-in-left" className="erp-testimonial-media">
             <img src={imgUrl('testimonials.png')} alt="Customer testimonial for UltiTech" />
+          </div>
+        </div>
+
+        <div id="news" className="erp-news">
+          <div data-aos="zoom-in" className="erp-news-header">
+            <h2 className="text-darken text-2xl font-semibold">Latest News and Resources</h2>
+            <p className="text-gray-500 my-5">
+              See the developments that have occurred to UltiTech in the world
+            </p>
+          </div>
+
+          <div data-aos="zoom-in-up" className="erp-news-grid">
+            <article className="erp-news-featured">
+              <img src={FEATURED_NEWS.image} alt="" />
+              <span className="erp-news-tag">{FEATURED_NEWS.tag}</span>
+              <h3>{FEATURED_NEWS.title}</h3>
+              <p>{FEATURED_NEWS.excerpt}</p>
+              <a href={trialUrl}>Read more</a>
+            </article>
+
+            <div className="erp-news-list">
+              {NEWS_ITEMS.map((item) => (
+                <article key={item.title} className="erp-news-item">
+                  <div className="erp-news-item-media">
+                    <img className="rounded-xl" src={item.image} alt="" />
+                    <span className="erp-news-tag erp-news-tag--overlay">{item.tag}</span>
+                  </div>
+                  <div className="erp-news-item-copy">
+                    <h3>{item.title}</h3>
+                    <p>{item.excerpt}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
         </div>
       </div>

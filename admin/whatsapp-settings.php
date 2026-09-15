@@ -14,6 +14,10 @@ $settingsHubUrl = function_exists('company_url')
 $whatsappSettingsUrl = function_exists('company_url')
     ? company_url('admin/whatsapp-settings.php?module=settings')
     : app_url('/admin/whatsapp-settings.php?module=settings');
+$whatsappBotUrl = function_exists('app_url')
+    ? rtrim(app_url('/whatsapp/frontend/web/'), '/') . '/'
+    : '/public_html/whatsapp/frontend/web/';
+$whatsappBotOpenUrl = $whatsappBotUrl;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_notification_settings'])) {
     $groupLink = trim((string) ($_POST['whatsapp_group_link'] ?? ''));
@@ -108,6 +112,25 @@ $esc = static function ($value): string {
         .feature-icon { color: #25d366; font-size: 16px; margin-top: 3px; flex-shrink: 0; }
         .feature-desc h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: #1e293b; }
         .feature-desc p { margin: 0; font-size: 12px; color: #64748b; line-height: 1.45; }
+        .bot-panel {
+            border: 1px solid #d1fae5; border-radius: 16px; overflow: hidden;
+            background: #fff; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.08);
+        }
+        .bot-toolbar {
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+            padding: 12px 16px; background: #ecfdf5; border-bottom: 1px solid #d1fae5;
+        }
+        .bot-toolbar h3 { margin: 0; font-size: 14px; font-weight: 700; color: #065f46; }
+        .bot-toolbar p { margin: 2px 0 0; font-size: 12px; color: #047857; }
+        .bot-toolbar a {
+            display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+            background: #25d366; color: #fff; font-size: 13px; font-weight: 600;
+            padding: 10px 14px; border-radius: 10px; text-decoration: none;
+        }
+        .bot-toolbar a:hover { background: #1da851; color: #fff; }
+        .bot-frame {
+            width: 100%; height: min(78vh, 820px); border: 0; display: block; background: #f8fafc;
+        }
         .btn-save {
             background: #7c3aed !important; color: white !important; padding: 14px 48px;
             border-radius: 12px; font-weight: 600; font-size: 15px; border: none;
@@ -141,8 +164,8 @@ $esc = static function ($value): string {
     <div class="page-shell editor-shell">
         <div class="editor-topbar">
             <div>
-                <h1 class="text-xl font-semibold text-slate-800">WhatsApp Integration</h1>
-                <p class="text-sm text-slate-400 mt-1 mb-0">Connect office operations to WhatsApp for faster approvals</p>
+                <h1 class="text-xl font-semibold text-slate-800">WhatsApp</h1>
+                <p class="text-sm text-slate-400 mt-1 mb-0">Group link for vouchers, plus the messaging bot for customers and staff</p>
             </div>
             <a href="<?= $esc($settingsHubUrl) ?>" class="text-slate-400 hover:text-slate-600 text-sm font-medium flex items-center gap-2">
                 <i class="fas fa-arrow-left text-xs"></i> Back to Settings
@@ -153,18 +176,45 @@ $esc = static function ($value): string {
             <div class="alert-flash <?= $flashType === 'error' ? 'error' : 'success' ?>"><?= $esc($flashMsg) ?></div>
         <?php endif; ?>
 
-        <form action="" method="POST">
-            <input type="hidden" name="update_notification_settings" value="1">
-
             <div class="editor-layout">
                 <aside class="section-nav">
                     <ul>
-                        <li><a href="#group-link" class="is-active">Group Link</a></li>
+                        <li><a href="#messaging-bot" class="is-active">Messaging bot</a></li>
+                        <li><a href="#group-link">Group Link</a></li>
                         <li><a href="#features">Features</a></li>
                     </ul>
                 </aside>
 
                 <div class="editor-main">
+                    <section class="editor-section" id="messaging-bot">
+                        <div class="section-header">
+                            <h2 class="section-title">Messaging bot</h2>
+                            <p class="section-subtitle">Send WhatsApp messages to customers and staff, run broadcasts, and manage contacts.</p>
+                        </div>
+                        <div class="bot-panel">
+                            <div class="bot-toolbar">
+                                <div>
+                                    <h3><i class="fab fa-whatsapp"></i> WhatsApp Bot Console</h3>
+                                    <p>Compose, contacts, broadcast, history, and Meta Cloud API settings.</p>
+                                </div>
+                                <a href="<?= $esc($whatsappBotOpenUrl) ?>" target="_blank" rel="noopener noreferrer">
+                                    Open in new tab <i class="fas fa-external-link-alt text-xs"></i>
+                                </a>
+                            </div>
+                            <iframe
+                                class="bot-frame"
+                                title="WhatsApp Bot"
+                                src="<?= $esc($whatsappBotUrl) ?>"
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade"
+                                allow="clipboard-write"
+                            ></iframe>
+                        </div>
+                    </section>
+
+                    <form action="" method="POST">
+                        <input type="hidden" name="update_notification_settings" value="1">
+
                     <section class="editor-section" id="group-link">
                         <div class="section-header">
                             <h2 class="section-title">Departmental Group Sharing</h2>
@@ -188,36 +238,36 @@ $esc = static function ($value): string {
                     <section class="editor-section" id="features">
                         <div class="section-header">
                             <h2 class="section-title">What this enables</h2>
-                            <p class="section-subtitle">How staff use the group link after it is saved.</p>
+                            <p class="section-subtitle">How staff use WhatsApp after configuration.</p>
                         </div>
 
                         <div class="feature-grid">
                             <div class="feature-item">
                                 <i class="fas fa-check-circle feature-icon"></i>
                                 <div class="feature-desc">
-                                    <h4>Instant Notifications</h4>
-                                    <p>Alert your finance team as soon as a voucher is generated.</p>
+                                    <h4>Customer &amp; staff messaging</h4>
+                                    <p>Send updates from the bot console to saved contacts or any phone number.</p>
                                 </div>
                             </div>
                             <div class="feature-item">
                                 <i class="fas fa-check-circle feature-icon"></i>
                                 <div class="feature-desc">
-                                    <h4>One-Tap Access</h4>
-                                    <p>Group members can open the link to view voucher details directly.</p>
+                                    <h4>Broadcasts</h4>
+                                    <p>Reach all customers or the whole staff team in one campaign.</p>
                                 </div>
                             </div>
                             <div class="feature-item">
                                 <i class="fas fa-check-circle feature-icon"></i>
                                 <div class="feature-desc">
-                                    <h4>Send to Group</h4>
-                                    <p>Employees can share new payment vouchers to the configured group from the app.</p>
+                                    <h4>Voucher group link</h4>
+                                    <p>Employees can share new payment vouchers to the configured group.</p>
                                 </div>
                             </div>
                             <div class="feature-item">
                                 <i class="fas fa-check-circle feature-icon"></i>
                                 <div class="feature-desc">
-                                    <h4>Department Routing</h4>
-                                    <p>Keep approvals moving without manual follow-ups across teams.</p>
+                                    <h4>Auto-reply bot</h4>
+                                    <p>Optional inbound auto-reply when Meta webhook is connected.</p>
                                 </div>
                             </div>
                         </div>
@@ -227,9 +277,9 @@ $esc = static function ($value): string {
                         <button type="button" onclick="location.href='<?= $esc($settingsHubUrl) ?>'" class="btn-cancel px-8 py-3 rounded-xl font-bold">Cancel</button>
                         <button type="submit" class="btn-save">Save Configuration</button>
                     </div>
+                    </form>
                 </div>
             </div>
-        </form>
     </div>
 </div>
 

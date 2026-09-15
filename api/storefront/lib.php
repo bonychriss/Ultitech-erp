@@ -149,6 +149,7 @@ function storefrontApiFetchProducts(PDO $pdo, ?int $id = null): array
         } elseif (!empty($row['main_image']) && function_exists('app_url')) {
             $image = app_url('/uploads/' . ltrim((string) $row['main_image'], '/'));
         }
+        $image = storefrontApiPublicImageUrl($image);
         $itemType = strtolower(trim((string) ($row['item_type'] ?? '')));
         $kind = in_array($itemType, ['vehicle', 'truck'], true) ? 'truck' : 'spare';
         $out[] = [
@@ -166,6 +167,46 @@ function storefrontApiFetchProducts(PDO $pdo, ?int $id = null): array
         ];
     }
     return $out;
+}
+
+/**
+ * Storefront clients load images from UltiTech — always return an absolute public URL.
+ */
+function storefrontApiPublicImageUrl(string $url): string
+{
+    $url = trim($url);
+    if ($url === '') {
+        return '';
+    }
+
+    $publicBase = rtrim((string) (getenv('STOREFRONT_PUBLIC_ASSET_BASE') ?: 'https://ultitech.io'), '/');
+    if (defined('STOREFRONT_PUBLIC_ASSET_BASE') && (string) STOREFRONT_PUBLIC_ASSET_BASE !== '') {
+        $publicBase = rtrim((string) STOREFRONT_PUBLIC_ASSET_BASE, '/');
+    }
+
+    // Already absolute
+    if (preg_match('#^https?://#i', $url)) {
+        $parts = parse_url($url);
+        $path = (string) ($parts['path'] ?? '');
+        $query = isset($parts['query']) ? ('?' . $parts['query']) : '';
+        // Drop local XAMPP base path (/public_html) from absolute URLs too
+        if (defined('APP_BASE_PATH') && APP_BASE_PATH !== '' && str_starts_with($path, (string) APP_BASE_PATH)) {
+            $path = substr($path, strlen((string) APP_BASE_PATH)) ?: '/';
+        }
+        $path = preg_replace('#^/public_html(?=/|$)#', '', $path) ?: $path;
+        return $publicBase . $path . $query;
+    }
+
+    $path = $url;
+    if (defined('APP_BASE_PATH') && APP_BASE_PATH !== '' && str_starts_with($path, (string) APP_BASE_PATH)) {
+        $path = substr($path, strlen((string) APP_BASE_PATH)) ?: '/';
+    }
+    $path = preg_replace('#^/public_html(?=/|$)#', '', $path) ?: $path;
+    if ($path === '' || $path[0] !== '/') {
+        $path = '/' . ltrim($path, '/');
+    }
+
+    return $publicBase . $path;
 }
 
 /**

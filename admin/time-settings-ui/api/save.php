@@ -14,10 +14,23 @@ try {
     if (!is_array($body)) {
         $body = $_POST;
     }
-    $payload = timeSettingsUiSavePayload($pdo, is_array($body) ? $body : []);
+    $body = is_array($body) ? $body : [];
+    $action = trim((string) ($body['action'] ?? 'save'));
+
+    if ($action === 'add_current_ip') {
+        $payload = timeSettingsUiAddCurrentIp($pdo);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Current office IP added.',
+            'data' => $payload,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $payload = timeSettingsUiSavePayload($pdo, $body);
     echo json_encode([
         'success' => true,
-        'message' => 'Time settings saved.',
+        'message' => 'Time & attendance settings saved.',
         'data' => $payload,
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {

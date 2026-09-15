@@ -209,20 +209,11 @@ function adminSettingsUiHubCards(): array
         ],
         [
             'id' => 'time',
-            'title' => 'Time & format',
-            'description' => 'Timezone, 12/24 hour display, and time overrides.',
+            'title' => 'Time & attendance',
+            'description' => 'Timezone, display format, work hours, office network, and geofencing.',
             'href' => 'time-settings.php' . $qs,
             'accent' => '#2563eb',
             'icon' => 'clock',
-            'superAdminOnly' => false,
-        ],
-        [
-            'id' => 'attendance',
-            'title' => 'Attendance',
-            'description' => 'Work hours, grace periods, and attendance options.',
-            'href' => '../attendance/settings.php' . $qs,
-            'accent' => '#2563eb',
-            'icon' => 'calendar-check',
             'superAdminOnly' => false,
         ],
         [

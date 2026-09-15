@@ -745,10 +745,10 @@ switch ($active_module) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=attendance');
             addItem($menuItems, 'view', 'View Records', 'calendar-check', $prefix . 'admin/view-attendance.php?module=attendance');
             $attSettingsHref = function_exists('company_url')
-                ? company_url('attendance/settings.php', $currentSlug !== '' ? $currentSlug : null)
-                : ($prefix . 'attendance/settings.php');
+                ? company_url('admin/time-settings.php', $currentSlug !== '' ? $currentSlug : null)
+                : ($prefix . 'admin/time-settings.php');
             $attSettingsSep = (strpos($attSettingsHref, '?') !== false) ? '&' : '?';
-            addItem($menuItems, 'settings', 'Settings', 'gear', $attSettingsHref . $attSettingsSep . 'module=attendance');
+            addItem($menuItems, 'settings', 'Settings', 'gear', $attSettingsHref . $attSettingsSep . 'module=settings');
         } else {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=attendance');
             addItem($menuItems, 'stats', 'My Stats', 'graph-up-arrow', $prefix . 'employee/attendance-analytics.php?module=attendance');
@@ -986,8 +986,7 @@ switch ($active_module) {
                 . ($csSidebarSlug !== '' ? '&company_slug=' . rawurlencode($csSidebarSlug) : ''));
             addItem($menuItems, 'company-settings', 'Company Settings', 'building', $prefix . 'admin/company-settings.php?' . http_build_query($csSidebarQs));
             addItem($menuItems, 'sys-wa', 'WhatsApp Config', 'whatsapp', $prefix . 'admin/whatsapp-settings.php?module=settings');
-            addItem($menuItems, 'sys-time', 'Time & Format', 'clock', $prefix . 'admin/time-settings.php?module=settings');
-            addItem($menuItems, 'att-settings', 'Attendance Config', 'calendar-check', $prefix . 'attendance/settings.php?module=settings');
+            addItem($menuItems, 'sys-time', 'Time & Attendance', 'clock', $prefix . 'admin/time-settings.php?module=settings');
         }
         break;
 

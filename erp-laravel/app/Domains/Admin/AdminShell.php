@@ -237,7 +237,7 @@ body.page-whatsapp-settings .employee-header--exp-desk .employee-header-page-tit
             . ';</script>';
 
         return [
-            'pageTitle' => 'Time & Format',
+            'pageTitle' => 'Time & Attendance',
             'bodyClass' => 'page-exp-desk page-time-settings page-admin-laravel page-erp-laravel',
             'headMarkup' => $head,
             'footerScripts' => '<style>
@@ -260,8 +260,12 @@ body.page-time-settings .wizard {
     border-color: transparent !important;
 }
 body.page-time-settings button.wizard-btn-prev,
-body.page-time-settings button.wizard-btn-next {
+body.page-time-settings button.wizard-btn-next,
+body.page-time-settings button.ts-chip {
     border-radius: 999px !important;
+}
+body.page-time-settings button.wizard-btn-prev,
+body.page-time-settings button.wizard-btn-next {
     padding: 8px 20px !important;
 }
 body.page-time-settings .employee-header--exp-desk .employee-header-page-title {
@@ -271,7 +275,7 @@ body.page-time-settings .employee-header--exp-desk .employee-header-page-title {
 <script type="module" crossorigin src="'
                 . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8')
                 . '"></script>',
-            'employeeHeaderTitle' => 'Time & Format',
+            'employeeHeaderTitle' => 'Time & Attendance',
             'hideHeaderCompanyBranding' => true,
             'employeeHeaderExtraClass' => 'employee-header--exp-desk',
             'mainRootClass' => 'exp-desk-react-root',

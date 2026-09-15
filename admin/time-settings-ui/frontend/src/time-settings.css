@@ -93,6 +93,34 @@
   line-height: 1.45;
   color: #7f1d1d;
 }
+.ts-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.ts-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ts-chip:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #0f172a;
+}
+.ts-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
 
 .wizard {
   background: transparent !important;

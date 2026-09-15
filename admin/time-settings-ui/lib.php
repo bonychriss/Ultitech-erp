@@ -161,12 +161,58 @@ function timeSettingsUiGetPayload(PDO $pdo): array
     $overrideEnabled = timeSettingsUiGetSetting($pdo, 'system_time_override_enabled', '0') === '1';
     $overrideTime = timeSettingsUiDatetimeLocal(timeSettingsUiGetSetting($pdo, 'system_override_time'));
 
+    $attendanceLib = dirname(__DIR__, 2) . '/attendance/lib.php';
+    $att = [
+        'start_time' => '09:00',
+        'end_time' => '17:00',
+        'grace_period_minutes' => 15,
+        'office_ips' => [''],
+        'geofence_enabled' => true,
+        'latitude' => null,
+        'longitude' => null,
+        'radius_meters' => 100,
+    ];
+    $currentIp = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    if (is_file($attendanceLib)) {
+        require_once $attendanceLib;
+        if (function_exists('ensureAttendanceClockModuleSchema')) {
+            try {
+                ensureAttendanceClockModuleSchema();
+            } catch (Throwable $e) {
+                // keep defaults
+            }
+        }
+        if (function_exists('attendanceSettingsFetchPayload')) {
+            try {
+                $payload = attendanceSettingsFetchPayload($pdo);
+                if (is_array($payload['settings'] ?? null)) {
+                    $att = array_merge($att, $payload['settings']);
+                }
+                if (!empty($payload['current_ip'])) {
+                    $currentIp = (string) $payload['current_ip'];
+                }
+            } catch (Throwable $e) {
+                // keep defaults
+            }
+        }
+    }
+
     return [
         'form' => [
             'timezone' => $timezone,
             'timeFormat' => $format === '12' ? '12' : '24',
             'overrideEnabled' => $overrideEnabled,
             'overrideTime' => $overrideTime,
+            'startTime' => (string) ($att['start_time'] ?? '09:00'),
+            'endTime' => (string) ($att['end_time'] ?? '17:00'),
+            'gracePeriodMinutes' => (int) ($att['grace_period_minutes'] ?? 15),
+            'officeIps' => is_array($att['office_ips'] ?? null) && $att['office_ips'] !== []
+                ? array_values(array_map('strval', $att['office_ips']))
+                : [''],
+            'geofenceEnabled' => !empty($att['geofence_enabled']),
+            'latitude' => $att['latitude'] ?? null,
+            'longitude' => $att['longitude'] ?? null,
+            'radiusMeters' => (int) ($att['radius_meters'] ?? 100),
         ],
         'links' => [
             'backUrl' => $backUrl,
@@ -174,6 +220,7 @@ function timeSettingsUiGetPayload(PDO $pdo): array
         'meta' => [
             'companySlug' => $slug,
             'serverNow' => date('Y-m-d H:i:s'),
+            'currentIp' => $currentIp,
         ],
         'options' => [
             'timezones' => timeSettingsUiTimezoneOptions(),
@@ -217,5 +264,49 @@ function timeSettingsUiSavePayload(PDO $pdo, array $input): array
     timeSettingsUiSetSetting($pdo, 'system_time_override_enabled', $overrideEnabled ? '1' : '0');
     timeSettingsUiSetSetting($pdo, 'system_override_time', $overrideTime);
 
+    $attendanceLib = dirname(__DIR__, 2) . '/attendance/lib.php';
+    if (is_file($attendanceLib)) {
+        require_once $attendanceLib;
+        if (function_exists('attendanceSettingsSave')) {
+            $officeIps = $input['officeIps'] ?? $input['office_ips'] ?? [];
+            if (!is_array($officeIps)) {
+                $officeIps = [trim((string) $officeIps)];
+            }
+            attendanceSettingsSave($pdo, [
+                'start_time' => (string) ($input['startTime'] ?? $input['start_time'] ?? '09:00'),
+                'end_time' => (string) ($input['endTime'] ?? $input['end_time'] ?? '17:00'),
+                'grace_period_minutes' => (int) ($input['gracePeriodMinutes'] ?? $input['grace_period_minutes'] ?? 15),
+                'office_ips' => $officeIps,
+                'geofence_enabled' => !empty($input['geofenceEnabled'] ?? $input['geofence_enabled']),
+                'latitude' => $input['latitude'] ?? null,
+                'longitude' => $input['longitude'] ?? null,
+                'radius_meters' => (int) ($input['radiusMeters'] ?? $input['radius_meters'] ?? 100),
+            ]);
+        }
+    }
+
+    return timeSettingsUiGetPayload($pdo);
+}
+
+/**
+ * @return array{form:array<string,mixed>,links:array<string,string>,meta:array<string,mixed>,options:array<string,mixed>}
+ */
+function timeSettingsUiAddCurrentIp(PDO $pdo): array
+{
+    $attendanceLib = dirname(__DIR__, 2) . '/attendance/lib.php';
+    $attendanceClass = dirname(__DIR__, 2) . '/attendance/classes/Attendance.php';
+    if (is_file($attendanceLib)) {
+        require_once $attendanceLib;
+    }
+    if (is_file($attendanceClass)) {
+        require_once $attendanceClass;
+    }
+    if (class_exists('Attendance', false)) {
+        $attendance = new Attendance($pdo);
+        $currentIp = (string) $attendance->getCurrentUserIp();
+        if ($currentIp !== '') {
+            $attendance->rememberOfficeIp($currentIp);
+        }
+    }
     return timeSettingsUiGetPayload($pdo);
 }

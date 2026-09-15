@@ -21,3 +21,8 @@ $ROADMASTER_DB_HOST = 'localhost';
 $APP_ENV = 'development';
 // e.g. '/public_html' when the app lives at http://localhost/public_html/
 $APP_BASE_PATH = '/public_html';
+
+// Roadmaster storefront sync API (Bearer token for /api/storefront and /roadmaster/api/storefront)
+if (!defined('STOREFRONT_SYNC_TOKEN')) {
+    define('STOREFRONT_SYNC_TOKEN', 'roadmaster-storefront-dev-token-change-me');
+}

@@ -40,4 +40,27 @@ if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'OPTIONS') {
     exit;
 }
 
+// Discard HTML/debug noise printed while bootstrapping UltiTech config.
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
+ob_start();
+register_shutdown_function(static function (): void {
+    $buffer = ob_get_contents();
+    if ($buffer === false) {
+        return;
+    }
+    // Keep only the last JSON object/array if debug text leaked before it.
+    $trim = trim($buffer);
+    if ($trim !== '' && ($trim[0] === '{' || $trim[0] === '[')) {
+        return;
+    }
+    if (preg_match('/(\{.*\}|\[.*\])\s*$/s', $buffer, $m)) {
+        ob_clean();
+        echo $m[1];
+    }
+});
+
 storefrontApiRequireBearer();
+// Clear any boot chatter before endpoint body runs.
+ob_clean();

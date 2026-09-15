@@ -136,7 +136,7 @@ body.page-whatsapp-settings .layout-main-wrapper,
 body.page-whatsapp-settings .layout-main-wrapper > .flex-grow-1,
 body.page-whatsapp-settings .employee-header.employee-header--exp-desk,
 body.page-whatsapp-settings main.main-content.exp-desk-react-root {
-    background: #fff !important;
+    background: #f9fafb !important;
 }
 </style>' . "\n"
             . '<script>window.__WHATSAPP_SETTINGS_CFG__ = '

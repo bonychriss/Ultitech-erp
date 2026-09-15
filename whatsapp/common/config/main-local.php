@@ -16,7 +16,10 @@ $isRoadmaster = !$isLocal && (
 
 $isUltimate = !$isLocal && (
     str_contains($host, 'ultimate.co.tz')
+    || str_contains($host, 'ultitech.io')
     || str_contains($path, '/home/ultimate/')
+    || str_contains($path, '/home/sites/')
+    || str_contains($path, '/public_html/')
 );
 
 if ($isRoadmaster) {

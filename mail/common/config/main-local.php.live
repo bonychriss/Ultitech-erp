@@ -3,13 +3,32 @@
 /**
  * Same as common/config/main-local.php (DB only — safe for web + console).
  */
-$isLive = (
-    (isset($_SERVER['HTTP_HOST']) && str_contains(strtolower((string) $_SERVER['HTTP_HOST']), 'ultimate.co.tz'))
-    || str_contains(str_replace('\\', '/', __DIR__), '/public_html/')
-    || str_contains(str_replace('\\', '/', __DIR__), '/home/ultimate/')
-);
+$host = isset($_SERVER['HTTP_HOST']) ? strtolower((string) $_SERVER['HTTP_HOST']) : '';
+$path = str_replace('\\', '/', __DIR__);
 
-if ($isLive) {
+$isRoadmaster = str_contains($host, 'roadmasterspares.com')
+    || str_contains($path, '/home/roady/');
+
+$isUltimate = str_contains($host, 'ultimate.co.tz')
+    || str_contains($path, '/home/ultimate/');
+
+$isLive = $isRoadmaster
+    || $isUltimate
+    || str_contains($path, '/public_html/');
+
+if ($isRoadmaster) {
+    $db = [
+        'class' => \yii\db\Connection::class,
+        'dsn' => 'mysql:host=localhost;dbname=roady_mail-353036334069',
+        'username' => 'roady_mail', // TODO: set cPanel DB username if different
+        'password' => '3R-8)fo?ZEXW',
+        'charset' => 'utf8mb4',
+    ];
+    $mailerSingleton = [
+        'class' => \yii\symfonymailer\Mailer::class,
+        'viewPath' => '@common/mail',
+    ];
+} elseif ($isLive) {
     $db = [
         'class' => \yii\db\Connection::class,
         'dsn' => 'mysql:host=localhost;dbname=ultimate_mail_app',

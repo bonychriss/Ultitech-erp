@@ -3,6 +3,7 @@
   font-family: var(--erp-font-family, Inter, system-ui, sans-serif);
   max-width: 960px;
   margin: 0 auto;
+  background: #fff;
 }
 
 .wa-loading {
@@ -65,10 +66,10 @@
 
 .wizard {
   background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border: none;
+  border-radius: 0;
   min-height: 0;
-  padding: 0 20px 16px;
+  padding: 0 4px 8px;
 }
 .wizard-top {
   display: flex;
@@ -504,7 +505,7 @@
 .wa-copy:hover { text-decoration: underline; }
 
 @media (max-width: 800px) {
-  .wizard { padding: 0 14px 14px; }
+  .wizard { padding: 0; }
   .wizard-top {
     flex-direction: column;
     align-items: flex-start;

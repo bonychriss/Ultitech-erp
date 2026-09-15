@@ -9,7 +9,6 @@ import {
   MapPin,
   Network,
   Plus,
-  TriangleAlert,
 } from 'lucide-react'
 
 const STEP_LABELS = {
@@ -26,8 +25,6 @@ function emptyForm() {
   return {
     timezone: 'Africa/Dar_es_Salaam',
     timeFormat: '24',
-    overrideEnabled: false,
-    overrideTime: '',
     startTime: '09:00',
     endTime: '17:00',
     gracePeriodMinutes: 15,
@@ -131,9 +128,6 @@ export default function TimeSettingsPage() {
   function validateStep(s) {
     if (s === 1) {
       if (!form.timezone) return 'Select a system timezone.'
-      if (form.overrideEnabled && !form.overrideTime) {
-        return 'Enter the override timestamp, or turn off manual override.'
-      }
       return null
     }
     if (s === 2) {
@@ -186,6 +180,8 @@ export default function TimeSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          overrideEnabled: false,
+          overrideTime: '',
           latitude: form.latitude === '' ? null : Number(form.latitude),
           longitude: form.longitude === '' ? null : Number(form.longitude),
         }),
@@ -266,8 +262,8 @@ export default function TimeSettingsPage() {
           <ArrowLeft size={16} />
           Settings
         </a>
-        {form.overrideEnabled ? (
-          <span className="ts-badge ts-badge-warn">Override active</span>
+        {form.geofenceEnabled ? (
+          <span className="ts-badge">Geofence on</span>
         ) : (
           <span className="ts-badge">Time & attendance</span>
         )}
@@ -371,39 +367,6 @@ export default function TimeSettingsPage() {
                         </option>
                       ))}
                     </select>
-                  </div>
-                </div>
-              </div>
-              <div className="ts-warn">
-                <div className="ts-warn-head">
-                  <TriangleAlert size={16} />
-                  <span>Manual override</span>
-                </div>
-                <p>Optional emergency fixed time for attendance records.</p>
-              </div>
-              <div className="wizard-row">
-                <div className="wizard-aside">
-                  <h2>Override</h2>
-                  <p>Freeze attendance timestamps to a chosen datetime.</p>
-                </div>
-                <div className="wizard-auth-fields">
-                  <label className="same-pass">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(form.overrideEnabled)}
-                      onChange={(e) => patch('overrideEnabled', e.target.checked)}
-                    />
-                    Activate manual time override
-                  </label>
-                  <div className={`field-line ${form.overrideEnabled ? '' : 'is-disabled'}`}>
-                    <Clock3 size={18} aria-hidden />
-                    <input
-                      type="datetime-local"
-                      value={form.overrideTime}
-                      onChange={(e) => patch('overrideTime', e.target.value)}
-                      disabled={!form.overrideEnabled}
-                      aria-label="Override timestamp"
-                    />
                   </div>
                 </div>
               </div>

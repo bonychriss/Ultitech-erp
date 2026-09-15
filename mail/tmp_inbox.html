@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Inbox - Mail</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="csrf-param" content="_csrf-frontend">
+<meta name="csrf-token" content="f5AToeLYlgC37o_sQ9nVpD3uXW3a9kM3WqXwDfknQ78awyrku5PEWuGsyKNxm5vpcJ9uLqisdFwb9JJ-n0EozQ==">
+
+<link href="/mail/frontend/web/assets/397a266f/bootstrap.css?v=1789045912" rel="stylesheet">
+<link href="/mail/frontend/web/css/mail.css?v=1789054996" rel="stylesheet"></head>
+<body class="mail-app">
+<div class="gmail-shell erp-shell">
+    <header class="erp-top">
+        <div class="erp-top-left">
+            <a href="/mail/frontend/web/mail" class="erp-logo" aria-label="Ultimate Trading">
+                <span class="erp-logo-mark">
+                    <span class="erp-logo-bar gold"></span>
+                    <span class="erp-logo-bar dark"></span>
+                    <span class="erp-logo-bar gold"></span>
+                </span>
+                <span class="erp-logo-text">
+                    <span>ULTIMATE</span>
+                    <span>TRADING</span>
+                </span>
+            </a>
+            <button type="button" class="erp-menu-btn" id="erp-nav-toggle" aria-label="Toggle menu">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>
+            </button>
+        </div>
+
+        <form class="erp-search" method="get" action="/mail/frontend/web/mail">
+            <input type="hidden" name="folder" value="inbox">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="search" name="q" value="" placeholder="Search mail..." autocomplete="off">
+        </form>
+
+        <div class="erp-top-actions">
+                            <form class="erp-sync-form" action="/mail/frontend/web/mail/sync" method="post">
+<input type="hidden" name="_csrf-frontend" value="f5AToeLYlgC37o_sQ9nVpD3uXW3a9kM3WqXwDfknQ78awyrku5PEWuGsyKNxm5vpcJ9uLqisdFwb9JJ-n0EozQ==">                    <button type="submit" class="erp-sync-btn">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6V3L8 7l4 4V8c2.76 0 5 2.24 5 5a5 5 0 0 1-8.9 3.1l-1.46 1.46A7 7 0 0 0 19 13c0-3.87-3.13-7-7-7zm-7 7c0-1.48.48-2.85 1.3-3.96l1.46 1.46A4.98 4.98 0 0 0 7 13c0 2.76 2.24 5 5 5v-3l4 4-4 4v-3c-3.87 0-7-3.13-7-7z"/></svg>
+                        Sync
+                    </button>
+                </form>                        <button type="button" class="erp-new-mail" id="compose-open-btn">New mail</button>
+            <div class="erp-user-menu">
+                <a class="erp-quiet-link" href="/mail/frontend/web/account/index">Accounts</a>                <form class="logout-form" action="/mail/frontend/web/site/logout" method="post">
+<input type="hidden" name="_csrf-frontend" value="f5AToeLYlgC37o_sQ9nVpD3uXW3a9kM3WqXwDfknQ78awyrku5PEWuGsyKNxm5vpcJ9uLqisdFwb9JJ-n0EozQ==">                    <button type="submit" class="erp-quiet-link btn-reset">Sign out</button>                </form>            </div>
+        </div>
+    </header>
+
+    <div class="erp-body">
+        <aside class="gmail-nav erp-nav" id="erp-nav">
+            <div class="erp-profile">
+                <div class="erp-avatar">S</div>
+                <div class="erp-profile-text">
+                    <div class="erp-profile-name">System Admin</div>
+                    <div class="erp-profile-role">Admin</div>
+                </div>
+            </div>
+
+            <div class="erp-nav-label">MAIN</div>
+            <nav class="folder-list">
+                <a class="folder-item" href="/mail/frontend/web/">
+                    <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+                    <span class="folder-name">All Modules</span>
+                </a>
+                                    <a class="folder-item active" href="/mail/frontend/web/mail?folder=inbox">
+                        <svg viewBox="0 0 24 24"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+                        <span class="folder-name">Inbox</span>
+                                                    <span class="badge">3</span>
+                                            </a>
+                                                        <a class="folder-item " href="/mail/frontend/web/mail?folder=starred">
+                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        <span class="folder-name">Starred</span>
+                                            </a>
+                                                        <a class="folder-item " href="/mail/frontend/web/mail?folder=sent">
+                        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        <span class="folder-name">Sent</span>
+                                            </a>
+                                                        <a class="folder-item " href="/mail/frontend/web/mail?folder=drafts">
+                        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                        <span class="folder-name">Drafts</span>
+                                            </a>
+                                                                                                <span class="folder-item is-muted" title="Coming soon">
+                                <svg viewBox="0 0 24 24"><path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/></svg>
+                                <span class="folder-name">Archive</span>
+                            </span>
+                                                                                <a class="folder-item " href="/mail/frontend/web/mail?folder=spam">
+                        <svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 16h2v2h-2v-2zm0-6h2v4h-2v-4z"/></svg>
+                        <span class="folder-name">Spam</span>
+                                            </a>
+                                                        <a class="folder-item " href="/mail/frontend/web/mail?folder=trash">
+                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        <span class="folder-name">Trash</span>
+                                            </a>
+                                                </nav>
+
+            <a class="folder-item erp-personalization" href="/mail/frontend/web/account/index">
+                <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                <span class="folder-name">Personalization</span>
+            </a>
+        </aside>
+
+        <section class="gmail-main erp-main" data-inbox-unread="3">
+            <div class="mail-toolbar erp-toolbar">
+    <div class="erp-toolbar-title">
+        <h1>Inbox</h1>
+                    <div class="erp-unread-meta">3 unread</div>
+            </div>
+</div>
+
+<div class="mail-list erp-mail-list">
+                                    <div class="mail-row erp-row ">
+                <label class="erp-check">
+                    <input type="checkbox" tabindex="-1">
+                </label>
+                <form class="star-form" action="/mail/frontend/web/mail/star?id=1" method="post">
+<input type="hidden" name="_csrf-frontend" value="f5AToeLYlgC37o_sQ9nVpD3uXW3a9kM3WqXwDfknQ78awyrku5PEWuGsyKNxm5vpcJ9uLqisdFwb9JJ-n0EozQ==">                    <button type="submit" class="star-btn on" title="Star">
+                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    </button>
+                </form>                <a class="mail-row-link erp-row-link" href="/mail/frontend/web/mail/view?id=1">
+                                            <span class="erp-unread-dot is-empty" aria-hidden="true"></span>
+                                        <span class="col-from">Supplier Desk</span>
+                    <span class="col-content">
+                        <span class="erp-line">
+                            <span class="subject">PO-10482 confirmation — 120 units ready</span>
+                                                            <span class="snippet"> — Hi Demo, Purchase order PO-10482 has been confirmed. 120 units will ship tomorrow. Regards, Supplier Desk</span>
+                                                    </span>
+                                                    <span class="erp-attach-row">
+                                                                                                        <span class="erp-attach-chip type-hot" title="PO-10482-confirmation.pdf">
+                                        <span class="erp-attach-ico is-pdf" aria-hidden="true">
+                                            PDF                                        </span>
+                                        <span class="erp-attach-name">PO-10482-confi…</span>
+                                    </span>
+                                                            </span>
+                                            </span>
+                    <span class="col-meta">
+                        <span class="date">10 Sep</span>
+                    </span>
+                </a>
+            </div>
+                                <div class="mail-row erp-row ">
+                <label class="erp-check">
+                    <input type="checkbox" tabindex="-1">
+                </label>
+                <form class="star-form" action="/mail/frontend/web/mail/star?id=2" method="post">
+<input type="hidden" name="_csrf-frontend" value="f5AToeLYlgC37o_sQ9nVpD3uXW3a9kM3WqXwDfknQ78awyrku5PEWuGsyKNxm5vpcJ9uLqisdFwb9JJ-n0EozQ==">                    <button type="submit" class="star-btn " title="Star">
+                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    </button>
+                </form>                <a class="mail-row-link erp-row-link" href="/mail/frontend/web/mail/view?id=2">
+                                            <span class="erp-unread-dot is-empty" aria-hidden="true"></span>
+                                        <span class="col-from">ERP Finance</span>
+                    <span class="col-content">
+                        <span class="erp-line">
+                            <span class="subject">Invoice INV-9081 awaiting approval</span>
+                                                            <span class="snippet"> — Hello, Invoice INV-9081 ($4,250.00) is waiting for your approval in the ERP. Open the finance module to review.</span>
+                                                    </span>
+                                            </span>
+                    <span class="col-meta">
+                        <span class="date">10 Sep</span>
+                    </span>
+                </a>
+            </div>
+                                <div class="mail-row erp-row ">
+                <label class="erp-check">
+                    <input type="checkbox" tabindex="-1">
+                </label>
+                <form class="star-form" action="/mail/frontend/web/mail/star?id=3" method="post">
+<input type="hidden" name="_csrf-frontend" value="f5AToeLYlgC37o_sQ9nVpD3uXW3a9kM3WqXwDfknQ78awyrku5PEWuGsyKNxm5vpcJ9uLqisdFwb9JJ-n0EozQ==">                    <button type="submit" class="star-btn " title="Star">
+                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    </button>
+                </form>                <a class="mail-row-link erp-row-link" href="/mail/frontend/web/mail/view?id=3">
+                                            <span class="erp-unread-dot is-empty" aria-hidden="true"></span>
+                                        <span class="col-from">HR Team</span>
+                    <span class="col-content">
+                        <span class="erp-line">
+                            <span class="subject">Weekly ops standup notes</span>
+                                                            <span class="snippet"> — Team, Notes from today&#039;s standup: - Warehouse stock sync delayed 20m - Customer portal SSL renewed - Mail app rollout st</span>
+                                                    </span>
+                                            </span>
+                    <span class="col-meta">
+                        <span class="date">9 Sep</span>
+                    </span>
+                </a>
+            </div>
+                                <div class="mail-row erp-row unread">
+                <label class="erp-check">
+                    <input type="checkbox" tabindex="-1">
+                </label>
+                <form class="star-form" action="/mail/frontend/web/mail/star?id=4" method="post">
+<input type="hidden" name="_csrf-frontend" value="f5AToeLYlgC37o_sQ9nVpD3uXW3a9kM3WqXwDfknQ78awyrku5PEWuGsyKNxm5vpcJ9uLqisdFwb9JJ-n0EozQ==">                    <button type="submit" class="star-btn " title="Star">
+                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    </button>
+                </form>                <a class="mail-row-link erp-row-link" href="/mail/frontend/web/mail/view?id=4">
+                                            <span class="erp-unread-dot" aria-hidden="true"></span>
+                                        <span class="col-from">Client Corp Support</span>
+                    <span class="col-content">
+                        <span class="erp-line">
+                            <span class="subject">Re: Delivery window for SO-441</span>
+                                                            <span class="snippet"> — Hi, Can you confirm the delivery window for sales order SO-441? We need Friday morning if possible. Best, Client Corp</span>
+                                                    </span>
+                                            </span>
+                    <span class="col-meta">
+                        <span class="date">9 Sep</span>
+                    </span>
+                </a>
+            </div>
+                                <div class="mail-row erp-row unread">
+                <label class="erp-check">
+                    <input type="checkbox" tabindex="-1">
+                </label>
+                <form class="star-form" action="/mail/frontend/web/mail/star?id=8" method="post">
+<input type="hidden" name="_csrf-frontend" value="f5AToeLYlgC37o_sQ9nVpD3uXW3a9kM3WqXwDfknQ78awyrku5PEWuGsyKNxm5vpcJ9uLqisdFwb9JJ-n0EozQ==">                    <button type="submit" class="star-btn " title="Star">
+                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    </button>
+                </form>                <a class="mail-row-link erp-row-link" href="/mail/frontend/web/mail/view?id=8">
+                                            <span class="erp-unread-dot" aria-hidden="true"></span>
+                                        <span class="col-from">Iddy Fuko</span>
+                    <span class="col-content">
+                        <span class="erp-line">
+                            <span class="subject">RE: QUOTE</span>
+                                                            <span class="snippet"> — Attached is the revised quotation as discussed.</span>
+                                                    </span>
+                                                    <span class="erp-attach-row">
+                                                                                                        <span class="erp-attach-chip type-hot" title="quote-revised.pdf">
+                                        <span class="erp-attach-ico is-pdf" aria-hidden="true">
+                                            PDF                                        </span>
+                                        <span class="erp-attach-name">quote-revised.…</span>
+                                    </span>
+                                                            </span>
+                                            </span>
+                    <span class="col-meta">
+                        <span class="date">21 Aug</span>
+                    </span>
+                </a>
+            </div>
+                                <div class="mail-row erp-row unread">
+                <label class="erp-check">
+                    <input type="checkbox" tabindex="-1">
+                </label>
+                <form class="star-form" action="/mail/frontend/web/mail/star?id=7" method="post">
+<input type="hidden" name="_csrf-frontend" value="f5AToeLYlgC37o_sQ9nVpD3uXW3a9kM3WqXwDfknQ78awyrku5PEWuGsyKNxm5vpcJ9uLqisdFwb9JJ-n0EozQ==">                    <button type="submit" class="star-btn " title="Star">
+                        <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    </button>
+                </form>                <a class="mail-row-link erp-row-link" href="/mail/frontend/web/mail/view?id=7">
+                                            <span class="erp-unread-dot" aria-hidden="true"></span>
+                                        <span class="col-from">Theresia Madeni</span>
+                    <span class="col-content">
+                        <span class="erp-line">
+                            <span class="subject">RE: order</span>
+                                                            <span class="snippet"> — Please find the images for the latest order confirmation attached.</span>
+                                                    </span>
+                                                    <span class="erp-attach-row">
+                                                                                                        <span class="erp-attach-chip type-hot" title="image001.png">
+                                        <span class="erp-attach-ico" aria-hidden="true">
+                                            PNG                                        </span>
+                                        <span class="erp-attach-name">image001.png</span>
+                                    </span>
+                                                                                                        <span class="erp-attach-chip type-cool" title="image002.wmz">
+                                        <span class="erp-attach-ico" aria-hidden="true">
+                                            WMZ                                        </span>
+                                        <span class="erp-attach-name">image002.wmz</span>
+                                    </span>
+                                                                                                        <span class="erp-attach-chip type-hot" title="image003.gif">
+                                        <span class="erp-attach-ico" aria-hidden="true">
+                                            GIF                                        </span>
+                                        <span class="erp-attach-name">image003.gif</span>
+                                    </span>
+                                                                                                        <span class="erp-attach-chip type-hot" title="20260821184712654.pdf">
+                                        <span class="erp-attach-ico is-pdf" aria-hidden="true">
+                                            PDF                                        </span>
+                                        <span class="erp-attach-name">20260821184712…</span>
+                                    </span>
+                                                            </span>
+                                            </span>
+                    <span class="col-meta">
+                        <span class="date">21 Aug</span>
+                    </span>
+                </a>
+            </div>
+            </div>
+
+<div class="mail-pager">
+    </div>
+        </section>
+    </div>
+</div>
+
+    <div id="compose-popup" class="compose-popup" aria-hidden="true">
+    <div class="compose-popup-card">
+        <div class="compose-popup-title">
+            <span id="compose-popup-heading">New Message</span>
+            <div class="compose-popup-controls">
+                <button type="button" class="compose-win-btn" id="compose-minimize" title="Minimize" aria-label="Minimize">—</button>
+                <button type="button" class="compose-win-btn" id="compose-close" title="Close" aria-label="Close">×</button>
+            </div>
+        </div>
+
+        <form id="compose-form" class="compose-form" action="/mail/frontend/web/mail/send" method="post" enctype="multipart/form-data">
+<input type="hidden" name="_csrf-frontend" value="f5AToeLYlgC37o_sQ9nVpD3uXW3a9kM3WqXwDfknQ78awyrku5PEWuGsyKNxm5vpcJ9uLqisdFwb9JJ-n0EozQ==">            <input type="hidden" id="composeform-in_reply_to" name="ComposeForm[in_reply_to]">            <input type="hidden" id="composeform-draft_id" name="ComposeForm[draft_id]">            <div class="mb-3 field-compose-to">
+
+<input type="text" id="compose-to" class="form-control" name="ComposeForm[to]" value="" placeholder="Recipients">
+
+<div class="invalid-feedback"></div>
+</div>            <div class="mb-3 field-composeform-cc">
+
+<input type="text" id="composeform-cc" class="form-control" name="ComposeForm[cc]" value="" placeholder="Cc">
+
+<div class="invalid-feedback"></div>
+</div>            <div class="mb-3 field-composeform-bcc">
+
+<input type="text" id="composeform-bcc" class="form-control" name="ComposeForm[bcc]" value="" placeholder="Bcc">
+
+<div class="invalid-feedback"></div>
+</div>            <div class="mb-3 field-compose-subject">
+
+<input type="text" id="compose-subject" class="form-control" name="ComposeForm[subject]" value="" placeholder="Subject">
+
+<div class="invalid-feedback"></div>
+</div>            <div class="mb-3 field-compose-body">
+
+<textarea id="compose-body" class="form-control compose-body" name="ComposeForm[body]" rows="10" placeholder="Write your message…"></textarea>
+
+<div class="invalid-feedback"></div>
+</div>
+            <div class="attach-box">
+                <label class="attach-label" for="compose-attachments">
+                    <span class="attach-icon">📎</span>
+                    Attach PDF or files
+                </label>
+                <div class="mb-3 field-compose-attachments">
+
+<input type="hidden" name="ComposeForm[attachments][]" value=""><input type="file" id="compose-attachments" class="attach-input form-control" name="ComposeForm[attachments][]" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip">
+
+<div class="invalid-feedback"></div>
+</div>                <div class="attach-hint">PDF, images, Office docs, ZIP — up to 10 files, 15MB each</div>
+                <div id="attach-list" class="attach-list"></div>
+            </div>
+
+            
+            <div class="compose-actions">
+                <button type="submit" class="send-btn">Send</button>                <button type="submit" class="draft-btn" formaction="/mail/frontend/web/mail/save-draft">Save draft</button>            </div>
+        </form>    </div>
+</div>
+
+
+<div id="yii-debug-toolbar" data-url="/mail/frontend/web/debug/default/toolbar?tag=6aa2d108c9e5a" data-skip-urls="[]" style="display:none" class="yii-debug-toolbar-bottom"></div><style>#yii-debug-toolbar-logo{position:fixed;right:31px;bottom:4px}@media print{.yii-debug-toolbar{display:none !important}}.yii-debug-toolbar{font:11px Verdana, Arial, sans-serif;text-align:left;width:96px;transition:width .3s ease;z-index:1000000}.yii-debug-toolbar.yii-debug-toolbar_active:not(.yii-debug-toolbar_animating) .yii-debug-toolbar__bar{overflow:visible;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.yii-debug-toolbar.yii-debug-toolbar_iframe_active:not(.yii-debug-toolbar_animating) .yii-debug-toolbar__resize-handle{display:block;height:4px;cursor:ns-resize;margin-bottom:0;z-index:1000001;position:absolute;left:0;right:0}.yii-debug-toolbar:not(.yii-debug-toolbar_active) .yii-debug-toolbar__bar,.yii-debug-toolbar.yii-debug-toolbar_animating .yii-debug-toolbar__bar{height:40px}.yii-debug-toolbar_active{width:100%}.yii-debug-toolbar_active .yii-debug-toolbar__toggle-icon{-webkit-transform:rotate(0);transform:rotate(0)}.yii-debug-toolbar_position_top{margin:0 0 20px 0;width:100%}.yii-debug-toolbar_position_bottom{position:fixed;right:0;bottom:0;margin:0}.yii-debug-toolbar_position_upper{position:fixed;right:0;top:0;margin:0}.yii-debug-toolbar_position_upper.yii-debug-toolbar_iframe_active{border-bottom:1px solid rgba(0,0,0,.11)}.yii-debug-toolbar_position_upper.yii-debug-toolbar_iframe_active .yii-debug-toolbar__toggle-icon{-webkit-transform:rotate(-90deg);transform:rotate(-90deg)}.yii-debug-toolbar__bar{position:relative;padding:0;font:11px Verdana, Arial, sans-serif;text-align:left;overflow:hidden;box-sizing:content-box;display:flex;flex-wrap:wrap;background:#fff;background:-moz-linear-gradient(top, #fff 0%, #f7f7f7 100%);background:-webkit-linear-gradient(top, #fff 0%, #f7f7f7 100%);background:linear-gradient(to bottom, #fff 0%, #f7f7f7 100%);filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff', endColorstr='#f7f7f7', GradientType=0);border:1px solid rgba(0,0,0,0.11);direction:ltr}.yii-debug-toolbar__bar::after{content:'';display:table;clear:both}.yii-debug-toolbar__view{height:0;overflow:hidden;background:white}.yii-debug-toolbar__view iframe{margin:0;padding:10px 0 0;height:100%;width:100%;border:0}.yii-debug-toolbar_iframe_active .yii-debug-toolbar__view{height:100%}.yii-debug-toolbar_iframe_active .yii-debug-toolbar__toggle-icon{-webkit-transform:rotate(90deg);transform:rotate(90deg)}.yii-debug-toolbar_iframe_active .yii-debug-toolbar__external{display:block}.yii-debug-toolbar_iframe_animating .yii-debug-toolbar__view{transition:height .3s ease}.yii-debug-toolbar__block{margin:0;border-right:1px solid rgba(0,0,0,0.11);border-bottom:1px solid rgba(0,0,0,0.11);padding:4px 8px;line-height:32px;white-space:nowrap}@media (max-width: 767.98px){.yii-debug-toolbar__block{flex-grow:1;text-align:center}}.yii-debug-toolbar__block a{display:inline-block;text-decoration:none;color:black}.yii-debug-toolbar__block img{vertical-align:middle;width:30px;height:30px}.yii-debug-toolbar__block_active,.yii-debug-toolbar__ajax:hover{background:#f7f7f7;background:-moz-linear-gradient(top, #f7f7f7 0%, #e0e0e0 100%);background:-webkit-linear-gradient(top, #f7f7f7 0%, #e0e0e0 100%);background:linear-gradient(to bottom, #f7f7f7 0%, #e0e0e0 100%);filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#f7f7f7', endColorstr='#e0e0e0', GradientType=0)}.yii-debug-toolbar__label{display:inline-block;padding:2px 4px;font-size:12px;font-weight:normal;line-height:14px;white-space:nowrap;vertical-align:middle;max-width:100px;overflow-x:hidden;text-overflow:ellipsis;color:#ffffff;text-shadow:0 -1px 0 rgba(0,0,0,0.25);background-color:#737373;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px}.yii-debug-toolbar__label:empty{display:none}a.yii-debug-toolbar__label:hover,a.yii-debug-toolbar__label:focus{color:#ffffff;text-decoration:none;cursor:pointer}.yii-debug-toolbar__label_important,.yii-debug-toolbar__label_error{background-color:#b94a48}.yii-debug-toolbar__label_important[href]{background-color:#953b39}.yii-debug-toolbar__label_warning,.yii-debug-toolbar__badge_warning{background-color:#f89406}.yii-debug-toolbar__label_warning[href]{background-color:#c67605}.yii-debug-toolbar__label_success{background-color:#217822}.yii-debug-toolbar__label_success[href]{background-color:#356635}.yii-debug-toolbar__label_info{background-color:#0b72b8}.yii-debug-toolbar__label_info[href]{background-color:#2d6987}.yii-debug-toolbar__label_inverse,.yii-debug-toolbar__badge_inverse{background-color:#333333}.yii-debug-toolbar__label_inverse[href],.yii-debug-toolbar__badge_inverse[href]{background-color:#1a1a1a}.yii-debug-toolbar__title{background:#f7f7f7;background:-moz-linear-gradient(top, #f7f7f7 0%, #e0e0e0 100%);background:-webkit-linear-gradient(top, #f7f7f7 0%, #e0e0e0 100%);background:linear-gradient(to bottom, #f7f7f7 0%, #e0e0e0 100%);filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#f7f7f7', endColorstr='#e0e0e0', GradientType=0)}.yii-debug-toolbar__block_last{width:80px;height:40px;float:left}.yii-debug-toolbar__toggle,.yii-debug-toolbar__external{cursor:pointer;position:absolute;width:30px;height:30px;font-size:25px;font-weight:100;line-height:28px;color:#ffffff;text-align:center;opacity:0.5;filter:alpha(opacity=50);transition:opacity .3s ease}.yii-debug-toolbar__toggle:hover,.yii-debug-toolbar__toggle:focus,.yii-debug-toolbar__external:hover,.yii-debug-toolbar__external:focus{color:#ffffff;text-decoration:none;opacity:0.9;filter:alpha(opacity=90)}.yii-debug-toolbar__toggle-icon,.yii-debug-toolbar__external-icon{display:inline-block;background-position:50% 50%;background-repeat:no-repeat}.yii-debug-toolbar__toggle{right:10px;bottom:4px}.yii-debug-toolbar__toggle-icon{padding:7px 0;width:10px;height:16px;background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNSIgaGVpZ2h0PSIxNSIgdmlld0JveD0iMCAwIDUwIDUwIj48cGF0aCBmaWxsPSIjNDQ0IiBkPSJNMTUuNTYzIDQwLjgzNmEuOTk3Ljk5NyAwIDAgMCAxLjQxNCAwbDE1LTE1YTEgMSAwIDAgMCAwLTEuNDE0bC0xNS0xNWExIDEgMCAwIDAtMS40MTQgMS40MTRMMjkuODU2IDI1LjEzIDE1LjU2MyAzOS40MmExIDEgMCAwIDAgMCAxLjQxNHoiLz48L3N2Zz4=");transition:-webkit-transform .3s ease-out;transition:transform .3s ease-out;-webkit-transform:rotate(180deg);transform:rotate(180deg)}.yii-debug-toolbar__external{display:none;right:50px;bottom:4px}.yii-debug-toolbar__external-icon{padding:8px 0;width:14px;height:14px;background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNSIgaGVpZ2h0PSIxNSIgdmlld0JveD0iMCAwIDUwIDUwIj48cGF0aCBmaWxsPSIjNDQ0IiBkPSJNMzkuNjQyIDkuNzIyYTEuMDEgMS4wMSAwIDAgMC0uMzgyLS4wNzdIMjguMTAzYTEgMSAwIDAgMCAwIDJoOC43NDNMMjEuNyAyNi43OWExIDEgMCAwIDAgMS40MTQgMS40MTVMMzguMjYgMTMuMDZ2OC43NDNhMSAxIDAgMCAwIDIgMFYxMC42NDZhMS4wMDUgMS4wMDUgMCAwIDAtLjYxOC0uOTI0eiIvPjxwYXRoIGQ9Ik0zOS4yNiAyNy45ODVhMSAxIDAgMCAwLTEgMXYxMC42NmgtMjh2LTI4aDEwLjY4M2ExIDEgMCAwIDAgMC0ySDkuMjZhMSAxIDAgMCAwLTEgMXYzMGExIDEgMCAwIDAgMSAxaDMwYTEgMSAwIDAgMCAxLTF2LTExLjY2YTEgMSAwIDAgMC0xLTF6Ii8+PC9zdmc+")}.yii-debug-toolbar__switch-icon{margin-left:10px;padding:5px 10px;width:18px;height:18px;background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDUwIDUwIiB2ZXJzaW9uPSIxLjEiPjxwYXRoIGQ9Im00MS4xIDIzYy0wLjYgMC0xIDAuNC0xIDF2MTAuN2wtMjUuNi0wLjFjMCAwIDAtMiAwLTIuOCAwLTAuOC0wLjctMS0xLTAuNmwtMy41IDMuNWMtMC42IDAuNi0wLjYgMS4zIDAgMmwzLjQgMy40YzAuNCAwLjQgMS4xIDAuMiAxLTAuNmwwLTIuOWMwIDAgMjAuOCAwLjEgMjYuNiAwIDAuNiAwIDEtMC40IDEtMXYtMTEuN2MwLTAuNi0wLjQtMS0xLTF6TTkgMjYuOSA5IDI2LjkgOSAyNi45IDkgMjYuOSIvPjxwYXRoIGQ9Im05IDI2LjljMC42IDAgMS0wLjQgMS0xdi0xMC43bDI1LjYgMC4xYzAgMCAwIDIgMCAyLjggMCAwLjggMC43IDEgMSAwLjZsMy41LTMuNWMwLjYtMC42IDAuNi0xLjMgMC0ybC0zLjQtMy40Yy0wLjQtMC40LTEuMS0wLjItMSAwLjZsMCAyLjljMCAwLTIwLjgtMC4xLTI2LjYgMC0wLjYgMC0xIDAuNC0xIDF2MTEuN2MwIDAuNiAwLjQgMSAxIDF6Ii8+PC9zdmc+")}.yii-debug-toolbar__ajax{position:relative}.yii-debug-toolbar__ajax:hover .yii-debug-toolbar__ajax_info,.yii-debug-toolbar__ajax:focus .yii-debug-toolbar__ajax_info{visibility:visible}.yii-debug-toolbar__ajax a{color:#337ab7}.yii-debug-toolbar__ajax table{width:100%;table-layout:auto;border-spacing:0;border-collapse:collapse}.yii-debug-toolbar__ajax table td{padding:4px;font-size:12px;line-height:normal;vertical-align:top;border-top:1px solid #ddd}.yii-debug-toolbar__ajax table th{padding:4px;font-size:11px;line-height:normal;vertical-align:bottom;border-bottom:2px solid #ddd}.yii-debug-toolbar__ajax_info{visibility:hidden;transition:visibility .2s linear;background-color:white;box-shadow:inset 0 -10px 10px -10px #e1e1e1;position:absolute;bottom:40px;left:-1px;padding:10px;max-width:480px;max-height:480px;word-wrap:break-word;overflow:hidden;overflow-y:auto;box-sizing:border-box;border:1px solid rgba(0,0,0,0.11);z-index:1000001}.yii-debug-toolbar__ajax_request_status{color:white;padding:2px 5px}.yii-debug-toolbar__ajax_request_url{max-width:170px;overflow:hidden;text-overflow:ellipsis}
+</style><script>(function () {
+    'use strict';
+
+    var findToolbar = function () {
+            return document.querySelector('#yii-debug-toolbar');
+        },
+        ajax = function (url, settings) {
+            var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+            settings = settings || {};
+            xhr.open(settings.method || 'GET', url, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Accept', 'text/html');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 && settings.success) {
+                        settings.success(xhr);
+                    } else if (xhr.status !== 200 && settings.error) {
+                        settings.error(xhr);
+                    }
+                }
+            };
+            xhr.send(settings.data || '');
+        },
+        url,
+        div,
+        toolbarEl = findToolbar(),
+        toolbarAnimatingClass = 'yii-debug-toolbar_animating',
+        barSelector = '.yii-debug-toolbar__bar',
+        viewSelector = '.yii-debug-toolbar__view',
+        blockSelector = '.yii-debug-toolbar__block',
+        toggleSelector = '.yii-debug-toolbar__toggle',
+        externalSelector = '.yii-debug-toolbar__external',
+
+        CACHE_KEY = 'yii-debug-toolbar',
+        ACTIVE_STATE = 'active',
+
+        animationTime = 300,
+
+        activeClass = 'yii-debug-toolbar_active',
+        iframeActiveClass = 'yii-debug-toolbar_iframe_active',
+        iframeAnimatingClass = 'yii-debug-toolbar_iframe_animating',
+        titleClass = 'yii-debug-toolbar__title',
+        blockClass = 'yii-debug-toolbar__block',
+        ignoreClickClass = 'yii-debug-toolbar__ignore_click',
+        blockActiveClass = 'yii-debug-toolbar__block_active',
+        requestStack = [];
+
+    if (toolbarEl) {
+        url = toolbarEl.getAttribute('data-url');
+
+        ajax(url, {
+            success: function (xhr) {
+                div = document.createElement('div');
+                div.innerHTML = xhr.responseText;
+
+                toolbarEl.parentNode && toolbarEl.parentNode.replaceChild(div, toolbarEl);
+
+                showToolbar(findToolbar());
+
+                var event;
+                if (typeof(Event) === 'function') {
+                    event = new Event('yii.debug.toolbar_attached', {'bubbles': true});
+                } else {
+                    event = document.createEvent('Event');
+                    event.initEvent('yii.debug.toolbar_attached', true, true);
+                }
+
+                div.dispatchEvent(event);
+            },
+            error: function (xhr) {
+                toolbarEl.innerText = xhr.responseText;
+            }
+        });
+    }
+
+    function showToolbar(toolbarEl) {
+        var barEl = toolbarEl.querySelector(barSelector),
+            viewEl = toolbarEl.querySelector(viewSelector),
+            toggleEl = toolbarEl.querySelector(toggleSelector),
+            externalEl = toolbarEl.querySelector(externalSelector),
+            blockEls = barEl.querySelectorAll(blockSelector),
+            blockLinksEls = document.querySelectorAll(blockSelector + ':not(.' + titleClass + ') a'),
+            iframeEl = viewEl.querySelector('iframe'),
+            iframeHeight = function () {
+                return (window.innerHeight * (toolbarEl.dataset.height / 100) - barEl.clientHeight) + 'px';
+            },
+            isIframeActive = function () {
+                return toolbarEl.classList.contains(iframeActiveClass);
+            },
+            resizeIframe = function(mouse) {
+                var availableHeight = window.innerHeight - barEl.clientHeight;
+                viewEl.style.height = Math.min(availableHeight, availableHeight - mouse.y) + "px";
+            },
+            showIframe = function (href) {
+                toolbarEl.classList.add(iframeAnimatingClass);
+                toolbarEl.classList.add(iframeActiveClass);
+
+                iframeEl.src = externalEl.href = href;
+                iframeEl.removeAttribute('tabindex');
+
+                viewEl.style.height = iframeHeight();
+                setTimeout(function () {
+                    toolbarEl.classList.remove(iframeAnimatingClass);
+                }, animationTime);
+            },
+            hideIframe = function () {
+                toolbarEl.classList.add(iframeAnimatingClass);
+                toolbarEl.classList.remove(iframeActiveClass);
+                iframeEl.setAttribute("tabindex", "-1");
+                removeActiveBlocksCls();
+
+                externalEl.href = '#';
+                viewEl.style.height = '';
+                setTimeout(function () {
+                    toolbarEl.classList.remove(iframeAnimatingClass);
+                }, animationTime);
+            },
+            removeActiveBlocksCls = function () {
+                [].forEach.call(blockEls, function (el) {
+                    el.classList.remove(blockActiveClass);
+                });
+            },
+            toggleToolbarClass = function (className) {
+                toolbarEl.classList.add(toolbarAnimatingClass);
+                if (toolbarEl.classList.contains(className)) {
+                    toolbarEl.classList.remove(className);
+                    [].forEach.call(blockLinksEls, function (el) {
+                        el.setAttribute('tabindex', "-1");
+                    });
+                } else {
+                    [].forEach.call(blockLinksEls, function (el) {
+                        el.removeAttribute('tabindex');
+                    });
+                    toolbarEl.classList.add(className);
+                }
+                setTimeout(function () {
+                    toolbarEl.classList.remove(toolbarAnimatingClass);
+                }, animationTime);
+            },
+            toggleStorageState = function (key, value) {
+                if (window.localStorage) {
+                    var item = localStorage.getItem(key);
+
+                    if (item) {
+                        localStorage.removeItem(key);
+                    } else {
+                        localStorage.setItem(key, value);
+                    }
+                }
+            },
+            restoreStorageState = function (key) {
+                if (window.localStorage) {
+                    return localStorage.getItem(key);
+                }
+            },
+            togglePosition = function () {
+                if (isIframeActive()) {
+                    hideIframe();
+                } else {
+                    toggleToolbarClass(activeClass);
+                    toggleStorageState(CACHE_KEY, ACTIVE_STATE);
+                }
+            };
+
+        if (restoreStorageState(CACHE_KEY) === ACTIVE_STATE) {
+            var transition = toolbarEl.style.transition;
+            toolbarEl.style.transition = 'none';
+            toolbarEl.classList.add(activeClass);
+            setTimeout(function () {
+                toolbarEl.style.transition = transition;
+            }, animationTime);
+        } else {
+            [].forEach.call(blockLinksEls, function (el) {
+                el.setAttribute('tabindex', "-1");
+            });
+        }
+
+        toolbarEl.style.display = 'block';
+
+        window.onresize = function () {
+            if (toolbarEl.classList.contains(iframeActiveClass)) {
+                viewEl.style.height = iframeHeight();
+            }
+        };
+
+        toolbarEl.addEventListener("mousedown", function(e) {
+            if (isIframeActive() && (e.y - toolbarEl.offsetTop < 4 /* 4px click zone */)) {
+                document.addEventListener("mousemove", resizeIframe, false);
+            }
+        }, false);
+
+        document.addEventListener("mouseup", function(){
+            if (isIframeActive()) {
+                document.removeEventListener("mousemove", resizeIframe, false);
+            }
+        }, false);
+
+        barEl.onclick = function (e) {
+            var target = e.target,
+                block = findAncestor(target, blockClass);
+
+            if (block
+                && !block.classList.contains(titleClass)
+                && !block.classList.contains(ignoreClickClass)
+                && e.which !== 2 && !e.ctrlKey // not mouse wheel and not ctrl+click
+            ) {
+                while (target !== this) {
+                    if (target.href) {
+                        removeActiveBlocksCls();
+                        block.classList.add(blockActiveClass);
+                        showIframe(target.href);
+                    }
+                    target = target.parentNode;
+                }
+
+                e.preventDefault();
+            }
+        };
+
+        toggleEl.onclick = togglePosition;
+    }
+
+    function findAncestor(el, cls) {
+        while ((el = el.parentElement) && !el.classList.contains(cls)) ;
+        return el;
+    }
+
+    function renderAjaxRequests() {
+        var requestCounter = document.getElementsByClassName('yii-debug-toolbar__ajax_counter');
+        if (!requestCounter.length) {
+            return;
+        }
+        var ajaxToolbarPanel = document.querySelector('.yii-debug-toolbar__ajax');
+        var tbodies = document.getElementsByClassName('yii-debug-toolbar__ajax_requests');
+        var state = 'ok';
+        if (tbodies.length) {
+            var tbody = tbodies[0];
+            var rows = document.createDocumentFragment();
+            if (requestStack.length) {
+                var firstItem = requestStack.length > 20 ? requestStack.length - 20 : 0;
+                for (var i = firstItem; i < requestStack.length; i++) {
+                    var request = requestStack[i];
+                    var row = document.createElement('tr');
+                    rows.appendChild(row);
+
+                    var methodCell = document.createElement('td');
+                    methodCell.innerHTML = request.method;
+                    row.appendChild(methodCell);
+
+                    var statusCodeCell = document.createElement('td');
+                    var statusCode = document.createElement('span');
+                    if (request.statusCode < 300) {
+                        statusCode.setAttribute('class', 'yii-debug-toolbar__ajax_request_status yii-debug-toolbar__label_success');
+                    } else if (request.statusCode < 400) {
+                        statusCode.setAttribute('class', 'yii-debug-toolbar__ajax_request_status yii-debug-toolbar__label_warning');
+                    } else {
+                        statusCode.setAttribute('class', 'yii-debug-toolbar__ajax_request_status yii-debug-toolbar__label_error');
+                    }
+                    statusCode.textContent = request.statusCode || '-';
+                    statusCodeCell.appendChild(statusCode);
+                    row.appendChild(statusCodeCell);
+
+                    var pathCell = document.createElement('td');
+                    pathCell.className = 'yii-debug-toolbar__ajax_request_url';
+                    pathCell.innerHTML = request.url;
+                    pathCell.setAttribute('title', request.url);
+                    row.appendChild(pathCell);
+
+                    var durationCell = document.createElement('td');
+                    durationCell.className = 'yii-debug-toolbar__ajax_request_duration';
+                    if (request.duration) {
+                        durationCell.innerText = request.duration + " ms";
+                    } else {
+                        durationCell.innerText = '-';
+                    }
+                    row.appendChild(durationCell);
+                    row.appendChild(document.createTextNode(' '));
+
+                    var profilerCell = document.createElement('td');
+                    if (request.profilerUrl) {
+                        var profilerLink = document.createElement('a');
+                        profilerLink.setAttribute('href', request.profilerUrl);
+                        profilerLink.innerText = request.profile;
+                        profilerCell.appendChild(profilerLink);
+                    } else {
+                        profilerCell.innerText = 'n/a';
+                    }
+                    row.appendChild(profilerCell);
+
+                    if (request.error) {
+                        if (state !== "loading" && i > requestStack.length - 4) {
+                            state = 'error';
+                        }
+                    } else if (request.loading) {
+                        state = 'loading'
+                    }
+                    row.className = 'yii-debug-toolbar__ajax_request';
+                }
+                while (tbody.firstChild) {
+                    tbody.removeChild(tbody.firstChild);
+                }
+                tbody.appendChild(rows);
+            }
+            ajaxToolbarPanel.style.display = 'block';
+        }
+        requestCounter[0].innerText = requestStack.length;
+        var className = 'yii-debug-toolbar__label yii-debug-toolbar__ajax_counter';
+        if (state === 'ok') {
+            className += ' yii-debug-toolbar__label_success';
+        } else if (state === 'error') {
+            className += ' yii-debug-toolbar__label_error';
+        }
+        requestCounter[0].className = className;
+    }
+
+    /**
+     * Should AJAX request to be logged in debug panel
+     *
+     * @param requestUrl
+     * @returns {boolean}
+     */
+    function shouldTrackRequest(requestUrl) {
+        if (!toolbarEl) {
+            return false;
+        }
+        var a = document.createElement('a');
+        a.href = requestUrl;
+        var skipAjaxRequestUrls = JSON.parse(toolbarEl.getAttribute('data-skip-urls'));
+        if (Array.isArray(skipAjaxRequestUrls) && skipAjaxRequestUrls.length && skipAjaxRequestUrls.includes(requestUrl)) {
+            return false;
+        }
+        return a.host === location.host;
+    }
+
+    var proxied = XMLHttpRequest.prototype.open;
+
+    XMLHttpRequest.prototype.open = function (method, url, async, user, pass) {
+        var self = this;
+
+        if (shouldTrackRequest(url)) {
+            var stackElement = {
+                loading: true,
+                error: false,
+                url: url,
+                method: method,
+                start: new Date()
+            };
+            requestStack.push(stackElement);
+            this.addEventListener('readystatechange', function () {
+                if (self.readyState === 4) {
+                    stackElement.duration = self.getResponseHeader('X-Debug-Duration') || new Date() - stackElement.start;
+                    stackElement.loading = false;
+                    stackElement.statusCode = self.status;
+                    stackElement.error = self.status < 200 || self.status >= 400;
+                    stackElement.profile = self.getResponseHeader('X-Debug-Tag');
+                    stackElement.profilerUrl = self.getResponseHeader('X-Debug-Link');
+                    renderAjaxRequests();
+                }
+            }, false);
+            renderAjaxRequests();
+        }
+        proxied.apply(this, Array.prototype.slice.call(arguments));
+    };
+
+    // catch fetch AJAX requests
+    if (window.fetch) {
+        var originalFetch = window.fetch;
+
+        window.fetch = function (input, init) {
+            var method;
+            var url;
+            if (typeof input === 'string') {
+                method = (init && init.method) || 'GET';
+                url = input;
+            } else if (window.URL && input instanceof URL) { // fix https://github.com/yiisoft/yii2-debug/issues/296
+                method = (init && init.method) || 'GET';
+                url = input.href;
+            } else if (window.Request && input instanceof Request) {
+                method = input.method;
+                url = input.url;
+            }
+            var promise = originalFetch(input, init);
+
+            if (shouldTrackRequest(url)) {
+                var stackElement = {
+                    loading: true,
+                    error: false,
+                    url: url,
+                    method: method,
+                    start: new Date()
+                };
+                requestStack.push(stackElement);
+                promise.then(function (response) {
+                    stackElement.duration = response.headers.get('X-Debug-Duration') || new Date() - stackElement.start;
+                    stackElement.loading = false;
+                    stackElement.statusCode = response.status;
+                    stackElement.error = response.status < 200 || response.status >= 400;
+                    stackElement.profile = response.headers.get('X-Debug-Tag');
+                    stackElement.profilerUrl = response.headers.get('X-Debug-Link');
+                    renderAjaxRequests();
+
+                    return response;
+                }).catch(function (error) {
+                    stackElement.loading = false;
+                    stackElement.error = true;
+                    renderAjaxRequests();
+                });
+                renderAjaxRequests();
+            }
+
+            return promise;
+        };
+    }
+
+})();
+</script><script src="/mail/frontend/web/assets/b5750283/jquery.js?v=1789045912"></script>
+<script src="/mail/frontend/web/assets/1a84a485/yii.js?v=1789045912"></script>
+<script src="/mail/frontend/web/js/mail.js?v=1789047619"></script>
+<script src="/mail/frontend/web/assets/1a84a485/yii.validation.js?v=1789045912"></script>
+<script src="/mail/frontend/web/assets/1a84a485/yii.activeForm.js?v=1789045912"></script>
+<script>jQuery(function ($) {
+jQuery('#compose-form').yiiActiveForm([{"id":"compose-to","name":"to","container":".field-compose-to","input":"#compose-to","error":".invalid-feedback","validate":function (attribute, value, messages, deferred, $form) {yii.validation.string(value, messages, {"message":"To must be a string.","skipOnEmpty":1});}},{"id":"composeform-cc","name":"cc","container":".field-composeform-cc","input":"#composeform-cc","error":".invalid-feedback","validate":function (attribute, value, messages, deferred, $form) {yii.validation.string(value, messages, {"message":"Cc must be a string.","skipOnEmpty":1});}},{"id":"composeform-bcc","name":"bcc","container":".field-composeform-bcc","input":"#composeform-bcc","error":".invalid-feedback","validate":function (attribute, value, messages, deferred, $form) {yii.validation.string(value, messages, {"message":"Bcc must be a string.","skipOnEmpty":1});}},{"id":"compose-subject","name":"subject","container":".field-compose-subject","input":"#compose-subject","error":".invalid-feedback","validate":function (attribute, value, messages, deferred, $form) {yii.validation.string(value, messages, {"message":"Subject must be a string.","skipOnEmpty":1});}},{"id":"compose-body","name":"body","container":".field-compose-body","input":"#compose-body","error":".invalid-feedback","validate":function (attribute, value, messages, deferred, $form) {yii.validation.string(value, messages, {"message":"Message must be a string.","skipOnEmpty":1});}},{"id":"compose-attachments","name":"attachments[]","container":".field-compose-attachments","input":"#compose-attachments","error":".invalid-feedback","validate":function (attribute, value, messages, deferred, $form) {yii.validation.file(attribute, messages, {"message":"File upload failed.","skipOnEmpty":true,"mimeTypes":[],"wrongMimeType":"Only files with these MIME types are allowed: .","extensions":["pdf","png","jpg","jpeg","gif","webp","doc","docx","xls","xlsx","ppt","pptx","txt","csv","zip","rar","7z"],"wrongExtension":"Only files with these extensions are allowed: pdf, png, jpg, jpeg, gif, webp, doc, docx, xls, xlsx, ppt, pptx, txt, csv, zip, rar, 7z.","maxSize":15728640,"tooBig":"The file \u0022{file}\u0022 is too big. Its size cannot exceed 15.00 MiB.","maxFiles":10,"tooMany":"You can upload at most 10 files."});}}], {"errorSummary":".alert.alert-danger","errorCssClass":"is-invalid","successCssClass":"is-valid","validationStateOn":"input"});
+(function () {
+  var btn = document.getElementById('erp-nav-toggle');
+  var nav = document.getElementById('erp-nav');
+  if (btn && nav) {
+    btn.addEventListener('click', function () {
+      document.body.classList.toggle('erp-nav-collapsed');
+    });
+  }
+})();
+});</script></body>
+</html>

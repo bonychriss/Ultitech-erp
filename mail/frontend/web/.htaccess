@@ -1,0 +1,11 @@
+RewriteEngine on
+
+# Local: http://localhost/mail/ (Apache Alias → this directory)
+RewriteBase /mail/
+
+RewriteRule ^frontend/web/?$ /mail/ [R=301,L]
+RewriteRule ^frontend/web/(.*)$ /mail/$1 [R=301,L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . index.php

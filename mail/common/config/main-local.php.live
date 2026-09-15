@@ -1,0 +1,49 @@
+<?php
+
+/**
+ * Same as common/config/main-local.php (DB only — safe for web + console).
+ */
+$isLive = (
+    (isset($_SERVER['HTTP_HOST']) && str_contains(strtolower((string) $_SERVER['HTTP_HOST']), 'ultimate.co.tz'))
+    || str_contains(str_replace('\\', '/', __DIR__), '/public_html/')
+    || str_contains(str_replace('\\', '/', __DIR__), '/home/ultimate/')
+);
+
+if ($isLive) {
+    $db = [
+        'class' => \yii\db\Connection::class,
+        'dsn' => 'mysql:host=localhost;dbname=ultimate_mail_app',
+        'username' => 'ultimate_mail_user',
+        'password' => 'Baddyman123!',
+        'charset' => 'utf8mb4',
+    ];
+    $mailerSingleton = [
+        'class' => \yii\symfonymailer\Mailer::class,
+        'viewPath' => '@common/mail',
+    ];
+} else {
+    $db = [
+        'class' => \yii\db\Connection::class,
+        'dsn' => 'mysql:host=localhost;dbname=mail_app',
+        'username' => 'root',
+        'password' => '',
+        'charset' => 'utf8mb4',
+    ];
+    $mailerSingleton = [
+        'class' => \yii\symfonymailer\Mailer::class,
+        'viewPath' => '@common/mail',
+        'useFileTransport' => true,
+    ];
+}
+
+return [
+    'container' => [
+        'singletons' => [
+            \yii\mail\MailerInterface::class => $mailerSingleton,
+        ],
+    ],
+    'components' => [
+        'db' => $db,
+        'mailer' => \yii\mail\MailerInterface::class,
+    ],
+];

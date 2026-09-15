@@ -139,21 +139,12 @@ function storefrontApiFetchProducts(PDO $pdo, ?int $id = null): array
     $out = [];
     foreach ($rows as $row) {
         $price = (float) ($row['selling_price'] ?? 0);
-        $image = '';
-        if (function_exists('sales_product_image_url')) {
-            $image = (string) sales_product_image_url(
-                (int) ($row['id'] ?? 0),
-                (string) ($row['main_image'] ?? ''),
-                'medium'
-            );
-        } elseif (!empty($row['main_image']) && function_exists('app_url')) {
-            $image = app_url('/uploads/' . ltrim((string) $row['main_image'], '/'));
-        }
-        $image = storefrontApiPublicImageUrl($image);
+        $productId = (int) ($row['id'] ?? 0);
+        $image = storefrontApiResolveProductImageUrl($pdo, $productId, (string) ($row['main_image'] ?? ''));
         $itemType = strtolower(trim((string) ($row['item_type'] ?? '')));
         $kind = in_array($itemType, ['vehicle', 'truck'], true) ? 'truck' : 'spare';
         $out[] = [
-            'id' => (int) ($row['id'] ?? 0),
+            'id' => $productId,
             'sku' => (string) ($row['product_code'] ?? ''),
             'name' => (string) ($row['name'] ?? ''),
             'description' => (string) ($row['description'] ?? ''),
@@ -169,13 +160,79 @@ function storefrontApiFetchProducts(PDO $pdo, ?int $id = null): array
     return $out;
 }
 
+function storefrontApiIsJunkImageFilename(string $filename): bool
+{
+    $base = strtolower(basename(str_replace('\\', '/', trim($filename))));
+    if ($base === '' || $base === '.' || $base === '..') {
+        return true;
+    }
+    if (str_contains($base, 'placeholder') || str_contains($base, 'no-image') || str_contains($base, 'no_image')) {
+        return true;
+    }
+    return in_array($base, ['untitled.jpg', 'untitled.png', 'default.jpg', 'default.png'], true);
+}
+
 /**
- * Storefront clients load images from UltiTech — always return an absolute public URL.
+ * Match UltiTech stock products list: real photo only, never junk placeholders.
+ */
+function storefrontApiResolveProductImageUrl(PDO $pdo, int $productId, string $mainImage): string
+{
+    if ($productId <= 0) {
+        return '';
+    }
+
+    $candidates = [];
+    $main = trim($mainImage);
+    if ($main !== '' && !storefrontApiIsJunkImageFilename($main)) {
+        $candidates[] = basename(str_replace('\\', '/', $main));
+    }
+
+    try {
+        $stmt = $pdo->prepare('
+            SELECT image_name FROM product_images
+            WHERE product_id = ?
+            ORDER BY is_primary DESC, id ASC
+        ');
+        $stmt->execute([$productId]);
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) ?: [] as $name) {
+            $name = trim((string) $name);
+            if ($name === '' || storefrontApiIsJunkImageFilename($name)) {
+                continue;
+            }
+            $base = basename(str_replace('\\', '/', $name));
+            if ($base !== '' && !in_array($base, $candidates, true)) {
+                $candidates[] = $base;
+            }
+        }
+    } catch (Throwable $e) {
+        // product_images may be missing
+    }
+
+    foreach ($candidates as $filename) {
+        $url = '';
+        if (function_exists('stock_product_list_image_url')) {
+            $url = (string) stock_product_list_image_url($productId, $filename, 'medium', '');
+        }
+        if ($url === '' && function_exists('sales_product_image_url')) {
+            // Only when list helper unavailable; still skip junk names
+            $url = (string) sales_product_image_url($productId, $filename, 'medium');
+        }
+        $url = storefrontApiPublicImageUrl($url);
+        if ($url !== '' && !storefrontApiIsJunkImageFilename($url) && stripos($url, 'placeholder') === false) {
+            return $url;
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Storefront clients load images from UltiTech - always return an absolute public URL.
  */
 function storefrontApiPublicImageUrl(string $url): string
 {
     $url = trim($url);
-    if ($url === '') {
+    if ($url === '' || storefrontApiIsJunkImageFilename($url) || stripos($url, 'placeholder') !== false) {
         return '';
     }
 

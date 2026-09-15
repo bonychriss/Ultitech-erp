@@ -23,6 +23,16 @@ if (empty($_SESSION['company_slug'])) {
 require_once $publicHtmlRoot . '/includes/config.php';
 require_once $publicHtmlRoot . '/includes/functions.php';
 
+// Stock image helpers (same resolver as /roadmaster/stock/products)
+$stockFn = $publicHtmlRoot . '/stock/config/functions.php';
+if (is_file($stockFn)) {
+    require_once $stockFn;
+}
+$salesFn = $publicHtmlRoot . '/modules/sales/functions.php';
+if (is_file($salesFn)) {
+    require_once $salesFn;
+}
+
 if (!defined('STOREFRONT_API_ROOT')) {
     define('STOREFRONT_API_ROOT', __DIR__);
 }

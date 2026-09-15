@@ -1383,7 +1383,8 @@ function crmMarketSearchLabConfigLegacyPaths(): array
 function crmMarketSearchLabConfig(): array
 {
     $fallback = [
-        'host' => 'local-business-search.p.rapidapi.com',
+        'provider' => 'instagram',
+        'host' => 'instagram-scraper21.p.rapidapi.com',
         'key' => '',
         'limit' => 50,
         'lat' => -6.369,
@@ -1413,8 +1414,19 @@ function crmMarketSearchLabConfig(): array
     if (!is_array($decoded)) {
         return $fallback;
     }
+    $host = (string) ($decoded['host'] ?? $fallback['host']);
+    $provider = strtolower(trim((string) ($decoded['provider'] ?? '')));
+    if ($provider === '') {
+        $provider = str_contains(strtolower($host), 'instagram') ? 'instagram' : 'local_business';
+    }
+    if ($provider === 'instagram') {
+        $host = 'instagram-scraper21.p.rapidapi.com';
+    } elseif ($provider === 'local_business' && (trim($host) === '' || str_contains(strtolower($host), 'instagram'))) {
+        $host = 'local-business-search.p.rapidapi.com';
+    }
     return array_merge($fallback, [
-        'host' => (string) ($decoded['host'] ?? $fallback['host']),
+        'provider' => $provider === 'local_business' ? 'local_business' : 'instagram',
+        'host' => $host,
         'key' => (string) ($decoded['key'] ?? ''),
         'limit' => (int) ($decoded['limit'] ?? $fallback['limit']),
         'lat' => (float) ($decoded['lat'] ?? $fallback['lat']),
@@ -1496,6 +1508,56 @@ function crmMarketNormalizeSearchPayload(mixed $payload): array
 }
 
 /**
+ * Map Instagram scraper /api/v1/search users into CRM market lead rows.
+ *
+ * @return list<array<string, mixed>>
+ */
+function crmMarketNormalizeInstagramSearchPayload(mixed $payload): array
+{
+    if (!is_array($payload)) {
+        return [];
+    }
+    $users = null;
+    if (isset($payload['data']['users']) && is_array($payload['data']['users'])) {
+        $users = $payload['data']['users'];
+    } elseif (isset($payload['users']) && is_array($payload['users'])) {
+        $users = $payload['users'];
+    } elseif (isset($payload['data']) && is_array($payload['data']) && array_is_list($payload['data'])) {
+        $users = $payload['data'];
+    }
+    if (!is_array($users)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($users as $i => $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $username = trim((string) ($item['username'] ?? ''));
+        $fullName = trim((string) ($item['full_name'] ?? $item['fullName'] ?? ''));
+        $name = $fullName !== '' ? $fullName : ($username !== '' ? '@' . $username : '');
+        if ($name === '') {
+            continue;
+        }
+        $pk = (string) ($item['pk'] ?? $item['id'] ?? $item['pk_id'] ?? $i);
+        $verified = !empty($item['is_verified']);
+        $out[] = [
+            'id' => 'ig-' . ($pk !== '' ? $pk : $username),
+            'name' => $name,
+            'phone' => '',
+            'address' => $username !== '' ? '@' . $username : '',
+            'website' => $username !== '' ? ('https://instagram.com/' . rawurlencode($username)) : '',
+            'email' => '',
+            'rating' => null,
+            'type' => $verified ? 'Instagram (verified)' : 'Instagram',
+            'city' => '',
+        ];
+    }
+    return $out;
+}
+
+/**
  * @return array{ok:bool,code:int,payload:mixed,error:string}
  */
 function crmMarketRapidGet(string $path, array $query): array
@@ -1540,6 +1602,18 @@ function crmMarketRapidGet(string $path, array $query): array
 function crmMarketRapidSearch(string $query, string $location): array
 {
     $cfg = crmMarketSearchLabConfig();
+    if (($cfg['provider'] ?? '') === 'instagram') {
+        $q = trim($query);
+        if ($q === '') {
+            return ['ok' => false, 'rows' => [], 'error' => 'Enter a search term.'];
+        }
+        $search = crmMarketRapidGet('api/v1/search', ['q' => $q]);
+        if ($search['ok']) {
+            return ['ok' => true, 'rows' => crmMarketNormalizeInstagramSearchPayload($search['payload']), 'error' => ''];
+        }
+        return ['ok' => false, 'rows' => [], 'error' => $search['error'] !== '' ? $search['error'] : 'Instagram search failed.'];
+    }
+
     $meta = crmMarketCountryMeta($location);
     $lat = $meta['lat'] ?? $cfg['lat'];
     $lng = $meta['lng'] ?? $cfg['lng'];

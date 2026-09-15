@@ -32,9 +32,10 @@ class AdminDeskPageController extends Controller
         }
 
         $erp = $request->attributes->get('erp') ?? [];
+        $uiFolder = $desk . '-ui';
         $apiBase = function_exists('app_url')
-            ? rtrim((string) app_url('/admin/email-settings-ui/api'), '/')
-            : '/public_html/admin/email-settings-ui/api';
+            ? rtrim((string) app_url('/admin/' . $uiFolder . '/api'), '/')
+            : '/public_html/admin/' . $uiFolder . '/api';
 
         $viewData = (new DeskShell())->viewData($desk, [
             'apiBase' => $apiBase,
@@ -44,8 +45,8 @@ class AdminDeskPageController extends Controller
         if ($viewData === null) {
             return response(
                 '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;">'
-                . '<h1>Email settings UI missing</h1>'
-                . '<p>Build <code>admin/email-settings-ui/frontend</code> with npm.</p>'
+                . '<h1>' . htmlspecialchars($desk, ENT_QUOTES, 'UTF-8') . ' UI missing</h1>'
+                . '<p>Build <code>admin/' . htmlspecialchars($uiFolder, ENT_QUOTES, 'UTF-8') . '/frontend</code> with npm.</p>'
                 . '</body></html>',
                 503
             )->header('Content-Type', 'text/html; charset=UTF-8');

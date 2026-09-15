@@ -337,7 +337,15 @@ try {
 
         case 'market_settings_test':
             $keyOverride = trim((string) ($jsonBody['key'] ?? ($jsonBody['apiKey'] ?? '')));
-            $result = crmMarketTestSearchApi($keyOverride !== '' ? $keyOverride : null);
+            $providerOverride = trim((string) ($jsonBody['provider'] ?? ''));
+            $detected = crmMarketDetectProviderFromPaste($keyOverride);
+            if ($providerOverride === '' && $detected !== null) {
+                $providerOverride = $detected;
+            }
+            $result = crmMarketTestSearchApi(
+                $keyOverride !== '' ? $keyOverride : null,
+                $providerOverride !== '' ? $providerOverride : null
+            );
             if (!$result['ok']) {
                 crmDeskJsonResponse(false, $result, $result['message'], 400);
             }

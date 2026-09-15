@@ -1383,7 +1383,8 @@ function crmMarketSearchLabConfigLegacyPaths(): array
 function crmMarketSearchLabConfig(): array
 {
     $fallback = [
-        'host' => 'local-business-search.p.rapidapi.com',
+        'provider' => 'instagram',
+        'host' => 'instagram-scraper21.p.rapidapi.com',
         'key' => '',
         'limit' => 50,
         'lat' => -6.369,
@@ -1413,8 +1414,19 @@ function crmMarketSearchLabConfig(): array
     if (!is_array($decoded)) {
         return $fallback;
     }
+    $host = (string) ($decoded['host'] ?? $fallback['host']);
+    $provider = strtolower(trim((string) ($decoded['provider'] ?? '')));
+    if ($provider === '') {
+        $provider = str_contains(strtolower($host), 'instagram') ? 'instagram' : 'local_business';
+    }
+    if ($provider === 'instagram') {
+        $host = 'instagram-scraper21.p.rapidapi.com';
+    } elseif ($provider === 'local_business' && (trim($host) === '' || str_contains(strtolower($host), 'instagram'))) {
+        $host = 'local-business-search.p.rapidapi.com';
+    }
     return array_merge($fallback, [
-        'host' => (string) ($decoded['host'] ?? $fallback['host']),
+        'provider' => $provider === 'local_business' ? 'local_business' : 'instagram',
+        'host' => $host,
         'key' => (string) ($decoded['key'] ?? ''),
         'limit' => (int) ($decoded['limit'] ?? $fallback['limit']),
         'lat' => (float) ($decoded['lat'] ?? $fallback['lat']),
@@ -1496,6 +1508,56 @@ function crmMarketNormalizeSearchPayload(mixed $payload): array
 }
 
 /**
+ * Map Instagram scraper /api/v1/search users into CRM market lead rows.
+ *
+ * @return list<array<string, mixed>>
+ */
+function crmMarketNormalizeInstagramSearchPayload(mixed $payload): array
+{
+    if (!is_array($payload)) {
+        return [];
+    }
+    $users = null;
+    if (isset($payload['data']['users']) && is_array($payload['data']['users'])) {
+        $users = $payload['data']['users'];
+    } elseif (isset($payload['users']) && is_array($payload['users'])) {
+        $users = $payload['users'];
+    } elseif (isset($payload['data']) && is_array($payload['data']) && array_is_list($payload['data'])) {
+        $users = $payload['data'];
+    }
+    if (!is_array($users)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($users as $i => $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $username = trim((string) ($item['username'] ?? ''));
+        $fullName = trim((string) ($item['full_name'] ?? $item['fullName'] ?? ''));
+        $name = $fullName !== '' ? $fullName : ($username !== '' ? '@' . $username : '');
+        if ($name === '') {
+            continue;
+        }
+        $pk = (string) ($item['pk'] ?? $item['id'] ?? $item['pk_id'] ?? $i);
+        $verified = !empty($item['is_verified']);
+        $out[] = [
+            'id' => 'ig-' . ($pk !== '' ? $pk : $username),
+            'name' => $name,
+            'phone' => '',
+            'address' => $username !== '' ? '@' . $username : '',
+            'website' => $username !== '' ? ('https://instagram.com/' . rawurlencode($username)) : '',
+            'email' => '',
+            'rating' => null,
+            'type' => $verified ? 'Instagram (verified)' : 'Instagram',
+            'city' => '',
+        ];
+    }
+    return $out;
+}
+
+/**
  * @return array{ok:bool,code:int,payload:mixed,error:string}
  */
 function crmMarketRapidGet(string $path, array $query): array
@@ -1540,6 +1602,18 @@ function crmMarketRapidGet(string $path, array $query): array
 function crmMarketRapidSearch(string $query, string $location): array
 {
     $cfg = crmMarketSearchLabConfig();
+    if (($cfg['provider'] ?? '') === 'instagram') {
+        $q = trim($query);
+        if ($q === '') {
+            return ['ok' => false, 'rows' => [], 'error' => 'Enter a search term.'];
+        }
+        $search = crmMarketRapidGet('api/v1/search', ['q' => $q]);
+        if ($search['ok']) {
+            return ['ok' => true, 'rows' => crmMarketNormalizeInstagramSearchPayload($search['payload']), 'error' => ''];
+        }
+        return ['ok' => false, 'rows' => [], 'error' => $search['error'] !== '' ? $search['error'] : 'Instagram search failed.'];
+    }
+
     $meta = crmMarketCountryMeta($location);
     $lat = $meta['lat'] ?? $cfg['lat'];
     $lng = $meta['lng'] ?? $cfg['lng'];
@@ -1579,6 +1653,26 @@ function crmMarketRapidAutocomplete(string $query, string $location): array
         return ['ok' => true, 'suggestions' => [], 'error' => ''];
     }
     $cfg = crmMarketSearchLabConfig();
+    if (($cfg['provider'] ?? '') === 'instagram') {
+        $search = crmMarketRapidGet('api/v1/search', ['q' => $query]);
+        if (!$search['ok']) {
+            return ['ok' => false, 'suggestions' => [], 'error' => $search['error']];
+        }
+        $rows = crmMarketNormalizeInstagramSearchPayload($search['payload']);
+        $suggestions = [];
+        foreach (array_slice($rows, 0, 12) as $row) {
+            $label = trim((string) ($row['name'] ?? ''));
+            if ($label === '') {
+                continue;
+            }
+            $suggestions[] = [
+                'label' => $label,
+                'type' => (string) ($row['type'] ?? 'Instagram'),
+                'city' => (string) ($row['address'] ?? ''),
+            ];
+        }
+        return ['ok' => true, 'suggestions' => $suggestions, 'error' => ''];
+    }
     $meta = crmMarketCountryMeta($location);
     $lat = $meta['lat'] ?? $cfg['lat'];
     $lng = $meta['lng'] ?? $cfg['lng'];
@@ -2577,6 +2671,7 @@ function crmMarketGetSearchSettingsPublic(): array
     $key = (string) ($cfg['key'] ?? '');
     $masked = $key === '' ? '' : (str_repeat('•', max(0, strlen($key) - 4)) . substr($key, -4));
     return [
+        'provider' => (string) ($cfg['provider'] ?? 'instagram'),
         'host' => (string) ($cfg['host'] ?? ''),
         'limit' => (int) ($cfg['limit'] ?? 50),
         'lat' => (float) ($cfg['lat'] ?? 0),
@@ -2587,6 +2682,21 @@ function crmMarketGetSearchSettingsPublic(): array
         'hasKey' => $key !== '',
         'keyMasked' => $masked,
     ];
+}
+
+/**
+ * Detect RapidAPI provider from a pasted curl / host snippet.
+ */
+function crmMarketDetectProviderFromPaste(string $raw): ?string
+{
+    $raw = strtolower($raw);
+    if (str_contains($raw, 'instagram-scraper21') || str_contains($raw, 'instagram scraper')) {
+        return 'instagram';
+    }
+    if (str_contains($raw, 'local-business-search')) {
+        return 'local_business';
+    }
+    return null;
 }
 
 /**
@@ -2630,9 +2740,10 @@ function crmMarketSaveSearchSettings(array $input): array
             $current = $decoded;
         }
     }
-    // Keep host/limit/region/language as stored defaults; Settings UI only updates the API key.
+    // Keep host/limit/region/language as stored defaults; Settings UI updates key + provider.
     $next = array_merge([
-        'host' => 'local-business-search.p.rapidapi.com',
+        'provider' => 'instagram',
+        'host' => 'instagram-scraper21.p.rapidapi.com',
         'limit' => 50,
         'lat' => -6.369,
         'lng' => 34.889,
@@ -2641,7 +2752,21 @@ function crmMarketSaveSearchSettings(array $input): array
         'mode' => 'manual',
         'key' => '',
     ], $current);
-    $newKey = crmMarketNormalizeApiKey((string) ($input['key'] ?? $input['apiKey'] ?? ''));
+    $pasteBlob = (string) ($input['key'] ?? $input['apiKey'] ?? $input['paste'] ?? '');
+    $detected = crmMarketDetectProviderFromPaste($pasteBlob);
+    $providerIn = strtolower(trim((string) ($input['provider'] ?? '')));
+    if ($providerIn === 'local_business' || $providerIn === 'instagram') {
+        $next['provider'] = $providerIn;
+    } elseif ($detected !== null) {
+        $next['provider'] = $detected;
+    }
+    if (($next['provider'] ?? '') === 'instagram') {
+        $next['host'] = 'instagram-scraper21.p.rapidapi.com';
+    } else {
+        $next['provider'] = 'local_business';
+        $next['host'] = 'local-business-search.p.rapidapi.com';
+    }
+    $newKey = crmMarketNormalizeApiKey($pasteBlob);
     if ($newKey !== '') {
         $next['key'] = $newKey;
     }
@@ -2667,9 +2792,17 @@ function crmMarketSaveSearchSettings(array $input): array
  *
  * @return array{ok:bool,message:string,code:int,normalized_key?:string}
  */
-function crmMarketTestSearchApi(?string $keyOverride = null): array
+function crmMarketTestSearchApi(?string $keyOverride = null, ?string $providerOverride = null): array
 {
     $cfg = crmMarketSearchLabConfig();
+    $provider = strtolower(trim((string) (
+        $providerOverride !== null && $providerOverride !== ''
+            ? $providerOverride
+            : ($cfg['provider'] ?? 'instagram')
+    )));
+    if ($provider !== 'local_business') {
+        $provider = 'instagram';
+    }
     $key = crmMarketNormalizeApiKey((string) (
         $keyOverride !== null && trim((string) $keyOverride) !== ''
             ? $keyOverride
@@ -2679,14 +2812,20 @@ function crmMarketTestSearchApi(?string $keyOverride = null): array
         return ['ok' => false, 'message' => 'Paste an API token first.', 'code' => 0];
     }
 
-    $host = preg_replace('/^https?:\/\//', '', (string) ($cfg['host'] ?? '')) ?: 'local-business-search.p.rapidapi.com';
-    $query = http_build_query([
-        'query' => 'hotel',
-        'region' => (string) ($cfg['region'] ?? 'tz') ?: 'tz',
-        'language' => (string) ($cfg['language'] ?? 'en') ?: 'en',
-        'coordinates' => ((float) ($cfg['lat'] ?? -6.369)) . ',' . ((float) ($cfg['lng'] ?? 34.889)),
-    ]);
-    $url = 'https://' . $host . '/autocomplete?' . $query;
+    if ($provider === 'instagram') {
+        $apiHost = 'instagram-scraper21.p.rapidapi.com';
+        $url = 'https://' . $apiHost . '/api/v1/ping';
+    } else {
+        $apiHost = 'local-business-search.p.rapidapi.com';
+        $query = http_build_query([
+            'query' => 'hotel',
+            'region' => (string) ($cfg['region'] ?? 'tz') ?: 'tz',
+            'language' => (string) ($cfg['language'] ?? 'en') ?: 'en',
+            'coordinates' => ((float) ($cfg['lat'] ?? -6.369)) . ',' . ((float) ($cfg['lng'] ?? 34.889)),
+        ]);
+        $url = 'https://' . $apiHost . '/autocomplete?' . $query;
+    }
+
     $ch = curl_init($url);
     if ($ch === false) {
         return ['ok' => false, 'message' => 'Could not start API test request.', 'code' => 0];
@@ -2696,7 +2835,7 @@ function crmMarketTestSearchApi(?string $keyOverride = null): array
         CURLOPT_TIMEOUT => 20,
         CURLOPT_HTTPHEADER => [
             'Content-Type: application/json',
-            'x-rapidapi-host: ' . $host,
+            'x-rapidapi-host: ' . $apiHost,
             'x-rapidapi-key: ' . $key,
         ],
     ]);
@@ -2712,13 +2851,14 @@ function crmMarketTestSearchApi(?string $keyOverride = null): array
         return ['ok' => false, 'message' => 'API token was rejected (invalid or unauthorized).', 'code' => $code];
     }
     if ($code === 429) {
-        // Key is accepted; plan quota is exhausted. Allow saving so searches work after reset/upgrade.
+        $planLabel = $provider === 'instagram' ? 'Instagram Scraper' : 'Local Business Search BASIC';
         return [
             'ok' => true,
-            'message' => 'Token is valid, but this month\'s RapidAPI BASIC quota is used up. Search will stay blocked until the quota resets or you upgrade the plan.',
+            'message' => 'Token is valid, but this month\'s RapidAPI ' . $planLabel . ' quota is used up. Search will stay blocked until the quota resets or you upgrade the plan.',
             'code' => $code,
             'normalized_key' => $key,
             'quota_exceeded' => true,
+            'provider' => $provider,
         ];
     }
     if ($code >= 400) {
@@ -2728,14 +2868,18 @@ function crmMarketTestSearchApi(?string $keyOverride = null): array
             'ok' => false,
             'message' => $msg !== '' ? $msg : ('API test failed (HTTP ' . $code . ').'),
             'code' => $code,
+            'provider' => $provider,
         ];
     }
 
     return [
         'ok' => true,
-        'message' => 'API token works. Search is ready to use.',
+        'message' => $provider === 'instagram'
+            ? 'Instagram Scraper token works. Search is ready to use.'
+            : 'API token works. Search is ready to use.',
         'code' => $code,
         'normalized_key' => $key,
+        'provider' => $provider,
     ];
 }
 

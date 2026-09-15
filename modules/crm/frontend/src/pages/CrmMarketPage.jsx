@@ -208,9 +208,13 @@ function isSearchQuotaError(text) {
   return t.includes('monthly quota') || (t.includes('quota') && t.includes('rapidapi')) || t.includes('upgrade your plan');
 }
 
-function quotaUpgradeHref(text) {
+function quotaUpgradeHref(text, provider = 'instagram') {
   const match = String(text || '').match(/https?:\/\/[^\s]+/i);
-  return match ? match[0].replace(/[).,]+$/, '') : 'https://rapidapi.com/letscrape-6bRBa3QguO5/api/local-business-search';
+  if (match) return match[0].replace(/[).,]+$/, '');
+  if (provider === 'local_business') {
+    return 'https://rapidapi.com/letscrape-6bRBa3QguO5/api/local-business-search';
+  }
+  return 'https://rapidapi.com/premium-apis-oanor/api/instagram-scraper21';
 }
 
 function ensureDotLottiePlayer() {
@@ -222,12 +226,12 @@ function ensureDotLottiePlayer() {
   document.head.appendChild(script);
 }
 
-function SearchQuotaState({ src, message }) {
+function SearchQuotaState({ src, message, provider = 'instagram' }) {
   useEffect(() => {
     ensureDotLottiePlayer();
   }, []);
 
-  const href = quotaUpgradeHref(message);
+  const href = quotaUpgradeHref(message, provider);
 
   return (
     <div className="crm-market-quota" role="status">
@@ -384,6 +388,13 @@ function extractRapidApiKeyFromPaste(value) {
   return raw;
 }
 
+function detectProviderFromPaste(value) {
+  const raw = String(value || '').toLowerCase();
+  if (raw.includes('instagram-scraper21') || raw.includes('instagram scraper')) return 'instagram';
+  if (raw.includes('local-business-search')) return 'local_business';
+  return null;
+}
+
 function countryFlagUrl(code) {
   return `https://flagcdn.com/w40/${String(code || '').toLowerCase()}.png`;
 }
@@ -535,6 +546,7 @@ export default function CrmMarketPage() {
   const [setKey, setSetKey] = useState('');
   const [setKeyMasked, setSetKeyMasked] = useState('');
   const [setHasKey, setSetHasKey] = useState(false);
+  const [provider, setProvider] = useState('instagram');
   const [setBusy, setSetBusy] = useState(false);
   const [testBusy, setTestBusy] = useState(false);
   const [tokenStatus, setTokenStatus] = useState(''); // '', testing, ok, quota, fail
@@ -560,6 +572,21 @@ export default function CrmMarketPage() {
       setError(e.message || 'Failed to load market leads.');
     }
   }, [search, isHome]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchMarketSettings()
+      .then((data) => {
+        if (cancelled) return;
+        setProvider(data.provider === 'local_business' ? 'local_business' : 'instagram');
+        setSetHasKey(Boolean(data.hasKey));
+        setSetKeyMasked(String(data.keyMasked || ''));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (isImport || isHome) void refresh();
@@ -647,6 +674,7 @@ export default function CrmMarketPage() {
         if (cancelled) return;
         setSetKeyMasked(String(data.keyMasked || ''));
         setSetHasKey(Boolean(data.hasKey));
+        setProvider(data.provider === 'local_business' ? 'local_business' : 'instagram');
         setSetKey('');
         setTokenStatus('');
       })
@@ -675,11 +703,14 @@ export default function CrmMarketPage() {
     setTokenStatus('testing');
     setTestBusy(true);
     const timer = setTimeout(() => {
-      testMarketSettings(token)
+      testMarketSettings(token, provider)
         .then((data) => {
           if (cancelled) return;
           if (data?.normalized_key && data.normalized_key !== setKey.trim()) {
             setSetKey(String(data.normalized_key));
+          }
+          if (data?.provider === 'instagram' || data?.provider === 'local_business') {
+            setProvider(data.provider);
           }
           const quotaHit = Boolean(data?.quota_exceeded) || Number(data?.code) === 429;
           setTokenStatus(quotaHit ? 'quota' : 'ok');
@@ -706,7 +737,7 @@ export default function CrmMarketPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [isSettings, setKey]);
+  }, [isSettings, setKey, provider]);
 
   const toggleOne = (id) => {
     setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -947,12 +978,17 @@ export default function CrmMarketPage() {
     setError('');
     setMessage('');
     try {
-      const data = await saveMarketSettings({ key: token });
+      const data = await saveMarketSettings({ key: token, provider });
       setSetKeyMasked(String(data.keyMasked || ''));
       setSetHasKey(Boolean(data.hasKey));
+      setProvider(data.provider === 'local_business' ? 'local_business' : 'instagram');
       setSetKey('');
       setTokenStatus('ok');
-      setMessage('API token saved.');
+      setMessage(
+        data.provider === 'instagram'
+          ? 'Instagram Scraper token saved.'
+          : 'API token saved.',
+      );
     } catch (err) {
       setError(err.message || 'Could not save API token.');
     } finally {
@@ -1422,7 +1458,9 @@ export default function CrmMarketPage() {
           <div>
             <p className="crm-market-eyebrow">CRM Market</p>
             <h1 className="crm-market-title">Settings</h1>
-            <p className="crm-market-lead">Paste your RapidAPI key (or a curl snippet). It is tested automatically.</p>
+            <p className="crm-market-lead">
+              Choose Instagram Scraper or Local Business Search, then paste your RapidAPI key (or curl snippet).
+            </p>
           </div>
         </header>
         <section className="crm-market-status" aria-live="polite">
@@ -1442,6 +1480,24 @@ export default function CrmMarketPage() {
         )}
         <form className="crm-market-form" onSubmit={(e) => void onSaveSettings(e)}>
           <label className="crm-market-field">
+            <span>Search provider</span>
+            <select
+              value={provider}
+              onChange={(e) => {
+                setTokenStatus('');
+                setProvider(e.target.value === 'local_business' ? 'local_business' : 'instagram');
+              }}
+            >
+              <option value="instagram">Instagram Scraper (instagram-scraper21)</option>
+              <option value="local_business">Local Business Search</option>
+            </select>
+            <small className="crm-market-token-hint">
+              {provider === 'instagram'
+                ? 'Searches Instagram users and saves them as market leads.'
+                : 'Searches Google-style local businesses (separate RapidAPI quota).'}
+            </small>
+          </label>
+          <label className="crm-market-field">
             <span>API token {setHasKey ? `(saved: ${setKeyMasked})` : '(not set)'}</span>
             <input
               type="password"
@@ -1457,13 +1513,18 @@ export default function CrmMarketPage() {
               onFocus={() => setTokenFocused(true)}
               onBlur={() => setTokenFocused(false)}
               onChange={(e) => {
+                const raw = e.target.value;
+                const detected = detectProviderFromPaste(raw);
+                if (detected) setProvider(detected);
                 setTokenStatus('');
-                setSetKey(extractRapidApiKeyFromPaste(e.target.value));
+                setSetKey(extractRapidApiKeyFromPaste(raw));
               }}
               onPaste={(e) => {
                 const text = e.clipboardData?.getData('text') || '';
                 if (!text) return;
                 e.preventDefault();
+                const detected = detectProviderFromPaste(text);
+                if (detected) setProvider(detected);
                 setTokenStatus('');
                 setSetKey(extractRapidApiKeyFromPaste(text));
               }}
@@ -1601,7 +1662,7 @@ export default function CrmMarketPage() {
             {searchBusy ? (
               <SearchBusyState src={searchAnimSrc} />
             ) : quotaError ? (
-              <SearchQuotaState src={nothingSrc} message={error} />
+              <SearchQuotaState src={nothingSrc} message={error} provider={provider} />
             ) : searchRows.length === 0 ? (
               historyLoading ? (
                 <div className="crm-market-empty"><h2>Loading saved searches...</h2></div>

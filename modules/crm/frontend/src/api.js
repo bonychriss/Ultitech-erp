@@ -194,9 +194,13 @@ export async function saveMarketSettings(payload) {
   });
 }
 
-export async function testMarketSettings(key = '') {
+export async function testMarketSettings(key = '', provider = '') {
   return request(`${apiBase()}?action=market_settings_test`, {
     method: 'POST',
-    body: JSON.stringify({ action: 'market_settings_test', key: String(key || '') }),
+    body: JSON.stringify({
+      action: 'market_settings_test',
+      key: String(key || ''),
+      provider: String(provider || ''),
+    }),
   });
 }

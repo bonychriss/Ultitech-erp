@@ -208,9 +208,13 @@ function isSearchQuotaError(text) {
   return t.includes('monthly quota') || (t.includes('quota') && t.includes('rapidapi')) || t.includes('upgrade your plan');
 }
 
-function quotaUpgradeHref(text) {
+function quotaUpgradeHref(text, provider = 'instagram') {
   const match = String(text || '').match(/https?:\/\/[^\s]+/i);
-  return match ? match[0].replace(/[).,]+$/, '') : 'https://rapidapi.com/letscrape-6bRBa3QguO5/api/local-business-search';
+  if (match) return match[0].replace(/[).,]+$/, '');
+  if (provider === 'local_business') {
+    return 'https://rapidapi.com/letscrape-6bRBa3QguO5/api/local-business-search';
+  }
+  return 'https://rapidapi.com/premium-apis-oanor/api/instagram-scraper21';
 }
 
 function ensureDotLottiePlayer() {
@@ -222,12 +226,12 @@ function ensureDotLottiePlayer() {
   document.head.appendChild(script);
 }
 
-function SearchQuotaState({ src, message }) {
+function SearchQuotaState({ src, message, provider = 'instagram' }) {
   useEffect(() => {
     ensureDotLottiePlayer();
   }, []);
 
-  const href = quotaUpgradeHref(message);
+  const href = quotaUpgradeHref(message, provider);
 
   return (
     <div className="crm-market-quota" role="status">
@@ -384,6 +388,13 @@ function extractRapidApiKeyFromPaste(value) {
   return raw;
 }
 
+function detectProviderFromPaste(value) {
+  const raw = String(value || '').toLowerCase();
+  if (raw.includes('instagram-scraper21') || raw.includes('instagram scraper')) return 'instagram';
+  if (raw.includes('local-business-search')) return 'local_business';
+  return null;
+}
+
 function countryFlagUrl(code) {
   return `https://flagcdn.com/w40/${String(code || '').toLowerCase()}.png`;
 }
@@ -535,6 +546,7 @@ export default function CrmMarketPage() {
   const [setKey, setSetKey] = useState('');
   const [setKeyMasked, setSetKeyMasked] = useState('');
   const [setHasKey, setSetHasKey] = useState(false);
+  const [provider, setProvider] = useState('instagram');
   const [setBusy, setSetBusy] = useState(false);
   const [testBusy, setTestBusy] = useState(false);
   const [tokenStatus, setTokenStatus] = useState(''); // '', testing, ok, quota, fail
@@ -647,6 +659,7 @@ export default function CrmMarketPage() {
         if (cancelled) return;
         setSetKeyMasked(String(data.keyMasked || ''));
         setSetHasKey(Boolean(data.hasKey));
+        setProvider(data.provider === 'local_business' ? 'local_business' : 'instagram');
         setSetKey('');
         setTokenStatus('');
       })
@@ -675,11 +688,14 @@ export default function CrmMarketPage() {
     setTokenStatus('testing');
     setTestBusy(true);
     const timer = setTimeout(() => {
-      testMarketSettings(token)
+      testMarketSettings(token, provider)
         .then((data) => {
           if (cancelled) return;
           if (data?.normalized_key && data.normalized_key !== setKey.trim()) {
             setSetKey(String(data.normalized_key));
+          }
+          if (data?.provider === 'instagram' || data?.provider === 'local_business') {
+            setProvider(data.provider);
           }
           const quotaHit = Boolean(data?.quota_exceeded) || Number(data?.code) === 429;
           setTokenStatus(quotaHit ? 'quota' : 'ok');
@@ -706,7 +722,7 @@ export default function CrmMarketPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [isSettings, setKey]);
+  }, [isSettings, setKey, provider]);
 
   const toggleOne = (id) => {
     setSelected((prev) => ({ ...prev, [id]: !prev[id] }));

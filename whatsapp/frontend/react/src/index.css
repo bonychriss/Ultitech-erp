@@ -1,18 +1,19 @@
 :root {
-  --bg: #0f1410;
-  --bg-panel: #161d18;
-  --bg-elevated: #1c2620;
-  --border: #2a3830;
-  --text: #e8f0ea;
-  --muted: #8fa396;
-  --accent: #25d366;
-  --accent-dim: #1da851;
-  --danger: #e35d5d;
-  --warn: #e0b44f;
-  --staff: #5b9fd4;
-  --customer: #25d366;
+  --bg: #f4f7f5;
+  --bg-panel: #ffffff;
+  --bg-elevated: #f0f4f1;
+  --border: #d8e2db;
+  --text: #152019;
+  --muted: #5f7266;
+  --accent: #1fa855;
+  --accent-dim: #188a45;
+  --danger: #d14343;
+  --warn: #b8860b;
+  --staff: #2f7bbd;
+  --customer: #1fa855;
   --radius: 12px;
   --font: 'DM Sans', 'IBM Plex Sans', system-ui, sans-serif;
+  --shadow: 0 10px 30px rgba(21, 32, 25, 0.06);
 }
 
 * {
@@ -31,8 +32,8 @@ body,
 
 body {
   background:
-    radial-gradient(ellipse 80% 50% at 10% -10%, rgba(37, 211, 102, 0.12), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(91, 159, 212, 0.08), transparent),
+    radial-gradient(ellipse 80% 50% at 10% -10%, rgba(37, 211, 102, 0.1), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(47, 123, 189, 0.06), transparent),
     var(--bg);
 }
 
@@ -63,7 +64,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow);
 }
 
 .login-card h1 {
@@ -127,7 +128,7 @@ textarea {
 
 .btn-primary {
   background: var(--accent);
-  color: #062012;
+  color: #ffffff;
   width: 100%;
 }
 
@@ -177,6 +178,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  box-shadow: 2px 0 16px rgba(21, 32, 25, 0.03);
 }
 
 .brand {
@@ -192,10 +194,10 @@ textarea {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(145deg, var(--accent), #128c7e);
+  background: linear-gradient(145deg, #25d366, #128c7e);
   display: grid;
   place-items: center;
-  color: #062012;
+  color: #ffffff;
   font-size: 1.2rem;
 }
 
@@ -277,6 +279,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem 1.1rem;
+  box-shadow: var(--shadow);
 }
 
 .stat .label {
@@ -297,6 +300,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.1rem 1.2rem;
+  box-shadow: var(--shadow);
 }
 
 .panel + .panel {
@@ -402,9 +406,9 @@ textarea {
 }
 
 .warn-banner {
-  background: rgba(224, 180, 79, 0.12);
-  border: 1px solid rgba(224, 180, 79, 0.35);
-  color: #f0d48a;
+  background: #fff8e8;
+  border: 1px solid #f0d48a;
+  color: #8a6508;
   border-radius: 10px;
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;

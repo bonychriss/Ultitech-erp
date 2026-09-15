@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,6 +21,64 @@ const STEP_LABELS = {
   1: 'Business identity',
   2: 'Cloud API credentials',
   3: 'Webhook & automation',
+}
+
+const FLAG_BASE = 'https://flagcdn.com/w40/'
+
+// Unique dial codes (longest first for parsing)
+const PHONE_COUNTRIES = [
+  { dial: '+255', iso: 'tz', label: 'TZ +255' },
+  { dial: '+254', iso: 'ke', label: 'KE +254' },
+  { dial: '+256', iso: 'ug', label: 'UG +256' },
+  { dial: '+250', iso: 'rw', label: 'RW +250' },
+  { dial: '+27', iso: 'za', label: 'ZA +27' },
+  { dial: '+234', iso: 'ng', label: 'NG +234' },
+  { dial: '+233', iso: 'gh', label: 'GH +233' },
+  { dial: '+971', iso: 'ae', label: 'AE +971' },
+  { dial: '+91', iso: 'in', label: 'IN +91' },
+  { dial: '+44', iso: 'gb', label: 'UK +44' },
+  { dial: '+1', iso: 'us', label: 'US +1' },
+]
+
+function flagUrl(iso) {
+  return `${FLAG_BASE}${String(iso || 'un').toLowerCase()}.png`
+}
+
+function splitPhone(raw) {
+  const cleaned = String(raw || '').trim()
+  const digitsPrefixed = cleaned.replace(/[^\d+]/g, '')
+  const withPlus = digitsPrefixed.startsWith('+')
+    ? digitsPrefixed
+    : digitsPrefixed
+      ? `+${digitsPrefixed}`
+      : ''
+  const sorted = [...PHONE_COUNTRIES].sort((a, b) => b.dial.length - a.dial.length)
+  for (const c of sorted) {
+    if (withPlus.startsWith(c.dial)) {
+      return {
+        countryCode: c.dial,
+        national: withPlus.slice(c.dial.length).replace(/\D/g, ''),
+      }
+    }
+  }
+  // Also match without plus: 2557...
+  const onlyDigits = cleaned.replace(/\D/g, '')
+  for (const c of sorted) {
+    const dialDigits = c.dial.replace(/\D/g, '')
+    if (onlyDigits.startsWith(dialDigits)) {
+      return {
+        countryCode: c.dial,
+        national: onlyDigits.slice(dialDigits.length),
+      }
+    }
+  }
+  return { countryCode: '+255', national: onlyDigits }
+}
+
+function joinPhone(countryCode, national) {
+  const n = String(national || '').replace(/\D/g, '')
+  if (!n) return ''
+  return `${countryCode} ${n}`.trim()
 }
 
 function getCfg() {
@@ -67,6 +125,31 @@ export default function WhatsAppSettingsPage() {
   const [notice, setNotice] = useState('')
   const [copied, setCopied] = useState('')
   const [showToken, setShowToken] = useState(false)
+  const [countryCode, setCountryCode] = useState(() => splitPhone(form.displayPhone).countryCode)
+  const [nationalPhone, setNationalPhone] = useState(() => splitPhone(form.displayPhone).national)
+  const [countryOpen, setCountryOpen] = useState(false)
+  const countryMenuRef = useRef(null)
+
+  const selectedCountry =
+    PHONE_COUNTRIES.find((c) => c.dial === countryCode) || PHONE_COUNTRIES[0]
+
+  useEffect(() => {
+    if (!countryOpen) return undefined
+    function onPointerDown(event) {
+      if (!countryMenuRef.current?.contains(event.target)) {
+        setCountryOpen(false)
+      }
+    }
+    function onEscape(event) {
+      if (event.key === 'Escape') setCountryOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onEscape)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onEscape)
+    }
+  }, [countryOpen])
 
   useEffect(() => {
     if (cfg.initial) return undefined
@@ -78,7 +161,11 @@ export default function WhatsAppSettingsPage() {
         if (!res.ok || data.success === false) throw new Error(data.error || 'Failed to load')
         if (cancelled) return
         const next = data.data || {}
-        setForm({ ...emptyForm(), ...(next.form || {}) })
+        const nextForm = { ...emptyForm(), ...(next.form || {}) }
+        setForm(nextForm)
+        const parsed = splitPhone(nextForm.displayPhone)
+        setCountryCode(parsed.countryCode)
+        setNationalPhone(parsed.national)
         setLinks(next.links || {})
         setMeta(next.meta || {})
       } catch (err) {
@@ -96,9 +183,18 @@ export default function WhatsAppSettingsPage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
+  function updatePhone(nextCountry, nextNational) {
+    const national = String(nextNational || '').replace(/\D/g, '')
+    setCountryCode(nextCountry)
+    setNationalPhone(national)
+    patch('displayPhone', joinPhone(nextCountry, national))
+  }
+
   function validateStep(s) {
     if (s === 1) {
-      if (!form.displayPhone.trim()) return 'Enter the WhatsApp business phone number.'
+      if (!nationalPhone.trim() && !form.displayPhone.trim()) {
+        return 'Enter the WhatsApp business phone number.'
+      }
       return null
     }
     if (s === 2) {
@@ -149,7 +245,11 @@ export default function WhatsAppSettingsPage() {
       const data = await parseJson(res)
       if (!res.ok || data.success === false) throw new Error(data.error || 'Save failed')
       const next = data.data || {}
-      setForm({ ...emptyForm(), ...(next.form || {}), accessToken: '' })
+      const nextForm = { ...emptyForm(), ...(next.form || {}), accessToken: '' }
+      setForm(nextForm)
+      const parsed = splitPhone(nextForm.displayPhone)
+      setCountryCode(parsed.countryCode)
+      setNationalPhone(parsed.national)
       setLinks(next.links || links)
       setMeta(next.meta || meta)
       setNotice(data.message || 'WhatsApp registered.')
@@ -265,16 +365,68 @@ export default function WhatsAppSettingsPage() {
                   <p>The public WhatsApp Business number customers will message.</p>
                 </div>
                 <div className="wizard-auth-fields">
-                  <div className="field-line">
+                  <div className="field-line field-line--phone">
                     <Phone size={18} aria-hidden />
-                    <input
-                      type="tel"
-                      value={form.displayPhone}
-                      onChange={(e) => patch('displayPhone', e.target.value)}
-                      placeholder="Phone number (+255 7XX XXX XXX)"
-                      autoComplete="tel"
-                      aria-label="Display phone"
-                    />
+                    <div className="phone-row">
+                      <div
+                        className={`phone-country${countryOpen ? ' is-open' : ''}`}
+                        ref={countryMenuRef}
+                      >
+                        <button
+                          type="button"
+                          className="phone-country-trigger"
+                          aria-haspopup="listbox"
+                          aria-expanded={countryOpen}
+                          aria-label="Country code"
+                          onClick={() => setCountryOpen((v) => !v)}
+                        >
+                          <img
+                            className="country-flag-img"
+                            src={flagUrl(selectedCountry.iso)}
+                            alt=""
+                            width={22}
+                            height={16}
+                          />
+                          <span className="country-dial">{countryCode}</span>
+                          <span className="country-chevron" aria-hidden="true" />
+                        </button>
+                        {countryOpen ? (
+                          <ul className="phone-country-menu" role="listbox">
+                            {PHONE_COUNTRIES.map((c) => (
+                              <li key={c.dial} role="option" aria-selected={c.dial === countryCode}>
+                                <button
+                                  type="button"
+                                  className={`phone-country-option${c.dial === countryCode ? ' is-selected' : ''}`}
+                                  onClick={() => {
+                                    updatePhone(c.dial, nationalPhone)
+                                    setCountryOpen(false)
+                                  }}
+                                >
+                                  <img
+                                    className="country-flag-img"
+                                    src={flagUrl(c.iso)}
+                                    alt=""
+                                    width={22}
+                                    height={16}
+                                  />
+                                  <span>{c.label}</span>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                      <span className="phone-divider" aria-hidden="true" />
+                      <input
+                        type="tel"
+                        value={nationalPhone}
+                        onChange={(e) => updatePhone(countryCode, e.target.value)}
+                        placeholder="7XX XXX XXX"
+                        autoComplete="tel-national"
+                        inputMode="tel"
+                        aria-label="Display phone"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

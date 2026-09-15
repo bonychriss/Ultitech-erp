@@ -10,7 +10,7 @@ final class DeskShell
     /** @return list<string> */
     public static function laravelDesks(): array
     {
-        return ['email-settings'];
+        return ['email-settings', 'whatsapp-settings'];
     }
 
     public static function deskRegex(): string
@@ -36,10 +36,12 @@ final class DeskShell
     public function viewData(string $desk, array $cfg = []): ?array
     {
         $desk = strtolower(trim($desk));
-        if ($desk !== 'email-settings') {
-            return null;
-        }
+        $shell = new AdminShell();
 
-        return (new AdminShell())->emailSettings($cfg);
+        return match ($desk) {
+            'email-settings' => $shell->emailSettings($cfg),
+            'whatsapp-settings' => $shell->whatsappSettings($cfg),
+            default => null,
+        };
     }
 }

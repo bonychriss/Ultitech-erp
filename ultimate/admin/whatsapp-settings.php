@@ -1,7 +1,7 @@
 <?php
 /**
  * Alias: /ultimate/admin/whatsapp-settings.php
- * ? parent admin/whatsapp-settings.php (group link + WhatsApp bot console).
+ * ? parent admin/whatsapp-settings.php (Laravel desk + React registration wizard).
  */
 if (empty($_GET['company_slug'])) {
     $_GET['company_slug'] = 'ultimate';

@@ -5,8 +5,6 @@ import {
   ArrowLeft,
   ArrowUpCircle,
   Boxes,
-  FileDown,
-  FileSpreadsheet,
   Inbox,
   Loader2,
   Search,
@@ -17,6 +15,7 @@ import MovementsList from './components/MovementsList';
 import MovementDetail from './components/MovementDetail';
 import StoreOutgoingForm from './components/StoreOutgoingForm';
 import StoreReceiveForm from './components/StoreReceiveForm';
+import ExportMenu from './components/ExportMenu';
 import ExportPdfModal, { type ExportPdfRange } from './components/ExportPdfModal';
 import WarningConfirmPopup from './components/WarningConfirmPopup';
 import { deleteWarehouseMovement, fetchInit, fetchMovements, fetchProducts } from './api';
@@ -189,11 +188,37 @@ export default function App() {
   };
 
   const handleExportExcel = async () => {
-    if (!selectedWarehouse) return;
+    if (!selectedWarehouse || !warehouseId) {
+      setError('Select a warehouse before exporting.');
+      return;
+    }
+
     setExportingExcel(true);
     setError(null);
     try {
-      await exportMovementsExcel(listedMovements, selectedWarehouse.name);
+      let rows = listedMovements;
+      if (rows.length === 0) {
+        const { movements: exportRows } = await fetchMovements(warehouseId, {
+          search: searchTerm.trim() || undefined,
+          type: movementFilter === 'all' ? undefined : movementFilter,
+        });
+        rows = exportRows
+          .filter((m) => m.movementType === 'in' || m.movementType === 'out')
+          .map((m) => ({
+            ...m,
+            imageUrl: m.imageUrl || products.find((p) => p.id === m.productId)?.imageUrl || '',
+          }));
+      }
+
+      if (rows.length === 0) {
+        setError('No results to export as Excel.');
+        return;
+      }
+
+      await exportMovementsExcel(
+        rows,
+        selectedWarehouse.name || selectedWarehouse.code || 'warehouse'
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to export Excel');
     } finally {
@@ -458,26 +483,16 @@ export default function App() {
                 <X size={12} aria-hidden="true" />
               </button>
             )}
-            <button
-              type="button"
-              className="sms-desk-btn sms-desk-btn-secondary sms-desk-btn-sm sms-btn-rounded"
-              onClick={handleExportExcel}
-              disabled={exportingExcel || loadingMovements || listedMovements.length === 0}
-              title="Export results as Excel"
-            >
-              {exportingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
-              <span>Export Excel</span>
-            </button>
-            <button
-              type="button"
-              className="sms-desk-btn sms-desk-btn-secondary sms-desk-btn-sm sms-btn-rounded"
-              onClick={openExportPdf}
-              disabled={exportingPdf || loadingMovements}
-              title="Export results as PDF"
-            >
-              {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
-              <span>Export PDF</span>
-            </button>
+            <ExportMenu
+              exportingExcel={exportingExcel}
+              exportingPdf={exportingPdf}
+              excelDisabled={loadingMovements}
+              pdfDisabled={loadingMovements}
+              onExportExcel={() => {
+                void handleExportExcel();
+              }}
+              onExportPdf={openExportPdf}
+            />
           </div>
         </div>
 

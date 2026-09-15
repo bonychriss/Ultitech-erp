@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { fetchInit } from '../api';
 import type { DashboardInit, InsightItem } from '../types';
+import { navigateLdView } from '../nav';
 
 Chart.register(
   LineController,
@@ -294,40 +295,66 @@ export default function DashboardPage() {
       </div>
 
       <div className="ld-kpi-grid">
-        <div className="ld-kpi-card">
+        <button
+          type="button"
+          className="ld-kpi-card ld-kpi-card--clickable"
+          onClick={() => navigateLdView({ name: 'liquidity' })}
+          title="Open Total Liquidity details"
+        >
           <div className="ld-kpi-icon bg-blue-50 text-blue-600">
             <Shield className="w-5 h-5" />
           </div>
           <div className="ld-kpi-value">{kpis.totalLiquidityDisplay}</div>
           <div className="ld-kpi-label">Total Liquidity</div>
           <div className="ld-kpi-sub">
-            {kpis.accountCount} active account{kpis.accountCount === 1 ? '' : 's'}
+            {kpis.accountCount} active account{kpis.accountCount === 1 ? '' : 's'} - Click for details
           </div>
-        </div>
-        <div className="ld-kpi-card">
+        </button>
+        <button
+          type="button"
+          className="ld-kpi-card ld-kpi-card--clickable"
+          onClick={() => navigateLdView({ name: 'liquidity', bucket: 'cash' })}
+          title="Open Cash on Hand details"
+        >
           <div className="ld-kpi-icon bg-green-50 text-green-600">
             <Banknote className="w-5 h-5" />
           </div>
           <div className="ld-kpi-value">{kpis.cashTotalDisplay}</div>
           <div className="ld-kpi-label">Cash on Hand</div>
-          <div className="ld-kpi-sub">{kpis.hasCash ? 'Physical cash' : 'No cash accounts'}</div>
-        </div>
-        <div className="ld-kpi-card">
+          <div className="ld-kpi-sub">
+            {kpis.hasCash ? 'Physical cash - Click for details' : 'No cash accounts'}
+          </div>
+        </button>
+        <button
+          type="button"
+          className="ld-kpi-card ld-kpi-card--clickable"
+          onClick={() => navigateLdView({ name: 'liquidity', bucket: 'bank' })}
+          title="Open Bank Accounts details"
+        >
           <div className="ld-kpi-icon bg-indigo-50 text-indigo-600">
             <Landmark className="w-5 h-5" />
           </div>
           <div className="ld-kpi-value">{kpis.bankTotalDisplay}</div>
           <div className="ld-kpi-label">Bank Accounts</div>
-          <div className="ld-kpi-sub">{kpis.hasBank ? 'Bank balances' : 'No bank accounts'}</div>
-        </div>
-        <div className="ld-kpi-card">
+          <div className="ld-kpi-sub">
+            {kpis.hasBank ? 'Bank balances - Click for details' : 'No bank accounts'}
+          </div>
+        </button>
+        <button
+          type="button"
+          className="ld-kpi-card ld-kpi-card--clickable"
+          onClick={() => navigateLdView({ name: 'liquidity', bucket: 'mobile' })}
+          title="Open Mobile Money details"
+        >
           <div className="ld-kpi-icon bg-violet-50 text-violet-600">
             <Smartphone className="w-5 h-5" />
           </div>
           <div className={`ld-kpi-value${kpis.mobileTotal < 0 ? ' is-neg' : ''}`}>{kpis.mobileTotalDisplay}</div>
           <div className="ld-kpi-label">Mobile Money</div>
-          <div className="ld-kpi-sub">{kpis.hasMobile ? 'Mobile wallets' : 'No mobile accounts'}</div>
-        </div>
+          <div className="ld-kpi-sub">
+            {kpis.hasMobile ? 'Mobile wallets - Click for details' : 'No mobile accounts'}
+          </div>
+        </button>
       </div>
 
       <div className="ld-grid">
@@ -429,7 +456,7 @@ export default function DashboardPage() {
                     {extraInsights.map((item, index) => (
                       <InsightMsg key={`ai-${index}`} item={item} />
                     ))}
-                    {extraLoading && <div className="ld-insights-note">Analyzing payments and liquidityù</div>}
+                    {extraLoading && <div className="ld-insights-note">Analyzing payments and liquidity...</div>}
                   </div>
                 )}
                 {hiddenCount > 0 && (

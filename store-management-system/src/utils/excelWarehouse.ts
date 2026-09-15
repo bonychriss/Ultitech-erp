@@ -1,4 +1,5 @@
 import type { PendingReceipt, Product, StockMovement } from '../types';
+import * as XLSX from 'xlsx';
 
 type SheetRow = Record<string, string | number>;
 
@@ -11,13 +12,16 @@ function cellValue(value: unknown): string {
   return String(value).trim();
 }
 
+/** No-op warm helper (xlsx is bundled statically now). */
+export function preloadXlsx(): Promise<typeof XLSX> {
+  return Promise.resolve(XLSX);
+}
+
 export async function loadXlsx() {
-  const mod = await import('xlsx');
-  return mod.default ?? mod;
+  return XLSX;
 }
 
 export async function parseExcelFile(file: File): Promise<SheetRow[]> {
-  const XLSX = await loadXlsx();
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: 'array' });
   const sheetName = workbook.SheetNames[0];
@@ -33,18 +37,27 @@ export async function parseExcelFile(file: File): Promise<SheetRow[]> {
   });
 }
 
-async function writeWorkbook(filename: string, rows: Record<string, string | number>[], sheetName = 'Sheet1') {
-  const XLSX = await loadXlsx();
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  XLSX.writeFile(workbook, filename);
+function safeFilePart(value: string): string {
+  const cleaned = value
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^\.+|\.+$/g, '');
+  return cleaned || 'export';
 }
 
 function stamp(name: string): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${name}-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.xlsx`;
+  return `${safeFilePart(name)}-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.xlsx`;
+}
+
+function writeWorkbook(filename: string, rows: Record<string, string | number>[], sheetName = 'Sheet1') {
+  const worksheet = XLSX.utils.json_to_sheet(rows.length > 0 ? rows : [{ message: 'No rows' }]);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  XLSX.writeFile(workbook, filename);
 }
 
 export async function exportMovementsExcel(movements: StockMovement[], warehouseName: string) {
@@ -58,7 +71,7 @@ export async function exportMovementsExcel(movements: StockMovement[], warehouse
     notes: m.notes || '',
     reference: m.referenceType || '',
   }));
-  await writeWorkbook(stamp(`warehouse-movements-${warehouseName.replace(/\s+/g, '-')}`), rows, 'Movements');
+  writeWorkbook(stamp(`warehouse-movements-${warehouseName || 'warehouse'}`), rows, 'Movements');
 }
 
 export async function exportIncomingExcel(receipts: PendingReceipt[]) {
@@ -71,11 +84,11 @@ export async function exportIncomingExcel(receipts: PendingReceipt[]) {
     qty_verified: '',
     notes: '',
   }));
-  await writeWorkbook(stamp('incoming-verify'), rows, 'Incoming');
+  writeWorkbook(stamp('incoming-verify'), rows, 'Incoming');
 }
 
 export async function exportIncomingTemplate() {
-  await writeWorkbook('incoming-template.xlsx', [
+  writeWorkbook('incoming-template.xlsx', [
     {
       receipt_id: '123',
       product_sku: 'SKU-001',
@@ -89,7 +102,7 @@ export async function exportIncomingTemplate() {
 }
 
 export async function exportOutgoingTemplate() {
-  await writeWorkbook('outgoing-sample-template.xlsx', [
+  writeWorkbook('outgoing-sample-template.xlsx', [
     {
       product_sku: 'SKU-001',
       product_name: 'Example product',

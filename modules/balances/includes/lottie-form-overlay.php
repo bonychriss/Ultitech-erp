@@ -1,6 +1,6 @@
 <?php
 /**
- * Balances forms � same Lottie success overlay as Petty Cash (voucher-success.json).
+ * Balances forms - same Lottie success overlay as Petty Cash (voucher-success.json).
  */
 if (!isset($bal_lottie_flash_captured)) {
     $bal_lottie_flash_captured = true;

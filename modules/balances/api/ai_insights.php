@@ -105,7 +105,7 @@ try {
     $lines = preg_split('/\r\n|\r|\n/', $content) ?: [];
     $suggestions = [];
     foreach ($lines as $line) {
-        $line = trim(preg_replace('/^[\-\*�\d\.\)\s]+/', '', $line));
+        $line = trim(preg_replace('/^[\-\*\x{2022}\d\.\)\s]+/u', '', $line));
         if ($line !== '') {
             $suggestions[] = $line;
         }

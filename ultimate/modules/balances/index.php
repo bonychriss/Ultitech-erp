@@ -1,6 +1,6 @@
 <?php
 /**
- * Liquidity Dashboard — React shell (balances).
+ * Liquidity Dashboard - React shell (balances).
  * modules/balances/index.php
  */
 require_once __DIR__ . '/liquidity-dashboard-ui/ld-lib.php';

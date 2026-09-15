@@ -548,7 +548,7 @@ include __DIR__ . '/includes/header.php';
                                         $ref .= ' #' . (int) $tx['reference_id'];
                                     }
                                     if ($ref === '') {
-                                        $ref = '�';
+                                        $ref = '-';
                                     }
                                 ?>
                                 <tr class="tx-row transition-colors font-light text-black">
@@ -560,7 +560,7 @@ include __DIR__ . '/includes/header.php';
                                             <span class="px-2 py-0.5 bg-red-100 text-red-700 text-[9px] font-medium rounded uppercase">Out</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="px-6 py-3.5 text-xs max-w-xs truncate" title="<?= htmlspecialchars((string) ($tx['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) ($tx['description'] ?? '�'), ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td class="px-6 py-3.5 text-xs max-w-xs truncate" title="<?= htmlspecialchars((string) ($tx['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) ($tx['description'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
                                     <td class="px-6 py-3.5 text-xs text-slate-500"><?= htmlspecialchars($ref, ENT_QUOTES, 'UTF-8') ?></td>
                                     <td class="px-6 py-3.5 text-right pr-8">
                                         <span class="text-sm font-normal <?= $isCredit ? 'text-green-600' : 'text-red-600' ?>">

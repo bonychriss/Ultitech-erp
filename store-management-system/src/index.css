@@ -1040,6 +1040,104 @@ html[data-theme="dark"] .sms-excel-page-title {
   padding-right: 0.75rem !important;
 }
 
+.sms-export-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sms-export-menu-trigger {
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  background: #fff;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.sms-export-menu-trigger:hover:not(:disabled),
+.sms-export-menu.is-open .sms-export-menu-trigger {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.sms-export-menu-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sms-export-menu-panel {
+  position: fixed;
+  z-index: 1400;
+  min-width: 10.5rem;
+  padding: 0.3rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+.sms-export-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.55rem 0.65rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sms-export-menu-item:hover:not(:disabled) {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.sms-export-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+html[data-theme="dark"] .sms-export-menu-trigger {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .sms-export-menu-trigger:hover:not(:disabled),
+html[data-theme="dark"] .sms-export-menu.is-open .sms-export-menu-trigger {
+  background: #334155;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .sms-export-menu-panel {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] .sms-export-menu-item {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .sms-export-menu-item:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.18);
+  color: #c7d2fe;
+}
+
 .sms-row-menu {
   position: relative;
   display: inline-flex;

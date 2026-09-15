@@ -803,6 +803,15 @@ export default function ProductsList({ data }) {
                           ) : null}
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontWeight: 600 }}>{product.category_name || 'N/A'}</div>
+                            <div
+                              className={`prod-desk-web-status${product.on_web ? ' is-on' : ' is-off'}`}
+                              title={product.on_web ? 'Listed on website' : 'Not on website'}
+                            >
+                              <span className="prod-desk-web-dot" aria-hidden="true" />
+                              <span className="prod-desk-web-label">
+                                {product.on_web ? '.web' : '.x'}
+                              </span>
+                            </div>
                             {!product.brand_logo_url ? (
                               <div className="prod-desk-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <HiOutlineTag size={11} aria-hidden="true" />

@@ -232,13 +232,19 @@ foreach ($rows as $row) {
     $brandLogoUrl = function_exists('stock_resolve_brand_logo_url')
         ? stock_resolve_brand_logo_url($pdo, $brandName, (string) ($categoryName ?? ''))
         : '';
+    $productName = (string) ($row['name'] ?? '');
+    $productCode = (string) ($row['product_code'] ?? '');
+    $onWeb = function_exists('stock_product_is_on_web')
+        ? stock_product_is_on_web((int) $row['id'], $productCode, $productName)
+        : false;
 
     $products[] = [
         'id' => (int) $row['id'],
-        'name' => (string) ($row['name'] ?? ''),
-        'product_code' => (string) ($row['product_code'] ?? ''),
+        'name' => $productName,
+        'product_code' => $productCode,
         'brand' => $brandName,
         'brand_logo_url' => $brandLogoUrl,
+        'on_web' => $onWeb,
         'currency' => (string) ($row['currency'] ?? 'USD'),
         'unit_price' => (float) ($row['unit_price'] ?? 0),
         'buying_price' => (float) ($row['buying_price'] ?? 0),

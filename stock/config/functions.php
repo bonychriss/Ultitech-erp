@@ -1465,6 +1465,155 @@ if (!function_exists('stock_resolve_brand_logo_url')) {
 }
 
 /**
+ * Normalize a product name/sku key for website matching.
+ */
+if (!function_exists('stock_web_match_key')) {
+    function stock_web_match_key($value)
+    {
+        $n = strtolower(trim(preg_replace('/\s+/', ' ', (string) $value) ?? ''));
+        $n = preg_replace('/[^a-z0-9]+/', '', $n) ?? $n;
+
+        return $n;
+    }
+}
+
+/**
+ * Index of products currently published on the Roadmaster website catalogue.
+ * Keys: id:<erpId>, sku:<sku>, name:<normalizedName>
+ *
+ * @return array{ids: array<int,true>, skus: array<string,true>, names: array<string,true>}
+ */
+if (!function_exists('stock_website_catalog_index')) {
+    function stock_website_catalog_index()
+    {
+        static $index = null;
+        if (is_array($index)) {
+            return $index;
+        }
+
+        $index = ['ids' => [], 'skus' => [], 'names' => []];
+        $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+        if ($slug !== '' && $slug !== 'roadmaster') {
+            return $index;
+        }
+
+        $candidates = [
+            dirname(__DIR__, 2) . '/../roadmasterspares/public_html/runtime/web-spare.json',
+            dirname(__DIR__, 2) . '/../roadmasterspares/public_html/runtime/web-truck.json',
+            'c:/xampp/htdocs/roadmasterspares/public_html/runtime/web-spare.json',
+            'c:/xampp/htdocs/roadmasterspares/public_html/runtime/web-truck.json',
+        ];
+        // Prefer tenant cache if present
+        $ctx = function_exists('stock_image_company_context')
+            ? stock_image_company_context()
+            : ['company_id' => 0];
+        $companyId = (int) ($ctx['company_id'] ?? 0);
+        if ($companyId > 0) {
+            array_unshift(
+                $candidates,
+                dirname(__DIR__, 2) . '/storage/tenant_' . $companyId . '/cache/web-spare.json',
+                dirname(__DIR__, 2) . '/storage/tenant_' . $companyId . '/cache/web-truck.json'
+            );
+        }
+
+        $files = [];
+        foreach ($candidates as $path) {
+            $path = str_replace('\\', '/', $path);
+            if (!is_file($path)) {
+                continue;
+            }
+            $base = basename($path);
+            if (!isset($files[$base])) {
+                $files[$base] = $path;
+            }
+        }
+
+        // Refresh from live site if cache missing/stale (>6h)
+        $runtimeDir = 'c:/xampp/htdocs/roadmasterspares/public_html/runtime';
+        if ($companyId > 0) {
+            $tenantCache = dirname(__DIR__, 2) . '/storage/tenant_' . $companyId . '/cache';
+            if (!is_dir($tenantCache)) {
+                @mkdir($tenantCache, 0775, true);
+            }
+            if (is_dir($tenantCache)) {
+                $runtimeDir = $tenantCache;
+            }
+        }
+        foreach (['spare', 'truck'] as $kind) {
+            $cacheFile = rtrim(str_replace('\\', '/', $runtimeDir), '/') . '/web-' . $kind . '.json';
+            $needsFetch = !is_file($cacheFile) || (time() - (int) @filemtime($cacheFile)) > 21600;
+            if ($needsFetch) {
+                $url = 'https://roadmasterspares.com/index.php/api/catalog?kind=' . $kind;
+                $raw = @file_get_contents($url);
+                if ($raw === false || $raw === '') {
+                    $tmp = sys_get_temp_dir() . '/rm_web_' . $kind . '.json';
+                    @exec('curl.exe -sS ' . escapeshellarg($url) . ' -o ' . escapeshellarg($tmp) . ' --max-time 60');
+                    if (is_file($tmp) && filesize($tmp) > 0) {
+                        $raw = (string) file_get_contents($tmp);
+                    }
+                }
+                if (is_string($raw) && $raw !== '') {
+                    @file_put_contents($cacheFile, $raw);
+                }
+            }
+            if (is_file($cacheFile)) {
+                $files['web-' . $kind . '.json'] = $cacheFile;
+            }
+        }
+
+        foreach ($files as $path) {
+            $json = json_decode((string) file_get_contents($path), true);
+            if (empty($json['products']) || !is_array($json['products'])) {
+                continue;
+            }
+            foreach ($json['products'] as $p) {
+                $id = (int) ($p['id'] ?? 0);
+                if ($id > 0) {
+                    $index['ids'][$id] = true;
+                }
+                $sku = strtolower(trim((string) ($p['sku'] ?? '')));
+                if ($sku !== '') {
+                    $index['skus'][$sku] = true;
+                }
+                $nameKey = stock_web_match_key((string) ($p['name'] ?? ''));
+                if ($nameKey !== '') {
+                    $index['names'][$nameKey] = true;
+                }
+            }
+        }
+
+        return $index;
+    }
+}
+
+/**
+ * Whether a stock product currently appears on the Roadmaster website.
+ */
+if (!function_exists('stock_product_is_on_web')) {
+    function stock_product_is_on_web($productId, $productCode = '', $productName = '')
+    {
+        $index = stock_website_catalog_index();
+        if ($index['ids'] === [] && $index['skus'] === [] && $index['names'] === []) {
+            return false;
+        }
+        $id = (int) $productId;
+        if ($id > 0 && isset($index['ids'][$id])) {
+            return true;
+        }
+        $sku = strtolower(trim((string) $productCode));
+        if ($sku !== '' && isset($index['skus'][$sku])) {
+            return true;
+        }
+        $nameKey = stock_web_match_key((string) $productName);
+        if ($nameKey !== '' && isset($index['names'][$nameKey])) {
+            return true;
+        }
+
+        return false;
+    }
+}
+
+/**
  * Public URL for a product image file (always under /stock/uploads/, not /{company}/stock/uploads/).
  */
 if (!function_exists('stock_product_image_url')) {

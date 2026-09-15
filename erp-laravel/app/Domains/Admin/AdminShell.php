@@ -129,6 +129,16 @@ final class AdminShell
         $head = whatsappSettingsUiShellHeadExtras() . "\n"
             . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">' . "\n"
             . '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n"
+            . '<style>
+body.page-whatsapp-settings,
+body.page-whatsapp-settings.dashboard,
+body.page-whatsapp-settings .layout-main-wrapper,
+body.page-whatsapp-settings .layout-main-wrapper > .flex-grow-1,
+body.page-whatsapp-settings .employee-header.employee-header--exp-desk,
+body.page-whatsapp-settings main.main-content.exp-desk-react-root {
+    background: #fff !important;
+}
+</style>' . "\n"
             . '<script>window.__WHATSAPP_SETTINGS_CFG__ = '
             . json_encode($windowCfg, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             . ';</script>';

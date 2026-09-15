@@ -21,9 +21,6 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     if (function_exists('erp_dark_theme_css_url')) {
         echo '<link rel="stylesheet" id="erp-dark-theme" href="' . htmlspecialchars(erp_dark_theme_css_url()) . '">' . "\n";
     }
-    if (function_exists('erp_get_theme_toggle_css_link_html')) {
-        echo erp_get_theme_toggle_css_link_html();
-    }
     if (function_exists('renderSystemFontHeadMarkup')) {
         renderSystemFontHeadMarkup();
     }

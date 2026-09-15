@@ -28,6 +28,17 @@
       btn.title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
       btn.classList.toggle('is-dark', isDark);
       btn.classList.toggle('is-light', !isDark);
+
+      var icon = btn.querySelector('i');
+      if (icon && !btn.classList.contains('theme-toggle-glass')) {
+        icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+      }
+
+      var label = btn.querySelector('.sidebar-text');
+      if (label) {
+        label.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+      }
+
       btn.classList.add('is-animating');
       global.setTimeout(function () {
         btn.classList.remove('is-animating');

@@ -8161,19 +8161,15 @@ function erp_get_theme_toggle_css_body_override_html(): string
     return "<style id=\"erp-theme-toggle-glass-final\">\n" . $css . "\n</style>\n";
 }
 
-/** Markup for the shared glass Light/Dark toggle. */
+/** Markup for the shared classic Light/Dark theme toggle. */
 function erp_render_theme_toggle_html(string $extraClass = '', string $id = 'themeToggleBtn'): string
 {
     $themeToggleExtraClass = $extraClass;
     $themeToggleId = $id;
-    // Prefer external stylesheet; always also emit once-only inline CSS so the
-    // pill/bubble styles apply even when &lt;head&gt; never linked the file.
-    $prefix = erp_get_theme_toggle_css_link_html()
-        . erp_get_theme_toggle_css_body_override_html();
     ob_start();
     require __DIR__ . '/partials/theme_toggle.php';
 
-    return $prefix . (string) ob_get_clean();
+    return (string) ob_get_clean();
 }
 
 /** Inline script: apply saved theme before first paint (prevents flash). */
@@ -8193,7 +8189,6 @@ function erp_get_dark_theme_head_html(): string
 
     $html = '<link rel="stylesheet" id="erp-dark-theme" href="'
         . htmlspecialchars(erp_dark_theme_css_url(), ENT_QUOTES, 'UTF-8') . '">' . "\n";
-    $html .= erp_get_theme_toggle_css_link_html();
 
     return $html;
 }
@@ -8316,12 +8311,6 @@ function erp_inject_system_font_into_html_buffer(string $buffer): string
         }
         if (stripos($buffer, 'id="erp-dark-theme"') === false) {
             $headMarkup .= erp_get_dark_theme_head_html();
-        }
-        // Glass toggle CSS must load even when dark-theme was already linked by headers.
-        if (stripos($buffer, 'id="erp-theme-toggle-glass"') === false
-            && stripos($buffer, 'theme-toggle-glass.css') === false
-        ) {
-            $headMarkup .= erp_get_theme_toggle_css_link_html();
         }
         // System-wide one-step-back (skip if page already included it).
         if (stripos($buffer, 'nav-back.js') === false && stripos($buffer, 'erpNavBack') === false) {

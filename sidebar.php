@@ -1743,46 +1743,51 @@ if (!isset($_GET['print'])) {
         margin-bottom: 0.25rem;
     }
 
+    #native-sidebar .sidebar-theme-toggle.theme-toggle-btn,
     #native-sidebar .sidebar-theme-toggle:not(.theme-toggle-glass) {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.55rem 1rem;
-        color: inherit;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0.55rem 1rem !important;
+        border-radius: 0.375rem !important;
+        color: inherit !important;
         font-weight: 500;
         font-size: 0.95rem;
         cursor: pointer;
+        box-sizing: border-box !important;
+        transform: none !important;
     }
 
-    #native-sidebar .sidebar-theme-toggle.theme-toggle-glass {
-        display: inline-flex !important;
-        width: 112px !important;
-        min-width: 112px !important;
-        height: 46px !important;
-        margin: 0.35rem 0.85rem;
-        padding: 0 !important;
-        gap: 0;
-        opacity: 1;
-    }
-
+    #native-sidebar .sidebar-theme-toggle.theme-toggle-btn:hover,
     #native-sidebar .sidebar-theme-toggle:not(.theme-toggle-glass):hover,
     #native-sidebar .sidebar-notif-trigger:hover {
         opacity: 0.85;
+        transform: none !important;
+        background: transparent !important;
     }
 
+    #native-sidebar .sidebar-theme-toggle.theme-toggle-btn i,
     #native-sidebar .sidebar-theme-toggle:not(.theme-toggle-glass) i {
-        width: 1.25rem;
+        width: 1.25rem !important;
+        min-width: 1.25rem !important;
+        height: 1.25rem !important;
+        font-size: 1.1rem !important;
+        line-height: 1.25rem !important;
         text-align: center;
         flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
     body.sidebar-collapsed #native-sidebar .sidebar-theme-toggle .sidebar-text {
         display: none;
-    }
-
-    body.sidebar-collapsed #native-sidebar .sidebar-theme-toggle.theme-toggle-glass {
-        margin-left: auto;
-        margin-right: auto;
     }
 
     /* Mobile: move Logout under Appearance */

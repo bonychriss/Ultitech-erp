@@ -27,8 +27,13 @@ $catList = $pdo->query('SELECT id, name FROM categories ORDER BY name')->fetchAl
 $supList = $pdo->query('SELECT id, name FROM suppliers ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
 $brandList = [];
 try {
-    $brandList = $pdo->query('SELECT id, name FROM brands ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+    $brandList = $pdo->query('SELECT id, name, logo FROM brands ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
+    try {
+        $brandList = $pdo->query('SELECT id, name FROM brands ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e2) {
+        $brandList = [];
+    }
 }
 
 $dupSql = "SELECT product_code, name, COUNT(*) AS cnt
@@ -222,11 +227,18 @@ foreach ($rows as $row) {
     }
     $isCreated = $createdId > 0 && (int) $row['id'] === $createdId;
 
+    $brandName = (string) ($row['brand'] ?? '');
+    $categoryName = $row['category_name'] ?? null;
+    $brandLogoUrl = function_exists('stock_resolve_brand_logo_url')
+        ? stock_resolve_brand_logo_url($pdo, $brandName, (string) ($categoryName ?? ''))
+        : '';
+
     $products[] = [
         'id' => (int) $row['id'],
         'name' => (string) ($row['name'] ?? ''),
         'product_code' => (string) ($row['product_code'] ?? ''),
-        'brand' => (string) ($row['brand'] ?? ''),
+        'brand' => $brandName,
+        'brand_logo_url' => $brandLogoUrl,
         'currency' => (string) ($row['currency'] ?? 'USD'),
         'unit_price' => (float) ($row['unit_price'] ?? 0),
         'buying_price' => (float) ($row['buying_price'] ?? 0),
@@ -234,7 +246,7 @@ foreach ($rows as $row) {
         'item_type' => (string) ($row['item_type'] ?? 'general'),
         'main_image' => $filename,
         'image_url' => $imageUrl,
-        'category_name' => $row['category_name'] ?? null,
+        'category_name' => $categoryName,
         'supplier_name' => $row['supplier_name'] ?? null,
         'quantity' => $qty,
         'location' => $row['location'] ?? null,
@@ -421,9 +433,14 @@ html[data-theme="dark"] body.page-products-desk .employee-header--products-desk 
                     return ['id' => (int) $s['id'], 'name' => (string) $s['name']];
                 }, $supList),
                 'brands' => array_map(static function ($b) {
+                    $logo = trim((string) ($b['logo'] ?? ''));
+                    $logoUrl = ($logo !== '' && function_exists('stock_brand_image_url'))
+                        ? stock_brand_image_url($logo)
+                        : '';
                     return [
                         'id' => isset($b['id']) ? (int) $b['id'] : 0,
                         'name' => (string) ($b['name'] ?? ''),
+                        'logo_url' => $logoUrl,
                     ];
                 }, $brandList),
                 'hasItemType' => $hasItemType,

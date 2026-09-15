@@ -792,10 +792,26 @@ export default function ProductsList({ data }) {
                         </td>
                       )}
                       <td>
-                        <div style={{ fontWeight: 600 }}>{product.category_name || 'N/A'}</div>
-                        <div className="prod-desk-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <HiOutlineTag size={11} aria-hidden="true" />
-                          {brandName}
+                        <div className="prod-desk-brand-cell">
+                          {product.brand_logo_url ? (
+                            <ProductThumb
+                              src={product.brand_logo_url}
+                              className="prod-desk-brand-logo"
+                              size={12}
+                              alt={brandName}
+                            />
+                          ) : null}
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 600 }}>{product.category_name || 'N/A'}</div>
+                            {!product.brand_logo_url ? (
+                              <div className="prod-desk-muted" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <HiOutlineTag size={11} aria-hidden="true" />
+                                {brandName}
+                              </div>
+                            ) : brandName !== 'No Brand' ? (
+                              <div className="prod-desk-muted">{brandName}</div>
+                            ) : null}
+                          </div>
                         </div>
                       </td>
                       <td>

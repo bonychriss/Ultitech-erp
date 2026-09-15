@@ -608,6 +608,46 @@
   min-width: 0;
 }
 
+.prod-desk-brand-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.prod-desk-brand-logo {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #94a3b8;
+  position: relative;
+}
+
+.prod-desk-brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 0.2rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.prod-desk-brand-logo img.is-visible,
+.prod-desk-brand-logo.is-loaded img {
+  opacity: 1;
+}
+
+.prod-desk-brand-logo.is-empty {
+  background: #f8fafc;
+}
+
 .prod-desk-thumb {
   width: 2.35rem;
   height: 2.35rem;

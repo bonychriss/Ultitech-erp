@@ -1386,6 +1386,85 @@ if (!function_exists('stock_brand_image_url')) {
 }
 
 /**
+ * Map lowercase brand names (and aliases) to public logo URLs from the brands table.
+ *
+ * @return array<string, string>
+ */
+if (!function_exists('stock_brands_logo_map')) {
+    function stock_brands_logo_map(PDO $pdo)
+    {
+        static $cache = null;
+        if (is_array($cache)) {
+            return $cache;
+        }
+        $cache = [];
+        try {
+            $rows = $pdo->query('SELECT name, logo FROM brands')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            return $cache;
+        }
+        foreach ($rows as $row) {
+            $name = strtolower(trim((string) ($row['name'] ?? '')));
+            $logo = trim((string) ($row['logo'] ?? ''));
+            if ($name === '' || $logo === '') {
+                continue;
+            }
+            $url = function_exists('stock_brand_image_url') ? stock_brand_image_url($logo) : '';
+            if ($url === '') {
+                continue;
+            }
+            $cache[$name] = $url;
+        }
+        // Common aliases
+        if (isset($cache['howo']) && !isset($cache['sinotruk'])) {
+            $cache['sinotruk'] = $cache['howo'];
+        }
+        if (isset($cache['sinotruk']) && !isset($cache['howo'])) {
+            $cache['howo'] = $cache['sinotruk'];
+        }
+
+        return $cache;
+    }
+}
+
+/**
+ * Resolve a brand logo URL for a product brand / category name.
+ */
+if (!function_exists('stock_resolve_brand_logo_url')) {
+    function stock_resolve_brand_logo_url(PDO $pdo, $brand, $categoryName = '')
+    {
+        $map = stock_brands_logo_map($pdo);
+        if ($map === []) {
+            return '';
+        }
+        $candidates = [
+            strtolower(trim((string) $brand)),
+            strtolower(trim((string) $categoryName)),
+        ];
+        foreach ($candidates as $key) {
+            if ($key === '') {
+                continue;
+            }
+            if (isset($map[$key])) {
+                return $map[$key];
+            }
+            $compact = preg_replace('/[^a-z0-9]+/', '', $key) ?? $key;
+            if ($compact === '') {
+                continue;
+            }
+            foreach ($map as $name => $url) {
+                $nameCompact = preg_replace('/[^a-z0-9]+/', '', $name) ?? $name;
+                if ($nameCompact !== '' && $compact === $nameCompact) {
+                    return $url;
+                }
+            }
+        }
+
+        return '';
+    }
+}
+
+/**
  * Public URL for a product image file (always under /stock/uploads/, not /{company}/stock/uploads/).
  */
 if (!function_exists('stock_product_image_url')) {

@@ -1,0 +1,8 @@
+# Place this file in public_html/staff/mail/ (project root on the server)
+DirectoryIndex index.php
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^$ frontend/web/ [R=302,L]
+</IfModule>

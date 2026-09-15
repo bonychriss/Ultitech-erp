@@ -199,8 +199,8 @@ function adminSettingsUiHubCards(): array
         ],
         [
             'id' => 'whatsapp',
-            'title' => 'WhatsApp group',
-            'description' => 'WhatsApp link for voucher sharing and notifications.',
+            'title' => 'WhatsApp',
+            'description' => 'Messaging bot for customers/staff, plus voucher group link.',
             'href' => 'whatsapp-settings.php' . $qs,
             'accent' => '#128C7E',
             'icon' => 'whatsapp',

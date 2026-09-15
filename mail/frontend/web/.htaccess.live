@@ -1,0 +1,11 @@
+RewriteEngine On
+RewriteBase /staff/mail/frontend/web/
+
+# Pass Authorization headers if present
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Existing files/dirs (assets, debug-deploy.php) served directly
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [L]

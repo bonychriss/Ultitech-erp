@@ -129,16 +129,6 @@ final class AdminShell
         $head = whatsappSettingsUiShellHeadExtras() . "\n"
             . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">' . "\n"
             . '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n"
-            . '<style>
-body.page-whatsapp-settings,
-body.page-whatsapp-settings.dashboard,
-body.page-whatsapp-settings .layout-main-wrapper,
-body.page-whatsapp-settings .layout-main-wrapper > .flex-grow-1,
-body.page-whatsapp-settings .employee-header.employee-header--exp-desk,
-body.page-whatsapp-settings main.main-content.exp-desk-react-root {
-    background: #f9fafb !important;
-}
-</style>' . "\n"
             . '<script>window.__WHATSAPP_SETTINGS_CFG__ = '
             . json_encode($windowCfg, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             . ';</script>';
@@ -147,7 +137,27 @@ body.page-whatsapp-settings main.main-content.exp-desk-react-root {
             'pageTitle' => 'WhatsApp Configuration',
             'bodyClass' => 'page-exp-desk page-whatsapp-settings page-admin-laravel page-erp-laravel',
             'headMarkup' => $head,
-            'footerScripts' => '<script type="module" crossorigin src="'
+            'footerScripts' => '<style>
+body.page-whatsapp-settings,
+body.page-whatsapp-settings.dashboard,
+body.page-whatsapp-settings .layout-main-wrapper,
+body.page-whatsapp-settings .layout-main-wrapper > .flex-grow-1,
+body.page-whatsapp-settings .employee-header.employee-header--exp-desk,
+body.page-whatsapp-settings main.main-content,
+body.page-whatsapp-settings main.main-content.exp-desk-react-root,
+body.page-whatsapp-settings main.main-content.exp-desk-react-root #root {
+    background: #f9fafb !important;
+    background-color: #f9fafb !important;
+    box-shadow: none !important;
+}
+body.page-whatsapp-settings .wa-page,
+body.page-whatsapp-settings .wizard {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+}
+</style>
+<script type="module" crossorigin src="'
                 . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8')
                 . '"></script>',
             'employeeHeaderTitle' => 'WhatsApp Configuration',

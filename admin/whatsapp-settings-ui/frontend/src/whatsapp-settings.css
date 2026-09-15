@@ -3,7 +3,9 @@
   font-family: var(--erp-font-family, Inter, system-ui, sans-serif);
   max-width: 960px;
   margin: 0 auto;
-  background: transparent;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 .wa-loading {
@@ -65,9 +67,10 @@
 .wa-flash-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-weight: 600; }
 
 .wizard {
-  background: transparent;
-  border: none;
-  border-radius: 0;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   min-height: 0;
   padding: 0 4px 8px;
 }
@@ -421,11 +424,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border-radius: 8px;
-  padding: 7px 14px;
+  border-radius: 999px;
+  padding: 8px 18px;
   font: inherit;
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
 }
 .wizard-btn-prev {

@@ -84,6 +84,7 @@ return [
         'invoices',
         'orders',
         'quotations',
+        'quote-requests',
         'customers',
         'my-sales',
         'pricelist',

@@ -509,6 +509,7 @@ switch ($active_module) {
         addItem($menuItems, 'customer-statement', 'Customer Statement', 'file-text', $prefix . 'customer_statement/index.php?module=sales');
         // Add Customer hidden
         addItem($menuItems, 'create', 'Quotation', 'file-earmark-plus', $prefix . 'modules/sales/orders/create.php?module=sales');
+        addItem($menuItems, 'quote-requests', 'Quote requests', 'inbox', $prefix . 'sales/quote-requests?module=sales');
         addItem($menuItems, 'orders', 'Sales Orders', 'bag', $prefix . 'modules/sales/orders/index.php?module=sales');
         addItem($menuItems, 'invoices', 'Invoices', 'receipt', $prefix . 'modules/sales/invoices/index.php?module=sales');
         addItem($menuItems, 'sales-settings', 'Sales Settings', 'gear', $prefix . 'sales/settings?module=sales');

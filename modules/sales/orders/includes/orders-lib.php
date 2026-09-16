@@ -411,3 +411,50 @@ function salesQuotationsListRenderReactShell(): bool
     require dirname(__FILE__) . '/orders-react-shell.php';
     exit;
 }
+
+/**
+ * Render website quote requests React shell (same orders desk bundle / layout).
+ */
+function salesQuoteRequestsRenderReactShell(): void
+{
+    $assets = ordersDeskLoadReactAssets();
+    if ($assets === null) {
+        http_response_code(503);
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<!DOCTYPE html><html><head><title>Quote requests</title></head><body style="font-family:sans-serif;padding:2rem;">';
+        echo '<h1>Quote requests</h1>';
+        echo '<p>The React UI has not been built yet. Run <code>npm install</code> and <code>npm run build</code> inside <code>modules/sales/orders/frontend/</code>.</p>';
+        echo '</body></html>';
+        exit;
+    }
+
+    $page_title = 'Quote requests';
+    $employeeHeaderTitle = 'Quote requests';
+    $hideHeaderCompanyBranding = true;
+    $employeeHeaderExtraClass = 'employee-header--exp-desk';
+    $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+
+    $cfg = [
+        'module' => $module,
+        'engine' => 'Laravel + React',
+    ];
+
+    $initUrl = function_exists('sales_laravel_api_url')
+        ? sales_laravel_api_url('quote-requests', ['module' => $module])
+        : '';
+    if ($initUrl === '' && function_exists('app_url')) {
+        $initUrl = app_url('/modules/sales/quote-requests/api/init.php?module=' . rawurlencode($module));
+    }
+    if ($initUrl === '') {
+        $initUrl = '/modules/sales/quote-requests/api/init.php?module=' . rawurlencode($module);
+    }
+
+    $ordersHeadMarkup = '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') . '">'
+        . "\n" . '<script>window.__QUOTE_REQUESTS_API_BASE__ = ' . json_encode(dirname($initUrl), JSON_UNESCAPED_SLASHES) . ';'
+        . 'window.__QUOTE_REQUESTS_INIT_URL__ = ' . json_encode($initUrl, JSON_UNESCAPED_SLASHES) . ';'
+        . 'window.__QUOTE_REQUESTS_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';'
+        . 'window.__ORDERS_DESK_PAGE__ = ' . json_encode('quote_requests', JSON_UNESCAPED_SLASHES) . ';</script>';
+
+    require dirname(__FILE__) . '/orders-react-shell.php';
+    exit;
+}

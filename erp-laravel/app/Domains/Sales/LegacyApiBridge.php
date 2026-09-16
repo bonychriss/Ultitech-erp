@@ -22,6 +22,7 @@ final class LegacyApiBridge
         'pricelist' => 'modules/sales/pricelist/api/init.php',
         'settings' => 'modules/sales/settings/api/init.php',
         'quotations' => 'modules/sales/orders/api/init.php',
+        'quote-requests' => 'modules/sales/quote-requests/api/init.php',
         'create-init' => 'modules/sales/invoices/api/create-init.php',
         'create-quote' => 'modules/sales/invoices/api/create-quote.php',
         'create-invoice' => 'modules/sales/invoices/api/create-invoice.php',

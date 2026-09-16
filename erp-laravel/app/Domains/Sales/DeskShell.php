@@ -15,6 +15,7 @@ final class DeskShell
             'invoices',
             'orders',
             'quotations',
+            'quote-requests',
             'customers',
             'my-sales',
             'pricelist',
@@ -60,6 +61,7 @@ final class DeskShell
             'invoices' => $this->invoices(),
             'orders' => $this->orders(),
             'quotations' => $this->quotations(),
+            'quote-requests' => $this->quoteRequests(),
             'customers' => $this->customers(),
             'my-sales' => $this->mySales(),
             'pricelist' => $this->pricelist(),
@@ -278,6 +280,45 @@ final class DeskShell
             $assets,
             $script,
             ['sweetAlert' => true]
+        );
+    }
+
+    private function quoteRequests(): ?array
+    {
+        $lib = $this->root() . '/modules/sales/orders/includes/orders-lib.php';
+        if (!is_file($lib)) {
+            return null;
+        }
+        require_once $lib;
+        if (function_exists('ordersDeskBootstrap')) {
+            ordersDeskBootstrap();
+        }
+        if (!function_exists('ordersDeskLoadReactAssets')) {
+            return null;
+        }
+        $assets = ordersDeskLoadReactAssets();
+        if ($assets === null) {
+            return null;
+        }
+
+        $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+        $cfg = [
+            'module' => $module,
+            'engine' => 'erp-laravel Domains/Sales',
+        ];
+        $initUrl = function_exists('sales_laravel_api_url')
+            ? sales_laravel_api_url('quote-requests', ['module' => $module])
+            : '';
+
+        $script = 'window.__QUOTE_REQUESTS_INIT_URL__ = ' . json_encode($initUrl, JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__QUOTE_REQUESTS_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__ORDERS_DESK_PAGE__ = ' . json_encode('quote_requests', JSON_UNESCAPED_SLASHES) . ';';
+
+        return $this->pack(
+            'Quote requests',
+            $this->listBody('page-orders-desk'),
+            $assets,
+            $script
         );
     }
 

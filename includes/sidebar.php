@@ -250,9 +250,12 @@ switch ($active_module) {
         if (isRoadmaster()) {
             addItem($menuItems, 'create-truck', 'New Truck Quote', 'truck', $prefix . 'modules/sales/orders/create.php?module=sales&mode=new&type=truck');
             addItem($menuItems, 'create-spare', 'New Spare Quote', 'cogs', $prefix . 'modules/sales/orders/create.php?module=sales&mode=new&type=spare');
+            addItem($menuItems, 'quotations', 'Quotations', 'document-text', $prefix . 'sales/quotations?module=sales');
+            addItem($menuItems, 'quote-requests', 'Quote requests', 'inbox', $prefix . 'sales/quote-requests?module=sales');
             addItem($menuItems, 'orders', 'All Orders', 'shopping-bag', $prefix . 'modules/sales/orders/index.php?module=sales');
         } else {
             addItem($menuItems, 'create', 'Create Quote', 'document-text', $prefix . 'modules/sales/orders/create.php?module=sales');
+            addItem($menuItems, 'quote-requests', 'Quote requests', 'inbox', $prefix . 'sales/quote-requests?module=sales');
             addItem($menuItems, 'orders', 'Sales Orders', 'shopping-bag', $prefix . 'modules/sales/orders/index.php?module=sales');
         }
 

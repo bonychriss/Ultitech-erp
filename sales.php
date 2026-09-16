@@ -61,6 +61,7 @@ $salesDeskEntries = [
     'pricelist' => __DIR__ . '/modules/sales/pricelist.php',
     'settings' => __DIR__ . '/modules/sales/settings/index.php',
     'quotations' => __DIR__ . '/modules/sales/orders/create.php',
+    'quote-requests' => __DIR__ . '/modules/sales/quote-requests/index.php',
     'quote-create' => __DIR__ . '/modules/sales/orders/create.php',
     'invoice-create' => __DIR__ . '/modules/sales/invoices/create.php',
     'order-view' => __DIR__ . '/modules/sales/orders/view.php',

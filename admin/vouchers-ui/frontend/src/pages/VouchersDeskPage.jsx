@@ -26,6 +26,9 @@ import {
   toggleReference,
 } from '../api/vouchers.js'
 import PaymentModal from '../components/PaymentModal.jsx'
+import ExportMenu from '../components/ExportMenu.jsx'
+import ExportRangeModal from '../components/ExportRangeModal.jsx'
+import { exportVouchersExcel, exportVouchersPdf } from '../utils/exportVouchers.js'
 
 const MODULE = getModule()
 const APPEND_MODULE = MODULE ? `&module=${encodeURIComponent(MODULE)}` : ''
@@ -148,9 +151,10 @@ function formatFilterDateLabel(value) {
 function statusBadgeClass(voucher) {
   if (voucher.is_posted) return 'pv-badge pv-badge--posted'
   if (voucher.is_paid) return 'pv-badge pv-badge--paid'
-  const s = String(voucher.derived_status || '').toLowerCase()
+  const s = String(voucher.display_status_key || voucher.derived_status || '').toLowerCase()
   if (s === 'approved') return 'pv-badge pv-badge--approved'
   if (s === 'rejected') return 'pv-badge pv-badge--rejected'
+  if (s === 'signed') return 'pv-badge pv-badge--signed'
   if (s === 'confirming') return 'pv-badge pv-badge--confirming'
   if (s === 'draft') return 'pv-badge pv-badge--draft'
   return 'pv-badge pv-badge--pending'
@@ -438,6 +442,11 @@ export default function VouchersDeskPage() {
   const [openMenuId, setOpenMenuId] = useState(null)
   const [headerSearchSlot, setHeaderSearchSlot] = useState(null)
   const [filterSlot, setFilterSlot] = useState(null)
+  const [exportingExcel, setExportingExcel] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [exportFormat, setExportFormat] = useState('pdf')
+  const [exportModalError, setExportModalError] = useState(null)
 
   useLayoutEffect(() => {
     if (!MOUNT_SEARCH_IN_HEADER) return undefined
@@ -704,6 +713,69 @@ export default function VouchersDeskPage() {
   function gotoPage(page) {
     setFilters((cur) => ({ ...cur, page }))
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  async function fetchVouchersForExport(range) {
+    const base = {
+      search: filters.search || '',
+      status: filters.status || '',
+      prefix: filters.prefix,
+      sort: filters.sort || 'newest',
+      from_date: range.allTime ? '' : (range.startDate || ''),
+      to_date: range.allTime ? '' : (range.endDate || ''),
+      per_page: 500,
+    }
+    const all = []
+    let page = 1
+    let totalPages = 1
+    do {
+      const data = await fetchVouchers({ ...base, page })
+      const rows = Array.isArray(data.vouchers) ? data.vouchers : []
+      all.push(...rows)
+      totalPages = Math.max(1, Number(data.pagination?.total_pages || 1))
+      page += 1
+    } while (page <= totalPages)
+    return all
+  }
+
+  function openExportModal(format) {
+    setExportFormat(format)
+    setExportModalError(null)
+    setExportModalOpen(true)
+  }
+
+  function closeExportModal() {
+    if (exportingExcel || exportingPdf) return
+    setExportModalOpen(false)
+    setExportModalError(null)
+  }
+
+  async function handleExportRange(range) {
+    const isExcel = exportFormat === 'excel'
+    const setBusy = isExcel ? setExportingExcel : setExportingPdf
+    setBusy(true)
+    setExportModalError(null)
+    setError('')
+    try {
+      const rows = await fetchVouchersForExport(range)
+      if (isExcel) {
+        await exportVouchersExcel(rows)
+      } else {
+        const subtitle = range.allTime
+          ? 'All time'
+          : `${range.startDate} to ${range.endDate}`
+        await exportVouchersPdf(rows, { title: 'Vouchers report', subtitle })
+      }
+      setExportModalOpen(false)
+    } catch (err) {
+      setExportModalError(
+        err instanceof Error
+          ? err.message
+          : (isExcel ? 'Failed to export Excel' : 'Failed to export PDF report'),
+      )
+    } finally {
+      setBusy(false)
+    }
   }
 
   function goView(id) {
@@ -1065,6 +1137,17 @@ export default function VouchersDeskPage() {
       )}
 
       <div className="pv-card">
+        <div className="pv-card-head">
+          <span className="pv-card-title">{FEAT.pageTitle}</span>
+          <ExportMenu
+            exportingExcel={exportingExcel}
+            exportingPdf={exportingPdf}
+            excelDisabled={loading}
+            pdfDisabled={loading}
+            onExportExcel={() => openExportModal('excel')}
+            onExportPdf={() => openExportModal('pdf')}
+          />
+        </div>
         {flash && <div className="pv-flash pv-flash-success" role="status">{flash}</div>}
         {error && <div className="pv-flash pv-flash-error" role="alert">{error}</div>}
 
@@ -1224,6 +1307,15 @@ export default function VouchersDeskPage() {
           </>
         )}
       </div>
+
+      <ExportRangeModal
+        open={exportModalOpen}
+        format={exportFormat}
+        exporting={exportFormat === 'excel' ? exportingExcel : exportingPdf}
+        error={exportModalError}
+        onClose={closeExportModal}
+        onExport={handleExportRange}
+      />
     </div>
   )
 }

@@ -174,7 +174,10 @@ $createHref = htmlspecialchars($employeeBase . '/create-voucher.php?module=' . r
 $employeeHeaderCenterHtml = '<div class="ad-header-toolbar">'
     . '<a href="' . $reportsHref . '" class="ad-chip-btn ad-chip-btn--ghost">'
     . '<span class="ad-chip-dollar" aria-hidden="true">$</span> Reports</a>'
+    . '<div class="ad-search-with-filter">'
     . '<div id="ed-dashboard-search-slot" class="ed-dashboard-search-slot"></div>'
+    . '<div id="pv-filter-slot" class="pv-filter-slot pv-filter-slot--beside-search"></div>'
+    . '</div>'
     . '<div class="ad-header-actions">'
     . '<a href="' . $userManualHref . '" class="ad-chip-btn ad-chip-btn--ghost ad-chip-btn--icon" title="User Guide" aria-label="User Guide">'
     . '<i class="fas fa-book-open" aria-hidden="true"></i></a>'
@@ -183,7 +186,7 @@ $employeeHeaderCenterHtml = '<div class="ad-header-toolbar">'
     . '</div>'
     . '</div>';
 
-$employeeHeaderAfterThemeHtml = '<div id="pv-filter-slot" class="pv-filter-slot pv-filter-slot--tray"></div>';
+$employeeHeaderAfterThemeHtml = null;
 $employeeHeaderRightHtml = null;
 ?>
 <!DOCTYPE html>
@@ -301,12 +304,20 @@ $employeeHeaderRightHtml = null;
             width: 100%;
             min-width: 0;
         }
-        body.dashboard .ed-dashboard-search-slot {
+        body.dashboard .ad-search-with-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             flex: 1 1 auto;
             min-width: 180px;
-            max-width: 480px;
+            max-width: 528px;
         }
-        body.dashboard .pv-filter-slot--tray {
+        body.dashboard .ed-dashboard-search-slot {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: none;
+        }
+        body.dashboard .pv-filter-slot--beside-search {
             flex: 0 0 auto;
             display: flex;
             align-items: center;
@@ -421,7 +432,7 @@ $employeeHeaderRightHtml = null;
         }
         body.dashboard .ed-dashboard-search-slot .pv-suggestions { z-index: 50; }
         body.dashboard .pv-filter-slot .pv-filter-btn,
-        body.dashboard .pv-filter-slot--tray .pv-filter-btn {
+        body.dashboard .pv-filter-slot--beside-search .pv-filter-btn {
             width: 36px !important;
             height: 36px !important;
             min-width: 36px !important;
@@ -439,8 +450,8 @@ $employeeHeaderRightHtml = null;
         }
         body.dashboard .pv-filter-slot .pv-filter-btn.is-active,
         body.dashboard .pv-filter-slot .pv-filter-btn:hover,
-        body.dashboard .pv-filter-slot--tray .pv-filter-btn.is-active,
-        body.dashboard .pv-filter-slot--tray .pv-filter-btn:hover {
+        body.dashboard .pv-filter-slot--beside-search .pv-filter-btn.is-active,
+        body.dashboard .pv-filter-slot--beside-search .pv-filter-btn:hover {
             background: #f8fafc !important;
             color: #111827 !important;
             border-color: #cbd5e1 !important;
@@ -485,7 +496,7 @@ $employeeHeaderRightHtml = null;
             color: #f8fafc !important;
         }
         html[data-theme="dark"] body.dashboard .pv-filter-slot .pv-filter-btn,
-        html[data-theme="dark"] body.dashboard .pv-filter-slot--tray .pv-filter-btn {
+        html[data-theme="dark"] body.dashboard .pv-filter-slot--beside-search .pv-filter-btn {
             background: #1e293b !important;
             border-color: #334155 !important;
             color: #e2e8f0 !important;
@@ -544,9 +555,14 @@ $employeeHeaderRightHtml = null;
                 flex-wrap: wrap;
                 gap: 8px;
             }
-            body.dashboard .ed-dashboard-search-slot {
+            body.dashboard .ad-search-with-filter {
                 order: 1;
                 flex: 1 1 100%;
+                max-width: none;
+                min-width: 0;
+            }
+            body.dashboard .ed-dashboard-search-slot {
+                flex: 1 1 auto;
                 max-width: none;
                 min-width: 0;
             }
@@ -567,7 +583,7 @@ $employeeHeaderRightHtml = null;
             body.dashboard .header.admin-header .header-right.header-actions-tray {
                 gap: 8px !important;
             }
-            body.dashboard .pv-filter-slot--tray .pv-filter-btn {
+            body.dashboard .pv-filter-slot--beside-search .pv-filter-btn {
                 width: 36px !important;
                 height: 36px !important;
             }

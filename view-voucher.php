@@ -24,18 +24,35 @@ if (isset($_GET['return']) && $_GET['return'] === 'finance') {
     $isFinanceMode = true;
 }
 
+/**
+ * Redirect back to this voucher after a POST action without dropping module/return
+ * query params (losing them creates a duplicate history entry and breaks Back).
+ */
+$vvRedirectToSelf = static function (array $extra = []) use ($voucher_id): void {
+    $params = $_GET;
+    $params['id'] = $voucher_id;
+    foreach ($extra as $key => $value) {
+        if ($value === null || $value === '') {
+            unset($params[$key]);
+        } else {
+            $params[$key] = $value;
+        }
+    }
+    $qs = http_build_query($params);
+    header('Location: view-voucher.php' . ($qs !== '' ? '?' . $qs : ''), true, 303);
+    exit();
+};
+
 // Handle Mark Posted action (Finance finalization) before fetching details
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_posted']) && (int) $_POST['mark_posted'] === 1) {
     $result = markVoucherPosted($voucher_id, $_SESSION['user_id']);
-    $params = [];
     if (!empty($result['ok'])) {
-        $params['posted'] = '1';
-    } else {
-        $params['post_error'] = isset($result['error']) ? $result['error'] : 'Unable to post voucher';
+        $vvRedirectToSelf(['posted' => '1', 'post_error' => null]);
     }
-    $redir = 'view-voucher.php?id=' . $voucher_id . '&' . http_build_query($params) . $returnParams;
-    header('Location: ' . $redir);
-    exit();
+    $vvRedirectToSelf([
+        'posted' => null,
+        'post_error' => isset($result['error']) ? $result['error'] : 'Unable to post voucher',
+    ]);
 }
 
 // Handle Admin Approve/Reject Shortcuts
@@ -49,8 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_action']) && is
 
     if ($action === 'approved' && $currStatus === 'confirming') {
         $_SESSION['error_msg'] = "You cannot 'Final Approve' a voucher while it is in 'Confirming' state.";
-        header('Location: view-voucher.php?id=' . $voucher_id . $returnParams);
-        exit();
+        $vvRedirectToSelf();
     }
 
     try {
@@ -104,8 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_action']) && is
         } catch (Exception $eN) { /* ignore */ }
 
         $_SESSION['success_msg'] = 'Voucher has been ' . $action . ' successfully.';
-        header('Location: view-voucher.php?id=' . $voucher_id . $returnParams);
-        exit();
+        $vvRedirectToSelf();
     } catch (Exception $ex) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
@@ -133,8 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_restricted']))
         $stmt->execute([$newState, $voucher_id]);
         $_SESSION['success_msg'] = $newState ? 'Voucher locked (restricted) successfully.' : 'Voucher unlocked (unrestricted) successfully.';
     }
-    header('Location: view-voucher.php?id=' . $voucher_id . $returnParams);
-    exit();
+    $vvRedirectToSelf();
 }
 
 require_once __DIR__ . '/view-voucher-ui/load-data.php';

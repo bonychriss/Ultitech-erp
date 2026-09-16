@@ -48,20 +48,42 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     $payeeRaw = trim((string) ($voucher['payee_name'] ?? ''));
     $isPlaceholderPayee = ($payeeRaw === '' || stripos($payeeRaw, '(draft') === 0);
     $isIncompleteCore = $isPlaceholderPayee || (float) ($voucher['total_amount'] ?? 0) <= 0 || count($items) === 0;
-    $isDraftDerived = ($statusLower === 'pending') && $isIncompleteCore;
+    $isDraftDerived = ($statusLower === 'pending' || $statusLower === 'confirming') && $isIncompleteCore;
     $blockFinanceForIncomplete = $isIncompleteCore;
 
-    $statusLabel = ucfirst($statusLower ?: 'pending');
-    if ($isPosted) {
-        $statusLabel = 'Posted';
-    } elseif ($isPaid) {
-        $statusLabel = 'Paid';
-    }
-    $statusClass = 'vv-status-' . preg_replace('/[^a-z0-9_-]/', '', $statusLower ?: 'pending');
-    if ($isPosted) {
-        $statusClass = 'vv-status-posted';
-    } elseif ($isPaid) {
-        $statusClass = 'vv-status-paid';
+    $statusResolved = function_exists('resolvePaymentVoucherDisplayStatus')
+        ? resolvePaymentVoucherDisplayStatus(
+            $pdo,
+            $voucher,
+            [
+                'user_id' => (int) ($_SESSION['user_id'] ?? 0),
+                'full_name' => (string) ($_SESSION['full_name'] ?? ''),
+            ],
+            null,
+            [
+                'item_count' => count($items),
+                'looks_draft' => $isDraftDerived,
+                'class_prefix' => 'vv-status-',
+            ]
+        )
+        : null;
+    if (is_array($statusResolved)) {
+        $statusLabel = (string) ($statusResolved['label'] ?? ucfirst($statusLower ?: 'pending'));
+        $statusClass = (string) ($statusResolved['className'] ?? ('vv-status-' . preg_replace('/[^a-z0-9_-]/', '', $statusLower ?: 'pending')));
+        $isDraftDerived = !empty($statusResolved['looks_draft']) || $isDraftDerived;
+    } else {
+        $statusLabel = ucfirst($statusLower ?: 'pending');
+        if ($isPosted) {
+            $statusLabel = 'Posted';
+        } elseif ($isPaid) {
+            $statusLabel = 'Paid';
+        }
+        $statusClass = 'vv-status-' . preg_replace('/[^a-z0-9_-]/', '', $statusLower ?: 'pending');
+        if ($isPosted) {
+            $statusClass = 'vv-status-posted';
+        } elseif ($isPaid) {
+            $statusClass = 'vv-status-paid';
+        }
     }
 
     // GM display + signature
@@ -504,6 +526,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             }, $comments),
             'status' => [
                 'label' => $statusLabel,
+                'key' => is_array($statusResolved) ? (string) ($statusResolved['key'] ?? $statusLower) : $statusLower,
                 'className' => $statusClass,
                 'isPaid' => $isPaid,
                 'isPosted' => $isPosted,

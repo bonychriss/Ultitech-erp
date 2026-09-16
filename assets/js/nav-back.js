@@ -141,6 +141,43 @@
     return norm(a) === norm(b);
   }
 
+  /** Same voucher/document even when module/return/flash query params differ. */
+  function isSameDocument(aHref, bHref) {
+    try {
+      var a = new URL(String(aHref || ''), global.location.href);
+      var b = new URL(String(bHref || ''), global.location.href);
+      if (!pathsCompatible(a.pathname, b.pathname)) return false;
+      if (a.search === b.search && a.hash === b.hash) return true;
+
+      var aId = a.searchParams.get('id');
+      var bId = b.searchParams.get('id');
+      if (!aId || !bId || String(aId) !== String(bId)) return false;
+
+      var path = a.pathname.toLowerCase().replace(/\/+$/, '');
+      if (/(^|\/)view-voucher(\.php)?$/.test(path)) return true;
+      if (/(^|\/)view-voucher(\.php)?$/.test(b.pathname.toLowerCase().replace(/\/+$/, ''))) return true;
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function pruneSameDocumentFromStack(href) {
+    var stack = readStack();
+    if (!stack.length) return;
+    var next = [];
+    for (var i = 0; i < stack.length; i++) {
+      var item = stack[i];
+      if (!item || !item.href) continue;
+      if (isSameDocument(item.href, href || global.location.href)) continue;
+      next.push(item);
+    }
+    if (next.length !== stack.length) {
+      writeStack(next);
+      refreshControl();
+    }
+  }
+
   function shouldSkipPage() {
     var body = global.document && global.document.body;
     if (!body) return false;
@@ -180,10 +217,9 @@
     var last = stack.length ? stack[stack.length - 1] : null;
     if (last) {
       try {
-        var lastUrl = new URL(last.href, global.location.href);
-        var nextUrl = new URL(item.href, global.location.href);
-        if (pathsCompatible(lastUrl.pathname, nextUrl.pathname) && lastUrl.search === nextUrl.search) {
-          // Upgrade/replace (e.g. auto-push then list push with search state).
+        if (isSameDocument(last.href, item.href)) {
+          // Upgrade/replace (e.g. auto-push then list push with search state,
+          // or same voucher with/without module=).
           stack[stack.length - 1] = item;
           writeStack(stack);
           refreshControl();
@@ -242,10 +278,10 @@
       item = pop();
       if (!item) break;
       if (item.href && isSafeReturnUrl(item.href)) {
-        // Never "return" to the page we are already on.
+        // Never "return" to the page/document we are already on
+        // (same view-voucher id with different module/flash query still counts).
         try {
-          if (pathsCompatible(new URL(item.href, global.location.href).pathname, global.location.pathname)
-            && new URL(item.href, global.location.href).search === global.location.search) {
+          if (isSameDocument(item.href, global.location.href)) {
             item = null;
             continue;
           }
@@ -424,6 +460,8 @@
     consumeRestore: consumeRestore,
     currentHref: currentHref,
     refreshControl: refreshControl,
+    pruneSameDocument: pruneSameDocumentFromStack,
+    isSameDocument: isSameDocument,
     isAuthUrl: isAuthUrl,
     isSafeReturnUrl: isSafeReturnUrl,
   };
@@ -440,6 +478,13 @@
     if (!global.document) return;
     // Drop any unsafe entries immediately (including after login).
     readStack();
+    // After approve/reject redirects, drop duplicate voucher entries so Back
+    // returns to the list on the first click.
+    try {
+      if (/(^|\/)view-voucher(\.php)?$/i.test(global.location.pathname.replace(/\/+$/, ''))) {
+        pruneSameDocumentFromStack(global.location.href);
+      }
+    } catch (ePrune) { /* ignore */ }
     global.document.addEventListener('click', onDocumentClick, true);
     if (global.document.readyState === 'loading') {
       global.document.addEventListener('DOMContentLoaded', refreshControl);

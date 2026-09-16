@@ -62,6 +62,7 @@ export async function fetchVouchers(query = {}) {
   if (query.to_date) params.set('to_date', query.to_date)
   if (query.sort) params.set('sort', query.sort)
   if (query.page) params.set('page', String(query.page))
+  if (query.per_page) params.set('per_page', String(query.per_page))
   if (query.prefix !== undefined && query.prefix !== null && query.prefix !== '') {
     params.set('prefix', query.prefix)
   }

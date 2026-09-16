@@ -471,6 +471,12 @@ body.dashboard.vv-mobile-view .voucher-container .vv-card {
     border: 1px solid #fed7aa;
 }
 
+.vv-status-signed {
+    background: #e0e7ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+}
+
 .vv-status-rejected {
     background: #fee2e2;
     color: #b91c1c;

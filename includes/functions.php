@@ -3016,6 +3016,194 @@ function voucherApprovalRoleIsApproved(PDO $pdo, $voucherId, $roleKey): bool
 }
 
 /**
+ * Batch-load which core approval roles are approved for many vouchers.
+ *
+ * @param list<int> $voucherIds
+ * @return array<int, array{applicant:bool,department manager:bool,checked by:bool}>
+ */
+function loadPaymentVoucherApprovalRoleFlagsBatch(PDO $pdo, array $voucherIds): array
+{
+    $out = array();
+    $ids = array_values(array_unique(array_filter(array_map('intval', $voucherIds), static function ($id) {
+        return $id > 0;
+    })));
+    foreach ($ids as $id) {
+        $out[$id] = array(
+            'applicant' => false,
+            'department manager' => false,
+            'checked by' => false,
+        );
+    }
+    if ($ids === [] || !($pdo instanceof PDO) || !erp_connection_has_table($pdo, 'approvals')) {
+        return $out;
+    }
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    try {
+        $st = $pdo->prepare("SELECT voucher_id, role, status FROM approvals WHERE voucher_id IN ($placeholders)");
+        $st->execute($ids);
+        while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
+            $vid = (int) ($row['voucher_id'] ?? 0);
+            if ($vid <= 0 || !isset($out[$vid])) {
+                continue;
+            }
+            if (strtolower(trim((string) ($row['status'] ?? ''))) !== 'approved') {
+                continue;
+            }
+            $roleKey = normalizeVoucherApprovalRoleKey($row['role'] ?? '');
+            if (isset($out[$vid][$roleKey])) {
+                $out[$vid][$roleKey] = true;
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('loadPaymentVoucherApprovalRoleFlagsBatch: ' . $e->getMessage());
+    }
+
+    return $out;
+}
+
+/**
+ * Resolve the viewer-facing Payment Voucher status label.
+ *
+ * Before Checked By completes, status is user-specific (Confirming vs Signed).
+ * After Checked By completes, status is global (Pending → Approved).
+ * Paid / Posted / Rejected / Draft overlays are preserved.
+ *
+ * Does NOT change payment_vouchers.status — display only.
+ *
+ * @param array<string,mixed> $voucher
+ * @param array{user_id?:int,full_name?:string} $viewer
+ * @param array{applicant?:bool,department manager?:bool,checked by?:bool}|null $roleApproved
+ * @param array{item_count?:int,looks_draft?:bool|null,class_prefix?:string} $opts
+ * @return array{label:string,key:string,derived_status:string,className:string,looks_draft:bool}
+ */
+function resolvePaymentVoucherDisplayStatus(PDO $pdo = null, array $voucher = array(), array $viewer = array(), $roleApproved = null, array $opts = array()): array
+{
+    $statusLower = strtolower(trim((string) ($voucher['status'] ?? '')));
+    if ($statusLower === '') {
+        $statusLower = 'confirming';
+    }
+    $isPaid = isset($voucher['is_paid']) && (int) $voucher['is_paid'] === 1;
+    $isPosted = isset($voucher['is_posted']) && (int) $voucher['is_posted'] === 1;
+
+    $itemCount = isset($opts['item_count'])
+        ? (int) $opts['item_count']
+        : (isset($voucher['item_count']) ? (int) $voucher['item_count'] : -1);
+    $payeeRaw = trim((string) ($voucher['payee_name'] ?? ''));
+    $isPlaceholderPayee = ($payeeRaw === '' || stripos($payeeRaw, '(draft') === 0);
+    $looksDraft = array_key_exists('looks_draft', $opts) && $opts['looks_draft'] !== null
+        ? (bool) $opts['looks_draft']
+        : (
+            !$isPaid && !$isPosted
+            && in_array($statusLower, array('pending', 'confirming'), true)
+            && (
+                $isPlaceholderPayee
+                || (float) ($voucher['total_amount'] ?? 0) <= 0
+                || ($itemCount >= 0 && $itemCount === 0)
+            )
+        );
+
+    $classPrefix = isset($opts['class_prefix']) ? (string) $opts['class_prefix'] : 'vv-status-';
+    $finish = static function ($label, $key, $derived, $looksDraftFlag) use ($classPrefix) {
+        $safeKey = preg_replace('/[^a-z0-9_-]/', '', strtolower((string) $key)) ?: 'pending';
+
+        return array(
+            'label' => (string) $label,
+            'key' => (string) $key,
+            'derived_status' => (string) $derived,
+            'className' => $classPrefix . $safeKey,
+            'looks_draft' => (bool) $looksDraftFlag,
+        );
+    };
+
+    if ($isPosted) {
+        return $finish('Posted', 'posted', $statusLower, false);
+    }
+    if ($isPaid) {
+        return $finish('Paid', 'paid', $statusLower, false);
+    }
+    if ($statusLower === 'rejected') {
+        return $finish('Rejected', 'rejected', 'rejected', false);
+    }
+    if ($statusLower === 'approved') {
+        return $finish('Approved', 'approved', 'approved', false);
+    }
+    if ($looksDraft) {
+        $draftKey = defined('STATUS_DRAFT') ? STATUS_DRAFT : 'draft';
+
+        return $finish('Draft', 'draft', $draftKey, true);
+    }
+
+    // Global Pending from DB — no need to inspect approval rows.
+    if ($statusLower === 'pending') {
+        return $finish('Pending', 'pending', 'pending', false);
+    }
+
+    $voucherId = (int) ($voucher['id'] ?? 0);
+    if (!is_array($roleApproved)) {
+        $roleApproved = array(
+            'applicant' => false,
+            'department manager' => false,
+            'checked by' => false,
+        );
+        if ($voucherId > 0 && $pdo instanceof PDO) {
+            $roleApproved['applicant'] = voucherApprovalRoleIsApproved($pdo, $voucherId, 'applicant');
+            $roleApproved['department manager'] = voucherApprovalRoleIsApproved($pdo, $voucherId, 'department manager');
+            $roleApproved['checked by'] = voucherApprovalRoleIsApproved($pdo, $voucherId, 'checked by');
+        }
+    } else {
+        $roleApproved = array(
+            'applicant' => !empty($roleApproved['applicant']),
+            'department manager' => !empty($roleApproved['department manager']),
+            'checked by' => !empty($roleApproved['checked by']),
+        );
+    }
+
+    $checkedByName = trim((string) ($voucher['checked_by'] ?? ''));
+    // Empty Checked By assignee: treat core completion as the global gate.
+    $checkedByDone = $checkedByName === ''
+        ? (
+            $pdo instanceof PDO
+            && $voucherId > 0
+            && function_exists('voucherCoreApprovalRolesComplete')
+            && voucherCoreApprovalRolesComplete($pdo, $voucherId, $voucher)
+        )
+        : !empty($roleApproved['checked by']);
+
+    // Global phase: after Checked By everyone sees Pending (even if DB still saying confirming).
+    if ($checkedByDone) {
+        return $finish('Pending', 'pending', 'pending', false);
+    }
+
+    // Pre-Checked-By phase: user-specific Signed vs Confirming.
+    $viewerId = (int) ($viewer['user_id'] ?? ($viewer['id'] ?? 0));
+    if ($viewerId <= 0 && isset($_SESSION['user_id'])) {
+        $viewerId = (int) $_SESSION['user_id'];
+    }
+    $viewerName = trim((string) ($viewer['full_name'] ?? ''));
+    if ($viewerName === '' && isset($_SESSION['full_name'])) {
+        $viewerName = trim((string) $_SESSION['full_name']);
+    }
+
+    $viewerHasSigned = false;
+    if (!empty($roleApproved['applicant'])
+        && userIsVoucherApprovalRoleAssignee($voucher, 'applicant', $viewerName, $viewerId, $pdo)) {
+        $viewerHasSigned = true;
+    }
+    if (!$viewerHasSigned
+        && !empty($roleApproved['department manager'])
+        && userIsVoucherApprovalRoleAssignee($voucher, 'department manager', $viewerName, $viewerId, $pdo)) {
+        $viewerHasSigned = true;
+    }
+
+    if ($viewerHasSigned) {
+        return $finish('Signed', 'signed', $statusLower !== '' ? $statusLower : 'confirming', false);
+    }
+
+    return $finish('Confirming', 'confirming', $statusLower !== '' ? $statusLower : 'confirming', false);
+}
+
+/**
  * Move confirming vouchers to pending once Applicant, Department Manager, and Checked By signed off.
  */
 function maybePromoteVoucherFromConfirmingToPending(PDO $pdo, $voucherId, array $voucher = array()): bool
@@ -5270,13 +5458,19 @@ if (!function_exists('normalizeAppWebPath')) {
 if (!function_exists('ultitechReservedPathSegments')) {
     function ultitechReservedPathSegments(): array
     {
-        return [
+        $base = [
             'admin', 'api', 'assets', 'attendance', 'company', 'css', 'deliveries', 'dispatch',
             'employee', 'erp', 'home', 'includes', 'js', 'logs', 'modules', 'client-apps', 'public_html', 'public-html',
             'sites', 'stock', 'storage', 'uploads', 'vouchers', 'store-management-system', 'logout.php', 'login.php', 'select-module.php',
             'index.php', 'my-account.php', 'debug_login.php', 'debug_db_connections.php', 'debug_online.php',
             'debug_system_full.php', 'debug_create_voucher.php', 'debug_voucher_applicant.php', 'debug_todo_index.php', 'hc.php', 'ping.php',
+            'login', 'logout', 'register', 'select-module',
         ];
+        if (function_exists('ultitechInstallPathReservedSegments')) {
+            $base = array_merge($base, ultitechInstallPathReservedSegments());
+        }
+
+        return array_values(array_unique($base));
     }
 }
 
@@ -5290,9 +5484,13 @@ function detectCompanyFromPath()
     if ($path === '') {
         return null;
     }
-    $base = rtrim((string) (defined('APP_BASE_PATH') ? APP_BASE_PATH : ''), '/');
-    if ($base !== '' && strpos($path, $base) === 0) {
-        $path = substr($path, strlen($base));
+    if (function_exists('ultitechStripAppBasePathFromRequestPath')) {
+        $path = ultitechStripAppBasePathFromRequestPath($path);
+    } else {
+        $base = rtrim((string) (defined('APP_BASE_PATH') ? APP_BASE_PATH : ''), '/');
+        if ($base !== '' && strpos($path, $base) === 0) {
+            $path = substr($path, strlen($base));
+        }
     }
     $path = function_exists('normalizeAppWebPath') ? normalizeAppWebPath($path) : trim($path, '/');
     if ($path === '') {
@@ -5308,12 +5506,14 @@ function detectCompanyFromPath()
     }
 
     $slug = strtolower(trim((string) ($segments[0] ?? '')));
-    if ($slug === '' || strpos($slug, '.') !== false || !preg_match('/^[a-z0-9][a-z0-9-]*$/', $slug)) {
+    if ($slug === '' || strpos($slug, '.') !== false || !preg_match('/^[a-z0-9][a-z0-9_-]*$/', $slug)) {
         return null;
     }
 
     $reserved = ultitechReservedPathSegments();
-    if (in_array($slug, $reserved, true)) {
+    if (in_array($slug, $reserved, true)
+        || in_array(str_replace('_', '-', $slug), $reserved, true)
+        || in_array(str_replace('-', '_', $slug), $reserved, true)) {
         return null;
     }
 

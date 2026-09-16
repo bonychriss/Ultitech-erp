@@ -99,18 +99,34 @@ export default function ViewVoucherPage() {
   const postTarget = `${window.location.pathname}${window.location.search}`
   const headerMount = typeof document !== 'undefined' ? document.getElementById('vv-actions-header-mount') : null
 
-  const markPosted = useCallback(() => {
+  const markPosted = useCallback(async () => {
     if (!window.confirm('Finalize (post) this voucher? This locks further changes for non-admin users.')) return
-    const form = document.createElement('form')
-    form.method = 'POST'
-    form.action = postTarget
-    const input = document.createElement('input')
-    input.type = 'hidden'
-    input.name = 'mark_posted'
-    input.value = '1'
-    form.appendChild(input)
-    document.body.appendChild(form)
-    form.submit()
+    try {
+      const fd = new FormData()
+      fd.append('mark_posted', '1')
+      const res = await fetch(postTarget, {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+        redirect: 'manual',
+      })
+      const redirected = res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)
+      if (!redirected && !res.ok) throw new Error(`Request failed (${res.status})`)
+      if (window.erpNavBack && typeof window.erpNavBack.pruneSameDocument === 'function') {
+        try { window.erpNavBack.pruneSameDocument(window.location.href) } catch { /* ignore */ }
+      }
+      // Prefer redirect Location when present so flash query params (posted=1) apply.
+      let next = window.location.href
+      try {
+        const loc = res.headers.get('Location')
+        if (loc) next = new URL(loc, window.location.href).href
+      } catch { /* keep current */ }
+      window.location.replace(next)
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : 'Could not post voucher'
+      if (window.Swal) window.Swal.fire('Error', msg, 'error')
+      else alert(msg)
+    }
   }, [postTarget])
 
   if (loading) {
@@ -203,7 +219,13 @@ export default function ViewVoucherPage() {
         approval={approveTarget}
         rolesStr={approveRoles}
         data={data}
-        onSuccess={() => window.location.reload()}
+        onSuccess={() => {
+          if (window.erpNavBack && typeof window.erpNavBack.pruneSameDocument === 'function') {
+            try { window.erpNavBack.pruneSameDocument(window.location.href) } catch { /* ignore */ }
+          }
+          // Replace (not reload) so history has no duplicate voucher entry.
+          window.location.replace(window.location.href)
+        }}
       />
       <DocPreviewModal
         open={preview.open}

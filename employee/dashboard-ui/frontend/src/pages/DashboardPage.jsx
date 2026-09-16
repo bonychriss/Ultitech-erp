@@ -15,6 +15,7 @@ import {
   Pencil,
   Plus,
   Search,
+  SlidersHorizontal,
   Sparkles,
   Star,
   Trash2,
@@ -23,6 +24,9 @@ import {
   XCircle,
 } from 'lucide-react'
 import { aiSearch, fetchDashboard, getConfig, toggleReference } from '../api/dashboard.js'
+import ExportMenu from '../components/ExportMenu.jsx'
+import ExportRangeModal from '../components/ExportRangeModal.jsx'
+import { exportVouchersExcel, exportVouchersPdf, filterVouchersByDateRange } from '../utils/exportVouchers.js'
 
 function WhatsAppIcon({ size = 16 }) {
   return (
@@ -410,12 +414,17 @@ function cap(s) {
 function statusPill(row) {
   if (row.is_posted) return { label: 'Posted', cls: 'ed-vbadge ed-vbadge--posted' }
   if (row.is_paid) return { label: 'Paid', cls: 'ed-vbadge ed-vbadge--paid' }
-  const s = String(row.derived_status || row.status || '').toLowerCase()
-  if (s === 'approved') return { label: 'Approved', cls: 'ed-vbadge ed-vbadge--approved' }
-  if (s === 'rejected') return { label: 'Rejected', cls: 'ed-vbadge ed-vbadge--rejected' }
-  if (s === 'confirming') return { label: 'Confirming', cls: 'ed-vbadge ed-vbadge--confirming' }
-  if (s === 'draft') return { label: 'Draft', cls: 'ed-vbadge ed-vbadge--draft' }
-  return { label: s ? cap(s) : 'Pending', cls: 'ed-vbadge ed-vbadge--pending' }
+  const key = String(row.display_status_key || row.derived_status || row.status || '').toLowerCase()
+  const label = row.display_status
+    ? String(row.display_status)
+    : (key ? cap(key) : 'Pending')
+  if (key === 'approved') return { label: label || 'Approved', cls: 'ed-vbadge ed-vbadge--approved' }
+  if (key === 'rejected') return { label: label || 'Rejected', cls: 'ed-vbadge ed-vbadge--rejected' }
+  if (key === 'signed') return { label: label || 'Signed', cls: 'ed-vbadge ed-vbadge--signed' }
+  if (key === 'confirming') return { label: label || 'Confirming', cls: 'ed-vbadge ed-vbadge--confirming' }
+  if (key === 'draft') return { label: label || 'Draft', cls: 'ed-vbadge ed-vbadge--draft' }
+  if (key === 'pending') return { label: label || 'Pending', cls: 'ed-vbadge ed-vbadge--pending' }
+  return { label: label || 'Pending', cls: 'ed-vbadge ed-vbadge--pending' }
 }
 
 function formatDate(dateStr) {
@@ -535,15 +544,89 @@ export default function DashboardPage() {
   })
   const [payVoucher, setPayVoucher] = useState(null)
   const [headerSearchSlot, setHeaderSearchSlot] = useState(null)
+  const [filterSlot, setFilterSlot] = useState(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [draftFilters, setDraftFilters] = useState(() => ({ ...aiFilters }))
+  const [filterPanelStyle, setFilterPanelStyle] = useState(null)
   const [openMenuId, setOpenMenuId] = useState(null)
+  const [exportingExcel, setExportingExcel] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [exportFormat, setExportFormat] = useState('pdf')
+  const [exportModalError, setExportModalError] = useState(null)
   const searchWrapRef = useRef(null)
+  const filterDropdownRef = useRef(null)
+  const filterBtnRef = useRef(null)
+  const filterPanelRef = useRef(null)
 
   useLayoutEffect(() => {
     if (!MOUNT_SEARCH_IN_HEADER) return undefined
-    const slot = document.getElementById('ed-dashboard-search-slot')
-    setHeaderSearchSlot(slot)
+    setHeaderSearchSlot(document.getElementById('ed-dashboard-search-slot'))
+    setFilterSlot(document.getElementById('pv-filter-slot'))
     return undefined
   }, [])
+
+  useEffect(() => {
+    if (!filtersOpen) return undefined
+    function onDoc(e) {
+      if (filterDropdownRef.current?.contains(e.target)) return
+      if (filterPanelRef.current?.contains(e.target)) return
+      setFiltersOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [filtersOpen])
+
+  useEffect(() => {
+    if (!filtersOpen) {
+      setFilterPanelStyle(null)
+      return undefined
+    }
+    function place() {
+      const btn = filterBtnRef.current
+      if (!btn) return
+      const rect = btn.getBoundingClientRect()
+      const width = Math.min(360, Math.max(280, window.innerWidth - 24))
+      let left = rect.right - width
+      left = Math.max(12, Math.min(left, window.innerWidth - width - 12))
+      const top = Math.min(rect.bottom + 8, window.innerHeight - 24)
+      setFilterPanelStyle({
+        position: 'fixed',
+        top,
+        left,
+        width,
+        zIndex: 1050,
+      })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [filtersOpen])
+
+  function toggleFilters() {
+    setDraftFilters({ ...aiFilters })
+    setFiltersOpen((open) => !open)
+  }
+
+  function applyDraftFilters() {
+    setAiFilters({ ...draftFilters })
+    setFiltersOpen(false)
+    setAiNote('')
+  }
+
+  function clearDraftFilters() {
+    const empty = { status: '', from_date: '', to_date: '' }
+    setDraftFilters(empty)
+    setAiFilters(empty)
+    setFiltersOpen(false)
+    setAiNote('')
+  }
+
+  const hasActiveFilters = Boolean(aiFilters.status || aiFilters.from_date || aiFilters.to_date)
 
   useEffect(() => {
     if (!flash) return undefined
@@ -685,6 +768,46 @@ export default function DashboardPage() {
   )
   const suggestions = useMemo(() => filteredVouchers.slice(0, 6), [filteredVouchers])
 
+  const openExportModal = (format) => {
+    setExportFormat(format)
+    setExportModalError(null)
+    setExportModalOpen(true)
+  }
+
+  const closeExportModal = () => {
+    if (exportingExcel || exportingPdf) return
+    setExportModalOpen(false)
+    setExportModalError(null)
+  }
+
+  const handleExportRange = async (range) => {
+    const isExcel = exportFormat === 'excel'
+    const setBusy = isExcel ? setExportingExcel : setExportingPdf
+    setBusy(true)
+    setExportModalError(null)
+    setError('')
+    try {
+      const rows = filterVouchersByDateRange(allVouchers, range)
+      if (isExcel) {
+        await exportVouchersExcel(rows)
+      } else {
+        const subtitle = range.allTime
+          ? 'All time'
+          : `${range.startDate} to ${range.endDate}`
+        await exportVouchersPdf(rows, { title: 'Vouchers report', subtitle })
+      }
+      setExportModalOpen(false)
+    } catch (err) {
+      setExportModalError(
+        err instanceof Error
+          ? err.message
+          : (isExcel ? 'Failed to export Excel' : 'Failed to export PDF report'),
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const totalAmountLabel = useMemo(() => {
     if (IS_ADMIN && (stats.approved_amount_tzs || stats.approved_amount_usd)) {
       return `TZS ${formatMoney(stats.approved_amount_tzs)} / USD ${formatMoney(stats.approved_amount_usd)}`
@@ -795,11 +918,101 @@ export default function DashboardPage() {
     </div>
   )
 
+  const filterBlock = (
+    <div className={`pv-filter-dropdown${filtersOpen ? ' is-open' : ''}`} ref={filterDropdownRef}>
+      <button
+        ref={filterBtnRef}
+        type="button"
+        className={`pv-filter-btn${filtersOpen || hasActiveFilters ? ' is-active' : ''}`}
+        onClick={toggleFilters}
+        aria-expanded={filtersOpen}
+        aria-haspopup="dialog"
+        title="Filters"
+      >
+        <SlidersHorizontal size={18} aria-hidden="true" />
+        {hasActiveFilters && <span className="pv-filter-dot" aria-hidden="true" />}
+      </button>
+    </div>
+  )
+
+  const filtersPanel = filtersOpen && filterPanelStyle ? createPortal(
+    (
+      <div
+        ref={filterPanelRef}
+        className="pv-filters-panel"
+        style={filterPanelStyle}
+        role="dialog"
+        aria-label="Filter options"
+      >
+        <div className="pv-filters-head">
+          <div>
+            <h2 className="pv-filters-title">Filters</h2>
+            <p className="pv-filters-sub">Narrow the list by status and date.</p>
+          </div>
+          <button type="button" className="pv-filters-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="pv-filters-body">
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Date range</div>
+            <div className="pv-filters-grid pv-filters-grid--dates">
+              <div className="pv-field">
+                <label htmlFor="edFilterFrom">From</label>
+                <input
+                  id="edFilterFrom"
+                  type="date"
+                  value={draftFilters.from_date}
+                  onChange={(e) => setDraftFilters((prev) => ({ ...prev, from_date: e.target.value }))}
+                />
+              </div>
+              <div className="pv-field">
+                <label htmlFor="edFilterTo">To</label>
+                <input
+                  id="edFilterTo"
+                  type="date"
+                  value={draftFilters.to_date}
+                  onChange={(e) => setDraftFilters((prev) => ({ ...prev, to_date: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Status</div>
+            <div className="pv-field">
+              <label htmlFor="edFilterStatus">Status</label>
+              <select
+                id="edFilterStatus"
+                value={draftFilters.status}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, status: e.target.value }))}
+              >
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="paid">Paid</option>
+                <option value="posted">Posted</option>
+                <option value="draft">Needs Info</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="pv-filters-footer">
+          <button type="button" className="pv-btn-plain" onClick={clearDraftFilters}>Clear</button>
+          <button type="button" className="ed-btn ed-btn--primary" onClick={applyDraftFilters}>Apply</button>
+        </div>
+      </div>
+    ),
+    document.body,
+  ) : null
+
   return (
     <div className="ed-page">
       {flash && <div className="ed-flash ed-flash--success" role="status">{flash}</div>}
       {error && <div className="ed-flash ed-flash--error" role="alert">{error}</div>}
       {headerSearchSlot ? createPortal(searchBar, headerSearchSlot) : null}
+      {filterSlot ? createPortal(filterBlock, filterSlot) : null}
+      {filtersPanel}
 
         {/* Top band: KPI cards / in-page actions (admin chrome lives in PHP header) */}
         {(!HIDE_KPIS || !headerSearchSlot) && (
@@ -854,7 +1067,14 @@ export default function DashboardPage() {
             </a>
           </h3>
           {IS_ADMIN && (
-            <a href={`${URLS.myVouchers}${PREPEND_MODULE}`} className="ed-card-link">View All</a>
+            <ExportMenu
+              exportingExcel={exportingExcel}
+              exportingPdf={exportingPdf}
+              excelDisabled={allVouchers.length === 0}
+              pdfDisabled={allVouchers.length === 0}
+              onExportExcel={() => openExportModal('excel')}
+              onExportPdf={() => openExportModal('pdf')}
+            />
           )}
         </div>
         )}
@@ -974,6 +1194,15 @@ export default function DashboardPage() {
           onClose={() => setPayVoucher(null)}
         />
       )}
+
+      <ExportRangeModal
+        open={exportModalOpen}
+        format={exportFormat}
+        exporting={exportFormat === 'excel' ? exportingExcel : exportingPdf}
+        error={exportModalError}
+        onClose={closeExportModal}
+        onExport={handleExportRange}
+      />
     </div>
   )
 }

@@ -215,6 +215,94 @@ if (!defined('APP_BASE_PATH')) {
     define('APP_BASE_PATH', $APP_BASE_PATH);
 }
 
+/**
+ * Strip APP_BASE_PATH from a request path, tolerant of case and _/- aliases
+ * (local XAMPP often has both /ultitech_erp and /Ultitech-erp → same folder).
+ */
+if (!function_exists('ultitechStripAppBasePathFromRequestPath')) {
+    function ultitechStripAppBasePathFromRequestPath(string $uriPath): string
+    {
+        $uriPath = str_replace('\\', '/', (string) $uriPath);
+        if ($uriPath === '') {
+            return '';
+        }
+        if ($uriPath[0] !== '/') {
+            $uriPath = '/' . $uriPath;
+        }
+
+        $base = rtrim(str_replace('\\', '/', (string) (defined('APP_BASE_PATH') ? APP_BASE_PATH : '')), '/');
+        $candidates = [];
+        $add = static function ($path) use (&$candidates) {
+            $path = rtrim(str_replace('\\', '/', (string) $path), '/');
+            if ($path === '' || $path === '/') {
+                return;
+            }
+            if ($path[0] !== '/') {
+                $path = '/' . $path;
+            }
+            $candidates[] = $path;
+            $candidates[] = str_replace('_', '-', $path);
+            $candidates[] = str_replace('-', '_', $path);
+        };
+        if ($base !== '' && $base !== '/') {
+            $add($base);
+        }
+        // On-disk install folder (may differ from APP_BASE_PATH spelling).
+        $diskFolder = basename(str_replace('\\', '/', dirname(__DIR__)));
+        if ($diskFolder !== '' && strcasecmp($diskFolder, 'includes') !== 0) {
+            $add('/' . $diskFolder);
+        }
+
+        $candidates = array_values(array_unique($candidates));
+        foreach ($candidates as $cand) {
+            $len = strlen($cand);
+            if ($len <= 0 || strlen($uriPath) < $len) {
+                continue;
+            }
+            $prefix = substr($uriPath, 0, $len);
+            if (strcasecmp(str_replace('-', '_', $prefix), str_replace('-', '_', $cand)) !== 0) {
+                continue;
+            }
+            $next = substr($uriPath, $len);
+            if ($next === '' || $next[0] === '/' || $next[0] === '?' || $next[0] === '#') {
+                return $next === '' ? '/' : $next;
+            }
+        }
+
+        return $uriPath;
+    }
+}
+
+/**
+ * Path segments that must never be treated as company slugs (includes install folder aliases).
+ *
+ * @return list<string>
+ */
+if (!function_exists('ultitechInstallPathReservedSegments')) {
+    function ultitechInstallPathReservedSegments(): array
+    {
+        $segs = [];
+        $push = static function ($s) use (&$segs) {
+            $s = strtolower(trim((string) $s));
+            if ($s === '') {
+                return;
+            }
+            $segs[] = $s;
+            $segs[] = str_replace('_', '-', $s);
+            $segs[] = str_replace('-', '_', $s);
+        };
+        $base = rtrim(str_replace('\\', '/', (string) (defined('APP_BASE_PATH') ? APP_BASE_PATH : '')), '/');
+        if ($base !== '' && $base !== '/') {
+            $push(basename($base));
+        }
+        $diskFolder = basename(str_replace('\\', '/', dirname(__DIR__)));
+        if ($diskFolder !== '' && strcasecmp($diskFolder, 'includes') !== 0) {
+            $push($diskFolder);
+        }
+        return array_values(array_unique($segs));
+    }
+}
+
 // Create database connection (with host fallback for shared hosting variants)
 try {
     $configuredHost = defined('DB_HOST') ? DB_HOST : 'localhost';
@@ -334,9 +422,13 @@ if (isset($control_pdo)) {
         // Detect company slug from URL path too (e.g. /roadmaster/admin/all-vouchers.php)
         if (!$slug) {
             $uriPath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
-            $basePath = rtrim((string) (defined('APP_BASE_PATH') ? APP_BASE_PATH : ''), '/');
-            if ($basePath !== '' && strpos($uriPath, $basePath) === 0) {
-                $uriPath = (string) substr($uriPath, strlen($basePath));
+            if (function_exists('ultitechStripAppBasePathFromRequestPath')) {
+                $uriPath = ultitechStripAppBasePathFromRequestPath($uriPath);
+            } else {
+                $basePath = rtrim((string) (defined('APP_BASE_PATH') ? APP_BASE_PATH : ''), '/');
+                if ($basePath !== '' && strpos($uriPath, $basePath) === 0) {
+                    $uriPath = (string) substr($uriPath, strlen($basePath));
+                }
             }
             $uriPath = trim($uriPath, '/');
             if (preg_match('#^home/sites/.+/public_html(?:/(.*))?$#i', $uriPath, $stackMatch)) {
@@ -345,7 +437,7 @@ if (isset($control_pdo)) {
             if ($uriPath !== '') {
                 $segments = explode('/', $uriPath);
                 $candidateSlug = strtolower(trim((string) ($segments[0] ?? '')));
-                if ($candidateSlug !== '' && strpos($candidateSlug, '.') === false && preg_match('/^[a-z0-9][a-z0-9-]*$/', $candidateSlug)) {
+                if ($candidateSlug !== '' && strpos($candidateSlug, '.') === false && preg_match('/^[a-z0-9][a-z0-9_-]*$/', $candidateSlug)) {
                     $reserved = [
                         'admin', 'api', 'assets', 'attendance', 'company', 'css', 'deliveries', 'dispatch',
                         'employee', 'erp', 'home', 'includes', 'js', 'logs', 'modules', 'public_html', 'public-html',
@@ -357,7 +449,12 @@ if (isset($control_pdo)) {
                         'petty-cash', 'replenishments', 'replenishment', 'categories', 'expenses', 'sales', 'finance',
                         'balances', 'letters', 'todo', 'view-voucher-ui',
                     ];
-                    if (!in_array($candidateSlug, $reserved, true)) {
+                    if (function_exists('ultitechInstallPathReservedSegments')) {
+                        $reserved = array_merge($reserved, ultitechInstallPathReservedSegments());
+                    }
+                    if (!in_array($candidateSlug, $reserved, true)
+                        && !in_array(str_replace('_', '-', $candidateSlug), $reserved, true)
+                        && !in_array(str_replace('-', '_', $candidateSlug), $reserved, true)) {
                         $slug = $candidateSlug;
                         $_GET['company_slug'] = $slug;
                     }

@@ -58,25 +58,48 @@ if (!$isNew) {
     $initConfig['reportPeriodOptions'] = salesReportsPeriodOptions($user);
     $initConfig['reportDomains'] = array_values(reportEngineDomains());
 
-    if ($reportDomain !== 'sales' && $hasValidDates) {
+    $period = strtolower(trim((string) ($_GET['period'] ?? '')));
+    if (!in_array($period, ['monthly', 'quarterly', 'annual'], true)) {
+        $period = '';
+    }
+
+    if ($reportDomain !== 'sales') {
         $domainMeta = reportEngineDomains()[$reportDomain] ?? reportEngineDomains()['sales'];
-        $initConfig['selectedPeriod'] = $reportDomain;
-        $initConfig['defaults'] = [
-            'report_domain' => $reportDomain,
-            'report_name' => salesReportsFormatCoverPeriod($startDate, $endDate) . ' ' . ($domainMeta['label'] ?? 'Report'),
-            'report_type' => 'management',
-            'template_key' => 'standard',
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'prepared_by' => $user['name'],
-            'department' => $user['department'] !== '' ? $user['department'] : ($domainMeta['department_default'] ?? 'Sales'),
-            'filters' => [],
-        ];
-    } else {
-        $period = strtolower(trim((string) ($_GET['period'] ?? '')));
-        if (!in_array($period, ['monthly', 'quarterly', 'annual'], true)) {
-            $period = '';
+        if ($hasValidDates) {
+            $initConfig['selectedPeriod'] = $period !== '' ? $period : $reportDomain;
+            $initConfig['defaults'] = [
+                'report_domain' => $reportDomain,
+                'report_name' => salesReportsFormatCoverPeriod($startDate, $endDate) . ' ' . ($domainMeta['label'] ?? 'Report'),
+                'report_type' => $period !== '' ? $period : 'management',
+                'template_key' => 'standard',
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'prepared_by' => $user['name'],
+                'department' => $user['department'] !== '' ? $user['department'] : ($domainMeta['department_default'] ?? 'Sales'),
+                'filters' => [],
+            ];
+        } elseif ($period !== '') {
+            $periodDefaults = salesReportsPeriodDefaults($period, $user);
+            $initConfig['selectedPeriod'] = $period;
+            $initConfig['defaults'] = [
+                'report_domain' => $reportDomain,
+                'report_name' => salesReportsFormatCoverPeriod(
+                    $periodDefaults['start_date'],
+                    $periodDefaults['end_date']
+                ) . ' ' . ($domainMeta['label'] ?? 'Report'),
+                'report_type' => $period,
+                'template_key' => 'standard',
+                'start_date' => $periodDefaults['start_date'],
+                'end_date' => $periodDefaults['end_date'],
+                'period_label' => $periodDefaults['period_label'] ?? '',
+                'prepared_by' => $user['name'],
+                'department' => $user['department'] !== '' ? $user['department'] : ($domainMeta['department_default'] ?? 'Sales'),
+                'filters' => [],
+            ];
+        } else {
+            $initConfig['selectedPeriod'] = null;
         }
+    } else {
         $initConfig['selectedPeriod'] = $period !== '' ? $period : null;
         if ($period !== '') {
             $customStart = preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate) ? $startDate : null;

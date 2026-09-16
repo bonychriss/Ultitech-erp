@@ -136,7 +136,9 @@ export default function ReportEditorPage() {
   const [autofilling, setAutofilling] = useState(false)
   const [needsAutofill, setNeedsAutofill] = useState(Boolean(CFG.document?.needs_autofill))
   const [exportOpen, setExportOpen] = useState(false)
+  const [chromeVisible, setChromeVisible] = useState(true)
   const exportRef = useRef(null)
+  const scrollRef = useRef(null)
   const loadedReportRef = useRef(null)
   const editorInstanceRef = useRef(null)
   const contentRef = useRef('')
@@ -177,6 +179,49 @@ export default function ReportEditorPage() {
       loadHtmlIntoEditor(ed, contentRef.current)
     }
   }, [])
+
+  const hideChrome = useCallback(() => {
+    setChromeVisible(false)
+    setExportOpen(false)
+  }, [])
+
+  const showChrome = useCallback(() => {
+    setChromeVisible(true)
+  }, [])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return undefined
+    const onScroll = () => hideChrome()
+    el.addEventListener('scroll', onScroll, { passive: true })
+    el.addEventListener('wheel', onScroll, { passive: true })
+    el.addEventListener('touchmove', onScroll, { passive: true })
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      el.removeEventListener('wheel', onScroll)
+      el.removeEventListener('touchmove', onScroll)
+    }
+  }, [hideChrome, loading, reportId])
+
+  useEffect(() => {
+    if (!editor) return undefined
+    const win = typeof editor.getWin === 'function' ? editor.getWin() : null
+    const doc = typeof editor.getDoc === 'function' ? editor.getDoc() : null
+    const body = typeof editor.getBody === 'function' ? editor.getBody() : null
+    const onScroll = () => hideChrome()
+    win?.addEventListener?.('scroll', onScroll, { passive: true })
+    win?.addEventListener?.('wheel', onScroll, { passive: true })
+    doc?.addEventListener?.('scroll', onScroll, { passive: true })
+    body?.addEventListener?.('wheel', onScroll, { passive: true })
+    body?.addEventListener?.('touchmove', onScroll, { passive: true })
+    return () => {
+      win?.removeEventListener?.('scroll', onScroll)
+      win?.removeEventListener?.('wheel', onScroll)
+      doc?.removeEventListener?.('scroll', onScroll)
+      body?.removeEventListener?.('wheel', onScroll)
+      body?.removeEventListener?.('touchmove', onScroll)
+    }
+  }, [editor, hideChrome])
 
   useEffect(() => {
     if (!editor) return undefined
@@ -338,13 +383,19 @@ export default function ReportEditorPage() {
     setShowPeriodPicker(false)
     const url = new URL(window.location.href)
     url.searchParams.set('module', CFG.module || 'analytics')
-    const domain = defaults.report_domain || option.domain || option.key
-    if (domain && domain !== 'sales' && !['monthly', 'quarterly', 'annual'].includes(option.key)) {
-      url.searchParams.delete('period')
+    const domain = defaults.report_domain || option.domain || option.report_domain || ''
+    const periodKeys = ['monthly', 'quarterly', 'annual']
+    const periodKey = periodKeys.includes(option.key) ? option.key : ''
+
+    if (domain && domain !== 'sales') {
       url.searchParams.set('report_domain', domain)
     } else {
-      url.searchParams.set('period', option.key)
       url.searchParams.delete('report_domain')
+    }
+    if (periodKey) {
+      url.searchParams.set('period', periodKey)
+    } else {
+      url.searchParams.delete('period')
     }
     if (defaults.start_date) url.searchParams.set('start_date', defaults.start_date)
     if (defaults.end_date) url.searchParams.set('end_date', defaults.end_date)
@@ -517,117 +568,131 @@ export default function ReportEditorPage() {
 
   return (
     <div className="word-app">
-      <header className="word-titlebar">
-        <div className="word-titlebar-nav">
-          <a
-            href={listUrl}
-            className="word-back"
-            onClick={(e) => {
-              e.preventDefault()
-              requestNavigation(listUrl)
-            }}
-          >
-            <i className="bi bi-arrow-left" aria-hidden="true" />
-            <span>Reports</span>
-          </a>
-        </div>
-
-        <span className="word-titlebar-divider" aria-hidden="true" />
-
-        <div className="word-titlebar-doc">
-          <input
-            type="text"
-            className="word-doc-title-input"
-            value={report?.report_name || ''}
-            onChange={(e) => {
-              setReport((r) => ({ ...r, report_name: e.target.value }))
-              setDirty(true)
-            }}
-            onBlur={async () => {
-              if (!reportId) return
-              const fd = new FormData()
-              fd.append('id', reportId)
-              fd.append('report_name', report?.report_name || '')
-              await fetch(apiUrl('rename.php'), { method: 'POST', body: fd })
-            }}
-            placeholder="Untitled Sales Report"
-          />
-        </div>
-
-        <div className="word-titlebar-tools">
-          <div className="word-titlebar-group word-titlebar-group--history">
-            <EditorUndoRedo editor={editor} showLabels={false} />
-          </div>
-
-          <span className="word-titlebar-divider word-titlebar-divider--status" aria-hidden="true" />
-
-          <div className="word-titlebar-group word-titlebar-group--status">
-            <SaveStatusDisplay status={saveStatus} />
+      <div className={`word-chrome${chromeVisible ? ' is-open' : ''}`}>
+        <header className="word-titlebar">
+          <div className="word-titlebar-nav">
+            <a
+              href={listUrl}
+              className="word-back"
+              onClick={(e) => {
+                e.preventDefault()
+                requestNavigation(listUrl)
+              }}
+            >
+              <i className="bi bi-arrow-left" aria-hidden="true" />
+              <span>Reports</span>
+            </a>
           </div>
 
           <span className="word-titlebar-divider" aria-hidden="true" />
 
-          <div className="word-titlebar-group word-titlebar-group--actions">
-            <button type="button" className="word-title-icon-btn" title="Info" aria-label="Info" onClick={() => setShowInfo(true)}>
-              <i className="bi bi-info-circle" aria-hidden="true" />
-            </button>
-            <button type="button" className="word-title-icon-btn" title="Save" aria-label="Save" onClick={() => saveDocument(false)}>
-              <i className="bi bi-floppy" aria-hidden="true" />
-            </button>
-            <div className="word-export-wrap" ref={exportRef}>
-              <button
-                type="button"
-                className="word-title-icon-btn"
-                title="Export"
-                aria-label="Export"
-                aria-expanded={exportOpen}
-                onClick={() => setExportOpen((v) => !v)}
-              >
-                <i className="bi bi-download" aria-hidden="true" />
+          <div className="word-titlebar-doc">
+            <input
+              type="text"
+              className="word-doc-title-input"
+              value={report?.report_name || ''}
+              onChange={(e) => {
+                setReport((r) => ({ ...r, report_name: e.target.value }))
+                setDirty(true)
+              }}
+              onBlur={async () => {
+                if (!reportId) return
+                const fd = new FormData()
+                fd.append('id', reportId)
+                fd.append('report_name', report?.report_name || '')
+                await fetch(apiUrl('rename.php'), { method: 'POST', body: fd })
+              }}
+              placeholder="Untitled Sales Report"
+            />
+          </div>
+
+          <div className="word-titlebar-tools">
+            <div className="word-titlebar-group word-titlebar-group--history">
+              <EditorUndoRedo editor={editor} showLabels={false} />
+            </div>
+
+            <span className="word-titlebar-divider word-titlebar-divider--status" aria-hidden="true" />
+
+            <div className="word-titlebar-group word-titlebar-group--status">
+              <SaveStatusDisplay status={saveStatus} />
+            </div>
+
+            <span className="word-titlebar-divider" aria-hidden="true" />
+
+            <div className="word-titlebar-group word-titlebar-group--actions">
+              <button type="button" className="word-title-icon-btn" title="Info" aria-label="Info" onClick={() => setShowInfo(true)}>
+                <i className="bi bi-info-circle" aria-hidden="true" />
               </button>
-              {exportOpen && (
-                <div className="word-export-dropdown">
-                  <button type="button" onClick={() => handleExport('pdf')}>
-                    <i className="bi bi-file-earmark-pdf" aria-hidden="true" /> Download PDF
-                  </button>
-                  <button type="button" onClick={() => handleExport('word')}>
-                    <i className="bi bi-file-earmark-word" aria-hidden="true" /> Download Word
-                  </button>
-                  <button type="button" onClick={() => handleExport('print')}>
-                    <i className="bi bi-printer" aria-hidden="true" /> Print
-                  </button>
-                </div>
-              )}
+              <button type="button" className="word-title-icon-btn" title="Save" aria-label="Save" onClick={() => saveDocument(false)}>
+                <i className="bi bi-floppy" aria-hidden="true" />
+              </button>
+              <div className="word-export-wrap" ref={exportRef}>
+                <button
+                  type="button"
+                  className="word-title-icon-btn"
+                  title="Export"
+                  aria-label="Export"
+                  aria-expanded={exportOpen}
+                  onClick={() => setExportOpen((v) => !v)}
+                >
+                  <i className="bi bi-download" aria-hidden="true" />
+                </button>
+                {exportOpen && (
+                  <div className="word-export-dropdown">
+                    <button type="button" onClick={() => handleExport('pdf')}>
+                      <i className="bi bi-file-earmark-pdf" aria-hidden="true" /> Download PDF
+                    </button>
+                    <button type="button" onClick={() => handleExport('word')}>
+                      <i className="bi bi-file-earmark-word" aria-hidden="true" /> Download Word
+                    </button>
+                    <button type="button" onClick={() => handleExport('print')}>
+                      <i className="bi bi-printer" aria-hidden="true" /> Print
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+        </header>
+
+        <WordRibbon
+          editor={editor}
+          activeTab={ribbonTab}
+          onTabChange={setRibbonTab}
+        />
+      </div>
+
+      <button
+        type="button"
+        className={`word-chrome-reveal${chromeVisible ? '' : ' is-visible'}`}
+        onClick={showChrome}
+        aria-label="Show editor toolbar"
+        title="Show toolbar"
+      >
+        <i className="bi bi-chevron-down" aria-hidden="true" />
+      </button>
+
+      <div className="word-scroll" ref={scrollRef}>
+        <div className="word-workspace">
+          {autofilling && (
+            <div className="word-autofill-overlay">
+              <div className="word-spinner" />
+              <p>Populating {reportTypePhrase(report, createDefaultsRef.current || CFG.defaults)} from ERP data...</p>
+            </div>
+          )}
+          <main className="word-canvas-scroll">
+            <div className="word-canvas">
+              {reportId && !loading ? (
+                <WordDocument
+                  initialContent={content}
+                  onChange={handleContentChange}
+                  onInit={handleEditorInit}
+                  readOnly={!report?.can_edit}
+                />
+              ) : null}
+            </div>
+          </main>
         </div>
-      </header>
-
-      <WordRibbon
-        editor={editor}
-        activeTab={ribbonTab}
-        onTabChange={setRibbonTab}
-      />
-
-      <div className="word-workspace">
-        {autofilling && (
-          <div className="word-autofill-overlay">
-            <div className="word-spinner" />
-            <p>Populating {reportTypePhrase(report, createDefaultsRef.current || CFG.defaults)} from ERP data...</p>
-          </div>
-        )}
-        <main className="word-canvas-scroll">
-          <div className="word-canvas">
-            {reportId && !loading ? (
-              <WordDocument
-                initialContent={content}
-                onChange={handleContentChange}
-                onInit={handleEditorInit}
-                readOnly={!report?.can_edit}
-              />
-            ) : null}
-          </div>
-        </main>
       </div>
 
       <footer className="word-statusbar">

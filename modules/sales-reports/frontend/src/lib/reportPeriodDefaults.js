@@ -1,5 +1,5 @@
 /** Build report defaults for a monthly period from start/end dates. */
-export function buildMonthlyDefaults(startDate, endDate, baseDefaults = {}, user = {}) {
+export function buildMonthlyDefaults(startDate, endDate, baseDefaults = {}, user = {}, reportLabel = 'Sales Report') {
   const start = String(startDate || '').slice(0, 10)
   const end = String(endDate || '').slice(0, 10)
   if (!start || !end) return null
@@ -15,10 +15,11 @@ export function buildMonthlyDefaults(startDate, endDate, baseDefaults = {}, user
   const endLabel = endDt.toLocaleString('en-US', { month: 'long' }).toUpperCase()
   const periodLabel = sameMonth ? startLabel : `${startLabel}-${endLabel}`
   const year = endDt.getFullYear()
+  const titleLabel = String(reportLabel || baseDefaults.report_label || 'Sales Report').trim() || 'Sales Report'
 
   return {
     ...baseDefaults,
-    report_name: `${periodLabel} Sales Report ${year}`,
+    report_name: `${periodLabel} ${titleLabel} ${year}`,
     report_type: 'monthly',
     template_key: 'monthly',
     start_date: start,
@@ -59,17 +60,20 @@ export function navigateToNewReport(option, defaults, cfg = {}) {
 
   const domain = defaults?.report_domain || option.domain || option.report_domain || ''
   const salesPeriods = ['monthly', 'quarterly', 'annual']
-  const isSalesPeriod = salesPeriods.includes(option.key)
+  const periodKey = salesPeriods.includes(option.key) ? option.key : ''
 
-  if (domain && domain !== 'sales' && !isSalesPeriod) {
+  if (domain && domain !== 'sales') {
     url.searchParams.set('report_domain', domain)
-    if (defaults?.start_date) url.searchParams.set('start_date', defaults.start_date)
-    if (defaults?.end_date) url.searchParams.set('end_date', defaults.end_date)
   } else {
-    url.searchParams.set('period', option.key)
-    if (defaults?.start_date) url.searchParams.set('start_date', defaults.start_date)
-    if (defaults?.end_date) url.searchParams.set('end_date', defaults.end_date)
+    url.searchParams.delete('report_domain')
   }
+
+  if (periodKey) {
+    url.searchParams.set('period', periodKey)
+  }
+
+  if (defaults?.start_date) url.searchParams.set('start_date', defaults.start_date)
+  if (defaults?.end_date) url.searchParams.set('end_date', defaults.end_date)
 
   window.location.href = `${url.pathname}${url.search}`
 }

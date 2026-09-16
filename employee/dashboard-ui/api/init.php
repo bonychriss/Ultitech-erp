@@ -103,6 +103,7 @@ try {
     $sql = "SELECT pv.id, pv.voucher_no, pv.payee_name, pv.total_amount, pv.status,
                 pv.date_created, pv.currency, pv.created_at, pv.prepared_by, pv.description,
                 pv.created_by,
+                pv.applicant, pv.department_manager, pv.checked_by,
                 IFNULL(pv.is_paid,0) AS is_paid,
                 IFNULL(pv.is_posted,0) AS is_posted,
                 IFNULL(pv.is_restricted,0) AS is_restricted,
@@ -132,6 +133,22 @@ try {
     $limitedEditEnabled = function_exists('isApprovedVoucherClassificationEditEnabled')
         ? isApprovedVoucherClassificationEditEnabled() : false;
 
+    $viewer = [
+        'user_id' => $myId,
+        'full_name' => (string) ($_SESSION['full_name'] ?? ''),
+    ];
+    $approvalFlagsById = [];
+    if (function_exists('loadPaymentVoucherApprovalRoleFlagsBatch')) {
+        $confirmingIds = [];
+        foreach ($rows as $rv) {
+            $st = strtolower((string) ($rv['status'] ?? ''));
+            if ($st === $statusConfirming || $st === 'confirming') {
+                $confirmingIds[] = (int) ($rv['id'] ?? 0);
+            }
+        }
+        $approvalFlagsById = loadPaymentVoucherApprovalRoleFlagsBatch($pdo, $confirmingIds);
+    }
+
     $recent = [];
     $sn = 1;
     foreach ($rows as $v) {
@@ -150,13 +167,29 @@ try {
                 empty($v['payee_name']) || $v['payee_name'] === '(Draft)'
                 || (float) $v['total_amount'] <= 0 || (int) ($v['item_count'] ?? 0) === 0
             );
-        $derivedStatus = $looksDraft ? $statusDraft : $v['status'];
-        if ($isPostedFlag) {
-            $displayStatus = 'Posted';
-        } elseif ($isPaidFlag) {
-            $displayStatus = 'Paid';
+
+        $roleFlags = $approvalFlagsById[$vid] ?? null;
+        $resolved = function_exists('resolvePaymentVoucherDisplayStatus')
+            ? resolvePaymentVoucherDisplayStatus($pdo, $v, $viewer, $roleFlags, [
+                'item_count' => (int) ($v['item_count'] ?? 0),
+                'looks_draft' => $looksDraft,
+            ])
+            : null;
+
+        if (is_array($resolved)) {
+            $derivedStatus = (string) ($resolved['derived_status'] ?? $v['status']);
+            $displayStatus = (string) ($resolved['label'] ?? ucfirst((string) $derivedStatus));
+            $displayStatusKey = (string) ($resolved['key'] ?? $derivedStatus);
         } else {
-            $displayStatus = ucfirst((string) $derivedStatus);
+            $derivedStatus = $looksDraft ? $statusDraft : $v['status'];
+            if ($isPostedFlag) {
+                $displayStatus = 'Posted';
+            } elseif ($isPaidFlag) {
+                $displayStatus = 'Paid';
+            } else {
+                $displayStatus = ucfirst((string) $derivedStatus);
+            }
+            $displayStatusKey = strtolower((string) $derivedStatus);
         }
 
         // Inline edit/delete permissions mirroring the my-vouchers desk.
@@ -193,6 +226,7 @@ try {
             'description' => $canView ? (string) ($v['description'] ?? '') : '',
             'status' => (string) ($v['status'] ?? ''),
             'display_status' => $displayStatus,
+            'display_status_key' => $displayStatusKey,
             'derived_status' => (string) $derivedStatus,
             'is_paid' => $isPaidFlag,
             'is_posted' => $isPostedFlag,

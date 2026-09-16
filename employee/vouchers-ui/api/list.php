@@ -145,6 +145,7 @@ try {
         SELECT pv.id, pv.voucher_no, pv.payee_name, pv.total_amount, pv.status,
                pv.date_created, pv.currency, pv.created_at, pv.prepared_by, pv.description,
                pv.created_by,
+               pv.applicant, pv.department_manager, pv.checked_by,
                IFNULL(pv.is_paid,0) AS is_paid,
                IFNULL(pv.is_posted,0) AS is_posted,
                IFNULL(pv.is_reference,0) AS is_reference,
@@ -177,6 +178,21 @@ try {
     $statusConfirming = defined('STATUS_CONFIRMING') ? STATUS_CONFIRMING : 'confirming';
     $statusApproved = defined('STATUS_APPROVED') ? STATUS_APPROVED : 'approved';
     // Session-level flag (evaluated once, not per row) so we can compute edit/delete
+    $viewer = [
+        'user_id' => $myId,
+        'full_name' => (string) ($_SESSION['full_name'] ?? ''),
+    ];
+    $approvalFlagsById = [];
+    if (function_exists('loadPaymentVoucherApprovalRoleFlagsBatch')) {
+        $confirmingIds = [];
+        foreach ($rows as $rv) {
+            $st = strtolower((string) ($rv['status'] ?? ''));
+            if ($st === $statusConfirming || $st === 'confirming') {
+                $confirmingIds[] = (int) ($rv['id'] ?? 0);
+            }
+        }
+        $approvalFlagsById = loadPaymentVoucherApprovalRoleFlagsBatch($pdo, $confirmingIds);
+    }
     // permissions inline instead of running N+1 queries per voucher.
     $limitedEditEnabled = function_exists('isApprovedVoucherClassificationEditEnabled')
         ? isApprovedVoucherClassificationEditEnabled()
@@ -203,17 +219,31 @@ try {
                 || (int) ($v['item_count'] ?? 0) === 0
             );
 
-        $derivedStatus = $v['status'];
-        if ($looksDraft) {
-            $derivedStatus = $statusDraft;
-        }
+        $roleFlags = $approvalFlagsById[$vid] ?? null;
+        $resolved = function_exists('resolvePaymentVoucherDisplayStatus')
+            ? resolvePaymentVoucherDisplayStatus($pdo, $v, $viewer, $roleFlags, [
+                'item_count' => (int) ($v['item_count'] ?? 0),
+                'looks_draft' => $looksDraft,
+            ])
+            : null;
 
-        if ($isPostedFlag) {
-            $displayStatus = 'Posted';
-        } elseif ($isPaidFlag) {
-            $displayStatus = 'Paid';
+        if (is_array($resolved)) {
+            $derivedStatus = (string) ($resolved['derived_status'] ?? $v['status']);
+            $displayStatus = (string) ($resolved['label'] ?? ucfirst((string) $derivedStatus));
+            $displayStatusKey = (string) ($resolved['key'] ?? $derivedStatus);
         } else {
-            $displayStatus = ucfirst((string) $derivedStatus);
+            $derivedStatus = $v['status'];
+            if ($looksDraft) {
+                $derivedStatus = $statusDraft;
+            }
+            if ($isPostedFlag) {
+                $displayStatus = 'Posted';
+            } elseif ($isPaidFlag) {
+                $displayStatus = 'Paid';
+            } else {
+                $displayStatus = ucfirst((string) $derivedStatus);
+            }
+            $displayStatusKey = strtolower((string) $derivedStatus);
         }
 
         $approverRole = isset($v['approver_role']) ? (string) $v['approver_role'] : '';
@@ -264,6 +294,7 @@ try {
             'created_at' => (string) ($v['created_at'] ?? ''),
             'status' => (string) ($v['status'] ?? ''),
             'display_status' => $displayStatus,
+            'display_status_key' => $displayStatusKey,
             'derived_status' => (string) $derivedStatus,
             'is_paid' => $isPaidFlag,
             'is_posted' => $isPostedFlag,

@@ -71,8 +71,69 @@ export function MarkPaidModal({ open, onClose, data }) {
 }
 
 export function AdminApprovalModal({ open, onClose, action, postUrl }) {
+  const [comments, setComments] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!open) {
+      setComments('')
+      setSaving(false)
+    }
+  }, [open])
+
   if (!open) return null
   const isApprove = action === 'approved'
+
+  async function submit(e) {
+    e.preventDefault()
+    if (saving) return
+    setSaving(true)
+    try {
+      const fd = new FormData()
+      fd.append('admin_action', action)
+      fd.append('comments', comments)
+      const res = await fetch(postUrl || window.location.href, {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+        redirect: 'manual',
+      })
+      const redirected = res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)
+      if (!redirected && !res.ok) {
+        throw new Error(`Request failed (${res.status})`)
+      }
+      if (!redirected && res.ok) {
+        // Server rendered an error into the page instead of redirecting.
+        let msg = 'Could not complete this action. Please refresh and try again.'
+        try {
+          const html = await res.text()
+          const m = html.match(/Error processing voucher:\s*([^<]+)/i)
+          if (m && m[1]) msg = m[1].trim()
+        } catch { /* ignore */ }
+        throw new Error(msg)
+      }
+      // Replace current history entry so Back returns to the list, not a
+      // duplicate voucher URL created by classic form POST + redirect.
+      if (window.erpNavBack && typeof window.erpNavBack.pruneSameDocument === 'function') {
+        try { window.erpNavBack.pruneSameDocument(window.location.href) } catch { /* ignore */ }
+      }
+      let next = window.location.href
+      try {
+        const loc = res.headers.get('Location')
+        if (loc) next = new URL(loc, window.location.href).href
+      } catch { /* keep current */ }
+      window.location.replace(next)
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : 'Network error'
+      if (typeof window.Swal !== 'undefined') {
+        window.Swal.fire({ icon: 'error', title: 'Action failed', text: msg, confirmButtonColor: '#dc3545' })
+      } else {
+        alert(msg)
+      }
+      setSaving(false)
+    }
+  }
+
   return (
     <VvModalOverlay open={open} onClose={onClose} id="vv-admin-approval-modal">
       <div className="vv-react-modal" onMouseDown={(e) => e.stopPropagation()}>
@@ -84,26 +145,29 @@ export function AdminApprovalModal({ open, onClose, action, postUrl }) {
               : 'Confirm rejection of this voucher.'}
           </p>
         </div>
-        <form method="POST" action={postUrl} className="vv-react-modal__form">
-          <input type="hidden" name="admin_action" value={action} />
+        <form onSubmit={submit} className="vv-react-modal__form">
           <label className="vv-react-modal__field">
             <span>Comments (Optional)</span>
             <textarea
               name="comments"
               rows={4}
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
               placeholder="Add a reason or note..."
               className="vv-react-modal__textarea"
+              disabled={saving}
             />
           </label>
           <div className="vv-react-modal__foot">
-            <button type="button" onClick={onClose} className="vv-react-modal__btn vv-react-modal__btn--ghost">
+            <button type="button" onClick={onClose} className="vv-react-modal__btn vv-react-modal__btn--ghost" disabled={saving}>
               Cancel
             </button>
             <button
               type="submit"
+              disabled={saving}
               className={`vv-react-modal__btn ${isApprove ? 'vv-react-modal__btn--success' : 'vv-react-modal__btn--danger'}`}
             >
-              {isApprove ? 'Confirm Approval' : 'Confirm Rejection'}
+              {saving ? 'Saving...' : (isApprove ? 'Confirm Approval' : 'Confirm Rejection')}
             </button>
           </div>
         </form>

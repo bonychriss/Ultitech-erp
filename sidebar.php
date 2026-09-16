@@ -1560,10 +1560,8 @@ if (!isset($_GET['print'])) {
     .sidebar-child-parent-toggle .submenu-chevron {
         margin-left: auto;
         font-size: 0.8rem;
-        transition: transform 0.2s ease;
-    }
-    .sidebar-child-parent-toggle.is-open .submenu-chevron {
-        transform: rotate(90deg);
+        display: inline-block;
+        line-height: 1;
     }
     .sidebar-submenu-nested .nav-link.sidebar-nested-under-category {
         display: flex;
@@ -1603,13 +1601,12 @@ if (!isset($_GET['print'])) {
     .sidebar-submenu-nested .nav-link i {
         display: none;
     }
-    .sidebar-parent-toggle .submenu-chevron {
+    .sidebar-parent-toggle .submenu-chevron,
+    .submenu-chevron-btn .submenu-chevron {
         margin-left: auto;
         font-size: 0.8rem;
-        transition: transform 0.2s ease;
-    }
-    .sidebar-parent-toggle.is-open .submenu-chevron {
-        transform: rotate(90deg);
+        display: inline-block;
+        line-height: 1;
     }
     
 
@@ -1974,12 +1971,16 @@ if (!isset($_GET['print'])) {
                     }
                     ?>
                     <?php if ($hasChildren): ?>
+                        <?php
+                        $chevronOpen = ($isActive === 'active');
+                        $chevronClass = $chevronOpen ? 'bi-chevron-down' : 'bi-chevron-right';
+                        ?>
                         <?php if ($parentHasHub): ?>
-                            <button type="button" class="submenu-chevron-btn flex-shrink-0 border-0 bg-transparent p-0 ms-1" aria-label="Toggle Personalization menu" onclick="event.preventDefault(); event.stopPropagation(); toggleSidebarSubmenu(this.closest('a.nav-link')); return false;">
-                                <i class="bi bi-chevron-right submenu-chevron" aria-hidden="true"></i>
+                            <button type="button" class="submenu-chevron-btn flex-shrink-0 border-0 bg-transparent p-0 ms-1" aria-label="Toggle <?= htmlspecialchars($item['label']) ?> menu" aria-expanded="<?= $chevronOpen ? 'true' : 'false' ?>" onclick="event.preventDefault(); event.stopPropagation(); toggleSidebarSubmenu(this.closest('a.nav-link')); return false;">
+                                <i class="bi <?= $chevronClass ?> submenu-chevron" aria-hidden="true"></i>
                             </button>
                         <?php else: ?>
-                            <i class="bi bi-chevron-right submenu-chevron flex-shrink-0" aria-hidden="true"></i>
+                            <i class="bi <?= $chevronClass ?> submenu-chevron flex-shrink-0" aria-hidden="true"></i>
                         <?php endif; ?>
                     <?php endif; ?>
                 </a>
@@ -2044,7 +2045,7 @@ if (!isset($_GET['print'])) {
                                    title="<?= htmlspecialchars((string) ($child['title'] ?? $child['label'] ?? '')) ?>">
                                     <?= sidebar_render_nav_icon((string) ($child['icon'] ?? '')) ?>
                                     <span class="sidebar-text flex-grow-1 text-start"><?= htmlspecialchars((string) $child['label']) ?></span>
-                                    <i class="bi bi-chevron-right submenu-chevron flex-shrink-0" aria-hidden="true"></i>
+                                    <i class="bi <?= $nestedMenuOpen ? 'bi-chevron-down' : 'bi-chevron-right' ?> submenu-chevron flex-shrink-0" aria-hidden="true"></i>
                                 </a>
                                 <ul class="sidebar-submenu-nested<?= $nestedMenuOpen ? '' : ' is-collapsed' ?>">
                                     <?php foreach ($nestedChildren as $nested): ?>
@@ -2227,8 +2228,19 @@ if (!isset($_GET['print'])) {
             return;
         }
         var isCollapsed = submenu.classList.contains('is-collapsed');
+        var willOpen = isCollapsed;
         submenu.classList.toggle('is-collapsed');
-        trigger.classList.toggle('is-open', isCollapsed);
+        trigger.classList.toggle('is-open', willOpen);
+
+        var chevron = trigger.querySelector('.submenu-chevron');
+        if (chevron) {
+            chevron.classList.toggle('bi-chevron-right', !willOpen);
+            chevron.classList.toggle('bi-chevron-down', willOpen);
+        }
+        var chevronBtn = trigger.querySelector('.submenu-chevron-btn');
+        if (chevronBtn) {
+            chevronBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        }
     }
 
     function toggleNativeSidebar() {

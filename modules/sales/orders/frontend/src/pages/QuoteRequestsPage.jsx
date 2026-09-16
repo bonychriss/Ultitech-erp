@@ -10,6 +10,40 @@ function formatWhen(value) {
   return d.toLocaleString();
 }
 
+function ensureDotLottiePlayer() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('qr-dotlottie-wc')) return;
+  const script = document.createElement('script');
+  script.id = 'qr-dotlottie-wc';
+  script.type = 'module';
+  script.src = 'https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js';
+  document.head.appendChild(script);
+}
+
+function EmptyQuoteRequests({ animationSrc }) {
+  useEffect(() => {
+    ensureDotLottiePlayer();
+  }, []);
+
+  return (
+    <div className="exp-desk-empty qr-desk-empty">
+      {animationSrc ? (
+        <div className="qr-desk-empty-anim" aria-hidden="true">
+          <dotlottie-wc
+            src={animationSrc}
+            autoplay
+            loop
+            speed="1"
+            style={{ width: '220px', height: '220px' }}
+          />
+        </div>
+      ) : null}
+      <p className="exp-desk-empty-title">No quote requests found</p>
+      <p>Website quotation requests will appear here.</p>
+    </div>
+  );
+}
+
 export default function QuoteRequestsPage() {
   const [init, setInit] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,6 +70,7 @@ export default function QuoteRequestsPage() {
   }, []);
 
   const requests = useMemo(() => init?.requests || [], [init]);
+  const nothingSrc = init?.nothing_animation || '/assets/animations/nothing.lottie';
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -142,10 +177,7 @@ export default function QuoteRequestsPage() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="exp-desk-empty">
-            <p className="exp-desk-empty-title">No quote requests found</p>
-            <p>Website quotation requests from Roadmaster Spares will appear here.</p>
-          </div>
+          <EmptyQuoteRequests animationSrc={nothingSrc} />
         ) : (
           <div className="qr-desk-list">
             {filtered.map((row) => (

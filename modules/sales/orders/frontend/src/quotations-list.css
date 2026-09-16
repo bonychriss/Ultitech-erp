@@ -568,3 +568,18 @@ body.page-orders-desk .exp-desk-btn-create {
   margin: 0;
   white-space: pre-wrap;
 }
+.qr-desk-empty {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  padding: 2rem 1rem 2.5rem;
+}
+.qr-desk-empty-anim {
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.35rem;
+}
+.qr-desk-empty .exp-desk-empty-title {
+  margin-top: 0.15rem;
+}

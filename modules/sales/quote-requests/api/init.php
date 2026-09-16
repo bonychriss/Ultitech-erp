@@ -49,10 +49,14 @@ try {
     }
 
     $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+    $nothingAnimation = function_exists('app_url')
+        ? app_url('/assets/animations/nothing.lottie')
+        : '/assets/animations/nothing.lottie';
     echo json_encode([
         'requests' => array_values($groups),
         'count' => count($groups),
         'module' => $module,
+        'nothing_animation' => $nothingAnimation,
         'urls' => [
             'list' => function_exists('sales_module_url')
                 ? sales_module_url('quote-requests/index.php', ['module' => $module])

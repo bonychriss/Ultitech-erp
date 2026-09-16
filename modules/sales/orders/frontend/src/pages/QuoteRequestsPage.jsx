@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Inbox, Loader2, Mail, Phone, Search, User } from 'lucide-react';
+import { Inbox, Loader2, Mail, Phone, Search, User, X } from 'lucide-react';
 import { fetchQuoteRequestsInit } from '../api/quoteRequestsDesk';
 
 function formatWhen(value) {
@@ -78,44 +78,60 @@ export default function QuoteRequestsPage() {
     <div className="exp-desk-page">
       <div className="exp-desk-page-header">
         <div className="exp-desk-page-header-search exp-desk-page-header-search--desktop">
-          <label className="exp-desk-search" htmlFor="qr-desk-search">
-            <Search size={16} aria-hidden="true" />
+          <div className="exp-desk-search-field">
+            <Search className="exp-desk-search-icon" aria-hidden="true" />
             <input
               id="qr-desk-search"
               type="search"
+              className="exp-desk-search-input"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search quote requests..."
+              placeholder="Search number, customer, product..."
+              autoComplete="off"
               aria-label="Search quote requests"
             />
-          </label>
+            {search.trim() !== '' && (
+              <button
+                type="button"
+                className="exp-desk-search-clear"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
+
         <div className="exp-desk-page-header-actions">
-          {init.urls?.quotations ? (
-            <a href={init.urls.quotations} className="exp-desk-btn exp-desk-btn-ghost">
-              Quotations
-            </a>
-          ) : null}
+          <div className="exp-desk-toolbar-secondary">
+            {init.urls?.quotations ? (
+              <a href={init.urls.quotations} className="exp-desk-btn exp-desk-btn-ghost">
+                Quotations
+              </a>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      <section className="exp-desk-kpi-grid" aria-label="Quote request summary">
-        <div className="exp-desk-kpi">
-          <div className="exp-desk-kpi-icon" aria-hidden="true">
-            <Inbox size={18} />
+      <section className="exp-desk-kpi-grid qt-kpi-grid" aria-label="Quote request summary">
+        <div className="exp-desk-kpi exp-desk-kpi-card">
+          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--violet">
+            <Inbox size={20} aria-hidden="true" />
           </div>
-          <div>
-            <div className="exp-desk-kpi-value">{requests.length}</div>
+          <div className="exp-desk-kpi-body">
             <div className="exp-desk-kpi-label">website requests</div>
+            <div className="exp-desk-kpi-value">{requests.length}</div>
           </div>
         </div>
-        <div className="exp-desk-kpi">
-          <div className="exp-desk-kpi-icon" aria-hidden="true">
-            <Search size={18} />
+        <div className="exp-desk-kpi exp-desk-kpi-card">
+          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--teal">
+            <Search size={20} aria-hidden="true" />
           </div>
-          <div>
-            <div className="exp-desk-kpi-value">{filtered.length}</div>
+          <div className="exp-desk-kpi-body">
             <div className="exp-desk-kpi-label">listed now</div>
+            <div className="exp-desk-kpi-value">{filtered.length}</div>
+            <div className="exp-desk-kpi-helper">matching current search</div>
           </div>
         </div>
       </section>

@@ -187,7 +187,6 @@ export function MailboxLogin({ onConnected, onToast }: Props) {
                       ? typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)
                       : label}
                   </strong>
-                  <span>{m.email}</span>
                 </span>
               </button>
             );

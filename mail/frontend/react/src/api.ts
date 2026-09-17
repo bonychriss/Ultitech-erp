@@ -233,6 +233,13 @@ export const api = {
     return request<{ ok: boolean }>('/api/logout', { method: 'POST' });
   },
 
+  signOutMailbox() {
+    return request<{ ok: boolean; message?: string; mailboxes?: PoolMailbox[] }>(
+      '/api/sign-out-mailbox',
+      { method: 'POST' },
+    );
+  },
+
   folders() {
     return request<{ ok: boolean; folders: Folder[]; account: Account }>('/api/folders');
   },

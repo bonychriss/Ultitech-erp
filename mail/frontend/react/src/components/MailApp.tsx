@@ -85,7 +85,7 @@ export function MailApp({
   initialFolders,
   welcomeMessage = '',
   isMailAdmin = false,
-  onLogout,
+  onLogout: _onLogout,
 }: Props) {
   const [folders, setFolders] = useState(initialFolders);
   const [account, setAccount] = useState(initialAccount);
@@ -458,8 +458,22 @@ export function MailApp({
             className="side-item side-signout"
             title="Sign out"
             onClick={async () => {
-              await api.logout();
-              onLogout();
+              try {
+                await api.signOutMailbox();
+              } catch {
+                // still return to picker
+              }
+              setAccount(null);
+              setFolders([]);
+              setSelected(null);
+              setMessages([]);
+              setInlineReply(false);
+              setSelectMode(false);
+              setSelectedIds([]);
+              setCompose({ open: false });
+              setSettingsStartCreate(false);
+              setView('claim');
+              setToast('Choose a mailbox to continue');
             }}
           >
             <span className="side-ico">

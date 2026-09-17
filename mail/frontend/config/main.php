@@ -58,6 +58,7 @@ return [
                 'api/login' => 'api/login',
                 'api/signup' => 'api/signup',
                 'api/logout' => 'api/logout',
+                'api/sign-out-mailbox' => 'api/sign-out-mailbox',
                 'api/folders' => 'api/folders',
                 'api/messages' => 'api/messages',
                 'api/messages/<id:\d+>' => 'api/message',

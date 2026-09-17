@@ -49,6 +49,7 @@ class ApiController extends Controller
                     'login' => ['post'],
                     'signup' => ['post'],
                     'logout' => ['post'],
+                    'sign-out-mailbox' => ['post'],
                     'send' => ['post'],
                     'draft' => ['post'],
                     'star' => ['post'],
@@ -203,6 +204,19 @@ class ApiController extends Controller
     {
         Yii::$app->user->logout();
         return ['ok' => true];
+    }
+
+    /** Leave the active mailbox and return to the account picker (stay signed into the app). */
+    public function actionSignOutMailbox(): array
+    {
+        $this->setMailboxSignedOut(true);
+        Yii::$app->session->remove('mail_active_account_id');
+
+        return [
+            'ok' => true,
+            'message' => 'Signed out of mailbox.',
+            'mailboxes' => $this->listClaimableMailboxes(),
+        ];
     }
 
     public function actionFolders(): array
@@ -430,10 +444,41 @@ class ApiController extends Controller
             return ['ok' => false, 'message' => 'Choose a mailbox and enter its password.'];
         }
 
+        $uid = (int) Yii::$app->user->id;
+        $ownedQuery = MailAccount::find()->where(['user_id' => $uid, 'is_active' => 1]);
+        if ($id > 0) {
+            $ownedQuery->andWhere(['id' => $id]);
+        } elseif ($email !== '') {
+            $ownedQuery->andWhere(['email' => $email]);
+        }
+        $owned = $ownedQuery->one();
+        if ($owned) {
+            $probe = (new ImapSyncService())->testLogin($owned, $password);
+            if (!$probe['ok']) {
+                Yii::$app->response->statusCode = 422;
+                return [
+                    'ok' => false,
+                    'message' => 'Login failed. Check the password your admin sent you.',
+                ];
+            }
+            $owned->imap_password_plain = $password;
+            $owned->smtp_password_plain = $password;
+            $owned->save(false);
+            $this->setMailboxSignedOut(false);
+            Yii::$app->session->set('mail_active_account_id', (int) $owned->id);
+
+            return [
+                'ok' => true,
+                'message' => 'Mailbox connected. You will not need to enter this password again.',
+                'account' => $this->serializeAccount($owned),
+                'folders' => array_map([$this, 'serializeFolder'], $owned->folders),
+            ];
+        }
+
         if ($this->findAccount(false)) {
             // Allow connecting another address; block only if this email is already linked.
             $dupQuery = MailAccount::find()->where([
-                'user_id' => (int) Yii::$app->user->id,
+                'user_id' => $uid,
                 'is_active' => 1,
             ]);
             if ($id > 0) {
@@ -509,6 +554,9 @@ class ApiController extends Controller
             $account->ensureDefaultFolders();
         }
 
+        $this->setMailboxSignedOut(false);
+        Yii::$app->session->set('mail_active_account_id', (int) $account->id);
+
         return [
             'ok' => true,
             'message' => 'Mailbox connected. You will not need to enter this password again.',
@@ -520,13 +568,41 @@ class ApiController extends Controller
     /**
      * Distinct company mailboxes this user can still connect to
      * (unclaimed pool first, then shared addresses already used by teammates).
+     * After mailbox sign-out, lists this user's own accounts so they can pick again.
      *
-     * @return list<array{id:int,email:string,display_name:string}>
+     * @return list<array{id:int,email:string,display_name:string,account_type?:string}>
      */
     private function listClaimableMailboxes(): array
     {
         $company = $this->currentCompany();
         $uid = (int) Yii::$app->user->id;
+        $signedOut = $this->isMailboxSignedOut();
+
+        if ($signedOut) {
+            $owned = MailAccount::find()
+                ->where(['user_id' => $uid, 'is_active' => 1])
+                ->orderBy(['email' => SORT_ASC, 'id' => SORT_ASC])
+                ->all();
+            $mailboxes = [];
+            $seen = [];
+            foreach ($owned as $a) {
+                $email = strtolower(trim((string) $a->email));
+                if ($email === '' || isset($seen[$email])) {
+                    continue;
+                }
+                $seen[$email] = true;
+                $mailboxes[] = [
+                    'id' => (int) $a->id,
+                    'email' => $a->email,
+                    'display_name' => $a->display_name,
+                    'account_type' => (string) ($a->account_type ?? ''),
+                ];
+            }
+            if ($mailboxes !== []) {
+                return $mailboxes;
+            }
+        }
+
         $mine = MailAccount::find()
             ->select(['email'])
             ->where(['user_id' => $uid, 'is_active' => 1])
@@ -870,6 +946,9 @@ class ApiController extends Controller
             }
         }
 
+        $this->setMailboxSignedOut(false);
+        Yii::$app->session->set('mail_active_account_id', (int) $model->id);
+
         return [
             'ok' => true,
             'message' => $isNew ? 'Mailbox connected.' : 'Account updated. IMAP login verified.',
@@ -888,16 +967,51 @@ class ApiController extends Controller
 
     private function findAccount(bool $required = true): ?MailAccount
     {
-        $account = MailAccount::find()
-            ->where(['user_id' => Yii::$app->user->id, 'is_active' => 1])
-            ->orderBy(['id' => SORT_DESC])
-            ->one();
+        if ($this->isMailboxSignedOut()) {
+            if ($required) {
+                Yii::$app->response->statusCode = 404;
+                Yii::$app->response->data = ['ok' => false, 'message' => 'No mail account connected.'];
+                Yii::$app->end();
+            }
+            return null;
+        }
+
+        $uid = (int) Yii::$app->user->id;
+        $preferredId = (int) Yii::$app->session->get('mail_active_account_id', 0);
+        $account = null;
+        if ($preferredId > 0) {
+            $account = MailAccount::findOne([
+                'id' => $preferredId,
+                'user_id' => $uid,
+                'is_active' => 1,
+            ]);
+        }
+        if (!$account) {
+            $account = MailAccount::find()
+                ->where(['user_id' => $uid, 'is_active' => 1])
+                ->orderBy(['id' => SORT_DESC])
+                ->one();
+        }
         if (!$account && $required) {
             Yii::$app->response->statusCode = 404;
             Yii::$app->response->data = ['ok' => false, 'message' => 'No mail account connected.'];
             Yii::$app->end();
         }
         return $account;
+    }
+
+    private function isMailboxSignedOut(): bool
+    {
+        return (bool) Yii::$app->session->get('mail_mailbox_signed_out', false);
+    }
+
+    private function setMailboxSignedOut(bool $signedOut): void
+    {
+        if ($signedOut) {
+            Yii::$app->session->set('mail_mailbox_signed_out', true);
+            return;
+        }
+        Yii::$app->session->remove('mail_mailbox_signed_out');
     }
 
     private function findMessage(int $accountId, int $id): MailMessage

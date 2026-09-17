@@ -593,8 +593,27 @@ class ApiController extends Controller
             'has_attachments' => (bool) $m->has_attachments,
             'attachments' => $attachments,
             'date_sent' => $m->date_sent,
-            'date_label' => Yii::$app->formatter->asDatetime($m->date_sent, 'php:M j'),
+            'date_label' => $this->formatMessageDateLabel($m->date_sent),
         ];
+    }
+
+    private function formatMessageDateLabel(?int $timestamp): string
+    {
+        if (!$timestamp) {
+            return '';
+        }
+        $tz = Yii::$app->timeZone ?: date_default_timezone_get() ?: 'UTC';
+        $dt = (new \DateTimeImmutable('@' . $timestamp))->setTimezone(new \DateTimeZone($tz));
+        $now = new \DateTimeImmutable('now', new \DateTimeZone($tz));
+
+        // Today → time only; this year → "Sep 17, 1:14 PM"; older → include year.
+        if ($dt->format('Y-m-d') === $now->format('Y-m-d')) {
+            return $dt->format('g:i A');
+        }
+        if ($dt->format('Y') === $now->format('Y')) {
+            return $dt->format('M j, g:i A');
+        }
+        return $dt->format('M j, Y g:i A');
     }
 
     private function serializeMessageDetail(MailMessage $m): array

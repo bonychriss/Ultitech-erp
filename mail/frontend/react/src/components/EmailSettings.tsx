@@ -828,25 +828,31 @@ export function EmailSettings({
         </div>
       ) : (
         <div className="account-cards">
-          {accounts.map((a) => (
-            <div key={a.id} className="account-card">
-              <strong className="account-card-name">{a.display_name || a.email}</strong>
-              <span className="account-card-email muted">{a.email}</span>
-              <span className="account-card-servers muted">
-                IMAP {a.imap_host}:{a.imap_port} · SMTP {a.smtp_host}:{a.smtp_port}
-              </span>
-              <div className="account-actions">
-                <button type="button" className="tool" onClick={() => openEdit(a)}>
-                  <MdEdit size={18} aria-hidden />
-                  Edit
-                </button>
-                <button type="button" className="tool" onClick={() => void removeAccount(a)}>
-                  <MdDelete size={18} aria-hidden />
-                  Remove
-                </button>
+          {accounts.map((a) => {
+            const sameHost = a.imap_host === a.smtp_host;
+            const servers = sameHost
+              ? `${a.imap_host} · IMAP ${a.imap_port} · SMTP ${a.smtp_port}`
+              : `IMAP ${a.imap_host}:${a.imap_port} · SMTP ${a.smtp_host}:${a.smtp_port}`;
+            return (
+              <div key={a.id} className="account-card">
+                <strong className="account-card-name">{a.display_name || a.email}</strong>
+                <span className="account-card-email muted">{a.email}</span>
+                <span className="account-card-servers muted" title={servers}>
+                  {servers}
+                </span>
+                <div className="account-actions">
+                  <button type="button" className="tool" onClick={() => openEdit(a)}>
+                    <MdEdit size={18} aria-hidden />
+                    Edit
+                  </button>
+                  <button type="button" className="tool" onClick={() => void removeAccount(a)}>
+                    <MdDelete size={18} aria-hidden />
+                    Remove
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

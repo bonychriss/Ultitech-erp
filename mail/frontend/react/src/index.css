@@ -2056,6 +2056,9 @@ a.auth-submit-link {
 .settings-panel {
   padding: 18px 24px 40px;
   max-width: 880px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .settings-head {
   display: flex;
@@ -2100,34 +2103,37 @@ a.auth-submit-link {
   flex-direction: column;
   gap: 12px;
   margin-top: 18px;
+  width: 100%;
+  min-width: 0;
 }
 .account-card {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 16px 20px;
+  column-gap: 18px;
+  row-gap: 8px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 14px 18px;
   border: 1px solid #e8eaed;
   border-radius: 12px;
   background: #fff;
-  overflow-x: auto;
 }
 .account-card-name {
   color: #111111;
   font-weight: 600;
   font-size: 0.95rem;
   white-space: nowrap;
-  flex: 0 0 auto;
 }
 .account-card-email {
   white-space: nowrap;
-  flex: 0 0 auto;
 }
 .account-card-servers {
-  white-space: nowrap;
-  flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .account-card .muted {
   color: #5f6368;
@@ -2136,8 +2142,8 @@ a.auth-submit-link {
 .account-actions {
   display: flex;
   gap: 4px;
-  flex: 0 0 auto;
-  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .account-form .form-grid {
   display: grid;
@@ -2569,11 +2575,10 @@ a.auth-submit-link {
   .auth-submit { max-width: none; }
   .account-form .form-grid { grid-template-columns: 1fr; }
   .account-card {
-    flex-wrap: wrap;
-    row-gap: 10px;
+    grid-template-columns: 1fr auto;
   }
-  .account-actions {
-    margin-left: 0;
-    width: 100%;
-  }
+  .account-card-name { grid-column: 1; }
+  .account-card-email { grid-column: 1; }
+  .account-card-servers { grid-column: 1; }
+  .account-actions { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
 }

@@ -66,7 +66,6 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
   const approverName = line(doc.approverName);
   const approverTitle = line(doc.approverTitle);
   const approverSignatureUrl = line(doc.approverSignatureUrl);
-  const logoWatermarkUrl = line(doc.logoUrl) || line(doc.companyLogoUrl);
   const bodyText = String(doc.body || '');
   const paragraphs = bodyText
     .split(/\n\s*\n/)
@@ -223,19 +222,21 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
           </div>
 
           <div className="lh-signatories">
-            <div className="lh-signatory">
+            <div className="lh-signatory lh-signatory--author">
               <div className="lh-signatory-role">Prepared by</div>
-              {signatureUrl ? (
-                <div className="lh-signature-wrap">
-                  <img
-                    src={signatureUrl}
-                    alt="Author signature"
-                    className="lh-signature"
-                  />
-                </div>
-              ) : (
-                <div className="lh-sign-space" aria-hidden="true" />
-              )}
+              <div className="lh-author-sig-block">
+                {signatureUrl ? (
+                  <div className="lh-signature-wrap">
+                    <img
+                      src={signatureUrl}
+                      alt="Author signature"
+                      className="lh-signature"
+                    />
+                  </div>
+                ) : (
+                  <div className="lh-sign-space" aria-hidden="true" />
+                )}
+              </div>
               {editable ? (
                 <>
                   <LhEdit
@@ -262,11 +263,11 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
             <div className="lh-signatory lh-signatory--approver">
               <div className="lh-signatory-role">Approved by</div>
               <div className="lh-approver-sig-block">
-                {logoWatermarkUrl ? (
+                {showStamp ? (
                   <img
-                    src={logoWatermarkUrl}
+                    src={stampSrc}
                     alt=""
-                    className="lh-approver-logo-watermark"
+                    className="lh-approver-stamp-watermark"
                     aria-hidden="true"
                   />
                 ) : null}
@@ -290,16 +291,6 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
               </div>
             </div>
           </div>
-
-          {showStamp ? (
-            <div className="lh-stamp-wrap">
-              <img
-                src={stampSrc}
-                alt="Company stamp"
-                className="lh-stamp"
-              />
-            </div>
-          ) : null}
         </div>
       </div>
 

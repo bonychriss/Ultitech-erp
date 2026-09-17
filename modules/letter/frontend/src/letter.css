@@ -884,15 +884,34 @@
 }
 
 .lh-closing {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.85rem;
 }
 
 .lh-signatories {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.25rem 2rem;
-  margin-top: 0.5rem;
+  gap: 1.5rem 3rem;
+  margin-top: 0;
   align-items: start;
+  width: 100%;
+  max-width: none;
+}
+
+.lh-signatory {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  min-width: 0;
+}
+
+.lh-signatory--author {
+  justify-self: start;
+}
+
+.lh-signatory--approver {
+  justify-self: end;
+  align-items: flex-start;
 }
 
 .lh-signatory-role {
@@ -901,46 +920,65 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #64748b;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.35rem;
+  min-height: 1.1em;
 }
 
+.lh-author-sig-block,
 .lh-approver-sig-block {
   position: relative;
   display: flex;
-  align-items: flex-end;
-  min-height: 56px;
-  min-width: 160px;
-  margin: 0.15rem 0 0.2rem;
+  align-items: center;
+  justify-content: flex-start;
+  width: 130px;
+  height: 110px;
+  margin: 0 0 0.15rem;
 }
 
-.lh-approver-logo-watermark {
+.lh-approver-stamp-watermark {
   position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 88px;
-  height: 88px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 108px;
+  height: 108px;
   object-fit: contain;
-  opacity: 0.28;
+  opacity: 0.55;
   pointer-events: none;
   user-select: none;
   z-index: 0;
 }
 
-.lh-signatory--approver .lh-signature-wrap {
+.lh-signatory .lh-signature-wrap {
   position: relative;
   z-index: 1;
   margin: 0;
   background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 0;
 }
 
-.lh-signatory--approver .lh-signature {
+.lh-signatory .lh-signature {
   position: relative;
   z-index: 1;
+  max-width: 120px;
+  max-height: 44px;
 }
 
-.lh-signatory--approver .lh-sign-space--pending {
+.lh-signatory .lh-sign-space,
+.lh-signatory .lh-sign-space--pending {
   position: relative;
   z-index: 1;
+  margin: 0;
+  width: 120px;
+}
+
+.lh-signatory .lh-sign-name,
+.lh-signatory .lh-sign-title {
+  text-align: left;
+  width: 100%;
 }
 
 .lh-sign-space {
@@ -986,6 +1024,7 @@
 @media (max-width: 640px) {
   .lh-signatories {
     grid-template-columns: 1fr;
+    max-width: none;
   }
 }
 

@@ -17,7 +17,6 @@ import {
   api,
   type AccountDetail,
   type AccountInput,
-  type PoolMailbox,
 } from '../api';
 
 /** Empty mailbox form; From name defaults to the company name in capitals. */
@@ -195,8 +194,6 @@ type Props = {
   requirePassword?: boolean;
   onPasswordSaved?: () => void;
   isMailAdmin?: boolean;
-  /** Admin first-run: create team mailboxes for staff to claim. */
-  teamPoolMode?: boolean;
   onBackToClaim?: () => void;
 };
 
@@ -209,11 +206,9 @@ export function EmailSettings({
   requirePassword = false,
   onPasswordSaved,
   isMailAdmin = false,
-  teamPoolMode = false,
   onBackToClaim,
 }: Props) {
   const [accounts, setAccounts] = useState<AccountDetail[]>([]);
-  const [pool, setPool] = useState<PoolMailbox[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>('list');
   const [step, setStep] = useState<SetupStep>(1);
@@ -229,9 +224,6 @@ export function EmailSettings({
   /** When sync failed auth, force re-entry — blank must not keep the bad password. */
   const [passwordRequired, setPasswordRequired] = useState(requirePassword);
   const [hint, setHint] = useState('');
-  const [poolEmail, setPoolEmail] = useState('');
-  const [poolPassword, setPoolPassword] = useState('');
-  const [poolBusy, setPoolBusy] = useState(false);
   const [customAccountType, setCustomAccountType] = useState(false);
 
   function companyPreset() {

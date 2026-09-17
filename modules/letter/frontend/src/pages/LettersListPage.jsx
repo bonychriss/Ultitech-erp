@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FilePlus2, Lock, Share2, Trash2 } from 'lucide-react';
+import { CheckCircle2, FilePlus2, Lock, Share2, Trash2 } from 'lucide-react';
 import ShareLetterModal from '../components/ShareLetterModal.jsx';
 import {
   composeHref,
@@ -7,8 +7,10 @@ import {
   deleteLetter,
   formatListDate,
   listLetters,
+  normalizeApprovalStatus,
   normalizeVisibility,
   readLetterCfg,
+  syncLettersFromServer,
   upsertLetter,
 } from '../utils/letterStore.js';
 
@@ -38,10 +40,20 @@ function authorLabel(row, cfg) {
   ).trim() || '-';
 }
 
+function statusPill(status) {
+  const s = normalizeApprovalStatus(status);
+  if (s === 'approved') return { label: 'Approved', className: 'is-approved' };
+  if (s === 'pending') return { label: 'Pending', className: 'is-pending' };
+  if (s === 'rejected') return { label: 'Rejected', className: 'is-rejected' };
+  return { label: 'Draft', className: 'is-draft' };
+}
+
 export default function LettersListPage() {
   const cfg = useMemo(() => readLetterCfg(), []);
   const accent = cfg.branding?.accentColor || '#FBC51C';
   const [letters, setLetters] = useState(() => listLetters(cfg));
+  const [pending, setPending] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(Boolean(cfg.isAdmin));
   const [shareRow, setShareRow] = useState(null);
   const [notice, setNotice] = useState('');
   const emptyAnimSrc = String(cfg.emptyAnimationUrl || EMPTY_LOTTIE_FALLBACK).trim() || EMPTY_LOTTIE_FALLBACK;
@@ -56,6 +68,17 @@ export default function LettersListPage() {
     const flash = consumeLetterFlash();
     if (flash) setNotice(flash);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    syncLettersFromServer(cfg).then((result) => {
+      if (cancelled) return;
+      setLetters(result.letters || listLetters(cfg));
+      setPending(Array.isArray(result.pending) ? result.pending : []);
+      setIsAdmin(Boolean(result.isAdmin ?? cfg.isAdmin));
+    });
+    return () => { cancelled = true; };
+  }, [cfg]);
 
   const showSentNotice = (count = 1) => {
     const n = Math.max(1, Number(count) || 1);
@@ -76,6 +99,7 @@ export default function LettersListPage() {
     if (!window.confirm(`Delete ${label}?`)) return;
     deleteLetter(id, cfg);
     refresh();
+    setPending((rows) => rows.filter((r) => String(r.id) !== String(id)));
   };
 
   const handleToggleVisibility = (event, row) => {
@@ -96,6 +120,10 @@ export default function LettersListPage() {
     setShareRow(row);
   };
 
+  const pendingOnly = pending.filter(
+    (row) => !letters.some((mine) => String(mine.id) === String(row.id))
+  );
+
   return (
     <div className="letter-list-page" style={{ '--lh-accent': accent }}>
       {notice ? (
@@ -106,7 +134,7 @@ export default function LettersListPage() {
 
       <div className="letter-list-head">
         <div>
-          <p>Your letters are saved automatically. Open one to keep editing.</p>
+          <p>Create a letter, then submit it for admin approval. The company stamp appears only after approval.</p>
         </div>
         <button type="button" className="letter-btn letter-btn-primary letter-btn--pill" onClick={handleNew}>
           <FilePlus2 size={16} />
@@ -114,7 +142,43 @@ export default function LettersListPage() {
         </button>
       </div>
 
-      {letters.length === 0 ? (
+      {isAdmin && pending.length > 0 ? (
+        <div className="letter-table-wrap letter-card" style={{ marginBottom: '1rem' }}>
+          <div className="letter-list-section-title">
+            <CheckCircle2 size={16} />
+            Awaiting your approval ({pending.length})
+          </div>
+          <table className="letter-table">
+            <thead>
+              <tr>
+                <th className="letter-col-sn">S/N</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pending.map((row, index) => {
+                const pill = statusPill(row.status);
+                return (
+                  <tr key={`pending-${row.id}`} onClick={() => handleOpen(row.id)}>
+                    <td className="letter-col-sn">{index + 1}</td>
+                    <td className="letter-col-name">{authorLabel(row, cfg)}</td>
+                    <td>{recipientLabel(row.form)}</td>
+                    <td>
+                      <span className={`letter-approval-pill ${pill.className}`}>{pill.label}</span>
+                    </td>
+                    <td>{formatListDate(row.updatedAt || row.createdAt)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {letters.length === 0 && pendingOnly.length === 0 ? (
         <div className="letter-list-empty letter-card">
           <div className="letter-empty-lottie" aria-hidden="true">
             <dotlottie-wc
@@ -132,7 +196,7 @@ export default function LettersListPage() {
             Create letter
           </button>
         </div>
-      ) : (
+      ) : letters.length > 0 ? (
         <div className="letter-table-wrap letter-card">
           <table className="letter-table">
             <thead>
@@ -140,6 +204,7 @@ export default function LettersListPage() {
                 <th className="letter-col-sn">S/N</th>
                 <th>Name</th>
                 <th>To</th>
+                <th>Status</th>
                 <th>Date</th>
                 <th className="letter-col-actions" aria-label="Actions" />
               </tr>
@@ -148,11 +213,15 @@ export default function LettersListPage() {
               {letters.map((row, index) => {
                 const visibility = normalizeVisibility(row.visibility);
                 const isPrivate = visibility === 'private';
+                const pill = statusPill(row.status);
                 return (
                   <tr key={row.id} onClick={() => handleOpen(row.id)}>
                     <td className="letter-col-sn">{index + 1}</td>
                     <td className="letter-col-name">{authorLabel(row, cfg)}</td>
                     <td>{recipientLabel(row.form)}</td>
+                    <td>
+                      <span className={`letter-approval-pill ${pill.className}`}>{pill.label}</span>
+                    </td>
                     <td>{formatListDate(row.updatedAt || row.createdAt)}</td>
                     <td className="letter-col-actions">
                       <div className="letter-row-actions">
@@ -200,7 +269,7 @@ export default function LettersListPage() {
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
 
       {shareRow ? (
         <ShareLetterModal

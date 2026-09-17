@@ -1,4 +1,4 @@
-/** Multi-letter localStorage store (per company + user). */
+/** Multi-letter localStorage store (per company + user) + server approval sync. */
 
 export function readLetterCfg() {
   if (typeof window !== 'undefined' && window.__LETTER_CFG__ && typeof window.__LETTER_CFG__ === 'object') {
@@ -46,6 +46,122 @@ export function letterDisplayTitle(form = {}) {
   return 'Untitled letter';
 }
 
+export function normalizeApprovalStatus(value) {
+  const s = String(value || '').toLowerCase().trim();
+  if (s === 'pending' || s === 'approved' || s === 'rejected' || s === 'draft') return s;
+  return 'draft';
+}
+
+function letterApiBase(cfg = readLetterCfg()) {
+  return String(cfg.apiUrl || '').trim();
+}
+
+async function letterApiRequest(action, { method = 'GET', body, id, cfg = readLetterCfg() } = {}) {
+  const base = letterApiBase(cfg);
+  if (!base) return null;
+  const url = new URL(base, window.location.origin);
+  url.searchParams.set('action', action);
+  if (id) url.searchParams.set('id', id);
+  const opts = {
+    method,
+    credentials: 'same-origin',
+    headers: {},
+  };
+  if (body !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify({ action, ...body });
+  }
+  const res = await fetch(url.toString(), opts);
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json || json.ok === false) {
+    const err = new Error((json && json.error) || `Request failed (${res.status})`);
+    err.payload = json;
+    throw err;
+  }
+  return json;
+}
+
+export async function syncLettersFromServer(cfg = readLetterCfg()) {
+  try {
+    const data = await letterApiRequest('list', { cfg });
+    if (!data) return { letters: listLetters(cfg), pending: [] };
+    const mine = Array.isArray(data.letters) ? data.letters : [];
+    const pending = Array.isArray(data.pending) ? data.pending : [];
+    mine.forEach((row) => {
+      if (row?.id) upsertLetter({ ...row, skipServer: true }, cfg);
+    });
+    pending.forEach((row) => {
+      if (row?.id) upsertLetter({ ...row, skipServer: true }, cfg);
+    });
+    return { letters: listLetters(cfg), pending, isAdmin: Boolean(data.isAdmin) };
+  } catch {
+    return { letters: listLetters(cfg), pending: [], isAdmin: Boolean(cfg.isAdmin) };
+  }
+}
+
+export async function fetchLetterFromServer(id, cfg = readLetterCfg()) {
+  if (!id) return null;
+  try {
+    const data = await letterApiRequest('get', { id, cfg });
+    if (data?.letter?.id) {
+      upsertLetter({ ...data.letter, skipServer: true }, cfg);
+      return data.letter;
+    }
+  } catch {
+    /* fall through */
+  }
+  return getLetter(id, cfg);
+}
+
+export async function saveLetterToServer(letter, { submit = false } = {}, cfg = readLetterCfg()) {
+  if (!letter?.id) return null;
+  const data = await letterApiRequest(submit ? 'submit' : 'save', {
+    method: 'POST',
+    cfg,
+    body: {
+      id: letter.id,
+      title: letter.title || letterDisplayTitle(letter.form || {}),
+      form: letter.form || {},
+      visibility: normalizeVisibility(letter.visibility),
+      authorName: letter.authorName,
+      authorId: letter.authorId,
+      createdAt: letter.createdAt,
+      status: letter.status,
+    },
+  });
+  if (data?.letter?.id) {
+    upsertLetter({ ...data.letter, skipServer: true }, cfg);
+    return data.letter;
+  }
+  return null;
+}
+
+export async function approveLetterOnServer(id, cfg = readLetterCfg()) {
+  const data = await letterApiRequest('approve', {
+    method: 'POST',
+    cfg,
+    body: { id },
+  });
+  if (data?.letter?.id) {
+    upsertLetter({ ...data.letter, skipServer: true }, cfg);
+    return data.letter;
+  }
+  return null;
+}
+
+export async function rejectLetterOnServer(id, cfg = readLetterCfg()) {
+  const data = await letterApiRequest('reject', {
+    method: 'POST',
+    cfg,
+    body: { id },
+  });
+  if (data?.letter?.id) {
+    upsertLetter({ ...data.letter, skipServer: true }, cfg);
+    return data.letter;
+  }
+  return null;
+}
+
 function readLibrary(key) {
   if (typeof window === 'undefined') return [];
   try {
@@ -83,6 +199,7 @@ function migrateLegacyDraft(cfg, key) {
       title: letterDisplayTitle(form),
       form,
       visibility: 'private',
+      status: 'draft',
       createdAt: now,
       updatedAt: now,
     }];
@@ -109,7 +226,6 @@ export function getLetter(id, cfg = readLetterCfg()) {
 export function listInboxLetters(cfg = readLetterCfg()) {
   const me = Number(cfg.user?.id || 0) || 0;
 
-  // Keep any of this user's already-public letters in the public pool.
   listLetters(cfg).forEach((row) => {
     if (normalizeVisibility(row.visibility) === 'public') {
       syncInboxLetter(row, cfg);
@@ -196,6 +312,10 @@ export function sendLetterToEmployees(letter, userIds, cfg = readLetterCfg()) {
     authorName: String(letter.authorName || letter.form?.signName || cfg.user?.name || '').trim(),
     authorId: Number(letter.authorId || cfg.user?.id || 0) || 0,
     visibility: normalizeVisibility(letter.visibility || 'private'),
+    status: normalizeApprovalStatus(letter.status),
+    approverName: letter.approverName || '',
+    approverTitle: letter.approverTitle || '',
+    approverSignatureUrl: letter.approverSignatureUrl || '',
     createdAt: letter.createdAt || now,
     updatedAt: letter.updatedAt || now,
     sharedAt: now,
@@ -298,6 +418,24 @@ export function upsertLetter(letter, cfg = readLetterCfg()) {
         ? letter.visibility
         : (prev?.visibility || 'private')
     ),
+    status: normalizeApprovalStatus(
+      letter.status !== undefined
+        ? letter.status
+        : (prev?.status || 'draft')
+    ),
+    approverId: letter.approverId !== undefined ? letter.approverId : (prev?.approverId || null),
+    approverName: letter.approverName !== undefined
+      ? String(letter.approverName || '')
+      : String(prev?.approverName || ''),
+    approverTitle: letter.approverTitle !== undefined
+      ? String(letter.approverTitle || '')
+      : String(prev?.approverTitle || ''),
+    approverSignatureUrl: letter.approverSignatureUrl !== undefined
+      ? String(letter.approverSignatureUrl || '')
+      : String(prev?.approverSignatureUrl || ''),
+    approvedAt: letter.approvedAt !== undefined
+      ? String(letter.approvedAt || '')
+      : String(prev?.approvedAt || ''),
     createdAt: (prev && prev.createdAt) || letter.createdAt || now,
     updatedAt: now,
   };
@@ -313,6 +451,10 @@ export function upsertLetter(letter, cfg = readLetterCfg()) {
   } else {
     removeInboxLetter(next.id, cfg);
   }
+
+  if (!letter.skipServer && letterApiBase(cfg) && next.status === 'draft') {
+    saveLetterToServer(next, { submit: false }, cfg).catch(() => {});
+  }
   return true;
 }
 
@@ -323,6 +465,9 @@ export function deleteLetter(id, cfg = readLetterCfg()) {
   const ok = writeLibrary(key, letters);
   removeInboxLetter(id, cfg);
   removeDirectShares(id, cfg);
+  if (letterApiBase(cfg)) {
+    letterApiRequest('delete', { method: 'POST', cfg, body: { id } }).catch(() => {});
+  }
   return ok;
 }
 

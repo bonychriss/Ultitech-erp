@@ -40,7 +40,11 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
   const headerSrc = line(doc.letterheadHeaderUrl) || headerArt;
   const footerSrc = line(doc.letterheadFooterUrl) || footerArt;
   const stampSrc = line(doc.stampUrl) || line(doc.stampPreviewUrl) || ultimateStamp;
-  const showStamp = Boolean(doc.showStamp ?? doc.showUltimateStamp);
+  const approvalStatus = String(doc.approvalStatus || doc.status || 'draft').toLowerCase();
+  const isApproved = approvalStatus === 'approved';
+  // Company stamp only after an admin has approved the letter.
+  const stampAvailable = Boolean(doc.stampAvailable ?? doc.showStamp ?? doc.showUltimateStamp);
+  const showStamp = stampAvailable && isApproved;
 
   const subjectRaw = String(doc.subject ?? '');
   const refValue = !subjectRaw
@@ -59,6 +63,9 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
   const signName = line(doc.signName);
   const signTitle = line(doc.signTitle);
   const signatureUrl = line(doc.signatureUrl);
+  const approverName = line(doc.approverName);
+  const approverTitle = line(doc.approverTitle);
+  const approverSignatureUrl = line(doc.approverSignatureUrl);
   const bodyText = String(doc.body || '');
   const paragraphs = bodyText
     .split(/\n\s*\n/)
@@ -213,38 +220,66 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
               closing
             )}
           </div>
-          {signatureUrl ? (
-            <div className="lh-signature-wrap">
-              <img
-                src={signatureUrl}
-                alt="Signature"
-                className="lh-signature"
-              />
+
+          <div className="lh-signatories">
+            <div className="lh-signatory">
+              <div className="lh-signatory-role">Prepared by</div>
+              {signatureUrl ? (
+                <div className="lh-signature-wrap">
+                  <img
+                    src={signatureUrl}
+                    alt="Author signature"
+                    className="lh-signature"
+                  />
+                </div>
+              ) : (
+                <div className="lh-sign-space" aria-hidden="true" />
+              )}
+              {editable ? (
+                <>
+                  <LhEdit
+                    className="lh-sign-name"
+                    value={doc.signName}
+                    onChange={set('signName')}
+                    placeholder="Signatory name"
+                  />
+                  <LhEdit
+                    className="lh-sign-title"
+                    value={doc.signTitle}
+                    onChange={set('signTitle')}
+                    placeholder="Title"
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="lh-sign-name">{signName}</div>
+                  <div className="lh-sign-title">{signTitle}</div>
+                </>
+              )}
             </div>
-          ) : (
-            <div className="lh-sign-space" aria-hidden="true" />
-          )}
-          {editable ? (
-            <>
-              <LhEdit
-                className="lh-sign-name"
-                value={doc.signName}
-                onChange={set('signName')}
-                placeholder="Signatory name"
-              />
-              <LhEdit
-                className="lh-sign-title"
-                value={doc.signTitle}
-                onChange={set('signTitle')}
-                placeholder="Title"
-              />
-            </>
-          ) : (
-            <>
-              <div className="lh-sign-name">{signName}</div>
-              <div className="lh-sign-title">{signTitle}</div>
-            </>
-          )}
+
+            <div className="lh-signatory">
+              <div className="lh-signatory-role">Approved by</div>
+              {approverSignatureUrl ? (
+                <div className="lh-signature-wrap">
+                  <img
+                    src={approverSignatureUrl}
+                    alt="Approver signature"
+                    className="lh-signature"
+                  />
+                </div>
+              ) : (
+                <div className="lh-sign-space lh-sign-space--pending" aria-hidden="true" />
+              )}
+              <div className="lh-sign-name">
+                {approverName || (isApproved ? '' : 'Pending approval')}
+              </div>
+              <div className="lh-sign-title">
+                {approverTitle || (isApproved ? '' : 'Administrator')}
+              </div>
+            </div>
+          </div>
+
           {showStamp ? (
             <div className="lh-stamp-wrap">
               <img

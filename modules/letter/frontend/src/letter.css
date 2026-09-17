@@ -880,14 +880,39 @@
 
 .lh-signoff--template {
   margin-top: 1.75rem;
+  page-break-inside: avoid;
 }
 
 .lh-closing {
   margin-bottom: 0.25rem;
 }
 
+.lh-signatories {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem 2rem;
+  margin-top: 0.5rem;
+  align-items: start;
+}
+
+.lh-signatory-role {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 0.2rem;
+}
+
 .lh-sign-space {
   height: 52px;
+}
+
+.lh-sign-space--pending {
+  border-bottom: 1px solid #cbd5e1;
+  width: 140px;
+  height: 42px;
+  margin: 0.25rem 0 0.15rem;
 }
 
 .lh-signature-wrap {
@@ -917,6 +942,12 @@
   margin-top: 0.1rem;
   color: #111;
   font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .lh-signatories {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Inline letter editing */
@@ -1218,3 +1249,53 @@
     size: A4;
   }
 }
+
+.letter-save-status.is-pending {
+  color: #b45309;
+}
+
+.letter-save-status.is-approved {
+  color: #15803d;
+}
+
+.letter-list-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.85rem 1rem 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.letter-approval-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.letter-approval-pill.is-draft {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.letter-approval-pill.is-pending {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.letter-approval-pill.is-approved {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.letter-approval-pill.is-rejected {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+

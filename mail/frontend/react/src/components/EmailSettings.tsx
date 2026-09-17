@@ -19,13 +19,14 @@ import {
   type AccountInput,
 } from '../api';
 
-/** Empty mailbox form; display name comes from the registered user when provided. */
+/** Empty mailbox form; From name defaults to the company name in capitals. */
 function blankPreset(email = '', displayName = ''): AccountInput {
   const trimmed = email.trim();
   const domain = trimmed.includes('@') ? trimmed.split('@')[1] : '';
+  const companyName = companyFromName(displayName) || companyNameFromEmail(trimmed);
   return {
     email: trimmed,
-    display_name: displayName.trim(),
+    display_name: companyName,
     imap_host: domain ? `mail.${domain}` : '',
     imap_port: 993,
     imap_encryption: 'ssl',
@@ -37,6 +38,37 @@ function blankPreset(email = '', displayName = ''): AccountInput {
     smtp_username: trimmed,
     smtp_password: '',
   };
+}
+
+/** Known company From names (shown on the receiver side). */
+function companyNameFromEmail(email: string): string {
+  const domain = email.includes('@') ? email.split('@')[1].toLowerCase() : '';
+  if (domain.includes('roadmasterspares.com') || domain.includes('roadmaster')) {
+    return 'ROADMASTER SPARES LIMITED';
+  }
+  if (domain.includes('ultimate.co.tz') || domain.includes('ultimate')) {
+    return 'ULTIMATE';
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname.toLowerCase();
+    if (host.includes('roadmasterspares.com')) return 'ROADMASTER SPARES LIMITED';
+    if (host.includes('ultimate.co.tz')) return 'ULTIMATE';
+  }
+  if (!domain) return '';
+  const base = domain.split('.')[0] || '';
+  return base.replace(/[-_]+/g, ' ').trim().toUpperCase();
+}
+
+/** Prefer an explicit company-style name; ignore usernames like "admin". */
+function companyFromName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  if (/^(admin|user|test|root|demo)$/i.test(trimmed)) return '';
+  // Already looks like a company / display name
+  if (trimmed === trimmed.toUpperCase() || /\s/.test(trimmed)) {
+    return trimmed.toUpperCase();
+  }
+  return trimmed.toUpperCase();
 }
 
 function titleFromLocalPart(local: string): string {
@@ -51,15 +83,23 @@ function titleFromLocalPart(local: string): string {
 
 function presetFromEmail(email: string, displayName = ''): AccountInput {
   const trimmed = email.trim();
-  const local = trimmed.includes('@') ? trimmed.split('@')[0] : '';
-  const preferred = displayName.trim();
-  return blankPreset(trimmed, preferred || titleFromLocalPart(local));
+  const preferred =
+    companyFromName(displayName) ||
+    companyNameFromEmail(trimmed) ||
+    titleFromLocalPart(trimmed.includes('@') ? trimmed.split('@')[0] : '').toUpperCase();
+  return blankPreset(trimmed, preferred);
 }
 
 function fromDetail(a: AccountDetail): AccountInput {
+  const fallback = companyNameFromEmail(a.email);
+  const existing = (a.display_name || '').trim();
+  const display =
+    companyFromName(existing) ||
+    fallback ||
+    existing.toUpperCase();
   return {
     email: a.email,
-    display_name: a.display_name || '',
+    display_name: display,
     imap_host: a.imap_host,
     imap_port: a.imap_port,
     imap_encryption: a.imap_encryption || 'ssl',
@@ -215,6 +255,9 @@ export function EmailSettings({
       if (!form.email.trim()) return 'Enter your company email.';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
         return 'Enter a valid company email address.';
+      }
+      if (!form.display_name.trim()) {
+        return 'Enter the From name that should appear on the receiver’s side.';
       }
       return null;
     }
@@ -376,21 +419,55 @@ export function EmailSettings({
                         aria-label="Company email"
                         placeholder="Company email"
                         value={form.email}
-                        onChange={(e) => setField('email', e.target.value)}
+                        onChange={(e) => {
+                          const nextEmail = e.target.value;
+                          setForm((prev) => {
+                            const applied = applyEmailDefaults(nextEmail, prev);
+                            const keepName =
+                              prev.display_name.trim() !== '' &&
+                              prev.display_name.trim() !== companyNameFromEmail(prev.email);
+                            return {
+                              ...applied,
+                              display_name: keepName
+                                ? prev.display_name
+                                : companyNameFromEmail(nextEmail) || prev.display_name,
+                            };
+                          });
+                        }}
                       />
                     </div>
                     <p className="field-hint-inline">
                       Domain mailbox used for send and receive.
                     </p>
+                  </div>
+                </div>
+              </div>
+              <div className="wizard-row">
+                <div className="wizard-aside">
+                  <h2>
+                    From name<span className="req">*</span>
+                  </h2>
+                  <p>
+                    This is the name that appears on the receiver’s side (e.g. in their inbox From
+                    column).
+                  </p>
+                </div>
+                <div className="wizard-fields">
+                  <div className="wizard-auth-fields">
                     <div className="field-line">
                       <MdPersonOutline size={18} aria-hidden />
                       <input
-                        aria-label="Display name"
-                        placeholder="Display name"
+                        required
+                        aria-label="From name"
+                        placeholder="Company name in CAPITALS"
                         value={form.display_name}
-                        onChange={(e) => setField('display_name', e.target.value)}
+                        onChange={(e) => setField('display_name', e.target.value.toUpperCase())}
                       />
                     </div>
+                    <p className="field-hint-inline">
+                      Defaults to your company name in capital letters. Change it only if you want
+                      a different sender name.
+                    </p>
                   </div>
                 </div>
               </div>

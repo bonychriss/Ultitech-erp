@@ -499,8 +499,14 @@ export function MailApp({
         <section className={`main ${focusMailboxSetup ? 'main-setup' : ''}`}>
           {view === 'settings' || focusMailboxSetup ? (
             <EmailSettings
-              preferredEmail={user.email}
-              preferredDisplayName={user.username}
+              preferredEmail={
+                user.email ||
+                (typeof window !== 'undefined' &&
+                window.location.hostname.includes('roadmasterspares.com')
+                  ? 'sales@roadmasterspares.com'
+                  : user.email)
+              }
+              preferredDisplayName=""
               focusAccountId={settingsFocusId}
               onToast={setToast}
               onAccountsChanged={() => {

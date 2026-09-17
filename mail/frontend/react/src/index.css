@@ -1954,39 +1954,38 @@ a.auth-submit-link {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(6px);
   animation: success-overlay-in 0.28s ease-out;
 }
 
 .success-overlay-out {
-  animation: success-overlay-out 0.35s ease-in forwards;
+  animation: success-overlay-out 0.32s ease-in forwards;
 }
 
-.success-overlay-card {
+.success-overlay-content {
   width: min(360px, 100%);
   text-align: center;
-  background: #fff;
-  border-radius: 20px;
-  padding: 28px 24px 32px;
-  box-shadow: 0 18px 50px rgba(26, 115, 232, 0.18);
-  border: 1px solid #e8f0fe;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 }
 
 .success-overlay-lottie {
   display: grid;
   place-items: center;
-  margin: 0 auto 8px;
+  margin: 0 auto 4px;
 }
 
-.success-overlay-card h2 {
+.success-overlay-content h2 {
   margin: 0 0 8px;
   font-size: 1.45rem;
   font-weight: 600;
   color: #202124;
 }
 
-.success-overlay-card p {
+.success-overlay-content p {
   margin: 0;
   color: #5f6368;
   font-size: 0.95rem;

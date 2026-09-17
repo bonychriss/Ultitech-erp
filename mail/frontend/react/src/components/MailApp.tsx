@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import {
-  MdAdd,
   MdArrowBack,
   MdClose,
   MdDelete,
@@ -91,7 +90,7 @@ export function MailApp({
   const [account, setAccount] = useState(initialAccount);
   const [folder, setFolder] = useState('inbox');
   const [view, setView] = useState<'mail' | 'settings' | 'claim'>(
-    initialAccount ? 'mail' : isMailAdmin ? 'settings' : 'claim',
+    initialAccount ? 'mail' : 'claim',
   );
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
@@ -438,17 +437,6 @@ export function MailApp({
               </span>
               <span className="side-item-label">Compose</span>
             </button>
-            <button
-              type="button"
-              className={`side-item ${view === 'settings' && settingsStartCreate ? 'active' : ''}`}
-              title="Add account"
-              onClick={() => openSettings({ addAccount: true })}
-            >
-              <span className="side-ico">
-                <MdAdd size={18} aria-hidden />
-              </span>
-              <span className="side-item-label">Add account</span>
-            </button>
           </div>
         </nav>
 
@@ -545,12 +533,12 @@ export function MailApp({
         ) : null}
 
         <section className={`main ${focusMailboxSetup ? 'main-setup' : ''}`}>
-          {view === 'claim' && !account ? (
+          {!account && view !== 'settings' ? (
             <MailboxLogin
               onToast={setToast}
               onConnected={() => void afterMailboxConnected()}
             />
-          ) : view === 'settings' || (!account && view !== 'mail') ? (
+          ) : view === 'settings' || (!account && settingsStartCreate) ? (
             <EmailSettings
               preferredEmail={
                 user.email ||
@@ -572,37 +560,30 @@ export function MailApp({
               onAccountsChanged={() => {
                 setSettingsStartCreate(false);
                 void refreshFolders().then(() => {
-                  if (account || isMailAdmin) {
-                    // Admin creating pool may still have no personal account.
-                    void api.folders()
-                      .then((data) => {
-                        setFolders(data.folders);
-                        setAccount(data.account);
-                        if (data.account) {
-                          setView('mail');
-                          setFolder('inbox');
-                        } else {
-                          setView('claim');
-                        }
-                      })
-                      .catch(() => setView('claim'));
-                  } else {
-                    setView('mail');
-                    setFolder('inbox');
-                  }
+                  void api
+                    .folders()
+                    .then((data) => {
+                      setFolders(data.folders);
+                      setAccount(data.account);
+                      if (data.account) {
+                        setView('mail');
+                        setFolder('inbox');
+                      } else {
+                        setView('claim');
+                      }
+                    })
+                    .catch(() => setView('claim'));
                 });
               }}
-              onBackToClaim={
-                !account
-                  ? () => {
-                      setSettingsStartCreate(false);
-                      setView('claim');
-                    }
-                  : () => {
-                      setSettingsStartCreate(false);
-                      setView('mail');
-                    }
-              }
+              onBackToClaim={() => {
+                setSettingsStartCreate(false);
+                setSettingsFocusId(null);
+                if (account) {
+                  setView('mail');
+                } else {
+                  setView('claim');
+                }
+              }}
             />
           ) : selected ? (
             <div className="read">

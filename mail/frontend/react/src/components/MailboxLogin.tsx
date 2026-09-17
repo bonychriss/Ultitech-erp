@@ -93,8 +93,7 @@ export function MailboxLogin({ onConnected, onToast }: Props) {
         <div className="mailbox-login-panel">
           <h1>No mailbox yet</h1>
           <p className="muted">
-            Ask your admin to add your company email in Mail settings, then come back here to sign
-            in once.
+            Add a company mailbox to start sending and receiving mail.
           </p>
         </div>
       </div>

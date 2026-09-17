@@ -223,6 +223,17 @@ function letterBuildClientCfg(array $erp = []): array
         $employees = [];
     }
 
+    $apiUrl = '';
+    if ($slug !== '' && function_exists('company_url')) {
+        $apiUrl = company_url('modules/letter/api/index.php', $slug);
+    } elseif (function_exists('app_url')) {
+        $apiUrl = rtrim((string) app_url('/modules/letter/api/index.php'), '/');
+    } else {
+        $apiUrl = '/modules/letter/api/index.php';
+    }
+
+    $isAdminUser = function_exists('isAdmin') && isAdmin();
+
     return [
         'module' => 'letter',
         'engine' => 'erp-laravel Domains/Letter',
@@ -231,11 +242,15 @@ function letterBuildClientCfg(array $erp = []): array
         'listUrl' => $listUrl,
         'composeUrl' => $composeUrl,
         'inboxUrl' => $inboxUrl,
+        'apiUrl' => $apiUrl,
         'emptyAnimationUrl' => $emptyAnimationUrl,
+        'isAdmin' => $isAdminUser,
         'isUltimateCompany' => $isUltimate,
         'isRoadmasterCompany' => $isRoadmaster,
         'showUltimateStamp' => $isUltimate && $showStamp,
+        // Stamp asset is available for the company; letter UI only shows it after admin approval.
         'showStamp' => $showStamp,
+        'stampAvailable' => $showStamp,
         'stampEditorUrl' => $editorUrl,
         'stampPreviewUrl' => $stampPreviewUrl,
         'letterheadHeaderUrl' => $letterheadHeaderUrl,

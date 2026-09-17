@@ -414,7 +414,7 @@ export default function ComposeLetterPage() {
     }
   };
 
-  const canSubmit = status !== 'pending' && status !== 'approved';
+  const canSubmit = !isAdmin && status !== 'pending' && status !== 'approved';
   const canApprove = isAdmin && (status === 'pending' || status === 'draft');
 
   return (

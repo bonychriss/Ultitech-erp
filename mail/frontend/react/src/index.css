@@ -1591,6 +1591,15 @@ button, input, textarea { font: inherit; }
 .send:hover { background: #1765cc; }
 .compose-send:disabled,
 .send:disabled { opacity: 0.6; cursor: default; }
+
+.compose-sending {
+  display: grid;
+  place-items: center;
+  min-height: 280px;
+  padding: 24px 16px 32px;
+  background: transparent;
+}
+
 .compose-draft,
 .draft {
   border: 0;

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { MdAttachFile } from 'react-icons/md';
 import { api, type MailDetail } from '../api';
+import { loadingAnimUrl } from './SuccessOverlay';
 
 export type ComposeState = {
   open: boolean;
@@ -40,6 +42,7 @@ export function ComposePopup({ state, onClose, onSent }: Props) {
   const [files, setFiles] = useState<FileList | null>(null);
   const [minimized, setMinimized] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -54,26 +57,32 @@ export function ComposePopup({ state, onClose, onSent }: Props) {
     if (fileRef.current) fileRef.current.value = '';
     setMinimized(false);
     setError('');
+    setSending(false);
   }, [state]);
 
   useEffect(() => {
     if (!state.open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !sending) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [state.open, onClose]);
+  }, [state.open, onClose, sending]);
 
   if (!state.open) return null;
 
   async function submit(kind: 'send' | 'draft') {
     setBusy(true);
     setError('');
+    const started = Date.now();
     try {
       if (kind === 'send' && !to.trim()) {
         setError('Add at least one recipient.');
         return;
+      }
+      if (kind === 'send') {
+        setSending(true);
+        setMinimized(false);
       }
       const form = new FormData();
       form.set('to', to);
@@ -87,9 +96,18 @@ export function ComposePopup({ state, onClose, onSent }: Props) {
         Array.from(files).forEach((f) => form.append('attachments[]', f));
       }
       const result = kind === 'send' ? await api.send(form) : await api.draft(form);
-      onSent(result.message || (kind === 'send' ? 'Sent' : 'Draft saved'));
-      if (kind === 'send') onClose();
+      const msg = result.message || (kind === 'send' ? 'Sent' : 'Draft saved');
+      if (kind === 'send') {
+        const wait = Math.max(0, 1600 - (Date.now() - started));
+        await new Promise((r) => window.setTimeout(r, wait));
+        onSent(msg);
+        setSending(false);
+        onClose();
+      } else {
+        onSent(msg);
+      }
     } catch (err) {
+      setSending(false);
       setError(err instanceof Error ? err.message : 'Failed');
     } finally {
       setBusy(false);
@@ -105,7 +123,7 @@ export function ComposePopup({ state, onClose, onSent }: Props) {
     <div
       className={`compose-overlay${minimized ? ' is-minimized' : ''}`}
       onClick={(e) => {
-        if (e.target === e.currentTarget && !minimized) onClose();
+        if (e.target === e.currentTarget && !minimized && !sending) onClose();
       }}
     >
       <div
@@ -117,16 +135,39 @@ export function ComposePopup({ state, onClose, onSent }: Props) {
         <div className="compose-modal-header">
           <span>{state.title || 'New Message'}</span>
           <div className="compose-modal-controls">
-            <button type="button" onClick={() => setMinimized((v) => !v)} title="Minimize" aria-label="Minimize">
+            <button
+              type="button"
+              onClick={() => setMinimized((v) => !v)}
+              title="Minimize"
+              aria-label="Minimize"
+              disabled={sending}
+            >
               <span className="compose-ico-min" />
             </button>
-            <button type="button" onClick={onClose} title="Close" aria-label="Close">
+            <button
+              type="button"
+              onClick={onClose}
+              title="Close"
+              aria-label="Close"
+              disabled={sending}
+            >
               ×
             </button>
           </div>
         </div>
 
-        {!minimized ? (
+        {sending ? (
+          <div className="compose-sending" role="status" aria-live="polite" aria-label="Sending mail">
+            <DotLottieReact
+              src={loadingAnimUrl()}
+              loop
+              autoplay
+              style={{ width: 220, height: 220 }}
+            />
+          </div>
+        ) : null}
+
+        {!minimized && !sending ? (
           <form className="compose-modal-body" onSubmit={onSubmit}>
             {error ? <div className="compose-error">{error}</div> : null}
 

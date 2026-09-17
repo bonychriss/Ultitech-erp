@@ -6,7 +6,10 @@ import { MailApp } from './components/MailApp';
 import { SuccessOverlay } from './components/SuccessOverlay';
 import './index.css';
 
-const MIN_LOADING_MS = 900;
+const MIN_LOADING_MS =
+  typeof window !== 'undefined' && /localhost|127\.0\.0\.1/.test(window.location.hostname)
+    ? 400
+    : 900;
 
 export default function App() {
   const [boot, setBoot] = useState<Bootstrap | null>(null);

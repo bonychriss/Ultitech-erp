@@ -30,6 +30,12 @@ final class MailSsoService
     {
         $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
         $path = str_replace('\\', '/', Yii::getAlias('@app'));
+        if (str_contains($host, 'localhost')
+            || str_contains($host, '127.0.0.1')
+            || str_contains(strtolower($path), '/xampp/')) {
+            // Local: do not enforce company match.
+            return '';
+        }
         if (str_contains($host, 'roadmasterspares.com')
             || str_contains($path, '/home/roady/')
             || str_contains($path, '/8a9d1d19f3/')) {

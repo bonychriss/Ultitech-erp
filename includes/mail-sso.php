@@ -103,10 +103,39 @@ if (!function_exists('mail_sso_verify_token')) {
     }
 }
 
+if (!function_exists('mail_sso_is_local')) {
+    function mail_sso_is_local(): bool
+    {
+        $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+        $path = str_replace('\\', '/', (string) (__DIR__));
+        return str_contains($host, 'localhost')
+            || str_contains($host, '127.0.0.1')
+            || str_contains($host, '::1')
+            || str_contains(strtolower($path), '/xampp/');
+    }
+}
+
 if (!function_exists('mail_sso_target_url')) {
     function mail_sso_target_url(string $companySlug): string
     {
         $slug = strtolower(trim($companySlug));
+        if (!in_array($slug, ['ultimate', 'roadmaster'], true)) {
+            return '';
+        }
+
+        // Local XAMPP: keep SSO on the same host (never jump to live).
+        if (mail_sso_is_local()) {
+            $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+            $scheme = $https ? 'https' : 'http';
+            $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+            $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/mail-sso-launch.php'));
+            $root = rtrim(dirname($script), '/');
+            if ($root === '/' || $root === '\\') {
+                $root = '';
+            }
+            return $scheme . '://' . $host . $root . '/mail/frontend/web/index.php/app';
+        }
+
         $map = [
             'ultimate' => 'https://ultimate.co.tz/staff/mail/frontend/web/index.php/app',
             'roadmaster' => 'https://roadmasterspares.com/mail/frontend/web/index.php/app',

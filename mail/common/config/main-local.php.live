@@ -18,16 +18,14 @@ $isLive = $isRoadmaster
     || str_contains($path, '/public_html/')
     || str_contains($path, '/home/sites/');
 
-$roadmasterMysqlHost = 'sdb-73.hosting.stackcp.net';
-$ultimateMysqlHost = '127.0.0.1';
-
 if ($isRoadmaster) {
     $db = [
         'class' => \yii\db\Connection::class,
-        'dsn' => "mysql:host={$roadmasterMysqlHost};dbname=roady_mail-353036334069",
-        'username' => 'roady_mail',
-        'password' => '3R-8)fo?ZEXW',
+        'dsn' => 'mysql:host=sdb-73.hosting.stackcp.net;dbname=roady_database-35303633fb03',
+        'username' => 'roady_database-35303633fb03',
+        'password' => hex2bin('63c2a3432e5859452f5e2b2a4f'),
         'charset' => 'utf8mb4',
+        'tablePrefix' => 'rmm_',
     ];
     $mailerSingleton = [
         'class' => \yii\symfonymailer\Mailer::class,
@@ -36,7 +34,7 @@ if ($isRoadmaster) {
 } elseif ($isLive) {
     $db = [
         'class' => \yii\db\Connection::class,
-        'dsn' => "mysql:host={$ultimateMysqlHost};dbname=ultimate_mail_app",
+        'dsn' => 'mysql:host=127.0.0.1;dbname=ultimate_mail_app',
         'username' => 'ultimate_mail_user',
         'password' => 'Baddyman123!',
         'charset' => 'utf8mb4',

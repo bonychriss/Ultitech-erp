@@ -115,7 +115,6 @@ $this->title = 'Login';
                 <?= Html::a('Register Now', ['site/signup']) ?>
             </p>
 
-            <p class="split-demo">Demo: <strong>demo</strong> / <strong>demo1234</strong></p>
         </div>
 
         <div class="split-right-foot">

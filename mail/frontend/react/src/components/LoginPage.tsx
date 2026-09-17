@@ -31,9 +31,9 @@ function authHeroSrc(): string {
 
 export function LoginPage({ bootstrap: _bootstrap, onLoggedIn }: Props) {
   const [mode, setMode] = useState<Mode>('login');
-  const [username, setUsername] = useState('demo');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('demo1234');
+  const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -46,17 +46,10 @@ export function LoginPage({ bootstrap: _bootstrap, onLoggedIn }: Props) {
     setError('');
     setShowPassword(false);
     setShowConfirm(false);
-    if (next === 'register') {
-      setUsername('');
-      setEmail('sales@ultimate.co.tz');
-      setPassword('');
-      setPasswordConfirm('');
-    } else {
-      setUsername('demo');
-      setPassword('demo1234');
-      setEmail('');
-      setPasswordConfirm('');
-    }
+    setUsername('');
+    setEmail('');
+    setPassword('');
+    setPasswordConfirm('');
   }
 
   async function ensureCsrf() {
@@ -185,7 +178,7 @@ export function LoginPage({ bootstrap: _bootstrap, onLoggedIn }: Props) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Company email (e.g. sales@ultimate.co.tz)"
+                  placeholder="Company email"
                   required
                   autoComplete="email"
                 />

@@ -431,8 +431,25 @@ class ApiController extends Controller
         }
 
         if ($this->findAccount(false)) {
-            Yii::$app->response->statusCode = 422;
-            return ['ok' => false, 'message' => 'You already have a mailbox connected.'];
+            // Allow connecting another address; block only if this email is already linked.
+            $dupQuery = MailAccount::find()->where([
+                'user_id' => (int) Yii::$app->user->id,
+                'is_active' => 1,
+            ]);
+            if ($id > 0) {
+                $tpl = MailAccount::findOne($id);
+                if ($tpl) {
+                    $dupQuery->andWhere(['email' => $tpl->email]);
+                } elseif ($email !== '') {
+                    $dupQuery->andWhere(['email' => $email]);
+                }
+            } elseif ($email !== '') {
+                $dupQuery->andWhere(['email' => $email]);
+            }
+            if ($dupQuery->exists()) {
+                Yii::$app->response->statusCode = 422;
+                return ['ok' => false, 'message' => 'That mailbox is already connected to your account.'];
+            }
         }
 
         $company = $this->currentCompany();
@@ -805,6 +822,20 @@ class ApiController extends Controller
         $model->imap_password_plain = $imapPass;
         $model->smtp_password_plain = $smtpPass;
         $model->user_id = (int) Yii::$app->user->id;
+
+        if ($isNew) {
+            $dup = MailAccount::find()
+                ->where([
+                    'user_id' => (int) Yii::$app->user->id,
+                    'email' => strtolower(trim((string) $model->email)),
+                    'is_active' => 1,
+                ])
+                ->exists();
+            if ($dup) {
+                Yii::$app->response->statusCode = 422;
+                return ['ok' => false, 'message' => 'That mailbox is already connected.'];
+            }
+        }
 
         if ($isNew && ($imapPass === '' || $smtpPass === '')) {
             Yii::$app->response->statusCode = 422;

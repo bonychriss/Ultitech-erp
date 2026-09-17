@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import {
+  MdAdd,
   MdArrowBack,
   MdClose,
   MdDelete,
@@ -104,6 +105,7 @@ export function MailApp({
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [settingsFocusId, setSettingsFocusId] = useState<number | null>(null);
+  const [settingsStartCreate, setSettingsStartCreate] = useState(false);
   const [requirePassword, setRequirePassword] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -214,9 +216,14 @@ export function MailApp({
     setSelectedIds([]);
   }
 
-  function openSettings(opts?: { editAccount?: boolean; requirePassword?: boolean }) {
+  function openSettings(opts?: {
+    editAccount?: boolean;
+    requirePassword?: boolean;
+    addAccount?: boolean;
+  }) {
     const needPassword = !!opts?.requirePassword;
     setRequirePassword(needPassword);
+    setSettingsStartCreate(!!opts?.addAccount);
     setSettingsFocusId(
       needPassword || opts?.editAccount ? account?.id ?? null : null,
     );
@@ -431,6 +438,17 @@ export function MailApp({
               </span>
               <span className="side-item-label">Compose</span>
             </button>
+            <button
+              type="button"
+              className={`side-item ${view === 'settings' && settingsStartCreate ? 'active' : ''}`}
+              title="Add account"
+              onClick={() => openSettings({ addAccount: true })}
+            >
+              <span className="side-ico">
+                <MdAdd size={18} aria-hidden />
+              </span>
+              <span className="side-item-label">Add account</span>
+            </button>
           </div>
         </nav>
 
@@ -530,6 +548,7 @@ export function MailApp({
               preferredDisplayName=""
               focusAccountId={settingsFocusId}
               requirePassword={requirePassword}
+              startCreate={settingsStartCreate}
               isMailAdmin={isMailAdmin}
               onPasswordSaved={() => {
                 setRequirePassword(false);
@@ -537,6 +556,7 @@ export function MailApp({
               }}
               onToast={setToast}
               onAccountsChanged={() => {
+                setSettingsStartCreate(false);
                 void refreshFolders().then(() => {
                   if (account || isMailAdmin) {
                     // Admin creating pool may still have no personal account.
@@ -560,8 +580,14 @@ export function MailApp({
               }}
               onBackToClaim={
                 !account
-                  ? () => setView('claim')
-                  : undefined
+                  ? () => {
+                      setSettingsStartCreate(false);
+                      setView('claim');
+                    }
+                  : () => {
+                      setSettingsStartCreate(false);
+                      setView('mail');
+                    }
               }
             />
           ) : selected ? (

@@ -194,6 +194,8 @@ type Props = {
   requirePassword?: boolean;
   onPasswordSaved?: () => void;
   isMailAdmin?: boolean;
+  /** Open the add-account wizard immediately. */
+  startCreate?: boolean;
   onBackToClaim?: () => void;
 };
 
@@ -206,6 +208,7 @@ export function EmailSettings({
   requirePassword = false,
   onPasswordSaved,
   isMailAdmin = false,
+  startCreate = false,
   onBackToClaim,
 }: Props) {
   const [accounts, setAccounts] = useState<AccountDetail[]>([]);
@@ -286,6 +289,16 @@ export function EmailSettings({
               : '',
           );
         }
+      } else if (startCreate) {
+        setMode('create');
+        setStep(1);
+        setEditingId(null);
+        setForm(companyPreset());
+        setCustomAccountType(false);
+        setSamePassword(true);
+        setPasswordRequired(true);
+        setHint('');
+        setError('');
       } else {
         setMode('list');
         setPasswordRequired(false);
@@ -302,7 +315,7 @@ export function EmailSettings({
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusAccountId, requirePassword]);
+  }, [focusAccountId, requirePassword, startCreate]);
 
   function openCreate() {
     setMode('create');
@@ -969,7 +982,7 @@ export function EmailSettings({
           ) : null}
           <button type="button" className="settings-primary" onClick={() => openCreate()}>
             <MdAdd size={18} aria-hidden />
-            Register mailbox
+            Add account
           </button>
         </div>
       </div>
@@ -981,14 +994,16 @@ export function EmailSettings({
       ) : accounts.length === 0 ? (
         <div className="empty">
           <h2>No mailbox yet</h2>
-          <p>Register your company mailbox to start sending and receiving mail.</p>
+          <p>Add your company mailbox to start sending and receiving mail.</p>
           <button type="button" className="settings-primary" onClick={() => openCreate()}>
-            Register mailbox
+            Add account
           </button>
         </div>
       ) : (
         <>
-          <h2 className="settings-subhead">Your connected mailbox</h2>
+          <h2 className="settings-subhead">
+            {accounts.length === 1 ? 'Your connected mailbox' : 'Your connected mailboxes'}
+          </h2>
           <div className="account-cards">
             {accounts.map((a) => {
               const sameHost = a.imap_host === a.smtp_host;

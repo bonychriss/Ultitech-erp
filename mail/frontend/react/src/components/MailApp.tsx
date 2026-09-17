@@ -103,7 +103,7 @@ export function MailApp({ user, account: initialAccount, initialFolders, onLogou
   viewRef.current = view;
 
   const title = view === 'settings' ? 'Email settings' : FOLDER_TITLES[folder] || folder;
-  const displayName = user.username === 'demo' ? 'System Admin' : user.username;
+  const displayName = user.username;
   const hasUnread = folders.some((f) => f.unread_count > 0);
 
   async function refreshFolders() {
@@ -476,6 +476,7 @@ export function MailApp({ user, account: initialAccount, initialFolders, onLogou
           {view === 'settings' || focusMailboxSetup ? (
             <EmailSettings
               preferredEmail={user.email}
+              preferredDisplayName={user.username}
               focusAccountId={settingsFocusId}
               onToast={setToast}
               onAccountsChanged={() => {

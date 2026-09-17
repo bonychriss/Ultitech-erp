@@ -19,49 +19,41 @@ import {
   type AccountInput,
 } from '../api';
 
-/** cPanel-style defaults for Ultimate General Trading mail */
-const ULTIMATE_PRESET: AccountInput = {
-  email: 'sales@ultimate.co.tz',
-  display_name: 'Ultimate Sales',
-  imap_host: 'mail.ultimate.co.tz',
-  imap_port: 993,
-  imap_encryption: 'ssl',
-  imap_username: 'sales@ultimate.co.tz',
-  imap_password: '',
-  smtp_host: 'mail.ultimate.co.tz',
-  smtp_port: 465,
-  smtp_encryption: 'ssl',
-  smtp_username: 'sales@ultimate.co.tz',
-  smtp_password: '',
-};
-
-function presetFromEmail(email: string): AccountInput {
-  const trimmed = email.trim() || ULTIMATE_PRESET.email;
-  const domain = trimmed.includes('@') ? trimmed.split('@')[1] : 'ultimate.co.tz';
-  const local = trimmed.includes('@') ? trimmed.split('@')[0] : 'sales';
-  const display =
-    local === 'sales'
-      ? 'Ultimate Sales'
-      : local
-          .split(/[._-]/)
-          .filter(Boolean)
-          .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-          .join(' ') || 'Mailbox';
-
+/** Empty mailbox form; display name comes from the registered user when provided. */
+function blankPreset(email = '', displayName = ''): AccountInput {
+  const trimmed = email.trim();
+  const domain = trimmed.includes('@') ? trimmed.split('@')[1] : '';
   return {
     email: trimmed,
-    display_name: display,
-    imap_host: `mail.${domain}`,
+    display_name: displayName.trim(),
+    imap_host: domain ? `mail.${domain}` : '',
     imap_port: 993,
     imap_encryption: 'ssl',
     imap_username: trimmed,
     imap_password: '',
-    smtp_host: `mail.${domain}`,
+    smtp_host: domain ? `mail.${domain}` : '',
     smtp_port: 465,
     smtp_encryption: 'ssl',
     smtp_username: trimmed,
     smtp_password: '',
   };
+}
+
+function titleFromLocalPart(local: string): string {
+  return (
+    local
+      .split(/[._-]/)
+      .filter(Boolean)
+      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+      .join(' ') || ''
+  );
+}
+
+function presetFromEmail(email: string, displayName = ''): AccountInput {
+  const trimmed = email.trim();
+  const local = trimmed.includes('@') ? trimmed.split('@')[0] : '';
+  const preferred = displayName.trim();
+  return blankPreset(trimmed, preferred || titleFromLocalPart(local));
 }
 
 function fromDetail(a: AccountDetail): AccountInput {
@@ -114,6 +106,8 @@ type Props = {
   onToast: (message: string) => void;
   onAccountsChanged: () => void;
   preferredEmail?: string;
+  /** Registered app username — used as default mailbox display name. */
+  preferredDisplayName?: string;
   focusAccountId?: number | null;
 };
 
@@ -121,6 +115,7 @@ export function EmailSettings({
   onToast,
   onAccountsChanged,
   preferredEmail,
+  preferredDisplayName,
   focusAccountId,
 }: Props) {
   const [accounts, setAccounts] = useState<AccountDetail[]>([]);
@@ -129,7 +124,7 @@ export function EmailSettings({
   const [step, setStep] = useState<SetupStep>(1);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<AccountInput>(() =>
-    preferredEmail ? presetFromEmail(preferredEmail) : { ...ULTIMATE_PRESET },
+    blankPreset(preferredEmail || '', preferredDisplayName || ''),
   );
   const [samePassword, setSamePassword] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -138,7 +133,7 @@ export function EmailSettings({
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
 
   function companyPreset() {
-    return preferredEmail ? presetFromEmail(preferredEmail) : { ...ULTIMATE_PRESET };
+    return blankPreset(preferredEmail || '', preferredDisplayName || '');
   }
 
   async function load() {
@@ -248,7 +243,7 @@ export function EmailSettings({
     setError('');
     if (step === 1) {
       setForm((prev) => {
-        const filled = presetFromEmail(prev.email);
+        const filled = presetFromEmail(prev.email, preferredDisplayName || prev.display_name);
         return {
           ...filled,
           display_name: prev.display_name.trim() || filled.display_name,
@@ -377,13 +372,13 @@ export function EmailSettings({
                         required
                         autoFocus
                         aria-label="Company email"
-                        placeholder="Company email (e.g. sales@ultimate.co.tz)"
+                        placeholder="Company email"
                         value={form.email}
                         onChange={(e) => setField('email', e.target.value)}
                       />
                     </div>
                     <p className="field-hint-inline">
-                      Domain mailbox used for send and receive (e.g. sales@ultimate.co.tz).
+                      Domain mailbox used for send and receive.
                     </p>
                     <div className="field-line">
                       <MdPersonOutline size={18} aria-hidden />
@@ -417,7 +412,7 @@ export function EmailSettings({
                         required
                         autoFocus
                         aria-label="IMAP host"
-                        placeholder="IMAP host (e.g. mail.ultimate.co.tz)"
+                        placeholder="IMAP host (e.g. mail.yourdomain.com)"
                         value={form.imap_host}
                         onChange={(e) => setField('imap_host', e.target.value)}
                       />
@@ -520,7 +515,7 @@ export function EmailSettings({
                         required
                         autoFocus
                         aria-label="SMTP host"
-                        placeholder="SMTP host (e.g. mail.ultimate.co.tz)"
+                        placeholder="SMTP host (e.g. mail.yourdomain.com)"
                         value={form.smtp_host}
                         onChange={(e) => setField('smtp_host', e.target.value)}
                       />
@@ -701,9 +696,9 @@ export function EmailSettings({
       ) : accounts.length === 0 ? (
         <div className="empty">
           <h2>No mailbox yet</h2>
-          <p>Register sales@ultimate.co.tz with full IMAP/SMTP settings to send and receive.</p>
+          <p>Register your company mailbox with IMAP/SMTP settings to send and receive.</p>
           <button type="button" className="settings-primary" onClick={() => openCreate()}>
-            Register sales@ultimate.co.tz
+            Register mailbox
           </button>
         </div>
       ) : (

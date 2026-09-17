@@ -262,23 +262,23 @@ export function MailApp({
     setSyncing(true);
     try {
       const res = await api.sync();
-      if (!opts?.quiet || (res.imported ?? 0) > 0) {
+      if (!opts?.quiet || (res.imported ?? 0) > 0 || res.ok === false) {
         setToast(res.message);
       }
       await refreshFolders();
       if (viewRef.current === 'mail') {
-        setLoading(true);
+        // Refresh quietly — never flip the list back to "Loading…" during sync.
         try {
           const data = await api.messages(folderRef.current, queryRef.current);
           setMessages(data.messages);
-        } catch (err) {
-          setToast(err instanceof Error ? err.message : 'Failed to load mail');
-        } finally {
-          setLoading(false);
+        } catch {
+          // keep current list
         }
       }
     } catch (err) {
-      setToast(err instanceof Error ? err.message : 'Sync failed');
+      if (!opts?.quiet) {
+        setToast(err instanceof Error ? err.message : 'Sync failed');
+      }
     } finally {
       syncingRef.current = false;
       setSyncing(false);

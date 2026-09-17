@@ -327,6 +327,11 @@ class ApiController extends Controller
     {
         try {
             $account = $this->findAccount();
+            // Release session lock so /api/messages and other calls are not blocked
+            // while IMAP connects (wrong password / slow host can take a long time).
+            if (Yii::$app->has('session', true)) {
+                Yii::$app->session->close();
+            }
             return (new ImapSyncService())->sync($account);
         } catch (\Throwable $e) {
             Yii::error($e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
@@ -482,7 +487,7 @@ class ApiController extends Controller
     {
         $account = MailAccount::find()
             ->where(['user_id' => Yii::$app->user->id, 'is_active' => 1])
-            ->orderBy(['id' => SORT_ASC])
+            ->orderBy(['id' => SORT_DESC])
             ->one();
         if (!$account && $required) {
             Yii::$app->response->statusCode = 404;

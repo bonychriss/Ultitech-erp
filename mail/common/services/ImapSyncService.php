@@ -41,18 +41,29 @@ class ImapSyncService
             return ['ok' => false, 'message' => 'IMAP password is missing. Update it in Email settings.', 'imported' => 0];
         }
 
-        if (defined('IMAP_OPENTIMEOUT')) {
-            @imap_timeout(IMAP_OPENTIMEOUT, 15);
-        }
-        if (defined('IMAP_READTIMEOUT')) {
-            @imap_timeout(IMAP_READTIMEOUT, 30);
+        // Keep IMAP attempts short so a bad password cannot freeze the UI.
+        if (function_exists('imap_timeout')) {
+            if (defined('IMAP_OPENTIMEOUT')) {
+                @imap_timeout(IMAP_OPENTIMEOUT, 8);
+            }
+            if (defined('IMAP_READTIMEOUT')) {
+                @imap_timeout(IMAP_READTIMEOUT, 12);
+            }
+            if (defined('IMAP_WRITETIMEOUT')) {
+                @imap_timeout(IMAP_WRITETIMEOUT, 8);
+            }
         }
 
         $imported = 0;
         $errors = [];
         $syncedFolders = 0;
+        $authFailed = false;
 
         foreach (self::FOLDER_MAP as $slug => $defaultPath) {
+            if ($authFailed) {
+                break;
+            }
+
             $folder = $account->getFolderBySlug($slug);
             if (!$folder) {
                 continue;
@@ -75,12 +86,20 @@ class ImapSyncService
             $opened = false;
             foreach ($paths as $path) {
                 $mailbox = $this->buildMailboxString($account, $path);
-                $stream = @imap_open($mailbox, $account->imap_username, $password, 0, 1, [
+                $stream = @imap_open($mailbox, $account->imap_username, $password, 0, 0, [
                     'DISABLE_AUTHENTICATOR' => 'GSSAPI',
                 ]);
                 if ($stream === false) {
-                    imap_errors();
-                    imap_alerts();
+                    $imapErr = implode(' ', array_filter(array_merge(
+                        imap_errors() ?: [],
+                        imap_alerts() ?: [],
+                        [imap_last_error() ?: ''],
+                    )));
+                    if ($this->isAuthFailure($imapErr)) {
+                        $authFailed = true;
+                        $errors[] = 'IMAP login failed. Check the mailbox password in Email settings.';
+                        break;
+                    }
                     continue;
                 }
 
@@ -99,7 +118,7 @@ class ImapSyncService
                 break;
             }
 
-            if (!$opened && $slug === 'inbox') {
+            if (!$opened && $slug === 'inbox' && !$authFailed) {
                 $error = imap_last_error() ?: 'Unable to connect to IMAP server.';
                 $errors[] = $error;
             }
@@ -204,6 +223,18 @@ class ImapSyncService
         }
 
         return $imported;
+    }
+
+    private function isAuthFailure(string $error): bool
+    {
+        $error = strtolower($error);
+        return str_contains($error, 'authenticationfailed')
+            || str_contains($error, 'authentication failed')
+            || str_contains($error, 'invalid credentials')
+            || str_contains($error, 'login failed')
+            || str_contains($error, 'auth fail')
+            || str_contains($error, 'incorrect authentication')
+            || str_contains($error, '[auth]');
     }
 
     private function buildMailboxString(MailAccount $account, string $folderPath): string

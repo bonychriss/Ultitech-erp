@@ -241,9 +241,12 @@ export const api = {
   },
 
   sync() {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 25000);
     return request<{ ok: boolean; message: string; imported?: number }>('/api/sync', {
       method: 'POST',
-    });
+      signal: controller.signal,
+    }).finally(() => window.clearTimeout(timer));
   },
 
   send(form: FormData) {

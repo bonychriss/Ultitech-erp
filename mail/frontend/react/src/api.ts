@@ -140,6 +140,19 @@ export type Bootstrap = {
   account: Account | null;
   folders?: Folder[];
   message?: string;
+  is_mail_admin?: boolean;
+  available_mailboxes?: number;
+};
+
+export type PoolMailbox = {
+  id: number;
+  email: string;
+  display_name: string;
+  imap_host?: string;
+  imap_port?: number;
+  smtp_host?: string;
+  smtp_port?: number;
+  has_password?: boolean;
 };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -247,6 +260,51 @@ export const api = {
       method: 'POST',
       signal: controller.signal,
     }).finally(() => window.clearTimeout(timer));
+  },
+
+  availableMailboxes() {
+    return request<{ ok: boolean; mailboxes: PoolMailbox[] }>('/api/available-mailboxes');
+  },
+
+  claimMailbox(payload: { id?: number; email: string; password: string }) {
+    return request<{
+      ok: boolean;
+      message: string;
+      account: Account;
+      folders: Folder[];
+    }>('/api/claim-mailbox', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  poolAccounts() {
+    return request<{ ok: boolean; mailboxes: PoolMailbox[] }>('/api/pool-accounts');
+  },
+
+  createPoolAccount(payload: {
+    email: string;
+    display_name?: string;
+    password: string;
+    imap_host?: string;
+    imap_port?: number;
+    smtp_host?: string;
+    smtp_port?: number;
+  }) {
+    return request<{ ok: boolean; message: string; mailbox: PoolMailbox }>('/api/pool-accounts', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...payload,
+        imap_password: payload.password,
+        smtp_password: payload.password,
+      }),
+    });
+  },
+
+  deletePoolAccount(id: number) {
+    return request<{ ok: boolean; message: string }>(`/api/pool-accounts/${id}`, {
+      method: 'DELETE',
+    });
   },
 
   send(form: FormData) {

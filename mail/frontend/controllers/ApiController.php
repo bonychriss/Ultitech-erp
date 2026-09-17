@@ -11,6 +11,8 @@ use common\models\MailMessage;
 use common\models\User;
 use common\services\AttachmentStorageService;
 use common\services\ImapSyncService;
+use common\services\MailSchemaService;
+use common\services\MailSsoService;
 use common\services\SmtpSendService;
 use frontend\models\ComposeForm;
 use frontend\models\SignupForm;
@@ -54,6 +56,10 @@ class ApiController extends Controller
                     'sync' => ['post'],
                     'accounts' => ['get', 'post'],
                     'account' => ['get', 'put', 'delete'],
+                    'available-mailboxes' => ['get'],
+                    'claim-mailbox' => ['post'],
+                    'pool-accounts' => ['get', 'post'],
+                    'pool-account' => ['delete'],
                 ],
             ],
             'access' => [
@@ -82,6 +88,9 @@ class ApiController extends Controller
             'class' => JsonResponseFormatter::class,
             'encodeOptions' => JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE,
         ];
+        if (!Yii::$app->user->isGuest) {
+            MailSchemaService::ensurePoolColumns();
+        }
         return parent::beforeAction($action);
     }
 
@@ -95,20 +104,27 @@ class ApiController extends Controller
             'authenticated' => !$user->isGuest,
             'user' => null,
             'account' => null,
+            'is_mail_admin' => false,
+            'available_mailboxes' => 0,
         ];
 
         if (!$user->isGuest) {
+            MailSchemaService::ensurePoolColumns();
             $payload['user'] = [
                 'id' => $user->id,
                 'username' => $user->identity->username,
                 'email' => $user->identity->email,
             ];
+            $payload['is_mail_admin'] = $this->isMailAdmin();
             $account = $this->findAccount(false);
             if ($account) {
                 $payload['account'] = $this->serializeAccount($account);
                 $payload['folders'] = array_map([$this, 'serializeFolder'], $account->folders);
             } else {
                 $payload['folders'] = [];
+                $payload['available_mailboxes'] = (int) MailAccount::find()
+                    ->where(['user_id' => null, 'is_active' => 1, 'company' => $this->currentCompany()])
+                    ->count();
             }
             $welcome = Yii::$app->session->getFlash('mail_welcome');
             if (is_string($welcome) && trim($welcome) !== '') {
@@ -381,7 +397,250 @@ class ApiController extends Controller
         return [
             'ok' => true,
             'accounts' => array_map([$this, 'serializeAccountDetail'], $accounts),
+            'is_mail_admin' => $this->isMailAdmin(),
         ];
+    }
+
+    /** Unclaimed team mailboxes the current user can log into. */
+    public function actionAvailableMailboxes(): array
+    {
+        MailSchemaService::ensurePoolColumns();
+        $rows = MailAccount::find()
+            ->where(['user_id' => null, 'is_active' => 1, 'company' => $this->currentCompany()])
+            ->orderBy(['email' => SORT_ASC])
+            ->all();
+
+        return [
+            'ok' => true,
+            'mailboxes' => array_map(static function (MailAccount $a) {
+                return [
+                    'id' => $a->id,
+                    'email' => $a->email,
+                    'display_name' => $a->display_name,
+                ];
+            }, $rows),
+        ];
+    }
+
+    /** User picks a team mailbox and enters the password admin shared with them. */
+    public function actionClaimMailbox(): array
+    {
+        MailSchemaService::ensurePoolColumns();
+        $body = Yii::$app->request->getBodyParams();
+        if (!is_array($body) || $body === []) {
+            $decoded = json_decode(Yii::$app->request->rawBody, true);
+            $body = is_array($decoded) ? $decoded : [];
+        }
+
+        $email = strtolower(trim((string) ($body['email'] ?? '')));
+        $password = (string) ($body['password'] ?? '');
+        $id = (int) ($body['id'] ?? 0);
+
+        if (($email === '' && $id < 1) || $password === '') {
+            Yii::$app->response->statusCode = 422;
+            return ['ok' => false, 'message' => 'Choose a mailbox and enter its password.'];
+        }
+
+        if ($this->findAccount(false)) {
+            Yii::$app->response->statusCode = 422;
+            return ['ok' => false, 'message' => 'You already have a mailbox connected.'];
+        }
+
+        $query = MailAccount::find()->where([
+            'user_id' => null,
+            'is_active' => 1,
+            'company' => $this->currentCompany(),
+        ]);
+        if ($id > 0) {
+            $query->andWhere(['id' => $id]);
+        } else {
+            $query->andWhere(['email' => $email]);
+        }
+        $account = $query->one();
+        if (!$account) {
+            Yii::$app->response->statusCode = 404;
+            return ['ok' => false, 'message' => 'That mailbox is not available. Ask admin to create it.'];
+        }
+
+        $probe = (new ImapSyncService())->testLogin($account, $password);
+        if (!$probe['ok']) {
+            Yii::$app->response->statusCode = 422;
+            return [
+                'ok' => false,
+                'message' => 'Login failed. Check the password your admin sent you.',
+            ];
+        }
+
+        $account->user_id = (int) Yii::$app->user->id;
+        $account->imap_password_plain = $password;
+        $account->smtp_password_plain = $password;
+        $account->imap_username = $account->imap_username ?: $account->email;
+        $account->smtp_username = $account->smtp_username ?: $account->email;
+        $account->save(false);
+        $account->ensureDefaultFolders();
+
+        return [
+            'ok' => true,
+            'message' => 'Mailbox connected. You will not need to enter this password again.',
+            'account' => $this->serializeAccount($account),
+            'folders' => array_map([$this, 'serializeFolder'], $account->folders),
+        ];
+    }
+
+    /** Admin: list / create unclaimed team mailboxes. */
+    public function actionPoolAccounts(): array
+    {
+        if (!$this->isMailAdmin()) {
+            Yii::$app->response->statusCode = 403;
+            return ['ok' => false, 'message' => 'Only mail admins can manage team mailboxes.'];
+        }
+        MailSchemaService::ensurePoolColumns();
+
+        if (Yii::$app->request->isPost) {
+            return $this->savePoolAccount();
+        }
+
+        $rows = MailAccount::find()
+            ->where(['company' => $this->currentCompany()])
+            ->andWhere(['or', ['user_id' => null], ['user_id' => 0]])
+            ->orderBy(['email' => SORT_ASC])
+            ->all();
+
+        return [
+            'ok' => true,
+            'mailboxes' => array_map([$this, 'serializePoolMailbox'], $rows),
+        ];
+    }
+
+    public function actionPoolAccount(int $id): array
+    {
+        if (!$this->isMailAdmin()) {
+            Yii::$app->response->statusCode = 403;
+            return ['ok' => false, 'message' => 'Only mail admins can manage team mailboxes.'];
+        }
+        $model = MailAccount::find()
+            ->where(['id' => $id, 'company' => $this->currentCompany()])
+            ->andWhere(['or', ['user_id' => null], ['user_id' => 0]])
+            ->one();
+        if (!$model) {
+            throw new NotFoundHttpException('Mailbox not found.');
+        }
+        if (strtoupper((string) Yii::$app->request->method) === 'DELETE') {
+            $model->delete();
+            return ['ok' => true, 'message' => 'Team mailbox removed.'];
+        }
+        return ['ok' => true, 'mailbox' => $this->serializePoolMailbox($model)];
+    }
+
+    private function savePoolAccount(): array
+    {
+        $body = Yii::$app->request->getBodyParams();
+        if (!is_array($body) || $body === []) {
+            $decoded = json_decode(Yii::$app->request->rawBody, true);
+            $body = is_array($decoded) ? $decoded : [];
+        }
+
+        $email = strtolower(trim((string) ($body['email'] ?? '')));
+        $password = trim((string) ($body['imap_password'] ?? $body['password'] ?? ''));
+        if ($email === '' || $password === '') {
+            Yii::$app->response->statusCode = 422;
+            return ['ok' => false, 'message' => 'Email and mailbox password are required.'];
+        }
+
+        $exists = MailAccount::find()
+            ->where(['email' => $email, 'company' => $this->currentCompany()])
+            ->andWhere(['or', ['user_id' => null], ['user_id' => 0]])
+            ->exists();
+        if ($exists) {
+            Yii::$app->response->statusCode = 422;
+            return ['ok' => false, 'message' => 'That team mailbox is already listed.'];
+        }
+
+        $domain = substr(strrchr($email, '@') ?: '', 1) ?: 'localhost';
+        $display = trim((string) ($body['display_name'] ?? ''));
+        if ($display === '') {
+            $display = strtoupper(str_replace(['.', '-', '_'], ' ', explode('@', $email)[0] ?? 'MAIL'));
+        }
+
+        $model = new MailAccount([
+            'user_id' => null,
+            'created_by' => (int) Yii::$app->user->id,
+            'company' => $this->currentCompany(),
+            'email' => $email,
+            'display_name' => $display,
+            'imap_host' => trim((string) ($body['imap_host'] ?? ('mail.' . $domain))),
+            'imap_port' => (int) ($body['imap_port'] ?? 993),
+            'imap_encryption' => (string) ($body['imap_encryption'] ?? 'ssl'),
+            'imap_username' => trim((string) ($body['imap_username'] ?? $email)),
+            'smtp_host' => trim((string) ($body['smtp_host'] ?? ('mail.' . $domain))),
+            'smtp_port' => (int) ($body['smtp_port'] ?? 465),
+            'smtp_encryption' => (string) ($body['smtp_encryption'] ?? 'ssl'),
+            'smtp_username' => trim((string) ($body['smtp_username'] ?? $email)),
+            'is_active' => 1,
+        ]);
+        $model->imap_password_plain = $password;
+        $model->smtp_password_plain = trim((string) ($body['smtp_password'] ?? $password));
+
+        $probe = (new ImapSyncService())->testLogin($model, $password);
+        if (!$probe['ok']) {
+            Yii::$app->response->statusCode = 422;
+            return [
+                'ok' => false,
+                'message' => 'Could not verify IMAP with that password. Create the mailbox in StackCP first, then try again.',
+            ];
+        }
+
+        if (!$model->save()) {
+            Yii::$app->response->statusCode = 422;
+            $errors = $model->getFirstErrors();
+            return [
+                'ok' => false,
+                'message' => $errors ? reset($errors) : 'Could not save team mailbox.',
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'message' => 'Team mailbox ready. Staff can log into it from the Mail login screen.',
+            'mailbox' => $this->serializePoolMailbox($model),
+        ];
+    }
+
+    private function serializePoolMailbox(MailAccount $a): array
+    {
+        return [
+            'id' => $a->id,
+            'email' => $a->email,
+            'display_name' => $a->display_name,
+            'imap_host' => $a->imap_host,
+            'imap_port' => (int) $a->imap_port,
+            'smtp_host' => $a->smtp_host,
+            'smtp_port' => (int) $a->smtp_port,
+            'has_password' => $a->getDecryptedImapPassword() !== '',
+            'created_at' => $a->created_at,
+        ];
+    }
+
+    private function isMailAdmin(): bool
+    {
+        if (Yii::$app->user->isGuest) {
+            return false;
+        }
+        $username = strtolower((string) Yii::$app->user->identity->username);
+        $email = strtolower((string) Yii::$app->user->identity->email);
+        return $username === 'admin'
+            || str_starts_with($username, 'admin')
+            || str_starts_with($email, 'admin@')
+            || $email === 'sales@roadmasterspares.com';
+    }
+
+    private function currentCompany(): string
+    {
+        $company = MailSsoService::expectedCompany();
+        if ($company !== '') {
+            return $company;
+        }
+        return 'roadmaster';
     }
 
     public function actionAccount(int $id): array

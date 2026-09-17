@@ -30,6 +30,7 @@ import { EmailSettings } from './EmailSettings';
 import { FileTypeIcon } from './FileTypeIcon';
 import { GmailAttachments } from './GmailAttachments';
 import { InlineReply } from './InlineReply';
+import { MailboxLogin } from './MailboxLogin';
 
 const FOLDER_TITLES: Record<string, string> = {
   inbox: 'Inbox',
@@ -73,6 +74,7 @@ type Props = {
   account: Account | null;
   initialFolders: Folder[];
   welcomeMessage?: string;
+  isMailAdmin?: boolean;
   onLogout: () => void;
 };
 
@@ -81,12 +83,15 @@ export function MailApp({
   account: initialAccount,
   initialFolders,
   welcomeMessage = '',
+  isMailAdmin = false,
   onLogout,
 }: Props) {
   const [folders, setFolders] = useState(initialFolders);
   const [account, setAccount] = useState(initialAccount);
   const [folder, setFolder] = useState('inbox');
-  const [view, setView] = useState<'mail' | 'settings'>(initialAccount ? 'mail' : 'settings');
+  const [view, setView] = useState<'mail' | 'settings' | 'claim'>(
+    initialAccount ? 'mail' : isMailAdmin ? 'settings' : 'claim',
+  );
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<MailListItem[]>([]);
@@ -111,9 +116,11 @@ export function MailApp({
   queryRef.current = query;
   viewRef.current = view;
 
-  const title = view === 'settings' ? 'Email settings' : FOLDER_TITLES[folder] || folder;
+  const title =
+    view === 'settings' ? 'Email settings' : view === 'claim' ? 'Mailbox login' : FOLDER_TITLES[folder] || folder;
   const displayName = user.username;
   const hasUnread = folders.some((f) => f.unread_count > 0);
+  const focusMailboxSetup = !account && (view === 'claim' || view === 'settings');
 
   async function refreshFolders() {
     try {
@@ -125,6 +132,13 @@ export function MailApp({
       setFolders([]);
       setAccount(null);
     }
+  }
+
+  async function afterMailboxConnected() {
+    await refreshFolders();
+    setView('mail');
+    setFolder('inbox');
+    void loadMessages('inbox', '');
   }
 
   async function loadMessages(nextFolder = folder, nextQuery = query) {
@@ -317,8 +331,6 @@ export function MailApp({
     return () => window.clearInterval(timer);
   }, [account?.id, initialAccount?.id]);
 
-  const focusMailboxSetup = !account;
-
   return (
     <div
       className={`app-shell ${collapsed ? 'nav-collapsed' : ''} ${focusMailboxSetup ? 'setup-only' : ''}`}
@@ -501,7 +513,14 @@ export function MailApp({
         ) : null}
 
         <section className={`main ${focusMailboxSetup ? 'main-setup' : ''}`}>
-          {view === 'settings' || focusMailboxSetup ? (
+          {view === 'claim' && !account ? (
+            <MailboxLogin
+              isMailAdmin={isMailAdmin}
+              onToast={setToast}
+              onOpenAdmin={() => setView('settings')}
+              onConnected={() => void afterMailboxConnected()}
+            />
+          ) : view === 'settings' || (!account && view !== 'mail') ? (
             <EmailSettings
               preferredEmail={
                 user.email ||
@@ -513,6 +532,8 @@ export function MailApp({
               preferredDisplayName=""
               focusAccountId={settingsFocusId}
               requirePassword={requirePassword}
+              isMailAdmin={isMailAdmin}
+              teamPoolMode={!account && isMailAdmin}
               onPasswordSaved={() => {
                 setRequirePassword(false);
                 authHintShownRef.current = false;
@@ -520,10 +541,31 @@ export function MailApp({
               onToast={setToast}
               onAccountsChanged={() => {
                 void refreshFolders().then(() => {
-                  setView('mail');
-                  setFolder('inbox');
+                  if (account || isMailAdmin) {
+                    // Admin creating pool may still have no personal account.
+                    void api.folders()
+                      .then((data) => {
+                        setFolders(data.folders);
+                        setAccount(data.account);
+                        if (data.account) {
+                          setView('mail');
+                          setFolder('inbox');
+                        } else {
+                          setView('claim');
+                        }
+                      })
+                      .catch(() => setView('claim'));
+                  } else {
+                    setView('mail');
+                    setFolder('inbox');
+                  }
                 });
               }}
+              onBackToClaim={
+                !account
+                  ? () => setView('claim')
+                  : undefined
+              }
             />
           ) : selected ? (
             <div className="read">

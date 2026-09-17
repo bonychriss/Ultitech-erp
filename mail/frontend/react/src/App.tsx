@@ -72,6 +72,7 @@ export default function App() {
         account={boot.account}
         initialFolders={boot.folders || []}
         welcomeMessage=""
+        isMailAdmin={!!boot.is_mail_admin}
         onLogout={() =>
           setBoot({
             ...boot,

@@ -17,6 +17,7 @@ import {
   api,
   type AccountDetail,
   type AccountInput,
+  type PoolMailbox,
 } from '../api';
 
 /** Empty mailbox form; From name defaults to the company name in capitals. */
@@ -152,6 +153,10 @@ type Props = {
   /** Only true after IMAP auth failure — forces one password re-entry. */
   requirePassword?: boolean;
   onPasswordSaved?: () => void;
+  isMailAdmin?: boolean;
+  /** Admin first-run: create team mailboxes for staff to claim. */
+  teamPoolMode?: boolean;
+  onBackToClaim?: () => void;
 };
 
 export function EmailSettings({
@@ -162,8 +167,12 @@ export function EmailSettings({
   focusAccountId,
   requirePassword = false,
   onPasswordSaved,
+  isMailAdmin = false,
+  teamPoolMode = false,
+  onBackToClaim,
 }: Props) {
   const [accounts, setAccounts] = useState<AccountDetail[]>([]);
+  const [pool, setPool] = useState<PoolMailbox[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>('list');
   const [step, setStep] = useState<SetupStep>(1);
@@ -179,6 +188,9 @@ export function EmailSettings({
   /** When sync failed auth, force re-entry — blank must not keep the bad password. */
   const [passwordRequired, setPasswordRequired] = useState(requirePassword);
   const [hint, setHint] = useState('');
+  const [poolEmail, setPoolEmail] = useState('');
+  const [poolPassword, setPoolPassword] = useState('');
+  const [poolBusy, setPoolBusy] = useState(false);
 
   function companyPreset() {
     return blankPreset(preferredEmail || '', preferredDisplayName || '');
@@ -189,14 +201,27 @@ export function EmailSettings({
     try {
       const data = await api.accounts();
       setAccounts(data.accounts);
-      if (data.accounts.length === 0) {
-        setMode('create');
-        setStep(1);
-        setForm(companyPreset());
-        setSamePassword(true);
-        setPasswordRequired(true);
-        setHint('');
-        setError('');
+      if (isMailAdmin || teamPoolMode) {
+        try {
+          const poolData = await api.poolAccounts();
+          setPool(poolData.mailboxes);
+        } catch {
+          setPool([]);
+        }
+      }
+      if (data.accounts.length === 0 && !teamPoolMode && !focusAccountId) {
+        // Staff without a mailbox use MailboxLogin; admin stays on list/pool.
+        if (!isMailAdmin) {
+          setMode('create');
+          setStep(1);
+          setForm(companyPreset());
+          setSamePassword(true);
+          setPasswordRequired(true);
+          setHint('');
+          setError('');
+        } else {
+          setMode('list');
+        }
       } else if (focusAccountId) {
         const target =
           data.accounts.find((a) => a.id === focusAccountId) || data.accounts[0];
@@ -230,7 +255,44 @@ export function EmailSettings({
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusAccountId, requirePassword]);
+  }, [focusAccountId, requirePassword, teamPoolMode]);
+
+  async function createTeamMailbox(e: FormEvent) {
+    e.preventDefault();
+    const email = poolEmail.trim().toLowerCase();
+    if (!email || !poolPassword) {
+      setError('Enter the mailbox email and password.');
+      return;
+    }
+    setPoolBusy(true);
+    setError('');
+    try {
+      const res = await api.createPoolAccount({
+        email,
+        password: poolPassword,
+        display_name: companyNameFromEmail(email),
+      });
+      onToast(res.message || 'Team mailbox created');
+      setPoolEmail('');
+      setPoolPassword('');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create mailbox');
+    } finally {
+      setPoolBusy(false);
+    }
+  }
+
+  async function removePoolMailbox(m: PoolMailbox) {
+    if (!window.confirm(`Remove team mailbox ${m.email}?`)) return;
+    try {
+      const res = await api.deletePoolAccount(m.id);
+      onToast(res.message || 'Removed');
+      await load();
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Delete failed');
+    }
+  }
 
   function openCreate() {
     setMode('create');
@@ -809,51 +871,122 @@ export function EmailSettings({
   return (
     <div className="settings-panel">
       <div className="settings-head">
-        <h1>Email accounts</h1>
-        <button type="button" className="settings-primary" onClick={() => openCreate()}>
-          <MdAdd size={18} aria-hidden />
-          Register mailbox
-        </button>
+        <h1>{teamPoolMode ? 'Team mailboxes' : 'Email accounts'}</h1>
+        <div className="settings-head-actions">
+          {onBackToClaim ? (
+            <button type="button" className="tool" onClick={onBackToClaim}>
+              Back to mailbox login
+            </button>
+          ) : null}
+          {!teamPoolMode ? (
+            <button type="button" className="settings-primary" onClick={() => openCreate()}>
+              <MdAdd size={18} aria-hidden />
+              Register mailbox
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {error && mode === 'list' ? <div className="settings-error">{error}</div> : null}
+
+      {isMailAdmin || teamPoolMode ? (
+        <section className="team-pool">
+          <h2>Available for staff login</h2>
+          <p className="muted">
+            Create a mailbox in StackCP first, then add it here. Staff open Mail, pick the address,
+            and log in once with the password you send them.
+          </p>
+          <form className="team-pool-form" onSubmit={(e) => void createTeamMailbox(e)}>
+            <div className="field-line">
+              <MdEmail size={18} aria-hidden />
+              <input
+                type="email"
+                required
+                placeholder="procurement@roadmasterspares.com"
+                value={poolEmail}
+                onChange={(e) => setPoolEmail(e.target.value)}
+              />
+            </div>
+            <div className="field-line">
+              <MdLockOutline size={18} aria-hidden />
+              <input
+                type="password"
+                required
+                placeholder="Mailbox password"
+                value={poolPassword}
+                onChange={(e) => setPoolPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <button type="submit" className="settings-primary" disabled={poolBusy}>
+              {poolBusy ? 'Verifying…' : 'Add team mailbox'}
+            </button>
+          </form>
+          {pool.length === 0 ? (
+            <p className="muted">No unclaimed team mailboxes yet.</p>
+          ) : (
+            <div className="account-cards">
+              {pool.map((m) => (
+                <div key={m.id} className="account-card">
+                  <strong className="account-card-name">{m.display_name || m.email}</strong>
+                  <span className="account-card-email muted">{m.email}</span>
+                  <span className="account-card-servers muted">Ready for staff login</span>
+                  <div className="account-actions">
+                    <button type="button" className="tool" onClick={() => void removePoolMailbox(m)}>
+                      <MdDelete size={18} aria-hidden />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       {loading ? (
         <div className="empty">Loading…</div>
       ) : accounts.length === 0 ? (
-        <div className="empty">
-          <h2>No mailbox yet</h2>
-          <p>Register your company mailbox with IMAP/SMTP settings to send and receive.</p>
-          <button type="button" className="settings-primary" onClick={() => openCreate()}>
-            Register mailbox
-          </button>
-        </div>
+        teamPoolMode ? null : (
+          <div className="empty">
+            <h2>No personal mailbox yet</h2>
+            <p>Register your own mailbox, or log into a team mailbox from the login screen.</p>
+            <button type="button" className="settings-primary" onClick={() => openCreate()}>
+              Register mailbox
+            </button>
+          </div>
+        )
       ) : (
-        <div className="account-cards">
-          {accounts.map((a) => {
-            const sameHost = a.imap_host === a.smtp_host;
-            const servers = sameHost
-              ? `${a.imap_host} · IMAP ${a.imap_port} · SMTP ${a.smtp_port}`
-              : `IMAP ${a.imap_host}:${a.imap_port} · SMTP ${a.smtp_host}:${a.smtp_port}`;
-            return (
-              <div key={a.id} className="account-card">
-                <strong className="account-card-name">{a.display_name || a.email}</strong>
-                <span className="account-card-email muted">{a.email}</span>
-                <span className="account-card-servers muted" title={servers}>
-                  {servers}
-                </span>
-                <div className="account-actions">
-                  <button type="button" className="tool" onClick={() => openEdit(a)}>
-                    <MdEdit size={18} aria-hidden />
-                    Edit
-                  </button>
-                  <button type="button" className="tool" onClick={() => void removeAccount(a)}>
-                    <MdDelete size={18} aria-hidden />
-                    Remove
-                  </button>
+        <>
+          <h2 className="settings-subhead">Your connected mailbox</h2>
+          <div className="account-cards">
+            {accounts.map((a) => {
+              const sameHost = a.imap_host === a.smtp_host;
+              const servers = sameHost
+                ? `${a.imap_host} · IMAP ${a.imap_port} · SMTP ${a.smtp_port}`
+                : `IMAP ${a.imap_host}:${a.imap_port} · SMTP ${a.smtp_host}:${a.smtp_port}`;
+              return (
+                <div key={a.id} className="account-card">
+                  <strong className="account-card-name">{a.display_name || a.email}</strong>
+                  <span className="account-card-email muted">{a.email}</span>
+                  <span className="account-card-servers muted" title={servers}>
+                    {servers}
+                  </span>
+                  <div className="account-actions">
+                    <button type="button" className="tool" onClick={() => openEdit(a)}>
+                      <MdEdit size={18} aria-hidden />
+                      Edit
+                    </button>
+                    <button type="button" className="tool" onClick={() => void removeAccount(a)}>
+                      <MdDelete size={18} aria-hidden />
+                      Remove
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

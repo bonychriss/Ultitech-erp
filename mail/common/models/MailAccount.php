@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace common\models;
 
+use common\services\MailSsoService;
 use Yii;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
@@ -11,7 +12,9 @@ use yii\db\ActiveRecord;
 
 /**
  * @property int $id
- * @property int $user_id
+ * @property int|null $user_id
+ * @property string $company
+ * @property int|null $created_by
  * @property string $email
  * @property string $display_name
  * @property string $imap_host
@@ -29,7 +32,7 @@ use yii\db\ActiveRecord;
  * @property int $created_at
  * @property int $updated_at
  *
- * @property User $user
+ * @property User|null $user
  * @property MailFolder[] $folders
  * @property MailMessage[] $messages
  */
@@ -51,20 +54,22 @@ class MailAccount extends ActiveRecord
     public function rules(): array
     {
         return [
-            [['user_id', 'email', 'imap_host', 'imap_username', 'smtp_host', 'smtp_username'], 'required'],
-            [['user_id', 'imap_port', 'smtp_port', 'last_synced_at', 'created_at', 'updated_at'], 'integer'],
+            [['email', 'imap_host', 'imap_username', 'smtp_host', 'smtp_username'], 'required'],
+            [['user_id', 'created_by', 'imap_port', 'smtp_port', 'last_synced_at', 'created_at', 'updated_at'], 'integer'],
             [['imap_password', 'smtp_password'], 'string'],
             [['is_active'], 'boolean'],
             [['email'], 'email'],
+            [['company'], 'string', 'max' => 32],
             [['email', 'display_name', 'imap_host', 'imap_username', 'smtp_host', 'smtp_username'], 'string', 'max' => 255],
             [['imap_encryption', 'smtp_encryption'], 'string', 'max' => 10],
             [['imap_encryption', 'smtp_encryption'], 'in', 'range' => ['ssl', 'tls', 'none']],
             [['imap_password_plain', 'smtp_password_plain'], 'safe'],
             [['imap_port'], 'default', 'value' => 993],
-            [['smtp_port'], 'default', 'value' => 587],
+            [['smtp_port'], 'default', 'value' => 465],
             [['imap_encryption'], 'default', 'value' => 'ssl'],
-            [['smtp_encryption'], 'default', 'value' => 'tls'],
+            [['smtp_encryption'], 'default', 'value' => 'ssl'],
             [['display_name'], 'default', 'value' => ''],
+            [['company'], 'default', 'value' => ''],
             [['is_active'], 'default', 'value' => true],
         ];
     }
@@ -77,12 +82,10 @@ class MailAccount extends ActiveRecord
             'imap_host' => 'IMAP host',
             'imap_port' => 'IMAP port',
             'imap_encryption' => 'IMAP encryption',
-            'imap_username' => 'IMAP username',
             'imap_password_plain' => 'IMAP password',
             'smtp_host' => 'SMTP host',
             'smtp_port' => 'SMTP port',
             'smtp_encryption' => 'SMTP encryption',
-            'smtp_username' => 'SMTP username',
             'smtp_password_plain' => 'SMTP password',
         ];
     }
@@ -93,11 +96,22 @@ class MailAccount extends ActiveRecord
             return false;
         }
 
+        if ($this->company === '' || $this->company === null) {
+            $this->company = MailSsoService::expectedCompany() ?: self::companyFromEmail((string) $this->email);
+        }
+
         if ($this->imap_password_plain !== '') {
             $this->imap_password = $this->encryptSecret($this->imap_password_plain);
         }
         if ($this->smtp_password_plain !== '') {
             $this->smtp_password = $this->encryptSecret($this->smtp_password_plain);
+        }
+
+        if ($this->imap_password === null) {
+            $this->imap_password = '';
+        }
+        if ($this->smtp_password === null) {
+            $this->smtp_password = '';
         }
 
         return true;
@@ -121,6 +135,23 @@ class MailAccount extends ActiveRecord
         return $this->decryptSecret((string) $this->smtp_password);
     }
 
+    public function isUnclaimed(): bool
+    {
+        return $this->user_id === null || (int) $this->user_id === 0;
+    }
+
+    public static function companyFromEmail(string $email): string
+    {
+        $domain = strtolower((string) (explode('@', $email)[1] ?? ''));
+        if (str_contains($domain, 'roadmaster')) {
+            return 'roadmaster';
+        }
+        if (str_contains($domain, 'ultimate')) {
+            return 'ultimate';
+        }
+        return $domain !== '' ? explode('.', $domain)[0] : '';
+    }
+
     public function getUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
@@ -128,7 +159,7 @@ class MailAccount extends ActiveRecord
 
     public function getFolders(): ActiveQuery
     {
-        return $this->hasMany(MailFolder::class, ['account_id' => 'id'])->orderBy(['sort_order' => SORT_ASC]);
+        return $this->hasMany(MailFolder::class, ['account_id' => 'id'])->orderBy(['sort_order' => SORT_ASC, 'id' => SORT_ASC]);
     }
 
     public function getMessages(): ActiveQuery
@@ -144,29 +175,24 @@ class MailAccount extends ActiveRecord
     public function ensureDefaultFolders(): void
     {
         $defaults = [
-            ['Inbox', 'inbox', 'INBOX', 1],
-            ['Starred', 'starred', null, 2],
-            ['Sent', 'sent', 'Sent', 3],
-            ['Drafts', 'drafts', 'Drafts', 4],
-            ['Trash', 'trash', 'Trash', 5],
-            ['Spam', 'spam', 'Junk', 6],
+            ['Inbox', 'inbox', 1],
+            ['Starred', 'starred', 2],
+            ['Sent', 'sent', 3],
+            ['Drafts', 'drafts', 4],
+            ['Trash', 'trash', 5],
+            ['Spam', 'spam', 6],
         ];
-        $now = time();
-        foreach ($defaults as [$name, $slug, $imapPath, $sort]) {
-            if (MailFolder::find()->where(['account_id' => $this->id, 'slug' => $slug])->exists()) {
+        foreach ($defaults as [$name, $slug, $sort]) {
+            if ($this->getFolderBySlug($slug)) {
                 continue;
             }
             $folder = new MailFolder([
                 'account_id' => $this->id,
                 'name' => $name,
                 'slug' => $slug,
-                'imap_path' => $imapPath,
                 'sort_order' => $sort,
                 'unread_count' => 0,
-                'created_at' => $now,
-                'updated_at' => $now,
             ]);
-            $folder->detachBehavior('timestamp');
             $folder->save(false);
         }
     }

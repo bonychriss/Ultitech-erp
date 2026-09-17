@@ -212,23 +212,20 @@ export default function ComposeLetterPage() {
   }, []);
 
   const playStampAnimation = () => {
-    setStampPlayAnimation(false);
-    // Force reflow so the animation can replay if approving again.
+    // Stamp mounts with the press animation after status becomes approved.
+    setStampPlayAnimation(true);
     window.requestAnimationFrame(() => {
-      setStampPlayAnimation(true);
-      window.requestAnimationFrame(() => {
-        const target = document.querySelector('.lh-signatory--approver');
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      });
-      if (stampAnimTimerRef.current) {
-        window.clearTimeout(stampAnimTimerRef.current);
+      const target = document.querySelector('.lh-signatory--approver');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-      stampAnimTimerRef.current = window.setTimeout(() => {
-        setStampPlayAnimation(false);
-      }, 1100);
     });
+    if (stampAnimTimerRef.current) {
+      window.clearTimeout(stampAnimTimerRef.current);
+    }
+    stampAnimTimerRef.current = window.setTimeout(() => {
+      setStampPlayAnimation(false);
+    }, 1100);
   };
 
   useEffect(() => {

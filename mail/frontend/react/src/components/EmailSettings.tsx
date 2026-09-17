@@ -151,11 +151,13 @@ export function EmailSettings({
           data.accounts.find((a) => a.id === focusAccountId) || data.accounts[0];
         if (target) {
           setMode('edit');
-          setStep(1);
+          setStep(2);
           setEditingId(target.id);
           setForm(fromDetail(target));
           setSamePassword(true);
-          setError('');
+          setError(
+            'IMAP rejected the saved password. In StackCP → Email Accounts, set a new password for this mailbox, then paste that same password here (not your Ultitech login).',
+          );
         }
       }
     } catch (err) {

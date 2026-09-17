@@ -105,6 +105,7 @@ export function MailApp({
   const queryRef = useRef(query);
   const viewRef = useRef(view);
   const syncingRef = useRef(false);
+  const authHintShownRef = useRef(false);
   folderRef.current = folder;
   queryRef.current = query;
   viewRef.current = view;
@@ -262,9 +263,24 @@ export function MailApp({
     setSyncing(true);
     try {
       const res = await api.sync();
-      if (!opts?.quiet || (res.imported ?? 0) > 0 || res.ok === false) {
+      const authHint =
+        typeof res.message === 'string' &&
+        /imap login failed|mailbox password/i.test(res.message);
+
+      if (!opts?.quiet) {
         setToast(res.message);
+        if (authHint) {
+          openSettings(true);
+        }
+      } else if ((res.imported ?? 0) > 0) {
+        setToast(res.message);
+      } else if (authHint && !authHintShownRef.current) {
+        // Show once per session on background sync, then open settings.
+        authHintShownRef.current = true;
+        setToast(res.message);
+        openSettings(true);
       }
+
       await refreshFolders();
       if (viewRef.current === 'mail') {
         // Refresh quietly — never flip the list back to "Loading…" during sync.

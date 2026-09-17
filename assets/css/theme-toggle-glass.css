@@ -1,24 +1,21 @@
 /**
- * Moving glass-bubble theme toggle (reference match).
- * - Matte pill track
- * - Large translucent bubble slides left/right over the active icon
- * - Light: sun left + "Light" right
- * - Dark:  "Dark" left + moon right
+ * Compact theme toggle switch.
+ * Small track + knob; sun/moon icons only (no Light/Dark labels).
  */
 
 .theme-toggle-btn.theme-toggle-glass {
-    --tt-w: 112px;
-    --tt-h: 34px;
-    --tt-bubble: 46px;
-    --tt-pad: 2px;
-    --tt-ease: cubic-bezier(0.34, 1.3, 0.64, 1);
+    --tt-w: 40px;
+    --tt-h: 22px;
+    --tt-bubble: 16px;
+    --tt-pad: 3px;
+    --tt-ease: cubic-bezier(0.4, 0, 0.2, 1);
     background: transparent !important;
     border: 0 !important;
     color: inherit !important;
     width: var(--tt-w) !important;
-    height: var(--tt-bubble) !important; /* room for protruding bubble */
+    height: var(--tt-h) !important;
     min-width: var(--tt-w) !important;
-    min-height: var(--tt-bubble) !important;
+    min-height: var(--tt-h) !important;
     padding: 0 !important;
     margin: 0 !important;
     border-radius: 999px !important;
@@ -31,7 +28,6 @@
     box-shadow: none !important;
     flex: 0 0 auto;
     -webkit-tap-highlight-color: transparent;
-    isolation: isolate;
 }
 
 .theme-toggle-btn.theme-toggle-glass:hover,
@@ -42,9 +38,7 @@
 }
 
 .theme-toggle-btn.theme-toggle-glass:focus-visible .theme-toggle-glass__track {
-    box-shadow:
-        0 8px 20px rgba(15, 23, 42, 0.18),
-        0 0 0 3px rgba(148, 163, 184, 0.35);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
 
 .theme-toggle-glass__track {
@@ -53,95 +47,55 @@
     height: var(--tt-h);
     border-radius: 999px;
     display: block;
-    overflow: visible;
-    background: #d7dbe3;
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    box-shadow:
-        0 10px 22px rgba(15, 23, 42, 0.16),
-        0 2px 4px rgba(15, 23, 42, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.85);
-    transition:
-        background 0.45s ease,
-        border-color 0.45s ease,
-        box-shadow 0.35s ease;
+    overflow: hidden;
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+    transition: background 0.25s ease, border-color 0.25s ease;
 }
 
 .theme-toggle-btn.theme-toggle-glass:hover .theme-toggle-glass__track {
-    box-shadow:
-        0 12px 26px rgba(15, 23, 42, 0.2),
-        0 2px 6px rgba(15, 23, 42, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border-color: #94a3b8;
 }
 
-/* ---- Fixed icons (bubble slides over them) ---- */
+/* Tiny icons inside the track */
 .theme-toggle-glass__icon {
     position: absolute !important;
     top: 50% !important;
-    width: 18px !important;
-    height: 18px !important;
+    width: 10px !important;
+    height: 10px !important;
     min-width: 0 !important;
     margin: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 14px !important;
+    font-size: 9px !important;
     line-height: 1 !important;
-    z-index: 2;
+    z-index: 1;
     pointer-events: none;
     transform: translateY(-50%);
-    transition: opacity 0.3s ease, color 0.3s ease, transform 0.45s var(--tt-ease);
+    transition: opacity 0.2s ease, color 0.2s ease;
 }
 
 .theme-toggle-glass__icon--sun {
-    left: 14px;
-    color: #fff !important;
+    left: 5px;
+    color: #f59e0b !important;
     opacity: 1 !important;
-    text-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
 }
 
 .theme-toggle-glass__icon--moon {
-    right: 14px;
+    right: 5px;
     left: auto;
-    color: #fff !important;
+    color: #e2e8f0 !important;
     opacity: 0 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
-/* ---- Labels ---- */
+/* Hide old label nodes if any remain cached */
 .theme-toggle-glass__label {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    font-family: "DM Sans", "Segoe UI", system-ui, sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    line-height: 1;
-    pointer-events: none;
-    user-select: none;
-    z-index: 2;
-    transition: opacity 0.28s ease, transform 0.45s var(--tt-ease), color 0.3s ease;
+    display: none !important;
 }
 
-.theme-toggle-glass__label--light {
-    right: 16px;
-    left: auto;
-    color: #3f4654;
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.theme-toggle-glass__label--dark {
-    left: 16px;
-    right: auto;
-    color: #fff;
-    opacity: 0;
-    transform: translateX(8px);
-}
-
-/* ---- Moving glass bubble ---- */
+/* Knob */
 .theme-toggle-glass__bubble {
     position: absolute;
     top: 50%;
@@ -150,113 +104,38 @@
     height: var(--tt-bubble);
     margin-top: calc(var(--tt-bubble) / -2);
     border-radius: 50%;
-    z-index: 3;
+    z-index: 2;
     pointer-events: none;
-    background:
-        radial-gradient(
-            circle at 32% 28%,
-            rgba(255, 255, 255, 0.72) 0%,
-            rgba(255, 255, 255, 0.28) 32%,
-            rgba(255, 255, 255, 0.1) 58%,
-            rgba(255, 255, 255, 0.04) 100%
-        );
-    border: 1.5px solid rgba(255, 255, 255, 0.7);
-    box-shadow:
-        0 8px 18px rgba(15, 23, 42, 0.22),
-        0 2px 4px rgba(15, 23, 42, 0.12),
-        inset 0 1px 2px rgba(255, 255, 255, 0.95),
-        inset 0 -4px 8px rgba(120, 130, 150, 0.18);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    backdrop-filter: blur(10px) saturate(160%);
-    transition:
-        left 0.55s var(--tt-ease),
-        transform 0.22s ease,
-        width 0.22s ease,
-        border-radius 0.22s ease,
-        box-shadow 0.3s ease;
-    will-change: left, transform;
+    background: #fff;
+    border: 0;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+    transition: left 0.25s var(--tt-ease), box-shadow 0.2s ease;
 }
 
-/* Specular highlight on the glass */
-.theme-toggle-glass__bubble::before {
-    content: "";
-    position: absolute;
-    top: 10%;
-    left: 14%;
-    width: 46%;
-    height: 32%;
-    border-radius: 50%;
-    background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.95) 0%,
-        rgba(255, 255, 255, 0.15) 70%,
-        transparent 100%
-    );
-    pointer-events: none;
-}
-
-/* Soft contact shadow under the bubble */
+.theme-toggle-glass__bubble::before,
 .theme-toggle-glass__bubble::after {
-    content: "";
-    position: absolute;
-    left: 16%;
-    right: 16%;
-    bottom: -7px;
-    height: 12px;
-    border-radius: 50%;
-    background: rgba(15, 23, 42, 0.28);
-    filter: blur(5px);
-    z-index: -1;
-    pointer-events: none;
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    display: none !important;
+    content: none !important;
 }
 
-/* Press = liquid squash */
 .theme-toggle-btn.theme-toggle-glass.is-pressing .theme-toggle-glass__bubble {
-    width: calc(var(--tt-bubble) + 8px);
-    border-radius: 22px;
-    transform: scaleY(0.9);
-}
-
-.theme-toggle-btn.theme-toggle-glass.is-pressing .theme-toggle-glass__bubble::after {
-    transform: scaleX(1.15);
-    opacity: 0.55;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.18);
 }
 
 .theme-toggle-btn.theme-toggle-glass.is-animating .theme-toggle-glass__bubble {
-    transition:
-        left 0.55s var(--tt-ease),
-        transform 0.35s var(--tt-ease),
-        width 0.35s ease,
-        border-radius 0.35s ease,
-        box-shadow 0.35s ease;
+    transition: left 0.25s var(--tt-ease);
 }
 
-/* ========== Dark mode ========== */
+/* Dark mode */
 html[data-theme="dark"] .theme-toggle-glass__track {
-    background: #2a2e36;
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow:
-        0 10px 24px rgba(0, 0, 0, 0.45),
-        0 2px 4px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    background: #334155;
+    border-color: #475569;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 html[data-theme="dark"] .theme-toggle-glass__bubble {
     left: calc(100% - var(--tt-bubble) - var(--tt-pad));
-    background:
-        radial-gradient(
-            circle at 32% 28%,
-            rgba(255, 255, 255, 0.45) 0%,
-            rgba(255, 255, 255, 0.16) 34%,
-            rgba(255, 255, 255, 0.06) 62%,
-            rgba(255, 255, 255, 0.03) 100%
-        );
-    border-color: rgba(255, 255, 255, 0.45);
-}
-
-html[data-theme="dark"] .theme-toggle-btn.theme-toggle-glass.is-pressing .theme-toggle-glass__bubble {
-    left: calc(100% - var(--tt-bubble) - var(--tt-pad) - 8px);
+    background: #f8fafc;
 }
 
 html[data-theme="dark"] .theme-toggle-glass__icon--sun {
@@ -265,63 +144,45 @@ html[data-theme="dark"] .theme-toggle-glass__icon--sun {
 
 html[data-theme="dark"] .theme-toggle-glass__icon--moon {
     opacity: 1 !important;
+    color: #cbd5e1 !important;
 }
 
-html[data-theme="dark"] .theme-toggle-glass__label--light {
-    opacity: 0;
-    transform: translateX(-8px);
-}
-
-html[data-theme="dark"] .theme-toggle-glass__label--dark {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-/* Header alignment with notifications */
 .header-actions-tray .theme-toggle-btn.theme-toggle-glass {
     align-self: center;
 }
 
-/* Sidebar */
+/* Sidebar: keep switch compact; label text from .sidebar-text */
 #native-sidebar .sidebar-theme-toggle.theme-toggle-glass,
 #native-sidebar .theme-toggle-glass {
-    width: var(--tt-w) !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0.35rem 0.85rem !important;
     display: inline-flex !important;
-    padding: 0 !important;
+    align-items: center !important;
+    gap: 0.55rem !important;
+    padding: 0.35rem 0 !important;
+}
+
+#native-sidebar .theme-toggle-glass .sidebar-text {
+    font-size: 0.875rem;
+    font-weight: 600;
 }
 
 body.sidebar-collapsed #native-sidebar .theme-toggle-glass {
-    --tt-w: 52px;
     margin-left: auto !important;
     margin-right: auto !important;
+    justify-content: center !important;
 }
 
-body.sidebar-collapsed #native-sidebar .theme-toggle-glass__label {
+body.sidebar-collapsed #native-sidebar .theme-toggle-glass .sidebar-text {
     display: none;
-}
-
-@media (max-width: 640px) {
-    .theme-toggle-btn.theme-toggle-glass {
-        --tt-w: 100px;
-        --tt-h: 32px;
-        --tt-bubble: 42px;
-    }
-
-    .theme-toggle-glass__label {
-        font-size: 12px;
-    }
-
-    .theme-toggle-glass__label--light { right: 14px; }
-    .theme-toggle-glass__label--dark { left: 14px; }
-    .theme-toggle-glass__icon--sun { left: 12px; }
-    .theme-toggle-glass__icon--moon { right: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .theme-toggle-glass__bubble,
     .theme-toggle-glass__icon,
-    .theme-toggle-glass__label,
     .theme-toggle-glass__track {
         transition-duration: 0.01ms !important;
     }

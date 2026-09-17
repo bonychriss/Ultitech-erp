@@ -72,10 +72,17 @@ type Props = {
   user: User;
   account: Account | null;
   initialFolders: Folder[];
+  welcomeMessage?: string;
   onLogout: () => void;
 };
 
-export function MailApp({ user, account: initialAccount, initialFolders, onLogout }: Props) {
+export function MailApp({
+  user,
+  account: initialAccount,
+  initialFolders,
+  welcomeMessage = '',
+  onLogout,
+}: Props) {
   const [folders, setFolders] = useState(initialFolders);
   const [account, setAccount] = useState(initialAccount);
   const [folder, setFolder] = useState('inbox');
@@ -85,7 +92,7 @@ export function MailApp({ user, account: initialAccount, initialFolders, onLogou
   const [messages, setMessages] = useState<MailListItem[]>([]);
   const [selected, setSelected] = useState<MailDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState('');
+  const [toast, setToast] = useState(welcomeMessage);
   const [compose, setCompose] = useState<ComposeState>({ open: false });
   const [inlineReply, setInlineReply] = useState(false);
   const [replyDraft, setReplyDraft] = useState('');
@@ -159,9 +166,10 @@ export function MailApp({ user, account: initialAccount, initialFolders, onLogou
 
   useEffect(() => {
     if (!toast) return;
-    const t = window.setTimeout(() => setToast(''), 5000);
+    const ms = welcomeMessage && toast === welcomeMessage ? 8000 : 5000;
+    const t = window.setTimeout(() => setToast(''), ms);
     return () => window.clearTimeout(t);
-  }, [toast]);
+  }, [toast, welcomeMessage]);
 
   const listLabel = useMemo(() => {
     if (query) return `Results for “${query}”`;

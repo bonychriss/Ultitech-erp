@@ -37,6 +37,7 @@ export default function App() {
       user={boot.user}
       account={boot.account}
       initialFolders={boot.folders || []}
+      welcomeMessage={boot.message || ''}
       onLogout={() =>
         setBoot({
           ...boot,
@@ -44,6 +45,7 @@ export default function App() {
           user: null,
           account: null,
           folders: [],
+          message: undefined,
         })
       }
     />

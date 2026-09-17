@@ -39,11 +39,13 @@ export function LoginPage({ bootstrap: _bootstrap, onLoggedIn }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
 
   function switchMode(next: Mode) {
     setMode(next);
     setError('');
+    setSuccess('');
     setShowPassword(false);
     setShowConfirm(false);
     setUsername('');
@@ -76,6 +78,7 @@ export function LoginPage({ bootstrap: _bootstrap, onLoggedIn }: Props) {
     e.preventDefault();
     setBusy(true);
     setError('');
+    setSuccess('');
     try {
       if (password.length < 8) {
         throw new Error('Password must be at least 8 characters.');
@@ -90,10 +93,15 @@ export function LoginPage({ bootstrap: _bootstrap, onLoggedIn }: Props) {
         password,
         password_confirm: passwordConfirm,
       });
-      onLoggedIn(data);
+      const welcome =
+        data.message?.trim() ||
+        `Account created successfully. Welcome, ${username.trim()}!`;
+      setSuccess(welcome);
+      window.setTimeout(() => {
+        onLoggedIn({ ...data, message: welcome });
+      }, 1400);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
-    } finally {
       setBusy(false);
     }
   }
@@ -111,6 +119,7 @@ export function LoginPage({ bootstrap: _bootstrap, onLoggedIn }: Props) {
           <h1>{mode === 'login' ? 'Log in' : 'Sign up'}</h1>
 
           {error ? <div className="error">{error}</div> : null}
+          {success ? <div className="success" role="status">{success}</div> : null}
 
           {mode === 'login' ? (
             <form className="auth-form" onSubmit={(e) => void onLogin(e)}>
@@ -227,8 +236,8 @@ export function LoginPage({ bootstrap: _bootstrap, onLoggedIn }: Props) {
                 </button>
               </div>
 
-              <button className="auth-submit" type="submit" disabled={busy}>
-                {busy ? 'Creating account…' : 'Sign up'}
+              <button className="auth-submit" type="submit" disabled={busy || !!success}>
+                {success ? 'Success…' : busy ? 'Creating account…' : 'Sign up'}
               </button>
             </form>
           )}

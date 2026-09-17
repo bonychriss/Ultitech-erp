@@ -175,7 +175,7 @@ class ApiController extends Controller
 
         Yii::$app->user->login($user, 3600 * 24 * 30);
         $payload = $this->actionBootstrap();
-        $payload['message'] = 'Account created. Welcome!';
+        $payload['message'] = 'Registration successful. Your account has been created.';
         return $payload;
     }
 

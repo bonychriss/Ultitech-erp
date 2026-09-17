@@ -1792,6 +1792,17 @@ button, input, textarea { font: inherit; }
   margin-bottom: 10px;
   font-size: 0.8rem;
 }
+.login-page .success {
+  color: #137333;
+  background: #e6f4ea;
+  border: 1px solid #ceead6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
 
 .loading {
   min-height: 100%;

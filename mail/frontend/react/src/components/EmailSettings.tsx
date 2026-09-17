@@ -149,6 +149,9 @@ type Props = {
   /** Registered app username — used as default mailbox display name. */
   preferredDisplayName?: string;
   focusAccountId?: number | null;
+  /** Only true after IMAP auth failure — forces one password re-entry. */
+  requirePassword?: boolean;
+  onPasswordSaved?: () => void;
 };
 
 export function EmailSettings({
@@ -157,6 +160,8 @@ export function EmailSettings({
   preferredEmail,
   preferredDisplayName,
   focusAccountId,
+  requirePassword = false,
+  onPasswordSaved,
 }: Props) {
   const [accounts, setAccounts] = useState<AccountDetail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -172,7 +177,7 @@ export function EmailSettings({
   const [showImapPassword, setShowImapPassword] = useState(false);
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   /** When sync failed auth, force re-entry — blank must not keep the bad password. */
-  const [passwordRequired, setPasswordRequired] = useState(false);
+  const [passwordRequired, setPasswordRequired] = useState(requirePassword);
   const [hint, setHint] = useState('');
 
   function companyPreset() {
@@ -197,16 +202,23 @@ export function EmailSettings({
           data.accounts.find((a) => a.id === focusAccountId) || data.accounts[0];
         if (target) {
           setMode('edit');
-          setStep(2);
+          setStep(requirePassword ? 2 : 1);
           setEditingId(target.id);
           setForm(fromDetail(target));
           setSamePassword(true);
-          setPasswordRequired(true);
+          setPasswordRequired(requirePassword);
           setError('');
           setHint(
-            'Type the mailbox password you just set in StackCP Email Accounts into the password field below, then Continue → Save changes. Leaving it blank keeps the old (rejected) password.',
+            requirePassword
+              ? 'Type the mailbox password once, then Continue → Save changes. After it saves, you will not need to enter it again.'
+              : '',
           );
         }
+      } else {
+        setMode('list');
+        setPasswordRequired(false);
+        setHint('');
+        setError('');
       }
     } catch (err) {
       onToast(err instanceof Error ? err.message : 'Failed to load accounts');
@@ -218,7 +230,7 @@ export function EmailSettings({
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusAccountId]);
+  }, [focusAccountId, requirePassword]);
 
   function openCreate() {
     setMode('create');
@@ -345,6 +357,9 @@ export function EmailSettings({
           : await api.createAccount(payload);
 
       onToast(result.message || 'Mailbox registered');
+      setPasswordRequired(false);
+      setHint('');
+      onPasswordSaved?.();
       await load();
       onAccountsChanged();
       setMode('list');

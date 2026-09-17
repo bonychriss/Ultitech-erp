@@ -99,6 +99,7 @@ export function MailApp({
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [settingsFocusId, setSettingsFocusId] = useState<number | null>(null);
+  const [requirePassword, setRequirePassword] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const folderRef = useRef(folder);
@@ -199,8 +200,12 @@ export function MailApp({
     setSelectedIds([]);
   }
 
-  function openSettings(focusAccount = false) {
-    setSettingsFocusId(focusAccount && account ? account.id : null);
+  function openSettings(opts?: { editAccount?: boolean; requirePassword?: boolean }) {
+    const needPassword = !!opts?.requirePassword;
+    setRequirePassword(needPassword);
+    setSettingsFocusId(
+      needPassword || opts?.editAccount ? account?.id ?? null : null,
+    );
     setView('settings');
     setSelected(null);
     setInlineReply(false);
@@ -270,15 +275,14 @@ export function MailApp({
       if (!opts?.quiet) {
         setToast(res.message);
         if (authHint) {
-          openSettings(true);
+          openSettings({ editAccount: true, requirePassword: true });
         }
       } else if ((res.imported ?? 0) > 0) {
         setToast(res.message);
       } else if (authHint && !authHintShownRef.current) {
-        // Show once per session on background sync, then open settings.
         authHintShownRef.current = true;
         setToast(res.message);
-        openSettings(true);
+        openSettings({ editAccount: true, requirePassword: true });
       }
 
       await refreshFolders();
@@ -341,7 +345,7 @@ export function MailApp({
               type="button"
               className="side-profile-btn"
               title="Email & account settings"
-              onClick={() => openSettings(true)}
+              onClick={() => openSettings()}
             >
               <div className={`side-avatar ${hasUnread ? 'has-unread' : ''}`} aria-hidden>
                 {(account.display_name || account.email).slice(0, 1).toUpperCase()}
@@ -508,6 +512,11 @@ export function MailApp({
               }
               preferredDisplayName=""
               focusAccountId={settingsFocusId}
+              requirePassword={requirePassword}
+              onPasswordSaved={() => {
+                setRequirePassword(false);
+                authHintShownRef.current = false;
+              }}
               onToast={setToast}
               onAccountsChanged={() => {
                 void refreshFolders().then(() => {

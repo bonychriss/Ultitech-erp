@@ -171,7 +171,11 @@ export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }:
 
         <div className="mailbox-tile-grid" role="list">
           {mailboxes.map((m, i) => {
-            const label = m.display_name || m.email.split('@')[0];
+            const typeLabel = (m.account_type || '').trim();
+            const label =
+              typeLabel ||
+              m.display_name ||
+              m.email.split('@')[0];
             const tone = ['purple', 'blue', 'green'][i % 3];
             return (
               <button
@@ -185,7 +189,11 @@ export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }:
                   <MdPerson size={22} />
                 </span>
                 <span className="mailbox-tile-text">
-                  <strong>{label}</strong>
+                  <strong>
+                    {typeLabel
+                      ? typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)
+                      : label}
+                  </strong>
                   <span>{m.email}</span>
                 </span>
               </button>

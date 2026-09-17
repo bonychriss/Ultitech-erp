@@ -21,13 +21,17 @@ import {
 } from '../api';
 
 /** Empty mailbox form; From name defaults to the company name in capitals. */
-function blankPreset(email = '', displayName = ''): AccountInput {
+function blankPreset(email = '', displayName = '', accountType = ''): AccountInput {
   const trimmed = email.trim();
   const domain = trimmed.includes('@') ? trimmed.split('@')[1] : '';
+  const inferredType =
+    accountType ||
+    (trimmed.includes('@') ? trimmed.split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g, '') : '');
   const companyName = companyFromName(displayName) || companyNameFromEmail(trimmed);
   return {
     email: trimmed,
     display_name: companyName,
+    account_type: inferredType,
     imap_host: domain ? `mail.${domain}` : '',
     imap_port: 993,
     imap_encryption: 'ssl',
@@ -39,6 +43,39 @@ function blankPreset(email = '', displayName = ''): AccountInput {
     smtp_username: trimmed,
     smtp_password: '',
   };
+}
+
+const ACCOUNT_TYPE_OPTIONS = [
+  'sales',
+  'procurement',
+  'manager',
+  'accounts',
+  'admin',
+  'hr',
+  'support',
+  'info',
+] as const;
+
+function defaultMailDomain(preferredEmail = '', currentEmail = ''): string {
+  for (const candidate of [currentEmail, preferredEmail]) {
+    if (candidate.includes('@')) {
+      return candidate.split('@')[1].toLowerCase();
+    }
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname.toLowerCase();
+    if (host.includes('roadmasterspares.com')) return 'roadmasterspares.com';
+    if (host.includes('ultimate.co.tz')) return 'ultimate.co.tz';
+  }
+  return '';
+}
+
+function emailForAccountType(type: string, preferredEmail: string, currentEmail: string): string {
+  const cleaned = type.trim().toLowerCase().replace(/\s+/g, '');
+  if (!cleaned || cleaned === 'other') return currentEmail;
+  const domain = defaultMailDomain(preferredEmail, currentEmail);
+  if (!domain) return currentEmail;
+  return `${cleaned}@${domain}`;
 }
 
 /** Known company From names (shown on the receiver side). */
@@ -98,9 +135,13 @@ function fromDetail(a: AccountDetail): AccountInput {
     companyFromName(existing) ||
     fallback ||
     existing.toUpperCase();
+  const type =
+    (a.account_type || '').trim().toLowerCase() ||
+    (a.email.includes('@') ? a.email.split('@')[0].toLowerCase() : '');
   return {
     email: a.email,
     display_name: display,
+    account_type: type,
     imap_host: a.imap_host,
     imap_port: a.imap_port,
     imap_encryption: a.imap_encryption || 'ssl',
@@ -191,9 +232,32 @@ export function EmailSettings({
   const [poolEmail, setPoolEmail] = useState('');
   const [poolPassword, setPoolPassword] = useState('');
   const [poolBusy, setPoolBusy] = useState(false);
+  const [customAccountType, setCustomAccountType] = useState(false);
 
   function companyPreset() {
     return blankPreset(preferredEmail || '', preferredDisplayName || '');
+  }
+
+  function applyAccountType(nextType: string, useCustom = false) {
+    const cleaned = nextType.trim().toLowerCase();
+    setCustomAccountType(useCustom || (!!cleaned && !(ACCOUNT_TYPE_OPTIONS as readonly string[]).includes(cleaned)));
+    setForm((prev) => {
+      const nextEmail = emailForAccountType(cleaned, preferredEmail || '', prev.email);
+      const applied = applyEmailDefaults(nextEmail || prev.email, {
+        ...prev,
+        account_type: cleaned,
+      });
+      const keepName =
+        prev.display_name.trim() !== '' &&
+        prev.display_name.trim() !== companyNameFromEmail(prev.email);
+      return {
+        ...applied,
+        account_type: cleaned,
+        display_name: keepName
+          ? prev.display_name
+          : companyNameFromEmail(applied.email) || prev.display_name,
+      };
+    });
   }
 
   async function load() {
@@ -299,6 +363,7 @@ export function EmailSettings({
     setStep(1);
     setEditingId(null);
     setForm(companyPreset());
+    setCustomAccountType(false);
     setSamePassword(true);
     setPasswordRequired(true);
     setError('');
@@ -306,10 +371,15 @@ export function EmailSettings({
   }
 
   function openEdit(a: AccountDetail) {
+    const next = fromDetail(a);
     setMode('edit');
     setStep(1);
     setEditingId(a.id);
-    setForm(fromDetail(a));
+    setForm(next);
+    setCustomAccountType(
+      !!next.account_type &&
+        !(ACCOUNT_TYPE_OPTIONS as readonly string[]).includes(next.account_type.toLowerCase()),
+    );
     setSamePassword(true);
     setPasswordRequired(false);
     setError('');
@@ -340,6 +410,7 @@ export function EmailSettings({
 
   function validateStep(s: SetupStep): string | null {
     if (s === 1) {
+      if (!form.account_type?.trim()) return 'Choose or enter an account type (e.g. sales, procurement).';
       if (!form.email.trim()) return 'Enter your company email.';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
         return 'Enter a valid company email address.';
@@ -499,6 +570,72 @@ export function EmailSettings({
               <div className="wizard-row">
                 <div className="wizard-aside">
                   <h2>
+                    Account type<span className="req">*</span>
+                  </h2>
+                  <p>What this mailbox is for — sales, procurement, manager, and so on.</p>
+                </div>
+                <div className="wizard-fields">
+                  <div className="wizard-auth-fields">
+                    <div className="field-line">
+                      <MdTag size={18} aria-hidden />
+                      <select
+                        required
+                        aria-label="Account type"
+                        value={
+                          customAccountType ||
+                          !(ACCOUNT_TYPE_OPTIONS as readonly string[]).includes(
+                            (form.account_type || '').toLowerCase(),
+                          )
+                            ? 'other'
+                            : (form.account_type || '').toLowerCase()
+                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === 'other') {
+                            setCustomAccountType(true);
+                            setField('account_type', '');
+                            return;
+                          }
+                          applyAccountType(value, false);
+                        }}
+                      >
+                        <option value="" disabled>
+                          Select account type
+                        </option>
+                        {ACCOUNT_TYPE_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                          </option>
+                        ))}
+                        <option value="other">Other...</option>
+                      </select>
+                    </div>
+                    {customAccountType ||
+                    (!(ACCOUNT_TYPE_OPTIONS as readonly string[]).includes(
+                      (form.account_type || '').toLowerCase(),
+                    ) &&
+                      (form.account_type || '') !== '') ? (
+                      <div className="field-line">
+                        <MdTag size={18} aria-hidden />
+                        <input
+                          required
+                          autoFocus
+                          aria-label="Custom account type"
+                          placeholder="e.g. logistics, warehouse"
+                          value={form.account_type || ''}
+                          onChange={(e) => applyAccountType(e.target.value, true)}
+                        />
+                      </div>
+                    ) : null}
+                    <p className="field-hint-inline">
+                      Choosing a type suggests the matching mailbox address when possible.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="wizard-row">
+                <div className="wizard-aside">
+                  <h2>
                     Mailbox<span className="req">*</span>
                   </h2>
                   <p>The address people see when you send mail.</p>
@@ -510,7 +647,6 @@ export function EmailSettings({
                       <input
                         type="email"
                         required
-                        autoFocus
                         aria-label="Company email"
                         placeholder="Company email"
                         value={form.email}
@@ -521,8 +657,15 @@ export function EmailSettings({
                             const keepName =
                               prev.display_name.trim() !== '' &&
                               prev.display_name.trim() !== companyNameFromEmail(prev.email);
+                            const local = nextEmail.includes('@')
+                              ? nextEmail.split('@')[0].toLowerCase()
+                              : '';
+                            const keepType =
+                              !!prev.account_type &&
+                              !(ACCOUNT_TYPE_OPTIONS as readonly string[]).includes(local);
                             return {
                               ...applied,
+                              account_type: keepType ? prev.account_type : local || prev.account_type,
                               display_name: keepName
                                 ? prev.display_name
                                 : companyNameFromEmail(nextEmail) || prev.display_name,
@@ -967,7 +1110,11 @@ export function EmailSettings({
                 : `IMAP ${a.imap_host}:${a.imap_port} · SMTP ${a.smtp_host}:${a.smtp_port}`;
               return (
                 <div key={a.id} className="account-card">
-                  <strong className="account-card-name">{a.display_name || a.email}</strong>
+                  <strong className="account-card-name">
+                    {a.account_type
+                      ? a.account_type.charAt(0).toUpperCase() + a.account_type.slice(1)
+                      : a.display_name || a.email}
+                  </strong>
                   <span className="account-card-email muted">{a.email}</span>
                   <span className="account-card-servers muted" title={servers}>
                     {servers}

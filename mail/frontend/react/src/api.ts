@@ -55,6 +55,7 @@ export type Account = {
   id: number;
   email: string;
   display_name: string;
+  account_type?: string;
   last_synced_at: number | null;
 };
 
@@ -75,6 +76,7 @@ export type AccountDetail = Account & {
 export type AccountInput = {
   email: string;
   display_name: string;
+  account_type?: string;
   imap_host: string;
   imap_port: number;
   imap_encryption: string;
@@ -148,11 +150,13 @@ export type PoolMailbox = {
   id: number;
   email: string;
   display_name: string;
+  account_type?: string;
   imap_host?: string;
   imap_port?: number;
   smtp_host?: string;
   smtp_port?: number;
   has_password?: boolean;
+  created_at?: number;
 };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {

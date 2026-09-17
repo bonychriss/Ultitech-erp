@@ -41,6 +41,15 @@ class ImapSyncService
             return ['ok' => false, 'message' => 'IMAP password is missing. Update it in Email settings.', 'imported' => 0];
         }
 
+        $login = $this->testLogin($account, $password);
+        if (!$login['ok']) {
+            return [
+                'ok' => false,
+                'message' => $login['message'],
+                'imported' => 0,
+            ];
+        }
+
         // Keep IMAP attempts short so a bad password cannot freeze the UI.
         if (function_exists('imap_timeout')) {
             if (defined('IMAP_OPENTIMEOUT')) {
@@ -223,6 +232,63 @@ class ImapSyncService
         }
 
         return $imported;
+    }
+
+    /**
+     * Quick IMAP auth check (INBOX only).
+     * @return array{ok: bool, message: string}
+     */
+    public function testLogin(MailAccount $account, ?string $password = null): array
+    {
+        if (!extension_loaded('imap') || !function_exists('imap_open')) {
+            return [
+                'ok' => false,
+                'message' => 'PHP IMAP extension is not enabled on this server.',
+            ];
+        }
+
+        $password = $password ?? $account->getDecryptedImapPassword();
+        if ($password === '') {
+            return [
+                'ok' => false,
+                'message' => 'IMAP password is missing. Update it in Email settings.',
+            ];
+        }
+
+        if (function_exists('imap_timeout')) {
+            if (defined('IMAP_OPENTIMEOUT')) {
+                @imap_timeout(IMAP_OPENTIMEOUT, 8);
+            }
+            if (defined('IMAP_READTIMEOUT')) {
+                @imap_timeout(IMAP_READTIMEOUT, 8);
+            }
+        }
+
+        imap_errors();
+        imap_alerts();
+        $mailbox = $this->buildMailboxString($account, 'INBOX');
+        $stream = @imap_open($mailbox, (string) $account->imap_username, $password, 0, 0, [
+            'DISABLE_AUTHENTICATOR' => 'GSSAPI',
+        ]);
+        if ($stream === false) {
+            $imapErr = implode(' ', array_filter(array_merge(
+                imap_errors() ?: [],
+                imap_alerts() ?: [],
+                [imap_last_error() ?: ''],
+            )));
+            if ($this->isAuthFailure($imapErr)) {
+                return [
+                    'ok' => false,
+                    'message' => 'IMAP login failed. The password does not match StackCP Email Accounts for this mailbox.',
+                ];
+            }
+            return [
+                'ok' => false,
+                'message' => $imapErr !== '' ? $imapErr : 'Unable to connect to IMAP server.',
+            ];
+        }
+        imap_close($stream);
+        return ['ok' => true, 'message' => 'IMAP login OK.'];
     }
 
     private function isAuthFailure(string $error): bool

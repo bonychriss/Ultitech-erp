@@ -171,6 +171,9 @@ export function EmailSettings({
   const [error, setError] = useState('');
   const [showImapPassword, setShowImapPassword] = useState(false);
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  /** When sync failed auth, force re-entry — blank must not keep the bad password. */
+  const [passwordRequired, setPasswordRequired] = useState(false);
+  const [hint, setHint] = useState('');
 
   function companyPreset() {
     return blankPreset(preferredEmail || '', preferredDisplayName || '');
@@ -186,6 +189,9 @@ export function EmailSettings({
         setStep(1);
         setForm(companyPreset());
         setSamePassword(true);
+        setPasswordRequired(true);
+        setHint('');
+        setError('');
       } else if (focusAccountId) {
         const target =
           data.accounts.find((a) => a.id === focusAccountId) || data.accounts[0];
@@ -195,8 +201,10 @@ export function EmailSettings({
           setEditingId(target.id);
           setForm(fromDetail(target));
           setSamePassword(true);
-          setError(
-            'IMAP rejected the saved password. In StackCP → Email Accounts, set a new password for this mailbox, then paste that same password here (not your Ultitech login).',
+          setPasswordRequired(true);
+          setError('');
+          setHint(
+            'Type the mailbox password you just set in StackCP Email Accounts into the password field below, then Continue → Save changes. Leaving it blank keeps the old (rejected) password.',
           );
         }
       }
@@ -218,7 +226,9 @@ export function EmailSettings({
     setEditingId(null);
     setForm(companyPreset());
     setSamePassword(true);
+    setPasswordRequired(true);
     setError('');
+    setHint('');
   }
 
   function openEdit(a: AccountDetail) {
@@ -227,14 +237,18 @@ export function EmailSettings({
     setEditingId(a.id);
     setForm(fromDetail(a));
     setSamePassword(true);
+    setPasswordRequired(false);
     setError('');
+    setHint('');
   }
 
   function backToList() {
     setMode('list');
     setEditingId(null);
     setStep(1);
+    setPasswordRequired(false);
     setError('');
+    setHint('');
   }
 
   function setField<K extends keyof AccountInput>(key: K, value: AccountInput[K]) {
@@ -265,15 +279,18 @@ export function EmailSettings({
       if (!form.imap_host.trim()) return 'Enter the IMAP host.';
       if (!form.imap_port) return 'Enter the IMAP port.';
       if (!form.imap_username.trim()) return 'Enter the IMAP username.';
-      if (mode === 'create' && !form.imap_password) {
-        return 'Enter the IMAP mailbox password.';
+      if ((mode === 'create' || passwordRequired) && !form.imap_password) {
+        return 'Enter the mailbox password from StackCP (do not leave blank).';
       }
       return null;
     }
     if (!form.smtp_host.trim()) return 'Enter the SMTP host.';
     if (!form.smtp_port) return 'Enter the SMTP port.';
     if (!form.smtp_username.trim()) return 'Enter the SMTP username.';
-    if (mode === 'create' && !samePassword && !form.smtp_password) {
+    if ((mode === 'create' || passwordRequired) && !form.imap_password) {
+      return 'Go back to Incoming mail and enter the mailbox password.';
+    }
+    if ((mode === 'create' || passwordRequired) && !samePassword && !form.smtp_password) {
       return 'Enter the SMTP password, or use the same password as IMAP.';
     }
     return null;
@@ -398,6 +415,7 @@ export function EmailSettings({
           </div>
 
           {error ? <div className="settings-error">{error}</div> : null}
+          {hint && !error ? <div className="settings-hint">{hint}</div> : null}
 
           {step === 1 ? (
             <>
@@ -547,16 +565,23 @@ export function EmailSettings({
                       <MdLockOutline size={18} aria-hidden />
                       <input
                         type={showImapPassword ? 'text' : 'password'}
-                        required={mode === 'create'}
+                        required={mode === 'create' || passwordRequired}
                         autoComplete="new-password"
+                        autoFocus={passwordRequired}
                         aria-label="IMAP password"
                         placeholder={
-                          mode === 'edit'
-                            ? 'Leave blank to keep current password'
-                            : 'Mailbox password from cPanel'
+                          passwordRequired || mode === 'create'
+                            ? 'Paste mailbox password from StackCP'
+                            : 'Leave blank to keep current password'
                         }
                         value={form.imap_password || ''}
-                        onChange={(e) => setField('imap_password', e.target.value)}
+                        onChange={(e) => {
+                          setField('imap_password', e.target.value);
+                          if (e.target.value.trim()) {
+                            setHint('');
+                            setError('');
+                          }
+                        }}
                       />
                       <button
                         type="button"
@@ -571,6 +596,12 @@ export function EmailSettings({
                         )}
                       </button>
                     </div>
+                    {passwordRequired ? (
+                      <p className="field-hint-inline">
+                        Required — the password currently saved in Mail is wrong. Leaving blank will
+                        not update it.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -742,12 +773,12 @@ export function EmailSettings({
               </button>
               {step < 3 ? (
                 <button className="wizard-btn-next" type="submit">
-                  Save &amp; Continue
+                  Continue
                 </button>
               ) : (
                 <button className="wizard-btn-next" type="submit" disabled={busy}>
                   {busy
-                    ? 'Connecting…'
+                    ? 'Testing & saving…'
                     : mode === 'create'
                       ? 'Register & connect'
                       : 'Save changes'}

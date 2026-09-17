@@ -2086,6 +2086,15 @@ a.auth-submit-link {
   margin-bottom: 14px;
   font-size: 0.9rem;
 }
+.settings-hint {
+  background: #e8f0fe;
+  color: #174ea6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
 .account-cards {
   display: flex;
   flex-direction: column;

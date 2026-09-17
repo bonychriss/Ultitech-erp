@@ -467,9 +467,24 @@ class ApiController extends Controller
             ];
         }
 
+        // When a password was supplied, verify IMAP before reporting success.
+        if ($imapPass !== '') {
+            $model->refresh();
+            $probe = (new ImapSyncService())->testLogin($model, $imapPass);
+            if (!$probe['ok']) {
+                Yii::$app->response->statusCode = 422;
+                return [
+                    'ok' => false,
+                    'message' => $probe['message']
+                        . ' Re-check the password in StackCP Email Accounts and paste it again.',
+                    'account' => $this->serializeAccountDetail($model),
+                ];
+            }
+        }
+
         return [
             'ok' => true,
-            'message' => $isNew ? 'Mailbox connected.' : 'Account updated.',
+            'message' => $isNew ? 'Mailbox connected.' : 'Account updated. IMAP login verified.',
             'account' => $this->serializeAccountDetail($model),
         ];
     }

@@ -8,7 +8,9 @@ use common\models\MailAccount;
 use common\models\MailFolder;
 use common\models\MailMessage;
 use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Mailer\Transport\SendmailTransport;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Yii;
@@ -17,6 +19,7 @@ use yii\web\UploadedFile;
 
 /**
  * Sends mail through the account SMTP settings and stores a Sent copy.
+ * On shared hosting, falls back to sendmail when SMTP login is rejected.
  */
 class SmtpSendService
 {
@@ -40,64 +43,70 @@ class SmtpSendService
         if ($smtpPassword === '') {
             $smtpPassword = $account->getDecryptedImapPassword();
         }
-        if ($smtpPassword === '') {
-            return ['ok' => false, 'message' => 'SMTP password is missing. Update it in Email settings.'];
+
+        $email = (new Email())
+            ->from(new Address($account->email, $account->display_name ?: $account->email))
+            ->subject($subject)
+            ->text($body !== '' ? $body : ' ')
+            ->html(
+                $body !== ''
+                    ? nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'))
+                    : '&nbsp;',
+            );
+
+        foreach ($this->toAddressObjects($to) as $address) {
+            $email->addTo($address);
+        }
+        foreach ($this->toAddressObjects($cc) as $address) {
+            $email->addCc($address);
+        }
+        foreach ($this->toAddressObjects($bcc) as $address) {
+            $email->addBcc($address);
+        }
+
+        if (!empty($data['in_reply_to'])) {
+            $email->getHeaders()->addTextHeader('In-Reply-To', (string) $data['in_reply_to']);
+        }
+
+        foreach ($uploads as $upload) {
+            $email->attachFromPath(
+                $upload->tempName,
+                $upload->name,
+                $upload->type ?: null,
+            );
         }
 
         $smtpOk = false;
+        $lastError = '';
         try {
-            $tls = $account->smtp_encryption === 'ssl' ? true : null;
-            if ($account->smtp_encryption === 'none') {
-                $tls = false;
+            $transport = $this->buildSmtpTransport($account, $smtpPassword);
+            if ($transport === null) {
+                throw new \RuntimeException('SMTP password is missing. Update it in Email settings.');
             }
-            $transport = new EsmtpTransport(
-                (string) $account->smtp_host,
-                (int) $account->smtp_port,
-                $tls,
-            );
-            $transport->setUsername((string) $account->smtp_username);
-            $transport->setPassword($smtpPassword);
-
-            $email = (new Email())
-                ->from(new Address($account->email, $account->display_name ?: $account->email))
-                ->subject($subject)
-                ->text($body !== '' ? $body : ' ')
-                ->html(
-                    $body !== ''
-                        ? nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'))
-                        : '&nbsp;',
-                );
-
-            foreach ($this->toAddressObjects($to) as $address) {
-                $email->addTo($address);
-            }
-            foreach ($this->toAddressObjects($cc) as $address) {
-                $email->addCc($address);
-            }
-            foreach ($this->toAddressObjects($bcc) as $address) {
-                $email->addBcc($address);
-            }
-
-            if (!empty($data['in_reply_to'])) {
-                $email->getHeaders()->addTextHeader('In-Reply-To', (string) $data['in_reply_to']);
-            }
-
-            foreach ($uploads as $upload) {
-                $email->attachFromPath(
-                    $upload->tempName,
-                    $upload->name,
-                    $upload->type ?: null,
-                );
-            }
-
             (new Mailer($transport))->send($email);
             $smtpOk = true;
         } catch (\Throwable $e) {
-            Yii::error($e->getMessage(), __METHOD__);
-            if (!$this->isLocalDemo($account)) {
+            $lastError = $e->getMessage();
+            Yii::error($lastError, __METHOD__);
+
+            if ($this->isLocalDemo($account)) {
+                // Fall through: store Sent copy only (local/demo).
+            } elseif ($this->canUseSendmailFallback($lastError)) {
+                try {
+                    (new Mailer(new SendmailTransport()))->send($email);
+                    $smtpOk = true;
+                    Yii::warning('SMTP failed; sent via sendmail fallback. ' . $lastError, __METHOD__);
+                } catch (\Throwable $sendmailError) {
+                    Yii::error($sendmailError->getMessage(), __METHOD__);
+                    return [
+                        'ok' => false,
+                        'message' => 'Send failed: ' . $this->friendlySmtpError($lastError),
+                    ];
+                }
+            } else {
                 return [
                     'ok' => false,
-                    'message' => 'Send failed: ' . $this->friendlySmtpError($e->getMessage()),
+                    'message' => 'Send failed: ' . $this->friendlySmtpError($lastError),
                 ];
             }
         }
@@ -193,6 +202,41 @@ class SmtpSendService
         }
 
         return $message;
+    }
+
+    private function buildSmtpTransport(MailAccount $account, string $smtpPassword): ?TransportInterface
+    {
+        if ($smtpPassword === '') {
+            return null;
+        }
+
+        $tls = $account->smtp_encryption === 'ssl' ? true : null;
+        if ($account->smtp_encryption === 'none') {
+            $tls = false;
+        }
+
+        $transport = new EsmtpTransport(
+            (string) $account->smtp_host,
+            (int) $account->smtp_port,
+            $tls,
+        );
+        $transport->setUsername((string) $account->smtp_username);
+        $transport->setPassword($smtpPassword);
+
+        return $transport;
+    }
+
+    private function canUseSendmailFallback(string $raw): bool
+    {
+        if (!is_string(ini_get('sendmail_path')) || trim((string) ini_get('sendmail_path')) === '') {
+            return false;
+        }
+
+        $raw = strtolower($raw);
+        return str_contains($raw, 'authentication')
+            || str_contains($raw, '535')
+            || str_contains($raw, 'password is missing')
+            || str_contains($raw, 'incorrect authentication');
     }
 
     private function friendlySmtpError(string $raw): string

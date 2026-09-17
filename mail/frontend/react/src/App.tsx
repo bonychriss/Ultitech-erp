@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type Bootstrap } from './api';
+import { LoadingMail } from './components/LoadingMail';
 import { LoginPage } from './components/LoginPage';
 import { MailApp } from './components/MailApp';
 import './index.css';
@@ -16,11 +17,11 @@ export default function App() {
   }, []);
 
   if (error) {
-    return <div className="loading">{error}</div>;
+    return <LoadingMail label={error} />;
   }
 
   if (!boot) {
-    return <div className="loading">Loading Mail…</div>;
+    return <LoadingMail />;
   }
 
   if (!boot.authenticated || !boot.user) {

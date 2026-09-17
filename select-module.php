@@ -126,13 +126,11 @@ $push([
     'color' => '#be123c',
 ]);
 $companySlugLower = strtolower(trim($currentCompanySlug));
-$mailExternalHrefs = [
-    'ultimate' => 'https://ultimate.co.tz/staff/mail/frontend/web/',
-    'roadmaster' => 'https://roadmasterspares.com/mail/frontend/web/',
-];
-$mailHref = $mailExternalHrefs[$companySlugLower]
-    ?? ($companyRoute('modules/email/index') . '?module=email');
-$mailIsExternal = isset($mailExternalHrefs[$companySlugLower]);
+$mailExternalCompanies = ['ultimate', 'roadmaster'];
+$mailIsExternalCompany = in_array($companySlugLower, $mailExternalCompanies, true);
+$mailHref = $mailIsExternalCompany
+    ? (function_exists('app_url') ? app_url('/mail-sso-launch.php') : '/mail-sso-launch.php')
+    : ($companyRoute('modules/email/index') . '?module=email');
 $push([
     'id' => 'email',
     'label' => 'Mail',
@@ -141,7 +139,8 @@ $push([
     'icon' => 'email',
     'color' => '#2563eb',
     'badge' => $emailModuleUpdateBadge ? (string) ($emailModuleUpdateBadge['label'] ?? 'New') : null,
-    'external' => $mailIsExternal,
+    // Same-window: SSO launch needs the Ultitech session cookie, then redirects to Mail.
+    'external' => false,
 ]);
 $push([
     'id' => 'petty_cash',

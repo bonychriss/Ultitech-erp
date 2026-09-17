@@ -10,4 +10,6 @@ return [
     'user.passwordResetTokenExpire' => 3600,
     'user.passwordMinLength' => 8,
     'mail.secretKey' => 'mail-app-erp-secret-change-me',
+    // Must match Ultitech includes/mail-sso.php → mail_sso_shared_secret()
+    'mail.ssoSecret' => 'UltitechMailSso_v1_9mKp2xR7vN4wQ6tY_change_in_prod',
 ];

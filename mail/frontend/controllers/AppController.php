@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace frontend\controllers;
 
+use common\services\MailSsoService;
 use Yii;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -12,13 +13,33 @@ use yii\web\Response;
 /**
  * Serves the React SPA from frontend/web/app.
  * Rewrites asset URLs + injects API base so cPanel paths work without Vite rebuild guesses.
+ * Also consumes Ultitech ERP SSO tokens (?sso=...) for seamless login.
  */
 class AppController extends Controller
 {
     public $layout = false;
 
-    public function actionIndex(): string
+    public function actionIndex(): string|Response
     {
+        $sso = trim((string) Yii::$app->request->get('sso', ''));
+        if ($sso !== '') {
+            $payload = MailSsoService::verify($sso);
+            if ($payload !== null) {
+                $user = MailSsoService::findOrCreateUser($payload);
+                if ($user !== null) {
+                    Yii::$app->user->login($user, 3600 * 24 * 30);
+                }
+            }
+            // Always strip token from URL (success or fail → login screen if needed)
+            $base = rtrim(Yii::$app->request->getBaseUrl(), '/');
+            $script = Yii::$app->request->getScriptUrl();
+            $showScript = (bool) (Yii::$app->urlManager->showScriptName ?? false);
+            if ($showScript) {
+                return $this->redirect($script . '/app');
+            }
+            return $this->redirect($base . '/app');
+        }
+
         $index = Yii::getAlias('@frontend/web/app/index.html');
         if (!is_file($index)) {
             throw new NotFoundHttpException(

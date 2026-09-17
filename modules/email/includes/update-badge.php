@@ -84,8 +84,12 @@ function email_module_update_campaign(bool $returnedFromEmail = false): ?array
             : 'modules/email/api/rate_update.php');
 
     $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? (function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : ''))));
-    if ($slug === 'ultimate') {
-        $mailHref = 'https://ultimate.co.tz/staff/mail/frontend/web/';
+    $externalMail = [
+        'ultimate' => 'https://ultimate.co.tz/staff/mail/frontend/web/',
+        'roadmaster' => 'https://roadmasterspares.com/mail/frontend/web/',
+    ];
+    if (isset($externalMail[$slug])) {
+        $mailHref = $externalMail[$slug];
     } else {
         $mailHref = function_exists('company_url')
             ? (company_url('modules/email/index') . '?module=email&folder=inbox')

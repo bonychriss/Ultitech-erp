@@ -125,17 +125,23 @@ $push([
     'icon' => 'outstanding',
     'color' => '#be123c',
 ]);
+$companySlugLower = strtolower(trim($currentCompanySlug));
+$mailExternalHrefs = [
+    'ultimate' => 'https://ultimate.co.tz/staff/mail/frontend/web/',
+    'roadmaster' => 'https://roadmasterspares.com/mail/frontend/web/',
+];
+$mailHref = $mailExternalHrefs[$companySlugLower]
+    ?? ($companyRoute('modules/email/index') . '?module=email');
+$mailIsExternal = isset($mailExternalHrefs[$companySlugLower]);
 $push([
     'id' => 'email',
     'label' => 'Mail',
     'desc' => 'Manage Communications',
-    'href' => (strtolower(trim($currentCompanySlug)) === 'ultimate')
-        ? 'https://ultimate.co.tz/staff/mail/frontend/web/'
-        : ($companyRoute('modules/email/index') . '?module=email'),
+    'href' => $mailHref,
     'icon' => 'email',
     'color' => '#2563eb',
     'badge' => $emailModuleUpdateBadge ? (string) ($emailModuleUpdateBadge['label'] ?? 'New') : null,
-    'external' => strtolower(trim($currentCompanySlug)) === 'ultimate',
+    'external' => $mailIsExternal,
 ]);
 $push([
     'id' => 'petty_cash',

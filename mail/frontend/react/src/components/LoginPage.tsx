@@ -16,6 +16,19 @@ type Props = {
 
 type Mode = 'login' | 'register';
 
+/** Login hero must follow live host path (/mail vs /staff/mail), not Vite build base. */
+function authHeroSrc(): string {
+  const injected = typeof window !== 'undefined' ? window.__MAIL_WEB_BASE__ : undefined;
+  if (injected) {
+    return `${injected.replace(/\/$/, '')}/app/auth-hero.png`;
+  }
+  const viteBase = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '');
+  if (viteBase.endsWith('/app')) {
+    return `${viteBase}/auth-hero.png`;
+  }
+  return `${viteBase}/app/auth-hero.png`;
+}
+
 export function LoginPage({ bootstrap: _bootstrap, onLoggedIn }: Props) {
   const [mode, setMode] = useState<Mode>('login');
   const [username, setUsername] = useState('demo');
@@ -96,7 +109,7 @@ export function LoginPage({ bootstrap: _bootstrap, onLoggedIn }: Props) {
     <div className="login-page">
       <section className="login-art-pane">
         <div className="login-art">
-          <img src={`${import.meta.env.BASE_URL}auth-hero.png`} alt="" />
+          <img src={authHeroSrc()} alt="" />
         </div>
       </section>
 

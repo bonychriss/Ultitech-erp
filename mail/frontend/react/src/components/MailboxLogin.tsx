@@ -79,8 +79,8 @@ export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }:
         <div className="mailbox-login-card">
           <h1>No mailbox yet</h1>
           <p className="muted">
-            Ask your admin to create your company email (for example procurement@...) in Mail
-            settings. Then you can log in here once with the password they send you.
+            Ask your admin to add your company email in Mail settings (Team mailboxes), or to share
+            the password for an existing address such as sales@.... Then pick it here and log in once.
           </p>
           {isMailAdmin && onOpenAdmin ? (
             <button type="button" className="wizard-btn-next" onClick={onOpenAdmin}>

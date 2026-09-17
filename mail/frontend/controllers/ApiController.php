@@ -122,9 +122,7 @@ class ApiController extends Controller
                 $payload['folders'] = array_map([$this, 'serializeFolder'], $account->folders);
             } else {
                 $payload['folders'] = [];
-                $payload['available_mailboxes'] = (int) MailAccount::find()
-                    ->where(['user_id' => null, 'is_active' => 1, 'company' => $this->currentCompany()])
-                    ->count();
+                $payload['available_mailboxes'] = count($this->listClaimableMailboxes());
             }
             $welcome = Yii::$app->session->getFlash('mail_welcome');
             if (is_string($welcome) && trim($welcome) !== '') {
@@ -401,24 +399,14 @@ class ApiController extends Controller
         ];
     }
 
-    /** Unclaimed team mailboxes the current user can log into. */
+    /** Team / company mailboxes the current user can log into. */
     public function actionAvailableMailboxes(): array
     {
         MailSchemaService::ensurePoolColumns();
-        $rows = MailAccount::find()
-            ->where(['user_id' => null, 'is_active' => 1, 'company' => $this->currentCompany()])
-            ->orderBy(['email' => SORT_ASC])
-            ->all();
 
         return [
             'ok' => true,
-            'mailboxes' => array_map(static function (MailAccount $a) {
-                return [
-                    'id' => $a->id,
-                    'email' => $a->email,
-                    'display_name' => $a->display_name,
-                ];
-            }, $rows),
+            'mailboxes' => $this->listClaimableMailboxes(),
         ];
     }
 
@@ -446,20 +434,34 @@ class ApiController extends Controller
             return ['ok' => false, 'message' => 'You already have a mailbox connected.'];
         }
 
-        $query = MailAccount::find()->where([
-            'user_id' => null,
-            'is_active' => 1,
-            'company' => $this->currentCompany(),
-        ]);
+        $company = $this->currentCompany();
+        $unclaimed = MailAccount::find()
+            ->where(['is_active' => 1])
+            ->andWhere(['or', ['company' => $company], ['company' => '']])
+            ->andWhere(['or', ['user_id' => null], ['user_id' => 0]]);
         if ($id > 0) {
-            $query->andWhere(['id' => $id]);
+            $unclaimed->andWhere(['id' => $id]);
         } else {
-            $query->andWhere(['email' => $email]);
+            $unclaimed->andWhere(['email' => $email]);
         }
-        $account = $query->one();
+        $account = $unclaimed->one();
+
+        $template = null;
         if (!$account) {
-            Yii::$app->response->statusCode = 404;
-            return ['ok' => false, 'message' => 'That mailbox is not available. Ask admin to create it.'];
+            $templateQuery = MailAccount::find()
+                ->where(['is_active' => 1])
+                ->andWhere(['or', ['company' => $company], ['company' => '']]);
+            if ($id > 0) {
+                $templateQuery->andWhere(['id' => $id]);
+            } else {
+                $templateQuery->andWhere(['email' => $email]);
+            }
+            $template = $templateQuery->orderBy(['id' => SORT_ASC])->one();
+            if (!$template) {
+                Yii::$app->response->statusCode = 404;
+                return ['ok' => false, 'message' => 'That mailbox is not available. Ask admin to create it.'];
+            }
+            $account = $template;
         }
 
         $probe = (new ImapSyncService())->testLogin($account, $password);
@@ -471,13 +473,23 @@ class ApiController extends Controller
             ];
         }
 
-        $account->user_id = (int) Yii::$app->user->id;
-        $account->imap_password_plain = $password;
-        $account->smtp_password_plain = $password;
-        $account->imap_username = $account->imap_username ?: $account->email;
-        $account->smtp_username = $account->smtp_username ?: $account->email;
-        $account->save(false);
-        $account->ensureDefaultFolders();
+        // Unclaimed pool row → bind to this user. Already-used company mailbox → clone for this user.
+        if ($template !== null || !$account->isUnclaimed()) {
+            $account = $this->cloneMailboxForUser($account, $password);
+            if ($account === null) {
+                Yii::$app->response->statusCode = 500;
+                return ['ok' => false, 'message' => 'Could not connect that mailbox.'];
+            }
+        } else {
+            $account->user_id = (int) Yii::$app->user->id;
+            $account->company = $account->company !== '' ? $account->company : $company;
+            $account->imap_password_plain = $password;
+            $account->smtp_password_plain = $password;
+            $account->imap_username = $account->imap_username ?: $account->email;
+            $account->smtp_username = $account->smtp_username ?: $account->email;
+            $account->save(false);
+            $account->ensureDefaultFolders();
+        }
 
         return [
             'ok' => true,
@@ -485,6 +497,81 @@ class ApiController extends Controller
             'account' => $this->serializeAccount($account),
             'folders' => array_map([$this, 'serializeFolder'], $account->folders),
         ];
+    }
+
+    /**
+     * Distinct company mailboxes this user can still connect to
+     * (unclaimed pool first, then shared addresses already used by teammates).
+     *
+     * @return list<array{id:int,email:string,display_name:string}>
+     */
+    private function listClaimableMailboxes(): array
+    {
+        $company = $this->currentCompany();
+        $uid = (int) Yii::$app->user->id;
+        $mine = MailAccount::find()
+            ->select(['email'])
+            ->where(['user_id' => $uid, 'is_active' => 1])
+            ->column();
+        $mineLower = array_map('strtolower', $mine);
+
+        $rows = MailAccount::find()
+            ->where(['is_active' => 1])
+            ->andWhere(['or', ['company' => $company], ['company' => '']])
+            ->orderBy([
+                // Prefer unclaimed rows, then oldest template for stable ids
+                'user_id' => SORT_ASC,
+                'id' => SORT_ASC,
+            ])
+            ->all();
+
+        $mailboxes = [];
+        $seen = [];
+        foreach ($rows as $a) {
+            $email = strtolower(trim((string) $a->email));
+            if ($email === '' || str_ends_with($email, '@mail.local')) {
+                continue;
+            }
+            if (in_array($email, $mineLower, true) || isset($seen[$email])) {
+                continue;
+            }
+            $seen[$email] = true;
+            $mailboxes[] = [
+                'id' => (int) $a->id,
+                'email' => $a->email,
+                'display_name' => $a->display_name,
+            ];
+        }
+
+        return $mailboxes;
+    }
+
+    private function cloneMailboxForUser(MailAccount $template, string $password): ?MailAccount
+    {
+        $account = new MailAccount([
+            'user_id' => (int) Yii::$app->user->id,
+            'created_by' => (int) Yii::$app->user->id,
+            'company' => $template->company !== '' ? $template->company : $this->currentCompany(),
+            'email' => $template->email,
+            'display_name' => $template->display_name,
+            'imap_host' => $template->imap_host,
+            'imap_port' => (int) $template->imap_port,
+            'imap_encryption' => $template->imap_encryption,
+            'imap_username' => $template->imap_username ?: $template->email,
+            'smtp_host' => $template->smtp_host,
+            'smtp_port' => (int) $template->smtp_port,
+            'smtp_encryption' => $template->smtp_encryption,
+            'smtp_username' => $template->smtp_username ?: $template->email,
+            'is_active' => 1,
+        ]);
+        $account->imap_password_plain = $password;
+        $account->smtp_password_plain = $password;
+        if (!$account->save(false)) {
+            return null;
+        }
+        $account->ensureDefaultFolders();
+
+        return $account;
     }
 
     /** Admin: list / create unclaimed team mailboxes. */

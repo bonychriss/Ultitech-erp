@@ -35,6 +35,13 @@ class AppController extends Controller
                         }
                         Yii::$app->user->login($user, 3600 * 24 * 30);
                     }
+                    $name = trim((string) ($payload['name'] ?? $user->username));
+                    Yii::$app->session->setFlash(
+                        'mail_welcome',
+                        $name !== ''
+                            ? ('Welcome, ' . $name . '! Signed in via Ultitech.')
+                            : 'Welcome! Signed in via Ultitech.',
+                    );
                 }
             }
             // Always strip token from URL (success or fail → login screen if needed)

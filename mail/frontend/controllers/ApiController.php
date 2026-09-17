@@ -110,6 +110,10 @@ class ApiController extends Controller
             } else {
                 $payload['folders'] = [];
             }
+            $welcome = Yii::$app->session->getFlash('mail_welcome');
+            if (is_string($welcome) && trim($welcome) !== '') {
+                $payload['message'] = trim($welcome);
+            }
         }
 
         return $payload;
@@ -123,7 +127,9 @@ class ApiController extends Controller
         $model->rememberMe = (bool) Yii::$app->request->post('rememberMe', true);
 
         if ($model->login()) {
-            return $this->actionBootstrap();
+            $payload = $this->actionBootstrap();
+            $payload['message'] = 'Welcome back! You are signed in.';
+            return $payload;
         }
 
         Yii::$app->response->statusCode = 422;

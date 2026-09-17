@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { MdEmail, MdLockOutline, MdLogin } from 'react-icons/md';
+import { MdArrowBack, MdEmail, MdLockOutline, MdLogin, MdPerson } from 'react-icons/md';
 import { api, type PoolMailbox } from '../api';
 
 type Props = {
@@ -12,7 +12,9 @@ type Props = {
 export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }: Props) {
   const [mailboxes, setMailboxes] = useState<PoolMailbox[]>([]);
   const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState<'pick' | 'login'>('pick');
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -25,9 +27,6 @@ export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }:
         const data = await api.availableMailboxes();
         if (cancelled) return;
         setMailboxes(data.mailboxes);
-        if (data.mailboxes.length === 1) {
-          setSelectedId(data.mailboxes[0].id);
-        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Could not load mailboxes');
@@ -41,23 +40,40 @@ export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }:
     };
   }, []);
 
+  function openLogin(m: PoolMailbox) {
+    setSelectedId(m.id);
+    setEmail(m.email);
+    setPassword('');
+    setError('');
+    setStep('login');
+  }
+
+  function backToPick() {
+    setStep('pick');
+    setPassword('');
+    setError('');
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!selectedId) {
-      setError('Select a mailbox first.');
+    if (!email.trim()) {
+      setError('Enter the account email.');
       return;
     }
     if (!password.trim()) {
-      setError('Enter the mailbox password your admin sent you.');
+      setError('Enter the account password.');
       return;
     }
     setBusy(true);
     setError('');
     try {
       const selected = mailboxes.find((m) => m.id === selectedId);
+      const emailNorm = email.trim().toLowerCase();
+      const id =
+        selected && selected.email.toLowerCase() === emailNorm ? selected.id : undefined;
       const res = await api.claimMailbox({
-        id: selectedId,
-        email: selected?.email || '',
+        id,
+        email: emailNorm,
         password,
       });
       onToast(res.message || 'Mailbox connected');
@@ -70,17 +86,17 @@ export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }:
   }
 
   if (loading) {
-    return <div className="mailbox-login empty">Loading available mailboxes...</div>;
+    return <div className="mailbox-login empty">Loading mailboxes...</div>;
   }
 
   if (mailboxes.length === 0) {
     return (
       <div className="mailbox-login">
-        <div className="mailbox-login-card">
+        <div className="mailbox-login-panel">
           <h1>No mailbox yet</h1>
           <p className="muted">
-            Ask your admin to add your company email in Mail settings (Team mailboxes), or to share
-            the password for an existing address such as sales@.... Then pick it here and log in once.
+            Ask your admin to add your company email in Mail settings, then come back here to sign
+            in once.
           </p>
           {isMailAdmin && onOpenAdmin ? (
             <button type="button" className="wizard-btn-next" onClick={onOpenAdmin}>
@@ -92,71 +108,97 @@ export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }:
     );
   }
 
+  if (step === 'login') {
+    return (
+      <div className="mailbox-login">
+        <form className="mailbox-login-panel" onSubmit={(e) => void onSubmit(e)}>
+          <button type="button" className="mailbox-back" onClick={backToPick}>
+            <MdArrowBack size={18} aria-hidden />
+            Back
+          </button>
+          <h1>Sign in to mailbox</h1>
+          <p className="muted">Enter the account email and password. You only need to do this once.</p>
+
+          {error ? <div className="settings-error">{error}</div> : null}
+
+          <label className="mailbox-field">
+            Account email
+            <div className="field-line">
+              <MdEmail size={18} aria-hidden />
+              <input
+                type="email"
+                autoComplete="username"
+                placeholder="sales@roadmasterspares.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          </label>
+
+          <label className="mailbox-field">
+            Account password
+            <div className="field-line">
+              <MdLockOutline size={18} aria-hidden />
+              <input
+                type="password"
+                autoComplete="current-password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+          </label>
+
+          <button className="wizard-btn-next mailbox-login-submit" type="submit" disabled={busy}>
+            <MdLogin size={18} aria-hidden />
+            {busy ? 'Connecting...' : 'Log in'}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="mailbox-login">
-      <form className="mailbox-login-card" onSubmit={(e) => void onSubmit(e)}>
+      <div className="mailbox-login-panel mailbox-login-panel--wide">
         <h1>Choose your mailbox</h1>
-        <p className="muted">
-          Select the account your admin created for you, then enter the password they sent. You only
-          need to do this once.
-        </p>
+        <p className="muted">Pick an account to continue.</p>
 
         {error ? <div className="settings-error">{error}</div> : null}
 
-        <div className="mailbox-pick-list" role="listbox" aria-label="Available mailboxes">
-          {mailboxes.map((m) => {
-            const active = selectedId === m.id;
+        <div className="mailbox-tile-grid" role="list">
+          {mailboxes.map((m, i) => {
+            const label = m.display_name || m.email.split('@')[0];
+            const tone = ['purple', 'blue', 'green'][i % 3];
             return (
               <button
                 key={m.id}
                 type="button"
-                role="option"
-                aria-selected={active}
-                className={`mailbox-pick ${active ? 'on' : ''}`}
-                onClick={() => {
-                  setSelectedId(m.id);
-                  setError('');
-                }}
+                role="listitem"
+                className={`mailbox-tile tone-${tone}`}
+                onClick={() => openLogin(m)}
               >
-                <span className="mailbox-pick-avatar" aria-hidden>
-                  {(m.display_name || m.email).slice(0, 1).toUpperCase()}
+                <span className="mailbox-tile-icon" aria-hidden>
+                  <MdPerson size={22} />
                 </span>
-                <span className="mailbox-pick-text">
-                  <strong>{m.display_name || m.email.split('@')[0]}</strong>
-                  <span className="muted">{m.email}</span>
+                <span className="mailbox-tile-text">
+                  <strong>{label}</strong>
+                  <span>{m.email}</span>
                 </span>
-                <MdEmail size={18} aria-hidden />
               </button>
             );
           })}
         </div>
-
-        <label className="mailbox-pass-label">
-          Mailbox password
-          <div className="field-line">
-            <MdLockOutline size={18} aria-hidden />
-            <input
-              type="password"
-              autoComplete="current-password"
-              placeholder="Password from your admin"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-        </label>
-
-        <button className="wizard-btn-next mailbox-login-submit" type="submit" disabled={busy}>
-          <MdLogin size={18} aria-hidden />
-          {busy ? 'Connecting...' : 'Log in to mailbox'}
-        </button>
 
         {isMailAdmin && onOpenAdmin ? (
           <button type="button" className="mailbox-admin-link" onClick={onOpenAdmin}>
             Admin: manage team mailboxes
           </button>
         ) : null}
-      </form>
+      </div>
     </div>
   );
 }

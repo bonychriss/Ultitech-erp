@@ -2133,6 +2133,141 @@ a.auth-submit-link {
   place-items: center;
   min-height: min(70vh, 640px);
   padding: 24px;
+  width: 100%;
+}
+.mailbox-login-panel {
+  width: min(420px, 100%);
+  background: transparent;
+  border: 0;
+  padding: 8px 4px 12px;
+}
+.mailbox-login-panel--wide {
+  width: min(720px, 100%);
+}
+.mailbox-login-panel h1 {
+  margin: 0 0 6px;
+  font-size: 1.35rem;
+  font-weight: 650;
+  color: #1e293b;
+}
+.mailbox-login-panel > .muted {
+  margin: 0 0 18px;
+  color: #64748b;
+}
+.mailbox-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0;
+  margin: 0 0 14px;
+  cursor: pointer;
+}
+.mailbox-back:hover {
+  color: #1e293b;
+}
+.mailbox-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin: 8px 0 4px;
+}
+.mailbox-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #e8edf5;
+  border-radius: 14px;
+  background: #fff;
+  padding: 16px 18px;
+  cursor: pointer;
+  font: inherit;
+  color: #1e293b;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.mailbox-tile:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+.mailbox-tile-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.mailbox-tile.tone-purple .mailbox-tile-icon {
+  background: #efe7ff;
+  color: #7c3aed;
+}
+.mailbox-tile.tone-blue .mailbox-tile-icon {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+.mailbox-tile.tone-green .mailbox-tile-icon {
+  background: #dcfce7;
+  color: #16a34a;
+}
+.mailbox-tile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.mailbox-tile-text strong {
+  font-size: 0.98rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.mailbox-tile-text span {
+  font-size: 0.82rem;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mailbox-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #5f6368;
+  margin-bottom: 14px;
+}
+.mailbox-login-submit {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.mailbox-admin-link {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  padding: 8px;
+}
+.mailbox-admin-link:hover {
+  color: #1e293b;
 }
 .mailbox-login-card {
   width: min(480px, 100%);
@@ -2146,78 +2281,6 @@ a.auth-submit-link {
   margin: 0 0 8px;
   font-size: 1.45rem;
   font-weight: 600;
-}
-.mailbox-pick-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 18px 0 16px;
-}
-.mailbox-pick {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  text-align: left;
-  border: 1px solid #dadce0;
-  border-radius: 12px;
-  background: #fff;
-  padding: 12px 14px;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-}
-.mailbox-pick.on {
-  border-color: #1a73e8;
-  background: #e8f0fe;
-}
-.mailbox-pick-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: #1a73e8;
-  color: #fff;
-  font-weight: 600;
-  flex: 0 0 auto;
-}
-.mailbox-pick-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-.mailbox-pick-text strong {
-  font-weight: 600;
-}
-.mailbox-pass-label {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 0.9rem;
-  color: #5f6368;
-  margin-bottom: 16px;
-}
-.mailbox-login-submit {
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.mailbox-admin-link {
-  display: block;
-  width: 100%;
-  margin-top: 12px;
-  border: 0;
-  background: transparent;
-  color: #1a73e8;
-  font: inherit;
-  cursor: pointer;
-  text-align: center;
-  padding: 8px;
 }
 .account-cards {
   display: flex;

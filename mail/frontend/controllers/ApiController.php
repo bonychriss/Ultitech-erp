@@ -383,6 +383,7 @@ class ApiController extends Controller
 
     public function actionAccounts(): array
     {
+        MailSchemaService::ensurePoolColumns();
         if (Yii::$app->request->isPost) {
             return $this->saveAccount(null);
         }
@@ -540,6 +541,7 @@ class ApiController extends Controller
                 'id' => (int) $a->id,
                 'email' => $a->email,
                 'display_name' => $a->display_name,
+                'account_type' => (string) ($a->account_type ?? ''),
             ];
         }
 
@@ -699,6 +701,7 @@ class ApiController extends Controller
             'id' => $a->id,
             'email' => $a->email,
             'display_name' => $a->display_name,
+            'account_type' => (string) ($a->account_type ?? ''),
             'imap_host' => $a->imap_host,
             'imap_port' => (int) $a->imap_port,
             'smtp_host' => $a->smtp_host,
@@ -771,9 +774,11 @@ class ApiController extends Controller
             $body = is_array($decoded) ? $decoded : [];
         }
 
+        MailSchemaService::ensurePoolColumns();
         $fields = [
             'email',
             'display_name',
+            'account_type',
             'imap_host',
             'imap_port',
             'imap_encryption',
@@ -785,7 +790,11 @@ class ApiController extends Controller
         ];
         foreach ($fields as $field) {
             if (array_key_exists($field, $body)) {
-                $model->$field = $body[$field];
+                $value = $body[$field];
+                if ($field === 'account_type') {
+                    $value = strtolower(trim((string) $value));
+                }
+                $model->$field = $value;
             }
         }
 
@@ -873,6 +882,7 @@ class ApiController extends Controller
             'id' => $account->id,
             'email' => $account->email,
             'display_name' => $account->display_name,
+            'account_type' => (string) ($account->account_type ?? ''),
             'last_synced_at' => $account->last_synced_at,
         ];
     }
@@ -883,6 +893,7 @@ class ApiController extends Controller
             'id' => $account->id,
             'email' => $account->email,
             'display_name' => $account->display_name,
+            'account_type' => (string) ($account->account_type ?? ''),
             'imap_host' => $account->imap_host,
             'imap_port' => (int) $account->imap_port,
             'imap_encryption' => $account->imap_encryption,

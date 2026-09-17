@@ -14,6 +14,7 @@ use yii\db\ActiveRecord;
  * @property int $id
  * @property int|null $user_id
  * @property string $company
+ * @property string $account_type
  * @property int|null $created_by
  * @property string $email
  * @property string $display_name
@@ -60,6 +61,7 @@ class MailAccount extends ActiveRecord
             [['is_active'], 'boolean'],
             [['email'], 'email'],
             [['company'], 'string', 'max' => 32],
+            [['account_type'], 'string', 'max' => 64],
             [['email', 'display_name', 'imap_host', 'imap_username', 'smtp_host', 'smtp_username'], 'string', 'max' => 255],
             [['imap_encryption', 'smtp_encryption'], 'string', 'max' => 10],
             [['imap_encryption', 'smtp_encryption'], 'in', 'range' => ['ssl', 'tls', 'none']],
@@ -70,6 +72,7 @@ class MailAccount extends ActiveRecord
             [['smtp_encryption'], 'default', 'value' => 'ssl'],
             [['display_name'], 'default', 'value' => ''],
             [['company'], 'default', 'value' => ''],
+            [['account_type'], 'default', 'value' => ''],
             [['is_active'], 'default', 'value' => true],
         ];
     }
@@ -78,6 +81,7 @@ class MailAccount extends ActiveRecord
     {
         return [
             'email' => 'Email address',
+            'account_type' => 'Account type',
             'display_name' => 'Display name',
             'imap_host' => 'IMAP host',
             'imap_port' => 'IMAP port',

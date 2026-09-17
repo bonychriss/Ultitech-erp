@@ -43,6 +43,13 @@ final class MailSchemaService
                     'INT NULL',
                 )->execute();
             }
+            if (!isset($schema->columns['account_type'])) {
+                $db->createCommand()->addColumn(
+                    '{{%mail_account}}',
+                    'account_type',
+                    'VARCHAR(64) NOT NULL DEFAULT \'\'',
+                )->execute();
+            }
 
             // Refresh and make user_id nullable if needed.
             $schema = $db->getTableSchema('{{%mail_account}}', true);

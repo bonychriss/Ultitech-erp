@@ -830,13 +830,11 @@ export function EmailSettings({
         <div className="account-cards">
           {accounts.map((a) => (
             <div key={a.id} className="account-card">
-              <div>
-                <strong>{a.display_name || a.email}</strong>
-                <div className="muted">{a.email}</div>
-                <div className="muted">
-                  IMAP {a.imap_host}:{a.imap_port} · SMTP {a.smtp_host}:{a.smtp_port}
-                </div>
-              </div>
+              <strong className="account-card-name">{a.display_name || a.email}</strong>
+              <span className="account-card-email muted">{a.email}</span>
+              <span className="account-card-servers muted">
+                IMAP {a.imap_host}:{a.imap_port} · SMTP {a.smtp_host}:{a.smtp_port}
+              </span>
               <div className="account-actions">
                 <button type="button" className="tool" onClick={() => openEdit(a)}>
                   <MdEdit size={18} aria-hidden />

@@ -273,6 +273,7 @@ export default function ComposeLetterPage() {
     stampPreviewUrl: cfg.stampPreviewUrl || '',
     letterheadHeaderUrl: cfg.letterheadHeaderUrl || '',
     letterheadFooterUrl: cfg.letterheadFooterUrl || '',
+    logoUrl: String(branding.logoUrl || '').trim(),
     signatureUrl,
     approvalStatus: status,
     status,

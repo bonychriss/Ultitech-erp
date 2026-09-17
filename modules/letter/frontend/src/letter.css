@@ -904,6 +904,45 @@
   margin-bottom: 0.2rem;
 }
 
+.lh-approver-sig-block {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 56px;
+  min-width: 160px;
+  margin: 0.15rem 0 0.2rem;
+}
+
+.lh-approver-logo-watermark {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  opacity: 0.28;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.lh-signatory--approver .lh-signature-wrap {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  background: transparent;
+}
+
+.lh-signatory--approver .lh-signature {
+  position: relative;
+  z-index: 1;
+}
+
+.lh-signatory--approver .lh-sign-space--pending {
+  position: relative;
+  z-index: 1;
+}
+
 .lh-sign-space {
   height: 52px;
 }

@@ -66,6 +66,7 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
   const approverName = line(doc.approverName);
   const approverTitle = line(doc.approverTitle);
   const approverSignatureUrl = line(doc.approverSignatureUrl);
+  const logoWatermarkUrl = line(doc.logoUrl) || line(doc.companyLogoUrl);
   const bodyText = String(doc.body || '');
   const paragraphs = bodyText
     .split(/\n\s*\n/)
@@ -258,19 +259,29 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
               )}
             </div>
 
-            <div className="lh-signatory">
+            <div className="lh-signatory lh-signatory--approver">
               <div className="lh-signatory-role">Approved by</div>
-              {approverSignatureUrl ? (
-                <div className="lh-signature-wrap">
+              <div className="lh-approver-sig-block">
+                {logoWatermarkUrl ? (
                   <img
-                    src={approverSignatureUrl}
-                    alt="Approver signature"
-                    className="lh-signature"
+                    src={logoWatermarkUrl}
+                    alt=""
+                    className="lh-approver-logo-watermark"
+                    aria-hidden="true"
                   />
-                </div>
-              ) : (
-                <div className="lh-sign-space lh-sign-space--pending" aria-hidden="true" />
-              )}
+                ) : null}
+                {approverSignatureUrl ? (
+                  <div className="lh-signature-wrap">
+                    <img
+                      src={approverSignatureUrl}
+                      alt="Approver signature"
+                      className="lh-signature"
+                    />
+                  </div>
+                ) : (
+                  <div className="lh-sign-space lh-sign-space--pending" aria-hidden="true" />
+                )}
+              </div>
               <div className="lh-sign-name">
                 {approverName || (isApproved ? '' : 'Pending approval')}
               </div>

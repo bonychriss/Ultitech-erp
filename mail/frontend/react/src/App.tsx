@@ -16,8 +16,6 @@ export default function App() {
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [successTitle, setSuccessTitle] = useState('Welcome!');
-  const [successSubtitle, setSuccessSubtitle] = useState('You are signed in to Mail.');
 
   useEffect(() => {
     const started = Date.now();
@@ -29,8 +27,6 @@ export default function App() {
           setBoot(data);
           setReady(true);
           if (data.authenticated && data.message) {
-            setSuccessTitle('Welcome!');
-            setSuccessSubtitle(data.message);
             setShowSuccess(true);
           }
         }, wait);
@@ -43,10 +39,6 @@ export default function App() {
 
   const handleLoggedIn = useCallback((data: Bootstrap) => {
     setBoot(data);
-    setSuccessTitle('Welcome!');
-    setSuccessSubtitle(
-      data.message?.trim() || `Signed in as ${data.user?.username || 'user'}.`,
-    );
     setShowSuccess(true);
   }, []);
 
@@ -68,13 +60,7 @@ export default function App() {
     return (
       <>
         <LoginPage bootstrap={boot} onLoggedIn={handleLoggedIn} />
-        {showSuccess ? (
-          <SuccessOverlay
-            title={successTitle}
-            subtitle={successSubtitle}
-            onDone={dismissSuccess}
-          />
-        ) : null}
+        {showSuccess ? <SuccessOverlay onDone={dismissSuccess} /> : null}
       </>
     );
   }
@@ -97,13 +83,7 @@ export default function App() {
           })
         }
       />
-      {showSuccess ? (
-        <SuccessOverlay
-          title={successTitle}
-          subtitle={successSubtitle}
-          onDone={dismissSuccess}
-        />
-      ) : null}
+      {showSuccess ? <SuccessOverlay onDone={dismissSuccess} /> : null}
     </>
   );
 }

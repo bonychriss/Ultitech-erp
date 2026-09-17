@@ -1963,33 +1963,10 @@ a.auth-submit-link {
   animation: success-overlay-out 0.32s ease-in forwards;
 }
 
-.success-overlay-content {
-  width: min(360px, 100%);
-  text-align: center;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-}
-
 .success-overlay-lottie {
   display: grid;
   place-items: center;
-  margin: 0 auto 4px;
-}
-
-.success-overlay-content h2 {
-  margin: 0 0 8px;
-  font-size: 1.45rem;
-  font-weight: 600;
-  color: #202124;
-}
-
-.success-overlay-content p {
-  margin: 0;
-  color: #5f6368;
-  font-size: 0.95rem;
-  line-height: 1.45;
+  margin: 0 auto;
 }
 
 @keyframes success-overlay-in {

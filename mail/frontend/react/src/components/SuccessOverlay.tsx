@@ -10,17 +10,11 @@ function animUrl(file: string): string {
   return `${base}/app/animations/${file}`;
 }
 
-type Props = {
-  title?: string;
-  subtitle?: string;
-  onDone?: () => void;
-};
-
 export function SuccessOverlay({
-  title = 'Welcome!',
-  subtitle = 'You are signed in to Mail.',
   onDone,
-}: Props) {
+}: {
+  onDone?: () => void;
+}) {
   const [leaving, setLeaving] = useState(false);
   const doneRef = useRef(false);
   const src = useMemo(() => animUrl('welcome.lottie'), []);
@@ -52,19 +46,16 @@ export function SuccessOverlay({
       className={`success-overlay${leaving ? ' success-overlay-out' : ''}`}
       role="status"
       aria-live="polite"
+      aria-label="Signed in"
     >
-      <div className="success-overlay-content">
-        <div className="success-overlay-lottie">
-          <DotLottieReact
-            src={src}
-            autoplay
-            loop={false}
-            dotLottieRefCallback={onDotLottieRef}
-            style={{ width: 220, height: 220 }}
-          />
-        </div>
-        <h2>{title}</h2>
-        <p>{subtitle}</p>
+      <div className="success-overlay-lottie">
+        <DotLottieReact
+          src={src}
+          autoplay
+          loop={false}
+          dotLottieRefCallback={onDotLottieRef}
+          style={{ width: 360, height: 360 }}
+        />
       </div>
     </div>
   );

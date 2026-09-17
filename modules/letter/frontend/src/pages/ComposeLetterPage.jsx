@@ -137,8 +137,10 @@ export default function ComposeLetterPage() {
   const [busyAction, setBusyAction] = useState('');
   const [actionsOpen, setActionsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [stampPlayAnimation, setStampPlayAnimation] = useState(false);
   const savedTimerRef = useRef(null);
   const actionsRef = useRef(null);
+  const stampAnimTimerRef = useRef(null);
   const formRef = useRef(form);
   const visibilityRef = useRef(visibility);
   const statusRef = useRef(status);
@@ -203,8 +205,31 @@ export default function ComposeLetterPage() {
       if (savedTimerRef.current) {
         window.clearTimeout(savedTimerRef.current);
       }
+      if (stampAnimTimerRef.current) {
+        window.clearTimeout(stampAnimTimerRef.current);
+      }
     };
   }, []);
+
+  const playStampAnimation = () => {
+    setStampPlayAnimation(false);
+    // Force reflow so the animation can replay if approving again.
+    window.requestAnimationFrame(() => {
+      setStampPlayAnimation(true);
+      window.requestAnimationFrame(() => {
+        const target = document.querySelector('.lh-signatory--approver');
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+      if (stampAnimTimerRef.current) {
+        window.clearTimeout(stampAnimTimerRef.current);
+      }
+      stampAnimTimerRef.current = window.setTimeout(() => {
+        setStampPlayAnimation(false);
+      }, 1100);
+    });
+  };
 
   useEffect(() => {
     if (!actionsOpen) return undefined;
@@ -279,6 +304,7 @@ export default function ComposeLetterPage() {
     approverName,
     approverTitle,
     approverSignatureUrl,
+    stampPlayAnimation,
   };
 
   const statusLabel =
@@ -368,6 +394,7 @@ export default function ComposeLetterPage() {
       if (letter) {
         applyServerLetter(letter);
         setSaveState('saved');
+        playStampAnimation();
       }
     } catch (err) {
       window.alert(err?.message || 'Could not approve letter.');

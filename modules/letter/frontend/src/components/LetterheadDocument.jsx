@@ -267,7 +267,9 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
                   <img
                     src={stampSrc}
                     alt=""
-                    className="lh-approver-stamp-watermark"
+                    className={`lh-approver-stamp-watermark${
+                      doc.stampPlayAnimation ? ' is-stamping' : ''
+                    }`}
                     aria-hidden="true"
                   />
                 ) : null}

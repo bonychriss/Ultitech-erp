@@ -27,7 +27,14 @@ class AppController extends Controller
             if ($payload !== null) {
                 $user = MailSsoService::findOrCreateUser($payload);
                 if ($user !== null) {
-                    Yii::$app->user->login($user, 3600 * 24 * 30);
+                    // Persist across visits — Ultitech already authenticated the person.
+                    if (Yii::$app->user->isGuest || (int) Yii::$app->user->id !== (int) $user->id) {
+                        Yii::$app->user->logout(false);
+                        if (Yii::$app->has('session', true) && Yii::$app->session->getIsActive()) {
+                            Yii::$app->session->regenerateID(true);
+                        }
+                        Yii::$app->user->login($user, 3600 * 24 * 30);
+                    }
                 }
             }
             // Always strip token from URL (success or fail → login screen if needed)

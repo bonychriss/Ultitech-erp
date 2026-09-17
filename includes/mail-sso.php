@@ -108,8 +108,8 @@ if (!function_exists('mail_sso_target_url')) {
     {
         $slug = strtolower(trim($companySlug));
         $map = [
-            'ultimate' => 'https://ultimate.co.tz/staff/mail/frontend/web/',
-            'roadmaster' => 'https://roadmasterspares.com/mail/frontend/web/',
+            'ultimate' => 'https://ultimate.co.tz/staff/mail/frontend/web/index.php/app',
+            'roadmaster' => 'https://roadmasterspares.com/mail/frontend/web/index.php/app',
         ];
         return $map[$slug] ?? '';
     }

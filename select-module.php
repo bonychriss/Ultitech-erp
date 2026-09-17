@@ -129,7 +129,8 @@ $companySlugLower = strtolower(trim($currentCompanySlug));
 $mailExternalCompanies = ['ultimate', 'roadmaster'];
 $mailIsExternalCompany = in_array($companySlugLower, $mailExternalCompanies, true);
 $mailHref = $mailIsExternalCompany
-    ? (function_exists('app_url') ? app_url('/mail-sso-launch.php') : '/mail-sso-launch.php')
+    ? ((function_exists('app_url') ? app_url('/mail-sso-launch.php') : '/mail-sso-launch.php')
+        . '?company=' . rawurlencode($companySlugLower))
     : ($companyRoute('modules/email/index') . '?module=email');
 $push([
     'id' => 'email',
@@ -139,7 +140,7 @@ $push([
     'icon' => 'email',
     'color' => '#2563eb',
     'badge' => $emailModuleUpdateBadge ? (string) ($emailModuleUpdateBadge['label'] ?? 'New') : null,
-    // Same-window: SSO launch needs the Ultitech session cookie, then redirects to Mail.
+    // Same-window: requires Ultitech session, then SSO into Mail (no re-register).
     'external' => false,
 ]);
 $push([

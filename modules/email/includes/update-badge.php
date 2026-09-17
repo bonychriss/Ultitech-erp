@@ -85,9 +85,9 @@ function email_module_update_campaign(bool $returnedFromEmail = false): ?array
 
     $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? (function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : ''))));
     if (in_array($slug, ['ultimate', 'roadmaster'], true)) {
-        $mailHref = function_exists('app_url')
+        $mailHref = (function_exists('app_url')
             ? app_url('/mail-sso-launch.php')
-            : '/mail-sso-launch.php';
+            : '/mail-sso-launch.php') . '?company=' . rawurlencode($slug);
     } else {
         $mailHref = function_exists('company_url')
             ? (company_url('modules/email/index') . '?module=email&folder=inbox')

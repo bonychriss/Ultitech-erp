@@ -515,9 +515,7 @@ export function MailApp({
         <section className={`main ${focusMailboxSetup ? 'main-setup' : ''}`}>
           {view === 'claim' && !account ? (
             <MailboxLogin
-              isMailAdmin={isMailAdmin}
               onToast={setToast}
-              onOpenAdmin={() => setView('settings')}
               onConnected={() => void afterMailboxConnected()}
             />
           ) : view === 'settings' || (!account && view !== 'mail') ? (
@@ -533,7 +531,6 @@ export function MailApp({
               focusAccountId={settingsFocusId}
               requirePassword={requirePassword}
               isMailAdmin={isMailAdmin}
-              teamPoolMode={!account && isMailAdmin}
               onPasswordSaved={() => {
                 setRequirePassword(false);
                 authHintShownRef.current = false;

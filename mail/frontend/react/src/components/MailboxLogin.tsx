@@ -5,11 +5,9 @@ import { api, type PoolMailbox } from '../api';
 type Props = {
   onConnected: () => void;
   onToast: (message: string) => void;
-  isMailAdmin?: boolean;
-  onOpenAdmin?: () => void;
 };
 
-export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }: Props) {
+export function MailboxLogin({ onConnected, onToast }: Props) {
   const [mailboxes, setMailboxes] = useState<PoolMailbox[]>([]);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<'pick' | 'login'>('pick');
@@ -98,11 +96,6 @@ export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }:
             Ask your admin to add your company email in Mail settings, then come back here to sign
             in once.
           </p>
-          {isMailAdmin && onOpenAdmin ? (
-            <button type="button" className="wizard-btn-next" onClick={onOpenAdmin}>
-              Create team mailboxes
-            </button>
-          ) : null}
         </div>
       </div>
     );
@@ -200,12 +193,6 @@ export function MailboxLogin({ onConnected, onToast, isMailAdmin, onOpenAdmin }:
             );
           })}
         </div>
-
-        {isMailAdmin && onOpenAdmin ? (
-          <button type="button" className="mailbox-admin-link" onClick={onOpenAdmin}>
-            Admin: manage team mailboxes
-          </button>
-        ) : null}
       </div>
     </div>
   );

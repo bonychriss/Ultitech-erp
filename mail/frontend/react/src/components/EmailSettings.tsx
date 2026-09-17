@@ -257,16 +257,7 @@ export function EmailSettings({
     try {
       const data = await api.accounts();
       setAccounts(data.accounts);
-      if (isMailAdmin || teamPoolMode) {
-        try {
-          const poolData = await api.poolAccounts();
-          setPool(poolData.mailboxes);
-        } catch {
-          setPool([]);
-        }
-      }
-      if (data.accounts.length === 0 && !teamPoolMode && !focusAccountId) {
-        // Staff without a mailbox use MailboxLogin; admin stays on list/pool.
+      if (data.accounts.length === 0 && !focusAccountId) {
         if (!isMailAdmin) {
           setMode('create');
           setStep(1);
@@ -311,44 +302,7 @@ export function EmailSettings({
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusAccountId, requirePassword, teamPoolMode]);
-
-  async function createTeamMailbox(e: FormEvent) {
-    e.preventDefault();
-    const email = poolEmail.trim().toLowerCase();
-    if (!email || !poolPassword) {
-      setError('Enter the mailbox email and password.');
-      return;
-    }
-    setPoolBusy(true);
-    setError('');
-    try {
-      const res = await api.createPoolAccount({
-        email,
-        password: poolPassword,
-        display_name: companyNameFromEmail(email),
-      });
-      onToast(res.message || 'Team mailbox created');
-      setPoolEmail('');
-      setPoolPassword('');
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create mailbox');
-    } finally {
-      setPoolBusy(false);
-    }
-  }
-
-  async function removePoolMailbox(m: PoolMailbox) {
-    if (!window.confirm(`Remove team mailbox ${m.email}?`)) return;
-    try {
-      const res = await api.deletePoolAccount(m.id);
-      onToast(res.message || 'Removed');
-      await load();
-    } catch (err) {
-      onToast(err instanceof Error ? err.message : 'Delete failed');
-    }
-  }
+  }, [focusAccountId, requirePassword]);
 
   function openCreate() {
     setMode('create');
@@ -1006,91 +960,32 @@ export function EmailSettings({
   return (
     <div className="settings-panel">
       <div className="settings-head">
-        <h1>{teamPoolMode ? 'Team mailboxes' : 'Email accounts'}</h1>
+        <h1>Email accounts</h1>
         <div className="settings-head-actions">
           {onBackToClaim ? (
             <button type="button" className="tool" onClick={onBackToClaim}>
               Back to mailbox login
             </button>
           ) : null}
-          {!teamPoolMode ? (
-            <button type="button" className="settings-primary" onClick={() => openCreate()}>
-              <MdAdd size={18} aria-hidden />
-              Register mailbox
-            </button>
-          ) : null}
+          <button type="button" className="settings-primary" onClick={() => openCreate()}>
+            <MdAdd size={18} aria-hidden />
+            Register mailbox
+          </button>
         </div>
       </div>
 
       {error && mode === 'list' ? <div className="settings-error">{error}</div> : null}
 
-      {isMailAdmin || teamPoolMode ? (
-        <section className="team-pool">
-          <h2>Available for staff login</h2>
-          <p className="muted">
-            Create a mailbox in StackCP first, then add it here. Staff open Mail, pick the address,
-            and log in once with the password you send them.
-          </p>
-          <form className="team-pool-form" onSubmit={(e) => void createTeamMailbox(e)}>
-            <div className="field-line">
-              <MdEmail size={18} aria-hidden />
-              <input
-                type="email"
-                required
-                placeholder="procurement@roadmasterspares.com"
-                value={poolEmail}
-                onChange={(e) => setPoolEmail(e.target.value)}
-              />
-            </div>
-            <div className="field-line">
-              <MdLockOutline size={18} aria-hidden />
-              <input
-                type="password"
-                required
-                placeholder="Mailbox password"
-                value={poolPassword}
-                onChange={(e) => setPoolPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
-            <button type="submit" className="settings-primary" disabled={poolBusy}>
-              {poolBusy ? 'Verifying…' : 'Add team mailbox'}
-            </button>
-          </form>
-          {pool.length === 0 ? (
-            <p className="muted">No unclaimed team mailboxes yet.</p>
-          ) : (
-            <div className="account-cards">
-              {pool.map((m) => (
-                <div key={m.id} className="account-card">
-                  <strong className="account-card-name">{m.display_name || m.email}</strong>
-                  <span className="account-card-email muted">{m.email}</span>
-                  <span className="account-card-servers muted">Ready for staff login</span>
-                  <div className="account-actions">
-                    <button type="button" className="tool" onClick={() => void removePoolMailbox(m)}>
-                      <MdDelete size={18} aria-hidden />
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      ) : null}
-
       {loading ? (
         <div className="empty">Loading…</div>
       ) : accounts.length === 0 ? (
-        teamPoolMode ? null : (
-          <div className="empty">
-            <h2>No personal mailbox yet</h2>
-            <p>Register your own mailbox, or log into a team mailbox from the login screen.</p>
-            <button type="button" className="settings-primary" onClick={() => openCreate()}>
-              Register mailbox
-            </button>
-          </div>
-        )
+        <div className="empty">
+          <h2>No mailbox yet</h2>
+          <p>Register your company mailbox to start sending and receiving mail.</p>
+          <button type="button" className="settings-primary" onClick={() => openCreate()}>
+            Register mailbox
+          </button>
+        </div>
       ) : (
         <>
           <h2 className="settings-subhead">Your connected mailbox</h2>

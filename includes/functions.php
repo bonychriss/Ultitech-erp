@@ -8452,6 +8452,17 @@ function erp_get_mobile_top_chrome_html(): string
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style id="erp-mobile-top-chrome">
 @media (max-width: 991.98px) {
+  /* Hide floating mobile footer on all module pages */
+  .mobile-footer,
+  nav.mobile-footer,
+  .mf-floating-instagram {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  body.has-mobile-footer {
+    padding-bottom: 0 !important;
+  }
   html:has(body.dashboard) {
     background-color: {$top} !important;
   }

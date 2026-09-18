@@ -1,8 +1,10 @@
 <?php
-// Mobile bottom navigation â€” 5-icon bar (Home â†’ List â†’ Modules â†’ Account â†’ Action) on all modules
+// Mobile bottom navigation — disabled site-wide (all modules / devices).
 if (!function_exists('isLoggedIn')) {
     require_once __DIR__ . '/functions.php';
 }
+return;
+
 if (!isLoggedIn()) {
     return;
 }

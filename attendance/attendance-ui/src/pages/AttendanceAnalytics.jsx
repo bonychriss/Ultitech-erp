@@ -233,14 +233,18 @@ export default function AttendanceAnalytics({ data }) {
     metrics: initial.metrics || {},
     charts: initial.charts || { daily: { labels: [], values: [] }, weekly: { labels: [], values: [] } },
     insights: initial.insights || [],
-        history: initial.history || [],
+    history: initial.history || [],
     range: initial.range || {},
+    rangeBounds: initial.rangeBounds || {},
     personalKpi: initial.personalKpi || null,
   }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [barFrom, setBarFrom] = useState(() => String(initial.range?.start || ''));
   const [barTo, setBarTo] = useState(() => String(initial.range?.end || ''));
+  const rangeBounds = state.rangeBounds || initial.rangeBounds || {};
+  const dateMinBound = String(rangeBounds.min || '');
+  const dateMaxBound = String(rangeBounds.max || '');
   const [barMetric, setBarMetric] = useState('hours');
   const [employeeFilter, setEmployeeFilter] = useState('all');
   const [openMetric, setOpenMetric] = useState(null);
@@ -335,9 +339,9 @@ export default function AttendanceAnalytics({ data }) {
     return aggregateEmployeeTotals(filtered, teamLine.labels || [], barFrom, barTo);
   }, [teamLine.series, teamLine.labels, barFrom, barTo, employeeFilter]);
 
-  const chartMinDate = String(state.range?.start || (teamLine.labels || [])[0] || '');
+  const chartMinDate = String(dateMinBound || state.range?.start || (teamLine.labels || [])[0] || '');
   const chartMaxDate = String(
-    state.range?.end || (teamLine.labels || [])[(teamLine.labels || []).length - 1] || ''
+    dateMaxBound || state.range?.end || (teamLine.labels || [])[(teamLine.labels || []).length - 1] || ''
   );
 
   const barRangeLabel = useMemo(() => {
@@ -347,18 +351,6 @@ export default function AttendanceAnalytics({ data }) {
     }
     return monthTitle;
   }, [barFrom, barTo, chartMinDate, chartMaxDate, monthTitle]);
-
-  const onBarFromChange = (value) => {
-    const next = String(value || '');
-    setBarFrom(next);
-    if (barTo && next && next > barTo) setBarTo(next);
-  };
-
-  const onBarToChange = (value) => {
-    const next = String(value || '');
-    setBarTo(next);
-    if (barFrom && next && next < barFrom) setBarFrom(next);
-  };
 
   const metricCards = useMemo(() => {
     const presentHint = isTeam
@@ -492,20 +484,43 @@ export default function AttendanceAnalytics({ data }) {
     [metricCards, openMetric]
   );
 
-  async function loadAnalytics({ period, scope } = {}) {
+  async function loadAnalytics({ period, scope, start, end } = {}) {
     const nextPeriod = Number(period ?? state.period);
     const nextScope = (scope ?? state.scope) === 'team' ? 'team' : 'personal';
-    if (nextPeriod === state.period && nextScope === state.scope && period == null && scope == null) {
+    const hasExplicitRange = start !== undefined && end !== undefined;
+    const nextStart = hasExplicitRange ? String(start || '') : '';
+    const nextEnd = hasExplicitRange ? String(end || '') : '';
+    const usingCustomRange = nextScope === 'team' && hasExplicitRange && nextStart !== '' && nextEnd !== '';
+    if (
+      nextPeriod === state.period &&
+      nextScope === state.scope &&
+      period == null &&
+      scope == null &&
+      !hasExplicitRange
+    ) {
+      return;
+    }
+    if (
+      usingCustomRange &&
+      nextStart === String(state.range?.start || '') &&
+      nextEnd === String(state.range?.end || '') &&
+      nextScope === state.scope
+    ) {
       return;
     }
     setBusy(true);
     setError('');
     try {
-      const result = await postAttendanceAction({
+      const payloadBody = {
         action: 'analytics',
         period: nextPeriod,
         scope: nextScope,
-      });
+      };
+      if (usingCustomRange) {
+        payloadBody.start = nextStart;
+        payloadBody.end = nextEnd;
+      }
+      const result = await postAttendanceAction(payloadBody);
       if (!result.success) {
         setError(result.message || 'Failed to load analytics.');
         return;
@@ -522,12 +537,22 @@ export default function AttendanceAnalytics({ data }) {
         insights: payload.insights || [],
         history: payload.history || [],
         range: payload.range || {},
+        rangeBounds: payload.rangeBounds || cur.rangeBounds || {},
         personalKpi: payload.personalKpi || null,
       }));
+      if (payload.range?.start) setBarFrom(String(payload.range.start));
+      if (payload.range?.end) setBarTo(String(payload.range.end));
       const url = new URL(window.location.href);
       url.searchParams.set('period', String(payload.period || nextPeriod));
       url.searchParams.set('scope', payload.scope === 'team' ? 'team' : 'personal');
       url.searchParams.set('module', 'attendance');
+      if (payload.scope === 'team' && payload.range?.start && payload.range?.end) {
+        url.searchParams.set('start', String(payload.range.start));
+        url.searchParams.set('end', String(payload.range.end));
+      } else {
+        url.searchParams.delete('start');
+        url.searchParams.delete('end');
+      }
       window.history.replaceState({}, '', url.toString());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load analytics.');
@@ -535,6 +560,26 @@ export default function AttendanceAnalytics({ data }) {
       setBusy(false);
     }
   }
+
+  const onBarFromChange = (value) => {
+    const next = String(value || '');
+    const nextTo = barTo && next && next > barTo ? next : barTo;
+    setBarFrom(next);
+    if (nextTo !== barTo) setBarTo(nextTo);
+    if (next && nextTo) {
+      loadAnalytics({ scope: 'team', start: next, end: nextTo });
+    }
+  };
+
+  const onBarToChange = (value) => {
+    const next = String(value || '');
+    const nextFrom = barFrom && next && next < barFrom ? next : barFrom;
+    setBarTo(next);
+    if (nextFrom !== barFrom) setBarFrom(nextFrom);
+    if (next && nextFrom) {
+      loadAnalytics({ scope: 'team', start: nextFrom, end: next });
+    }
+  };
 
   return (
     <div className="att-shell att-page-analytics">

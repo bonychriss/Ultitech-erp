@@ -104,7 +104,15 @@ if ($action === 'analytics') {
     if ($scope !== 'team') {
         $scope = 'personal';
     }
-    $data = $attendance->getAnalytics($userId, $period, $scope);
+    $rangeStart = isset($payload['start']) ? trim((string) $payload['start']) : '';
+    $rangeEnd = isset($payload['end']) ? trim((string) $payload['end']) : '';
+    $data = $attendance->getAnalytics(
+        $userId,
+        $period,
+        $scope,
+        $rangeStart !== '' ? $rangeStart : null,
+        $rangeEnd !== '' ? $rangeEnd : null
+    );
     $data['apiUrl'] = function_exists('app_url')
         ? rtrim((string) app_url('/attendance'), '/') . '/api/action.php'
         : '/attendance/api/action.php';

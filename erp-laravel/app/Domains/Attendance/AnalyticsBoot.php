@@ -39,6 +39,8 @@ final class AnalyticsBoot
 
         $period = $this->normalizePeriod($periodDays);
         $scope = $this->normalizeScope(isset($erp['analytics_scope']) ? (string) $erp['analytics_scope'] : null);
+        $rangeStart = isset($_GET['start']) ? trim((string) $_GET['start']) : null;
+        $rangeEnd = isset($_GET['end']) ? trim((string) $_GET['end']) : null;
         $userId = (int) ($erp['user_id'] ?? ($_SESSION['user_id'] ?? 0));
 
         $apiUrl = function_exists('app_url')
@@ -84,7 +86,7 @@ final class AnalyticsBoot
         }
 
         $attendance = new \Attendance($pdo);
-        $data = $attendance->getAnalytics($userId, $period, $scope);
+        $data = $attendance->getAnalytics($userId, $period, $scope, $rangeStart, $rangeEnd);
         $data['apiUrl'] = $apiUrl;
         $data['links'] = $links;
         $data['engine'] = 'erp-laravel Domains/Attendance';

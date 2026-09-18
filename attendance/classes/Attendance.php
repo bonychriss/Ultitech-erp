@@ -572,13 +572,19 @@ class Attendance {
     }
 
     /**
-     * Analytics desk payload for a rolling period (7 / 30 / 90 days).
+     * Analytics desk payload for a rolling period (7 / 30 / 90 days)
+     * or an explicit start/end date range.
      *
      * @param 'personal'|'team' $scope
      * @return array<string,mixed>
      */
-    public function getAnalytics(int $userId, int $period = 30, string $scope = 'personal'): array
-    {
+    public function getAnalytics(
+        int $userId,
+        int $period = 30,
+        string $scope = 'personal',
+        ?string $rangeStart = null,
+        ?string $rangeEnd = null
+    ): array {
         if (!in_array($period, [7, 30, 90], true)) {
             $period = 30;
         }
@@ -589,6 +595,20 @@ class Attendance {
         $start = (clone $end)->modify('-' . max(0, $period - 1) . ' days');
         $startDate = $start->format('Y-m-d');
         $endDate = $end->format('Y-m-d');
+        $customRange = false;
+
+        $normalized = $this->normalizeAnalyticsDateRange($rangeStart, $rangeEnd, $tz);
+        if ($normalized !== null) {
+            $startDate = $normalized['start'];
+            $endDate = $normalized['end'];
+            $start = new DateTime($startDate . ' 12:00:00', $tz);
+            $end = new DateTime($endDate . ' 12:00:00', $tz);
+            $customRange = true;
+            $periodDays = max(1, (int) $start->diff($end)->days + 1);
+            if (in_array($periodDays, [7, 30, 90], true)) {
+                $period = $periodDays;
+            }
+        }
 
         $records = [];
         $teamHeadcount = 1;
@@ -596,10 +616,14 @@ class Attendance {
         try {
             $t = self::RECORDS_TABLE;
             if ($scope === 'team') {
-                // Team view: current calendar month, non-admin employees only.
-                $start = (clone $end)->modify('first day of this month');
-                $startDate = $start->format('Y-m-d');
-                $endDate = $end->format('Y-m-d');
+                // Team view default: current calendar month unless a custom range is set.
+                if (!$customRange) {
+                    $start = new DateTime('now', $tz);
+                    $end = clone $start;
+                    $start = (clone $end)->modify('first day of this month');
+                    $startDate = $start->format('Y-m-d');
+                    $endDate = $end->format('Y-m-d');
+                }
 
                 $adminRoles = [
                     'admin', 'administrator', 'superadmin', 'super_admin',
@@ -1118,6 +1142,10 @@ class Attendance {
                 'start' => $startDate,
                 'end' => $endDate,
             ],
+            'rangeBounds' => [
+                'min' => (new DateTime('now', $tz))->modify('-365 days')->format('Y-m-d'),
+                'max' => (new DateTime('now', $tz))->format('Y-m-d'),
+            ],
             'metrics' => [
                 'attendanceRate' => $attendanceRate,
                 'presentDays' => $presentDays,
@@ -1154,6 +1182,55 @@ class Attendance {
             'personalKpi' => $personalKpi,
             'insights' => $insights,
             'history' => array_reverse($records),
+        ];
+    }
+
+    /**
+     * @return array{start:string,end:string}|null
+     */
+    private function normalizeAnalyticsDateRange(?string $rangeStart, ?string $rangeEnd, DateTimeZone $tz): ?array
+    {
+        $startRaw = trim((string) $rangeStart);
+        $endRaw = trim((string) $rangeEnd);
+        if ($startRaw === '' && $endRaw === '') {
+            return null;
+        }
+
+        $today = new DateTime('now', $tz);
+        $todayStr = $today->format('Y-m-d');
+        $minAllowed = (clone $today)->modify('-365 days')->format('Y-m-d');
+
+        $startStr = $startRaw !== '' ? $startRaw : $endRaw;
+        $endStr = $endRaw !== '' ? $endRaw : $startRaw;
+
+        $start = DateTime::createFromFormat('Y-m-d', $startStr, $tz);
+        $end = DateTime::createFromFormat('Y-m-d', $endStr, $tz);
+        if (!$start instanceof DateTime || !$end instanceof DateTime) {
+            return null;
+        }
+        if ($start->format('Y-m-d') !== $startStr || $end->format('Y-m-d') !== $endStr) {
+            return null;
+        }
+
+        if ($start > $end) {
+            $tmp = $start;
+            $start = $end;
+            $end = $tmp;
+        }
+
+        if ($start->format('Y-m-d') < $minAllowed) {
+            $start = new DateTime($minAllowed . ' 12:00:00', $tz);
+        }
+        if ($end->format('Y-m-d') > $todayStr) {
+            $end = new DateTime($todayStr . ' 12:00:00', $tz);
+        }
+        if ($start > $end) {
+            $start = clone $end;
+        }
+
+        return [
+            'start' => $start->format('Y-m-d'),
+            'end' => $end->format('Y-m-d'),
         ];
     }
 

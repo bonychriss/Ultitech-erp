@@ -184,7 +184,16 @@ function EmployeeHoursBarChart({ employees = [], periodLabel = '', metric = 'hou
           ].filter(Boolean);
           return (
             <g key={emp.id != null ? `emp-${emp.id}` : `emp-${idx}`}>
-              <rect x={x} y={y} width={barWidth} height={barH} rx={8} ry={8} fill={emp.color || '#3b82f6'}>
+              <rect
+                className="att-analytics-emp-bar"
+                x={x}
+                y={y}
+                width={barWidth}
+                height={barH}
+                rx={8}
+                ry={8}
+                fill={emp.color || '#3b82f6'}
+              >
                 <title>{tipParts.join(' / ')}</title>
               </rect>
               <text x={cx} y={y - 8} textAnchor="middle" className="att-analytics-emp-bar-value">

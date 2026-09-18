@@ -9,8 +9,8 @@ namespace App\Domains\Attendance;
  */
 final class AttendanceShell
 {
-    /** Light deep indigo immersive mobile status bar + header (softer match to page). */
-    private const MOBILE_TOP_COLOR = '#6366F1';
+    /** Soft light-blue immersive mobile status bar + header. */
+    private const MOBILE_TOP_COLOR = '#BFDBFE';
 
     /**
      * @param array<string,mixed> $cfg
@@ -341,7 +341,7 @@ body.page-attendance-desk .clock-card-v2 {
     body.page-attendance-desk .employee-header--products-desk .employee-header-page-title,
     body.page-attendance-analytics .employee-header--products-desk .employee-header-page-title,
     body.page-attendance-desk .employee-header--products-desk .employee-header-page-title[style] {
-        color: #ffffff !important;
+        color: #0f172a !important;
     }
     body.page-attendance-desk .employee-header--products-desk .employee-header-menu-btn,
     body.page-attendance-desk .employee-header--products-desk .employee-header-menu-btn[style],
@@ -349,7 +349,7 @@ body.page-attendance-desk .clock-card-v2 {
     body.page-attendance-desk .employee-header--products-desk .header-actions-tray button,
     body.page-attendance-desk .employee-header--products-desk .header-actions-tray i,
     body.page-attendance-desk .employee-header--products-desk .header-actions-tray svg {
-        color: #ffffff !important;
+        color: #0f172a !important;
     }
     body.page-attendance-desk .layout-main-wrapper,
     body.page-attendance-desk .layout-main-wrapper > .flex-grow-1 {

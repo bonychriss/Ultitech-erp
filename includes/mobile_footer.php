@@ -46,6 +46,11 @@ if (strpos($script, 'select-module.php') !== false) {
     return;
 }
 
+// Stats desk uses full-screen analytics; hide floating mobile footer there.
+if (stripos($script, 'attendance-analytics') !== false) {
+    return;
+}
+
 // Path prefix to web root (matches sidebar depth logic)
 $cleanScript = ltrim((string) $script, '/');
 $depth = substr_count($cleanScript, '/');

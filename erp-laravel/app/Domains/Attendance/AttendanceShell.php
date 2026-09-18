@@ -215,17 +215,49 @@ main.main-content.att-react-root #root {
 }
 @media (max-width: 767.98px) {
     body.page-attendance-desk .employee-header.employee-header--products-desk { padding: 0 0.75rem !important; }
-    main.main-content.att-react-root { padding: 0 0.75rem 2rem !important; }
+    main.main-content.att-react-root {
+        padding: 0 0.75rem 1.25rem !important;
+    }
+}
+@media (max-width: 575.98px) {
+    main.main-content.att-react-root {
+        padding: 0 0.6rem 1rem !important;
+    }
+}
+/* Safety: never show floating mobile footer on Stats */
+@media (max-width: 991.98px) {
+    body.page-attendance-analytics .mobile-footer {
+        display: none !important;
+    }
+    body.page-attendance-analytics.has-mobile-footer {
+        padding-bottom: 0 !important;
+    }
+}
+body.page-attendance-analytics #erp-nav-back-control {
+    display: none !important;
 }
 html[data-theme="dark"] body.page-attendance-desk,
 html[data-theme="dark"] body.page-attendance-desk.dashboard,
+html[data-theme="dark"] body.page-attendance-analytics,
 html[data-theme="dark"] body.page-attendance-desk .layout-main-wrapper,
 html[data-theme="dark"] body.page-attendance-desk .layout-main-wrapper > .flex-grow-1,
-html[data-theme="dark"] body.page-attendance-desk main.main-content.att-react-root {
-    background: #0f172a !important;
+html[data-theme="dark"] body.page-attendance-desk main.main-content,
+html[data-theme="dark"] body.page-attendance-desk main.main-content.att-react-root,
+html[data-theme="dark"] body.page-attendance-analytics main.main-content.att-react-root {
+    background: #020617 !important;
 }
-html[data-theme="dark"] body.page-attendance-desk .employee-header.employee-header--products-desk {
-    background: #0f172a !important;
+html[data-theme="dark"] body.page-attendance-desk .employee-header.employee-header--products-desk,
+html[data-theme="dark"] body.page-attendance-analytics .employee-header.employee-header--products-desk {
+    background: #020617 !important;
+    border-bottom-color: #1e293b !important;
+}
+html[data-theme="dark"] body.page-attendance-desk .att-shell,
+html[data-theme="dark"] body.page-attendance-analytics .att-shell {
+    background: #020617 !important;
+    color: #e2e8f0 !important;
+}
+html[data-theme="dark"] body.page-attendance-analytics .att-shell.att-page-analytics {
+    background: transparent !important;
 }
 body.page-attendance-desk .clock-card-v2 {
     background-color: #1c1917 !important;

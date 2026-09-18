@@ -182,6 +182,7 @@
     var body = global.document && global.document.body;
     if (!body) return false;
     if (body.classList.contains('page-login') || body.classList.contains('page-register')) return true;
+    if (body.classList.contains('page-attendance-analytics')) return true;
     if (body.getAttribute('data-erp-nav-back') === 'off') return true;
     if (isAuthUrl(global.location.href)) return true;
     return false;

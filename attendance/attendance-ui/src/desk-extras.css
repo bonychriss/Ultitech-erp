@@ -256,3 +256,13 @@ main.main-content.att-react-root #root {
   width: 100%;
   min-height: 320px;
 }
+html[data-theme="dark"] main.main-content.att-react-root {
+  background: #020617 !important;
+}
+html[data-theme="dark"] .att-shell {
+  background: #020617 !important;
+  color: #e2e8f0;
+}
+html[data-theme="dark"] .att-shell.att-page-analytics {
+  background: transparent !important;
+}

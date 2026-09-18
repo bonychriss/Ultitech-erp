@@ -673,6 +673,13 @@ class Attendance {
                             'id' => $uid,
                             'name' => $label,
                             'byDate' => [],
+                            'punctSum' => 0.0,
+                            'punctDays' => 0,
+                            'lateIns' => 0,
+                            'missedOuts' => 0,
+                            'earlyOuts' => 0,
+                            'signInSum' => 0.0,
+                            'signOutSum' => 0.0,
                         ];
                     }
                     $teamHeadcount = max(1, count($employeeSeriesMap));
@@ -709,6 +716,7 @@ class Attendance {
 
         $presentDays = 0;
         $lateDays = 0;
+        $missedSignOuts = 0;
         $totalHours = 0.0;
         $totalOt = 0.0;
         $longestStreak = 0;
@@ -718,6 +726,11 @@ class Attendance {
         $weeklyData = ['Mon' => 0.0, 'Tue' => 0.0, 'Wed' => 0.0, 'Thu' => 0.0, 'Fri' => 0.0, 'Sat' => 0.0, 'Sun' => 0.0];
         $uniqueMembers = [];
         $datesWithAttendance = [];
+        $punctSumAll = 0.0;
+        $punctDaysAll = 0;
+        $todayStr = $end->format('Y-m-d');
+        $endTimeStr = (string) ($this->settings['end_time'] ?? '17:00:00');
+        $graceMinutes = (int) ($this->settings['grace_period_minutes'] ?? 15);
 
         foreach ($records as $record) {
             $date = (string) ($record['date'] ?? '');
@@ -731,7 +744,8 @@ class Attendance {
                 $uniqueMembers[$recUserId] = true;
             }
 
-            if (stripos((string) ($record['status'] ?? ''), 'late') !== false) {
+            $isLate = stripos((string) ($record['status'] ?? ''), 'late') !== false;
+            if ($isLate) {
                 $lateDays++;
             }
 
@@ -762,6 +776,20 @@ class Attendance {
                 $weeklyData[$dayKey] += $hours;
             }
 
+            $dayScore = $this->scoreAttendanceDay(
+                (string) ($record['status'] ?? ''),
+                $record['time_out'] ?? null,
+                $date,
+                $todayStr,
+                $endTimeStr,
+                $graceMinutes
+            );
+            $punctSumAll += $dayScore['combined'];
+            $punctDaysAll++;
+            if ($dayScore['missedOut']) {
+                $missedSignOuts++;
+            }
+
             if ($scope === 'team' && $recUserId > 0) {
                 if (!isset($employeeSeriesMap[$recUserId])) {
                     $label = trim((string) ($record['full_name'] ?? ''));
@@ -772,6 +800,13 @@ class Attendance {
                         'id' => $recUserId,
                         'name' => $label,
                         'byDate' => [],
+                        'punctSum' => 0.0,
+                        'punctDays' => 0,
+                        'lateIns' => 0,
+                        'missedOuts' => 0,
+                        'earlyOuts' => 0,
+                        'signInSum' => 0.0,
+                        'signOutSum' => 0.0,
                     ];
                 }
                 if (!isset($employeeSeriesMap[$recUserId]['byDate'][$date])) {
@@ -781,6 +816,19 @@ class Attendance {
                     $employeeSeriesMap[$recUserId]['byDate'][$date] + $hours,
                     2
                 );
+                $employeeSeriesMap[$recUserId]['punctSum'] += $dayScore['combined'];
+                $employeeSeriesMap[$recUserId]['punctDays']++;
+                $employeeSeriesMap[$recUserId]['signInSum'] += $dayScore['signIn'];
+                $employeeSeriesMap[$recUserId]['signOutSum'] += $dayScore['signOut'];
+                if ($dayScore['lateIn']) {
+                    $employeeSeriesMap[$recUserId]['lateIns']++;
+                }
+                if ($dayScore['missedOut']) {
+                    $employeeSeriesMap[$recUserId]['missedOuts']++;
+                }
+                if ($dayScore['earlyOut']) {
+                    $employeeSeriesMap[$recUserId]['earlyOuts']++;
+                }
             }
         }
 
@@ -810,8 +858,8 @@ class Attendance {
         $memberCount = $scope === 'team' ? $teamHeadcount : 1;
         $expectedSlots = $workingDays * max(1, $memberCount);
         $attendanceRate = $expectedSlots > 0 ? round(($presentDays / $expectedSlots) * 100, 1) : 0.0;
-        $punctualityScore = $presentDays > 0
-            ? round((($presentDays - $lateDays) / $presentDays) * 100, 1)
+        $punctualityScore = $punctDaysAll > 0
+            ? round($punctSumAll / $punctDaysAll, 1)
             : 0.0;
         $avgHoursPerDay = $presentDays > 0 ? round($totalHours / $presentDays, 1) : 0.0;
         $activeMembers = count($uniqueMembers);
@@ -847,16 +895,44 @@ class Attendance {
         ];
         $lineSeries = [];
         $colorIdx = 0;
+        $teamAvgIn = 0.0;
+        $teamAvgOut = 0.0;
+        $teamAvgCombined = 0.0;
+        $scoredMembers = 0;
+        $topScore = -1.0;
+        $topName = '';
+        $topId = 0;
         foreach ($employeeSeriesMap as $series) {
             $values = [];
             foreach ($lineLabels as $d) {
                 $values[] = isset($series['byDate'][$d]) ? round((float) $series['byDate'][$d], 2) : 0.0;
+            }
+            $days = (int) ($series['punctDays'] ?? 0);
+            $empScore = $days > 0 ? round(((float) $series['punctSum']) / $days, 1) : null;
+            $empIn = $days > 0 ? round(((float) $series['signInSum']) / $days, 1) : null;
+            $empOut = $days > 0 ? round(((float) $series['signOutSum']) / $days, 1) : null;
+            if ($empScore !== null) {
+                $teamAvgCombined += $empScore;
+                $teamAvgIn += (float) $empIn;
+                $teamAvgOut += (float) $empOut;
+                $scoredMembers++;
+                if ($empScore > $topScore) {
+                    $topScore = $empScore;
+                    $topName = (string) $series['name'];
+                    $topId = (int) $series['id'];
+                }
             }
             $lineSeries[] = [
                 'id' => (int) $series['id'],
                 'name' => (string) $series['name'],
                 'color' => $palette[$colorIdx % count($palette)],
                 'values' => $values,
+                'punctuality' => $empScore,
+                'signInScore' => $empIn,
+                'signOutScore' => $empOut,
+                'lateIns' => (int) ($series['lateIns'] ?? 0),
+                'missedOuts' => (int) ($series['missedOuts'] ?? 0),
+                'earlyOuts' => (int) ($series['earlyOuts'] ?? 0),
             ];
             $colorIdx++;
         }
@@ -865,6 +941,29 @@ class Attendance {
         });
 
         $monthLabel = $start->format('F Y');
+        $teamPunctuality = [
+            'average' => $scoredMembers > 0 ? round($teamAvgCombined / $scoredMembers, 1) : 0.0,
+            'averageSignIn' => $scoredMembers > 0 ? round($teamAvgIn / $scoredMembers, 1) : 0.0,
+            'averageSignOut' => $scoredMembers > 0 ? round($teamAvgOut / $scoredMembers, 1) : 0.0,
+            'top' => $topScore >= 0
+                ? [
+                    'id' => $topId,
+                    'name' => $topName,
+                    'score' => $topScore,
+                ]
+                : null,
+            'missedSignOuts' => $missedSignOuts,
+            'lateIns' => $lateDays,
+            'rules' => [
+                'lateInPenalty' => 30,
+                'missedOutPenalty' => 40,
+                'earlyOutPenalty' => 15,
+                'note' => 'Late sign-in -30, forgotten sign-out -40, early leave -15. Open sessions today are not penalized.',
+            ],
+        ];
+        if ($scope === 'team' && $scoredMembers > 0) {
+            $punctualityScore = $teamPunctuality['average'];
+        }
 
         return [
             'period' => $period,
@@ -891,6 +990,7 @@ class Attendance {
                 'activeMembers' => $activeMembers,
                 'punctualityScore' => $punctualityScore,
                 'lateDays' => $lateDays,
+                'missedSignOuts' => $missedSignOuts,
                 'longestStreak' => $longestStreak,
                 'currentStreak' => $currentStreak,
                 'avgHoursPerDay' => $avgHoursPerDay,
@@ -910,10 +1010,66 @@ class Attendance {
                     'title' => $monthLabel . ' performance',
                     'labels' => $lineLabels,
                     'series' => $lineSeries,
+                    'punctuality' => $scope === 'team' ? $teamPunctuality : null,
                 ],
             ],
             'insights' => $insights,
             'history' => array_reverse($records),
+        ];
+    }
+
+    /**
+     * Score one attendance day for punctuality (sign-in + sign-out).
+     * Late sign-in and forgotten sign-out reduce the score.
+     * Today's open session (no time_out yet) is not penalized.
+     *
+     * @return array{combined:float,signIn:float,signOut:float,lateIn:bool,missedOut:bool,earlyOut:bool}
+     */
+    private function scoreAttendanceDay(
+        string $status,
+        $timeOut,
+        string $date,
+        string $today,
+        string $endTime,
+        int $graceMinutes
+    ): array {
+        $lateIn = stripos($status, 'late') !== false;
+        // Sign-in: full credit unless late (-30 equivalent → 70).
+        $signIn = $lateIn ? 70.0 : 100.0;
+
+        $hasOut = $timeOut !== null && trim((string) $timeOut) !== '';
+        $missedOut = false;
+        $earlyOut = false;
+        $signOut = 100.0;
+
+        if (!$hasOut) {
+            if ($date < $today) {
+                $missedOut = true;
+                $signOut = 60.0; // forgotten sign-out (-40)
+            }
+        } else {
+            $outTs = strtotime((string) $timeOut);
+            $endTs = strtotime($endTime);
+            if ($outTs !== false && $endTs !== false) {
+                $outCmp = strtotime(date('H:i:s', $outTs));
+                $endCmp = strtotime(date('H:i:s', $endTs));
+                $earlyOk = $endCmp - max(0, $graceMinutes) * 60;
+                if ($outCmp !== false && $earlyOk !== false && $outCmp < $earlyOk) {
+                    $earlyOut = true;
+                    $signOut = 85.0; // early leave (-15)
+                }
+            }
+        }
+
+        $combined = max(0.0, min(100.0, ($signIn + $signOut) / 2.0));
+
+        return [
+            'combined' => round($combined, 1),
+            'signIn' => round($signIn, 1),
+            'signOut' => round($signOut, 1),
+            'lateIn' => $lateIn,
+            'missedOut' => $missedOut,
+            'earlyOut' => $earlyOut,
         ];
     }
 

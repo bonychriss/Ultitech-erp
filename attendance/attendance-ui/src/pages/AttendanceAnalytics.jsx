@@ -92,6 +92,11 @@ function aggregateEmployeeTotals(series = [], labels = [], grain = 'monthly') {
       color: s.color || '#3b82f6',
       hours: Math.round(total * 10) / 10,
       initials: initialsFromName(s.name),
+      punctuality: s.punctuality != null ? Number(s.punctuality) : null,
+      signInScore: s.signInScore != null ? Number(s.signInScore) : null,
+      signOutScore: s.signOutScore != null ? Number(s.signOutScore) : null,
+      lateIns: Number(s.lateIns || 0),
+      missedOuts: Number(s.missedOuts || 0),
     };
   });
 }
@@ -150,10 +155,20 @@ function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
           const y = axisY - barH;
           const hoursLabel = Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
           const displayName = String(emp.name || '').trim();
+          const punct =
+            emp.punctuality != null && !Number.isNaN(Number(emp.punctuality))
+              ? `${Number(emp.punctuality).toFixed(0)}% punctual`
+              : '';
+          const tipParts = [
+            `${displayName}: ${hoursLabel}`,
+            punct,
+            emp.missedOuts > 0 ? `${emp.missedOuts} missed sign-out${emp.missedOuts === 1 ? '' : 's'}` : '',
+            emp.lateIns > 0 ? `${emp.lateIns} late sign-in${emp.lateIns === 1 ? '' : 's'}` : '',
+          ].filter(Boolean);
           return (
             <g key={emp.id != null ? `emp-${emp.id}` : `emp-${idx}`}>
               <rect x={x} y={y} width={barWidth} height={barH} rx={8} ry={8} fill={emp.color || '#3b82f6'}>
-                <title>{`${displayName}: ${hoursLabel}`}</title>
+                <title>{tipParts.join(' ù ')}</title>
               </rect>
               <text x={cx} y={y - 8} textAnchor="middle" className="att-analytics-emp-bar-value">
                 {hoursLabel}
@@ -327,6 +342,7 @@ export default function AttendanceAnalytics({ data }) {
   const daily = state.charts?.daily || { labels: [], values: [] };
   const weekly = state.charts?.weekly || { labels: [], values: [] };
   const teamLine = state.charts?.teamLine || { labels: [], series: [], title: '' };
+  const teamPunct = teamLine.punctuality || null;
   const isTeam = state.scope === 'team';
 
   const monthTitle = useMemo(() => {
@@ -364,7 +380,9 @@ export default function AttendanceAnalytics({ data }) {
         key: 'punctual',
         label: 'Punctuality',
         value: `${Number(metrics.punctualityScore || 0)}%`,
-        hint: `${Number(metrics.lateDays || 0)} late arrival${Number(metrics.lateDays || 0) === 1 ? '' : 's'}`,
+        hint: isTeam
+          ? `${Number(metrics.lateDays || 0)} late ù ${Number(metrics.missedSignOuts || 0)} missed outs`
+          : `${Number(metrics.lateDays || 0)} late ù ${Number(metrics.missedSignOuts || 0)} missed outs`,
         icon: 'fa-clock',
         tone: 'green',
       },
@@ -513,6 +531,36 @@ export default function AttendanceAnalytics({ data }) {
                       ? `Total hours worked by each employee in ${monthTitle}`
                       : 'Hours by employee (admins excluded)'}
                   </p>
+                  {isTeam && teamPunct ? (
+                    <div className="att-analytics-punct-strip" title={teamPunct.rules?.note || ''}>
+                      <div className="att-analytics-punct-item">
+                        <span className="att-analytics-punct-label">Avg punctuality</span>
+                        <strong>{Number(teamPunct.average || 0).toFixed(0)}%</strong>
+                        <span className="att-analytics-punct-meta">
+                          In {Number(teamPunct.averageSignIn || 0).toFixed(0)}% ∑ Out{' '}
+                          {Number(teamPunct.averageSignOut || 0).toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="att-analytics-punct-item">
+                        <span className="att-analytics-punct-label">Top punctuality</span>
+                        <strong>
+                          {teamPunct.top
+                            ? `${Number(teamPunct.top.score || 0).toFixed(0)}%`
+                            : 'ó'}
+                        </strong>
+                        <span className="att-analytics-punct-meta">
+                          {teamPunct.top?.name || 'No scored employees yet'}
+                        </span>
+                      </div>
+                      <div className="att-analytics-punct-item">
+                        <span className="att-analytics-punct-label">Missed sign-outs</span>
+                        <strong>{Number(teamPunct.missedSignOuts || 0)}</strong>
+                        <span className="att-analytics-punct-meta">
+                          {Number(teamPunct.lateIns || 0)} late sign-ins
+                        </span>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="att-analytics-chart-controls">
                   <div className="att-analytics-periods" role="tablist" aria-label="Chart type">

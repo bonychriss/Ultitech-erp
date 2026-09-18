@@ -162,12 +162,53 @@
 .att-analytics-chart-head .att-analytics-chart-sub {
   margin: 0;
 }
-.att-analytics-chart-controls {
+.att-analytics-punct-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+.att-analytics-punct-item {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.65rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  min-width: 0;
+}
+.att-analytics-punct-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+.att-analytics-punct-item strong {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+.att-analytics-punct-meta {
+  font-size: 0.7rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+html[data-theme="dark"] .att-analytics-punct-item {
+  background: #0b1220;
+  border-color: #334155;
+}
+html[data-theme="dark"] .att-analytics-punct-item strong {
+  color: #f8fafc;
+}
+@media (max-width: 575.98px) {
+  .att-analytics-punct-strip {
+    grid-template-columns: 1fr;
+  }
 }
 .att-analytics-periods--blue .att-analytics-period.is-active {
   background: #2563eb;

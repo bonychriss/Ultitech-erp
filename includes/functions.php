@@ -8455,26 +8455,50 @@ function erp_get_mobile_top_chrome_html(): string
   html:has(body.dashboard) {
     background-color: {$top} !important;
   }
-  body.dashboard {
-    background-image: linear-gradient({$top}, {$top}) !important;
-    background-size: 100% calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
-    background-repeat: no-repeat !important;
-    background-position: top center !important;
-  }
   html[data-theme="dark"] body.dashboard {
     background-color: #020617 !important;
   }
   html:not([data-theme="dark"]) body.dashboard {
     background-color: #f8fafc !important;
   }
+  /* Continuous fill from screen top through hamburger row (SportyBet-style) */
+  body.dashboard:not(.att-top-chrome-hidden)::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(env(safe-area-inset-top, 0px) + 3.85rem);
+    background: {$top};
+    z-index: 1015;
+    pointer-events: none;
+  }
+  body.dashboard:not(.att-top-chrome-hidden) .layout-main-wrapper > .flex-grow-1 {
+    background-image: linear-gradient({$top}, {$top}) !important;
+    background-size: 100% calc(env(safe-area-inset-top, 0px) + 3.85rem) !important;
+    background-repeat: no-repeat !important;
+    background-position: top center !important;
+  }
   body.dashboard .employee-header,
   body.dashboard header.header.employee-header,
-  html body.dashboard .employee-header[class*="employee-header--"] {
+  html body.dashboard .employee-header[class*="employee-header--"],
+  html body.dashboard .employee-header.employee-header--page-context {
     background: {$top} !important;
+    background-color: {$top} !important;
     border: none !important;
     box-shadow: none !important;
-    padding-top: env(safe-area-inset-top, 0px) !important;
-    transition: background-color 0.18s ease;
+    /* Safe-area via border so shorthand padding from module CSS cannot wipe it */
+    border-top: env(safe-area-inset-top, 0px) solid {$top} !important;
+    margin-top: 0 !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1020 !important;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+  }
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-content,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-left,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-right {
+    background: transparent !important;
   }
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-page-title,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-page-title[style],
@@ -8483,8 +8507,14 @@ function erp_get_mobile_top_chrome_html(): string
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray a,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray button,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray i,
-  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray svg {
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray svg,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .erp-hamburger,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .erp-hamburger span {
     color: #0f172a !important;
+    border-color: #0f172a !important;
+  }
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .erp-hamburger span {
+    background-color: #0f172a !important;
   }
   html:has(body.dashboard.att-top-chrome-hidden) {
     background-color: #f8fafc !important;
@@ -8492,18 +8522,25 @@ function erp_get_mobile_top_chrome_html(): string
   html[data-theme="dark"]:has(body.dashboard.att-top-chrome-hidden) {
     background-color: #020617 !important;
   }
-  body.dashboard.att-top-chrome-hidden {
+  body.dashboard.att-top-chrome-hidden::before {
+    display: none !important;
+  }
+  body.dashboard.att-top-chrome-hidden .layout-main-wrapper > .flex-grow-1 {
     background-image: none !important;
   }
   body.dashboard.att-top-chrome-hidden .employee-header,
   body.dashboard.att-top-chrome-hidden header.header.employee-header,
   html body.dashboard.att-top-chrome-hidden .employee-header[class*="employee-header--"] {
     background: #f8fafc !important;
+    background-color: #f8fafc !important;
+    border-top-color: #f8fafc !important;
   }
   html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header,
   html[data-theme="dark"] body.dashboard.att-top-chrome-hidden header.header.employee-header,
   html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header[class*="employee-header--"] {
     background: #020617 !important;
+    background-color: #020617 !important;
+    border-top-color: #020617 !important;
   }
   html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .employee-header-page-title,
   html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .employee-header-page-title[style],
@@ -8514,6 +8551,9 @@ function erp_get_mobile_top_chrome_html(): string
   html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .header-actions-tray i,
   html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .header-actions-tray svg {
     color: #e2e8f0 !important;
+  }
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .erp-hamburger span {
+    background-color: #e2e8f0 !important;
   }
 }
 </style>
@@ -8532,9 +8572,13 @@ function erp_get_mobile_top_chrome_html(): string
     if (ms) ms.setAttribute('content', c);
   }
   function paintHeader(hidden){
+    var c = hidden ? pageBg() : TOP;
     var headers = document.querySelectorAll('body.dashboard .employee-header, body.dashboard header.employee-header');
     for (var i = 0; i < headers.length; i++) {
-      headers[i].style.setProperty('background', hidden ? pageBg() : TOP, 'important');
+      headers[i].style.setProperty('background', c, 'important');
+      headers[i].style.setProperty('background-color', c, 'important');
+      headers[i].style.setProperty('border-top-color', c, 'important');
+      headers[i].style.removeProperty('background-image');
     }
   }
   function scrollY(){

@@ -68,16 +68,38 @@ function initialsFromName(name) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-function aggregateEmployeeTotals(series = [], labels = [], grain = 'monthly') {
+function formatShortDate(value) {
+  if (!value) return '-';
+  const d = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function aggregateEmployeeTotals(series = [], labels = [], fromDate = '', toDate = '') {
   const n = labels.length;
   if (!n) return [];
 
   let startIdx = 0;
   let endIdx = n - 1;
-  if (grain === 'daily') {
-    startIdx = endIdx;
-  } else if (grain === 'weekly') {
-    startIdx = Math.max(0, n - 7);
+  if (fromDate || toDate) {
+    const from = fromDate || labels[0];
+    const to = toDate || labels[n - 1];
+    startIdx = labels.findIndex((d) => String(d) >= String(from));
+    if (startIdx < 0) startIdx = 0;
+    endIdx = labels.findLastIndex
+      ? labels.findLastIndex((d) => String(d) <= String(to))
+      : (() => {
+          let idx = -1;
+          for (let i = 0; i < n; i += 1) {
+            if (String(labels[i]) <= String(to)) idx = i;
+          }
+          return idx;
+        })();
+    if (endIdx < 0) endIdx = n - 1;
+    if (startIdx > endIdx) {
+      startIdx = 0;
+      endIdx = n - 1;
+    }
   }
 
   return series.map((s) => {
@@ -169,29 +191,28 @@ function EmployeeHoursBarChart({ employees = [], periodLabel = '', metric = 'hou
           const displayName = String(emp.name || '').trim();
           const bd = emp.kpiBreakdown || {};
           const tipParts = [
-            `${displayName}: ${pointsLabel} / 100`,
-            `Att ${Number(bd.attendance || 0)} ù Daily ${Number(bd.dailyTasks || 0)} ù Weekly ${Number(bd.weeklyTasks || 0)}`,
-            hoursLabel,
+            displayName,
+            showPoints ? `${pointsLabel} / 100` : hoursLabel,
+            showPoints
+              ? `Att ${Number(bd.attendance || 0)} / Daily ${Number(bd.dailyTasks || 0)} / Weekly ${Number(bd.weeklyTasks || 0)}`
+              : `${pointsLabel} KPI (month)`,
             emp.missedOuts > 0 ? `${emp.missedOuts} missed sign-out${emp.missedOuts === 1 ? '' : 's'}` : '',
             emp.lateIns > 0 ? `${emp.lateIns} late sign-in${emp.lateIns === 1 ? '' : 's'}` : '',
           ].filter(Boolean);
           return (
             <g key={emp.id != null ? `emp-${emp.id}` : `emp-${idx}`}>
               <rect x={x} y={y} width={barWidth} height={barH} rx={8} ry={8} fill={emp.color || '#3b82f6'}>
-                <title>{tipParts.join(' ù ')}</title>
+                <title>{tipParts.join(' / ')}</title>
               </rect>
               <text x={cx} y={y - 8} textAnchor="middle" className="att-analytics-emp-bar-value">
                 {topLabel}
               </text>
-              <text x={cx} y={axisY + 14} textAnchor="middle" className="att-analytics-emp-bar-initials">
-                {emp.initials}
-              </text>
               <text
                 x={cx}
-                y={axisY + 28}
+                y={axisY + 10}
                 textAnchor="end"
                 dominantBaseline="middle"
-                transform={`rotate(-90 ${cx} ${axisY + 28})`}
+                transform={`rotate(-90 ${cx} ${axisY + 10})`}
                 className="att-analytics-emp-bar-name"
               >
                 {displayName}
@@ -226,12 +247,20 @@ export default function AttendanceAnalytics({ data }) {
   }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [barGrain, setBarGrain] = useState('monthly');
+  const [barFrom, setBarFrom] = useState(() => String(initial.range?.start || ''));
+  const [barTo, setBarTo] = useState(() => String(initial.range?.end || ''));
   const [employeeFilter, setEmployeeFilter] = useState('all');
   const [openMetric, setOpenMetric] = useState(null);
   const [openPunct, setOpenPunct] = useState(null);
   const [showKpiAbout, setShowKpiAbout] = useState(false);
   const kpiAboutRef = useRef(null);
+
+  useEffect(() => {
+    const start = String(state.range?.start || '');
+    const end = String(state.range?.end || '');
+    if (start) setBarFrom(start);
+    if (end) setBarTo(end);
+  }, [state.range?.start, state.range?.end]);
 
   useEffect(() => {
     if (!showKpiAbout && openMetric == null && openPunct == null) return undefined;
@@ -294,8 +323,33 @@ export default function AttendanceAnalytics({ data }) {
       employeeFilter === 'all'
         ? series
         : series.filter((s) => String(s.id) === String(employeeFilter));
-    return aggregateEmployeeTotals(filtered, teamLine.labels || [], barGrain);
-  }, [teamLine.series, teamLine.labels, barGrain, employeeFilter]);
+    return aggregateEmployeeTotals(filtered, teamLine.labels || [], barFrom, barTo);
+  }, [teamLine.series, teamLine.labels, barFrom, barTo, employeeFilter]);
+
+  const chartMinDate = String(state.range?.start || (teamLine.labels || [])[0] || '');
+  const chartMaxDate = String(
+    state.range?.end || (teamLine.labels || [])[(teamLine.labels || []).length - 1] || ''
+  );
+
+  const barRangeLabel = useMemo(() => {
+    if (barFrom && barTo && barFrom === barTo) return formatShortDate(barFrom);
+    if (barFrom || barTo) {
+      return `${formatShortDate(barFrom || chartMinDate)} - ${formatShortDate(barTo || chartMaxDate)}`;
+    }
+    return monthTitle;
+  }, [barFrom, barTo, chartMinDate, chartMaxDate, monthTitle]);
+
+  const onBarFromChange = (value) => {
+    const next = String(value || '');
+    setBarFrom(next);
+    if (barTo && next && next > barTo) setBarTo(next);
+  };
+
+  const onBarToChange = (value) => {
+    const next = String(value || '');
+    setBarTo(next);
+    if (barFrom && next && next < barFrom) setBarFrom(next);
+  };
 
   const metricCards = useMemo(() => {
     const presentHint = isTeam
@@ -316,8 +370,8 @@ export default function AttendanceAnalytics({ data }) {
         label: 'Punctuality',
         value: `${Number(metrics.punctualityScore || 0)}%`,
         hint: isTeam
-          ? `${Number(metrics.lateDays || 0)} late ù ${Number(metrics.missedSignOuts || 0)} missed outs`
-          : `${Number(metrics.lateDays || 0)} late ù ${Number(metrics.missedSignOuts || 0)} missed outs`,
+          ? `${Number(metrics.lateDays || 0)} late - ${Number(metrics.missedSignOuts || 0)} missed outs`
+          : `${Number(metrics.lateDays || 0)} late - ${Number(metrics.missedSignOuts || 0)} missed outs`,
         icon: 'fa-clock',
         tone: 'green',
       },
@@ -392,12 +446,37 @@ export default function AttendanceAnalytics({ data }) {
     <div className="att-shell att-page-analytics">
       <div className="att-analytics">
         <div className="att-analytics-header">
-          <div>
-            <p className="att-analytics-sub att-analytics-sub--solo">
-              {state.range?.start && state.range?.end
-                ? `${formatDate(state.range.start)} - ${formatDate(state.range.end)}`
-                : 'Your attendance performance'}
-            </p>
+          <div className="att-analytics-header-range">
+            {isTeam ? (
+              <div className="att-analytics-date-range" aria-label="Stats date range">
+                <label className="att-analytics-date-field">
+                  <input
+                    type="date"
+                    value={barFrom || chartMinDate}
+                    min={chartMinDate || undefined}
+                    max={barTo || chartMaxDate || undefined}
+                    onChange={(e) => onBarFromChange(e.target.value)}
+                    aria-label="From date"
+                  />
+                </label>
+                <label className="att-analytics-date-field">
+                  <input
+                    type="date"
+                    value={barTo || chartMaxDate}
+                    min={barFrom || chartMinDate || undefined}
+                    max={chartMaxDate || undefined}
+                    onChange={(e) => onBarToChange(e.target.value)}
+                    aria-label="To date"
+                  />
+                </label>
+              </div>
+            ) : (
+              <p className="att-analytics-sub att-analytics-sub--solo">
+                {state.range?.start && state.range?.end
+                  ? `${formatDate(state.range.start)} - ${formatDate(state.range.end)}`
+                  : 'Your attendance performance'}
+              </p>
+            )}
           </div>
           <div className="att-analytics-header-controls">
             <div className="att-analytics-periods" role="tablist" aria-label="Stats scope">
@@ -469,145 +548,148 @@ export default function AttendanceAnalytics({ data }) {
 
         <section className={`att-analytics-charts${isTeam ? ' att-analytics-charts--single' : ''}`}>
           {isTeam ? (
-            <div className="att-analytics-chart-card">
-              <div className="att-analytics-chart-head">
-                <div>
-                  <div className="att-analytics-chart-title-row">
-                    <h2 className="att-analytics-chart-title">Attendance KPI Points</h2>
-                    <div className="att-analytics-about-wrap" ref={kpiAboutRef}>
-                      <button
-                        type="button"
-                        className={`att-analytics-about-btn${showKpiAbout ? ' is-active' : ''}`}
-                        aria-label="About attendance KPI points"
-                        aria-expanded={showKpiAbout}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowKpiAbout((v) => !v);
-                        }}
-                      >
-                        <i className="fas fa-info-circle" aria-hidden="true" />
-                      </button>
-                      {showKpiAbout ? (
-                        <>
-                          <button
-                            type="button"
-                            className="att-analytics-about-backdrop"
-                            aria-label="Close KPI info"
-                            onClick={() => setShowKpiAbout(false)}
-                          />
-                          <div className="att-analytics-about-pop" role="dialog" aria-label="KPI scoring info">
-                            {`100-pt score in ${monthTitle}: Attendance 40 + Daily todos 30 + Weekly tasks 30`}
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                  {teamKpi ? (
-                    <div className="att-analytics-punct-strip" title={teamKpi.note || ''}>
-                      <button
-                        type="button"
-                        className={`att-analytics-punct-item${openPunct === 'avg' ? ' is-open' : ''}`}
-                        aria-expanded={openPunct === 'avg'}
-                        onClick={() => setOpenPunct((cur) => (cur === 'avg' ? null : 'avg'))}
-                      >
-                        <span className="att-analytics-punct-icon att-analytics-punct-icon--avg" aria-hidden="true">
-                          <i className="fas fa-chart-pie" />
-                        </span>
-                        <div className="att-analytics-punct-body">
-                          <span className="att-analytics-punct-label">Avg attendance KPI</span>
-                          <strong>{Number(teamKpi.average || 0).toFixed(0)}/100</strong>
-                        </div>
-                        {openPunct === 'avg' ? (
-                          <div className="att-analytics-punct-pop">Att 40 / Daily 30 / Weekly 30</div>
-                        ) : null}
-                      </button>
-                      <button
-                        type="button"
-                        className={`att-analytics-punct-item${openPunct === 'top' ? ' is-open' : ''}`}
-                        aria-expanded={openPunct === 'top'}
-                        onClick={() => setOpenPunct((cur) => (cur === 'top' ? null : 'top'))}
-                      >
-                        <span className="att-analytics-punct-icon att-analytics-punct-icon--top" aria-hidden="true">
-                          <i className="fas fa-trophy" />
-                        </span>
-                        <div className="att-analytics-punct-body">
-                          <span className="att-analytics-punct-label">Top attendance KPI</span>
-                          <strong>
-                            {teamKpi.top ? `${Number(teamKpi.top.score || 0).toFixed(0)}/100` : '-'}
-                          </strong>
-                        </div>
-                        {openPunct === 'top' ? (
-                          <div className="att-analytics-punct-pop">
-                            {teamKpi.top
-                              ? `${teamKpi.top.name} / ${teamKpi.top.grade || ''}`
-                              : 'No scored employees yet'}
-                          </div>
-                        ) : null}
-                      </button>
-                      <button
-                        type="button"
-                        className={`att-analytics-punct-item${openPunct === 'missed' ? ' is-open' : ''}`}
-                        aria-expanded={openPunct === 'missed'}
-                        onClick={() => setOpenPunct((cur) => (cur === 'missed' ? null : 'missed'))}
-                      >
-                        <span className="att-analytics-punct-icon att-analytics-punct-icon--missed" aria-hidden="true">
-                          <i className="fas fa-sign-out-alt" />
-                        </span>
-                        <div className="att-analytics-punct-body">
-                          <span className="att-analytics-punct-label">Missed sign-outs</span>
-                          <strong>{Number(teamPunct?.missedSignOuts || 0)}</strong>
-                        </div>
-                        {openPunct === 'missed' ? (
-                          <div className="att-analytics-punct-pop">
-                            {Number(teamPunct?.lateIns || 0)} late sign-ins
-                          </div>
-                        ) : null}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="att-analytics-chart-controls">
-                  <div className="att-analytics-periods att-analytics-periods--blue" role="tablist" aria-label="Bar range">
-                    {[
-                      { value: 'daily', label: 'Daily' },
-                      { value: 'weekly', label: 'Weekly' },
-                      { value: 'monthly', label: 'Monthly' },
-                    ].map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        role="tab"
-                        aria-selected={barGrain === opt.value}
-                        className={`att-analytics-period${barGrain === opt.value ? ' is-active' : ''}`}
-                        onClick={() => setBarGrain(opt.value)}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  <label className="att-analytics-emp-filter">
-                    <i className="fas fa-users" aria-hidden="true" />
-                    <select
-                      value={employeeFilter}
-                      onChange={(e) => setEmployeeFilter(e.target.value)}
-                      aria-label="Filter employees"
+            <>
+              <div className="att-analytics-chart-card att-analytics-chart-card--kpi">
+                <div className="att-analytics-chart-title-row">
+                  <h2 className="att-analytics-chart-title">Attendance KPI Points</h2>
+                  <div className="att-analytics-about-wrap" ref={kpiAboutRef}>
+                    <button
+                      type="button"
+                      className={`att-analytics-about-btn${showKpiAbout ? ' is-active' : ''}`}
+                      aria-label="About attendance KPI points"
+                      aria-expanded={showKpiAbout}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowKpiAbout((v) => !v);
+                      }}
                     >
-                      <option value="all">All Employees</option>
-                      {(teamLine.series || []).map((s) => (
-                        <option key={s.id || s.name} value={String(s.id)}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      <i className="fas fa-info-circle" aria-hidden="true" />
+                    </button>
+                    {showKpiAbout ? (
+                      <>
+                        <button
+                          type="button"
+                          className="att-analytics-about-backdrop"
+                          aria-label="Close KPI info"
+                          onClick={() => setShowKpiAbout(false)}
+                        />
+                        <div className="att-analytics-about-pop" role="dialog" aria-label="KPI scoring info">
+                          {`100-pt score in ${monthTitle}: Attendance 40 + Daily todos 30 + Weekly tasks 30`}
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
+                {teamKpi ? (
+                  <div className="att-analytics-punct-strip" title={teamKpi.note || ''}>
+                    <button
+                      type="button"
+                      className={`att-analytics-punct-item${openPunct === 'avg' ? ' is-open' : ''}`}
+                      aria-expanded={openPunct === 'avg'}
+                      onClick={() => setOpenPunct((cur) => (cur === 'avg' ? null : 'avg'))}
+                    >
+                      <span className="att-analytics-punct-icon att-analytics-punct-icon--avg" aria-hidden="true">
+                        <i className="fas fa-chart-pie" />
+                      </span>
+                      <div className="att-analytics-punct-body">
+                        <span className="att-analytics-punct-label">Avg attendance KPI</span>
+                        <strong>{Number(teamKpi.average || 0).toFixed(0)}/100</strong>
+                      </div>
+                      {openPunct === 'avg' ? (
+                        <div className="att-analytics-punct-pop">Att 40 / Daily 30 / Weekly 30</div>
+                      ) : null}
+                    </button>
+                    <button
+                      type="button"
+                      className={`att-analytics-punct-item${openPunct === 'top' ? ' is-open' : ''}`}
+                      aria-expanded={openPunct === 'top'}
+                      onClick={() => setOpenPunct((cur) => (cur === 'top' ? null : 'top'))}
+                    >
+                      <span className="att-analytics-punct-icon att-analytics-punct-icon--top" aria-hidden="true">
+                        <i className="fas fa-trophy" />
+                      </span>
+                      <div className="att-analytics-punct-body">
+                        <span className="att-analytics-punct-label">Top attendance KPI</span>
+                        <strong>
+                          {teamKpi.top ? `${Number(teamKpi.top.score || 0).toFixed(0)}/100` : '-'}
+                        </strong>
+                      </div>
+                      {openPunct === 'top' ? (
+                        <div className="att-analytics-punct-pop">
+                          {teamKpi.top
+                            ? `${teamKpi.top.name} / ${teamKpi.top.grade || ''}`
+                            : 'No scored employees yet'}
+                        </div>
+                      ) : null}
+                    </button>
+                    <button
+                      type="button"
+                      className={`att-analytics-punct-item${openPunct === 'missed' ? ' is-open' : ''}`}
+                      aria-expanded={openPunct === 'missed'}
+                      onClick={() => setOpenPunct((cur) => (cur === 'missed' ? null : 'missed'))}
+                    >
+                      <span className="att-analytics-punct-icon att-analytics-punct-icon--missed" aria-hidden="true">
+                        <i className="fas fa-sign-out-alt" />
+                      </span>
+                      <div className="att-analytics-punct-body">
+                        <span className="att-analytics-punct-label">Missed sign-outs</span>
+                        <strong>{Number(teamPunct?.missedSignOuts || 0)}</strong>
+                      </div>
+                      {openPunct === 'missed' ? (
+                        <div className="att-analytics-punct-pop">Forgotten clock-outs (-40 each)</div>
+                      ) : null}
+                    </button>
+                    <button
+                      type="button"
+                      className={`att-analytics-punct-item${openPunct === 'late' ? ' is-open' : ''}`}
+                      aria-expanded={openPunct === 'late'}
+                      onClick={() => setOpenPunct((cur) => (cur === 'late' ? null : 'late'))}
+                    >
+                      <span className="att-analytics-punct-icon att-analytics-punct-icon--late" aria-hidden="true">
+                        <i className="fas fa-clock" />
+                      </span>
+                      <div className="att-analytics-punct-body">
+                        <span className="att-analytics-punct-label">Late sign-ins</span>
+                        <strong>{Number(teamPunct?.lateIns || 0)}</strong>
+                      </div>
+                      {openPunct === 'late' ? (
+                        <div className="att-analytics-punct-pop">Late arrivals (-30 each)</div>
+                      ) : null}
+                    </button>
+                  </div>
+                ) : null}
               </div>
-              <EmployeeHoursBarChart
-                employees={employeeTotals}
-                periodLabel={monthTitle}
-                metric="points"
-              />
-            </div>
+              <div className="att-analytics-chart-card">
+                <div className="att-analytics-chart-head">
+                  <div>
+                    <h2 className="att-analytics-chart-title">Team hours chart</h2>
+                    <p className="att-analytics-chart-sub">{`Hours worked ${barRangeLabel}`}</p>
+                  </div>
+                  <div className="att-analytics-chart-controls">
+                    <label className="att-analytics-emp-filter">
+                      <i className="fas fa-users" aria-hidden="true" />
+                      <select
+                        value={employeeFilter}
+                        onChange={(e) => setEmployeeFilter(e.target.value)}
+                        aria-label="Filter employees"
+                      >
+                        <option value="all">All Employees</option>
+                        {(teamLine.series || []).map((s) => (
+                          <option key={s.id || s.name} value={String(s.id)}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+                <EmployeeHoursBarChart
+                  employees={employeeTotals}
+                  periodLabel={barRangeLabel}
+                  metric="hours"
+                />
+              </div>
+            </>
           ) : (
             <>
               {personalKpi ? (

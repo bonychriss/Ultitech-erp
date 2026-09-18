@@ -229,16 +229,18 @@ export default function AttendanceAnalytics({ data }) {
   const [barGrain, setBarGrain] = useState('monthly');
   const [employeeFilter, setEmployeeFilter] = useState('all');
   const [openMetric, setOpenMetric] = useState(null);
+  const [openPunct, setOpenPunct] = useState(null);
   const [showKpiAbout, setShowKpiAbout] = useState(false);
   const kpiAboutRef = useRef(null);
 
   useEffect(() => {
-    if (!showKpiAbout && openMetric == null) return undefined;
+    if (!showKpiAbout && openMetric == null && openPunct == null) return undefined;
     const onDocPointer = (event) => {
       const target = event.target;
       if (!(target instanceof Element)) {
         setShowKpiAbout(false);
         setOpenMetric(null);
+        setOpenPunct(null);
         return;
       }
       if (showKpiAbout) {
@@ -250,21 +252,24 @@ export default function AttendanceAnalytics({ data }) {
       if (openMetric != null && !target.closest('.att-analytics-kpi-wrap')) {
         setOpenMetric(null);
       }
+      if (openPunct != null && !target.closest('.att-analytics-punct-item')) {
+        setOpenPunct(null);
+      }
     };
     const onKey = (event) => {
       if (event.key === 'Escape') {
         setShowKpiAbout(false);
         setOpenMetric(null);
+        setOpenPunct(null);
       }
     };
-    // Capture phase so ERP chrome / stopPropagation does not block dismiss.
     document.addEventListener('pointerdown', onDocPointer, true);
     document.addEventListener('keydown', onKey, true);
     return () => {
       document.removeEventListener('pointerdown', onDocPointer, true);
       document.removeEventListener('keydown', onKey, true);
     };
-  }, [showKpiAbout, openMetric]);
+  }, [showKpiAbout, openMetric, openPunct]);
 
   const metrics = state.metrics || {};
   const daily = state.charts?.daily || { labels: [], values: [] };
@@ -499,29 +504,65 @@ export default function AttendanceAnalytics({ data }) {
                   </div>
                   {teamKpi ? (
                     <div className="att-analytics-punct-strip" title={teamKpi.note || ''}>
-                      <div className="att-analytics-punct-item">
-                        <span className="att-analytics-punct-label">Avg attendance KPI</span>
-                        <strong>{Number(teamKpi.average || 0).toFixed(0)}/100</strong>
-                        <span className="att-analytics-punct-meta">Att 40 / Daily 30 / Weekly 30</span>
-                      </div>
-                      <div className="att-analytics-punct-item">
-                        <span className="att-analytics-punct-label">Top attendance KPI</span>
-                        <strong>
-                          {teamKpi.top ? `${Number(teamKpi.top.score || 0).toFixed(0)}/100` : '-'}
-                        </strong>
-                        <span className="att-analytics-punct-meta">
-                          {teamKpi.top
-                            ? `${teamKpi.top.name} / ${teamKpi.top.grade || ''}`
-                            : 'No scored employees yet'}
+                      <button
+                        type="button"
+                        className={`att-analytics-punct-item${openPunct === 'avg' ? ' is-open' : ''}`}
+                        aria-expanded={openPunct === 'avg'}
+                        onClick={() => setOpenPunct((cur) => (cur === 'avg' ? null : 'avg'))}
+                      >
+                        <span className="att-analytics-punct-icon att-analytics-punct-icon--avg" aria-hidden="true">
+                          <i className="fas fa-chart-pie" />
                         </span>
-                      </div>
-                      <div className="att-analytics-punct-item">
-                        <span className="att-analytics-punct-label">Missed sign-outs</span>
-                        <strong>{Number(teamPunct?.missedSignOuts || 0)}</strong>
-                        <span className="att-analytics-punct-meta">
-                          {Number(teamPunct?.lateIns || 0)} late sign-ins
+                        <div className="att-analytics-punct-body">
+                          <span className="att-analytics-punct-label">Avg attendance KPI</span>
+                          <strong>{Number(teamKpi.average || 0).toFixed(0)}/100</strong>
+                        </div>
+                        {openPunct === 'avg' ? (
+                          <div className="att-analytics-punct-pop">Att 40 / Daily 30 / Weekly 30</div>
+                        ) : null}
+                      </button>
+                      <button
+                        type="button"
+                        className={`att-analytics-punct-item${openPunct === 'top' ? ' is-open' : ''}`}
+                        aria-expanded={openPunct === 'top'}
+                        onClick={() => setOpenPunct((cur) => (cur === 'top' ? null : 'top'))}
+                      >
+                        <span className="att-analytics-punct-icon att-analytics-punct-icon--top" aria-hidden="true">
+                          <i className="fas fa-trophy" />
                         </span>
-                      </div>
+                        <div className="att-analytics-punct-body">
+                          <span className="att-analytics-punct-label">Top attendance KPI</span>
+                          <strong>
+                            {teamKpi.top ? `${Number(teamKpi.top.score || 0).toFixed(0)}/100` : '-'}
+                          </strong>
+                        </div>
+                        {openPunct === 'top' ? (
+                          <div className="att-analytics-punct-pop">
+                            {teamKpi.top
+                              ? `${teamKpi.top.name} / ${teamKpi.top.grade || ''}`
+                              : 'No scored employees yet'}
+                          </div>
+                        ) : null}
+                      </button>
+                      <button
+                        type="button"
+                        className={`att-analytics-punct-item${openPunct === 'missed' ? ' is-open' : ''}`}
+                        aria-expanded={openPunct === 'missed'}
+                        onClick={() => setOpenPunct((cur) => (cur === 'missed' ? null : 'missed'))}
+                      >
+                        <span className="att-analytics-punct-icon att-analytics-punct-icon--missed" aria-hidden="true">
+                          <i className="fas fa-sign-out-alt" />
+                        </span>
+                        <div className="att-analytics-punct-body">
+                          <span className="att-analytics-punct-label">Missed sign-outs</span>
+                          <strong>{Number(teamPunct?.missedSignOuts || 0)}</strong>
+                        </div>
+                        {openPunct === 'missed' ? (
+                          <div className="att-analytics-punct-pop">
+                            {Number(teamPunct?.lateIns || 0)} late sign-ins
+                          </div>
+                        ) : null}
+                      </button>
                     </div>
                   ) : null}
                 </div>

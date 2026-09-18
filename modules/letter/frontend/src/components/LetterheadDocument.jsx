@@ -64,7 +64,15 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
   const signTitle = line(doc.signTitle);
   const signatureUrl = line(doc.signatureUrl);
   const approverName = line(doc.approverName);
-  const approverTitle = line(doc.approverTitle);
+  const rawApproverTitle = line(doc.approverTitle);
+  const approverTitle = (() => {
+    if (rawApproverTitle) {
+      return /^(administrator|admin)$/i.test(rawApproverTitle)
+        ? 'Managing Director'
+        : rawApproverTitle;
+    }
+    return '';
+  })();
   const approverSignatureUrl = line(doc.approverSignatureUrl);
   const bodyText = String(doc.body || '');
   const paragraphs = bodyText
@@ -289,7 +297,7 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
                 {approverName || (isApproved ? '' : 'Pending approval')}
               </div>
               <div className="lh-sign-title">
-                {approverTitle || (isApproved ? '' : 'Administrator')}
+                {approverTitle || 'Managing Director'}
               </div>
             </div>
           </div>

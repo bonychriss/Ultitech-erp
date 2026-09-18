@@ -28,8 +28,9 @@ $companyId = (int) ($_SESSION['company_id'] ?? 0);
 $companySlug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
 $userId = (int) ($_SESSION['user_id'] ?? 0);
 $userName = trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? ''));
-$userTitle = trim((string) ($_SESSION['department'] ?? $_SESSION['job_title'] ?? ''));
+$rawUserTitle = trim((string) ($_SESSION['department'] ?? $_SESSION['job_title'] ?? $_SESSION['position'] ?? ''));
 $isAdmin = function_exists('isAdmin') && isAdmin();
+$userTitle = letterResolveSignatoryTitle($rawUserTitle, $isAdmin, (string) ($_SESSION['role'] ?? ''));
 
 $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 $action = strtolower(trim((string) ($_GET['action'] ?? $_POST['action'] ?? '')));
@@ -263,8 +264,8 @@ if ($action === 'approve') {
         }
     }
 
-    $approverName = $userName !== '' ? $userName : 'Administrator';
-    $approverTitle = $userTitle !== '' ? $userTitle : 'Administrator';
+    $approverName = $userName !== '' ? $userName : 'Managing Director';
+    $approverTitle = 'Managing Director';
     $approverSig = letterApprovalResolveSignatureUrl($userId);
     $now = date('Y-m-d H:i:s');
 

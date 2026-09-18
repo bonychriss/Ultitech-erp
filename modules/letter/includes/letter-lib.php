@@ -29,6 +29,50 @@ function letterResolvePdo(): ?PDO
 }
 
 /**
+ * Letter signatory title by role/position.
+ * Sales person → Sales Executive; Admin → Managing Director.
+ */
+function letterResolveSignatoryTitle(?string $rawTitle = null, ?bool $isAdmin = null, ?string $role = null): string
+{
+    $title = trim((string) $rawTitle);
+    $roleVal = strtolower(trim((string) ($role ?? ($_SESSION['role'] ?? ''))));
+    $admin = $isAdmin;
+    if ($admin === null) {
+        $admin = function_exists('isAdmin') && isAdmin();
+    }
+    if ($admin) {
+        return 'Managing Director';
+    }
+
+    $hay = strtolower(trim($title . ' ' . $roleVal . ' ' . (string) ($_SESSION['department'] ?? '') . ' ' . (string) ($_SESSION['job_title'] ?? '') . ' ' . (string) ($_SESSION['position'] ?? '')));
+    $salesHints = [
+        'sales person',
+        'salesperson',
+        'sales_person',
+        'sales-person',
+        'sales executive',
+        'sales_executive',
+        'sales rep',
+        'salesrep',
+        'sales',
+    ];
+    foreach ($salesHints as $hint) {
+        if ($hay !== '' && strpos($hay, $hint) !== false) {
+            return 'Sales Executive';
+        }
+    }
+
+    if ($title !== '') {
+        if (strcasecmp($title, 'Administrator') === 0 || strcasecmp($title, 'Admin') === 0) {
+            return 'Managing Director';
+        }
+        return $title;
+    }
+
+    return 'Title';
+}
+
+/**
  * Active company users available for share / send-to-inbox.
  *
  * @return list<array{id:int,name:string,email:string,phone:string,department:string}>
@@ -148,7 +192,9 @@ function letterBuildClientCfg(array $erp = []): array
 
     $userId = (int) ($erp['user_id'] ?? ($_SESSION['user_id'] ?? 0));
     $userName = trim((string) ($erp['full_name'] ?? $_SESSION['full_name'] ?? ''));
-    $userTitle = trim((string) ($erp['department'] ?? $_SESSION['department'] ?? $_SESSION['job_title'] ?? ''));
+    $rawUserTitle = trim((string) ($erp['department'] ?? $_SESSION['department'] ?? $_SESSION['job_title'] ?? $_SESSION['position'] ?? ''));
+    $isAdminUser = function_exists('isAdmin') && isAdmin();
+    $userTitle = letterResolveSignatoryTitle($rawUserTitle, $isAdminUser, (string) ($_SESSION['role'] ?? ''));
     if ($phone === '') {
         $phone = (string) ($defaults['phone'] ?? '+255 755 282 861');
     }
@@ -232,8 +278,6 @@ function letterBuildClientCfg(array $erp = []): array
         $apiUrl = '/modules/letter/api/index.php';
     }
 
-    $isAdminUser = function_exists('isAdmin') && isAdmin();
-
     return [
         'module' => 'letter',
         'engine' => 'erp-laravel Domains/Letter',
@@ -245,6 +289,7 @@ function letterBuildClientCfg(array $erp = []): array
         'apiUrl' => $apiUrl,
         'emptyAnimationUrl' => $emptyAnimationUrl,
         'isAdmin' => $isAdminUser,
+        'defaultApproverTitle' => 'Managing Director',
         'isUltimateCompany' => $isUltimate,
         'isRoadmasterCompany' => $isRoadmaster,
         'showUltimateStamp' => $isUltimate && $showStamp,

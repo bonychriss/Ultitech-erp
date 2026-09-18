@@ -237,6 +237,10 @@ export default function AttendanceAnalytics({ data }) {
   const [openMetric, setOpenMetric] = useState(null);
   const [openPunct, setOpenPunct] = useState(null);
   const [showKpiAbout, setShowKpiAbout] = useState(false);
+  const [showAttDistribution, setShowAttDistribution] = useState(false);
+  const [showMetricDetails, setShowMetricDetails] = useState(false);
+  const [showDailyTaskList, setShowDailyTaskList] = useState(false);
+  const [showWeeklyTaskList, setShowWeeklyTaskList] = useState(false);
   const kpiAboutRef = useRef(null);
 
   useEffect(() => {
@@ -254,6 +258,10 @@ export default function AttendanceAnalytics({ data }) {
         setShowKpiAbout(false);
         setOpenMetric(null);
         setOpenPunct(null);
+        setShowAttDistribution(false);
+        setShowMetricDetails(false);
+        setShowDailyTaskList(false);
+        setShowWeeklyTaskList(false);
         return;
       }
       if (showKpiAbout) {
@@ -264,9 +272,13 @@ export default function AttendanceAnalytics({ data }) {
       }
       if (openMetric != null && !target.closest('.att-analytics-kpi-wrap') && !target.closest('.att-analytics-punct-modal-card')) {
         setOpenMetric(null);
+        setShowMetricDetails(false);
       }
       if (openPunct != null && !target.closest('.att-analytics-punct-item') && !target.closest('.att-analytics-punct-modal-card')) {
         setOpenPunct(null);
+        setShowAttDistribution(false);
+        setShowDailyTaskList(false);
+        setShowWeeklyTaskList(false);
       }
     };
     const onKey = (event) => {
@@ -274,6 +286,10 @@ export default function AttendanceAnalytics({ data }) {
         setShowKpiAbout(false);
         setOpenMetric(null);
         setOpenPunct(null);
+        setShowAttDistribution(false);
+        setShowMetricDetails(false);
+        setShowDailyTaskList(false);
+        setShowWeeklyTaskList(false);
       }
     };
     document.addEventListener('pointerdown', onDocPointer, true);
@@ -365,6 +381,7 @@ export default function AttendanceAnalytics({ data }) {
         note: presentHint,
         icon: 'fa-chart-line',
         tone: 'violet',
+        detailsToggle: 'Attendance breakdown',
       },
       {
         key: 'punctual',
@@ -388,6 +405,7 @@ export default function AttendanceAnalytics({ data }) {
         note: 'Late arrivals and forgotten clock-outs reduce this score.',
         icon: 'fa-clock',
         tone: 'green',
+        detailsToggle: 'Point distribution',
       },
       {
         key: 'streak',
@@ -431,6 +449,7 @@ export default function AttendanceAnalytics({ data }) {
         note: isTeam ? 'Admins are excluded from team headcount.' : null,
         icon: isTeam ? 'fa-users' : 'fa-fire',
         tone: 'amber',
+        detailsToggle: isTeam ? 'Member coverage' : 'Streak details',
       },
       {
         key: 'avg',
@@ -454,6 +473,7 @@ export default function AttendanceAnalytics({ data }) {
         note: 'Remember to clock out so totals stay accurate.',
         icon: 'fa-hourglass-half',
         tone: 'sky',
+        detailsToggle: 'Hours breakdown',
       },
     ];
   }, [metrics, isTeam]);
@@ -590,7 +610,10 @@ export default function AttendanceAnalytics({ data }) {
                   type="button"
                   className={`att-analytics-kpi att-analytics-kpi--chip att-analytics-kpi--${card.tone}${isOpen ? ' is-active' : ''}`}
                   aria-expanded={isOpen}
-                  onClick={() => setOpenMetric((cur) => (cur === card.key ? null : card.key))}
+                  onClick={() => {
+                    setShowMetricDetails(false);
+                    setOpenMetric((cur) => (cur === card.key ? null : card.key));
+                  }}
                 >
                   <span className="att-analytics-kpi-icon" aria-hidden="true">
                     <i className={`fas ${card.icon}`} />
@@ -610,7 +633,10 @@ export default function AttendanceAnalytics({ data }) {
               type="button"
               className="att-analytics-punct-modal-backdrop"
               aria-label="Close details"
-              onClick={() => setOpenMetric(null)}
+              onClick={() => {
+                setShowMetricDetails(false);
+                setOpenMetric(null);
+              }}
             />
             <div className="att-analytics-punct-modal-card">
               <div className="att-analytics-punct-modal-head">
@@ -619,7 +645,10 @@ export default function AttendanceAnalytics({ data }) {
                   type="button"
                   className="att-analytics-punct-modal-close"
                   aria-label="Close"
-                  onClick={() => setOpenMetric(null)}
+                  onClick={() => {
+                    setShowMetricDetails(false);
+                    setOpenMetric(null);
+                  }}
                 >
                   <i className="fas fa-times" aria-hidden="true" />
                 </button>
@@ -630,16 +659,33 @@ export default function AttendanceAnalytics({ data }) {
               {openMetricCard.lead ? (
                 <p className="att-analytics-punct-modal-lead">{openMetricCard.lead}</p>
               ) : null}
-              <ul className="att-analytics-punct-modal-list">
-                {(openMetricCard.details || []).map((row) => (
-                  <li key={`${openMetricCard.key}-${row.label}`}>
-                    <span>{row.label}</span>
-                    <strong>{busy ? '...' : row.value}</strong>
-                  </li>
-                ))}
-              </ul>
-              {openMetricCard.note ? (
-                <p className="att-analytics-punct-modal-note">{openMetricCard.note}</p>
+              <button
+                type="button"
+                className="att-analytics-punct-modal-action"
+                onClick={() => setShowMetricDetails((v) => !v)}
+              >
+                <i
+                  className={`fas ${showMetricDetails ? 'fa-chevron-up' : 'fa-chart-pie'}`}
+                  aria-hidden="true"
+                />
+                {showMetricDetails
+                  ? `Hide ${(openMetricCard.detailsToggle || 'point distribution').toLowerCase()}`
+                  : openMetricCard.detailsToggle || 'Point distribution'}
+              </button>
+              {showMetricDetails ? (
+                <>
+                  <ul className="att-analytics-punct-modal-list">
+                    {(openMetricCard.details || []).map((row) => (
+                      <li key={`${openMetricCard.key}-${row.label}`}>
+                        <span>{row.label}</span>
+                        <strong>{busy ? '...' : row.value}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                  {openMetricCard.note ? (
+                    <p className="att-analytics-punct-modal-note">{openMetricCard.note}</p>
+                  ) : null}
+                </>
               ) : null}
             </div>
           </div>
@@ -946,38 +992,385 @@ export default function AttendanceAnalytics({ data }) {
           ) : (
             <>
               {personalKpi ? (
-                <div className="att-analytics-chart-card att-analytics-chart-card--kpi">
-                  <h2 className="att-analytics-chart-title">My attendance KPI points</h2>
-                  <p className="att-analytics-chart-sub">
-                    Attendance 40 + Daily todos (target 5) 30 + Weekly tasks (target 7) 30 = 100
-                  </p>
-                  <div className="att-analytics-punct-strip">
-                    <div className="att-analytics-punct-item">
-                      <span className="att-analytics-punct-label">Total</span>
-                      <strong>{Number(personalKpi.kpiPoints || 0).toFixed(0)}/100</strong>
-                      <span className="att-analytics-punct-meta">{personalKpi.grade || ''}</span>
-                    </div>
-                    <div className="att-analytics-punct-item">
-                      <span className="att-analytics-punct-label">Attendance</span>
-                      <strong>{Number(personalKpi.kpiBreakdown?.attendance || 0).toFixed(0)}/40</strong>
-                      <span className="att-analytics-punct-meta">Sign-in / sign-out score</span>
-                    </div>
-                    <div className="att-analytics-punct-item">
-                      <span className="att-analytics-punct-label">Daily tasks</span>
-                      <strong>{Number(personalKpi.kpiBreakdown?.dailyTasks || 0).toFixed(0)}/30</strong>
-                      <span className="att-analytics-punct-meta">
-                        {Number(personalKpi.kpiBreakdown?.dailyCompleted || 0)} completed
-                      </span>
-                    </div>
-                    <div className="att-analytics-punct-item">
-                      <span className="att-analytics-punct-label">Weekly tasks</span>
-                      <strong>{Number(personalKpi.kpiBreakdown?.weeklyTasks || 0).toFixed(0)}/30</strong>
-                      <span className="att-analytics-punct-meta">
-                        {Number(personalKpi.kpiBreakdown?.weeklyCompleted || 0)}/
-                        {Number(personalKpi.kpiBreakdown?.weeklyTotal || 0)} done
-                      </span>
+                <div className="att-analytics-chart-card att-analytics-chart-card--kpi att-analytics-chart-card--personal-kpi">
+                  <div className="att-analytics-chart-title-row">
+                    <h2 className="att-analytics-chart-title">My attendance KPI points</h2>
+                    <div className="att-analytics-about-wrap" ref={kpiAboutRef}>
+                      <button
+                        type="button"
+                        className={`att-analytics-about-btn${showKpiAbout ? ' is-active' : ''}`}
+                        aria-label="About my attendance KPI points"
+                        aria-expanded={showKpiAbout}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowKpiAbout((v) => !v);
+                        }}
+                      >
+                        <i className="fas fa-info-circle" aria-hidden="true" />
+                      </button>
+                      {showKpiAbout ? (
+                        <>
+                          <button
+                            type="button"
+                            className="att-analytics-about-backdrop"
+                            aria-label="Close KPI info"
+                            onClick={() => setShowKpiAbout(false)}
+                          />
+                          <div className="att-analytics-about-pop" role="dialog" aria-label="KPI scoring info">
+                            Attendance 40 + Daily todos (target 5) 30 + Weekly tasks (target 7) 30 = 100
+                          </div>
+                        </>
+                      ) : null}
                     </div>
                   </div>
+                  <div className="att-analytics-punct-strip att-analytics-punct-strip--personal">
+                    <button
+                      type="button"
+                      className={`att-analytics-punct-item${openPunct === 'p-total' ? ' is-open' : ''}`}
+                      aria-expanded={openPunct === 'p-total'}
+                      onClick={() => setOpenPunct((cur) => (cur === 'p-total' ? null : 'p-total'))}
+                    >
+                      <span className="att-analytics-punct-icon att-analytics-punct-icon--avg" aria-hidden="true">
+                        <i className="fas fa-star" />
+                      </span>
+                      <div className="att-analytics-punct-body">
+                        <span className="att-analytics-punct-label">Total</span>
+                        <strong>{Number(personalKpi.kpiPoints || 0).toFixed(0)}/100</strong>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className={`att-analytics-punct-item${openPunct === 'p-att' ? ' is-open' : ''}`}
+                      aria-expanded={openPunct === 'p-att'}
+                      onClick={() => {
+                        setShowAttDistribution(false);
+                        setShowDailyTaskList(false);
+                        setShowWeeklyTaskList(false);
+                        setOpenPunct((cur) => (cur === 'p-att' ? null : 'p-att'));
+                      }}
+                    >
+                      <span className="att-analytics-punct-icon att-analytics-punct-icon--top" aria-hidden="true">
+                        <i className="fas fa-user-check" />
+                      </span>
+                      <div className="att-analytics-punct-body">
+                        <span className="att-analytics-punct-label">Attendance</span>
+                        <strong>{Number(personalKpi.kpiBreakdown?.attendance || 0).toFixed(0)}/40</strong>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className={`att-analytics-punct-item${openPunct === 'p-daily' ? ' is-open' : ''}`}
+                      aria-expanded={openPunct === 'p-daily'}
+                      onClick={() => {
+                        setShowAttDistribution(false);
+                        setShowDailyTaskList(false);
+                        setShowWeeklyTaskList(false);
+                        setOpenPunct((cur) => (cur === 'p-daily' ? null : 'p-daily'));
+                      }}
+                    >
+                      <span className="att-analytics-punct-icon att-analytics-punct-icon--late" aria-hidden="true">
+                        <i className="fas fa-tasks" />
+                      </span>
+                      <div className="att-analytics-punct-body">
+                        <span className="att-analytics-punct-label">Daily tasks</span>
+                        <strong>{Number(personalKpi.kpiBreakdown?.dailyTasks || 0).toFixed(0)}/30</strong>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className={`att-analytics-punct-item${openPunct === 'p-weekly' ? ' is-open' : ''}`}
+                      aria-expanded={openPunct === 'p-weekly'}
+                      onClick={() => {
+                        setShowAttDistribution(false);
+                        setShowDailyTaskList(false);
+                        setShowWeeklyTaskList(false);
+                        setOpenPunct((cur) => (cur === 'p-weekly' ? null : 'p-weekly'));
+                      }}
+                    >
+                      <span className="att-analytics-punct-icon att-analytics-punct-icon--missed" aria-hidden="true">
+                        <i className="fas fa-calendar-week" />
+                      </span>
+                      <div className="att-analytics-punct-body">
+                        <span className="att-analytics-punct-label">Weekly tasks</span>
+                        <strong>{Number(personalKpi.kpiBreakdown?.weeklyTasks || 0).toFixed(0)}/30</strong>
+                      </div>
+                    </button>
+                  </div>
+                  {openPunct && String(openPunct).startsWith('p-') ? (
+                    <div className="att-analytics-punct-modal" role="dialog" aria-modal="true">
+                      <button
+                        type="button"
+                        className="att-analytics-punct-modal-backdrop"
+                        aria-label="Close details"
+                        onClick={() => {
+                          setShowAttDistribution(false);
+                          setShowDailyTaskList(false);
+                          setShowWeeklyTaskList(false);
+                          setOpenPunct(null);
+                        }}
+                      />
+                      <div className="att-analytics-punct-modal-card">
+                        <div className="att-analytics-punct-modal-head">
+                          <h3 className="att-analytics-punct-modal-title">
+                            {openPunct === 'p-total'
+                              ? 'Total KPI'
+                              : openPunct === 'p-att'
+                                ? 'Attendance'
+                                : openPunct === 'p-daily'
+                                  ? 'Daily tasks'
+                                  : 'Weekly tasks'}
+                          </h3>
+                          <button
+                            type="button"
+                            className="att-analytics-punct-modal-close"
+                            aria-label="Close"
+                            onClick={() => {
+                              setShowAttDistribution(false);
+                              setShowDailyTaskList(false);
+                              setShowWeeklyTaskList(false);
+                              setOpenPunct(null);
+                            }}
+                          >
+                            <i className="fas fa-times" aria-hidden="true" />
+                          </button>
+                        </div>
+                        {openPunct === 'p-total' ? (
+                          <>
+                            <div className="att-analytics-punct-modal-value">
+                              {Number(personalKpi.kpiPoints || 0).toFixed(0)}
+                              <span>/100</span>
+                            </div>
+                            <p className="att-analytics-punct-modal-lead">
+                              Your combined attendance KPI for this period.
+                            </p>
+                            <ul className="att-analytics-punct-modal-list">
+                              <li>
+                                <span>Grade</span>
+                                <strong>{personalKpi.grade || '-'}</strong>
+                              </li>
+                              <li>
+                                <span>Attendance</span>
+                                <strong>
+                                  {Number(personalKpi.kpiBreakdown?.attendance || 0).toFixed(0)}/40
+                                </strong>
+                              </li>
+                              <li>
+                                <span>Daily tasks</span>
+                                <strong>
+                                  {Number(personalKpi.kpiBreakdown?.dailyTasks || 0).toFixed(0)}/30
+                                </strong>
+                              </li>
+                              <li>
+                                <span>Weekly tasks</span>
+                                <strong>
+                                  {Number(personalKpi.kpiBreakdown?.weeklyTasks || 0).toFixed(0)}/30
+                                </strong>
+                              </li>
+                            </ul>
+                          </>
+                        ) : null}
+                        {openPunct === 'p-att' ? (
+                          <>
+                            <div className="att-analytics-punct-modal-value">
+                              {Number(personalKpi.kpiBreakdown?.attendance || 0).toFixed(0)}
+                              <span>/40</span>
+                            </div>
+                            <p className="att-analytics-punct-modal-lead">
+                              Sign-in / sign-out attendance score.
+                            </p>
+                            <ul className="att-analytics-punct-modal-list">
+                              <li>
+                                <span>Attendance points</span>
+                                <strong>
+                                  {Number(personalKpi.kpiBreakdown?.attendance || 0).toFixed(0)}/40
+                                </strong>
+                              </li>
+                              <li>
+                                <span>Weight</span>
+                                <strong>40 of 100</strong>
+                              </li>
+                            </ul>
+                            <button
+                              type="button"
+                              className="att-analytics-punct-modal-action"
+                              onClick={() => setShowAttDistribution((v) => !v)}
+                            >
+                              <i
+                                className={`fas ${showAttDistribution ? 'fa-chevron-up' : 'fa-chart-pie'}`}
+                                aria-hidden="true"
+                              />
+                              {showAttDistribution ? 'Hide point distribution' : 'Point distribution'}
+                            </button>
+                            {showAttDistribution ? (
+                              <>
+                                <ul className="att-analytics-punct-modal-list">
+                                  <li>
+                                    <span>Sign-in</span>
+                                    <strong>
+                                      {Number(personalKpi.attendanceDetail?.signInPoints || 0).toFixed(0)}/20
+                                    </strong>
+                                  </li>
+                                  <li>
+                                    <span>Sign-out</span>
+                                    <strong>
+                                      {Number(personalKpi.attendanceDetail?.signOutPoints || 0).toFixed(0)}/20
+                                    </strong>
+                                  </li>
+                                  <li>
+                                    <span>Punctuality</span>
+                                    <strong>
+                                      {Number(personalKpi.attendanceDetail?.punctualityScore || 0).toFixed(0)}%
+                                    </strong>
+                                  </li>
+                                  <li>
+                                    <span>Late sign-ins</span>
+                                    <strong>{Number(personalKpi.attendanceDetail?.lateIns || 0)}</strong>
+                                  </li>
+                                  <li>
+                                    <span>Missed sign-outs</span>
+                                    <strong>{Number(personalKpi.attendanceDetail?.missedOuts || 0)}</strong>
+                                  </li>
+                                </ul>
+                                <p className="att-analytics-punct-modal-note">
+                                  {personalKpi.attendanceDetail?.rules?.note ||
+                                    'Attendance 40 = sign-in (20) + sign-out (20) from period averages.'}
+                                </p>
+                              </>
+                            ) : null}
+                          </>
+                        ) : null}
+                        {openPunct === 'p-daily' ? (
+                          <>
+                            <div className="att-analytics-punct-modal-value">
+                              {Number(personalKpi.kpiBreakdown?.dailyTasks || 0).toFixed(0)}
+                              <span>/30</span>
+                            </div>
+                            <p className="att-analytics-punct-modal-lead">
+                              Daily todos toward the period target.
+                            </p>
+                            <ul className="att-analytics-punct-modal-list">
+                              <li>
+                                <span>Completed</span>
+                                <strong>
+                                  {Number(personalKpi.kpiBreakdown?.dailyCompleted || 0)}
+                                </strong>
+                              </li>
+                              <li>
+                                <span>Points</span>
+                                <strong>
+                                  {Number(personalKpi.kpiBreakdown?.dailyTasks || 0).toFixed(0)}/30
+                                </strong>
+                              </li>
+                              <li>
+                                <span>Target</span>
+                                <strong>5 per weekday</strong>
+                              </li>
+                            </ul>
+                            <button
+                              type="button"
+                              className="att-analytics-punct-modal-action"
+                              onClick={() => setShowDailyTaskList((v) => !v)}
+                            >
+                              <i
+                                className={`fas ${showDailyTaskList ? 'fa-chevron-up' : 'fa-list-ul'}`}
+                                aria-hidden="true"
+                              />
+                              {showDailyTaskList ? 'Hide daily tasks' : 'View daily tasks'}
+                            </button>
+                            {showDailyTaskList ? (
+                              <div className="att-analytics-task-list">
+                                {(personalKpi.dailyTasksList || []).length === 0 ? (
+                                  <p className="att-analytics-task-empty">No daily tasks found for this period.</p>
+                                ) : (
+                                  <ul>
+                                    {(personalKpi.dailyTasksList || []).map((task) => (
+                                      <li
+                                        key={`${task.source || 'task'}-${task.id || task.title}`}
+                                        className={task.completed ? 'is-done' : ''}
+                                      >
+                                        <span
+                                          className={`att-analytics-task-check${task.completed ? ' is-done' : ''}`}
+                                          aria-hidden="true"
+                                        >
+                                          <i className={`fas ${task.completed ? 'fa-check' : 'fa-circle'}`} />
+                                        </span>
+                                        <span className="att-analytics-task-title">{task.title}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            ) : null}
+                          </>
+                        ) : null}
+                        {openPunct === 'p-weekly' ? (
+                          <>
+                            <div className="att-analytics-punct-modal-value">
+                              {Number(personalKpi.kpiBreakdown?.weeklyTasks || 0).toFixed(0)}
+                              <span>/30</span>
+                            </div>
+                            <p className="att-analytics-punct-modal-lead">
+                              Weekly tasks completed in this period.
+                            </p>
+                            <ul className="att-analytics-punct-modal-list">
+                              <li>
+                                <span>Completed</span>
+                                <strong>
+                                  {Number(personalKpi.kpiBreakdown?.weeklyCompleted || 0)}/
+                                  {Number(personalKpi.kpiBreakdown?.weeklyTotal || 0)}
+                                </strong>
+                              </li>
+                              <li>
+                                <span>Points</span>
+                                <strong>
+                                  {Number(personalKpi.kpiBreakdown?.weeklyTasks || 0).toFixed(0)}/30
+                                </strong>
+                              </li>
+                              <li>
+                                <span>Target</span>
+                                <strong>7 per week</strong>
+                              </li>
+                            </ul>
+                            <button
+                              type="button"
+                              className="att-analytics-punct-modal-action"
+                              onClick={() => setShowWeeklyTaskList((v) => !v)}
+                            >
+                              <i
+                                className={`fas ${showWeeklyTaskList ? 'fa-chevron-up' : 'fa-list-ul'}`}
+                                aria-hidden="true"
+                              />
+                              {showWeeklyTaskList ? 'Hide weekly tasks' : 'View weekly tasks'}
+                            </button>
+                            {showWeeklyTaskList ? (
+                              <div className="att-analytics-task-list">
+                                {(personalKpi.weeklyTasksList || []).length === 0 ? (
+                                  <p className="att-analytics-task-empty">No weekly tasks found for this period.</p>
+                                ) : (
+                                  <ul>
+                                    {(personalKpi.weeklyTasksList || []).map((task) => (
+                                      <li
+                                        key={`${task.source || 'task'}-${task.id || task.title}`}
+                                        className={task.completed ? 'is-done' : ''}
+                                      >
+                                        <span
+                                          className={`att-analytics-task-check${task.completed ? ' is-done' : ''}`}
+                                          aria-hidden="true"
+                                        >
+                                          <i className={`fas ${task.completed ? 'fa-check' : 'fa-circle'}`} />
+                                        </span>
+                                        <span className="att-analytics-task-title">{task.title}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            ) : null}
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               <div className="att-analytics-chart-card">

@@ -728,6 +728,8 @@ class Attendance {
         $datesWithAttendance = [];
         $punctSumAll = 0.0;
         $punctDaysAll = 0;
+        $signInSumAll = 0.0;
+        $signOutSumAll = 0.0;
         $todayStr = $end->format('Y-m-d');
         $endTimeStr = (string) ($this->settings['end_time'] ?? '17:00:00');
         $graceMinutes = (int) ($this->settings['grace_period_minutes'] ?? 15);
@@ -785,6 +787,8 @@ class Attendance {
                 $graceMinutes
             );
             $punctSumAll += $dayScore['combined'];
+            $signInSumAll += $dayScore['signIn'];
+            $signOutSumAll += $dayScore['signOut'];
             $punctDaysAll++;
             if ($dayScore['missedOut']) {
                 $missedSignOuts++;
@@ -989,6 +993,10 @@ class Attendance {
             $dailyPts = (float) ($taskBits['dailyPoints'] ?? 0);
             $weeklyPts = (float) ($taskBits['weeklyPoints'] ?? 0);
             $kpiTotal = round(min(100.0, max(0.0, $attendancePts + $dailyPts + $weeklyPts)), 1);
+            $signInAvg = $punctDaysAll > 0 ? round($signInSumAll / $punctDaysAll, 1) : 0.0;
+            $signOutAvg = $punctDaysAll > 0 ? round($signOutSumAll / $punctDaysAll, 1) : 0.0;
+            $signInPts = round(($signInAvg / 100.0) * 20.0, 1);
+            $signOutPts = round(($signOutAvg / 100.0) * 20.0, 1);
             $personalKpi = [
                 'kpiPoints' => $kpiTotal,
                 'kpiBreakdown' => [
@@ -1005,7 +1013,25 @@ class Attendance {
                     'weeklyCompleted' => (int) ($taskBits['weeklyCompleted'] ?? 0),
                     'weeklyTotal' => (int) ($taskBits['weeklyTotal'] ?? 0),
                 ],
+                'attendanceDetail' => [
+                    'punctualityScore' => $punctualityScore,
+                    'signInScore' => $signInAvg,
+                    'signOutScore' => $signOutAvg,
+                    'signInPoints' => $signInPts,
+                    'signOutPoints' => $signOutPts,
+                    'lateIns' => $lateDays,
+                    'missedOuts' => $missedSignOuts,
+                    'daysScored' => $punctDaysAll,
+                    'rules' => [
+                        'lateInPenalty' => 30,
+                        'missedOutPenalty' => 40,
+                        'earlyOutPenalty' => 15,
+                        'note' => 'Attendance 40 = (sign-in avg / 100 × 20) + (sign-out avg / 100 × 20). Late in −30, missed out −40, early leave −15 on the day score.',
+                    ],
+                ],
                 'grade' => $this->kpiGradeLabel($kpiTotal),
+                'dailyTasksList' => $this->fetchDailyTaskListForUser($userId, $startDate, $endDate),
+                'weeklyTasksList' => $this->fetchWeeklyTaskListForUser($userId, $startDate, $endDate),
             ];
         }
 
@@ -1300,6 +1326,160 @@ class Attendance {
         }
 
         return $out;
+    }
+
+    /**
+     * Daily todo rows for personal KPI popup (user_tasks, else tasks.type=daily).
+     *
+     * @return list<array{id:int,title:string,completed:bool,taskDate:?string,source:string}>
+     */
+    private function fetchDailyTaskListForUser(int $userId, string $startDate, string $endDate): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+
+        $items = [];
+
+        try {
+            $sql = "SELECT id, task_description, is_completed, task_date
+                    FROM user_tasks
+                    WHERE user_id = ?
+                      AND task_date BETWEEN ? AND ?
+                    ORDER BY task_date DESC, id ASC
+                    LIMIT 50";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$userId, $startDate, $endDate]);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $title = trim((string) ($row['task_description'] ?? ''));
+                if ($title === '') {
+                    continue;
+                }
+                $items[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'title' => $title,
+                    'completed' => ((int) ($row['is_completed'] ?? 0)) === 1,
+                    'taskDate' => isset($row['task_date']) ? (string) $row['task_date'] : null,
+                    'source' => 'user_tasks',
+                ];
+            }
+        } catch (Throwable $e) {
+            // table may not exist
+        }
+
+        if ($items !== []) {
+            return $items;
+        }
+
+        try {
+            $sql = "SELECT id, description, is_completed,
+                           DATE(COALESCE(updated_at, created_at)) AS task_date
+                    FROM tasks
+                    WHERE user_id = ?
+                      AND type = 'daily'
+                      AND DATE(COALESCE(updated_at, created_at)) BETWEEN ? AND ?
+                    ORDER BY task_date DESC, id ASC
+                    LIMIT 50";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$userId, $startDate, $endDate]);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $title = trim((string) ($row['description'] ?? ''));
+                if ($title === '') {
+                    continue;
+                }
+                $items[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'title' => $title,
+                    'completed' => ((int) ($row['is_completed'] ?? 0)) === 1,
+                    'taskDate' => isset($row['task_date']) ? (string) $row['task_date'] : null,
+                    'source' => 'tasks',
+                ];
+            }
+        } catch (Throwable $e) {
+            // ignore
+        }
+
+        return $items;
+    }
+
+    /**
+     * Weekly task rows for personal KPI popup (plan items, else missions).
+     *
+     * @return list<array{id:int,title:string,completed:bool,weekStart:?string,source:string}>
+     */
+    private function fetchWeeklyTaskListForUser(int $userId, string $startDate, string $endDate): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+
+        $items = [];
+
+        try {
+            $sql = "SELECT i.id,
+                           i.task_description,
+                           i.is_completed,
+                           p.week_start_date
+                    FROM weekly_plans p
+                    INNER JOIN weekly_plan_items i ON i.plan_id = p.id
+                    WHERE p.user_id = ?
+                      AND p.week_start_date <= ?
+                      AND DATE_ADD(p.week_start_date, INTERVAL 6 DAY) >= ?
+                    ORDER BY p.week_start_date DESC, i.id ASC
+                    LIMIT 50";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$userId, $endDate, $startDate]);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $title = trim((string) ($row['task_description'] ?? ''));
+                if ($title === '') {
+                    continue;
+                }
+                $items[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'title' => $title,
+                    'completed' => ((int) ($row['is_completed'] ?? 0)) === 1,
+                    'weekStart' => isset($row['week_start_date']) ? (string) $row['week_start_date'] : null,
+                    'source' => 'plan',
+                ];
+            }
+        } catch (Throwable $e) {
+            // table may not exist
+        }
+
+        if ($items !== []) {
+            return $items;
+        }
+
+        try {
+            $sql = "SELECT id, title, status, completed_at, week_start
+                    FROM weekly_missions
+                    WHERE user_id = ?
+                      AND week_start <= ?
+                      AND week_end >= ?
+                    ORDER BY week_start DESC, id ASC
+                    LIMIT 50";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$userId, $endDate, $startDate]);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $title = trim((string) ($row['title'] ?? ''));
+                if ($title === '') {
+                    continue;
+                }
+                $status = strtolower((string) ($row['status'] ?? ''));
+                $completed = !empty($row['completed_at']) || $status === 'completed';
+                $items[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'title' => $title,
+                    'completed' => $completed,
+                    'weekStart' => isset($row['week_start']) ? (string) $row['week_start'] : null,
+                    'source' => 'mission',
+                ];
+            }
+        } catch (Throwable $e) {
+            // ignore
+        }
+
+        return $items;
     }
 
     /**

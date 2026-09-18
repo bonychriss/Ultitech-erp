@@ -1122,11 +1122,184 @@ class Attendance {
                     'labels' => $lineLabels,
                     'series' => $lineSeries,
                     'punctuality' => $scope === 'team' ? $teamPunctuality : null,
+                    'kpi' => $scope === 'team' ? $teamKpi : null,
                 ],
             ],
+            'personalKpi' => $personalKpi,
             'insights' => $insights,
             'history' => array_reverse($records),
         ];
+    }
+
+    private function kpiGradeLabel(float $score): string
+    {
+        if ($score >= 90) {
+            return 'Outstanding';
+        }
+        if ($score >= 80) {
+            return 'Exceeds Expectations';
+        }
+        if ($score >= 70) {
+            return 'Meets Expectations';
+        }
+        return 'Improvement Plan Required';
+    }
+
+    /**
+     * Task management points for KPI (daily todos target 5 → 30pts, weekly tasks target 7 → 30pts).
+     *
+     * @param list<int> $userIds
+     * @return array<int, array{dailyPoints:float,weeklyPoints:float,dailyCompleted:int,weeklyCompleted:int,weeklyTotal:int}>
+     */
+    private function fetchTaskKpiPointsByUser(array $userIds, string $startDate, string $endDate): array
+    {
+        $out = [];
+        $userIds = array_values(array_unique(array_filter(array_map('intval', $userIds), static fn ($id) => $id > 0)));
+        foreach ($userIds as $uid) {
+            $out[$uid] = [
+                'dailyPoints' => 0.0,
+                'weeklyPoints' => 0.0,
+                'dailyCompleted' => 0,
+                'weeklyCompleted' => 0,
+                'weeklyTotal' => 0,
+            ];
+        }
+        if ($userIds === []) {
+            return $out;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+        $weekdayCount = 0;
+        try {
+            $cursor = new DateTime($startDate . ' 12:00:00');
+            $endBound = new DateTime($endDate . ' 12:00:00');
+            while ($cursor <= $endBound) {
+                if ((int) $cursor->format('N') < 6) {
+                    $weekdayCount++;
+                }
+                $cursor->modify('+1 day');
+            }
+        } catch (Throwable $e) {
+            $weekdayCount = max(1, (int) ((strtotime($endDate) - strtotime($startDate)) / 86400) + 1);
+        }
+        $weekdayCount = max(1, $weekdayCount);
+        $dailyTarget = 5 * $weekdayCount;
+
+        // Daily / checklist todos from user_tasks
+        try {
+            $sql = "SELECT user_id,
+                           SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) AS completed_count
+                    FROM user_tasks
+                    WHERE user_id IN ({$placeholders})
+                      AND task_date BETWEEN ? AND ?
+                    GROUP BY user_id";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(array_merge($userIds, [$startDate, $endDate]));
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $uid = (int) ($row['user_id'] ?? 0);
+                if ($uid <= 0 || !isset($out[$uid])) {
+                    continue;
+                }
+                $completed = (int) ($row['completed_count'] ?? 0);
+                $out[$uid]['dailyCompleted'] = $completed;
+                $out[$uid]['dailyPoints'] = round(min(1.0, $completed / $dailyTarget) * 30.0, 1);
+            }
+        } catch (Throwable $e) {
+            // table may not exist in some tenants
+        }
+
+        // Fallback: tasks.type = daily marked completed in range
+        try {
+            $sql = "SELECT user_id, COUNT(*) AS completed_count
+                    FROM tasks
+                    WHERE user_id IN ({$placeholders})
+                      AND type = 'daily'
+                      AND is_completed = 1
+                      AND DATE(COALESCE(updated_at, created_at)) BETWEEN ? AND ?
+                    GROUP BY user_id";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(array_merge($userIds, [$startDate, $endDate]));
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $uid = (int) ($row['user_id'] ?? 0);
+                if ($uid <= 0 || !isset($out[$uid])) {
+                    continue;
+                }
+                $completed = (int) ($row['completed_count'] ?? 0);
+                if ($completed > (int) $out[$uid]['dailyCompleted']) {
+                    $out[$uid]['dailyCompleted'] = $completed;
+                    $out[$uid]['dailyPoints'] = round(min(1.0, $completed / $dailyTarget) * 30.0, 1);
+                }
+            }
+        } catch (Throwable $e) {
+            // ignore
+        }
+
+        // Weekly plan items overlapping the range
+        $weeklyTarget = 7;
+        try {
+            $weeks = max(1, (int) ceil($weekdayCount / 5));
+            $periodWeeklyTarget = max($weeklyTarget, $weeklyTarget * $weeks);
+
+            $sql = "SELECT p.user_id,
+                           COUNT(i.id) AS total_items,
+                           SUM(CASE WHEN i.is_completed = 1 THEN 1 ELSE 0 END) AS completed_items
+                    FROM weekly_plans p
+                    INNER JOIN weekly_plan_items i ON i.plan_id = p.id
+                    WHERE p.user_id IN ({$placeholders})
+                      AND p.week_start_date <= ?
+                      AND DATE_ADD(p.week_start_date, INTERVAL 6 DAY) >= ?
+                    GROUP BY p.user_id";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(array_merge($userIds, [$endDate, $startDate]));
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $uid = (int) ($row['user_id'] ?? 0);
+                if ($uid <= 0 || !isset($out[$uid])) {
+                    continue;
+                }
+                $total = (int) ($row['total_items'] ?? 0);
+                $completed = (int) ($row['completed_items'] ?? 0);
+                $out[$uid]['weeklyTotal'] = $total;
+                $out[$uid]['weeklyCompleted'] = $completed;
+                $denom = max($periodWeeklyTarget, $total > 0 ? $total : $periodWeeklyTarget);
+                $out[$uid]['weeklyPoints'] = round(min(1.0, $completed / $denom) * 30.0, 1);
+            }
+        } catch (Throwable $e) {
+            // ignore
+        }
+
+        // Fallback: weekly_missions completion in overlapping weeks
+        try {
+            $sql = "SELECT user_id,
+                           COUNT(*) AS total_items,
+                           SUM(CASE WHEN completed_at IS NOT NULL OR status = 'Completed' THEN 1 ELSE 0 END) AS completed_items
+                    FROM weekly_missions
+                    WHERE user_id IN ({$placeholders})
+                      AND week_start <= ?
+                      AND week_end >= ?
+                    GROUP BY user_id";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(array_merge($userIds, [$endDate, $startDate]));
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $uid = (int) ($row['user_id'] ?? 0);
+                if ($uid <= 0 || !isset($out[$uid])) {
+                    continue;
+                }
+                $total = (int) ($row['total_items'] ?? 0);
+                $completed = (int) ($row['completed_items'] ?? 0);
+                if ($completed > (int) $out[$uid]['weeklyCompleted'] || (int) $out[$uid]['weeklyTotal'] === 0) {
+                    $out[$uid]['weeklyTotal'] = $total;
+                    $out[$uid]['weeklyCompleted'] = $completed;
+                    $weeks = max(1, (int) ceil($weekdayCount / 5));
+                    $periodWeeklyTarget = max(7, 7 * $weeks);
+                    $denom = max($periodWeeklyTarget, $total > 0 ? $total : $periodWeeklyTarget);
+                    $out[$uid]['weeklyPoints'] = round(min(1.0, $completed / $denom) * 30.0, 1);
+                }
+            }
+        } catch (Throwable $e) {
+            // ignore
+        }
+
+        return $out;
     }
 
     /**

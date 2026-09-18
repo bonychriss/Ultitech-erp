@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { postAttendanceAction } from '../api';
 import '../attendance-records.css';
 import '../attendance-analytics.css';
@@ -97,11 +97,13 @@ function aggregateEmployeeTotals(series = [], labels = [], grain = 'monthly') {
       signOutScore: s.signOutScore != null ? Number(s.signOutScore) : null,
       lateIns: Number(s.lateIns || 0),
       missedOuts: Number(s.missedOuts || 0),
+      kpiPoints: s.kpiPoints != null ? Number(s.kpiPoints) : 0,
+      kpiBreakdown: s.kpiBreakdown || null,
     };
   });
 }
 
-function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
+function EmployeeHoursBarChart({ employees = [], periodLabel = '', metric = 'hours' }) {
   const width = 760;
   const labelSpace = 118;
   const height = 280 + labelSpace;
@@ -109,14 +111,16 @@ function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const count = employees.length;
+  const showPoints = metric === 'points';
 
   if (!count) {
     return <div className="att-analytics-chart-empty">No team members to chart.</div>;
   }
 
-  const rawMax = Math.max(...employees.map((e) => Number(e.hours) || 0), 1);
-  const niceStep = rawMax <= 10 ? 2 : rawMax <= 30 ? 5 : 10;
-  const maxY = Math.ceil(rawMax / niceStep) * niceStep || niceStep;
+  const valueOf = (emp) => (showPoints ? Number(emp.kpiPoints || 0) : Number(emp.hours || 0));
+  const rawMax = Math.max(...employees.map((e) => valueOf(e)), showPoints ? 100 : 1);
+  const niceStep = showPoints ? 10 : rawMax <= 10 ? 2 : rawMax <= 30 ? 5 : 10;
+  const maxY = showPoints ? 100 : Math.ceil(rawMax / niceStep) * niceStep || niceStep;
   const tickCount = Math.max(2, Math.round(maxY / niceStep));
   const gridYs = Array.from({ length: tickCount + 1 }, (_, i) => {
     const value = (maxY / tickCount) * i;
@@ -137,7 +141,11 @@ function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
         className="att-analytics-line-svg"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={`Employee working hours${periodLabel ? ` ${periodLabel}` : ''}`}
+        aria-label={
+          showPoints
+            ? `Attendance KPI points${periodLabel ? ` ${periodLabel}` : ''}`
+            : `Employee working hours${periodLabel ? ` ${periodLabel}` : ''}`
+        }
       >
         {gridYs.map((g) => (
           <g key={`grid-${g.label}`}>
@@ -148,20 +156,22 @@ function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
           </g>
         ))}
         {employees.map((emp, idx) => {
+          const value = valueOf(emp);
           const hours = Number(emp.hours) || 0;
-          const barH = Math.max(hours > 0 ? 4 : 0, (hours / maxY) * plotH);
+          const points = Number(emp.kpiPoints) || 0;
+          const barH = Math.max(value > 0 ? 4 : 0, (value / maxY) * plotH);
           const cx = pad.left + slot * idx + slot / 2;
           const x = cx - barWidth / 2;
           const y = axisY - barH;
           const hoursLabel = Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
+          const pointsLabel = `${Number.isInteger(points) ? points : points.toFixed(0)} pts`;
+          const topLabel = showPoints ? pointsLabel : hoursLabel;
           const displayName = String(emp.name || '').trim();
-          const punct =
-            emp.punctuality != null && !Number.isNaN(Number(emp.punctuality))
-              ? `${Number(emp.punctuality).toFixed(0)}% punctual`
-              : '';
+          const bd = emp.kpiBreakdown || {};
           const tipParts = [
-            `${displayName}: ${hoursLabel}`,
-            punct,
+            `${displayName}: ${pointsLabel} / 100`,
+            `Att ${Number(bd.attendance || 0)} ù Daily ${Number(bd.dailyTasks || 0)} ù Weekly ${Number(bd.weeklyTasks || 0)}`,
+            hoursLabel,
             emp.missedOuts > 0 ? `${emp.missedOuts} missed sign-out${emp.missedOuts === 1 ? '' : 's'}` : '',
             emp.lateIns > 0 ? `${emp.lateIns} late sign-in${emp.lateIns === 1 ? '' : 's'}` : '',
           ].filter(Boolean);
@@ -171,7 +181,7 @@ function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
                 <title>{tipParts.join(' ù ')}</title>
               </rect>
               <text x={cx} y={y - 8} textAnchor="middle" className="att-analytics-emp-bar-value">
-                {hoursLabel}
+                {topLabel}
               </text>
               <text x={cx} y={axisY + 14} textAnchor="middle" className="att-analytics-emp-bar-initials">
                 {emp.initials}
@@ -193,125 +203,6 @@ function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
     </div>
   );
 }
-
-function TeamChart({ labels = [], series = [], mode = 'line' }) {
-  const width = 720;
-  const height = 280;
-  const pad = { top: 16, right: 16, bottom: 36, left: 40 };
-  const plotW = width - pad.left - pad.right;
-  const plotH = height - pad.top - pad.bottom;
-
-  const allValues = series.flatMap((s) => (s.values || []).map((v) => Number(v) || 0));
-  const maxY = Math.max(...allValues, 1);
-  const n = labels.length;
-  const seriesCount = series.length;
-
-  if (!n || !seriesCount) {
-    return <div className="att-analytics-chart-empty">No team members to chart.</div>;
-  }
-
-  const xAt = (i) => pad.left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
-  const yAt = (v) => pad.top + plotH - (Math.max(0, Number(v) || 0) / maxY) * plotH;
-
-  const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => ({
-    y: pad.top + plotH * (1 - t),
-    label: (maxY * t).toFixed(t === 0 || t === 1 ? 0 : 1),
-  }));
-
-  const labelStep = Math.max(1, Math.ceil(n / 7));
-  const xLabels = [];
-  const seenTexts = new Set();
-  for (let i = 0; i < n; i += 1) {
-    const isEdge = i === 0 || i === n - 1;
-    const onStep = i % labelStep === 0;
-    if (!isEdge && !onStep) continue;
-    const text = new Date(`${labels[i]}T12:00:00`).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-    if (seenTexts.has(text) && i === n - 1 && onStep) continue;
-    if (seenTexts.has(text) && !isEdge) continue;
-    if (seenTexts.has(text) && i === n - 1) continue;
-    seenTexts.add(text);
-    xLabels.push({ i, text });
-  }
-  if (n > 1) {
-    const lastText = new Date(`${labels[n - 1]}T12:00:00`).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-    if (!seenTexts.has(lastText)) {
-      xLabels.push({ i: n - 1, text: lastText });
-    }
-  }
-
-  return (
-    <div className="att-analytics-line-wrap">
-      <svg
-        className="att-analytics-line-svg"
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label="Team month performance line chart"
-      >
-        {gridYs.map((g) => (
-          <g key={`g-${g.label}`}>
-            <line x1={pad.left} x2={width - pad.right} y1={g.y} y2={g.y} className="att-analytics-line-grid" />
-            <text x={pad.left - 8} y={g.y + 3} textAnchor="end" className="att-analytics-line-axis">
-              {g.label}
-            </text>
-          </g>
-        ))}
-        {series.map((s) => {
-          const pts = (s.values || []).map((v, i) => `${xAt(i)},${yAt(v)}`).join(' ');
-          return (
-            <g key={s.id || s.name}>
-              <polyline
-                fill="none"
-                stroke={s.color || '#0284c7'}
-                strokeWidth="2.25"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                points={pts}
-              />
-              {(s.values || []).map((v, i) => (
-                <circle
-                  key={`${s.id}-${i}`}
-                  cx={xAt(i)}
-                  cy={yAt(v)}
-                  r={Number(v) > 0 ? 3.25 : 2}
-                  fill={s.color || '#0284c7'}
-                  opacity={Number(v) > 0 ? 1 : 0.35}
-                >
-                  <title>{`${s.name}: ${formatDate(labels[i])} - ${Number(v).toFixed(1)}h`}</title>
-                </circle>
-              ))}
-            </g>
-          );
-        })}
-        {xLabels.map((item) => (
-          <text
-            key={`x-${item.i}-${item.text}`}
-            x={xAt(item.i)}
-            y={height - 10}
-            textAnchor="middle"
-            className="att-analytics-line-axis"
-          >
-            {item.text}
-          </text>
-        ))}
-      </svg>
-      <div className="att-analytics-line-legend">
-        {series.map((s) => (
-          <div className="att-analytics-line-legend-item" key={s.id || s.name}>
-            <span className="att-analytics-line-swatch" style={{ background: s.color || '#0284c7' }} />
-            <span>{s.name}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function AttendanceAnalytics({ data }) {
   const initial = data || {};
   const [state, setState] = useState(() => ({
@@ -329,20 +220,59 @@ export default function AttendanceAnalytics({ data }) {
     metrics: initial.metrics || {},
     charts: initial.charts || { daily: { labels: [], values: [] }, weekly: { labels: [], values: [] } },
     insights: initial.insights || [],
-    history: initial.history || [],
+        history: initial.history || [],
     range: initial.range || {},
+    personalKpi: initial.personalKpi || null,
   }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [chartType, setChartType] = useState('line');
   const [barGrain, setBarGrain] = useState('monthly');
   const [employeeFilter, setEmployeeFilter] = useState('all');
+  const [openMetric, setOpenMetric] = useState(null);
+  const [showKpiAbout, setShowKpiAbout] = useState(false);
+  const kpiAboutRef = useRef(null);
+
+  useEffect(() => {
+    if (!showKpiAbout && openMetric == null) return undefined;
+    const onDocPointer = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        setShowKpiAbout(false);
+        setOpenMetric(null);
+        return;
+      }
+      if (showKpiAbout) {
+        const aboutRoot = kpiAboutRef.current;
+        if (!aboutRoot || !aboutRoot.contains(target)) {
+          setShowKpiAbout(false);
+        }
+      }
+      if (openMetric != null && !target.closest('.att-analytics-kpi-wrap')) {
+        setOpenMetric(null);
+      }
+    };
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        setShowKpiAbout(false);
+        setOpenMetric(null);
+      }
+    };
+    // Capture phase so ERP chrome / stopPropagation does not block dismiss.
+    document.addEventListener('pointerdown', onDocPointer, true);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDocPointer, true);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [showKpiAbout, openMetric]);
 
   const metrics = state.metrics || {};
   const daily = state.charts?.daily || { labels: [], values: [] };
   const weekly = state.charts?.weekly || { labels: [], values: [] };
   const teamLine = state.charts?.teamLine || { labels: [], series: [], title: '' };
   const teamPunct = teamLine.punctuality || null;
+  const teamKpi = teamLine.kpi || null;
+  const personalKpi = state.personalKpi || initial.personalKpi || null;
   const isTeam = state.scope === 'team';
 
   const monthTitle = useMemo(() => {
@@ -439,6 +369,7 @@ export default function AttendanceAnalytics({ data }) {
         insights: payload.insights || [],
         history: payload.history || [],
         range: payload.range || {},
+        personalKpi: payload.personalKpi || null,
       }));
       const url = new URL(window.location.href);
       url.searchParams.set('period', String(payload.period || nextPeriod));
@@ -502,18 +433,33 @@ export default function AttendanceAnalytics({ data }) {
         {error ? <div className="att-desk-error">{error}</div> : null}
 
         <section className="att-analytics-kpi-grid" aria-label="Summary">
-          {metricCards.map((card) => (
-            <div className={`att-analytics-kpi att-analytics-kpi--${card.tone}`} key={card.key}>
-              <div className="att-analytics-kpi-icon" aria-hidden="true">
-                <i className={`fas ${card.icon}`} />
+          {metricCards.map((card) => {
+            const isOpen = openMetric === card.key;
+            return (
+              <div className={`att-analytics-kpi-wrap${isOpen ? ' is-open' : ''}`} key={card.key}>
+                <button
+                  type="button"
+                  className={`att-analytics-kpi att-analytics-kpi--chip att-analytics-kpi--${card.tone}${isOpen ? ' is-active' : ''}`}
+                  aria-expanded={isOpen}
+                  onClick={() => setOpenMetric((cur) => (cur === card.key ? null : card.key))}
+                >
+                  <span className="att-analytics-kpi-icon" aria-hidden="true">
+                    <i className={`fas ${card.icon}`} />
+                  </span>
+                  <span className="att-analytics-kpi-text">
+                    <span className="att-analytics-kpi-label">{card.label}</span>
+                    <span className="att-analytics-kpi-simple">{busy ? '...' : card.value}</span>
+                  </span>
+                </button>
+                {isOpen ? (
+                  <div className="att-analytics-kpi-pop" role="dialog" aria-label={card.label}>
+                    <div className="att-analytics-kpi-value">{busy ? '...' : card.value}</div>
+                    <div className="att-analytics-kpi-hint">{card.hint}</div>
+                  </div>
+                ) : null}
               </div>
-              <div>
-                <div className="att-analytics-kpi-label">{card.label}</div>
-                <div className="att-analytics-kpi-value">{busy ? '...' : card.value}</div>
-                <div className="att-analytics-kpi-hint">{card.hint}</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </section>
 
         <section className={`att-analytics-charts${isTeam ? ' att-analytics-charts--single' : ''}`}>
@@ -521,119 +467,143 @@ export default function AttendanceAnalytics({ data }) {
             <div className="att-analytics-chart-card">
               <div className="att-analytics-chart-head">
                 <div>
-                  <h2 className="att-analytics-chart-title">
-                    {chartType === 'bar'
-                      ? 'Employee Working Hours'
-                      : teamLine.title || 'Month performance'}
-                  </h2>
-                  <p className="att-analytics-chart-sub">
-                    {chartType === 'bar'
-                      ? `Total hours worked by each employee in ${monthTitle}`
-                      : 'Hours by employee (admins excluded)'}
-                  </p>
-                  {isTeam && teamPunct ? (
-                    <div className="att-analytics-punct-strip" title={teamPunct.rules?.note || ''}>
+                  <div className="att-analytics-chart-title-row">
+                    <h2 className="att-analytics-chart-title">Attendance KPI Points</h2>
+                    <div className="att-analytics-about-wrap" ref={kpiAboutRef}>
+                      <button
+                        type="button"
+                        className={`att-analytics-about-btn${showKpiAbout ? ' is-active' : ''}`}
+                        aria-label="About attendance KPI points"
+                        aria-expanded={showKpiAbout}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowKpiAbout((v) => !v);
+                        }}
+                      >
+                        <i className="fas fa-info-circle" aria-hidden="true" />
+                      </button>
+                      {showKpiAbout ? (
+                        <>
+                          <button
+                            type="button"
+                            className="att-analytics-about-backdrop"
+                            aria-label="Close KPI info"
+                            onClick={() => setShowKpiAbout(false)}
+                          />
+                          <div className="att-analytics-about-pop" role="dialog" aria-label="KPI scoring info">
+                            {`100-pt score in ${monthTitle}: Attendance 40 + Daily todos 30 + Weekly tasks 30`}
+                          </div>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                  {teamKpi ? (
+                    <div className="att-analytics-punct-strip" title={teamKpi.note || ''}>
                       <div className="att-analytics-punct-item">
-                        <span className="att-analytics-punct-label">Avg punctuality</span>
-                        <strong>{Number(teamPunct.average || 0).toFixed(0)}%</strong>
-                        <span className="att-analytics-punct-meta">
-                          In {Number(teamPunct.averageSignIn || 0).toFixed(0)}% ∑ Out{' '}
-                          {Number(teamPunct.averageSignOut || 0).toFixed(0)}%
-                        </span>
+                        <span className="att-analytics-punct-label">Avg attendance KPI</span>
+                        <strong>{Number(teamKpi.average || 0).toFixed(0)}/100</strong>
+                        <span className="att-analytics-punct-meta">Att 40 / Daily 30 / Weekly 30</span>
                       </div>
                       <div className="att-analytics-punct-item">
-                        <span className="att-analytics-punct-label">Top punctuality</span>
+                        <span className="att-analytics-punct-label">Top attendance KPI</span>
                         <strong>
-                          {teamPunct.top
-                            ? `${Number(teamPunct.top.score || 0).toFixed(0)}%`
-                            : 'ó'}
+                          {teamKpi.top ? `${Number(teamKpi.top.score || 0).toFixed(0)}/100` : '-'}
                         </strong>
                         <span className="att-analytics-punct-meta">
-                          {teamPunct.top?.name || 'No scored employees yet'}
+                          {teamKpi.top
+                            ? `${teamKpi.top.name} / ${teamKpi.top.grade || ''}`
+                            : 'No scored employees yet'}
                         </span>
                       </div>
                       <div className="att-analytics-punct-item">
                         <span className="att-analytics-punct-label">Missed sign-outs</span>
-                        <strong>{Number(teamPunct.missedSignOuts || 0)}</strong>
+                        <strong>{Number(teamPunct?.missedSignOuts || 0)}</strong>
                         <span className="att-analytics-punct-meta">
-                          {Number(teamPunct.lateIns || 0)} late sign-ins
+                          {Number(teamPunct?.lateIns || 0)} late sign-ins
                         </span>
                       </div>
                     </div>
                   ) : null}
                 </div>
                 <div className="att-analytics-chart-controls">
-                  <div className="att-analytics-periods" role="tablist" aria-label="Chart type">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={chartType === 'line'}
-                      className={`att-analytics-period${chartType === 'line' ? ' is-active' : ''}`}
-                      onClick={() => setChartType('line')}
-                    >
-                      Line
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={chartType === 'bar'}
-                      className={`att-analytics-period${chartType === 'bar' ? ' is-active' : ''}`}
-                      onClick={() => setChartType('bar')}
-                    >
-                      Bar
-                    </button>
+                  <div className="att-analytics-periods att-analytics-periods--blue" role="tablist" aria-label="Bar range">
+                    {[
+                      { value: 'daily', label: 'Daily' },
+                      { value: 'weekly', label: 'Weekly' },
+                      { value: 'monthly', label: 'Monthly' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        role="tab"
+                        aria-selected={barGrain === opt.value}
+                        className={`att-analytics-period${barGrain === opt.value ? ' is-active' : ''}`}
+                        onClick={() => setBarGrain(opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
-                  {chartType === 'bar' ? (
-                    <>
-                      <div className="att-analytics-periods att-analytics-periods--blue" role="tablist" aria-label="Bar range">
-                        {[
-                          { value: 'daily', label: 'Daily' },
-                          { value: 'weekly', label: 'Weekly' },
-                          { value: 'monthly', label: 'Monthly' },
-                        ].map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            role="tab"
-                            aria-selected={barGrain === opt.value}
-                            className={`att-analytics-period${barGrain === opt.value ? ' is-active' : ''}`}
-                            onClick={() => setBarGrain(opt.value)}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                      <label className="att-analytics-emp-filter">
-                        <i className="fas fa-users" aria-hidden="true" />
-                        <select
-                          value={employeeFilter}
-                          onChange={(e) => setEmployeeFilter(e.target.value)}
-                          aria-label="Filter employees"
-                        >
-                          <option value="all">All Employees</option>
-                          {(teamLine.series || []).map((s) => (
-                            <option key={s.id || s.name} value={String(s.id)}>
-                              {s.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </>
-                  ) : null}
+                  <label className="att-analytics-emp-filter">
+                    <i className="fas fa-users" aria-hidden="true" />
+                    <select
+                      value={employeeFilter}
+                      onChange={(e) => setEmployeeFilter(e.target.value)}
+                      aria-label="Filter employees"
+                    >
+                      <option value="all">All Employees</option>
+                      {(teamLine.series || []).map((s) => (
+                        <option key={s.id || s.name} value={String(s.id)}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
               </div>
-              {chartType === 'bar' ? (
-                <EmployeeHoursBarChart employees={employeeTotals} periodLabel={monthTitle} />
-              ) : (
-                <TeamChart
-                  labels={teamLine.labels || []}
-                  series={teamLine.series || []}
-                  mode="line"
-                />
-              )}
+              <EmployeeHoursBarChart
+                employees={employeeTotals}
+                periodLabel={monthTitle}
+                metric="points"
+              />
             </div>
           ) : (
             <>
+              {personalKpi ? (
+                <div className="att-analytics-chart-card att-analytics-chart-card--kpi">
+                  <h2 className="att-analytics-chart-title">My attendance KPI points</h2>
+                  <p className="att-analytics-chart-sub">
+                    Attendance 40 + Daily todos (target 5) 30 + Weekly tasks (target 7) 30 = 100
+                  </p>
+                  <div className="att-analytics-punct-strip">
+                    <div className="att-analytics-punct-item">
+                      <span className="att-analytics-punct-label">Total</span>
+                      <strong>{Number(personalKpi.kpiPoints || 0).toFixed(0)}/100</strong>
+                      <span className="att-analytics-punct-meta">{personalKpi.grade || ''}</span>
+                    </div>
+                    <div className="att-analytics-punct-item">
+                      <span className="att-analytics-punct-label">Attendance</span>
+                      <strong>{Number(personalKpi.kpiBreakdown?.attendance || 0).toFixed(0)}/40</strong>
+                      <span className="att-analytics-punct-meta">Sign-in / sign-out score</span>
+                    </div>
+                    <div className="att-analytics-punct-item">
+                      <span className="att-analytics-punct-label">Daily tasks</span>
+                      <strong>{Number(personalKpi.kpiBreakdown?.dailyTasks || 0).toFixed(0)}/30</strong>
+                      <span className="att-analytics-punct-meta">
+                        {Number(personalKpi.kpiBreakdown?.dailyCompleted || 0)} completed
+                      </span>
+                    </div>
+                    <div className="att-analytics-punct-item">
+                      <span className="att-analytics-punct-label">Weekly tasks</span>
+                      <strong>{Number(personalKpi.kpiBreakdown?.weeklyTasks || 0).toFixed(0)}/30</strong>
+                      <span className="att-analytics-punct-meta">
+                        {Number(personalKpi.kpiBreakdown?.weeklyCompleted || 0)}/
+                        {Number(personalKpi.kpiBreakdown?.weeklyTotal || 0)} done
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               <div className="att-analytics-chart-card">
                 <h2 className="att-analytics-chart-title">Daily hours worked</h2>
                 <BarChart labels={daily.labels || []} values={daily.values || []} color="#0284c7" />

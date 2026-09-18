@@ -738,6 +738,9 @@ class Attendance {
             $records = [];
         }
 
+        // One row per person-day from what was actually recorded (prefer completed clock-outs).
+        $records = $this->collapseAttendanceRecordsForAnalytics($records, $userId);
+
         $presentDays = 0;
         $lateDays = 0;
         $missedSignOuts = 0;
@@ -754,7 +757,8 @@ class Attendance {
         $punctDaysAll = 0;
         $signInSumAll = 0.0;
         $signOutSumAll = 0.0;
-        $todayStr = $end->format('Y-m-d');
+        // Always score against real calendar today (open sessions today are not missed yet).
+        $todayStr = (new DateTime('now', $tz))->format('Y-m-d');
         $endTimeStr = (string) ($this->settings['end_time'] ?? '17:00:00');
         $graceMinutes = (int) ($this->settings['grace_period_minutes'] ?? 15);
 
@@ -778,7 +782,7 @@ class Attendance {
             $hours = 0.0;
             if (isset($record['total_hours']) && $record['total_hours'] !== null && $record['total_hours'] !== '') {
                 $hours = (float) $record['total_hours'];
-            } elseif (!empty($record['time_in']) && !empty($record['time_out'])) {
+            } elseif (!empty($record['time_in']) && $this->hasValidAttendanceTimeOut($record['time_out'] ?? null)) {
                 try {
                     $in = new DateTime((string) $record['time_in']);
                     $out = new DateTime((string) $record['time_out']);
@@ -837,13 +841,8 @@ class Attendance {
                         'signOutSum' => 0.0,
                     ];
                 }
-                if (!isset($employeeSeriesMap[$recUserId]['byDate'][$date])) {
-                    $employeeSeriesMap[$recUserId]['byDate'][$date] = 0.0;
-                }
-                $employeeSeriesMap[$recUserId]['byDate'][$date] = round(
-                    $employeeSeriesMap[$recUserId]['byDate'][$date] + $hours,
-                    2
-                );
+                // After collapse there is one row per person-day — set hours, do not stack duplicates.
+                $employeeSeriesMap[$recUserId]['byDate'][$date] = round($hours, 2);
                 $employeeSeriesMap[$recUserId]['punctSum'] += $dayScore['combined'];
                 $employeeSeriesMap[$recUserId]['punctDays']++;
                 $employeeSeriesMap[$recUserId]['signInSum'] += $dayScore['signIn'];
@@ -1066,6 +1065,10 @@ class Attendance {
         $kpiTopId = 0;
         $kpiCount = 0;
         foreach ($lineSeries as $row) {
+            // Avg/Top KPI from people who actually have attendance recorded in this range.
+            if ((int) ($row['punctDays'] ?? 0) <= 0) {
+                continue;
+            }
             $pts = (float) ($row['kpiPoints'] ?? 0);
             $kpiAvg += $pts;
             $kpiCount++;
@@ -1183,6 +1186,70 @@ class Attendance {
             'insights' => $insights,
             'history' => array_reverse($records),
         ];
+    }
+
+    /**
+     * Keep one recorded row per person-day (prefer a completed clock-out).
+     *
+     * @param list<array<string,mixed>> $records
+     * @return list<array<string,mixed>>
+     */
+    private function collapseAttendanceRecordsForAnalytics(array $records, int $fallbackUserId = 0): array
+    {
+        $best = [];
+        foreach ($records as $record) {
+            $date = (string) ($record['date'] ?? '');
+            if ($date === '') {
+                continue;
+            }
+            $uid = !empty($record['user_id']) ? (int) $record['user_id'] : $fallbackUserId;
+            $key = $uid . '|' . $date;
+            $quality = 0;
+            if ($this->hasValidAttendanceTimeOut($record['time_out'] ?? null)) {
+                $quality += 100;
+            }
+            if (isset($record['total_hours']) && $record['total_hours'] !== null && $record['total_hours'] !== '') {
+                $quality += (int) min(50, max(0, (float) $record['total_hours'] * 2));
+            }
+            if (!empty($record['time_in'])) {
+                $quality += 5;
+            }
+            if (!isset($best[$key]) || $quality > (int) ($best[$key]['_quality'] ?? -1)) {
+                $record['_quality'] = $quality;
+                $best[$key] = $record;
+            }
+        }
+
+        $out = array_values($best);
+        usort($out, static function ($a, $b) {
+            $da = (string) ($a['date'] ?? '');
+            $db = (string) ($b['date'] ?? '');
+            if ($da === $db) {
+                return ((int) ($a['user_id'] ?? 0)) <=> ((int) ($b['user_id'] ?? 0));
+            }
+            return $da <=> $db;
+        });
+        foreach ($out as &$row) {
+            unset($row['_quality']);
+        }
+        unset($row);
+
+        return $out;
+    }
+
+    private function hasValidAttendanceTimeOut($timeOut): bool
+    {
+        if ($timeOut === null) {
+            return false;
+        }
+        $s = trim((string) $timeOut);
+        if ($s === '' || $s === '00:00:00') {
+            return false;
+        }
+        if (strpos($s, '0000-00-00') === 0) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -1578,7 +1645,7 @@ class Attendance {
         // Sign-in: full credit unless late (-30 equivalent → 70).
         $signIn = $lateIn ? 70.0 : 100.0;
 
-        $hasOut = $timeOut !== null && trim((string) $timeOut) !== '';
+        $hasOut = $this->hasValidAttendanceTimeOut($timeOut);
         $missedOut = false;
         $earlyOut = false;
         $signOut = 100.0;

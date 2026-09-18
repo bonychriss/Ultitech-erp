@@ -61,7 +61,8 @@ final class AttendanceShell
             $bootJson = '{"page":"' . $page . '","data":{}}';
         }
 
-        $headMarkup = $this->commonHeadExtras()
+        $headMarkup = $this->mobileStatusBarHead()
+            . $this->commonHeadExtras()
             . '<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">' . "\n"
             . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' . "\n"
             . '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n"
@@ -128,6 +129,23 @@ final class AttendanceShell
             'cssVersion' => (string) filemtime($cssPath),
             'jsVersion' => (string) filemtime($jsPath),
         ];
+    }
+
+    /**
+     * Soft light-purple system chrome (status bar / notch), SportyBet-style on mobile.
+     */
+    private function mobileStatusBarHead(): string
+    {
+        // Soft lilac ó SportyBet-style system chrome behind time/battery icons.
+        $color = '#C9B6E4';
+
+        return '<meta name="theme-color" content="' . $color . '">' . "\n"
+            . '<meta name="msapplication-navbutton-color" content="' . $color . '">' . "\n"
+            . '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n"
+            . '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n"
+            . '<script>(function(){var m=document.querySelector(\'meta[name="viewport"]\');'
+            . 'if(m){m.setAttribute("content","width=device-width, initial-scale=1.0, viewport-fit=cover");}'
+            . '})();</script>' . "\n";
     }
 
     private function commonHeadExtras(): string
@@ -268,6 +286,25 @@ body.page-attendance-desk .clock-card-v2 {
     background-size: cover !important;
     background-repeat: no-repeat !important;
     box-shadow: 0 14px 36px rgba(15, 23, 42, 0.28) !important;
+}
+/* Soft light purple status-bar / notch (SportyBet-style) ù must win over dark canvas */
+@media (max-width: 991.98px) {
+    html:has(body.page-attendance-desk),
+    html[data-theme="dark"]:has(body.page-attendance-desk) {
+        background-color: #C9B6E4 !important;
+    }
+    body.page-attendance-desk::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: env(safe-area-inset-top, 0px);
+        min-height: env(safe-area-inset-top, 0px);
+        background: #C9B6E4;
+        z-index: 10050;
+        pointer-events: none;
+    }
 }
 </style>
 CSS;

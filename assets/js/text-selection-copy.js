@@ -6,26 +6,32 @@
   }
   window.__ERP_TEXT_SELECTION_COPY__ = true;
 
-  var BTN_ID = 'erp-selection-copy-btn';
+  var MENU_ID = 'erp-selection-menu';
   var TOAST_ID = 'erp-selection-copy-toast';
   var MIN_CHARS = 1;
   var HIDE_DELAY_MS = 150;
   var SHOW_DELAY_MS = 40;
-  var btn = null;
+  var menu = null;
   var hideTimer = null;
   var showTimer = null;
   var lastText = '';
   var suppressUntil = 0;
 
-  function isEditableTarget(node) {
+  function isEditableEl(node) {
     if (!node) return false;
     if (node.nodeType !== 1) {
       node = node.parentElement || null;
     }
     if (!node || typeof node.closest !== 'function') return false;
     return !!node.closest(
-      'input, textarea, select, [contenteditable="true"], [contenteditable=""], .tox-edit-area, .mce-content-body, .erp-selection-copy-btn'
+      'input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea, [contenteditable="true"], [contenteditable=""], .tox-edit-area, .mce-content-body'
     );
+  }
+
+  function isMenuTarget(node) {
+    if (!node) return false;
+    if (node.nodeType !== 1) node = node.parentElement || null;
+    return !!(node && node.closest && node.closest('.erp-selection-menu'));
   }
 
   function getSelectedText() {
@@ -45,40 +51,52 @@
     return node;
   }
 
-  function ensureButton() {
-    if (btn && document.body && document.body.contains(btn)) return btn;
-    if (!document.body) return null;
-
-    btn = document.createElement('button');
-    btn.id = BTN_ID;
-    btn.type = 'button';
-    btn.className = 'erp-selection-copy-btn';
-    btn.setAttribute('aria-label', 'Copy selected text');
-    btn.hidden = true;
-    btn.innerHTML =
-      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">' +
-      '<rect x="9" y="9" width="13" height="13" rx="2"/>' +
-      '<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>' +
-      '</svg>' +
-      '<span>Copy</span>';
-    btn.addEventListener('mousedown', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    btn.addEventListener('mouseup', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    btn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      copySelection();
-    });
-    document.body.appendChild(btn);
-    return btn;
+  function stopPreserveSelection(e) {
+    e.preventDefault();
+    e.stopPropagation();
   }
 
-  function positionButton() {
+  function ensureMenu() {
+    if (menu && document.body && document.body.contains(menu)) return menu;
+    if (!document.body) return null;
+
+    menu = document.createElement('div');
+    menu.id = MENU_ID;
+    menu.className = 'erp-selection-menu';
+    menu.setAttribute('role', 'toolbar');
+    menu.setAttribute('aria-label', 'Selection actions');
+    menu.hidden = true;
+    menu.innerHTML =
+      '<div class="erp-selection-menu__bubble">' +
+      '<button type="button" class="erp-selection-menu__action" data-action="copy">Copy</button>' +
+      '<span class="erp-selection-menu__divider" aria-hidden="true"></span>' +
+      '<button type="button" class="erp-selection-menu__action" data-action="paste">Paste</button>' +
+      '</div>' +
+      '<div class="erp-selection-menu__arrow" aria-hidden="true"></div>';
+
+    menu.addEventListener('mousedown', stopPreserveSelection);
+    menu.addEventListener('mouseup', stopPreserveSelection);
+    menu.addEventListener('pointerdown', stopPreserveSelection);
+    menu.addEventListener('touchstart', stopPreserveSelection, { passive: false });
+
+    menu.addEventListener('click', function (e) {
+      var actionBtn = e.target && e.target.closest ? e.target.closest('[data-action]') : null;
+      if (!actionBtn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var action = actionBtn.getAttribute('data-action');
+      if (action === 'copy') {
+        copySelection();
+      } else if (action === 'paste') {
+        pasteClipboard();
+      }
+    });
+
+    document.body.appendChild(menu);
+    return menu;
+  }
+
+  function positionMenu() {
     var sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
 
@@ -94,33 +112,41 @@
       return;
     }
 
-    var el = ensureButton();
+    var el = ensureMenu();
     if (!el) return;
 
     el.hidden = false;
     el.classList.add('is-visible');
+    el.classList.remove('is-below');
 
-    var btnW = el.offsetWidth || 78;
-    var btnH = el.offsetHeight || 34;
-    var gap = 10;
-    var left = rect.left + rect.width / 2 - btnW / 2;
-    var top = rect.top - btnH - gap;
+    var menuW = el.offsetWidth || 140;
+    var menuH = el.offsetHeight || 48;
+    var gap = 6;
+    var left = rect.left + rect.width / 2 - menuW / 2;
+    var top = rect.top - menuH - gap;
+    var placeBelow = false;
 
     if (top < 8) {
       top = rect.bottom + gap;
+      placeBelow = true;
     }
-    left = Math.max(8, Math.min(left, window.innerWidth - btnW - 8));
-    top = Math.max(8, Math.min(top, window.innerHeight - btnH - 8));
+
+    left = Math.max(8, Math.min(left, window.innerWidth - menuW - 8));
+    top = Math.max(8, Math.min(top, window.innerHeight - menuH - 8));
+
+    if (placeBelow) {
+      el.classList.add('is-below');
+    }
 
     el.style.left = Math.round(left) + 'px';
     el.style.top = Math.round(top) + 'px';
   }
 
-  function hideButton() {
+  function hideMenu() {
     clearTimeout(showTimer);
-    if (!btn) return;
-    btn.classList.remove('is-visible');
-    btn.hidden = true;
+    if (!menu) return;
+    menu.classList.remove('is-visible', 'is-below');
+    menu.hidden = true;
     lastText = '';
   }
 
@@ -128,7 +154,7 @@
     clearTimeout(hideTimer);
     hideTimer = setTimeout(function () {
       if (!getSelectedText()) {
-        hideButton();
+        hideMenu();
       }
     }, HIDE_DELAY_MS);
   }
@@ -199,36 +225,91 @@
     return ok;
   }
 
+  function finishAction(ok, message) {
+    suppressUntil = Date.now() + 500;
+    hideMenu();
+    try {
+      window.getSelection().removeAllRanges();
+    } catch (e) { /* ignore */ }
+    notify(ok, message);
+  }
+
   function copySelection() {
     var text = lastText || getSelectedText();
     if (!text) {
-      hideButton();
+      hideMenu();
       return;
-    }
-
-    function done(ok) {
-      suppressUntil = Date.now() + 500;
-      hideButton();
-      try {
-        window.getSelection().removeAllRanges();
-      } catch (e) { /* ignore */ }
-      notify(ok, ok ? 'Copied to clipboard' : 'Could not copy');
     }
 
     if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
       navigator.clipboard.writeText(text).then(function () {
-        done(true);
+        finishAction(true, 'Copied');
       }).catch(function () {
-        done(fallbackCopy(text));
+        var ok = fallbackCopy(text);
+        finishAction(ok, ok ? 'Copied' : 'Could not copy');
       });
       return;
     }
-    done(fallbackCopy(text));
+    var ok = fallbackCopy(text);
+    finishAction(ok, ok ? 'Copied' : 'Could not copy');
+  }
+
+  function insertTextAtSelection(text) {
+    var active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+      var start = active.selectionStart != null ? active.selectionStart : active.value.length;
+      var end = active.selectionEnd != null ? active.selectionEnd : active.value.length;
+      var value = String(active.value || '');
+      active.value = value.slice(0, start) + text + value.slice(end);
+      var caret = start + text.length;
+      try {
+        active.setSelectionRange(caret, caret);
+      } catch (e) { /* ignore */ }
+      active.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    }
+
+    var sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && isEditableEl(sel.anchorNode)) {
+      try {
+        if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
+          return document.execCommand('insertText', false, text);
+        }
+        var range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(text));
+        sel.collapseToEnd();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  function pasteClipboard() {
+    function applyText(text) {
+      text = String(text || '');
+      if (!text) {
+        finishAction(false, 'Clipboard is empty');
+        return;
+      }
+      var ok = insertTextAtSelection(text);
+      finishAction(ok, ok ? 'Pasted' : 'Select a text field to paste');
+    }
+
+    if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+      navigator.clipboard.readText().then(applyText).catch(function () {
+        finishAction(false, 'Could not paste');
+      });
+      return;
+    }
+    finishAction(false, 'Paste is not supported here');
   }
 
   function updateFromSelection() {
     if (Date.now() < suppressUntil) {
-      hideButton();
+      hideMenu();
       return;
     }
 
@@ -239,14 +320,19 @@
     }
 
     var anchor = selectionAnchor();
-    if (isEditableTarget(anchor)) {
-      hideButton();
+    if (isMenuTarget(anchor)) {
+      return;
+    }
+
+    // Keep native editing UX in rich editors; still allow on plain page text
+    if (anchor && typeof anchor.closest === 'function' && anchor.closest('.tox-edit-area, .mce-content-body')) {
+      hideMenu();
       return;
     }
 
     lastText = text;
     clearTimeout(hideTimer);
-    positionButton();
+    positionMenu();
   }
 
   function scheduleShow() {
@@ -254,12 +340,13 @@
     showTimer = setTimeout(updateFromSelection, SHOW_DELAY_MS);
   }
 
-  function onPointerUp() {
+  function onPointerUp(e) {
+    if (isMenuTarget(e.target)) return;
     scheduleShow();
   }
 
   function boot() {
-    ensureButton();
+    ensureMenu();
     document.addEventListener('mouseup', onPointerUp, true);
     document.addEventListener('touchend', onPointerUp, { capture: true, passive: true });
     document.addEventListener('pointerup', onPointerUp, true);
@@ -277,15 +364,15 @@
       }
     });
     document.addEventListener('scroll', function () {
-      if (btn && btn.classList.contains('is-visible') && getSelectedText()) {
-        positionButton();
+      if (menu && menu.classList.contains('is-visible') && getSelectedText()) {
+        positionMenu();
       } else if (!getSelectedText()) {
-        hideButton();
+        hideMenu();
       }
     }, true);
-    window.addEventListener('resize', hideButton);
+    window.addEventListener('resize', hideMenu);
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') hideButton();
+      if (e.key === 'Escape') hideMenu();
     });
   }
 

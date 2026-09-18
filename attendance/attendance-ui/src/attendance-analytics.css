@@ -162,6 +162,63 @@
 .att-analytics-chart-head .att-analytics-chart-sub {
   margin: 0;
 }
+.att-analytics-chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.att-analytics-periods--blue .att-analytics-period.is-active {
+  background: #2563eb;
+  color: #fff;
+}
+.att-analytics-emp-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.7rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.att-analytics-emp-filter i {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+.att-analytics-emp-filter select {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  max-width: 11rem;
+}
+.att-analytics-emp-bars-wrap {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+.att-analytics-emp-bar-value {
+  fill: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+}
+.att-analytics-emp-bar-initials {
+  fill: #0f172a;
+  font-size: 11px;
+  font-weight: 700;
+}
+.att-analytics-emp-bar-name {
+  fill: #64748b;
+  font-size: 9px;
+}
 .att-analytics-line-wrap {
   width: 100%;
   min-width: 0;
@@ -338,9 +395,21 @@ html[data-theme="dark"] .att-analytics-periods {
   border-color: #334155;
 }
 
-html[data-theme="dark"] .att-analytics-period.is-active {
-  background: #e2e8f0;
-  color: #0f172a;
+html[data-theme="dark"] .att-analytics-emp-filter {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html[data-theme="dark"] .att-analytics-emp-bar-value,
+html[data-theme="dark"] .att-analytics-emp-bar-initials {
+  fill: #f8fafc;
+}
+html[data-theme="dark"] .att-analytics-emp-bar-name {
+  fill: #94a3b8;
+}
+html[data-theme="dark"] .att-analytics-periods--blue .att-analytics-period.is-active {
+  background: #3b82f6;
+  color: #fff;
 }
 
 @media (max-width: 991.98px) {

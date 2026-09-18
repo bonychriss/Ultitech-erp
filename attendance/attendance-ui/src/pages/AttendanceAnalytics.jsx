@@ -58,13 +58,123 @@ function BarChart({ labels = [], values = [], color = '#0284c7' }) {
   );
 }
 
+function initialsFromName(name) {
+  const parts = String(name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function aggregateEmployeeTotals(series = [], labels = [], grain = 'monthly') {
+  const n = labels.length;
+  if (!n) return [];
+
+  let startIdx = 0;
+  let endIdx = n - 1;
+  if (grain === 'daily') {
+    startIdx = endIdx;
+  } else if (grain === 'weekly') {
+    startIdx = Math.max(0, n - 7);
+  }
+
+  return series.map((s) => {
+    const values = s.values || [];
+    let total = 0;
+    for (let i = startIdx; i <= endIdx; i += 1) {
+      total += Number(values[i] || 0);
+    }
+    return {
+      id: s.id,
+      name: s.name,
+      color: s.color || '#3b82f6',
+      hours: Math.round(total * 10) / 10,
+      initials: initialsFromName(s.name),
+    };
+  });
+}
+
+function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
+  const width = 760;
+  const height = 340;
+  const pad = { top: 28, right: 12, bottom: 58, left: 40 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+  const count = employees.length;
+
+  if (!count) {
+    return <div className="att-analytics-chart-empty">No team members to chart.</div>;
+  }
+
+  const rawMax = Math.max(...employees.map((e) => Number(e.hours) || 0), 1);
+  const niceStep = rawMax <= 10 ? 2 : rawMax <= 30 ? 5 : 10;
+  const maxY = Math.ceil(rawMax / niceStep) * niceStep || niceStep;
+  const tickCount = Math.max(2, Math.round(maxY / niceStep));
+  const gridYs = Array.from({ length: tickCount + 1 }, (_, i) => {
+    const value = (maxY / tickCount) * i;
+    return {
+      value,
+      y: pad.top + plotH - (value / maxY) * plotH,
+      label: String(Math.round(value)),
+    };
+  });
+
+  const slot = plotW / count;
+  const barWidth = Math.min(46, Math.max(18, slot * 0.48));
+
+  return (
+    <div className="att-analytics-emp-bars-wrap">
+      <svg
+        className="att-analytics-line-svg"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={`Employee working hours${periodLabel ? ` ${periodLabel}` : ''}`}
+      >
+        {gridYs.map((g) => (
+          <g key={`grid-${g.label}`}>
+            <line x1={pad.left} x2={width - pad.right} y1={g.y} y2={g.y} className="att-analytics-line-grid" />
+            <text x={pad.left - 8} y={g.y + 3} textAnchor="end" className="att-analytics-line-axis">
+              {g.label}
+            </text>
+          </g>
+        ))}
+        {employees.map((emp, idx) => {
+          const hours = Number(emp.hours) || 0;
+          const barH = Math.max(hours > 0 ? 4 : 0, (hours / maxY) * plotH);
+          const cx = pad.left + slot * idx + slot / 2;
+          const x = cx - barWidth / 2;
+          const y = pad.top + plotH - barH;
+          const hoursLabel = Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
+          return (
+            <g key={emp.id || emp.name}>
+              <rect x={x} y={y} width={barWidth} height={barH} rx={8} ry={8} fill={emp.color || '#3b82f6'}>
+                <title>{`${emp.name}: ${hoursLabel}`}</title>
+              </rect>
+              <text x={cx} y={y - 8} textAnchor="middle" className="att-analytics-emp-bar-value">
+                {hoursLabel}
+              </text>
+              <text x={cx} y={height - 28} textAnchor="middle" className="att-analytics-emp-bar-initials">
+                {emp.initials}
+              </text>
+              <text x={cx} y={height - 12} textAnchor="middle" className="att-analytics-emp-bar-name">
+                {emp.name.length > 18 ? `${emp.name.slice(0, 16)}…` : emp.name}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 function TeamChart({ labels = [], series = [], mode = 'line' }) {
   const width = 720;
   const height = 280;
   const pad = { top: 16, right: 16, bottom: 36, left: 40 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
-  const isBar = mode === 'bar';
 
   const allValues = series.flatMap((s) => (s.values || []).map((v) => Number(v) || 0));
   const maxY = Math.max(...allValues, 1);
@@ -77,10 +187,6 @@ function TeamChart({ labels = [], series = [], mode = 'line' }) {
 
   const xAt = (i) => pad.left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
   const yAt = (v) => pad.top + plotH - (Math.max(0, Number(v) || 0) / maxY) * plotH;
-  const groupSlot = n === 1 ? plotW : plotW / Math.max(n - 1, 1);
-  const groupWidth = Math.min(isBar ? 28 : groupSlot * 0.7, groupSlot * 0.85);
-  const barGap = 1;
-  const barWidth = Math.max(2, (groupWidth - barGap * Math.max(seriesCount - 1, 0)) / seriesCount);
 
   const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => ({
     y: pad.top + plotH * (1 - t),
@@ -120,7 +226,7 @@ function TeamChart({ labels = [], series = [], mode = 'line' }) {
         className="att-analytics-line-svg"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={`Team month performance ${isBar ? 'bar' : 'line'} chart`}
+        aria-label="Team month performance line chart"
       >
         {gridYs.map((g) => (
           <g key={`g-${g.label}`}>
@@ -130,61 +236,33 @@ function TeamChart({ labels = [], series = [], mode = 'line' }) {
             </text>
           </g>
         ))}
-        {isBar
-          ? labels.map((label, dayIdx) => {
-              const groupLeft = xAt(dayIdx) - groupWidth / 2;
-              return (
-                <g key={`day-${label}-${dayIdx}`}>
-                  {series.map((s, sIdx) => {
-                    const value = Number((s.values || [])[dayIdx] || 0);
-                    const barH = Math.max(value > 0 ? 2 : 0, (Math.max(0, value) / maxY) * plotH);
-                    const x = groupLeft + sIdx * (barWidth + barGap);
-                    const y = pad.top + plotH - barH;
-                    return (
-                      <rect
-                        key={`${s.id || s.name}-${dayIdx}`}
-                        x={x}
-                        y={y}
-                        width={barWidth}
-                        height={barH}
-                        rx={1.5}
-                        fill={s.color || '#0284c7'}
-                        opacity={value > 0 ? 0.92 : 0.2}
-                      >
-                        <title>{`${s.name}: ${formatDate(label)} - ${value.toFixed(1)}h`}</title>
-                      </rect>
-                    );
-                  })}
-                </g>
-              );
-            })
-          : series.map((s) => {
-              const pts = (s.values || []).map((v, i) => `${xAt(i)},${yAt(v)}`).join(' ');
-              return (
-                <g key={s.id || s.name}>
-                  <polyline
-                    fill="none"
-                    stroke={s.color || '#0284c7'}
-                    strokeWidth="2.25"
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                    points={pts}
-                  />
-                  {(s.values || []).map((v, i) => (
-                    <circle
-                      key={`${s.id}-${i}`}
-                      cx={xAt(i)}
-                      cy={yAt(v)}
-                      r={Number(v) > 0 ? 3.25 : 2}
-                      fill={s.color || '#0284c7'}
-                      opacity={Number(v) > 0 ? 1 : 0.35}
-                    >
-                      <title>{`${s.name}: ${formatDate(labels[i])} - ${Number(v).toFixed(1)}h`}</title>
-                    </circle>
-                  ))}
-                </g>
-              );
-            })}
+        {series.map((s) => {
+          const pts = (s.values || []).map((v, i) => `${xAt(i)},${yAt(v)}`).join(' ');
+          return (
+            <g key={s.id || s.name}>
+              <polyline
+                fill="none"
+                stroke={s.color || '#0284c7'}
+                strokeWidth="2.25"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                points={pts}
+              />
+              {(s.values || []).map((v, i) => (
+                <circle
+                  key={`${s.id}-${i}`}
+                  cx={xAt(i)}
+                  cy={yAt(v)}
+                  r={Number(v) > 0 ? 3.25 : 2}
+                  fill={s.color || '#0284c7'}
+                  opacity={Number(v) > 0 ? 1 : 0.35}
+                >
+                  <title>{`${s.name}: ${formatDate(labels[i])} - ${Number(v).toFixed(1)}h`}</title>
+                </circle>
+              ))}
+            </g>
+          );
+        })}
         {xLabels.map((item) => (
           <text
             key={`x-${item.i}-${item.text}`}
@@ -232,12 +310,31 @@ export default function AttendanceAnalytics({ data }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [chartType, setChartType] = useState('line');
+  const [barGrain, setBarGrain] = useState('monthly');
+  const [employeeFilter, setEmployeeFilter] = useState('all');
 
   const metrics = state.metrics || {};
   const daily = state.charts?.daily || { labels: [], values: [] };
   const weekly = state.charts?.weekly || { labels: [], values: [] };
   const teamLine = state.charts?.teamLine || { labels: [], series: [], title: '' };
   const isTeam = state.scope === 'team';
+
+  const monthTitle = useMemo(() => {
+    const start = state.range?.start;
+    if (!start) return 'this month';
+    const d = new Date(`${start}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return 'this month';
+    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }, [state.range?.start]);
+
+  const employeeTotals = useMemo(() => {
+    const series = teamLine.series || [];
+    const filtered =
+      employeeFilter === 'all'
+        ? series
+        : series.filter((s) => String(s.id) === String(employeeFilter));
+    return aggregateEmployeeTotals(filtered, teamLine.labels || [], barGrain);
+  }, [teamLine.series, teamLine.labels, barGrain, employeeFilter]);
 
   const metricCards = useMemo(() => {
     const presentHint = isTeam
@@ -397,36 +494,85 @@ export default function AttendanceAnalytics({ data }) {
               <div className="att-analytics-chart-head">
                 <div>
                   <h2 className="att-analytics-chart-title">
-                    {teamLine.title || 'Month performance'}
+                    {chartType === 'bar'
+                      ? 'Employee Working Hours'
+                      : teamLine.title || 'Month performance'}
                   </h2>
-                  <p className="att-analytics-chart-sub">Hours by employee (admins excluded)</p>
+                  <p className="att-analytics-chart-sub">
+                    {chartType === 'bar'
+                      ? `Total hours worked by each employee in ${monthTitle}`
+                      : 'Hours by employee (admins excluded)'}
+                  </p>
                 </div>
-                <div className="att-analytics-periods" role="tablist" aria-label="Chart type">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={chartType === 'line'}
-                    className={`att-analytics-period${chartType === 'line' ? ' is-active' : ''}`}
-                    onClick={() => setChartType('line')}
-                  >
-                    Line
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={chartType === 'bar'}
-                    className={`att-analytics-period${chartType === 'bar' ? ' is-active' : ''}`}
-                    onClick={() => setChartType('bar')}
-                  >
-                    Bar
-                  </button>
+                <div className="att-analytics-chart-controls">
+                  <div className="att-analytics-periods" role="tablist" aria-label="Chart type">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={chartType === 'line'}
+                      className={`att-analytics-period${chartType === 'line' ? ' is-active' : ''}`}
+                      onClick={() => setChartType('line')}
+                    >
+                      Line
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={chartType === 'bar'}
+                      className={`att-analytics-period${chartType === 'bar' ? ' is-active' : ''}`}
+                      onClick={() => setChartType('bar')}
+                    >
+                      Bar
+                    </button>
+                  </div>
+                  {chartType === 'bar' ? (
+                    <>
+                      <div className="att-analytics-periods att-analytics-periods--blue" role="tablist" aria-label="Bar range">
+                        {[
+                          { value: 'daily', label: 'Daily' },
+                          { value: 'weekly', label: 'Weekly' },
+                          { value: 'monthly', label: 'Monthly' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            role="tab"
+                            aria-selected={barGrain === opt.value}
+                            className={`att-analytics-period${barGrain === opt.value ? ' is-active' : ''}`}
+                            onClick={() => setBarGrain(opt.value)}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      <label className="att-analytics-emp-filter">
+                        <i className="fas fa-users" aria-hidden="true" />
+                        <select
+                          value={employeeFilter}
+                          onChange={(e) => setEmployeeFilter(e.target.value)}
+                          aria-label="Filter employees"
+                        >
+                          <option value="all">All Employees</option>
+                          {(teamLine.series || []).map((s) => (
+                            <option key={s.id || s.name} value={String(s.id)}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </>
+                  ) : null}
                 </div>
               </div>
-              <TeamChart
-                labels={teamLine.labels || []}
-                series={teamLine.series || []}
-                mode={chartType}
-              />
+              {chartType === 'bar' ? (
+                <EmployeeHoursBarChart employees={employeeTotals} periodLabel={monthTitle} />
+              ) : (
+                <TeamChart
+                  labels={teamLine.labels || []}
+                  series={teamLine.series || []}
+                  mode="line"
+                />
+              )}
             </div>
           ) : (
             <>

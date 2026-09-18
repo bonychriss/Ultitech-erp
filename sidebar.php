@@ -752,7 +752,7 @@ switch ($active_module) {
             addItem($menuItems, 'settings', 'Settings', 'gear', $attSettingsHref . $attSettingsSep . 'module=settings');
         } else {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=attendance');
-            addItem($menuItems, 'stats', 'My Stats', 'graph-up-arrow', $prefix . 'employee/attendance-analytics.php?module=attendance');
+            addItem($menuItems, 'stats', 'Stats', 'graph-up-arrow', $prefix . 'employee/attendance-analytics.php?module=attendance');
         }
         break;
 

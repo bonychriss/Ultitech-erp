@@ -54,12 +54,16 @@ function attendance_pending_tasks(PDO $pdo, int $userId): array
     }
 }
 
-function attendance_desk_payload(Attendance $attendance, PDO $pdo, int $userId): array
+function attendance_desk_payload(Attendance $attendance, PDO $pdo, int $userId, ?string $historyMonth = null): array
 {
     $currentIp = $attendance->getCurrentUserIp();
+    $month = $attendance->normalizeHistoryMonth($historyMonth);
     return [
         'todayRecord' => $attendance->getTodayRecord($userId) ?: null,
-        'history' => $attendance->getHistory($userId) ?: [],
+        'history' => $attendance->getHistory($userId, $month) ?: [],
+        'historyMonth' => $month,
+        'historyMonthLabel' => $attendance->formatHistoryMonthLabel($month),
+        'historyMonths' => $attendance->getHistoryMonthOptions(12),
         'stats' => $attendance->getStats($userId) ?: [],
         'pendingTasks' => attendance_pending_tasks($pdo, $userId),
         'isIpAllowed' => $attendance->isIpAllowed($currentIp),
@@ -74,6 +78,23 @@ $lon = isset($payload['longitude']) && $payload['longitude'] !== '' && $payload[
     ? (float) $payload['longitude']
     : null;
 
+$historyMonth = isset($payload['history_month']) ? (string) $payload['history_month'] : null;
+
+if ($action === 'history') {
+    $desk = attendance_desk_payload($attendance, $pdo, $userId, $historyMonth);
+    echo json_encode([
+        'success' => true,
+        'message' => '',
+        'data' => [
+            'history' => $desk['history'],
+            'historyMonth' => $desk['historyMonth'],
+            'historyMonthLabel' => $desk['historyMonthLabel'],
+            'historyMonths' => $desk['historyMonths'],
+        ],
+    ]);
+    exit;
+}
+
 if ($action === 'clock_in') {
     $pendingBefore = attendance_pending_tasks($pdo, $userId);
     $carriedOverCount = count($pendingBefore);
@@ -83,7 +104,7 @@ if ($action === 'clock_in') {
         echo json_encode([
             'success' => false,
             'message' => (string) ($result['message'] ?? 'Clock in failed.'),
-            'data' => attendance_desk_payload($attendance, $pdo, $userId),
+            'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth),
         ]);
         exit;
     }
@@ -122,7 +143,7 @@ if ($action === 'clock_in') {
         'success' => true,
         'message' => 'Clocked in successfully.',
         'clockInSuccess' => $clockInSuccess,
-        'data' => attendance_desk_payload($attendance, $pdo, $userId),
+        'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth),
     ]);
     exit;
 }
@@ -139,7 +160,7 @@ if ($action === 'clock_out') {
         echo json_encode([
             'success' => false,
             'message' => (string) ($result['message'] ?? 'Clock out failed.'),
-            'data' => attendance_desk_payload($attendance, $pdo, $userId),
+            'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth),
         ]);
         exit;
     }
@@ -180,7 +201,7 @@ if ($action === 'clock_out') {
         'success' => true,
         'message' => 'Clocked out successfully.',
         'clockOutSuccess' => $clockOutSuccess,
-        'data' => attendance_desk_payload($attendance, $pdo, $userId),
+        'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth),
     ]);
     exit;
 }

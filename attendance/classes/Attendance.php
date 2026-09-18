@@ -489,18 +489,61 @@ class Attendance {
         }
     }
 
-    public function getHistory($userId, $limit = 30) {
+    public function normalizeHistoryMonth(?string $month = null): string
+    {
+        $tz = new \DateTimeZone('Africa/Dar_es_Salaam');
+        $now = new \DateTime('now', $tz);
+        $month = is_string($month) ? trim($month) : '';
+        if ($month !== '' && preg_match('/^\d{4}-\d{2}$/', $month)) {
+            $probe = \DateTime::createFromFormat('Y-m-d', $month . '-01', $tz);
+            if ($probe instanceof \DateTime) {
+                return $probe->format('Y-m');
+            }
+        }
+        return $now->format('Y-m');
+    }
+
+    public function formatHistoryMonthLabel(string $month): string
+    {
+        $month = $this->normalizeHistoryMonth($month);
+        $dt = \DateTime::createFromFormat('Y-m-d', $month . '-01');
+        return $dt instanceof \DateTime ? $dt->format('F Y') : $month;
+    }
+
+    /**
+     * @return list<array{value:string,label:string}>
+     */
+    public function getHistoryMonthOptions(int $monthsBack = 12): array
+    {
+        $tz = new \DateTimeZone('Africa/Dar_es_Salaam');
+        $cursor = new \DateTime('now', $tz);
+        $cursor->modify('first day of this month');
+        $options = [];
+        $count = max(1, min(36, $monthsBack));
+        for ($i = 0; $i < $count; $i++) {
+            $value = $cursor->format('Y-m');
+            $options[] = [
+                'value' => $value,
+                'label' => $cursor->format('F Y'),
+            ];
+            $cursor->modify('-1 month');
+        }
+        return $options;
+    }
+
+    public function getHistory($userId, $month = null) {
         try {
             $t = self::RECORDS_TABLE;
+            $month = $this->normalizeHistoryMonth(is_string($month) ? $month : null);
+            $start = $month . '-01';
+            $endDt = \DateTime::createFromFormat('Y-m-d', $start);
+            $end = $endDt instanceof \DateTime ? $endDt->format('Y-m-t') : $start;
             $stmt = $this->pdo->prepare("
                 SELECT * FROM `{$t}` 
-                WHERE user_id = ? 
+                WHERE user_id = ? AND `date` >= ? AND `date` <= ?
                 ORDER BY date DESC 
-                LIMIT ?
             ");
-            $stmt->bindValue(1, $userId, PDO::PARAM_INT);
-            $stmt->bindValue(2, (int)$limit, PDO::PARAM_INT);
-            $stmt->execute();
+            $stmt->execute([(int) $userId, $start, $end]);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Throwable $e) {
             return [];

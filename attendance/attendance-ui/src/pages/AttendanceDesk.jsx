@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getGeoPosition, postAttendanceAction } from '../api';
+import '../attendance-records.css';
 
 function formatTimeHm(value) {
   if (!value) return '--:--';
@@ -69,30 +70,65 @@ function useLiveClock(timeZone) {
 }
 
 function statusClass(status) {
-  if (status === 'On Time') return 'att-status-ontime';
-  if (status === 'Late') return 'att-status-late';
-  return 'att-status-other';
+  const s = String(status || '').toLowerCase();
+  if (s.includes('late')) return 'att-desk-status--late';
+  if (s.includes('early')) return 'att-desk-status--early';
+  return 'att-desk-status--on-time';
+}
+
+function buildMonthOptions(monthsBack = 12) {
+  const options = [];
+  const now = new Date();
+  for (let i = 0; i < monthsBack; i += 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    options.push({
+      value,
+      label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    });
+  }
+  return options;
+}
+
+function currentMonthValue() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 export default function AttendanceDesk({ data }) {
-  const [state, setState] = useState(() => ({
-    todayRecord: data.todayRecord || null,
-    history: data.history || [],
-    stats: data.stats || {},
-    pendingTasks: data.pendingTasks || [],
-    isIpAllowed: Boolean(data.isIpAllowed),
-    currentIp: data.currentIp || '',
-    message: data.message || '',
-    msgType: data.msgType || '',
-    clockInSuccess: data.clockInSuccess || null,
-    clockOutSuccess: data.clockOutSuccess || null,
-  }));
+  const [state, setState] = useState(() => {
+    const months =
+      Array.isArray(data.historyMonths) && data.historyMonths.length
+        ? data.historyMonths
+        : buildMonthOptions(12);
+    const month = data.historyMonth || currentMonthValue();
+    const label =
+      data.historyMonthLabel ||
+      months.find((m) => m.value === month)?.label ||
+      '';
+    return {
+      todayRecord: data.todayRecord || null,
+      history: data.history || [],
+      historyMonth: month,
+      historyMonthLabel: label,
+      historyMonths: months,
+      stats: data.stats || {},
+      pendingTasks: data.pendingTasks || [],
+      isIpAllowed: Boolean(data.isIpAllowed),
+      currentIp: data.currentIp || '',
+      message: data.message || '',
+      msgType: data.msgType || '',
+      clockInSuccess: data.clockInSuccess || null,
+      clockOutSuccess: data.clockOutSuccess || null,
+    };
+  });
 
   const [planOpen, setPlanOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [newTasks, setNewTasks] = useState(['']);
   const [completedIds, setCompletedIds] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
+  const [historyBusy, setHistoryBusy] = useState(false);
   const [successDismissed, setSuccessDismissed] = useState(false);
 
   const links = data.links || {};
@@ -185,6 +221,9 @@ export default function AttendanceDesk({ data }) {
       ...cur,
       todayRecord: payload.todayRecord ?? cur.todayRecord,
       history: payload.history ?? cur.history,
+      historyMonth: payload.historyMonth ?? cur.historyMonth,
+      historyMonthLabel: payload.historyMonthLabel ?? cur.historyMonthLabel,
+      historyMonths: payload.historyMonths ?? cur.historyMonths,
       stats: payload.stats ?? cur.stats,
       pendingTasks: payload.pendingTasks ?? cur.pendingTasks,
       isIpAllowed: payload.isIpAllowed ?? cur.isIpAllowed,
@@ -195,6 +234,35 @@ export default function AttendanceDesk({ data }) {
       clockOutSuccess: extras.clockOutSuccess ?? null,
     }));
     setSuccessDismissed(false);
+  }
+
+  async function loadHistoryMonth(month) {
+    const nextMonth = String(month || '').trim();
+    if (!nextMonth || nextMonth === state.historyMonth) return;
+    setHistoryBusy(true);
+    try {
+      const result = await postAttendanceAction({
+        action: 'history',
+        history_month: nextMonth,
+      });
+      if (!result.success) {
+        setState((cur) => ({
+          ...cur,
+          message: result.message || 'Failed to load history.',
+          msgType: 'danger',
+        }));
+        return;
+      }
+      applyPayload(result.data);
+    } catch (err) {
+      setState((cur) => ({
+        ...cur,
+        message: err instanceof Error ? err.message : 'Failed to load history.',
+        msgType: 'danger',
+      }));
+    } finally {
+      setHistoryBusy(false);
+    }
   }
 
   async function submitClockIn() {
@@ -212,6 +280,7 @@ export default function AttendanceDesk({ data }) {
         latitude: geo.latitude,
         longitude: geo.longitude,
         new_tasks: tasks,
+        history_month: state.historyMonth,
       });
       if (!result.success) {
         applyPayload(result.data, { message: result.message || 'Clock in failed.', msgType: 'danger' });
@@ -239,6 +308,7 @@ export default function AttendanceDesk({ data }) {
         latitude: geo.latitude,
         longitude: geo.longitude,
         completed_task_ids: Array.from(completedIds),
+        history_month: state.historyMonth,
       });
       if (!result.success) {
         applyPayload(result.data, { message: result.message || 'Clock out failed.', msgType: 'danger' });
@@ -385,25 +455,14 @@ export default function AttendanceDesk({ data }) {
               <div className={`att-alert-banner is-${state.msgType || 'danger'}`}>{state.message}</div>
             ) : null}
 
-            <div className="att-kpi-grid" aria-label="Attendance summary">
+            <div className="att-kpi-grid att-kpi-grid--two" aria-label="Attendance summary">
               <div className="att-kpi-tile">
                 <div className="att-kpi-icon att-kpi-icon--hours" aria-hidden="true">
                   <i className="fas fa-clock" />
                 </div>
                 <div className="att-kpi-body">
-                  <div className="att-kpi-label">Hours</div>
+                  <div className="att-kpi-label">Hours worked</div>
                   <div className="att-kpi-value is-hours">{Number(stats.total_hours || 0).toFixed(1)}h</div>
-                </div>
-              </div>
-              <div className="att-kpi-tile">
-                <div className="att-kpi-icon att-kpi-icon--punctual" aria-hidden="true">
-                  <i className="fas fa-user-check" />
-                </div>
-                <div className="att-kpi-body">
-                  <div className="att-kpi-label">Punctual</div>
-                  <div className="att-kpi-value is-punctual">
-                    {Number(stats.on_time_days || 0)}/{Number(stats.total_days || 0)}
-                  </div>
                 </div>
               </div>
               <div className="att-kpi-tile">
@@ -415,26 +474,41 @@ export default function AttendanceDesk({ data }) {
                   <div className="att-kpi-value is-ot">{Number(stats.total_ot || 0).toFixed(1)}h</div>
                 </div>
               </div>
-              <div className="att-kpi-tile">
-                <div className="att-kpi-icon att-kpi-icon--late" aria-hidden="true">
-                  <i className="fas fa-exclamation-circle" />
-                </div>
-                <div className="att-kpi-body">
-                  <div className="att-kpi-label">Late</div>
-                  <div className="att-kpi-value is-late">{Number(stats.late_days || 0)}</div>
-                </div>
-              </div>
             </div>
 
-            <div className="activity-card">
-              <div className="card-header">
-                <h3 className="card-title">Recent activity</h3>
-                <div className="att-text-slate" style={{ fontSize: 12, fontWeight: 700 }}>
-                  Last 30 days
+            <section className="att-desk-results att-activity-results" aria-label="Recent activity">
+              <div className="att-desk-results-head">
+                <div className="att-activity-head-left">
+                  <h3 className="att-activity-title">Recent activity</h3>
+                  <label className="att-history-month">
+                    <span className="att-history-month-label">Month</span>
+                    <select
+                      className="att-history-month-select"
+                      value={state.historyMonth || ''}
+                      disabled={historyBusy || busy}
+                      onChange={(e) => loadHistoryMonth(e.target.value)}
+                      aria-label="Select attendance month"
+                    >
+                      {(state.historyMonths || []).map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
+                <span className="att-desk-results-count">
+                  {historyBusy
+                    ? 'Loading…'
+                    : `${state.historyMonthLabel || 'This month'}${
+                        state.history.length
+                          ? ` · ${state.history.length} record${state.history.length === 1 ? '' : 's'}`
+                          : ' · no records'
+                      }`}
+                </span>
               </div>
-              <div className="table-responsive">
-                <table className="table table-v3 mb-0">
+              <div className="att-desk-table-wrap">
+                <table className="att-desk-table att-desk-table--activity">
                   <thead>
                     <tr>
                       <th>Date</th>
@@ -449,9 +523,16 @@ export default function AttendanceDesk({ data }) {
                     {state.history.length === 0 ? (
                       <tr>
                         <td colSpan={6}>
-                          <div className="att-empty-history">
-                            <i className="fas fa-calendar-times" />
-                            <span>No attendance records yet.</span>
+                          <div className="att-desk-empty">
+                            <div className="att-desk-empty-icon" aria-hidden="true">
+                              <i className="fas fa-calendar-times" />
+                            </div>
+                            <p className="att-desk-empty-title">
+                              No records for {state.historyMonthLabel || 'this month'}
+                            </p>
+                            <p className="att-desk-empty-sub">
+                              Choose another month above to view previous attendance.
+                            </p>
                           </div>
                         </td>
                       </tr>
@@ -459,24 +540,36 @@ export default function AttendanceDesk({ data }) {
                       state.history.map((row) => (
                         <tr key={`${row.date}-${row.time_in || ''}`}>
                           <td>
-                            <strong>{formatHistoryDate(row.date)}</strong>
+                            <strong className="att-activity-date">{formatHistoryDate(row.date)}</strong>
                           </td>
                           <td>
-                            <span className={statusClass(row.status)}>{row.status}</span>
+                            <span className={`att-desk-status ${statusClass(row.status)}`}>
+                              {row.status || '-'}
+                            </span>
                           </td>
                           <td>{formatTimeHm(row.time_in)}</td>
-                          <td>{row.time_out ? formatTimeHm(row.time_out) : '--:--'}</td>
+                          <td>
+                            {row.time_out ? formatTimeHm(row.time_out) : (
+                              <span className="att-desk-muted">--:--</span>
+                            )}
+                          </td>
                           <td>
                             <strong>{row.total_hours ?? '0'}</strong>h
                           </td>
-                          <td>{row.overtime_hours ? `+${row.overtime_hours}` : '--'}</td>
+                          <td>
+                            {row.overtime_hours ? (
+                              `+${row.overtime_hours}`
+                            ) : (
+                              <span className="att-desk-muted">--</span>
+                            )}
+                          </td>
                         </tr>
                       ))
                     )}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </section>
           </div>
         </div>
       </div>

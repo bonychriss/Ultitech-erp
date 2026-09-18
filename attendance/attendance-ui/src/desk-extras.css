@@ -57,6 +57,9 @@
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
+.att-kpi-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .att-kpi-tile {
   display: flex;
   align-items: flex-start;
@@ -80,9 +83,9 @@
   flex: 0 0 auto;
   font-size: 0.9rem;
 }
-.att-kpi-icon--hours { background: #e0e7ff; color: #4f46e5; }
+.att-kpi-icon--hours { background: #e0f2fe; color: #0284c7; }
 .att-kpi-icon--punctual { background: #dcfce7; color: #16a34a; }
-.att-kpi-icon--ot { background: #eef2ff; color: #6366f1; }
+.att-kpi-icon--ot { background: #ffedd5; color: #ea580c; }
 .att-kpi-icon--late { background: #fef3c7; color: #d97706; }
 .att-kpi-body {
   min-width: 0;
@@ -104,9 +107,9 @@
   font-family: var(--erp-font-family, inherit);
   line-height: 1.2;
 }
-.att-kpi-value.is-hours { color: #4f46e5; }
+.att-kpi-value.is-hours { color: #0284c7; }
 .att-kpi-value.is-punctual { color: #16a34a; }
-.att-kpi-value.is-ot { color: #818cf8; }
+.att-kpi-value.is-ot { color: #ea580c; }
 .att-kpi-value.is-late { color: #f59e0b; }
 
 @media (max-width: 767.98px) {
@@ -127,6 +130,76 @@
 }
 .att-empty-history span {
   font-weight: 700;
+}
+
+/* Recent activity — products-desk table layout */
+.att-shell .att-activity-results {
+  margin-top: 0.25rem;
+}
+.att-shell .att-activity-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+.att-shell .att-activity-head-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.85rem;
+  min-width: 0;
+}
+.att-shell .att-history-month {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+.att-shell .att-history-month-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+.att-shell .att-history-month-select {
+  appearance: none;
+  border: 1px solid #e2e8f0;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.65rem center;
+  background-size: 12px;
+  border-radius: 999px;
+  padding: 0.35rem 1.85rem 0.35rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #0f172a;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.att-shell .att-history-month-select:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.att-shell .att-history-month-select:focus {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.25);
+}
+.att-shell .att-desk-table--activity {
+  min-width: 560px;
+}
+.att-shell .att-activity-date {
+  font-weight: 600;
+  color: #0f172a;
+}
+html[data-theme="dark"] .att-shell .att-activity-title,
+html[data-theme="dark"] .att-shell .att-activity-date {
+  color: #f8fafc;
+}
+html[data-theme="dark"] .att-shell .att-history-month-select {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
 }
 
 .att-status-ontime { color: #16a34a; font-weight: 700; }

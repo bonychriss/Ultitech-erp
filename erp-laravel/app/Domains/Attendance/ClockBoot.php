@@ -25,7 +25,7 @@ final class ClockBoot
         }
 
         // $pdo is already bootstrapped by attendance.php ? includes/functions.php.
-        // Do not require attendance/config/database.php from a method scope — its
+        // Do not require attendance/config/database.php from a method scope ? its
         // isset($pdo) check only sees locals and dies with a false "connection failed".
         global $pdo;
         if (!($pdo instanceof PDO) && isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
@@ -102,6 +102,7 @@ final class ClockBoot
         $attClockTz = new \DateTimeZone('Africa/Dar_es_Salaam');
         $attClockNow = new \DateTime('now', $attClockTz);
         $currentIp = $attendance->getCurrentUserIp();
+        $historyMonth = $attendance->normalizeHistoryMonth(null);
 
         return [
             'page' => 'clock',
@@ -109,7 +110,10 @@ final class ClockBoot
                 'timeZone' => 'Africa/Dar_es_Salaam',
                 'dateSummary' => $attClockNow->format('l, d M Y'),
                 'todayRecord' => $attendance->getTodayRecord($userId) ?: null,
-                'history' => $attendance->getHistory($userId) ?: [],
+                'history' => $attendance->getHistory($userId, $historyMonth) ?: [],
+                'historyMonth' => $historyMonth,
+                'historyMonthLabel' => $attendance->formatHistoryMonthLabel($historyMonth),
+                'historyMonths' => $attendance->getHistoryMonthOptions(12),
                 'stats' => $attendance->getStats($userId) ?: [],
                 'pendingTasks' => $pendingTasks,
                 'isIpAllowed' => (bool) $attendance->isIpAllowed($currentIp),

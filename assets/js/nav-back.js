@@ -366,6 +366,7 @@
       'html[data-theme="dark"] #' + CONTROL_ID + '{',
       'background:#1e293b;color:#f8fafc;border-color:#334155;',
       '}',
+      '@media (max-width: 991.98px){#' + CONTROL_ID + ',#' + CONTROL_ID + '.is-visible{display:none!important;visibility:hidden!important;pointer-events:none!important;}}',
       '@media print{#' + CONTROL_ID + '{display:none!important;}}',
     ].join('');
     global.document.head.appendChild(style);
@@ -392,7 +393,13 @@
       global.document.body.appendChild(btn);
     }
     if (readStack().length > 0) {
-      btn.classList.add('is-visible');
+      // Floating Back is desktop-only; hide on phones/tablets.
+      var mobile = global.matchMedia && global.matchMedia('(max-width: 991.98px)').matches;
+      if (mobile) {
+        btn.classList.remove('is-visible');
+      } else {
+        btn.classList.add('is-visible');
+      }
     } else {
       btn.classList.remove('is-visible');
     }

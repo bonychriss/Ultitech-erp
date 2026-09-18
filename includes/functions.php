@@ -8463,6 +8463,13 @@ function erp_get_mobile_top_chrome_html(): string
   body.has-mobile-footer {
     padding-bottom: 0 !important;
   }
+  /* Hide floating bottom Back control on mobile */
+  #erp-nav-back-control,
+  #erp-nav-back-control.is-visible {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
   html:has(body.dashboard) {
     background-color: {$top} !important;
   }

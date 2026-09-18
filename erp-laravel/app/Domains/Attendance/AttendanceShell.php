@@ -9,6 +9,9 @@ namespace App\Domains\Attendance;
  */
 final class AttendanceShell
 {
+    /** Soft light purple used for immersive mobile status bar + header (SportyBet-style). */
+    private const MOBILE_TOP_COLOR = '#C9B6E4';
+
     /**
      * @param array<string,mixed> $cfg
      * @return array{
@@ -132,19 +135,22 @@ final class AttendanceShell
     }
 
     /**
-     * Soft light-purple system chrome (status bar / notch), SportyBet-style on mobile.
+     * Immersive mobile top chrome: status bar + header share one solid fill (SportyBet-style).
      */
     private function mobileStatusBarHead(): string
     {
-        // Soft lilac — SportyBet-style system chrome behind time/battery icons.
-        $color = '#C9B6E4';
+        $color = self::MOBILE_TOP_COLOR;
 
         return '<meta name="theme-color" content="' . $color . '">' . "\n"
+            . '<meta name="theme-color" media="(prefers-color-scheme: light)" content="' . $color . '">' . "\n"
+            . '<meta name="theme-color" media="(prefers-color-scheme: dark)" content="' . $color . '">' . "\n"
             . '<meta name="msapplication-navbutton-color" content="' . $color . '">' . "\n"
             . '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n"
-            . '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n"
+            . '<meta name="mobile-web-app-capable" content="yes">' . "\n"
+            . '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' . "\n"
             . '<script>(function(){var m=document.querySelector(\'meta[name="viewport"]\');'
             . 'if(m){m.setAttribute("content","width=device-width, initial-scale=1.0, viewport-fit=cover");}'
+            . 'document.documentElement.style.backgroundColor="' . $color . '";'
             . '})();</script>' . "\n";
     }
 
@@ -168,6 +174,7 @@ final class AttendanceShell
     private function deskChromeCss(string $wallpaperUrl): string
     {
         $wp = htmlspecialchars($wallpaperUrl, ENT_QUOTES, 'UTF-8');
+        $top = self::MOBILE_TOP_COLOR;
 
         return <<<CSS
 <style>
@@ -287,23 +294,66 @@ body.page-attendance-desk .clock-card-v2 {
     background-repeat: no-repeat !important;
     box-shadow: 0 14px 36px rgba(15, 23, 42, 0.28) !important;
 }
-/* Soft light purple status-bar / notch (SportyBet-style)  must win over dark canvas */
+/* Immersive top: one light-purple block under time/battery (SportyBet-style) */
 @media (max-width: 991.98px) {
     html:has(body.page-attendance-desk),
     html[data-theme="dark"]:has(body.page-attendance-desk) {
-        background-color: #C9B6E4 !important;
+        background-color: {$top} !important;
     }
-    body.page-attendance-desk::before {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: env(safe-area-inset-top, 0px);
-        min-height: env(safe-area-inset-top, 0px);
-        background: #C9B6E4;
-        z-index: 10050;
-        pointer-events: none;
+    body.page-attendance-desk,
+    body.page-attendance-desk.dashboard,
+    html[data-theme="dark"] body.page-attendance-desk,
+    html[data-theme="dark"] body.page-attendance-desk.dashboard {
+        background-color: #020617 !important;
+        background-image: linear-gradient({$top}, {$top}) !important;
+        background-size: 100% calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
+        background-repeat: no-repeat !important;
+        background-position: top center !important;
+    }
+    html:not([data-theme="dark"]) body.page-attendance-desk,
+    html:not([data-theme="dark"]) body.page-attendance-desk.dashboard {
+        background-color: #f8fafc !important;
+        background-image: linear-gradient({$top}, {$top}) !important;
+        background-size: 100% calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
+        background-repeat: no-repeat !important;
+        background-position: top center !important;
+    }
+    body.page-attendance-desk .employee-header.employee-header--products-desk,
+    body.page-attendance-analytics .employee-header.employee-header--products-desk,
+    html[data-theme="dark"] body.page-attendance-desk .employee-header.employee-header--products-desk,
+    html[data-theme="dark"] body.page-attendance-analytics .employee-header.employee-header--products-desk {
+        background: {$top} !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding-top: env(safe-area-inset-top, 0px) !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        margin: 0 !important;
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 1020 !important;
+    }
+    body.page-attendance-desk .employee-header--products-desk .header-content {
+        padding: 0.7rem 0 !important;
+        min-height: 2.75rem;
+        background: transparent !important;
+    }
+    body.page-attendance-desk .employee-header--products-desk .employee-header-page-title,
+    body.page-attendance-analytics .employee-header--products-desk .employee-header-page-title,
+    body.page-attendance-desk .employee-header--products-desk .employee-header-page-title[style] {
+        color: #1e1b4b !important;
+    }
+    body.page-attendance-desk .employee-header--products-desk .employee-header-menu-btn,
+    body.page-attendance-desk .employee-header--products-desk .employee-header-menu-btn[style],
+    body.page-attendance-desk .employee-header--products-desk .header-actions-tray a,
+    body.page-attendance-desk .employee-header--products-desk .header-actions-tray button,
+    body.page-attendance-desk .employee-header--products-desk .header-actions-tray i,
+    body.page-attendance-desk .employee-header--products-desk .header-actions-tray svg {
+        color: #1e1b4b !important;
+    }
+    body.page-attendance-desk .layout-main-wrapper,
+    body.page-attendance-desk .layout-main-wrapper > .flex-grow-1 {
+        background: transparent !important;
     }
 }
 </style>

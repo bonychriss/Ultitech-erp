@@ -61,7 +61,19 @@ export default function LetterheadDocument({ doc, editable = false, onChange }) 
   const salutation = line(doc.salutation);
   const closing = line(doc.closing);
   const signName = line(doc.signName);
-  const signTitle = line(doc.signTitle);
+  const rawSignTitle = line(doc.signTitle);
+  const signTitle = (() => {
+    if (!rawSignTitle) return '';
+    if (/^(administrator|admin)$/i.test(rawSignTitle)) return 'Managing Director';
+    if (
+      /sales\s*person|salesperson|sales[_\s-]*person|sales\s*executive|sales\s*rep|^sales$/i.test(
+        rawSignTitle
+      )
+    ) {
+      return 'Sales Executive';
+    }
+    return rawSignTitle;
+  })();
   const signatureUrl = line(doc.signatureUrl);
   const approverName = line(doc.approverName);
   const rawApproverTitle = line(doc.approverTitle);

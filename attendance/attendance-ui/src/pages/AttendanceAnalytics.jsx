@@ -98,8 +98,9 @@ function aggregateEmployeeTotals(series = [], labels = [], grain = 'monthly') {
 
 function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
   const width = 760;
-  const height = 340;
-  const pad = { top: 28, right: 12, bottom: 58, left: 40 };
+  const labelSpace = 118;
+  const height = 280 + labelSpace;
+  const pad = { top: 28, right: 16, bottom: labelSpace, left: 40 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const count = employees.length;
@@ -122,7 +123,8 @@ function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
   });
 
   const slot = plotW / count;
-  const barWidth = Math.min(46, Math.max(18, slot * 0.48));
+  const barWidth = Math.min(46, Math.max(16, slot * 0.52));
+  const axisY = pad.top + plotH;
 
   return (
     <div className="att-analytics-emp-bars-wrap">
@@ -145,21 +147,29 @@ function EmployeeHoursBarChart({ employees = [], periodLabel = '' }) {
           const barH = Math.max(hours > 0 ? 4 : 0, (hours / maxY) * plotH);
           const cx = pad.left + slot * idx + slot / 2;
           const x = cx - barWidth / 2;
-          const y = pad.top + plotH - barH;
+          const y = axisY - barH;
           const hoursLabel = Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
+          const displayName = String(emp.name || '').trim();
           return (
-            <g key={emp.id || emp.name}>
+            <g key={emp.id != null ? `emp-${emp.id}` : `emp-${idx}`}>
               <rect x={x} y={y} width={barWidth} height={barH} rx={8} ry={8} fill={emp.color || '#3b82f6'}>
-                <title>{`${emp.name}: ${hoursLabel}`}</title>
+                <title>{`${displayName}: ${hoursLabel}`}</title>
               </rect>
               <text x={cx} y={y - 8} textAnchor="middle" className="att-analytics-emp-bar-value">
                 {hoursLabel}
               </text>
-              <text x={cx} y={height - 28} textAnchor="middle" className="att-analytics-emp-bar-initials">
+              <text x={cx} y={axisY + 14} textAnchor="middle" className="att-analytics-emp-bar-initials">
                 {emp.initials}
               </text>
-              <text x={cx} y={height - 12} textAnchor="middle" className="att-analytics-emp-bar-name">
-                {emp.name.length > 18 ? `${emp.name.slice(0, 16)}…` : emp.name}
+              <text
+                x={cx}
+                y={axisY + 28}
+                textAnchor="end"
+                dominantBaseline="middle"
+                transform={`rotate(-90 ${cx} ${axisY + 28})`}
+                className="att-analytics-emp-bar-name"
+              >
+                {displayName}
               </text>
             </g>
           );

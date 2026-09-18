@@ -216,8 +216,9 @@
   font-weight: 700;
 }
 .att-analytics-emp-bar-name {
-  fill: #64748b;
-  font-size: 9px;
+  fill: #475569;
+  font-size: 10px;
+  font-weight: 500;
 }
 .att-analytics-line-wrap {
   width: 100%;

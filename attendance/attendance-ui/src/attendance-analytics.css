@@ -1,6 +1,12 @@
 .att-page-analytics {
   padding: 0.35rem 0 1.5rem;
   font-family: var(--erp-font-family, inherit);
+  font-weight: 400;
+}
+.att-page-analytics button,
+.att-page-analytics .att-analytics-punct-item,
+.att-page-analytics .att-analytics-kpi--chip {
+  font-weight: inherit;
 }
 
 .att-analytics-header {
@@ -64,7 +70,7 @@
   background: transparent;
   color: #64748b;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   padding: 0.4rem 0.85rem;
   cursor: pointer;
   font-family: inherit;
@@ -158,7 +164,7 @@
 
 .att-analytics-kpi-label {
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #94a3b8;
@@ -185,7 +191,7 @@
 
 .att-analytics-kpi-simple {
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #0f172a;
   letter-spacing: -0.01em;
   line-height: 1.2;
@@ -197,7 +203,7 @@
 .att-analytics-kpi-value {
   margin-top: 0.15rem;
   font-size: 1.35rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
   color: #0f172a;
   line-height: 1.15;
@@ -412,7 +418,7 @@ html[data-theme="dark"] .att-analytics-about-btn.is-active {
 }
 .att-analytics-punct-label {
   font-size: 0.65rem;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #94a3b8;
@@ -420,7 +426,7 @@ html[data-theme="dark"] .att-analytics-about-btn.is-active {
 }
 .att-analytics-punct-item strong {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #0f172a;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -492,14 +498,14 @@ html[data-theme="dark"] .att-analytics-punct-item strong {
   border-radius: 999px;
   color: #64748b;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 .att-analytics-date-field input[type='date'] {
   border: none;
   background: transparent;
   color: #0f172a;
   font: inherit;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.8125rem;
   padding: 0;
   min-width: 8.1rem;
@@ -530,7 +536,7 @@ html[data-theme="dark"] .att-analytics-punct-item strong {
   border-radius: 999px;
   color: #475569;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 .att-analytics-emp-filter i {
   color: #64748b;
@@ -541,7 +547,7 @@ html[data-theme="dark"] .att-analytics-punct-item strong {
   background: transparent;
   color: inherit;
   font: inherit;
-  font-weight: 600;
+  font-weight: 500;
   padding: 0;
   cursor: pointer;
   outline: none;
@@ -555,17 +561,17 @@ html[data-theme="dark"] .att-analytics-punct-item strong {
 .att-analytics-emp-bar-value {
   fill: #0f172a;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 .att-analytics-emp-bar-initials {
   fill: #0f172a;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 .att-analytics-emp-bar-name {
-  fill: #475569;
+  fill: #64748b;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 400;
 }
 .att-analytics-line-wrap {
   width: 100%;
@@ -620,7 +626,7 @@ html[data-theme="dark"] .att-analytics-punct-item strong {
 .att-analytics-chart-title {
   margin: 0 0 0.85rem;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #0f172a;
 }
 

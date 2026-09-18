@@ -194,6 +194,9 @@ body.page-attendance-desk .employee-header--products-desk .header-content {
 body.page-attendance-desk .employee-header--products-desk .header-right.header-actions-tray {
     margin-left: auto !important;
 }
+body.page-attendance-analytics .employee-header--products-desk .employee-header-page-title {
+    font-weight: 500 !important;
+}
 main.main-content.att-react-root {
     flex: 1 1 auto;
     width: 100% !important;

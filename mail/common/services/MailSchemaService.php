@@ -50,6 +50,14 @@ final class MailSchemaService
                     'VARCHAR(64) NOT NULL DEFAULT \'\'',
                 )->execute();
             }
+            if (!isset($schema->columns['remember_login'])) {
+                $db->createCommand()->addColumn(
+                    '{{%mail_account}}',
+                    'remember_login',
+                    'TINYINT(1) NOT NULL DEFAULT 0',
+                )->execute();
+                $db->getSchema()->refreshTableSchema('{{%mail_account}}');
+            }
 
             // Refresh and make user_id nullable if needed.
             $schema = $db->getTableSchema('{{%mail_account}}', true);

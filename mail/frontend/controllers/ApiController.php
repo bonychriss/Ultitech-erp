@@ -54,11 +54,14 @@ class ApiController extends Controller
                     'draft' => ['post'],
                     'star' => ['post'],
                     'trash' => ['post'],
+                    'archive' => ['post'],
+                    'bulk' => ['post'],
                     'sync' => ['post'],
                     'accounts' => ['get', 'post'],
                     'account' => ['get', 'put', 'delete'],
                     'available-mailboxes' => ['get'],
                     'claim-mailbox' => ['post'],
+                    'open-mailbox' => ['post'],
                     'pool-accounts' => ['get', 'post'],
                     'pool-account' => ['delete'],
                 ],
@@ -142,6 +145,8 @@ class ApiController extends Controller
         $model->rememberMe = (bool) Yii::$app->request->post('rememberMe', true);
 
         if ($model->login()) {
+            // Everyone (including admin) picks a mailbox after app login.
+            $this->clearActiveMailboxSession();
             $payload = $this->actionBootstrap();
             $payload['message'] = 'Welcome back! You are signed in.';
             return $payload;
@@ -195,6 +200,7 @@ class ApiController extends Controller
         }
 
         Yii::$app->user->login($user, 3600 * 24 * 30);
+        $this->clearActiveMailboxSession();
         $payload = $this->actionBootstrap();
         $payload['message'] = 'Registration successful. Your account has been created.';
         return $payload;
@@ -209,8 +215,7 @@ class ApiController extends Controller
     /** Leave the active mailbox and return to the account picker (stay signed into the app). */
     public function actionSignOutMailbox(): array
     {
-        $this->setMailboxSignedOut(true);
-        Yii::$app->session->remove('mail_active_account_id');
+        $this->clearActiveMailboxSession();
 
         return [
             'ok' => true,
@@ -222,6 +227,7 @@ class ApiController extends Controller
     public function actionFolders(): array
     {
         $account = $this->findAccount();
+        $account->ensureDefaultFolders();
         return [
             'ok' => true,
             'folders' => array_map([$this, 'serializeFolder'], $account->folders),
@@ -351,6 +357,92 @@ class ApiController extends Controller
         return ['ok' => true, 'message' => 'Moved to Trash.'];
     }
 
+    public function actionArchive(int $id): array
+    {
+        $account = $this->findAccount();
+        $account->ensureDefaultFolders();
+        $message = $this->findMessage($account->id, $id);
+        $archive = $account->getFolderBySlug('archive');
+        $inbox = $account->getFolderBySlug('inbox');
+        if (!$archive) {
+            Yii::$app->response->statusCode = 500;
+            return ['ok' => false, 'message' => 'Archive folder is missing.'];
+        }
+
+        // Already archived → restore to Inbox
+        if ((int) $message->folder_id === (int) $archive->id && $inbox) {
+            $message->folder_id = $inbox->id;
+            $message->save(false, ['folder_id', 'updated_at']);
+            $archive->refreshUnreadCount();
+            $inbox->refreshUnreadCount();
+            return ['ok' => true, 'message' => 'Moved to Inbox.'];
+        }
+
+        $old = $message->folder;
+        $message->folder_id = $archive->id;
+        $message->save(false, ['folder_id', 'updated_at']);
+        $old?->refreshUnreadCount();
+        $archive->refreshUnreadCount();
+
+        return ['ok' => true, 'message' => 'Archived.'];
+    }
+
+    /** Bulk trash / archive for multi-select. */
+    public function actionBulk(): array
+    {
+        $account = $this->findAccount();
+        $account->ensureDefaultFolders();
+        $body = Yii::$app->request->getBodyParams();
+        if (!is_array($body) || $body === []) {
+            $decoded = json_decode(Yii::$app->request->rawBody, true);
+            $body = is_array($decoded) ? $decoded : [];
+        }
+
+        $action = strtolower(trim((string) ($body['action'] ?? '')));
+        $ids = $body['ids'] ?? [];
+        if (!is_array($ids)) {
+            $ids = [];
+        }
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn ($id) => $id > 0)));
+
+        if ($ids === [] || !in_array($action, ['trash', 'archive'], true)) {
+            Yii::$app->response->statusCode = 422;
+            return ['ok' => false, 'message' => 'Choose messages and an action (trash or archive).'];
+        }
+
+        $done = 0;
+        $lastMessage = '';
+        foreach ($ids as $id) {
+            try {
+                if ($action === 'trash') {
+                    $res = $this->actionTrash($id);
+                } else {
+                    $res = $this->actionArchive($id);
+                }
+                if (!empty($res['ok'])) {
+                    $done++;
+                    $lastMessage = (string) ($res['message'] ?? '');
+                }
+            } catch (\Throwable $e) {
+                // skip missing/foreign messages
+            }
+        }
+
+        if ($done < 1) {
+            Yii::$app->response->statusCode = 422;
+            return ['ok' => false, 'message' => 'Could not update the selected messages.'];
+        }
+
+        $label = $action === 'trash' ? 'moved to Trash' : 'archived';
+        return [
+            'ok' => true,
+            'message' => $done === 1
+                ? ($lastMessage !== '' ? $lastMessage : '1 message ' . $label . '.')
+                : $done . ' messages ' . $label . '.',
+            'count' => $done,
+        ];
+    }
+
     public function actionSync(): array
     {
         try {
@@ -438,6 +530,7 @@ class ApiController extends Controller
         $email = strtolower(trim((string) ($body['email'] ?? '')));
         $password = (string) ($body['password'] ?? '');
         $id = (int) ($body['id'] ?? 0);
+        $remember = filter_var($body['remember'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if (($email === '' && $id < 1) || $password === '') {
             Yii::$app->response->statusCode = 422;
@@ -463,13 +556,16 @@ class ApiController extends Controller
             }
             $owned->imap_password_plain = $password;
             $owned->smtp_password_plain = $password;
+            $owned->remember_login = $remember;
             $owned->save(false);
             $this->setMailboxSignedOut(false);
             Yii::$app->session->set('mail_active_account_id', (int) $owned->id);
 
             return [
                 'ok' => true,
-                'message' => 'Mailbox connected. You will not need to enter this password again.',
+                'message' => $remember
+                    ? 'Mailbox connected. While you stay signed into Ultitech, you can open it without retyping the password.'
+                    : 'Mailbox connected.',
                 'account' => $this->serializeAccount($owned),
                 'folders' => array_map([$this, 'serializeFolder'], $owned->folders),
             ];
@@ -550,8 +646,14 @@ class ApiController extends Controller
             $account->smtp_password_plain = $password;
             $account->imap_username = $account->imap_username ?: $account->email;
             $account->smtp_username = $account->smtp_username ?: $account->email;
+            $account->remember_login = $remember;
             $account->save(false);
             $account->ensureDefaultFolders();
+        }
+
+        if ($account && (int) $account->user_id === $uid) {
+            $account->remember_login = $remember;
+            $account->save(false);
         }
 
         $this->setMailboxSignedOut(false);
@@ -559,55 +661,96 @@ class ApiController extends Controller
 
         return [
             'ok' => true,
-            'message' => 'Mailbox connected. You will not need to enter this password again.',
+            'message' => $remember
+                ? 'Mailbox connected. While you stay signed into Ultitech, you can open it without retyping the password.'
+                : 'Mailbox connected.',
+            'account' => $this->serializeAccount($account),
+            'folders' => array_map([$this, 'serializeFolder'], $account->folders),
+        ];
+    }
+
+    /** One-click open for a mailbox previously saved with Remember me. */
+    public function actionOpenMailbox(): array
+    {
+        MailSchemaService::ensurePoolColumns();
+        $body = Yii::$app->request->getBodyParams();
+        if (!is_array($body) || $body === []) {
+            $decoded = json_decode(Yii::$app->request->rawBody, true);
+            $body = is_array($decoded) ? $decoded : [];
+        }
+
+        $id = (int) ($body['id'] ?? 0);
+        $email = strtolower(trim((string) ($body['email'] ?? '')));
+        if ($id < 1 && $email === '') {
+            Yii::$app->response->statusCode = 422;
+            return ['ok' => false, 'message' => 'Choose a mailbox.'];
+        }
+
+        $uid = (int) Yii::$app->user->id;
+        $query = MailAccount::find()->where(['user_id' => $uid, 'is_active' => 1]);
+        if ($id > 0) {
+            $query->andWhere(['id' => $id]);
+        } else {
+            $query->andWhere(['email' => $email]);
+        }
+        $account = $query->one();
+        if (
+            !$account
+            || !(bool) ($account->remember_login ?? false)
+            || $account->getDecryptedImapPassword() === ''
+        ) {
+            Yii::$app->response->statusCode = 422;
+            return [
+                'ok' => false,
+                'message' => 'Enter the mailbox password once and turn on Remember me.',
+                'needs_password' => true,
+            ];
+        }
+
+        $this->setMailboxSignedOut(false);
+        Yii::$app->session->set('mail_active_account_id', (int) $account->id);
+
+        return [
+            'ok' => true,
+            'message' => 'Mailbox opened.',
             'account' => $this->serializeAccount($account),
             'folders' => array_map([$this, 'serializeFolder'], $account->folders),
         ];
     }
 
     /**
-     * Distinct company mailboxes this user can still connect to
-     * (unclaimed pool first, then shared addresses already used by teammates).
-     * After mailbox sign-out, lists this user's own accounts so they can pick again.
+     * Mailboxes shown on the picker for every user (including admin):
+     * this user's own accounts first, then other company addresses not yet linked.
      *
-     * @return list<array{id:int,email:string,display_name:string,account_type?:string}>
+     * @return list<array{id:int,email:string,display_name:string,account_type?:string,remembered?:bool}>
      */
     private function listClaimableMailboxes(): array
     {
         $company = $this->currentCompany();
         $uid = (int) Yii::$app->user->id;
-        $signedOut = $this->isMailboxSignedOut();
+        $mailboxes = [];
+        $seen = [];
 
-        if ($signedOut) {
-            $owned = MailAccount::find()
-                ->where(['user_id' => $uid, 'is_active' => 1])
-                ->orderBy(['email' => SORT_ASC, 'id' => SORT_ASC])
-                ->all();
-            $mailboxes = [];
-            $seen = [];
-            foreach ($owned as $a) {
-                $email = strtolower(trim((string) $a->email));
-                if ($email === '' || isset($seen[$email])) {
-                    continue;
-                }
-                $seen[$email] = true;
-                $mailboxes[] = [
-                    'id' => (int) $a->id,
-                    'email' => $a->email,
-                    'display_name' => $a->display_name,
-                    'account_type' => (string) ($a->account_type ?? ''),
-                ];
-            }
-            if ($mailboxes !== []) {
-                return $mailboxes;
-            }
-        }
-
-        $mine = MailAccount::find()
-            ->select(['email'])
+        $owned = MailAccount::find()
             ->where(['user_id' => $uid, 'is_active' => 1])
-            ->column();
-        $mineLower = array_map('strtolower', $mine);
+            ->orderBy(['email' => SORT_ASC, 'id' => SORT_ASC])
+            ->all();
+        foreach ($owned as $a) {
+            $email = strtolower(trim((string) $a->email));
+            if ($email === '' || isset($seen[$email])) {
+                continue;
+            }
+            $seen[$email] = true;
+            $remembered = (bool) ($a->remember_login ?? false)
+                && $a->getDecryptedImapPassword() !== '';
+            $mailboxes[] = [
+                'id' => (int) $a->id,
+                'email' => $a->email,
+                'display_name' => $a->display_name,
+                'account_type' => (string) ($a->account_type ?? ''),
+                'remembered' => $remembered,
+            ];
+        }
 
         $rows = MailAccount::find()
             ->where(['is_active' => 1])
@@ -619,14 +762,9 @@ class ApiController extends Controller
             ])
             ->all();
 
-        $mailboxes = [];
-        $seen = [];
         foreach ($rows as $a) {
             $email = strtolower(trim((string) $a->email));
-            if ($email === '' || str_ends_with($email, '@mail.local')) {
-                continue;
-            }
-            if (in_array($email, $mineLower, true) || isset($seen[$email])) {
+            if ($email === '' || str_ends_with($email, '@mail.local') || isset($seen[$email])) {
                 continue;
             }
             $seen[$email] = true;
@@ -635,6 +773,7 @@ class ApiController extends Controller
                 'email' => $a->email,
                 'display_name' => $a->display_name,
                 'account_type' => (string) ($a->account_type ?? ''),
+                'remembered' => false,
             ];
         }
 
@@ -979,18 +1118,13 @@ class ApiController extends Controller
         $uid = (int) Yii::$app->user->id;
         $preferredId = (int) Yii::$app->session->get('mail_active_account_id', 0);
         $account = null;
+        // Only the mailbox explicitly picked this session — never auto-select for admin/users.
         if ($preferredId > 0) {
             $account = MailAccount::findOne([
                 'id' => $preferredId,
                 'user_id' => $uid,
                 'is_active' => 1,
             ]);
-        }
-        if (!$account) {
-            $account = MailAccount::find()
-                ->where(['user_id' => $uid, 'is_active' => 1])
-                ->orderBy(['id' => SORT_DESC])
-                ->one();
         }
         if (!$account && $required) {
             Yii::$app->response->statusCode = 404;
@@ -1012,6 +1146,13 @@ class ApiController extends Controller
             return;
         }
         Yii::$app->session->remove('mail_mailbox_signed_out');
+    }
+
+    /** Force the Choose your mailbox screen (used after app login / mailbox sign-out). */
+    private function clearActiveMailboxSession(): void
+    {
+        $this->setMailboxSignedOut(true);
+        Yii::$app->session->remove('mail_active_account_id');
     }
 
     private function findMessage(int $accountId, int $id): MailMessage

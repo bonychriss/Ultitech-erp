@@ -59,6 +59,11 @@ return [
             'legacy_api' => true, // desk APIs stay under modules/revenue/api
             'entry' => 'revenue_entries.php',
         ],
+        'attendance' => [
+            'enabled' => true,
+            'legacy_api' => true, // clock actions stay under attendance/api
+            'entry' => 'attendance.php',
+        ],
     ],
 
     'react_dist' => [
@@ -78,6 +83,7 @@ return [
         'cashbook' => 'modules/petty-cash/frontend/dist',
         'accounting' => 'modules/accounting/frontend/dist',
         'revenue' => 'modules/revenue/frontend/dist',
+        'attendance' => 'attendance/attendance-ui/dist',
     ],
 
     'sales_laravel_desks' => [

@@ -15,6 +15,7 @@ use yii\db\ActiveRecord;
  * @property int|null $user_id
  * @property string $company
  * @property string $account_type
+ * @property bool $remember_login
  * @property int|null $created_by
  * @property string $email
  * @property string $display_name
@@ -58,7 +59,7 @@ class MailAccount extends ActiveRecord
             [['email', 'imap_host', 'imap_username', 'smtp_host', 'smtp_username'], 'required'],
             [['user_id', 'created_by', 'imap_port', 'smtp_port', 'last_synced_at', 'created_at', 'updated_at'], 'integer'],
             [['imap_password', 'smtp_password'], 'string'],
-            [['is_active'], 'boolean'],
+            [['is_active', 'remember_login'], 'boolean'],
             [['email'], 'email'],
             [['company'], 'string', 'max' => 32],
             [['account_type'], 'string', 'max' => 64],
@@ -74,6 +75,7 @@ class MailAccount extends ActiveRecord
             [['company'], 'default', 'value' => ''],
             [['account_type'], 'default', 'value' => ''],
             [['is_active'], 'default', 'value' => true],
+            [['remember_login'], 'default', 'value' => false],
         ];
     }
 
@@ -183,8 +185,9 @@ class MailAccount extends ActiveRecord
             ['Starred', 'starred', 2],
             ['Sent', 'sent', 3],
             ['Drafts', 'drafts', 4],
-            ['Trash', 'trash', 5],
-            ['Spam', 'spam', 6],
+            ['Archive', 'archive', 5],
+            ['Trash', 'trash', 6],
+            ['Spam', 'spam', 7],
         ];
         foreach ($defaults as [$name, $slug, $sort]) {
             if ($this->getFolderBySlug($slug)) {

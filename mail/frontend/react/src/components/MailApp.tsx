@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import {
+  MdArchive,
   MdArrowBack,
   MdClose,
   MdDelete,
@@ -31,12 +32,15 @@ import { FileTypeIcon } from './FileTypeIcon';
 import { GmailAttachments } from './GmailAttachments';
 import { InlineReply } from './InlineReply';
 import { MailboxLogin } from './MailboxLogin';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { loadingAnimUrl } from './SuccessOverlay';
 
 const FOLDER_TITLES: Record<string, string> = {
   inbox: 'Inbox',
   starred: 'Starred',
   sent: 'Sent',
   drafts: 'Drafts',
+  archive: 'Archive',
   trash: 'Trash',
   spam: 'Spam',
 };
@@ -48,6 +52,7 @@ const FOLDER_ICONS: Record<string, IconComponent> = {
   starred: MdStar,
   sent: MdSend,
   drafts: MdDrafts,
+  archive: MdArchive,
   trash: MdDelete,
   spam: MdReport,
 };
@@ -199,7 +204,7 @@ export function MailApp({
   const mailFolders = useMemo(
     () =>
       folders.filter((f) =>
-        ['inbox', 'starred', 'sent', 'drafts', 'spam', 'trash'].includes(f.slug),
+        ['inbox', 'starred', 'sent', 'drafts', 'archive', 'spam', 'trash'].includes(f.slug),
       ),
     [folders],
   );
@@ -280,6 +285,73 @@ export function MailApp({
     setSelected(null);
     await loadMessages();
     await refreshFolders();
+  }
+
+  async function bulkTrash() {
+    if (selectedIds.length === 0) return;
+    try {
+      const res = await api.bulk('trash', selectedIds);
+      setToast(res.message);
+      setSelectedIds([]);
+      setSelectMode(false);
+      setSelected(null);
+      await loadMessages();
+      await refreshFolders();
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : 'Could not delete messages');
+    }
+  }
+
+  async function bulkArchive() {
+    if (selectedIds.length === 0) return;
+    try {
+      const res = await api.bulk('archive', selectedIds);
+      setToast(res.message);
+      setSelectedIds([]);
+      setSelectMode(false);
+      setSelected(null);
+      await loadMessages();
+      await refreshFolders();
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : 'Could not archive messages');
+    }
+  }
+
+  async function bulkForward() {
+    if (selectedIds.length === 0) return;
+    try {
+      const details: MailDetail[] = [];
+      for (const id of selectedIds) {
+        const data = await api.message(id);
+        details.push(data.message);
+      }
+      if (details.length === 1) {
+        setCompose(composeFromMessage(details[0], 'forward', { folder }));
+      } else {
+        const blocks = details.map((m) => {
+          return (
+            `---------- Forwarded message ----------\n` +
+            `From: ${m.from_display} <${m.from_email}>\n` +
+            `Date: ${m.date_full}\n` +
+            `Subject: ${m.subject}\n\n` +
+            `${m.body_text || ''}`
+          );
+        });
+        const first = details[0];
+        setCompose({
+          open: true,
+          title: 'Forward',
+          subject: first.subject.toLowerCase().startsWith('fwd:')
+            ? first.subject
+            : `Fwd: ${first.subject}`,
+          body: `\n\n${blocks.join('\n\n')}`,
+        });
+      }
+      setSelectMode(false);
+      setSelectedIds([]);
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : 'Could not open forward');
+    }
   }
 
   async function syncMail(opts?: { quiet?: boolean }) {
@@ -716,9 +788,40 @@ export function MailApp({
                   {selectMode ? 'Cancel' : 'Select'}
                 </button>
                 {selectMode && selectedIds.length > 0 ? (
-                  <span className="toolbar-selected muted">
-                    {selectedIds.length} selected
-                  </span>
+                  <>
+                    <span className="toolbar-selected muted">
+                      {selectedIds.length} selected
+                    </span>
+                    <div className="toolbar-bulk" role="group" aria-label="Selected mail actions">
+                      <button
+                        type="button"
+                        className="toolbar-bulk-btn"
+                        title="Delete"
+                        onClick={() => void bulkTrash()}
+                      >
+                        <MdDelete size={18} aria-hidden />
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        className="toolbar-bulk-btn"
+                        title="Archive"
+                        onClick={() => void bulkArchive()}
+                      >
+                        <MdArchive size={18} aria-hidden />
+                        Archive
+                      </button>
+                      <button
+                        type="button"
+                        className="toolbar-bulk-btn"
+                        title="Forward"
+                        onClick={() => void bulkForward()}
+                      >
+                        <MdForward size={18} aria-hidden />
+                        Forward
+                      </button>
+                    </div>
+                  </>
                 ) : null}
                 {listLabel ? <span className="muted">{listLabel}</span> : null}
               </div>
@@ -726,7 +829,15 @@ export function MailApp({
                 {loading ? (
                   <div className="empty">Loading…</div>
                 ) : messages.length === 0 ? (
-                  <div className="empty">
+                  <div className="empty mail-empty">
+                    <div className="mail-empty-visual" aria-hidden="true">
+                      <DotLottieReact
+                        src={loadingAnimUrl()}
+                        loop
+                        autoplay
+                        style={{ width: 120, height: 120 }}
+                      />
+                    </div>
                     <h2>{searching ? 'No results' : 'No conversations'}</h2>
                     <p>
                       {searching

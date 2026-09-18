@@ -1,0 +1,22 @@
+Options -MultiViews
+AcceptPathInfo On
+
+RewriteEngine On
+RewriteBase /mail/frontend/web/
+
+# Pass Authorization headers if present
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Real files (SPA assets under /app/assets, css, images, etc.)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# /app is both the Yii SPA route and a static asset folder.
+# Send the shell (/app, /app/) and deep links to index.php; files already passed above.
+RewriteRule ^app(/.*)?$ index.php [L,QSA]
+
+# Other pretty URLs
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [L]

@@ -55,6 +55,7 @@ button, input, textarea { font: inherit; }
 .app-shell.setup-only .main-setup {
   display: block;
   padding: 0;
+  min-height: 100vh;
 }
 .app-shell.setup-only .wizard {
   width: 100%;
@@ -533,6 +534,34 @@ button, input, textarea { font: inherit; }
 .toolbar-selected {
   font-size: 0.88rem;
 }
+.toolbar-bulk {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  flex-wrap: wrap;
+}
+.toolbar-bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: #f1f3f4;
+  color: #3c4043;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.toolbar-bulk-btn:hover {
+  background: #e8eaed;
+  color: #202124;
+}
+.toolbar-bulk-btn svg {
+  flex: none;
+}
 
 .mail-check {
   display: grid;
@@ -713,6 +742,62 @@ button, input, textarea { font: inherit; }
   padding: 80px 24px;
   text-align: center;
   color: var(--muted);
+}
+.mail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  animation: mail-empty-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.mail-empty-visual {
+  width: 120px;
+  height: 120px;
+  margin: 0 0 8px;
+  display: grid;
+  place-items: center;
+  opacity: 0.92;
+  animation: mail-empty-float 3.2s ease-in-out infinite;
+}
+.mail-empty h2 {
+  margin: 0;
+  color: #202124;
+  font-size: 1.15rem;
+  font-weight: 600;
+  animation: mail-empty-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+}
+.mail-empty p {
+  margin: 6px 0 0;
+  max-width: 280px;
+  line-height: 1.45;
+  animation: mail-empty-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both;
+}
+@keyframes mail-empty-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes mail-empty-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mail-empty,
+  .mail-empty-visual,
+  .mail-empty h2,
+  .mail-empty p {
+    animation: none;
+  }
 }
 
 .read { padding: 12px 36px 48px; max-width: 980px; }
@@ -2134,15 +2219,158 @@ a.auth-submit-link {
   min-height: min(70vh, 640px);
   padding: 24px;
   width: 100%;
+  position: relative;
+}
+.mailbox-login--hero {
+  min-height: 100vh;
+  min-height: 100svh;
+  width: 100%;
+  padding: 32px 20px 48px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.mailbox-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  animation: mailbox-hero-fade 1.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.mailbox-hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+@keyframes mailbox-hero-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .mailbox-login-panel {
   width: min(420px, 100%);
   background: transparent;
   border: 0;
   padding: 8px 4px 12px;
+  position: relative;
+  z-index: 1;
+}
+.mailbox-login-panel--on-video {
+  width: min(720px, 100%);
+  background: rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  backdrop-filter: blur(18px) saturate(1.15);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  padding: 28px 26px 24px;
+  box-shadow: 0 18px 44px -26px rgba(0, 0, 0, 0.28);
+  animation: mailbox-fade-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.14s;
+}
+.mailbox-login-panel--glass {
+  width: min(440px, 100%);
+  background: rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  backdrop-filter: blur(22px) saturate(1.35);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 22px;
+  padding: 28px 26px 24px;
+  box-shadow:
+    0 18px 44px -26px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  animation: mailbox-fade-rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.mailbox-login-panel--glass h1 {
+  color: #111111;
+}
+.mailbox-login-panel--glass > .muted {
+  color: #3d3d3d;
+}
+.mailbox-login-panel--glass .mailbox-back {
+  color: #1a1a1a;
+}
+.mailbox-login-panel--glass .mailbox-field {
+  color: #2a2a2a;
+}
+.mailbox-login-panel--glass .field-line {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 6px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.mailbox-login-panel--glass .field-line:focus-within {
+  border-color: rgba(20, 20, 20, 0.22);
+  background: rgba(255, 255, 255, 0.62);
+}
+.mailbox-login-panel--glass .field-line input {
+  background: transparent;
+  color: #111111;
+}
+.mailbox-login-panel--glass .mailbox-login-submit {
+  margin-top: 8px;
+  border-radius: 12px;
+  background: #1a73e8;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 24px -12px rgba(26, 115, 232, 0.55);
+}
+.mailbox-login-panel--glass .mailbox-login-submit:hover:not(:disabled) {
+  background: #1765cc;
+}
+.mailbox-login-panel--glass .mailbox-remember {
+  color: #2a2a2a;
+  margin: 4px 0 2px;
+  font-size: 0.85rem;
+}
+@keyframes mailbox-fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .mailbox-login-panel--wide {
   width: min(720px, 100%);
+}
+.mailbox-login--hero .mailbox-login-panel h1 {
+  color: #111111;
+}
+.mailbox-login--hero .mailbox-login-panel > .muted {
+  color: #5c5c5c;
+}
+.mailbox-login--hero .mailbox-back {
+  color: #1a1a1a;
+}
+.mailbox-login--hero .mailbox-back:hover {
+  color: #111111;
+  opacity: 0.55;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mailbox-hero-video {
+    display: none;
+  }
+  .mailbox-hero-bg {
+    background: #eef2ee
+      url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260831_223518_f11bfa03-4e65-47e1-a4a7-30e42a7a8c2f.png&w=1920&q=85')
+      center / cover no-repeat;
+    animation: none !important;
+  }
+  .mailbox-login-panel--on-video,
+  .mailbox-login-panel--glass {
+    animation: none !important;
+  }
 }
 .mailbox-login-panel h1 {
   margin: 0 0 6px;
@@ -2167,6 +2395,7 @@ a.auth-submit-link {
   padding: 0;
   margin: 0 0 14px;
   cursor: pointer;
+  text-decoration: none;
 }
 .mailbox-back:hover {
   color: #1e293b;

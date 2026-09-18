@@ -9,6 +9,9 @@ RewriteRule ^select-module/?$ select-module.php [L,QSA,NC]
 RewriteRule ^suggest/?$ suggest.php [L,QSA,NC]
 RewriteRule ^payroll/?$ payroll.php [L,QSA,NC]
 RewriteRule ^payroll/(run-payroll|edit-payslip|payslip|settings|my-payslips)/?$ payroll.php?desk=$1 [L,QSA,NC]
+# Attendance → Laravel + React clock desk
+RewriteRule ^attendance/?$ attendance/index.php?module=attendance [L,QSA,NC]
+RewriteRule ^attendance/index(\.php)?/?$ attendance/index.php?module=attendance [L,QSA,NC]
 # Legacy select-module / payroll paths → Laravel payroll bridge
 RewriteRule ^modules/payroll/?$ payroll.php [L,QSA,NC]
 RewriteRule ^modules/payroll/index(\.php)?/?$ payroll.php [L,QSA,NC]

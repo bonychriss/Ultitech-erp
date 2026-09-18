@@ -151,6 +151,7 @@ export type PoolMailbox = {
   email: string;
   display_name: string;
   account_type?: string;
+  remembered?: boolean;
   imap_host?: string;
   imap_port?: number;
   smtp_host?: string;
@@ -264,6 +265,17 @@ export const api = {
     return request<{ ok: boolean; message: string }>(`/api/trash/${id}`, { method: 'POST' });
   },
 
+  archive(id: number) {
+    return request<{ ok: boolean; message: string }>(`/api/archive/${id}`, { method: 'POST' });
+  },
+
+  bulk(action: 'trash' | 'archive', ids: number[]) {
+    return request<{ ok: boolean; message: string; count?: number }>('/api/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ action, ids }),
+    });
+  },
+
   sync() {
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 25000);
@@ -277,13 +289,26 @@ export const api = {
     return request<{ ok: boolean; mailboxes: PoolMailbox[] }>('/api/available-mailboxes');
   },
 
-  claimMailbox(payload: { id?: number; email: string; password: string }) {
+  claimMailbox(payload: { id?: number; email: string; password: string; remember?: boolean }) {
     return request<{
       ok: boolean;
       message: string;
       account: Account;
       folders: Folder[];
     }>('/api/claim-mailbox', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  openMailbox(payload: { id?: number; email?: string }) {
+    return request<{
+      ok: boolean;
+      message: string;
+      account: Account;
+      folders: Folder[];
+      needs_password?: boolean;
+    }>('/api/open-mailbox', {
       method: 'POST',
       body: JSON.stringify(payload),
     });

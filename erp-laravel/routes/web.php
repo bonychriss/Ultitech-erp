@@ -27,6 +27,7 @@ use App\Http\Controllers\CashBookPageController;
 use App\Http\Controllers\AccountingPageController;
 use App\Http\Controllers\RevenueDeskPageController;
 use App\Http\Controllers\RevenuePageController;
+use App\Http\Controllers\AttendancePageController;
 use App\Domains\CashBook\DeskShell as CashBookDeskShell;
 use App\Domains\Revenue\DeskShell as RevenueDeskShell;
 use App\Http\Middleware\AttachErpContext;
@@ -106,4 +107,7 @@ Route::middleware([AttachErpContext::class])->group(function () {
     Route::match(['get', 'post'], '/revenue/desk/{desk}', [RevenueDeskPageController::class, 'show'])
         ->where('desk', RevenueDeskShell::deskRegex())
         ->name('revenue.page.desk');
+
+    // Attendance (React clock desk; actions stay under attendance/api)
+    Route::get('/attendance', [AttendancePageController::class, 'show'])->name('attendance.page');
 });

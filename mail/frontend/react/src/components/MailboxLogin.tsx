@@ -1,11 +1,34 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { MdArrowBack, MdEmail, MdLockOutline, MdLogin, MdPerson } from 'react-icons/md';
 import { api, type PoolMailbox } from '../api';
+import { LoginHeroVideo } from './LoginHeroVideo';
 
 type Props = {
   onConnected: () => void;
   onToast: (message: string) => void;
 };
+
+/** Ultitech / local module picker after leaving Mail. */
+function selectModuleUrl(): string {
+  if (typeof window === 'undefined') return '/select-module.php';
+  const host = window.location.hostname.toLowerCase();
+  const path = window.location.pathname.replace(/\\/g, '/');
+
+  if (host.includes('ultitech.io')) {
+    if (path.includes('/roadmaster')) return '/roadmaster/select-module';
+    if (path.includes('/ultimate')) return '/ultimate/select-module';
+  }
+  if (host.includes('roadmasterspares.com')) {
+    return 'https://ultitech.io/roadmaster/select-module';
+  }
+  if (host.includes('ultimate.co.tz')) {
+    return 'https://ultitech.io/ultimate/select-module';
+  }
+  if (path.includes('/public_html/')) {
+    return '/public_html/select-module.php';
+  }
+  return '/select-module.php';
+}
 
 export function MailboxLogin({ onConnected, onToast }: Props) {
   const [mailboxes, setMailboxes] = useState<PoolMailbox[]>([]);
@@ -14,6 +37,7 @@ export function MailboxLogin({ onConnected, onToast }: Props) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,10 +62,35 @@ export function MailboxLogin({ onConnected, onToast }: Props) {
     };
   }, []);
 
+  async function openRemembered(m: PoolMailbox) {
+    setBusy(true);
+    setError('');
+    try {
+      const res = await api.openMailbox({ id: m.id, email: m.email });
+      onToast(res.message || 'Mailbox opened');
+      onConnected();
+    } catch (err) {
+      // Fall back to password form if remember is stale.
+      setSelectedId(m.id);
+      setEmail(m.email);
+      setPassword('');
+      setRemember(true);
+      setStep('login');
+      setError(err instanceof Error ? err.message : 'Enter the mailbox password.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function openLogin(m: PoolMailbox) {
+    if (m.remembered) {
+      void openRemembered(m);
+      return;
+    }
     setSelectedId(m.id);
     setEmail(m.email);
     setPassword('');
+    setRemember(true);
     setError('');
     setStep('login');
   }
@@ -73,6 +122,7 @@ export function MailboxLogin({ onConnected, onToast }: Props) {
         id,
         email: emailNorm,
         password,
+        remember,
       });
       onToast(res.message || 'Mailbox connected');
       onConnected();
@@ -102,14 +152,21 @@ export function MailboxLogin({ onConnected, onToast }: Props) {
 
   if (step === 'login') {
     return (
-      <div className="mailbox-login">
-        <form className="mailbox-login-panel" onSubmit={(e) => void onSubmit(e)}>
+      <div className="mailbox-login mailbox-login--hero">
+        <LoginHeroVideo />
+        <form
+          className="mailbox-login-panel mailbox-login-panel--glass"
+          onSubmit={(e) => void onSubmit(e)}
+        >
           <button type="button" className="mailbox-back" onClick={backToPick}>
             <MdArrowBack size={18} aria-hidden />
             Back
           </button>
           <h1>Sign in to mailbox</h1>
-          <p className="muted">Enter the account email and password. You only need to do this once.</p>
+          <p className="muted">
+            Enter the account email and password. With Remember me on, you only need to do this
+            once while signed into Ultitech.
+          </p>
 
           {error ? <div className="settings-error">{error}</div> : null}
 
@@ -144,6 +201,15 @@ export function MailboxLogin({ onConnected, onToast }: Props) {
             </div>
           </label>
 
+          <label className="remember mailbox-remember">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+            Remember me
+          </label>
+
           <button className="wizard-btn-next mailbox-login-submit" type="submit" disabled={busy}>
             <MdLogin size={18} aria-hidden />
             {busy ? 'Connecting...' : 'Log in'}
@@ -154,10 +220,17 @@ export function MailboxLogin({ onConnected, onToast }: Props) {
   }
 
   return (
-    <div className="mailbox-login">
-      <div className="mailbox-login-panel mailbox-login-panel--wide">
+    <div className="mailbox-login mailbox-login--hero">
+      <LoginHeroVideo />
+      <div className="mailbox-login-panel mailbox-login-panel--wide mailbox-login-panel--on-video">
+        <a className="mailbox-back" href={selectModuleUrl()}>
+          <MdArrowBack size={18} aria-hidden />
+          Modules
+        </a>
         <h1>Choose your mailbox</h1>
-        <p className="muted">Pick an account to continue.</p>
+        <p className="muted">
+          {busy ? 'Opening mailbox…' : 'Pick an account to continue.'}
+        </p>
 
         {error ? <div className="settings-error">{error}</div> : null}
 
@@ -176,6 +249,7 @@ export function MailboxLogin({ onConnected, onToast }: Props) {
                 role="listitem"
                 className={`mailbox-tile tone-${tone}`}
                 onClick={() => openLogin(m)}
+                disabled={busy}
               >
                 <span className="mailbox-tile-icon" aria-hidden>
                   <MdPerson size={22} />

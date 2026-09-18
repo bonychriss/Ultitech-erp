@@ -402,21 +402,29 @@ export default function AttendanceAnalytics({ data }) {
             label: 'Missed sign-outs',
             value: String(Number(metrics.missedSignOuts || 0)),
           },
+          {
+            label: 'Longest streak',
+            value: `${Number(metrics.longestStreak || 0)} days`,
+          },
+          {
+            label: 'Current streak',
+            value: `${Number(metrics.currentStreak || 0)} days`,
+          },
         ],
         note: 'Late arrivals and forgotten clock-outs reduce this score.',
         icon: 'fa-clock',
         tone: 'green',
-        detailsToggle: 'Point distribution',
+        detailsToggle: 'Punctuality & streak',
       },
       {
-        key: 'streak',
-        label: isTeam ? 'Active members' : 'Longest streak',
+        key: isTeam ? 'members' : 'overtime',
+        label: isTeam ? 'Active members' : 'Overtime',
         value: isTeam
           ? `${Number(metrics.activeMembers || 0)}/${Number(metrics.teamHeadcount || 0)}`
-          : String(Number(metrics.longestStreak || 0)),
+          : `${Number(metrics.totalOt || 0)}h`,
         lead: isTeam
           ? 'People who clocked in at least once during this period.'
-          : 'Longest consecutive attendance streak in this period.',
+          : 'Total overtime hours recorded in this period.',
         details: isTeam
           ? [
               {
@@ -436,21 +444,34 @@ export default function AttendanceAnalytics({ data }) {
                       )}%`
                     : '-',
               },
+              {
+                label: 'Team overtime',
+                value: `${Number(metrics.totalOt || 0)}h`,
+              },
             ]
           : [
               {
-                label: 'Longest streak',
-                value: `${Number(metrics.longestStreak || 0)} days`,
+                label: 'Total overtime',
+                value: `${Number(metrics.totalOt || 0)}h`,
               },
               {
-                label: 'Current streak',
-                value: `${Number(metrics.currentStreak || 0)} days`,
+                label: 'Present days',
+                value: String(Number(metrics.presentDays || 0)),
+              },
+              {
+                label: 'Avg OT / present day',
+                value:
+                  Number(metrics.presentDays || 0) > 0
+                    ? `${(Number(metrics.totalOt || 0) / Number(metrics.presentDays || 0)).toFixed(1)}h`
+                    : '0h',
               },
             ],
-        note: isTeam ? 'Admins are excluded from team headcount.' : null,
-        icon: isTeam ? 'fa-users' : 'fa-fire',
+        note: isTeam
+          ? 'Admins are excluded from team headcount.'
+          : 'Overtime is hours past the configured end time.',
+        icon: isTeam ? 'fa-users' : 'fa-business-time',
         tone: 'amber',
-        detailsToggle: isTeam ? 'Member coverage' : 'Streak details',
+        detailsToggle: isTeam ? 'Member coverage' : 'Overtime details',
       },
       {
         key: 'avg',

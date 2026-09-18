@@ -8470,6 +8470,9 @@ function erp_get_mobile_top_chrome_html(): string
     visibility: hidden !important;
     pointer-events: none !important;
   }
+}
+/* Immersive light-blue top: phones only (avoid desktop sidebar + blue Stats split) */
+@media (max-width: 767.98px) {
   html:has(body.dashboard) {
     background-color: {$top} !important;
   }
@@ -8479,7 +8482,6 @@ function erp_get_mobile_top_chrome_html(): string
   html:not([data-theme="dark"]) body.dashboard {
     background-color: #f8fafc !important;
   }
-  /* Continuous fill from screen top through hamburger row (SportyBet-style) */
   body.dashboard:not(.att-top-chrome-hidden)::before {
     content: "";
     position: fixed;
@@ -8505,7 +8507,6 @@ function erp_get_mobile_top_chrome_html(): string
     background-color: {$top} !important;
     border: none !important;
     box-shadow: none !important;
-    /* Safe-area via border so shorthand padding from module CSS cannot wipe it */
     border-top: env(safe-area-inset-top, 0px) solid {$top} !important;
     margin-top: 0 !important;
     position: sticky !important;
@@ -8520,13 +8521,14 @@ function erp_get_mobile_top_chrome_html(): string
   }
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-page-title,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-page-title[style],
+  html[data-theme="dark"] body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-page-title,
+  html[data-theme="dark"] body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-page-title[style],
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray a,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray button,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray i,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray svg {
     color: #0f172a !important;
   }
-  /* Hamburger: lines only — no button box */
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn[style],
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn.btn,
@@ -8589,22 +8591,42 @@ function erp_get_mobile_top_chrome_html(): string
     background-color: #e2e8f0 !important;
   }
 }
+/* Desktop/tablet with sidebar: never keep forced light-blue header */
+@media (min-width: 768px) {
+  body.dashboard::before {
+    content: none !important;
+    display: none !important;
+  }
+  body.dashboard .layout-main-wrapper > .flex-grow-1 {
+    background-image: none !important;
+  }
+}
 </style>
 <script id="erp-mobile-top-chrome-boot">
 (function(){
   var TOP = '{$top}';
-  var m = document.querySelector('meta[name="viewport"]');
-  if (m) m.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
-  document.documentElement.style.backgroundColor = TOP;
   var THRESHOLD = 6, lastHidden = null;
   function pageBg(){ return document.documentElement.getAttribute('data-theme') === 'dark' ? '#020617' : '#f8fafc'; }
+  function isPhone(){ return !window.matchMedia || window.matchMedia('(max-width: 767.98px)').matches; }
   function setThemeColor(c){
     document.documentElement.style.backgroundColor = c;
     document.querySelectorAll('meta[name="theme-color"]').forEach(function(el){ el.setAttribute('content', c); });
     var ms = document.querySelector('meta[name="msapplication-navbutton-color"]');
     if (ms) ms.setAttribute('content', c);
   }
+  function clearHeaderPaint(){
+    var headers = document.querySelectorAll('body.dashboard .employee-header, body.dashboard header.employee-header');
+    for (var i = 0; i < headers.length; i++) {
+      headers[i].style.removeProperty('background');
+      headers[i].style.removeProperty('background-color');
+      headers[i].style.removeProperty('border-top-color');
+      headers[i].style.removeProperty('background-image');
+    }
+    document.documentElement.style.removeProperty('background-color');
+    document.body && document.body.classList.remove('att-top-chrome-hidden');
+  }
   function paintHeader(hidden){
+    if (!isPhone()) { clearHeaderPaint(); return; }
     var c = hidden ? pageBg() : TOP;
     var headers = document.querySelectorAll('body.dashboard .employee-header, body.dashboard header.employee-header');
     for (var i = 0; i < headers.length; i++) {
@@ -8622,11 +8644,12 @@ function erp_get_mobile_top_chrome_html(): string
     }
     return y;
   }
-  function isMobile(){ return !window.matchMedia || window.matchMedia('(max-width: 991.98px)').matches; }
   function apply(){
     if (!document.body || !document.body.classList.contains('dashboard')) return;
-    if (!isMobile()) {
-      if (lastHidden !== false) { document.body.classList.remove('att-top-chrome-hidden'); lastHidden = false; }
+    if (!isPhone()) {
+      if (lastHidden !== null) { clearHeaderPaint(); lastHidden = null; }
+      else { clearHeaderPaint(); }
+      setThemeColor(pageBg());
       return;
     }
     var hidden = scrollY() > THRESHOLD;
@@ -8642,14 +8665,16 @@ function erp_get_mobile_top_chrome_html(): string
     window.addEventListener('scroll', apply, opts);
     window.addEventListener('touchmove', apply, opts);
     window.addEventListener('wheel', apply, opts);
+    window.addEventListener('resize', function(){ lastHidden = null; apply(); }, { passive: true });
     var nodes = document.querySelectorAll('main.main-content, main[class*="-react-root"], .layout-main-wrapper, .layout-main-wrapper > .flex-grow-1, #root, .att-shell, [class*="-desk-react-root"]');
     for (var i = 0; i < nodes.length; i++) nodes[i].addEventListener('scroll', apply, opts);
   }
   function start(){
+    var m = document.querySelector('meta[name="viewport"]');
+    if (m) m.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
     bind();
     lastHidden = null;
     apply();
-    paintHeader(scrollY() > THRESHOLD);
     setTimeout(function(){ lastHidden = null; apply(); }, 100);
     setTimeout(function(){ lastHidden = null; apply(); }, 500);
     setTimeout(bind, 800);

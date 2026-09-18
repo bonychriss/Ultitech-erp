@@ -9,8 +9,8 @@ namespace App\Domains\Attendance;
  */
 final class AttendanceShell
 {
-    /** Soft slate-violet immersive mobile status bar + header (SportyBet-style). */
-    private const MOBILE_TOP_COLOR = '#312E81';
+    /** Light deep indigo immersive mobile status bar + header (softer match to page). */
+    private const MOBILE_TOP_COLOR = '#6366F1';
 
     /**
      * @param array<string,mixed> $cfg

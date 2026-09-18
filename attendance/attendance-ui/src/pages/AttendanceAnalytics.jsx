@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { postAttendanceAction } from '../api';
-import '../attendance-records.css';
 import '../attendance-analytics.css';
 
 function formatDate(value) {
@@ -8,22 +7,6 @@ function formatDate(value) {
   const d = new Date(`${value}T12:00:00`);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatTime(value) {
-  if (!value) return null;
-  const str = String(value).trim();
-  const timePart = str.includes(' ') ? str.split(' ').pop() : str.includes('T') ? str.split('T').pop() : str;
-  const parts = String(timePart).split(':');
-  if (parts.length >= 2) return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
-  return str;
-}
-
-function statusClass(status) {
-  const s = String(status || '').toLowerCase();
-  if (s.includes('late')) return 'att-desk-status--late';
-  if (s.includes('early')) return 'att-desk-status--early';
-  return 'att-desk-status--on-time';
 }
 
 function BarChart({ labels = [], values = [], color = '#0284c7' }) {
@@ -249,6 +232,7 @@ export default function AttendanceAnalytics({ data }) {
   const [error, setError] = useState('');
   const [barFrom, setBarFrom] = useState(() => String(initial.range?.start || ''));
   const [barTo, setBarTo] = useState(() => String(initial.range?.end || ''));
+  const [barMetric, setBarMetric] = useState('hours');
   const [employeeFilter, setEmployeeFilter] = useState('all');
   const [openMetric, setOpenMetric] = useState(null);
   const [openPunct, setOpenPunct] = useState(null);
@@ -662,10 +646,33 @@ export default function AttendanceAnalytics({ data }) {
               <div className="att-analytics-chart-card">
                 <div className="att-analytics-chart-head">
                   <div>
-                    <h2 className="att-analytics-chart-title">Team hours chart</h2>
-                    <p className="att-analytics-chart-sub">{`Hours worked ${barRangeLabel}`}</p>
+                    <h2 className="att-analytics-chart-title">
+                      {barMetric === 'points' ? 'Team KPI chart' : 'Team hours chart'}
+                    </h2>
+                    <p className="att-analytics-chart-sub">
+                      {barMetric === 'points'
+                        ? `100-pt KPI scores for ${barRangeLabel}`
+                        : `Hours worked ${barRangeLabel}`}
+                    </p>
                   </div>
                   <div className="att-analytics-chart-controls">
+                    <div className="att-analytics-periods att-analytics-periods--blue" role="tablist" aria-label="Chart metric">
+                      {[
+                        { value: 'hours', label: 'Hours' },
+                        { value: 'points', label: 'Points' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          role="tab"
+                          aria-selected={barMetric === opt.value}
+                          className={`att-analytics-period${barMetric === opt.value ? ' is-active' : ''}`}
+                          onClick={() => setBarMetric(opt.value)}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
                     <label className="att-analytics-emp-filter">
                       <i className="fas fa-users" aria-hidden="true" />
                       <select
@@ -686,7 +693,7 @@ export default function AttendanceAnalytics({ data }) {
                 <EmployeeHoursBarChart
                   employees={employeeTotals}
                   periodLabel={barRangeLabel}
-                  metric="hours"
+                  metric={barMetric}
                 />
               </div>
             </>
@@ -757,80 +764,6 @@ export default function AttendanceAnalytics({ data }) {
             </div>
           </section>
         ) : null}
-
-        <section className="att-desk-results">
-          <div className="att-desk-results-head">
-            <h2 className="att-analytics-chart-title" style={{ margin: 0 }}>
-              {isTeam ? 'Team records' : 'Recent records'}
-            </h2>
-            <span className="att-desk-results-count">
-              {busy
-                ? 'Loading...'
-                : `${(state.history || []).length} record${(state.history || []).length === 1 ? '' : 's'}`}
-            </span>
-          </div>
-          <div className="att-desk-table-wrap">
-            <table className={`att-desk-table${isTeam ? '' : ' att-desk-table--activity'}`}>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  {isTeam ? <th>Employee</th> : null}
-                  <th>Status</th>
-                  <th>In</th>
-                  <th>Out</th>
-                  <th>Hours</th>
-                  <th>OT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(state.history || []).length === 0 ? (
-                  <tr>
-                    <td colSpan={isTeam ? 7 : 6}>
-                      <div className="att-desk-empty">
-                        <div className="att-desk-empty-icon" aria-hidden="true">
-                          <i className="fas fa-chart-bar" />
-                        </div>
-                        <p className="att-desk-empty-title">No records in this period</p>
-                        <p className="att-desk-empty-sub">Try a longer period or clock in to start tracking.</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  (state.history || []).map((row) => (
-                    <tr key={`${row.user_id || 'me'}-${row.date}-${row.time_in || ''}`}>
-                      <td>
-                        <strong>{formatDate(row.date)}</strong>
-                      </td>
-                      {isTeam ? (
-                        <td>
-                          <div className="att-desk-emp-name">{row.full_name || row.username || '-'}</div>
-                          {row.username && row.full_name ? (
-                            <div className="att-desk-emp-user">{row.username}</div>
-                          ) : null}
-                        </td>
-                      ) : null}
-                      <td>
-                        <span className={`att-desk-status ${statusClass(row.status)}`}>{row.status || '-'}</span>
-                      </td>
-                      <td>{formatTime(row.time_in) || <span className="att-desk-muted">--:--</span>}</td>
-                      <td>
-                        {formatTime(row.time_out) || <span className="att-desk-muted">--:--</span>}
-                      </td>
-                      <td>{row.total_hours != null ? `${row.total_hours}h` : '-'}</td>
-                      <td>
-                        {row.overtime_hours && Number(row.overtime_hours) > 0 ? (
-                          `+${row.overtime_hours}`
-                        ) : (
-                          <span className="att-desk-muted">--</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
       </div>
     </div>
   );

@@ -8,6 +8,15 @@
 .att-page-analytics .att-analytics-kpi--chip {
   font-weight: inherit;
 }
+.att-desk-error {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.875rem;
+}
 
 .att-analytics-header {
   display: flex;
@@ -191,7 +200,7 @@
 
 .att-analytics-kpi-simple {
   font-size: 0.92rem;
-  font-weight: 600;
+  font-weight: 600 !important;
   color: #0f172a;
   letter-spacing: -0.01em;
   line-height: 1.2;
@@ -426,7 +435,7 @@ html[data-theme="dark"] .att-analytics-about-btn.is-active {
 }
 .att-analytics-punct-item strong {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 600 !important;
   color: #0f172a;
   letter-spacing: -0.02em;
   line-height: 1.1;

@@ -70,12 +70,12 @@ final class AttendanceShell
             . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' . "\n"
             . '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n"
             . $this->deskChromeCss($wallpaperUrl) . "\n"
-            . '<script>window.__ATTENDANCE_PAGE__ = ' . $bootJson . ';</script>';
+            . '<script>window.__ATTENDANCE_PAGE__ = ' . $bootJson . ';</script>'
+            . $this->mobileTopChromeScrollScript();
 
         $footerScripts = '<script type="module" crossorigin src="'
             . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8')
-            . '"></script>'
-            . $this->mobileTopChromeScrollScript();
+            . '"></script>';
 
         return [
             'pageTitle' => $pageTitle,
@@ -165,8 +165,9 @@ final class AttendanceShell
         return <<<JS
 <script>
 (function () {
-  if (window.matchMedia && !window.matchMedia('(max-width: 991.98px)').matches) return;
   var TOP = '{$top}';
+  var THRESHOLD = 6;
+  var lastHidden = null;
   var pageBg = function () {
     return document.documentElement.getAttribute('data-theme') === 'dark' ? '#020617' : '#f8fafc';
   };
@@ -178,28 +179,64 @@ final class AttendanceShell
     var ms = document.querySelector('meta[name="msapplication-navbutton-color"]');
     if (ms) ms.setAttribute('content', c);
   };
-  var apply = function (hidden) {
-    if (!document.body) return;
-    var on = document.body.classList.contains('att-top-chrome-hidden');
-    if (hidden === on) return;
-    document.body.classList.toggle('att-top-chrome-hidden', hidden);
-    setThemeColor(hidden ? pageBg() : TOP);
+  var paintHeader = function (hidden) {
+    var header = document.querySelector('body.page-attendance-desk .employee-header.employee-header--products-desk');
+    if (!header) return;
+    if (hidden) {
+      header.style.setProperty('background', pageBg(), 'important');
+    } else {
+      header.style.setProperty('background', TOP, 'important');
+    }
   };
   var scrollY = function () {
-    var main = document.querySelector('main.att-react-root');
-    var mainY = main ? main.scrollTop : 0;
-    var winY = window.scrollY || document.documentElement.scrollTop || 0;
-    return Math.max(mainY, winY);
+    var y = 0;
+    var winY = window.pageYOffset || window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    y = Math.max(y, winY);
+    var nodes = document.querySelectorAll('main.att-react-root, main.main-content, .layout-main-wrapper, .layout-main-wrapper > .flex-grow-1, #root, .att-shell');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i] && nodes[i].scrollTop) y = Math.max(y, nodes[i].scrollTop);
+    }
+    return y;
   };
-  var onScroll = function () { apply(scrollY() > 10); };
-  var bind = function () {
-    var main = document.querySelector('main.att-react-root');
-    if (main) main.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
+  var isMobile = function () {
+    return !window.matchMedia || window.matchMedia('(max-width: 991.98px)').matches;
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
-  else bind();
+  var apply = function () {
+    if (!document.body || !document.body.classList.contains('page-attendance-desk')) return;
+    if (!isMobile()) {
+      if (lastHidden !== false) {
+        document.body.classList.remove('att-top-chrome-hidden');
+        lastHidden = false;
+      }
+      return;
+    }
+    var hidden = scrollY() > THRESHOLD;
+    if (hidden === lastHidden) return;
+    lastHidden = hidden;
+    document.body.classList.toggle('att-top-chrome-hidden', hidden);
+    setThemeColor(hidden ? pageBg() : TOP);
+    paintHeader(hidden);
+  };
+  var bindScrollTargets = function () {
+    var opts = { passive: true, capture: true };
+    document.addEventListener('scroll', apply, opts);
+    window.addEventListener('scroll', apply, opts);
+    window.addEventListener('touchmove', apply, opts);
+    window.addEventListener('wheel', apply, opts);
+    var nodes = document.querySelectorAll('main.att-react-root, main.main-content, .layout-main-wrapper, .layout-main-wrapper > .flex-grow-1, #root, .att-shell');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].addEventListener('scroll', apply, opts);
+    }
+  };
+  var start = function () {
+    bindScrollTargets();
+    apply();
+    setTimeout(apply, 100);
+    setTimeout(apply, 500);
+    setTimeout(bindScrollTargets, 800);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 JS;

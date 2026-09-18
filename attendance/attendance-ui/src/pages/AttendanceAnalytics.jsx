@@ -58,23 +58,29 @@ function BarChart({ labels = [], values = [], color = '#0284c7' }) {
   );
 }
 
-function TeamLineChart({ labels = [], series = [] }) {
+function TeamChart({ labels = [], series = [], mode = 'line' }) {
   const width = 720;
   const height = 280;
   const pad = { top: 16, right: 16, bottom: 36, left: 40 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
+  const isBar = mode === 'bar';
 
   const allValues = series.flatMap((s) => (s.values || []).map((v) => Number(v) || 0));
   const maxY = Math.max(...allValues, 1);
   const n = labels.length;
+  const seriesCount = series.length;
 
-  if (!n || !series.length) {
+  if (!n || !seriesCount) {
     return <div className="att-analytics-chart-empty">No team members to chart.</div>;
   }
 
   const xAt = (i) => pad.left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
   const yAt = (v) => pad.top + plotH - (Math.max(0, Number(v) || 0) / maxY) * plotH;
+  const groupSlot = n === 1 ? plotW : plotW / Math.max(n - 1, 1);
+  const groupWidth = Math.min(isBar ? 28 : groupSlot * 0.7, groupSlot * 0.85);
+  const barGap = 1;
+  const barWidth = Math.max(2, (groupWidth - barGap * Math.max(seriesCount - 1, 0)) / seriesCount);
 
   const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => ({
     y: pad.top + plotH * (1 - t),
@@ -88,24 +94,16 @@ function TeamLineChart({ labels = [], series = [] }) {
     const isEdge = i === 0 || i === n - 1;
     const onStep = i % labelStep === 0;
     if (!isEdge && !onStep) continue;
-    // Prefer evenly spaced ticks; always keep first, and last only if not duplicate text.
     const text = new Date(`${labels[i]}T12:00:00`).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
     });
-    if (seenTexts.has(text) && i === n - 1 && onStep) {
-      // skip duplicate last if already shown via step
-      continue;
-    }
+    if (seenTexts.has(text) && i === n - 1 && onStep) continue;
     if (seenTexts.has(text) && !isEdge) continue;
-    if (seenTexts.has(text) && i === n - 1) {
-      // replace nothing; skip duplicate Sep 1-style repeats
-      continue;
-    }
+    if (seenTexts.has(text) && i === n - 1) continue;
     seenTexts.add(text);
     xLabels.push({ i, text });
   }
-  // Ensure last day is shown when distinct.
   if (n > 1) {
     const lastText = new Date(`${labels[n - 1]}T12:00:00`).toLocaleDateString('en-US', {
       month: 'short',
@@ -118,7 +116,12 @@ function TeamLineChart({ labels = [], series = [] }) {
 
   return (
     <div className="att-analytics-line-wrap">
-      <svg className="att-analytics-line-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Team month performance">
+      <svg
+        className="att-analytics-line-svg"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={`Team month performance ${isBar ? 'bar' : 'line'} chart`}
+      >
         {gridYs.map((g) => (
           <g key={`g-${g.label}`}>
             <line x1={pad.left} x2={width - pad.right} y1={g.y} y2={g.y} className="att-analytics-line-grid" />
@@ -127,33 +130,61 @@ function TeamLineChart({ labels = [], series = [] }) {
             </text>
           </g>
         ))}
-        {series.map((s) => {
-          const pts = (s.values || []).map((v, i) => `${xAt(i)},${yAt(v)}`).join(' ');
-          return (
-            <g key={s.id || s.name}>
-              <polyline
-                fill="none"
-                stroke={s.color || '#0284c7'}
-                strokeWidth="2.25"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                points={pts}
-              />
-              {(s.values || []).map((v, i) => (
-                <circle
-                  key={`${s.id}-${i}`}
-                  cx={xAt(i)}
-                  cy={yAt(v)}
-                  r={Number(v) > 0 ? 3.25 : 2}
-                  fill={s.color || '#0284c7'}
-                  opacity={Number(v) > 0 ? 1 : 0.35}
-                >
-                  <title>{`${s.name}: ${formatDate(labels[i])} - ${Number(v).toFixed(1)}h`}</title>
-                </circle>
-              ))}
-            </g>
-          );
-        })}
+        {isBar
+          ? labels.map((label, dayIdx) => {
+              const groupLeft = xAt(dayIdx) - groupWidth / 2;
+              return (
+                <g key={`day-${label}-${dayIdx}`}>
+                  {series.map((s, sIdx) => {
+                    const value = Number((s.values || [])[dayIdx] || 0);
+                    const barH = Math.max(value > 0 ? 2 : 0, (Math.max(0, value) / maxY) * plotH);
+                    const x = groupLeft + sIdx * (barWidth + barGap);
+                    const y = pad.top + plotH - barH;
+                    return (
+                      <rect
+                        key={`${s.id || s.name}-${dayIdx}`}
+                        x={x}
+                        y={y}
+                        width={barWidth}
+                        height={barH}
+                        rx={1.5}
+                        fill={s.color || '#0284c7'}
+                        opacity={value > 0 ? 0.92 : 0.2}
+                      >
+                        <title>{`${s.name}: ${formatDate(label)} - ${value.toFixed(1)}h`}</title>
+                      </rect>
+                    );
+                  })}
+                </g>
+              );
+            })
+          : series.map((s) => {
+              const pts = (s.values || []).map((v, i) => `${xAt(i)},${yAt(v)}`).join(' ');
+              return (
+                <g key={s.id || s.name}>
+                  <polyline
+                    fill="none"
+                    stroke={s.color || '#0284c7'}
+                    strokeWidth="2.25"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    points={pts}
+                  />
+                  {(s.values || []).map((v, i) => (
+                    <circle
+                      key={`${s.id}-${i}`}
+                      cx={xAt(i)}
+                      cy={yAt(v)}
+                      r={Number(v) > 0 ? 3.25 : 2}
+                      fill={s.color || '#0284c7'}
+                      opacity={Number(v) > 0 ? 1 : 0.35}
+                    >
+                      <title>{`${s.name}: ${formatDate(labels[i])} - ${Number(v).toFixed(1)}h`}</title>
+                    </circle>
+                  ))}
+                </g>
+              );
+            })}
         {xLabels.map((item) => (
           <text
             key={`x-${item.i}-${item.text}`}
@@ -200,6 +231,7 @@ export default function AttendanceAnalytics({ data }) {
   }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [chartType, setChartType] = useState('line');
 
   const metrics = state.metrics || {};
   const daily = state.charts?.daily || { labels: [], values: [] };
@@ -362,11 +394,39 @@ export default function AttendanceAnalytics({ data }) {
         <section className={`att-analytics-charts${isTeam ? ' att-analytics-charts--single' : ''}`}>
           {isTeam ? (
             <div className="att-analytics-chart-card">
-              <h2 className="att-analytics-chart-title">
-                {teamLine.title || 'Month performance'}
-              </h2>
-              <p className="att-analytics-chart-sub">Hours by employee (admins excluded)</p>
-              <TeamLineChart labels={teamLine.labels || []} series={teamLine.series || []} />
+              <div className="att-analytics-chart-head">
+                <div>
+                  <h2 className="att-analytics-chart-title">
+                    {teamLine.title || 'Month performance'}
+                  </h2>
+                  <p className="att-analytics-chart-sub">Hours by employee (admins excluded)</p>
+                </div>
+                <div className="att-analytics-periods" role="tablist" aria-label="Chart type">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={chartType === 'line'}
+                    className={`att-analytics-period${chartType === 'line' ? ' is-active' : ''}`}
+                    onClick={() => setChartType('line')}
+                  >
+                    Line
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={chartType === 'bar'}
+                    className={`att-analytics-period${chartType === 'bar' ? ' is-active' : ''}`}
+                    onClick={() => setChartType('bar')}
+                  >
+                    Bar
+                  </button>
+                </div>
+              </div>
+              <TeamChart
+                labels={teamLine.labels || []}
+                series={teamLine.series || []}
+                mode={chartType}
+              />
             </div>
           ) : (
             <>

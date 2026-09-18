@@ -148,6 +148,20 @@
   font-size: 0.75rem;
   color: #94a3b8;
 }
+.att-analytics-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.35rem;
+}
+.att-analytics-chart-head .att-analytics-chart-title {
+  margin-bottom: 0.35rem;
+}
+.att-analytics-chart-head .att-analytics-chart-sub {
+  margin: 0;
+}
 .att-analytics-line-wrap {
   width: 100%;
   min-width: 0;

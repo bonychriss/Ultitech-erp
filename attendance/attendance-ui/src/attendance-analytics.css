@@ -467,6 +467,132 @@ html[data-theme="dark"] .att-analytics-about-btn.is-active {
   font-weight: 500;
   line-height: 1.35;
 }
+.att-analytics-punct-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.att-analytics-punct-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none !important;
+  padding: 0;
+  margin: 0;
+  background: rgba(15, 23, 42, 0.45);
+  cursor: pointer;
+}
+.att-analytics-punct-modal-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 22rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem 1.1rem 1.15rem;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+}
+.att-analytics-punct-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+.att-analytics-punct-modal-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+.att-analytics-punct-modal-close {
+  border: none !important;
+  background: #f1f5f9;
+  color: #64748b;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.att-analytics-punct-modal-close:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+.att-analytics-punct-modal-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.att-analytics-punct-modal-value span {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-left: 0.15rem;
+}
+.att-analytics-punct-modal-lead {
+  margin: 0.45rem 0 0.85rem;
+  font-size: 0.8125rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+.att-analytics-punct-modal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.att-analytics-punct-modal-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+.att-analytics-punct-modal-list strong {
+  font-weight: 600 !important;
+  color: #0f172a;
+  text-align: right;
+}
+.att-analytics-punct-modal-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+html[data-theme="dark"] .att-analytics-punct-modal-card {
+  background: #0f172a;
+  border-color: #334155;
+}
+html[data-theme="dark"] .att-analytics-punct-modal-title,
+html[data-theme="dark"] .att-analytics-punct-modal-value,
+html[data-theme="dark"] .att-analytics-punct-modal-list strong {
+  color: #f8fafc;
+}
+html[data-theme="dark"] .att-analytics-punct-modal-list li {
+  background: #111827;
+  border-color: #334155;
+}
+html[data-theme="dark"] .att-analytics-punct-modal-close {
+  background: #1e293b;
+  color: #94a3b8;
+}
 html[data-theme="dark"] .att-analytics-punct-pop {
   background: #0f172a;
   border-color: #334155;

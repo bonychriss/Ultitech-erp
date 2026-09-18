@@ -9,9 +9,6 @@ namespace App\Domains\Attendance;
  */
 final class AttendanceShell
 {
-    /** Soft light-blue immersive mobile status bar + header. */
-    private const MOBILE_TOP_COLOR = '#BFDBFE';
-
     /**
      * @param array<string,mixed> $cfg
      * @return array{
@@ -64,14 +61,12 @@ final class AttendanceShell
             $bootJson = '{"page":"' . $page . '","data":{}}';
         }
 
-        $headMarkup = $this->mobileStatusBarHead()
-            . $this->commonHeadExtras()
+        $headMarkup = $this->commonHeadExtras()
             . '<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">' . "\n"
             . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' . "\n"
             . '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n"
             . $this->deskChromeCss($wallpaperUrl) . "\n"
-            . '<script>window.__ATTENDANCE_PAGE__ = ' . $bootJson . ';</script>'
-            . $this->mobileTopChromeScrollScript();
+            . '<script>window.__ATTENDANCE_PAGE__ = ' . $bootJson . ';</script>';
 
         $footerScripts = '<script type="module" crossorigin src="'
             . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8')
@@ -135,113 +130,6 @@ final class AttendanceShell
         ];
     }
 
-    /**
-     * Immersive mobile top chrome: status bar + header share one solid fill (SportyBet-style).
-     */
-    private function mobileStatusBarHead(): string
-    {
-        $color = self::MOBILE_TOP_COLOR;
-
-        return '<meta name="theme-color" content="' . $color . '">' . "\n"
-            . '<meta name="theme-color" media="(prefers-color-scheme: light)" content="' . $color . '">' . "\n"
-            . '<meta name="theme-color" media="(prefers-color-scheme: dark)" content="' . $color . '">' . "\n"
-            . '<meta name="msapplication-navbutton-color" content="' . $color . '">' . "\n"
-            . '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n"
-            . '<meta name="mobile-web-app-capable" content="yes">' . "\n"
-            . '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' . "\n"
-            . '<script>(function(){var m=document.querySelector(\'meta[name="viewport"]\');'
-            . 'if(m){m.setAttribute("content","width=device-width, initial-scale=1.0, viewport-fit=cover");}'
-            . 'document.documentElement.style.backgroundColor="' . $color . '";'
-            . '})();</script>' . "\n";
-    }
-
-    /**
-     * Hide immersive top color after scroll; restore at top of page.
-     */
-    private function mobileTopChromeScrollScript(): string
-    {
-        $top = self::MOBILE_TOP_COLOR;
-
-        return <<<JS
-<script>
-(function () {
-  var TOP = '{$top}';
-  var THRESHOLD = 6;
-  var lastHidden = null;
-  var pageBg = function () {
-    return document.documentElement.getAttribute('data-theme') === 'dark' ? '#020617' : '#f8fafc';
-  };
-  var setThemeColor = function (c) {
-    document.documentElement.style.backgroundColor = c;
-    document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
-      m.setAttribute('content', c);
-    });
-    var ms = document.querySelector('meta[name="msapplication-navbutton-color"]');
-    if (ms) ms.setAttribute('content', c);
-  };
-  var paintHeader = function (hidden) {
-    var header = document.querySelector('body.page-attendance-desk .employee-header.employee-header--products-desk');
-    if (!header) return;
-    if (hidden) {
-      header.style.setProperty('background', pageBg(), 'important');
-    } else {
-      header.style.setProperty('background', TOP, 'important');
-    }
-  };
-  var scrollY = function () {
-    var y = 0;
-    var winY = window.pageYOffset || window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-    y = Math.max(y, winY);
-    var nodes = document.querySelectorAll('main.att-react-root, main.main-content, .layout-main-wrapper, .layout-main-wrapper > .flex-grow-1, #root, .att-shell');
-    for (var i = 0; i < nodes.length; i++) {
-      if (nodes[i] && nodes[i].scrollTop) y = Math.max(y, nodes[i].scrollTop);
-    }
-    return y;
-  };
-  var isMobile = function () {
-    return !window.matchMedia || window.matchMedia('(max-width: 991.98px)').matches;
-  };
-  var apply = function () {
-    if (!document.body || !document.body.classList.contains('page-attendance-desk')) return;
-    if (!isMobile()) {
-      if (lastHidden !== false) {
-        document.body.classList.remove('att-top-chrome-hidden');
-        lastHidden = false;
-      }
-      return;
-    }
-    var hidden = scrollY() > THRESHOLD;
-    if (hidden === lastHidden) return;
-    lastHidden = hidden;
-    document.body.classList.toggle('att-top-chrome-hidden', hidden);
-    setThemeColor(hidden ? pageBg() : TOP);
-    paintHeader(hidden);
-  };
-  var bindScrollTargets = function () {
-    var opts = { passive: true, capture: true };
-    document.addEventListener('scroll', apply, opts);
-    window.addEventListener('scroll', apply, opts);
-    window.addEventListener('touchmove', apply, opts);
-    window.addEventListener('wheel', apply, opts);
-    var nodes = document.querySelectorAll('main.att-react-root, main.main-content, .layout-main-wrapper, .layout-main-wrapper > .flex-grow-1, #root, .att-shell');
-    for (var i = 0; i < nodes.length; i++) {
-      nodes[i].addEventListener('scroll', apply, opts);
-    }
-  };
-  var start = function () {
-    bindScrollTargets();
-    apply();
-    setTimeout(apply, 100);
-    setTimeout(apply, 500);
-    setTimeout(bindScrollTargets, 800);
-  };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
-  else start();
-})();
-</script>
-JS;
-    }
-
     private function commonHeadExtras(): string
     {
         $parts = [
@@ -262,7 +150,6 @@ JS;
     private function deskChromeCss(string $wallpaperUrl): string
     {
         $wp = htmlspecialchars($wallpaperUrl, ENT_QUOTES, 'UTF-8');
-        $top = self::MOBILE_TOP_COLOR;
 
         return <<<CSS
 <style>
@@ -292,6 +179,18 @@ body.page-attendance-desk .employee-header.employee-header--products-desk {
     position: sticky !important;
     top: 0 !important;
     z-index: 1020 !important;
+}
+@media (max-width: 991.98px) {
+    /* Let global mobile top chrome paint the header / status bar */
+    body.page-attendance-desk .employee-header.employee-header--products-desk,
+    html[data-theme="dark"] body.page-attendance-desk .employee-header.employee-header--products-desk,
+    html[data-theme="dark"] body.page-attendance-analytics .employee-header.employee-header--products-desk {
+        background: transparent !important;
+    }
+    body.page-attendance-desk .layout-main-wrapper,
+    body.page-attendance-desk .layout-main-wrapper > .flex-grow-1 {
+        background: transparent !important;
+    }
 }
 body.page-attendance-desk .employee-header--products-desk::after { display: none !important; }
 body.page-attendance-desk .employee-header--products-desk .header-content {
@@ -381,108 +280,6 @@ body.page-attendance-desk .clock-card-v2 {
     background-size: cover !important;
     background-repeat: no-repeat !important;
     box-shadow: 0 14px 36px rgba(15, 23, 42, 0.28) !important;
-}
-/* Immersive top: one light-purple block under time/battery (SportyBet-style) */
-@media (max-width: 991.98px) {
-    html:has(body.page-attendance-desk),
-    html[data-theme="dark"]:has(body.page-attendance-desk) {
-        background-color: {$top} !important;
-    }
-    body.page-attendance-desk,
-    body.page-attendance-desk.dashboard,
-    html[data-theme="dark"] body.page-attendance-desk,
-    html[data-theme="dark"] body.page-attendance-desk.dashboard {
-        background-color: #020617 !important;
-        background-image: linear-gradient({$top}, {$top}) !important;
-        background-size: 100% calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
-        background-repeat: no-repeat !important;
-        background-position: top center !important;
-    }
-    html:not([data-theme="dark"]) body.page-attendance-desk,
-    html:not([data-theme="dark"]) body.page-attendance-desk.dashboard {
-        background-color: #f8fafc !important;
-        background-image: linear-gradient({$top}, {$top}) !important;
-        background-size: 100% calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
-        background-repeat: no-repeat !important;
-        background-position: top center !important;
-    }
-    body.page-attendance-desk .employee-header.employee-header--products-desk,
-    body.page-attendance-analytics .employee-header.employee-header--products-desk,
-    html[data-theme="dark"] body.page-attendance-desk .employee-header.employee-header--products-desk,
-    html[data-theme="dark"] body.page-attendance-analytics .employee-header.employee-header--products-desk {
-        background: {$top} !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding-top: env(safe-area-inset-top, 0px) !important;
-        padding-left: 0.75rem !important;
-        padding-right: 0.75rem !important;
-        margin: 0 !important;
-        position: sticky !important;
-        top: 0 !important;
-        z-index: 1020 !important;
-    }
-    body.page-attendance-desk .employee-header--products-desk .header-content {
-        padding: 0.7rem 0 !important;
-        min-height: 2.75rem;
-        background: transparent !important;
-    }
-    body.page-attendance-desk .employee-header--products-desk .employee-header-page-title,
-    body.page-attendance-analytics .employee-header--products-desk .employee-header-page-title,
-    body.page-attendance-desk .employee-header--products-desk .employee-header-page-title[style] {
-        color: #0f172a !important;
-    }
-    body.page-attendance-desk .employee-header--products-desk .employee-header-menu-btn,
-    body.page-attendance-desk .employee-header--products-desk .employee-header-menu-btn[style],
-    body.page-attendance-desk .employee-header--products-desk .header-actions-tray a,
-    body.page-attendance-desk .employee-header--products-desk .header-actions-tray button,
-    body.page-attendance-desk .employee-header--products-desk .header-actions-tray i,
-    body.page-attendance-desk .employee-header--products-desk .header-actions-tray svg {
-        color: #0f172a !important;
-    }
-    body.page-attendance-desk .layout-main-wrapper,
-    body.page-attendance-desk .layout-main-wrapper > .flex-grow-1 {
-        background: transparent !important;
-    }
-    /* Scrolled: drop the light-blue top chrome so it matches the page */
-    html:has(body.page-attendance-desk.att-top-chrome-hidden) {
-        background-color: #f8fafc !important;
-    }
-    html[data-theme="dark"]:has(body.page-attendance-desk.att-top-chrome-hidden) {
-        background-color: #020617 !important;
-    }
-    body.page-attendance-desk.att-top-chrome-hidden,
-    body.page-attendance-desk.att-top-chrome-hidden.dashboard,
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden,
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden.dashboard,
-    html:not([data-theme="dark"]) body.page-attendance-desk.att-top-chrome-hidden,
-    html:not([data-theme="dark"]) body.page-attendance-desk.att-top-chrome-hidden.dashboard {
-        background-image: none !important;
-    }
-    body.page-attendance-desk.att-top-chrome-hidden .employee-header.employee-header--products-desk,
-    body.page-attendance-analytics.att-top-chrome-hidden .employee-header.employee-header--products-desk,
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden .employee-header.employee-header--products-desk,
-    html[data-theme="dark"] body.page-attendance-analytics.att-top-chrome-hidden .employee-header.employee-header--products-desk {
-        background: #f8fafc !important;
-        transition: background-color 0.18s ease;
-    }
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden .employee-header.employee-header--products-desk,
-    html[data-theme="dark"] body.page-attendance-analytics.att-top-chrome-hidden .employee-header.employee-header--products-desk {
-        background: #020617 !important;
-    }
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden .employee-header--products-desk .employee-header-page-title,
-    html[data-theme="dark"] body.page-attendance-analytics.att-top-chrome-hidden .employee-header--products-desk .employee-header-page-title,
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden .employee-header--products-desk .employee-header-page-title[style],
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden .employee-header--products-desk .employee-header-menu-btn,
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden .employee-header--products-desk .employee-header-menu-btn[style],
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden .employee-header--products-desk .header-actions-tray a,
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden .employee-header--products-desk .header-actions-tray button,
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden .employee-header--products-desk .header-actions-tray i,
-    html[data-theme="dark"] body.page-attendance-desk.att-top-chrome-hidden .employee-header--products-desk .header-actions-tray svg {
-        color: #e2e8f0 !important;
-    }
-    body.page-attendance-desk .employee-header.employee-header--products-desk {
-        transition: background-color 0.18s ease;
-    }
 }
 </style>
 CSS;

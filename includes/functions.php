@@ -8429,6 +8429,168 @@ function erp_should_inject_theme_assets(): bool
 }
 
 /**
+ * Soft light-blue immersive status bar + header for mobile module pages (SportyBet-style).
+ * Injected site-wide; hides after scroll.
+ */
+function erp_get_mobile_top_chrome_html(): string
+{
+    static $rendered = false;
+    if ($rendered || !erp_should_inject_mobile_top_chrome()) {
+        return '';
+    }
+    $rendered = true;
+
+    $top = '#BFDBFE';
+
+    return <<<HTML
+<meta name="theme-color" content="{$top}">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="{$top}">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="{$top}">
+<meta name="msapplication-navbutton-color" content="{$top}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style id="erp-mobile-top-chrome">
+@media (max-width: 991.98px) {
+  html:has(body.dashboard) {
+    background-color: {$top} !important;
+  }
+  body.dashboard {
+    background-image: linear-gradient({$top}, {$top}) !important;
+    background-size: 100% calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
+    background-repeat: no-repeat !important;
+    background-position: top center !important;
+  }
+  html[data-theme="dark"] body.dashboard {
+    background-color: #020617 !important;
+  }
+  html:not([data-theme="dark"]) body.dashboard {
+    background-color: #f8fafc !important;
+  }
+  body.dashboard .employee-header,
+  body.dashboard header.employee-header {
+    background: {$top} !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    transition: background-color 0.18s ease;
+  }
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-page-title,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-page-title[style],
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn[style],
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray a,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray button,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray i,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray svg {
+    color: #0f172a !important;
+  }
+  html:has(body.dashboard.att-top-chrome-hidden) {
+    background-color: #f8fafc !important;
+  }
+  html[data-theme="dark"]:has(body.dashboard.att-top-chrome-hidden) {
+    background-color: #020617 !important;
+  }
+  body.dashboard.att-top-chrome-hidden {
+    background-image: none !important;
+  }
+  body.dashboard.att-top-chrome-hidden .employee-header,
+  body.dashboard.att-top-chrome-hidden header.employee-header {
+    background: #f8fafc !important;
+  }
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header,
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden header.employee-header {
+    background: #020617 !important;
+  }
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .employee-header-page-title,
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .employee-header-page-title[style],
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .employee-header-menu-btn,
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .employee-header-menu-btn[style],
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .header-actions-tray a,
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .header-actions-tray button,
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .header-actions-tray i,
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .header-actions-tray svg {
+    color: #e2e8f0 !important;
+  }
+}
+</style>
+<script id="erp-mobile-top-chrome-boot">
+(function(){
+  var TOP = '{$top}';
+  var m = document.querySelector('meta[name="viewport"]');
+  if (m) m.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
+  document.documentElement.style.backgroundColor = TOP;
+  var THRESHOLD = 6, lastHidden = null;
+  function pageBg(){ return document.documentElement.getAttribute('data-theme') === 'dark' ? '#020617' : '#f8fafc'; }
+  function setThemeColor(c){
+    document.documentElement.style.backgroundColor = c;
+    document.querySelectorAll('meta[name="theme-color"]').forEach(function(el){ el.setAttribute('content', c); });
+    var ms = document.querySelector('meta[name="msapplication-navbutton-color"]');
+    if (ms) ms.setAttribute('content', c);
+  }
+  function paintHeader(hidden){
+    var headers = document.querySelectorAll('body.dashboard .employee-header, body.dashboard header.employee-header');
+    for (var i = 0; i < headers.length; i++) {
+      headers[i].style.setProperty('background', hidden ? pageBg() : TOP, 'important');
+    }
+  }
+  function scrollY(){
+    var y = window.pageYOffset || window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    var nodes = document.querySelectorAll('main.main-content, main[class*="-react-root"], .layout-main-wrapper, .layout-main-wrapper > .flex-grow-1, #root, .att-shell, [class*="-desk-react-root"]');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i] && nodes[i].scrollTop) y = Math.max(y, nodes[i].scrollTop);
+    }
+    return y;
+  }
+  function isMobile(){ return !window.matchMedia || window.matchMedia('(max-width: 991.98px)').matches; }
+  function apply(){
+    if (!document.body || !document.body.classList.contains('dashboard')) return;
+    if (!isMobile()) {
+      if (lastHidden !== false) { document.body.classList.remove('att-top-chrome-hidden'); lastHidden = false; }
+      return;
+    }
+    var hidden = scrollY() > THRESHOLD;
+    if (hidden === lastHidden) return;
+    lastHidden = hidden;
+    document.body.classList.toggle('att-top-chrome-hidden', hidden);
+    setThemeColor(hidden ? pageBg() : TOP);
+    paintHeader(hidden);
+  }
+  function bind(){
+    var opts = { passive: true, capture: true };
+    document.addEventListener('scroll', apply, opts);
+    window.addEventListener('scroll', apply, opts);
+    window.addEventListener('touchmove', apply, opts);
+    window.addEventListener('wheel', apply, opts);
+    var nodes = document.querySelectorAll('main.main-content, main[class*="-react-root"], .layout-main-wrapper, .layout-main-wrapper > .flex-grow-1, #root, .att-shell, [class*="-desk-react-root"]');
+    for (var i = 0; i < nodes.length; i++) nodes[i].addEventListener('scroll', apply, opts);
+  }
+  function start(){ bind(); apply(); setTimeout(apply, 100); setTimeout(apply, 500); setTimeout(bind, 800); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
+</script>
+
+HTML;
+}
+
+/** Whether to inject the mobile immersive top chrome. */
+function erp_should_inject_mobile_top_chrome(): bool
+{
+    if (!erp_should_inject_theme_assets()) {
+        return false;
+    }
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    $skip = ['/login.php', '/logout.php', '/register.php', '/api/', '/cron', '/webhook'];
+    foreach ($skip as $needle) {
+        if (str_contains($script, $needle)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
  * Inject font + dark theme on every HTML page (head assets + final body override).
  */
 function erp_get_nav_back_script_html(): string
@@ -8515,6 +8677,11 @@ function erp_inject_system_font_into_html_buffer(string $buffer): string
         // System-wide one-step-back (skip if page already included it).
         if (stripos($buffer, 'nav-back.js') === false && stripos($buffer, 'erpNavBack') === false) {
             $headMarkup .= erp_get_nav_back_script_html();
+        }
+        if (stripos($buffer, 'id="erp-mobile-top-chrome"') === false
+            && stripos($buffer, 'erp-mobile-top-chrome-boot') === false
+        ) {
+            $headMarkup .= erp_get_mobile_top_chrome_html();
         }
         if ($headMarkup !== '') {
             $replaced = preg_replace('/<\/head>/i', $headMarkup . '</head>', $buffer, 1);

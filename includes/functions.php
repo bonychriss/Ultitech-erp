@@ -8468,7 +8468,8 @@ function erp_get_mobile_top_chrome_html(): string
     background-color: #f8fafc !important;
   }
   body.dashboard .employee-header,
-  body.dashboard header.employee-header {
+  body.dashboard header.header.employee-header,
+  html body.dashboard .employee-header[class*="employee-header--"] {
     background: {$top} !important;
     border: none !important;
     box-shadow: none !important;
@@ -8495,11 +8496,13 @@ function erp_get_mobile_top_chrome_html(): string
     background-image: none !important;
   }
   body.dashboard.att-top-chrome-hidden .employee-header,
-  body.dashboard.att-top-chrome-hidden header.employee-header {
+  body.dashboard.att-top-chrome-hidden header.header.employee-header,
+  html body.dashboard.att-top-chrome-hidden .employee-header[class*="employee-header--"] {
     background: #f8fafc !important;
   }
   html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header,
-  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden header.employee-header {
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden header.header.employee-header,
+  html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header[class*="employee-header--"] {
     background: #020617 !important;
   }
   html[data-theme="dark"] body.dashboard.att-top-chrome-hidden .employee-header .employee-header-page-title,
@@ -8565,7 +8568,15 @@ function erp_get_mobile_top_chrome_html(): string
     var nodes = document.querySelectorAll('main.main-content, main[class*="-react-root"], .layout-main-wrapper, .layout-main-wrapper > .flex-grow-1, #root, .att-shell, [class*="-desk-react-root"]');
     for (var i = 0; i < nodes.length; i++) nodes[i].addEventListener('scroll', apply, opts);
   }
-  function start(){ bind(); apply(); setTimeout(apply, 100); setTimeout(apply, 500); setTimeout(bind, 800); }
+  function start(){
+    bind();
+    lastHidden = null;
+    apply();
+    paintHeader(scrollY() > THRESHOLD);
+    setTimeout(function(){ lastHidden = null; apply(); }, 100);
+    setTimeout(function(){ lastHidden = null; apply(); }, 500);
+    setTimeout(bind, 800);
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
 })();

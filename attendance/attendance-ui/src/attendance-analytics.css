@@ -25,6 +25,12 @@
   font-size: 0.8125rem;
   color: #64748b;
 }
+.att-analytics-sub--solo {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+}
 
 .att-analytics-periods {
   display: inline-flex;

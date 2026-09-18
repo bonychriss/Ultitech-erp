@@ -159,8 +159,7 @@ export default function AttendanceAnalytics({ data }) {
       <div className="att-analytics">
         <div className="att-analytics-header">
           <div>
-            <h1 className="att-analytics-title">Stats</h1>
-            <p className="att-analytics-sub">
+            <p className="att-analytics-sub att-analytics-sub--solo">
               {state.range?.start && state.range?.end
                 ? `${formatDate(state.range.start)} - ${formatDate(state.range.end)}`
                 : 'Your attendance performance'}

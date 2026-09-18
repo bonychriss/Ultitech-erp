@@ -6,7 +6,11 @@
 .att-page-analytics button,
 .att-page-analytics .att-analytics-punct-item,
 .att-page-analytics .att-analytics-kpi--chip {
-  font-weight: inherit;
+  font-weight: 400;
+}
+.att-page-analytics strong,
+.att-page-analytics b {
+  font-weight: 600;
 }
 .att-desk-error {
   margin: 0 0 0.85rem;

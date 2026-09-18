@@ -746,11 +746,14 @@ class Attendance {
         $missedSignOuts = 0;
         $totalHours = 0.0;
         $totalOt = 0.0;
+        $otDays = 0;
         $longestStreak = 0;
         $currentStreak = 0;
         $lastDate = null;
         $dailyHours = [];
+        $dailyOt = [];
         $weeklyData = ['Mon' => 0.0, 'Tue' => 0.0, 'Wed' => 0.0, 'Thu' => 0.0, 'Fri' => 0.0, 'Sat' => 0.0, 'Sun' => 0.0];
+        $weeklyOt = ['Mon' => 0.0, 'Tue' => 0.0, 'Wed' => 0.0, 'Thu' => 0.0, 'Fri' => 0.0, 'Sat' => 0.0, 'Sun' => 0.0];
         $uniqueMembers = [];
         $datesWithAttendance = [];
         $punctSumAll = 0.0;
@@ -800,10 +803,17 @@ class Attendance {
                 $dailyHours[$date] = 0.0;
             }
             $dailyHours[$date] = round($dailyHours[$date] + $hours, 2);
+            if (!isset($dailyOt[$date])) {
+                $dailyOt[$date] = 0.0;
+            }
+            $dailyOt[$date] = round($dailyOt[$date] + $ot, 2);
 
             $dayKey = date('D', strtotime($date));
             if (isset($weeklyData[$dayKey])) {
                 $weeklyData[$dayKey] += $hours;
+            }
+            if (isset($weeklyOt[$dayKey])) {
+                $weeklyOt[$dayKey] += $ot;
             }
 
             $dayScore = $this->scoreAttendanceDay(
@@ -832,6 +842,7 @@ class Attendance {
                         'id' => $recUserId,
                         'name' => $label,
                         'byDate' => [],
+                        'byDateOt' => [],
                         'punctSum' => 0.0,
                         'punctDays' => 0,
                         'lateIns' => 0,
@@ -843,6 +854,7 @@ class Attendance {
                 }
                 // After collapse there is one row per person-day — set hours, do not stack duplicates.
                 $employeeSeriesMap[$recUserId]['byDate'][$date] = round($hours, 2);
+                $employeeSeriesMap[$recUserId]['byDateOt'][$date] = round($ot, 2);
                 $employeeSeriesMap[$recUserId]['punctSum'] += $dayScore['combined'];
                 $employeeSeriesMap[$recUserId]['punctDays']++;
                 $employeeSeriesMap[$recUserId]['signInSum'] += $dayScore['signIn'];
@@ -905,6 +917,12 @@ class Attendance {
         foreach ($dailyHours as $d => $h) {
             $dailyHours[$d] = round((float) $h, 2);
         }
+        foreach ($dailyOt as $d => $h) {
+            $dailyOt[$d] = round((float) $h, 2);
+            if ((float) $h > 0) {
+                $otDays++;
+            }
+        }
 
         // Continuous date axis for team line chart (month-to-date).
         $lineLabels = [];
@@ -940,8 +958,10 @@ class Attendance {
 
         foreach ($employeeSeriesMap as $series) {
             $values = [];
+            $otValues = [];
             foreach ($lineLabels as $d) {
                 $values[] = isset($series['byDate'][$d]) ? round((float) $series['byDate'][$d], 2) : 0.0;
+                $otValues[] = isset($series['byDateOt'][$d]) ? round((float) $series['byDateOt'][$d], 2) : 0.0;
             }
             $days = (int) ($series['punctDays'] ?? 0);
             $empScore = $days > 0 ? round(((float) $series['punctSum']) / $days, 1) : null;
@@ -975,6 +995,7 @@ class Attendance {
                 'name' => (string) $series['name'],
                 'color' => $palette[$colorIdx % count($palette)],
                 'values' => $values,
+                'otValues' => $otValues,
                 'punctuality' => $empScore,
                 'signInScore' => $empIn,
                 'signOutScore' => $empOut,
@@ -1164,15 +1185,25 @@ class Attendance {
                 'avgHoursPerDay' => $avgHoursPerDay,
                 'totalHours' => round($totalHours, 1),
                 'totalOt' => round($totalOt, 1),
+                'otDays' => $otDays,
+                'avgOtPerDay' => $otDays > 0 ? round($totalOt / $otDays, 1) : 0.0,
             ],
             'charts' => [
                 'daily' => [
                     'labels' => array_keys($dailyHours),
                     'values' => array_values($dailyHours),
                 ],
+                'dailyOt' => [
+                    'labels' => array_keys($dailyOt),
+                    'values' => array_values($dailyOt),
+                ],
                 'weekly' => [
                     'labels' => array_keys($weeklyData),
                     'values' => array_map(static fn ($v) => round((float) $v, 2), array_values($weeklyData)),
+                ],
+                'weeklyOt' => [
+                    'labels' => array_keys($weeklyOt),
+                    'values' => array_map(static fn ($v) => round((float) $v, 2), array_values($weeklyOt)),
                 ],
                 'teamLine' => [
                     'title' => $monthLabel . ' performance',

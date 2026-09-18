@@ -108,6 +108,7 @@ Route::middleware([AttachErpContext::class])->group(function () {
         ->where('desk', RevenueDeskShell::deskRegex())
         ->name('revenue.page.desk');
 
-    // Attendance (React clock desk; actions stay under attendance/api)
+    // Attendance (React clock desk + analytics; actions stay under attendance/api)
     Route::get('/attendance', [AttendancePageController::class, 'show'])->name('attendance.page');
+    Route::get('/attendance/analytics', [AttendancePageController::class, 'analytics'])->name('attendance.page.analytics');
 });

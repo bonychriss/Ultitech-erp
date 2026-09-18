@@ -570,5 +570,203 @@ class Attendance {
             return ['total_hours' => 0, 'total_ot' => 0, 'total_days' => 0, 'on_time_days' => 0, 'late_days' => 0];
         }
     }
+
+    /**
+     * Analytics desk payload for a rolling period (7 / 30 / 90 days).
+     *
+     * @return array<string,mixed>
+     */
+    public function getAnalytics(int $userId, int $period = 30): array
+    {
+        if (!in_array($period, [7, 30, 90], true)) {
+            $period = 30;
+        }
+
+        $tz = new DateTimeZone('Africa/Dar_es_Salaam');
+        $end = new DateTime('now', $tz);
+        $start = (clone $end)->modify('-' . max(0, $period - 1) . ' days');
+        $startDate = $start->format('Y-m-d');
+        $endDate = $end->format('Y-m-d');
+
+        $records = [];
+        try {
+            $t = self::RECORDS_TABLE;
+            $stmt = $this->pdo->prepare(
+                "SELECT `date`, time_in, time_out, status, total_hours, overtime_hours
+                 FROM `{$t}`
+                 WHERE user_id = ? AND `date` BETWEEN ? AND ?
+                 ORDER BY `date` ASC"
+            );
+            $stmt->execute([$userId, $startDate, $endDate]);
+            $records = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            $records = [];
+        }
+
+        $presentDays = 0;
+        $lateDays = 0;
+        $totalHours = 0.0;
+        $totalOt = 0.0;
+        $longestStreak = 0;
+        $currentStreak = 0;
+        $lastDate = null;
+        $dailyHours = [];
+        $weeklyData = ['Mon' => 0.0, 'Tue' => 0.0, 'Wed' => 0.0, 'Thu' => 0.0, 'Fri' => 0.0, 'Sat' => 0.0, 'Sun' => 0.0];
+
+        foreach ($records as $record) {
+            $date = (string) ($record['date'] ?? '');
+            if ($date === '') {
+                continue;
+            }
+            $presentDays++;
+
+            if ($lastDate === null || (strtotime($date) - strtotime($lastDate)) === 86400) {
+                $currentStreak++;
+                $longestStreak = max($longestStreak, $currentStreak);
+            } else {
+                $currentStreak = 1;
+            }
+            $lastDate = $date;
+
+            if (stripos((string) ($record['status'] ?? ''), 'late') !== false) {
+                $lateDays++;
+            }
+
+            $hours = 0.0;
+            if (isset($record['total_hours']) && $record['total_hours'] !== null && $record['total_hours'] !== '') {
+                $hours = (float) $record['total_hours'];
+            } elseif (!empty($record['time_in']) && !empty($record['time_out'])) {
+                try {
+                    $in = new DateTime((string) $record['time_in']);
+                    $out = new DateTime((string) $record['time_out']);
+                    $diff = $in->diff($out);
+                    $hours = $diff->h + ($diff->i / 60) + ($diff->days * 24);
+                } catch (Throwable $e) {
+                    $hours = 0.0;
+                }
+            }
+
+            $ot = isset($record['overtime_hours']) ? (float) $record['overtime_hours'] : 0.0;
+            $totalHours += $hours;
+            $totalOt += $ot;
+            $dailyHours[$date] = round($hours, 2);
+
+            $dayKey = date('D', strtotime($date));
+            if (isset($weeklyData[$dayKey])) {
+                $weeklyData[$dayKey] += $hours;
+            }
+        }
+
+        $workingDays = 0;
+        $cursor = clone $start;
+        $endBound = clone $end;
+        while ($cursor <= $endBound) {
+            if ((int) $cursor->format('N') < 6) {
+                $workingDays++;
+            }
+            $cursor->modify('+1 day');
+        }
+
+        $attendanceRate = $workingDays > 0 ? round(($presentDays / $workingDays) * 100, 1) : 0.0;
+        $punctualityScore = $presentDays > 0
+            ? round((($presentDays - $lateDays) / $presentDays) * 100, 1)
+            : 0.0;
+        $avgHoursPerDay = $presentDays > 0 ? round($totalHours / $presentDays, 1) : 0.0;
+
+        $insights = [];
+        if ($presentDays <= 0) {
+            $insights[] = [
+                'tone' => 'info',
+                'icon' => 'fa-info-circle',
+                'title' => 'No attendance yet',
+                'body' => 'Clock in from the attendance desk to start building your stats.',
+            ];
+        } else {
+            if ($punctualityScore >= 90) {
+                $insights[] = [
+                    'tone' => 'success',
+                    'icon' => 'fa-check-circle',
+                    'title' => 'Excellent punctuality',
+                    'body' => 'You are consistently on time. Keep it up.',
+                ];
+            } elseif ($punctualityScore >= 70) {
+                $insights[] = [
+                    'tone' => 'warning',
+                    'icon' => 'fa-exclamation-triangle',
+                    'title' => 'Room to improve punctuality',
+                    'body' => "You had {$lateDays} late arrival(s). Aim to arrive a few minutes earlier.",
+                ];
+            } else {
+                $insights[] = [
+                    'tone' => 'danger',
+                    'icon' => 'fa-exclamation-circle',
+                    'title' => 'Punctuality needs attention',
+                    'body' => "Late arrivals: {$lateDays}. Try setting an earlier morning routine.",
+                ];
+            }
+
+            if ($avgHoursPerDay >= 8) {
+                $insights[] = [
+                    'tone' => 'success',
+                    'icon' => 'fa-hourglass-half',
+                    'title' => 'Solid daily hours',
+                    'body' => "Averaging {$avgHoursPerDay}h per day in this period.",
+                ];
+            } elseif ($avgHoursPerDay > 0) {
+                $insights[] = [
+                    'tone' => 'info',
+                    'icon' => 'fa-hourglass-half',
+                    'title' => 'Hours tracked',
+                    'body' => "Averaging {$avgHoursPerDay}h per day. Remember to clock out so totals stay accurate.",
+                ];
+            }
+
+            if ($longestStreak >= 5) {
+                $insights[] = [
+                    'tone' => 'success',
+                    'icon' => 'fa-fire',
+                    'title' => 'Strong streak',
+                    'body' => "Your longest streak this period is {$longestStreak} days.",
+                ];
+            }
+        }
+
+        return [
+            'period' => $period,
+            'periodOptions' => [
+                ['value' => 7, 'label' => '7 Days'],
+                ['value' => 30, 'label' => '30 Days'],
+                ['value' => 90, 'label' => '90 Days'],
+            ],
+            'range' => [
+                'start' => $startDate,
+                'end' => $endDate,
+            ],
+            'metrics' => [
+                'attendanceRate' => $attendanceRate,
+                'presentDays' => $presentDays,
+                'workingDays' => $workingDays,
+                'punctualityScore' => $punctualityScore,
+                'lateDays' => $lateDays,
+                'longestStreak' => $longestStreak,
+                'currentStreak' => $currentStreak,
+                'avgHoursPerDay' => $avgHoursPerDay,
+                'totalHours' => round($totalHours, 1),
+                'totalOt' => round($totalOt, 1),
+            ],
+            'charts' => [
+                'daily' => [
+                    'labels' => array_keys($dailyHours),
+                    'values' => array_values($dailyHours),
+                ],
+                'weekly' => [
+                    'labels' => array_keys($weeklyData),
+                    'values' => array_map(static fn ($v) => round((float) $v, 2), array_values($weeklyData)),
+                ],
+            ],
+            'insights' => $insights,
+            'history' => array_reverse($records),
+        ];
+    }
 }
 ?>

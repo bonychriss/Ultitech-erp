@@ -1,0 +1,287 @@
+.att-page-analytics {
+  padding: 0.35rem 0 1.5rem;
+  font-family: var(--erp-font-family, inherit);
+}
+
+.att-analytics-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.att-analytics-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.att-analytics-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.att-analytics-periods {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+}
+
+.att-analytics-period {
+  border: none !important;
+  border-radius: 999px !important;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.att-analytics-period:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.att-analytics-period.is-active {
+  background: #0f172a;
+  color: #fff;
+}
+
+.att-analytics-period:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.att-analytics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.att-analytics-kpi {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.9rem;
+  min-width: 0;
+}
+
+.att-analytics-kpi-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-size: 0.9rem;
+}
+
+.att-analytics-kpi--violet .att-analytics-kpi-icon { background: #ede9fe; color: #7c3aed; }
+.att-analytics-kpi--green .att-analytics-kpi-icon { background: #dcfce7; color: #16a34a; }
+.att-analytics-kpi--amber .att-analytics-kpi-icon { background: #ffedd5; color: #ea580c; }
+.att-analytics-kpi--sky .att-analytics-kpi-icon { background: #e0f2fe; color: #0284c7; }
+
+.att-analytics-kpi-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+
+.att-analytics-kpi-value {
+  margin-top: 0.15rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1.15;
+}
+
+.att-analytics-kpi-hint {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.att-analytics-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.att-analytics-chart-card,
+.att-analytics-insights {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem;
+  min-width: 0;
+}
+
+.att-analytics-insights {
+  margin-bottom: 1rem;
+}
+
+.att-analytics-chart-title {
+  margin: 0 0 0.85rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.att-analytics-chart-empty {
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.att-analytics-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.35rem;
+  min-height: 180px;
+  padding-top: 0.5rem;
+  overflow-x: auto;
+}
+
+.att-analytics-bar-col {
+  flex: 1 1 0;
+  min-width: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.att-analytics-bar-value {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  min-height: 0.85rem;
+}
+
+.att-analytics-bar-track {
+  width: 100%;
+  max-width: 36px;
+  height: 140px;
+  display: flex;
+  align-items: flex-end;
+  background: #f8fafc;
+  border-radius: 8px 8px 4px 4px;
+  overflow: hidden;
+}
+
+.att-analytics-bar-fill {
+  width: 100%;
+  border-radius: 8px 8px 2px 2px;
+  min-height: 4px;
+  transition: height 0.25s ease;
+}
+
+.att-analytics-bar-label {
+  font-size: 0.65rem;
+  color: #64748b;
+  text-align: center;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.att-analytics-insight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.att-analytics-insight {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.att-analytics-insight-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.att-analytics-insight--success .att-analytics-insight-icon { background: #dcfce7; color: #16a34a; }
+.att-analytics-insight--warning .att-analytics-insight-icon { background: #ffedd5; color: #ea580c; }
+.att-analytics-insight--danger .att-analytics-insight-icon { background: #fee2e2; color: #dc2626; }
+.att-analytics-insight--info .att-analytics-insight-icon { background: #e0f2fe; color: #0284c7; }
+
+.att-analytics-insight-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.att-analytics-insight-body {
+  margin-top: 0.15rem;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+html[data-theme="dark"] .att-analytics-title,
+html[data-theme="dark"] .att-analytics-chart-title,
+html[data-theme="dark"] .att-analytics-kpi-value,
+html[data-theme="dark"] .att-analytics-insight-title {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .att-analytics-kpi,
+html[data-theme="dark"] .att-analytics-chart-card,
+html[data-theme="dark"] .att-analytics-insights,
+html[data-theme="dark"] .att-analytics-periods {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .att-analytics-period.is-active {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+@media (max-width: 991.98px) {
+  .att-analytics-kpi-grid,
+  .att-analytics-charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .att-analytics-kpi-grid,
+  .att-analytics-charts {
+    grid-template-columns: 1fr;
+  }
+  .att-analytics-title { font-size: 1.25rem; }
+}

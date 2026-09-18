@@ -95,6 +95,23 @@ if ($action === 'history') {
     exit;
 }
 
+if ($action === 'analytics') {
+    $period = isset($payload['period']) ? (int) $payload['period'] : 30;
+    if (!in_array($period, [7, 30, 90], true)) {
+        $period = 30;
+    }
+    $data = $attendance->getAnalytics($userId, $period);
+    $data['apiUrl'] = function_exists('app_url')
+        ? rtrim((string) app_url('/attendance'), '/') . '/api/action.php'
+        : '/attendance/api/action.php';
+    echo json_encode([
+        'success' => true,
+        'message' => '',
+        'data' => $data,
+    ]);
+    exit;
+}
+
 if ($action === 'clock_in') {
     $pendingBefore = attendance_pending_tasks($pdo, $userId);
     $carriedOverCount = count($pendingBefore);

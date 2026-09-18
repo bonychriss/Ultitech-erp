@@ -8,16 +8,29 @@ use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 /**
- * Attendance clock HTML shell via Blade + existing React UI.
+ * Attendance clock / analytics HTML shells via Blade + React UI.
  */
 class AttendancePageController extends Controller
 {
     public function show(Request $request): View|Response
     {
+        return $this->render($request, 'clock');
+    }
+
+    public function analytics(Request $request): View|Response
+    {
+        $period = (int) $request->query('period', 30);
+        return $this->render($request, 'analytics', $period);
+    }
+
+    private function render(Request $request, string $page, ?int $period = null): View|Response
+    {
         $erp = $request->attributes->get('erp') ?? [];
 
         $viewData = (new AttendanceShell())->viewData([
             'erp' => is_array($erp) ? $erp : [],
+            'page' => $page,
+            'period' => $period,
             'companySlug' => (string) ($erp['company_slug'] ?? ''),
             'backUrl' => (string) ($erp['back_url'] ?? ''),
         ]);

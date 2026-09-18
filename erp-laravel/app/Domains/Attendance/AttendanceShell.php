@@ -30,8 +30,25 @@ final class AttendanceShell
         }
 
         $erp = is_array($cfg['erp'] ?? null) ? $cfg['erp'] : [];
-        $boot = (new ClockBoot())->build($erp);
-        $wallpaperUrl = (new ClockBoot())->wallpaperUrl();
+        $page = strtolower(trim((string) ($cfg['page'] ?? 'clock')));
+        if ($page !== 'analytics') {
+            $page = 'clock';
+        }
+
+        if ($page === 'analytics') {
+            $period = isset($cfg['period']) ? (int) $cfg['period'] : null;
+            $boot = (new AnalyticsBoot())->build($erp, $period);
+            $wallpaperUrl = (new ClockBoot())->wallpaperUrl();
+            $pageTitle = 'Stats';
+            $headerTitle = 'Stats';
+            $bodyClass = 'page-products-desk page-attendance-desk page-attendance-analytics page-attendance-laravel page-erp-laravel';
+        } else {
+            $boot = (new ClockBoot())->build($erp);
+            $wallpaperUrl = (new ClockBoot())->wallpaperUrl();
+            $pageTitle = 'Attendance';
+            $headerTitle = null;
+            $bodyClass = 'page-products-desk page-attendance-desk page-attendance-laravel page-erp-laravel';
+        }
 
         $cssUrl = $assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'];
         $jsUrl = $assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'];
@@ -41,7 +58,7 @@ final class AttendanceShell
             JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)
         );
         if ($bootJson === false) {
-            $bootJson = '{"page":"clock","data":{}}';
+            $bootJson = '{"page":"' . $page . '","data":{}}';
         }
 
         $headMarkup = $this->commonHeadExtras()
@@ -56,11 +73,11 @@ final class AttendanceShell
             . '"></script>';
 
         return [
-            'pageTitle' => 'Attendance',
-            'bodyClass' => 'page-products-desk page-attendance-desk page-attendance-laravel page-erp-laravel',
+            'pageTitle' => $pageTitle,
+            'bodyClass' => $bodyClass,
             'headMarkup' => $headMarkup,
             'footerScripts' => $footerScripts,
-            'employeeHeaderTitle' => null,
+            'employeeHeaderTitle' => $headerTitle,
             'hideHeaderCompanyBranding' => true,
             'employeeHeaderExtraClass' => 'employee-header--products-desk',
             'mainRootClass' => 'att-react-root',

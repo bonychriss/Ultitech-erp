@@ -73,6 +73,14 @@ if (!is_file($laravelAutoload)) {
     exit;
 }
 
+$desk = strtolower(trim((string) ($_GET['desk'] ?? '')));
+if ($desk === 'analytics' || $desk === 'stats') {
+    $GLOBALS['ERP_ROUTE'] = '/attendance/analytics';
+    $GLOBALS['ERP_ATTENDANCE_ROUTE'] = '/attendance/analytics';
+    require $laravelRoot . '/bootstrap/erp-bridge.php';
+    exit;
+}
+
 $GLOBALS['ERP_ROUTE'] = '/attendance';
 $GLOBALS['ERP_ATTENDANCE_ROUTE'] = '/attendance';
 require $laravelRoot . '/bootstrap/erp-bridge.php';

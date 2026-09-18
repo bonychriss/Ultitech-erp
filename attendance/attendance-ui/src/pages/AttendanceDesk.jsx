@@ -499,7 +499,7 @@ export default function AttendanceDesk({ data }) {
                 </div>
                 <span className="att-desk-results-count">
                   {historyBusy
-                    ? 'Loading…'
+                    ? 'Loading...'
                     : `${state.historyMonthLabel || 'This month'}${
                         state.history.length
                           ? ` · ${state.history.length} record${state.history.length === 1 ? '' : 's'}`

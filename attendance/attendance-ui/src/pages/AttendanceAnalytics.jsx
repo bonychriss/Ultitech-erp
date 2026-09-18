@@ -58,10 +58,135 @@ function BarChart({ labels = [], values = [], color = '#0284c7' }) {
   );
 }
 
+function TeamLineChart({ labels = [], series = [] }) {
+  const width = 720;
+  const height = 280;
+  const pad = { top: 16, right: 16, bottom: 36, left: 40 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+
+  const allValues = series.flatMap((s) => (s.values || []).map((v) => Number(v) || 0));
+  const maxY = Math.max(...allValues, 1);
+  const n = labels.length;
+
+  if (!n || !series.length) {
+    return <div className="att-analytics-chart-empty">No team members to chart.</div>;
+  }
+
+  const xAt = (i) => pad.left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const yAt = (v) => pad.top + plotH - (Math.max(0, Number(v) || 0) / maxY) * plotH;
+
+  const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => ({
+    y: pad.top + plotH * (1 - t),
+    label: (maxY * t).toFixed(t === 0 || t === 1 ? 0 : 1),
+  }));
+
+  const labelStep = Math.max(1, Math.ceil(n / 7));
+  const xLabels = [];
+  const seenTexts = new Set();
+  for (let i = 0; i < n; i += 1) {
+    const isEdge = i === 0 || i === n - 1;
+    const onStep = i % labelStep === 0;
+    if (!isEdge && !onStep) continue;
+    // Prefer evenly spaced ticks; always keep first, and last only if not duplicate text.
+    const text = new Date(`${labels[i]}T12:00:00`).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+    if (seenTexts.has(text) && i === n - 1 && onStep) {
+      // skip duplicate last if already shown via step
+      continue;
+    }
+    if (seenTexts.has(text) && !isEdge) continue;
+    if (seenTexts.has(text) && i === n - 1) {
+      // replace nothing; skip duplicate Sep 1-style repeats
+      continue;
+    }
+    seenTexts.add(text);
+    xLabels.push({ i, text });
+  }
+  // Ensure last day is shown when distinct.
+  if (n > 1) {
+    const lastText = new Date(`${labels[n - 1]}T12:00:00`).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+    if (!seenTexts.has(lastText)) {
+      xLabels.push({ i: n - 1, text: lastText });
+    }
+  }
+
+  return (
+    <div className="att-analytics-line-wrap">
+      <svg className="att-analytics-line-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Team month performance">
+        {gridYs.map((g) => (
+          <g key={`g-${g.label}`}>
+            <line x1={pad.left} x2={width - pad.right} y1={g.y} y2={g.y} className="att-analytics-line-grid" />
+            <text x={pad.left - 8} y={g.y + 3} textAnchor="end" className="att-analytics-line-axis">
+              {g.label}
+            </text>
+          </g>
+        ))}
+        {series.map((s) => {
+          const pts = (s.values || []).map((v, i) => `${xAt(i)},${yAt(v)}`).join(' ');
+          return (
+            <g key={s.id || s.name}>
+              <polyline
+                fill="none"
+                stroke={s.color || '#0284c7'}
+                strokeWidth="2.25"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                points={pts}
+              />
+              {(s.values || []).map((v, i) => (
+                <circle
+                  key={`${s.id}-${i}`}
+                  cx={xAt(i)}
+                  cy={yAt(v)}
+                  r={Number(v) > 0 ? 3.25 : 2}
+                  fill={s.color || '#0284c7'}
+                  opacity={Number(v) > 0 ? 1 : 0.35}
+                >
+                  <title>{`${s.name}: ${formatDate(labels[i])} - ${Number(v).toFixed(1)}h`}</title>
+                </circle>
+              ))}
+            </g>
+          );
+        })}
+        {xLabels.map((item) => (
+          <text
+            key={`x-${item.i}-${item.text}`}
+            x={xAt(item.i)}
+            y={height - 10}
+            textAnchor="middle"
+            className="att-analytics-line-axis"
+          >
+            {item.text}
+          </text>
+        ))}
+      </svg>
+      <div className="att-analytics-line-legend">
+        {series.map((s) => (
+          <div className="att-analytics-line-legend-item" key={s.id || s.name}>
+            <span className="att-analytics-line-swatch" style={{ background: s.color || '#0284c7' }} />
+            <span>{s.name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AttendanceAnalytics({ data }) {
   const initial = data || {};
   const [state, setState] = useState(() => ({
     period: Number(initial.period || 30),
+    scope: initial.scope === 'team' ? 'team' : 'personal',
+    scopeOptions: initial.scopeOptions || [
+      { value: 'personal', label: 'Personal' },
+      { value: 'team', label: 'Team' },
+    ],
     periodOptions: initial.periodOptions || [
       { value: 7, label: '7 Days' },
       { value: 30, label: '30 Days' },
@@ -79,14 +204,20 @@ export default function AttendanceAnalytics({ data }) {
   const metrics = state.metrics || {};
   const daily = state.charts?.daily || { labels: [], values: [] };
   const weekly = state.charts?.weekly || { labels: [], values: [] };
+  const teamLine = state.charts?.teamLine || { labels: [], series: [], title: '' };
+  const isTeam = state.scope === 'team';
 
-  const metricCards = useMemo(
-    () => [
+  const metricCards = useMemo(() => {
+    const presentHint = isTeam
+      ? `${Number(metrics.presentDays || 0)} clock-ins / ${Number(metrics.expectedSlots || 0)} slots`
+      : `${Number(metrics.presentDays || 0)} of ${Number(metrics.workingDays || 0)} days`;
+
+    return [
       {
         key: 'rate',
         label: 'Attendance rate',
         value: `${Number(metrics.attendanceRate || 0)}%`,
-        hint: `${Number(metrics.presentDays || 0)} of ${Number(metrics.workingDays || 0)} days`,
+        hint: presentHint,
         icon: 'fa-chart-line',
         tone: 'violet',
       },
@@ -94,16 +225,20 @@ export default function AttendanceAnalytics({ data }) {
         key: 'punctual',
         label: 'Punctuality',
         value: `${Number(metrics.punctualityScore || 0)}%`,
-        hint: `${Number(metrics.lateDays || 0)} late arrivals`,
+        hint: `${Number(metrics.lateDays || 0)} late arrival${Number(metrics.lateDays || 0) === 1 ? '' : 's'}`,
         icon: 'fa-clock',
         tone: 'green',
       },
       {
         key: 'streak',
-        label: 'Longest streak',
-        value: String(Number(metrics.longestStreak || 0)),
-        hint: `Current: ${Number(metrics.currentStreak || 0)} days`,
-        icon: 'fa-fire',
+        label: isTeam ? 'Active members' : 'Longest streak',
+        value: isTeam
+          ? `${Number(metrics.activeMembers || 0)}/${Number(metrics.teamHeadcount || 0)}`
+          : String(Number(metrics.longestStreak || 0)),
+        hint: isTeam
+          ? `People who clocked in`
+          : `Current: ${Number(metrics.currentStreak || 0)} days`,
+        icon: isTeam ? 'fa-users' : 'fa-fire',
         tone: 'amber',
       },
       {
@@ -114,19 +249,22 @@ export default function AttendanceAnalytics({ data }) {
         icon: 'fa-hourglass-half',
         tone: 'sky',
       },
-    ],
-    [metrics]
-  );
+    ];
+  }, [metrics, isTeam]);
 
-  async function loadPeriod(period) {
-    const next = Number(period);
-    if (!next || next === state.period) return;
+  async function loadAnalytics({ period, scope } = {}) {
+    const nextPeriod = Number(period ?? state.period);
+    const nextScope = (scope ?? state.scope) === 'team' ? 'team' : 'personal';
+    if (nextPeriod === state.period && nextScope === state.scope && period == null && scope == null) {
+      return;
+    }
     setBusy(true);
     setError('');
     try {
       const result = await postAttendanceAction({
         action: 'analytics',
-        period: next,
+        period: nextPeriod,
+        scope: nextScope,
       });
       if (!result.success) {
         setError(result.message || 'Failed to load analytics.');
@@ -135,7 +273,9 @@ export default function AttendanceAnalytics({ data }) {
       const payload = result.data || {};
       setState((cur) => ({
         ...cur,
-        period: Number(payload.period || next),
+        period: Number(payload.period || nextPeriod),
+        scope: payload.scope === 'team' ? 'team' : 'personal',
+        scopeOptions: payload.scopeOptions || cur.scopeOptions,
         periodOptions: payload.periodOptions || cur.periodOptions,
         metrics: payload.metrics || {},
         charts: payload.charts || cur.charts,
@@ -144,7 +284,8 @@ export default function AttendanceAnalytics({ data }) {
         range: payload.range || {},
       }));
       const url = new URL(window.location.href);
-      url.searchParams.set('period', String(next));
+      url.searchParams.set('period', String(payload.period || nextPeriod));
+      url.searchParams.set('scope', payload.scope === 'team' ? 'team' : 'personal');
       url.searchParams.set('module', 'attendance');
       window.history.replaceState({}, '', url.toString());
     } catch (err) {
@@ -165,20 +306,39 @@ export default function AttendanceAnalytics({ data }) {
                 : 'Your attendance performance'}
             </p>
           </div>
-          <div className="att-analytics-periods" role="tablist" aria-label="Period">
-            {(state.periodOptions || []).map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                role="tab"
-                aria-selected={Number(state.period) === Number(opt.value)}
-                className={`att-analytics-period${Number(state.period) === Number(opt.value) ? ' is-active' : ''}`}
-                disabled={busy}
-                onClick={() => loadPeriod(opt.value)}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="att-analytics-header-controls">
+            <div className="att-analytics-periods" role="tablist" aria-label="Stats scope">
+              {(state.scopeOptions || []).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={state.scope === opt.value}
+                  className={`att-analytics-period${state.scope === opt.value ? ' is-active' : ''}`}
+                  disabled={busy}
+                  onClick={() => loadAnalytics({ scope: opt.value })}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {!isTeam ? (
+              <div className="att-analytics-periods" role="tablist" aria-label="Period">
+                {(state.periodOptions || []).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={Number(state.period) === Number(opt.value)}
+                    className={`att-analytics-period${Number(state.period) === Number(opt.value) ? ' is-active' : ''}`}
+                    disabled={busy}
+                    onClick={() => loadAnalytics({ period: opt.value })}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -199,15 +359,27 @@ export default function AttendanceAnalytics({ data }) {
           ))}
         </section>
 
-        <section className="att-analytics-charts">
-          <div className="att-analytics-chart-card">
-            <h2 className="att-analytics-chart-title">Daily hours worked</h2>
-            <BarChart labels={daily.labels || []} values={daily.values || []} color="#0284c7" />
-          </div>
-          <div className="att-analytics-chart-card">
-            <h2 className="att-analytics-chart-title">Weekly distribution</h2>
-            <BarChart labels={weekly.labels || []} values={weekly.values || []} color="#ea580c" />
-          </div>
+        <section className={`att-analytics-charts${isTeam ? ' att-analytics-charts--single' : ''}`}>
+          {isTeam ? (
+            <div className="att-analytics-chart-card">
+              <h2 className="att-analytics-chart-title">
+                {teamLine.title || 'Month performance'}
+              </h2>
+              <p className="att-analytics-chart-sub">Hours by employee (admins excluded)</p>
+              <TeamLineChart labels={teamLine.labels || []} series={teamLine.series || []} />
+            </div>
+          ) : (
+            <>
+              <div className="att-analytics-chart-card">
+                <h2 className="att-analytics-chart-title">Daily hours worked</h2>
+                <BarChart labels={daily.labels || []} values={daily.values || []} color="#0284c7" />
+              </div>
+              <div className="att-analytics-chart-card">
+                <h2 className="att-analytics-chart-title">Weekly distribution</h2>
+                <BarChart labels={weekly.labels || []} values={weekly.values || []} color="#ea580c" />
+              </div>
+            </>
+          )}
         </section>
 
         {(state.insights || []).length > 0 ? (
@@ -232,17 +404,20 @@ export default function AttendanceAnalytics({ data }) {
         <section className="att-desk-results">
           <div className="att-desk-results-head">
             <h2 className="att-analytics-chart-title" style={{ margin: 0 }}>
-              Recent records
+              {isTeam ? 'Team records' : 'Recent records'}
             </h2>
             <span className="att-desk-results-count">
-              {busy ? 'Loading...' : `${(state.history || []).length} record${(state.history || []).length === 1 ? '' : 's'}`}
+              {busy
+                ? 'Loading...'
+                : `${(state.history || []).length} record${(state.history || []).length === 1 ? '' : 's'}`}
             </span>
           </div>
           <div className="att-desk-table-wrap">
-            <table className="att-desk-table att-desk-table--activity">
+            <table className={`att-desk-table${isTeam ? '' : ' att-desk-table--activity'}`}>
               <thead>
                 <tr>
                   <th>Date</th>
+                  {isTeam ? <th>Employee</th> : null}
                   <th>Status</th>
                   <th>In</th>
                   <th>Out</th>
@@ -253,7 +428,7 @@ export default function AttendanceAnalytics({ data }) {
               <tbody>
                 {(state.history || []).length === 0 ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={isTeam ? 7 : 6}>
                       <div className="att-desk-empty">
                         <div className="att-desk-empty-icon" aria-hidden="true">
                           <i className="fas fa-chart-bar" />
@@ -265,10 +440,18 @@ export default function AttendanceAnalytics({ data }) {
                   </tr>
                 ) : (
                   (state.history || []).map((row) => (
-                    <tr key={`${row.date}-${row.time_in || ''}`}>
+                    <tr key={`${row.user_id || 'me'}-${row.date}-${row.time_in || ''}`}>
                       <td>
                         <strong>{formatDate(row.date)}</strong>
                       </td>
+                      {isTeam ? (
+                        <td>
+                          <div className="att-desk-emp-name">{row.full_name || row.username || '-'}</div>
+                          {row.username && row.full_name ? (
+                            <div className="att-desk-emp-user">{row.username}</div>
+                          ) : null}
+                        </td>
+                      ) : null}
                       <td>
                         <span className={`att-desk-status ${statusClass(row.status)}`}>{row.status || '-'}</span>
                       </td>
@@ -278,9 +461,11 @@ export default function AttendanceAnalytics({ data }) {
                       </td>
                       <td>{row.total_hours != null ? `${row.total_hours}h` : '-'}</td>
                       <td>
-                        {row.overtime_hours && Number(row.overtime_hours) > 0
-                          ? `+${row.overtime_hours}`
-                          : <span className="att-desk-muted">--</span>}
+                        {row.overtime_hours && Number(row.overtime_hours) > 0 ? (
+                          `+${row.overtime_hours}`
+                        ) : (
+                          <span className="att-desk-muted">--</span>
+                        )}
                       </td>
                     </tr>
                   ))

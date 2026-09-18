@@ -100,7 +100,11 @@ if ($action === 'analytics') {
     if (!in_array($period, [7, 30, 90], true)) {
         $period = 30;
     }
-    $data = $attendance->getAnalytics($userId, $period);
+    $scope = strtolower(trim((string) ($payload['scope'] ?? 'personal')));
+    if ($scope !== 'team') {
+        $scope = 'personal';
+    }
+    $data = $attendance->getAnalytics($userId, $period, $scope);
     $data['apiUrl'] = function_exists('app_url')
         ? rtrim((string) app_url('/attendance'), '/') . '/api/action.php'
         : '/attendance/api/action.php';

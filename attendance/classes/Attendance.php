@@ -574,13 +574,15 @@ class Attendance {
     /**
      * Analytics desk payload for a rolling period (7 / 30 / 90 days).
      *
+     * @param 'personal'|'team' $scope
      * @return array<string,mixed>
      */
-    public function getAnalytics(int $userId, int $period = 30): array
+    public function getAnalytics(int $userId, int $period = 30, string $scope = 'personal'): array
     {
         if (!in_array($period, [7, 30, 90], true)) {
             $period = 30;
         }
+        $scope = strtolower(trim($scope)) === 'team' ? 'team' : 'personal';
 
         $tz = new DateTimeZone('Africa/Dar_es_Salaam');
         $end = new DateTime('now', $tz);
@@ -589,16 +591,118 @@ class Attendance {
         $endDate = $end->format('Y-m-d');
 
         $records = [];
+        $teamHeadcount = 1;
+        $employeeSeriesMap = [];
         try {
             $t = self::RECORDS_TABLE;
-            $stmt = $this->pdo->prepare(
-                "SELECT `date`, time_in, time_out, status, total_hours, overtime_hours
-                 FROM `{$t}`
-                 WHERE user_id = ? AND `date` BETWEEN ? AND ?
-                 ORDER BY `date` ASC"
-            );
-            $stmt->execute([$userId, $startDate, $endDate]);
-            $records = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            if ($scope === 'team') {
+                // Team view: current calendar month, non-admin employees only.
+                $start = (clone $end)->modify('first day of this month');
+                $startDate = $start->format('Y-m-d');
+                $endDate = $end->format('Y-m-d');
+
+                $adminRoles = [
+                    'admin', 'administrator', 'superadmin', 'super_admin',
+                    'company_admin', 'company admin', 'owner', 'system_admin', 'platform_admin',
+                ];
+                $adminPlaceholders = implode(',', array_fill(0, count($adminRoles), '?'));
+
+                $hasFullName = true;
+                $hasUsername = true;
+                $hasRole = true;
+                try {
+                    $this->pdo->query('SELECT full_name, username, role FROM users LIMIT 1');
+                } catch (Throwable $e) {
+                    try {
+                        $this->pdo->query('SELECT username, role FROM users LIMIT 1');
+                        $hasFullName = false;
+                    } catch (Throwable $e2) {
+                        $hasFullName = false;
+                        $hasUsername = false;
+                        $hasRole = false;
+                    }
+                }
+                $nameSelect = $hasFullName
+                    ? 'u.full_name, u.username'
+                    : ($hasUsername ? 'u.username AS full_name, u.username' : 'NULL AS full_name, NULL AS username');
+
+                $roleFilter = $hasRole
+                    ? "AND LOWER(TRIM(COALESCE(u.role, 'employee'))) NOT IN ({$adminPlaceholders})"
+                    : '';
+
+                $sql = "SELECT r.`date`, r.time_in, r.time_out, r.status, r.total_hours, r.overtime_hours, r.user_id,
+                               {$nameSelect}
+                        FROM `{$t}` r
+                        INNER JOIN users u ON u.id = r.user_id
+                        WHERE r.`date` BETWEEN ? AND ?
+                        {$roleFilter}
+                        ORDER BY r.`date` ASC, r.user_id ASC";
+                $stmt = $this->pdo->prepare($sql);
+                $params = [$startDate, $endDate];
+                if ($hasRole) {
+                    $params = array_merge($params, $adminRoles);
+                }
+                $stmt->execute($params);
+                $records = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                // Seed every non-admin employee so each gets a colored line (zeros if no clock-ins).
+                try {
+                    $userSelect = $hasFullName
+                        ? 'u.id, u.full_name, u.username'
+                        : ($hasUsername ? 'u.id, u.username AS full_name, u.username' : 'u.id, NULL AS full_name, NULL AS username');
+                    $usersSql = "SELECT {$userSelect} FROM users u WHERE 1=1 {$roleFilter} ORDER BY "
+                        . ($hasFullName ? 'u.full_name' : ($hasUsername ? 'u.username' : 'u.id'))
+                        . ' ASC';
+                    if ($hasRole) {
+                        $usersStmt = $this->pdo->prepare($usersSql);
+                        $usersStmt->execute($adminRoles);
+                    } else {
+                        $usersStmt = $this->pdo->query($usersSql);
+                    }
+                    $teamUsers = $usersStmt ? ($usersStmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+                    foreach ($teamUsers as $tu) {
+                        $uid = (int) ($tu['id'] ?? 0);
+                        if ($uid <= 0) {
+                            continue;
+                        }
+                        $label = trim((string) ($tu['full_name'] ?? ''));
+                        if ($label === '') {
+                            $label = trim((string) ($tu['username'] ?? ('User #' . $uid)));
+                        }
+                        $employeeSeriesMap[$uid] = [
+                            'id' => $uid,
+                            'name' => $label,
+                            'byDate' => [],
+                        ];
+                    }
+                    $teamHeadcount = max(1, count($employeeSeriesMap));
+                } catch (Throwable $e) {
+                    try {
+                        $countSql = "SELECT COUNT(*) FROM users u WHERE 1=1 {$roleFilter}";
+                        if ($hasRole) {
+                            $countStmt = $this->pdo->prepare($countSql);
+                            $countStmt->execute($adminRoles);
+                            $teamHeadcount = (int) $countStmt->fetchColumn();
+                        } else {
+                            $teamHeadcount = (int) $this->pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+                        }
+                    } catch (Throwable $e2) {
+                        $teamHeadcount = 1;
+                    }
+                    if ($teamHeadcount < 1) {
+                        $teamHeadcount = 1;
+                    }
+                }
+            } else {
+                $stmt = $this->pdo->prepare(
+                    "SELECT `date`, time_in, time_out, status, total_hours, overtime_hours, user_id
+                     FROM `{$t}`
+                     WHERE user_id = ? AND `date` BETWEEN ? AND ?
+                     ORDER BY `date` ASC"
+                );
+                $stmt->execute([$userId, $startDate, $endDate]);
+                $records = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
         } catch (Throwable $e) {
             $records = [];
         }
@@ -612,6 +716,8 @@ class Attendance {
         $lastDate = null;
         $dailyHours = [];
         $weeklyData = ['Mon' => 0.0, 'Tue' => 0.0, 'Wed' => 0.0, 'Thu' => 0.0, 'Fri' => 0.0, 'Sat' => 0.0, 'Sun' => 0.0];
+        $uniqueMembers = [];
+        $datesWithAttendance = [];
 
         foreach ($records as $record) {
             $date = (string) ($record['date'] ?? '');
@@ -619,14 +725,11 @@ class Attendance {
                 continue;
             }
             $presentDays++;
-
-            if ($lastDate === null || (strtotime($date) - strtotime($lastDate)) === 86400) {
-                $currentStreak++;
-                $longestStreak = max($longestStreak, $currentStreak);
-            } else {
-                $currentStreak = 1;
+            $datesWithAttendance[$date] = true;
+            $recUserId = !empty($record['user_id']) ? (int) $record['user_id'] : 0;
+            if ($recUserId > 0) {
+                $uniqueMembers[$recUserId] = true;
             }
-            $lastDate = $date;
 
             if (stripos((string) ($record['status'] ?? ''), 'late') !== false) {
                 $lateDays++;
@@ -649,12 +752,49 @@ class Attendance {
             $ot = isset($record['overtime_hours']) ? (float) $record['overtime_hours'] : 0.0;
             $totalHours += $hours;
             $totalOt += $ot;
-            $dailyHours[$date] = round($hours, 2);
+            if (!isset($dailyHours[$date])) {
+                $dailyHours[$date] = 0.0;
+            }
+            $dailyHours[$date] = round($dailyHours[$date] + $hours, 2);
 
             $dayKey = date('D', strtotime($date));
             if (isset($weeklyData[$dayKey])) {
                 $weeklyData[$dayKey] += $hours;
             }
+
+            if ($scope === 'team' && $recUserId > 0) {
+                if (!isset($employeeSeriesMap[$recUserId])) {
+                    $label = trim((string) ($record['full_name'] ?? ''));
+                    if ($label === '') {
+                        $label = trim((string) ($record['username'] ?? ('User #' . $recUserId)));
+                    }
+                    $employeeSeriesMap[$recUserId] = [
+                        'id' => $recUserId,
+                        'name' => $label,
+                        'byDate' => [],
+                    ];
+                }
+                if (!isset($employeeSeriesMap[$recUserId]['byDate'][$date])) {
+                    $employeeSeriesMap[$recUserId]['byDate'][$date] = 0.0;
+                }
+                $employeeSeriesMap[$recUserId]['byDate'][$date] = round(
+                    $employeeSeriesMap[$recUserId]['byDate'][$date] + $hours,
+                    2
+                );
+            }
+        }
+
+        // Streak based on unique calendar days with attendance (works for personal + team).
+        $sortedDates = array_keys($datesWithAttendance);
+        sort($sortedDates);
+        foreach ($sortedDates as $date) {
+            if ($lastDate === null || (strtotime($date) - strtotime($lastDate)) === 86400) {
+                $currentStreak++;
+                $longestStreak = max($longestStreak, $currentStreak);
+            } else {
+                $currentStreak = 1;
+            }
+            $lastDate = $date;
         }
 
         $workingDays = 0;
@@ -667,72 +807,72 @@ class Attendance {
             $cursor->modify('+1 day');
         }
 
-        $attendanceRate = $workingDays > 0 ? round(($presentDays / $workingDays) * 100, 1) : 0.0;
+        $memberCount = $scope === 'team' ? $teamHeadcount : 1;
+        $expectedSlots = $workingDays * max(1, $memberCount);
+        $attendanceRate = $expectedSlots > 0 ? round(($presentDays / $expectedSlots) * 100, 1) : 0.0;
         $punctualityScore = $presentDays > 0
             ? round((($presentDays - $lateDays) / $presentDays) * 100, 1)
             : 0.0;
         $avgHoursPerDay = $presentDays > 0 ? round($totalHours / $presentDays, 1) : 0.0;
+        $activeMembers = count($uniqueMembers);
 
-        $insights = [];
-        if ($presentDays <= 0) {
-            $insights[] = [
-                'tone' => 'info',
-                'icon' => 'fa-info-circle',
-                'title' => 'No attendance yet',
-                'body' => 'Clock in from the attendance desk to start building your stats.',
-            ];
-        } else {
-            if ($punctualityScore >= 90) {
-                $insights[] = [
-                    'tone' => 'success',
-                    'icon' => 'fa-check-circle',
-                    'title' => 'Excellent punctuality',
-                    'body' => 'You are consistently on time. Keep it up.',
-                ];
-            } elseif ($punctualityScore >= 70) {
-                $insights[] = [
-                    'tone' => 'warning',
-                    'icon' => 'fa-exclamation-triangle',
-                    'title' => 'Room to improve punctuality',
-                    'body' => "You had {$lateDays} late arrival(s). Aim to arrive a few minutes earlier.",
-                ];
-            } else {
-                $insights[] = [
-                    'tone' => 'danger',
-                    'icon' => 'fa-exclamation-circle',
-                    'title' => 'Punctuality needs attention',
-                    'body' => "Late arrivals: {$lateDays}. Try setting an earlier morning routine.",
-                ];
-            }
+        $insights = $this->buildAnalyticsInsights(
+            $scope,
+            $presentDays,
+            $punctualityScore,
+            $lateDays,
+            $avgHoursPerDay,
+            $longestStreak,
+            $activeMembers,
+            $memberCount
+        );
 
-            if ($avgHoursPerDay >= 8) {
-                $insights[] = [
-                    'tone' => 'success',
-                    'icon' => 'fa-hourglass-half',
-                    'title' => 'Solid daily hours',
-                    'body' => "Averaging {$avgHoursPerDay}h per day in this period.",
-                ];
-            } elseif ($avgHoursPerDay > 0) {
-                $insights[] = [
-                    'tone' => 'info',
-                    'icon' => 'fa-hourglass-half',
-                    'title' => 'Hours tracked',
-                    'body' => "Averaging {$avgHoursPerDay}h per day. Remember to clock out so totals stay accurate.",
-                ];
-            }
-
-            if ($longestStreak >= 5) {
-                $insights[] = [
-                    'tone' => 'success',
-                    'icon' => 'fa-fire',
-                    'title' => 'Strong streak',
-                    'body' => "Your longest streak this period is {$longestStreak} days.",
-                ];
-            }
+        foreach ($dailyHours as $d => $h) {
+            $dailyHours[$d] = round((float) $h, 2);
         }
+
+        // Continuous date axis for team line chart (month-to-date).
+        $lineLabels = [];
+        $lineCursor = clone $start;
+        while ($lineCursor <= $end) {
+            $lineLabels[] = $lineCursor->format('Y-m-d');
+            $lineCursor->modify('+1 day');
+        }
+
+        $palette = [
+            '#0284c7', '#ea580c', '#16a34a', '#7c3aed', '#db2777',
+            '#0891b2', '#ca8a04', '#4f46e5', '#dc2626', '#0d9488',
+            '#9333ea', '#c2410c', '#2563eb', '#059669', '#e11d48',
+            '#0ea5e9', '#a855f7', '#f59e0b', '#14b8a6', '#64748b',
+        ];
+        $lineSeries = [];
+        $colorIdx = 0;
+        foreach ($employeeSeriesMap as $series) {
+            $values = [];
+            foreach ($lineLabels as $d) {
+                $values[] = isset($series['byDate'][$d]) ? round((float) $series['byDate'][$d], 2) : 0.0;
+            }
+            $lineSeries[] = [
+                'id' => (int) $series['id'],
+                'name' => (string) $series['name'],
+                'color' => $palette[$colorIdx % count($palette)],
+                'values' => $values,
+            ];
+            $colorIdx++;
+        }
+        usort($lineSeries, static function ($a, $b) {
+            return strcasecmp((string) $a['name'], (string) $b['name']);
+        });
+
+        $monthLabel = $start->format('F Y');
 
         return [
             'period' => $period,
+            'scope' => $scope,
+            'scopeOptions' => [
+                ['value' => 'personal', 'label' => 'Personal'],
+                ['value' => 'team', 'label' => 'Team'],
+            ],
             'periodOptions' => [
                 ['value' => 7, 'label' => '7 Days'],
                 ['value' => 30, 'label' => '30 Days'],
@@ -746,6 +886,9 @@ class Attendance {
                 'attendanceRate' => $attendanceRate,
                 'presentDays' => $presentDays,
                 'workingDays' => $workingDays,
+                'expectedSlots' => $expectedSlots,
+                'teamHeadcount' => $memberCount,
+                'activeMembers' => $activeMembers,
                 'punctualityScore' => $punctualityScore,
                 'lateDays' => $lateDays,
                 'longestStreak' => $longestStreak,
@@ -763,10 +906,103 @@ class Attendance {
                     'labels' => array_keys($weeklyData),
                     'values' => array_map(static fn ($v) => round((float) $v, 2), array_values($weeklyData)),
                 ],
+                'teamLine' => [
+                    'title' => $monthLabel . ' performance',
+                    'labels' => $lineLabels,
+                    'series' => $lineSeries,
+                ],
             ],
             'insights' => $insights,
             'history' => array_reverse($records),
         ];
+    }
+
+    /**
+     * @return list<array{tone:string,icon:string,title:string,body:string}>
+     */
+    private function buildAnalyticsInsights(
+        string $scope,
+        int $presentDays,
+        float $punctualityScore,
+        int $lateDays,
+        float $avgHoursPerDay,
+        int $longestStreak,
+        int $activeMembers,
+        int $teamHeadcount
+    ): array {
+        $insights = [];
+        $isTeam = $scope === 'team';
+
+        if ($presentDays <= 0) {
+            $insights[] = [
+                'tone' => 'info',
+                'icon' => 'fa-info-circle',
+                'title' => $isTeam ? 'No team attendance yet' : 'No attendance yet',
+                'body' => $isTeam
+                    ? 'No clock-ins were recorded for the team in this period.'
+                    : 'Clock in from the attendance desk to start building your stats.',
+            ];
+            return $insights;
+        }
+
+        if ($punctualityScore >= 90) {
+            $insights[] = [
+                'tone' => 'success',
+                'icon' => 'fa-check-circle',
+                'title' => $isTeam ? 'Strong team punctuality' : 'Excellent punctuality',
+                'body' => $isTeam
+                    ? 'Most clock-ins this period were on time.'
+                    : 'You are consistently on time. Keep it up.',
+            ];
+        } elseif ($punctualityScore >= 70) {
+            $insights[] = [
+                'tone' => 'warning',
+                'icon' => 'fa-exclamation-triangle',
+                'title' => $isTeam ? 'Team punctuality can improve' : 'Room to improve punctuality',
+                'body' => "Late arrivals: {$lateDays}. Aim for earlier starts.",
+            ];
+        } else {
+            $insights[] = [
+                'tone' => 'danger',
+                'icon' => 'fa-exclamation-circle',
+                'title' => $isTeam ? 'Team punctuality needs attention' : 'Punctuality needs attention',
+                'body' => "Late arrivals: {$lateDays}. Try setting an earlier morning routine.",
+            ];
+        }
+
+        if ($avgHoursPerDay >= 8) {
+            $insights[] = [
+                'tone' => 'success',
+                'icon' => 'fa-hourglass-half',
+                'title' => $isTeam ? 'Healthy team hours' : 'Solid daily hours',
+                'body' => "Averaging {$avgHoursPerDay}h per attendance day in this period.",
+            ];
+        } elseif ($avgHoursPerDay > 0) {
+            $insights[] = [
+                'tone' => 'info',
+                'icon' => 'fa-hourglass-half',
+                'title' => 'Hours tracked',
+                'body' => "Averaging {$avgHoursPerDay}h per attendance day. Remember to clock out so totals stay accurate.",
+            ];
+        }
+
+        if ($isTeam) {
+            $insights[] = [
+                'tone' => 'info',
+                'icon' => 'fa-users',
+                'title' => 'Team coverage',
+                'body' => "{$activeMembers} of {$teamHeadcount} people clocked in during this period.",
+            ];
+        } elseif ($longestStreak >= 5) {
+            $insights[] = [
+                'tone' => 'success',
+                'icon' => 'fa-fire',
+                'title' => 'Strong streak',
+                'body' => "Your longest streak this period is {$longestStreak} days.",
+            ];
+        }
+
+        return $insights;
     }
 }
 ?>

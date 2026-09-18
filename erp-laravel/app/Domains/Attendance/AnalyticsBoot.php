@@ -38,6 +38,7 @@ final class AnalyticsBoot
         }
 
         $period = $this->normalizePeriod($periodDays);
+        $scope = $this->normalizeScope(isset($erp['analytics_scope']) ? (string) $erp['analytics_scope'] : null);
         $userId = (int) ($erp['user_id'] ?? ($_SESSION['user_id'] ?? 0));
 
         $apiUrl = function_exists('app_url')
@@ -57,6 +58,11 @@ final class AnalyticsBoot
                 'page' => 'analytics',
                 'data' => [
                     'period' => $period,
+                    'scope' => $scope,
+                    'scopeOptions' => [
+                        ['value' => 'personal', 'label' => 'Personal'],
+                        ['value' => 'team', 'label' => 'Team'],
+                    ],
                     'periodOptions' => [
                         ['value' => 7, 'label' => '7 Days'],
                         ['value' => 30, 'label' => '30 Days'],
@@ -78,7 +84,7 @@ final class AnalyticsBoot
         }
 
         $attendance = new \Attendance($pdo);
-        $data = $attendance->getAnalytics($userId, $period);
+        $data = $attendance->getAnalytics($userId, $period, $scope);
         $data['apiUrl'] = $apiUrl;
         $data['links'] = $links;
         $data['engine'] = 'erp-laravel Domains/Attendance';
@@ -97,5 +103,11 @@ final class AnalyticsBoot
     {
         $period = (int) ($periodDays ?? ($_GET['period'] ?? 30));
         return in_array($period, [7, 30, 90], true) ? $period : 30;
+    }
+
+    public function normalizeScope(?string $scope): string
+    {
+        $scope = strtolower(trim((string) ($scope ?? ($_GET['scope'] ?? 'personal'))));
+        return $scope === 'team' ? 'team' : 'personal';
     }
 }

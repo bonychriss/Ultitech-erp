@@ -80,6 +80,12 @@ if ($desk === 'analytics' || $desk === 'stats') {
     require $laravelRoot . '/bootstrap/erp-bridge.php';
     exit;
 }
+if ($desk === 'overtime' || $desk === 'ot') {
+    $GLOBALS['ERP_ROUTE'] = '/attendance/overtime';
+    $GLOBALS['ERP_ATTENDANCE_ROUTE'] = '/attendance/overtime';
+    require $laravelRoot . '/bootstrap/erp-bridge.php';
+    exit;
+}
 
 $GLOBALS['ERP_ROUTE'] = '/attendance';
 $GLOBALS['ERP_ATTENDANCE_ROUTE'] = '/attendance';

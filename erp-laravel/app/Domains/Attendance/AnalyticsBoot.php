@@ -46,13 +46,27 @@ final class AnalyticsBoot
         $apiUrl = function_exists('app_url')
             ? rtrim((string) app_url('/attendance'), '/') . '/api/action.php'
             : '/attendance/api/action.php';
+
+        $companySlug = trim((string) ($erp['company_slug'] ?? ($_SESSION['company_slug'] ?? '')));
+        $route = static function (string $path) use ($companySlug): string {
+            if (function_exists('company_url') && $companySlug !== '') {
+                return (string) company_url($path, $companySlug);
+            }
+            if (function_exists('app_url')) {
+                return (string) app_url('/' . ltrim($path, '/'));
+            }
+            return '/' . ltrim($path, '/');
+        };
+
+        $withModule = static function (string $url): string {
+            return $url . (strpos($url, '?') !== false ? '&' : '?') . 'module=attendance';
+        };
+
         $links = [
-            'clock' => function_exists('app_url')
-                ? (string) app_url('/attendance/') . '?module=attendance'
-                : '/attendance/?module=attendance',
-            'modules' => function_exists('app_url')
-                ? (string) app_url('/select-module.php')
-                : '/select-module.php',
+            'clock' => $withModule($route('attendance/')),
+            'modules' => $route('select-module.php'),
+            'stats' => $withModule($route('employee/attendance-analytics.php')),
+            'overtime' => $withModule($route('employee/attendance-overtime.php')),
         ];
 
         if (!($pdo instanceof PDO) || !class_exists('Attendance')) {

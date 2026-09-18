@@ -49,7 +49,7 @@ if (strpos($script, 'select-module.php') !== false) {
 }
 
 // Stats desk uses full-screen analytics; hide floating mobile footer there.
-if (stripos($script, 'attendance-analytics') !== false) {
+if (stripos($script, 'attendance-analytics') !== false || stripos($script, 'attendance-overtime') !== false) {
     return;
 }
 
@@ -372,7 +372,7 @@ switch ($active_module) {
         }
         if (strpos($script, 'select-module') !== false) {
             $mf_active_slug = 'modules';
-        } elseif (strpos($script, 'attendance-analytics') !== false) {
+        } elseif (strpos($script, 'attendance-analytics') !== false || strpos($script, 'attendance-overtime') !== false) {
             $mf_active_slug = 'cart';
         } elseif (strpos($script, 'view-attendance') !== false) {
             $mf_active_slug = 'home';

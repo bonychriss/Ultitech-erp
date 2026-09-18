@@ -111,4 +111,5 @@ Route::middleware([AttachErpContext::class])->group(function () {
     // Attendance (React clock desk + analytics; actions stay under attendance/api)
     Route::get('/attendance', [AttendancePageController::class, 'show'])->name('attendance.page');
     Route::get('/attendance/analytics', [AttendancePageController::class, 'analytics'])->name('attendance.page.analytics');
+    Route::get('/attendance/overtime', [AttendancePageController::class, 'overtime'])->name('attendance.page.overtime');
 });

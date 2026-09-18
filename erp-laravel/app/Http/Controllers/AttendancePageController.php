@@ -23,6 +23,12 @@ class AttendancePageController extends Controller
         return $this->render($request, 'analytics', $period);
     }
 
+    public function overtime(Request $request): View|Response
+    {
+        $period = (int) $request->query('period', 30);
+        return $this->render($request, 'overtime', $period);
+    }
+
     private function render(Request $request, string $page, ?int $period = null): View|Response
     {
         $erp = $request->attributes->get('erp') ?? [];

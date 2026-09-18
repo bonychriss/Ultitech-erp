@@ -753,6 +753,7 @@ switch ($active_module) {
         } else {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=attendance');
             addItem($menuItems, 'stats', 'Stats', 'graph-up-arrow', $prefix . 'employee/attendance-analytics.php?module=attendance');
+            addItem($menuItems, 'overtime', 'Overtime', 'stopwatch', $prefix . 'employee/attendance-overtime.php?module=attendance');
         }
         break;
 

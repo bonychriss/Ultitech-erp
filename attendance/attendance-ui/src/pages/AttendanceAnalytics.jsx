@@ -472,6 +472,7 @@ export default function AttendanceAnalytics({ data }) {
         icon: isTeam ? 'fa-users' : 'fa-business-time',
         tone: 'amber',
         detailsToggle: isTeam ? 'Member coverage' : 'Overtime details',
+        href: !isTeam && initial.links?.overtime ? initial.links.overtime : null,
       },
       {
         key: 'avg',
@@ -498,7 +499,7 @@ export default function AttendanceAnalytics({ data }) {
         detailsToggle: 'Hours breakdown',
       },
     ];
-  }, [metrics, isTeam]);
+  }, [metrics, isTeam, initial.links?.overtime]);
 
   const openMetricCard = useMemo(
     () => metricCards.find((card) => card.key === openMetric) || null,
@@ -686,6 +687,10 @@ export default function AttendanceAnalytics({ data }) {
                   className={`att-analytics-kpi att-analytics-kpi--chip att-analytics-kpi--${card.tone}${isOpen ? ' is-active' : ''}`}
                   aria-expanded={isOpen}
                   onClick={() => {
+                    if (card.href) {
+                      window.location.href = card.href;
+                      return;
+                    }
                     setShowMetricDetails(false);
                     setOpenMetric((cur) => (cur === card.key ? null : card.key));
                   }}

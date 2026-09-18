@@ -31,17 +31,26 @@ final class AttendanceShell
 
         $erp = is_array($cfg['erp'] ?? null) ? $cfg['erp'] : [];
         $page = strtolower(trim((string) ($cfg['page'] ?? 'clock')));
-        if ($page !== 'analytics') {
+        if (!in_array($page, ['analytics', 'overtime'], true)) {
             $page = 'clock';
         }
 
-        if ($page === 'analytics') {
+        if ($page === 'analytics' || $page === 'overtime') {
             $period = isset($cfg['period']) ? (int) $cfg['period'] : null;
             $boot = (new AnalyticsBoot())->build($erp, $period);
+            $boot['page'] = $page;
             $wallpaperUrl = (new ClockBoot())->wallpaperUrl();
-            $pageTitle = 'Stats';
-            $headerTitle = 'Stats';
+            if ($page === 'overtime') {
+                $pageTitle = 'Overtime';
+                $headerTitle = 'Overtime';
+            } else {
+                $pageTitle = 'Stats';
+                $headerTitle = 'Stats';
+            }
             $bodyClass = 'page-products-desk page-attendance-desk page-attendance-analytics page-attendance-laravel page-erp-laravel';
+            if ($page === 'overtime') {
+                $bodyClass .= ' page-attendance-overtime';
+            }
         } else {
             $boot = (new ClockBoot())->build($erp);
             $wallpaperUrl = (new ClockBoot())->wallpaperUrl();

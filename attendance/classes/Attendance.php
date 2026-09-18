@@ -902,6 +902,15 @@ class Attendance {
         $topScore = -1.0;
         $topName = '';
         $topId = 0;
+        $userIdsForKpi = [];
+        foreach ($employeeSeriesMap as $series) {
+            $userIdsForKpi[] = (int) $series['id'];
+        }
+        if ($scope !== 'team') {
+            $userIdsForKpi = [$userId];
+        }
+        $taskKpiByUser = $this->fetchTaskKpiPointsByUser($userIdsForKpi, $startDate, $endDate);
+
         foreach ($employeeSeriesMap as $series) {
             $values = [];
             foreach ($lineLabels as $d) {
@@ -922,8 +931,20 @@ class Attendance {
                     $topId = (int) $series['id'];
                 }
             }
+            $uid = (int) $series['id'];
+            $taskBits = $taskKpiByUser[$uid] ?? [
+                'dailyPoints' => 0.0,
+                'weeklyPoints' => 0.0,
+                'dailyCompleted' => 0,
+                'weeklyCompleted' => 0,
+                'weeklyTotal' => 0,
+            ];
+            $attendancePts = $empScore !== null ? round(($empScore / 100.0) * 40.0, 1) : 0.0;
+            $dailyPts = (float) ($taskBits['dailyPoints'] ?? 0);
+            $weeklyPts = (float) ($taskBits['weeklyPoints'] ?? 0);
+            $kpiTotal = round(min(100.0, max(0.0, $attendancePts + $dailyPts + $weeklyPts)), 1);
             $lineSeries[] = [
-                'id' => (int) $series['id'],
+                'id' => $uid,
                 'name' => (string) $series['name'],
                 'color' => $palette[$colorIdx % count($palette)],
                 'values' => $values,
@@ -933,6 +954,21 @@ class Attendance {
                 'lateIns' => (int) ($series['lateIns'] ?? 0),
                 'missedOuts' => (int) ($series['missedOuts'] ?? 0),
                 'earlyOuts' => (int) ($series['earlyOuts'] ?? 0),
+                'kpiPoints' => $kpiTotal,
+                'kpiBreakdown' => [
+                    'attendance' => $attendancePts,
+                    'dailyTasks' => $dailyPts,
+                    'weeklyTasks' => $weeklyPts,
+                    'max' => 100,
+                    'weights' => [
+                        'attendance' => 40,
+                        'dailyTasks' => 30,
+                        'weeklyTasks' => 30,
+                    ],
+                    'dailyCompleted' => (int) ($taskBits['dailyCompleted'] ?? 0),
+                    'weeklyCompleted' => (int) ($taskBits['weeklyCompleted'] ?? 0),
+                    'weeklyTotal' => (int) ($taskBits['weeklyTotal'] ?? 0),
+                ],
             ];
             $colorIdx++;
         }
@@ -940,7 +976,82 @@ class Attendance {
             return strcasecmp((string) $a['name'], (string) $b['name']);
         });
 
+        $personalKpi = null;
+        if ($scope !== 'team') {
+            $taskBits = $taskKpiByUser[$userId] ?? [
+                'dailyPoints' => 0.0,
+                'weeklyPoints' => 0.0,
+                'dailyCompleted' => 0,
+                'weeklyCompleted' => 0,
+                'weeklyTotal' => 0,
+            ];
+            $attendancePts = round(($punctualityScore / 100.0) * 40.0, 1);
+            $dailyPts = (float) ($taskBits['dailyPoints'] ?? 0);
+            $weeklyPts = (float) ($taskBits['weeklyPoints'] ?? 0);
+            $kpiTotal = round(min(100.0, max(0.0, $attendancePts + $dailyPts + $weeklyPts)), 1);
+            $personalKpi = [
+                'kpiPoints' => $kpiTotal,
+                'kpiBreakdown' => [
+                    'attendance' => $attendancePts,
+                    'dailyTasks' => $dailyPts,
+                    'weeklyTasks' => $weeklyPts,
+                    'max' => 100,
+                    'weights' => [
+                        'attendance' => 40,
+                        'dailyTasks' => 30,
+                        'weeklyTasks' => 30,
+                    ],
+                    'dailyCompleted' => (int) ($taskBits['dailyCompleted'] ?? 0),
+                    'weeklyCompleted' => (int) ($taskBits['weeklyCompleted'] ?? 0),
+                    'weeklyTotal' => (int) ($taskBits['weeklyTotal'] ?? 0),
+                ],
+                'grade' => $this->kpiGradeLabel($kpiTotal),
+            ];
+        }
+
         $monthLabel = $start->format('F Y');
+        $kpiAvg = 0.0;
+        $kpiTop = -1.0;
+        $kpiTopName = '';
+        $kpiTopId = 0;
+        $kpiCount = 0;
+        foreach ($lineSeries as $row) {
+            $pts = (float) ($row['kpiPoints'] ?? 0);
+            $kpiAvg += $pts;
+            $kpiCount++;
+            if ($pts > $kpiTop) {
+                $kpiTop = $pts;
+                $kpiTopName = (string) $row['name'];
+                $kpiTopId = (int) $row['id'];
+            }
+        }
+        $teamKpi = [
+            'average' => $kpiCount > 0 ? round($kpiAvg / $kpiCount, 1) : 0.0,
+            'top' => $kpiTop >= 0
+                ? [
+                    'id' => $kpiTopId,
+                    'name' => $kpiTopName,
+                    'score' => $kpiTop,
+                    'grade' => $this->kpiGradeLabel($kpiTop),
+                ]
+                : null,
+            'weights' => [
+                'attendance' => 40,
+                'dailyTasks' => 30,
+                'weeklyTasks' => 30,
+            ],
+            'targets' => [
+                'dailyTodos' => 5,
+                'weeklyTasks' => 7,
+            ],
+            'grades' => [
+                '90-100' => 'Outstanding',
+                '80-89' => 'Exceeds Expectations',
+                '70-79' => 'Meets Expectations',
+                'below-70' => 'Improvement Plan Required',
+            ],
+            'note' => '100-pt KPI from Ultimate manual: Attendance 40 + Daily todos (target 5) 30 + Weekly tasks (target 7) 30.',
+        ];
         $teamPunctuality = [
             'average' => $scoredMembers > 0 ? round($teamAvgCombined / $scoredMembers, 1) : 0.0,
             'averageSignIn' => $scoredMembers > 0 ? round($teamAvgIn / $scoredMembers, 1) : 0.0,

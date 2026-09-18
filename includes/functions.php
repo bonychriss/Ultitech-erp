@@ -8502,19 +8502,34 @@ function erp_get_mobile_top_chrome_html(): string
   }
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-page-title,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-page-title[style],
-  body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn,
-  body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn[style],
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray a,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray button,
   body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray i,
-  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray svg,
-  body.dashboard:not(.att-top-chrome-hidden) .employee-header .erp-hamburger,
-  body.dashboard:not(.att-top-chrome-hidden) .employee-header .erp-hamburger span {
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .header-actions-tray svg {
     color: #0f172a !important;
-    border-color: #0f172a !important;
   }
-  body.dashboard:not(.att-top-chrome-hidden) .employee-header .erp-hamburger span {
+  /* Hamburger: lines only — no button box */
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn[style],
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn.btn,
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .employee-header-menu-btn.btn-link {
+    color: #0f172a !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .erp-hamburger {
+    color: #0f172a !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  body.dashboard:not(.att-top-chrome-hidden) .employee-header .erp-hamburger > span {
     background-color: #0f172a !important;
+    border: none !important;
   }
   html:has(body.dashboard.att-top-chrome-hidden) {
     background-color: #f8fafc !important;

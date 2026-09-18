@@ -437,6 +437,7 @@ $selectModuleConfig = [
     } elseif (is_file(__DIR__ . '/includes/nav-back-script.php')) {
         require __DIR__ . '/includes/nav-back-script.php';
     } ?>
+    <?php require __DIR__ . '/includes/text-selection-copy-assets.php'; ?>
 </head>
 <body>
     <noscript><div style="padding:2rem;font-family:sans-serif;">JavaScript is required to select a module.</div></noscript>

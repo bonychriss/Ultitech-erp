@@ -7,23 +7,25 @@
   window.__ERP_TEXT_SELECTION_COPY__ = true;
 
   var BTN_ID = 'erp-selection-copy-btn';
+  var TOAST_ID = 'erp-selection-copy-toast';
   var MIN_CHARS = 1;
-  var HIDE_DELAY_MS = 120;
+  var HIDE_DELAY_MS = 150;
+  var SHOW_DELAY_MS = 40;
   var btn = null;
   var hideTimer = null;
+  var showTimer = null;
   var lastText = '';
   var suppressUntil = 0;
 
   function isEditableTarget(node) {
-    if (!node || node.nodeType !== 1) {
-      node = node && node.parentElement ? node.parentElement : null;
-    }
     if (!node) return false;
-    if (node.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], .tox-edit-area, .mce-content-body')) {
-      return true;
+    if (node.nodeType !== 1) {
+      node = node.parentElement || null;
     }
-    var tag = (node.tagName || '').toLowerCase();
-    return tag === 'input' || tag === 'textarea' || tag === 'select';
+    if (!node || typeof node.closest !== 'function') return false;
+    return !!node.closest(
+      'input, textarea, select, [contenteditable="true"], [contenteditable=""], .tox-edit-area, .mce-content-body, .erp-selection-copy-btn'
+    );
   }
 
   function getSelectedText() {
@@ -39,17 +41,20 @@
     if (!sel || sel.rangeCount === 0) return null;
     var range = sel.getRangeAt(0);
     var node = range.commonAncestorContainer;
-    if (node.nodeType === 3) node = node.parentElement;
+    if (node && node.nodeType === 3) node = node.parentElement;
     return node;
   }
 
   function ensureButton() {
-    if (btn && document.body.contains(btn)) return btn;
+    if (btn && document.body && document.body.contains(btn)) return btn;
+    if (!document.body) return null;
+
     btn = document.createElement('button');
     btn.id = BTN_ID;
     btn.type = 'button';
     btn.className = 'erp-selection-copy-btn';
     btn.setAttribute('aria-label', 'Copy selected text');
+    btn.hidden = true;
     btn.innerHTML =
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">' +
       '<rect x="9" y="9" width="13" height="13" rx="2"/>' +
@@ -57,8 +62,12 @@
       '</svg>' +
       '<span>Copy</span>';
     btn.addEventListener('mousedown', function (e) {
-      // Keep selection while clicking the button
       e.preventDefault();
+      e.stopPropagation();
+    });
+    btn.addEventListener('mouseup', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
     });
     btn.addEventListener('click', function (e) {
       e.preventDefault();
@@ -72,23 +81,28 @@
   function positionButton() {
     var sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
+
     var range = sel.getRangeAt(0);
     var rect = range.getBoundingClientRect();
     if (!rect || (rect.width === 0 && rect.height === 0)) {
       var rects = range.getClientRects();
       if (rects && rects.length) {
-        rect = rects[rects.length - 1];
+        rect = rects[0];
       }
     }
-    if (!rect) return;
+    if (!rect || (rect.width === 0 && rect.height === 0 && rect.top === 0 && rect.left === 0)) {
+      return;
+    }
 
     var el = ensureButton();
+    if (!el) return;
+
     el.hidden = false;
     el.classList.add('is-visible');
 
-    var btnW = el.offsetWidth || 72;
-    var btnH = el.offsetHeight || 32;
-    var gap = 8;
+    var btnW = el.offsetWidth || 78;
+    var btnH = el.offsetHeight || 34;
+    var gap = 10;
     var left = rect.left + rect.width / 2 - btnW / 2;
     var top = rect.top - btnH - gap;
 
@@ -103,6 +117,7 @@
   }
 
   function hideButton() {
+    clearTimeout(showTimer);
     if (!btn) return;
     btn.classList.remove('is-visible');
     btn.hidden = true;
@@ -116,6 +131,26 @@
         hideButton();
       }
     }, HIDE_DELAY_MS);
+  }
+
+  function showNativeToast(ok, message) {
+    var existing = document.getElementById(TOAST_ID);
+    if (existing) existing.remove();
+
+    var toast = document.createElement('div');
+    toast.id = TOAST_ID;
+    toast.className = 'erp-selection-copy-toast' + (ok ? ' is-ok' : ' is-err');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(function () {
+      toast.classList.add('is-visible');
+    });
+    setTimeout(function () {
+      toast.classList.remove('is-visible');
+      setTimeout(function () {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 200);
+    }, 2200);
   }
 
   function notify(ok, message) {
@@ -139,7 +174,9 @@
         showConfirmButton: false,
         timer: 2200
       });
+      return;
     }
+    showNativeToast(ok, message);
   }
 
   function fallbackCopy(text) {
@@ -150,6 +187,7 @@
     ta.style.left = '-9999px';
     ta.style.top = '0';
     document.body.appendChild(ta);
+    ta.focus();
     ta.select();
     var ok = false;
     try {
@@ -169,7 +207,7 @@
     }
 
     function done(ok) {
-      suppressUntil = Date.now() + 400;
+      suppressUntil = Date.now() + 500;
       hideButton();
       try {
         window.getSelection().removeAllRanges();
@@ -211,30 +249,49 @@
     positionButton();
   }
 
-  function onPointerUp() {
-    // Let the selection settle after mouse/touch release
-    setTimeout(updateFromSelection, 10);
+  function scheduleShow() {
+    clearTimeout(showTimer);
+    showTimer = setTimeout(updateFromSelection, SHOW_DELAY_MS);
   }
 
-  document.addEventListener('mouseup', onPointerUp);
-  document.addEventListener('touchend', onPointerUp, { passive: true });
-  document.addEventListener('keyup', function (e) {
-    if (e.key === 'Shift' || e.key.indexOf('Arrow') === 0 || e.key === 'a' || e.key === 'A') {
-      setTimeout(updateFromSelection, 10);
-    }
-  });
-  document.addEventListener('selectionchange', function () {
-    if (!getSelectedText()) {
-      scheduleHide();
-    }
-  });
-  document.addEventListener('scroll', function () {
-    if (btn && btn.classList.contains('is-visible')) {
-      positionButton();
-    }
-  }, true);
-  window.addEventListener('resize', hideButton);
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') hideButton();
-  });
+  function onPointerUp() {
+    scheduleShow();
+  }
+
+  function boot() {
+    ensureButton();
+    document.addEventListener('mouseup', onPointerUp, true);
+    document.addEventListener('touchend', onPointerUp, { capture: true, passive: true });
+    document.addEventListener('pointerup', onPointerUp, true);
+    document.addEventListener('keyup', function (e) {
+      var k = e.key || '';
+      if (k === 'Shift' || k.indexOf('Arrow') === 0 || k === 'a' || k === 'A') {
+        scheduleShow();
+      }
+    });
+    document.addEventListener('selectionchange', function () {
+      if (getSelectedText()) {
+        scheduleShow();
+      } else {
+        scheduleHide();
+      }
+    });
+    document.addEventListener('scroll', function () {
+      if (btn && btn.classList.contains('is-visible') && getSelectedText()) {
+        positionButton();
+      } else if (!getSelectedText()) {
+        hideButton();
+      }
+    }, true);
+    window.addEventListener('resize', hideButton);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') hideButton();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
 })();

@@ -1,10 +1,10 @@
 .erp-selection-copy-btn {
   position: fixed;
-  z-index: 12050;
+  z-index: 2147483000;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 7px 12px;
   border: 1px solid rgba(44, 54, 64, 0.12);
   border-radius: 8px;
   background: #2c3640;
@@ -46,6 +46,35 @@
   flex-shrink: 0;
 }
 
+.erp-selection-copy-toast {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2147483001;
+  max-width: min(280px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #2c3640;
+  color: #fff;
+  font-family: var(--erp-font-family, 'Poppins', sans-serif);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 10px 28px rgba(44, 54, 64, 0.28);
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+
+.erp-selection-copy-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.erp-selection-copy-toast.is-err {
+  background: #a82229;
+}
+
 html[data-theme="dark"] .erp-selection-copy-btn {
   background: #1e293b;
   border-color: rgba(148, 163, 184, 0.25);
@@ -54,4 +83,8 @@ html[data-theme="dark"] .erp-selection-copy-btn {
 
 html[data-theme="dark"] .erp-selection-copy-btn:hover {
   background: #334155;
+}
+
+html[data-theme="dark"] .erp-selection-copy-toast {
+  background: #1e293b;
 }

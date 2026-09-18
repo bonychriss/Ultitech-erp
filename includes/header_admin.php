@@ -330,16 +330,7 @@ if (function_exists('erp_get_theme_toggle_script_html')) {
 ?>
 
 <script src="<?= app_url('/assets/js/responsive-table.js') ?>"></script>
-<?php
-$textSelectionCopyCss = __DIR__ . '/../assets/css/text-selection-copy.css';
-$textSelectionCopyJs = __DIR__ . '/../assets/js/text-selection-copy.js';
-$textSelectionCopyVer = max(
-    (int) (@filemtime($textSelectionCopyCss) ?: 0),
-    (int) (@filemtime($textSelectionCopyJs) ?: 0)
-);
-?>
-<link rel="stylesheet" href="<?= app_url('/assets/css/text-selection-copy.css') ?>?v=<?= (int) $textSelectionCopyVer ?>">
-<script src="<?= app_url('/assets/js/text-selection-copy.js') ?>?v=<?= (int) $textSelectionCopyVer ?>" defer></script>
+<?php require __DIR__ . '/text-selection-copy-assets.php'; ?>
 <?php require_once __DIR__ . '/mobile_footer.php'; ?>
 
 <!-- Floating Chatbot (React) -->

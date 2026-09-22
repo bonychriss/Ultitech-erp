@@ -308,7 +308,7 @@ switch ($active_module) {
             $dlvQs .= '&company_slug=' . rawurlencode($mfSlug);
         }
         $links = [
-            ['slug' => 'home', 'url' => $modUrl('deliveries/index?' . $dlvQs), 'label' => 'Home', 'bi' => 'truck'],
+            ['slug' => 'home', 'url' => $modUrl('deliveries/hub?' . $dlvQs), 'label' => 'Home', 'bi' => 'truck'],
             ['slug' => 'cart', 'url' => $modUrl('deliveries/index?' . $dlvQs), 'label' => 'Desk', 'bi' => 'list-ul'],
             ['slug' => 'modules', 'url' => $modUrl('select-module.php'), 'label' => 'Modules', 'bi' => 'grid'],
             ['slug' => 'account', 'url' => $modUrl($accountPath . '?module=deliveries'), 'label' => 'Account', 'bi' => $mfBiAccount],
@@ -318,9 +318,11 @@ switch ($active_module) {
             $mf_active_slug = 'modules';
         } elseif (strpos($script, 'create_delivery') !== false) {
             $mf_active_slug = 'settings';
+        } elseif (strpos($script, 'hub') !== false) {
+            $mf_active_slug = 'home';
         } elseif (strpos($script, '/deliveries/') !== false) {
-            if ($baseName === 'index.php' || preg_match('#/deliveries/index/?$#', $script) || strpos($script, 'hub') !== false) {
-                $mf_active_slug = 'home';
+            if ($baseName === 'index.php' || preg_match('#/deliveries/index/?$#', $script)) {
+                $mf_active_slug = 'cart';
             } else {
                 $mf_active_slug = 'cart';
             }

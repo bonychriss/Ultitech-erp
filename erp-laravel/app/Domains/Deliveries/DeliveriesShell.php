@@ -576,6 +576,10 @@ final class DeliveriesShell
             'modules' => $this->companyPath('select-module', $slug),
             'dashboard' => $this->companyPath('deliveries/index', $slug, ['module' => 'deliveries']),
             'hub' => $this->companyPath('deliveries/hub', $slug, ['module' => 'deliveries']),
+            'driverKpiDelivery' => $this->companyPath('driver-kpi/index', $slug, [
+                'module' => 'driver_kpi',
+                'service' => 'delivery',
+            ]),
             'driverKpiRide' => $this->companyPath('driver-kpi/index', $slug, [
                 'module' => 'driver_kpi',
                 'service' => 'ride',

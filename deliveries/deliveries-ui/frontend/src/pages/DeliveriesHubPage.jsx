@@ -1,4 +1,4 @@
-import { Truck, Car } from 'lucide-react'
+import { Truck, Car, Wrench } from 'lucide-react'
 import { CFG } from '../config.js'
 
 const HUB_VIDEO =
@@ -23,6 +23,8 @@ function HubCard({ href, ariaLabel, icon, label, value, sub, tone }) {
 export default function DeliveriesHubPage() {
   const urls = CFG.data?.urls || {}
   const deliveryUrl = urls.dashboard || 'index.php?module=deliveries'
+  const vehicleCareUrl = urls.driverKpiDelivery
+    || '../driver-kpi/index?module=driver_kpi&service=delivery'
   const rideUrl = urls.driverKpiRide || '../driver-kpi/index?module=driver_kpi&service=ride'
   const modulesUrl = urls.modules || '../select-module.php'
 
@@ -40,17 +42,28 @@ export default function DeliveriesHubPage() {
       <div className="dlv-hub-stage__veil" aria-hidden="true" />
 
       <div className="dlv-hub-page">
-        <p className="dlv-hub__lede">Choose Delivery recordings or Ride service performance tracking.</p>
+        <p className="dlv-hub__lede">
+          Open the delivery desk, or record vehicle care and ride performance.
+        </p>
 
         <div className="dlv-hub__cards" role="list">
           <HubCard
             href={deliveryUrl}
-            ariaLabel="Open delivery recordings"
+            ariaLabel="Open delivery desk"
             tone="blue"
             icon={<Truck size={18} strokeWidth={2} />}
             label="Delivery"
-            value="Recordings"
-            sub="Trips, pending & exceptions desk"
+            value="Desk"
+            sub="Trips, pending & POD tracking"
+          />
+          <HubCard
+            href={vehicleCareUrl}
+            ariaLabel="Record vehicle care for delivery"
+            tone="amber"
+            icon={<Wrench size={18} strokeWidth={2} />}
+            label="Vehicle care"
+            value="Record"
+            sub="Maintenance & daily inspections"
           />
           <HubCard
             href={rideUrl}
@@ -59,7 +72,7 @@ export default function DeliveriesHubPage() {
             icon={<Car size={18} strokeWidth={2} />}
             label="Ride service"
             value="Record"
-            sub="Track ride performance scores"
+            sub="Ride performance scores"
           />
         </div>
 

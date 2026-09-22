@@ -68,9 +68,9 @@ if (!is_file($laravelAutoload)) {
     exit;
 }
 
-$desk = strtolower(trim((string) ($_GET['desk'] ?? 'hub')));
+$desk = strtolower(trim((string) ($_GET['desk'] ?? 'dashboard')));
 if ($desk === '' || $desk === 'home' || $desk === 'launcher') {
-    $desk = 'hub';
+    $desk = 'dashboard';
 }
 if ($desk === 'index') {
     $desk = 'dashboard';

@@ -83,9 +83,9 @@ if (function_exists('countPendingPaymentVoucherTasks')) {
 
 $pvTasksListUrl = $companyRoute('employee/pending-voucher-tasks.php') . '?module=voucher';
 
-$deliveriesHubUrl = $companyRoute('deliveries/hub') . '?module=deliveries';
+$deliveriesDeskUrl = $companyRoute('deliveries/index') . '?module=deliveries';
 if ($currentCompanySlug !== '') {
-    $deliveriesHubUrl .= '&company_slug=' . rawurlencode($currentCompanySlug);
+    $deliveriesDeskUrl .= '&company_slug=' . rawurlencode($currentCompanySlug);
 }
 
 $modules = [];
@@ -113,7 +113,7 @@ $push([
     'id' => 'deliveries',
     'label' => 'Delivery Logistics',
     'desc' => 'Fleet, Manifests & POD Tracking',
-    'href' => $deliveriesHubUrl,
+    'href' => $deliveriesDeskUrl,
     'icon' => 'deliveries',
     'color' => '#0369a1',
 ]);

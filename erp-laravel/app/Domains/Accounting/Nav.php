@@ -61,6 +61,14 @@ final class Nav
                 'tone' => 'blue',
             ],
             [
+                'id' => 'vat-control',
+                'title' => 'VAT Control',
+                'desc' => 'Monitor output and input VAT, drill into periods, and close months.',
+                'href' => $u('accounting/vat-control') . '?module=accounting',
+                'icon' => 'percent',
+                'tone' => 'amber',
+            ],
+            [
                 'id' => 'settings',
                 'title' => 'Accounting Settings',
                 'desc' => 'Default sales revenue account and other GL posting defaults.',

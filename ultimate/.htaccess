@@ -84,8 +84,17 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^stock/(.+)$ ../stock/$1?company_slug=ultimate&module=stocks [L,QSA]
 
 RewriteRule ^accounting/?$ accounting.php [L,QSA,NC]
+# Accounting sub-pages live at app-root /accounting/*.php (no ultimate/accounting/ folder).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^accounting/([^./]+)/?$ ../accounting/$1.php?company_slug=ultimate&module=accounting [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^accounting/([^./]+)\.php$ ../accounting/$1.php?company_slug=ultimate&module=accounting [L,QSA,NC]
 RewriteRule ^payment-vouchers/?$ payment-vouchers.php [L,QSA,NC]
 RewriteRule ^revenue/?$ revenue.php [L,QSA,NC]
+# Extensionless revenue desk URLs (sidebar / bookmarks omit .php)
+RewriteRule ^revenue_entries/?$ revenue_entries.php [L,QSA,NC]
+RewriteRule ^revenue_create/?$ revenue_create.php [L,QSA,NC]
+RewriteRule ^revenue_import/?$ revenue_import.php [L,QSA,NC]
 
 # customer_statement lives at app root — proxy when missing under ultimate/
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -149,18 +158,26 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^modules/(.+)$ ../modules/$1?company_slug=ultimate [L,QSA]
 
-# Real files/dirs under ultimate/ (todo, deliveries, attendance, stock/..., balances, �)
+# Real files/dirs under ultimate/ (todo, deliveries, attendance, stock/..., balances, …)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Generic extensionless proxy to parent app
+# Extensionless → local stub under ultimate/ (single segment only: revenue_entries → revenue_entries.php).
+# Multi-segment paths (accounting/journal-entries) must use explicit proxies above — a broad
+# (.+) rule here can recurse with parent .htaccess and hit AH00124.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^([^/]+)/?$ $1.php [L,QSA]
+
+# Generic extensionless proxy to parent app (single segment only)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{DOCUMENT_ROOT}/$1.php -f
-RewriteRule ^(.+?)/?$ ../$1.php?company_slug=ultimate [L,QSA]
+RewriteRule ^([^/]+)/?$ ../$1.php?company_slug=ultimate [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{DOCUMENT_ROOT}/public_html/$1.php -f
-RewriteRule ^(.+?)/?$ ../$1.php?company_slug=ultimate [L,QSA]
+RewriteRule ^([^/]+)/?$ ../$1.php?company_slug=ultimate [L,QSA]

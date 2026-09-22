@@ -2,6 +2,7 @@ import {
   BookOpen,
   Coins,
   Link2,
+  Percent,
   Scale,
   Settings,
   SlidersHorizontal,
@@ -34,6 +35,7 @@ function SectionIcon({ icon, iconUrl, tone }) {
     scale: Scale,
     coins: Coins,
     book: BookOpen,
+    percent: Percent,
     sliders: SlidersHorizontal,
     gear: Settings,
     table: Table2,
@@ -55,7 +57,7 @@ export default function AccountingHubPage() {
     <div className="acct-page">
       <header className="acct-hero">
         <h1>Accounting</h1>
-        <p>Choose a section to configure or work with balances, revenue, journals, and reports.</p>
+        <p>Choose a section to configure or work with balances, revenue, VAT, journals, and reports.</p>
       </header>
 
       {sections.length === 0 ? (

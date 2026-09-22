@@ -113,7 +113,7 @@ function rememberListAndView(id, listState) {
 
 function readListStateFromUrl() {
   if (typeof window === 'undefined') {
-    return { search: '', selectedId: 0, filters: { status: '', from_date: '', to_date: '' } }
+    return { search: '', selectedId: 0, filters: { status: '', from_date: '', to_date: '', payee: '' } }
   }
   const p = new URLSearchParams(window.location.search)
   return {
@@ -123,6 +123,7 @@ function readListStateFromUrl() {
       status: p.get('status') || '',
       from_date: p.get('from_date') || '',
       to_date: p.get('to_date') || '',
+      payee: p.get('payee') || '',
     },
   }
 }
@@ -139,6 +140,7 @@ function writeListStateToUrl(search, filters, selectedId) {
   setOrDel('status', filters && filters.status)
   setOrDel('from_date', filters && filters.from_date)
   setOrDel('to_date', filters && filters.to_date)
+  setOrDel('payee', filters && filters.payee)
   setOrDel('sel', selectedId ? String(selectedId) : '')
   const next = url.pathname + url.search + url.hash
   const cur = window.location.pathname + window.location.search + window.location.hash
@@ -506,6 +508,26 @@ function matchesDate(v, from, to) {
   return true
 }
 
+function matchesPayee(v, payee) {
+  const q = String(payee || '').trim().toLowerCase()
+  if (q === '') return true
+  const name = String(v.payee_name || '').toLowerCase()
+  return q.split(/\s+/).every((term) => name.includes(term))
+}
+
+function emptyListFilters() {
+  return { status: '', from_date: '', to_date: '', payee: '' }
+}
+
+function normalizeListFilters(filters) {
+  return {
+    status: (filters && filters.status) || '',
+    from_date: (filters && filters.from_date) || '',
+    to_date: (filters && filters.to_date) || '',
+    payee: (filters && filters.payee) || '',
+  }
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -522,16 +544,8 @@ export default function DashboardPage() {
   const [togglingRef, setTogglingRef] = useState(null)
   const [aiFilters, setAiFilters] = useState(() => (
     restoredList && restoredList.filters
-      ? {
-          status: restoredList.filters.status || '',
-          from_date: restoredList.filters.from_date || '',
-          to_date: restoredList.filters.to_date || '',
-        }
-      : {
-          status: urlList.filters.status || '',
-          from_date: urlList.filters.from_date || '',
-          to_date: urlList.filters.to_date || '',
-        }
+      ? normalizeListFilters(restoredList.filters)
+      : normalizeListFilters(urlList.filters)
   ))
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
@@ -619,14 +633,16 @@ export default function DashboardPage() {
   }
 
   function clearDraftFilters() {
-    const empty = { status: '', from_date: '', to_date: '' }
+    const empty = emptyListFilters()
     setDraftFilters(empty)
     setAiFilters(empty)
     setFiltersOpen(false)
     setAiNote('')
   }
 
-  const hasActiveFilters = Boolean(aiFilters.status || aiFilters.from_date || aiFilters.to_date)
+  const hasActiveFilters = Boolean(
+    aiFilters.status || aiFilters.from_date || aiFilters.to_date || String(aiFilters.payee || '').trim(),
+  )
 
   useEffect(() => {
     if (!flash) return undefined
@@ -673,6 +689,7 @@ export default function DashboardPage() {
           status: res.filters.status || '',
           from_date: res.filters.from_date || '',
           to_date: res.filters.to_date || '',
+          payee: res.filters.payee || res.filters.payee_name || '',
         })
         if (typeof res.filters.search === 'string') setSearchInput(res.filters.search)
         setAiNote(res.note || 'Showing AI-filtered results.')
@@ -688,7 +705,7 @@ export default function DashboardPage() {
 
   function onSearchChange(value) {
     setSearchInput(value)
-    setAiFilters({ status: '', from_date: '', to_date: '' })
+    setAiFilters(emptyListFilters())
     setAiNote('')
     setHighlightedId(0)
     setSuggestOpen(value.trim() !== '')
@@ -762,8 +779,11 @@ export default function DashboardPage() {
   const allVouchers = useMemo(() => data?.recent || [], [data])
   const filteredVouchers = useMemo(
     () => allVouchers.filter(
-      (v) => matchesSearch(v, searchInput) && matchesStatus(v, aiFilters.status) && matchesDate(v, aiFilters.from_date, aiFilters.to_date),
-    ),
+      (v) => matchesSearch(v, searchInput)
+        && matchesStatus(v, aiFilters.status)
+        && matchesDate(v, aiFilters.from_date, aiFilters.to_date)
+        && matchesPayee(v, aiFilters.payee),
+      ),
     [allVouchers, searchInput, aiFilters],
   )
   const suggestions = useMemo(() => filteredVouchers.slice(0, 6), [filteredVouchers])
@@ -947,13 +967,27 @@ export default function DashboardPage() {
         <div className="pv-filters-head">
           <div>
             <h2 className="pv-filters-title">Filters</h2>
-            <p className="pv-filters-sub">Narrow the list by status and date.</p>
+            <p className="pv-filters-sub">Narrow the list by payee, status, and date.</p>
           </div>
           <button type="button" className="pv-filters-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
             <X size={16} aria-hidden="true" />
           </button>
         </div>
         <div className="pv-filters-body">
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Payee</div>
+            <div className="pv-field">
+              <label htmlFor="edFilterPayee">Payee name</label>
+              <input
+                id="edFilterPayee"
+                type="text"
+                value={draftFilters.payee || ''}
+                placeholder="Search by payee name"
+                autoComplete="off"
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, payee: e.target.value }))}
+              />
+            </div>
+          </div>
           <div className="pv-filters-section">
             <div className="pv-filters-section-label">Date range</div>
             <div className="pv-filters-grid pv-filters-grid--dates">

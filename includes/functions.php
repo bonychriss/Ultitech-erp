@@ -5464,7 +5464,11 @@ if (!function_exists('ultitechReservedPathSegments')) {
             'sites', 'stock', 'storage', 'uploads', 'vouchers', 'store-management-system', 'logout.php', 'login.php', 'select-module.php',
             'index.php', 'my-account.php', 'debug_login.php', 'debug_db_connections.php', 'debug_online.php',
             'debug_system_full.php', 'debug_create_voucher.php', 'debug_voucher_applicant.php', 'debug_todo_index.php', 'hc.php', 'ping.php',
-            'login', 'logout', 'register', 'select-module',
+            'login', 'logout', 'register', 'select-module', 'suggest',
+            // Top-level ERP module folders — never treat as company slugs
+            'accounting', 'banking', 'balances', 'payroll', 'sales', 'finance', 'expenses', 'letters', 'letter',
+            'todo', 'reports', 'logistics', 'crm', 'petty-cash', 'replenishments', 'replenishment', 'categories',
+            'weekly_tasks', 'customer_statement', 'view-voucher-ui', 'revenue', 'revenue_entries',
         ];
         if (function_exists('ultitechInstallPathReservedSegments')) {
             $base = array_merge($base, ultitechInstallPathReservedSegments());
@@ -9799,6 +9803,54 @@ function buildPaymentVoucherStockPurchasePurposeWhereSql($alias = 'pv', $pvCols 
 }
 
 /**
+ * Whether a normalized PV purpose may be linked on stock purchase-create / PO classification.
+ */
+function paymentVoucherPurposeEligibleForStockPoLink($purpose): bool
+{
+    $purpose = normalizePaymentVoucherPurpose($purpose);
+
+    return $purpose === 'stock_purchase' || $purpose === 'general';
+}
+
+/**
+ * Short purpose tag for stock PO voucher picker labels: STK or GEN.
+ */
+function formatPaymentVoucherPurposeShortTag(array $pv): string
+{
+    return resolvePaymentVoucherPurposeFromRow($pv) === 'stock_purchase' ? 'STK' : 'GEN';
+}
+
+/**
+ * SQL fragment: purpose is Stock Purchase or General (blank purpose counts as general).
+ *
+ * Used by stock PO payment-voucher attach pickers.
+ *
+ * @param array<int,string>|null $pvCols
+ */
+function buildPaymentVoucherStockPoLinkablePurposeWhereSql($alias = 'pv', $pvCols = null)
+{
+    if ($pvCols === null) {
+        $pvCols = [];
+    }
+    $parts = [];
+    foreach (['purpose', 'payment_purpose', 'voucher_purpose'] as $col) {
+        if (!in_array($col, $pvCols, true)) {
+            continue;
+        }
+        $norm = "REPLACE(REPLACE(LOWER(TRIM(COALESCE({$alias}.`{$col}`, ''))), '-', '_'), ' ', '_')";
+        $parts[] = "({$norm} IN ('', 'stock_purchase', 'stockpurchase', 'general', 'general_payment')"
+            . " OR ({$norm} LIKE '%stock%' AND {$norm} LIKE '%purchase%'))";
+    }
+
+    // No purpose columns → treat rows as general (eligible for PO link).
+    if ($parts === []) {
+        return '1 = 1';
+    }
+
+    return '(' . implode(' OR ', $parts) . ')';
+}
+
+/**
  * Classification-edit picker: approved stock-purchase PVs + already linked to this PO.
  *
  * @param array<int,mixed> $params
@@ -9816,7 +9868,7 @@ function buildStockPurchasePoClassificationVoucherWhereParts(PDO $pdo, int $comp
 
     $where = ["LOWER(TRIM(COALESCE(pv.status, ''))) = 'approved'"];
 
-    $purposeSql = buildPaymentVoucherStockPurchasePurposeWhereSql('pv', $pvCols);
+    $purposeSql = buildPaymentVoucherStockPoLinkablePurposeWhereSql('pv', $pvCols);
     $eligible = [];
     if ($purposeSql !== '1 = 0') {
         $eligible[] = $purposeSql;
@@ -10039,7 +10091,7 @@ function buildStockPurchasePoLinkableVoucherWhereParts(PDO $pdo, $companyId, arr
 
     $where = [
         "LOWER(TRIM(COALESCE(pv.status, ''))) = 'approved'",
-        buildPaymentVoucherStockPurchasePurposeWhereSql('pv', $pvCols),
+        buildPaymentVoucherStockPoLinkablePurposeWhereSql('pv', $pvCols),
     ];
 
     if (in_array('is_paid', $pvCols, true) && !stockPurchasePoAllowPostedVoucherPicker()) {
@@ -10077,7 +10129,7 @@ function paymentVoucherRowEligibleForStockPoLink(array $row, int $companyId): bo
             return false;
         }
     }
-    if (resolvePaymentVoucherPurposeFromRow($row) !== 'stock_purchase') {
+    if (!paymentVoucherPurposeEligibleForStockPoLink(resolvePaymentVoucherPurposeFromRow($row))) {
         return false;
     }
     if ((int) ($row['linked_stock_po_id'] ?? 0) > 0) {
@@ -10189,6 +10241,7 @@ function fetchStockPurchasePoLinkableVouchers(PDO $pdo, int $companyId): array
  */
 function formatStockPurchasePoVoucherOptionLabel(array $pv): string
 {
+    $tag = formatPaymentVoucherPurposeShortTag($pv);
     $vno = trim((string) ($pv['voucher_no'] ?? ''));
     if ($vno === '') {
         $vno = 'PV-' . (int) ($pv['id'] ?? 0);
@@ -10196,8 +10249,9 @@ function formatStockPurchasePoVoucherOptionLabel(array $pv): string
     $payee = trim((string) ($pv['payee_name'] ?? 'Unknown Payee'));
     $currency = trim((string) ($pv['currency'] ?? ''));
     $amount = number_format((float) ($pv['total_amount'] ?? 0), 0, '.', ',');
+    $purposeLabel = $tag === 'STK' ? 'Stock Purchase' : 'General';
 
-    return $vno . ' - ' . $payee . ' - ' . $currency . ' ' . $amount . ' - Stock Purchase';
+    return $tag . ' ' . $vno . ' - ' . $payee . ' - ' . $currency . ' ' . $amount . ' - ' . $purposeLabel;
 }
 
 /**
@@ -10419,7 +10473,7 @@ function fetchStockPurchasePoVouchersForClassificationEdit(PDO $pdo, int $compan
             foreach (queryStockPurchasePaymentVoucherPickerRows($pvPdo, $pvCols, $whereFallback, $paramsFallback) as $pv) {
                 $purpose = resolvePaymentVoucherPurposeFromRow($pv);
                 $linkedPo = (int) ($pv['linked_stock_po_id'] ?? 0);
-                if ($purpose !== 'stock_purchase' && $linkedPo !== $poId) {
+                if (!paymentVoucherPurposeEligibleForStockPoLink($purpose) && $linkedPo !== $poId) {
                     continue;
                 }
                 $mergeRow($pv);
@@ -10454,7 +10508,7 @@ function buildStockPurchasePoLinkableVoucherWherePartsForPo(PDO $pdo, $companyId
 
     $where = [
         "LOWER(TRIM(COALESCE(pv.status, ''))) = 'approved'",
-        buildPaymentVoucherStockPurchasePurposeWhereSql('pv', $pvCols),
+        buildPaymentVoucherStockPoLinkablePurposeWhereSql('pv', $pvCols),
     ];
 
     if (!$classificationEditPicker && in_array('is_paid', $pvCols, true)) {
@@ -10834,12 +10888,12 @@ function updateStockPurchasePoClassification(PDO $pdo, int $companyId, int $poId
             if ($linkedPo > 0 && !$alreadyOnThisPo) {
                 return ['ok' => false, 'message' => 'One or more vouchers are already linked to another purchase order.'];
             }
-            if (resolvePaymentVoucherPurposeFromRow($pvRow) !== 'stock_purchase') {
-                return ['ok' => false, 'message' => 'Only Stock Purchase payment vouchers can be linked.'];
+            if (!paymentVoucherPurposeEligibleForStockPoLink(resolvePaymentVoucherPurposeFromRow($pvRow))) {
+                return ['ok' => false, 'message' => 'Only Stock Purchase (STK) or General (GEN) payment vouchers can be linked.'];
             }
             if (!$alreadyOnThisPo) {
                 if (strtolower(trim((string) ($pvRow['status'] ?? ''))) !== 'approved') {
-                    return ['ok' => false, 'message' => 'Only approved, unpaid stock purchase vouchers can be linked.'];
+                    return ['ok' => false, 'message' => 'Only approved, unpaid Stock Purchase or General vouchers can be linked.'];
                 }
                 if ((int) ($pvRow['is_paid'] ?? 0) === 1) {
                     return ['ok' => false, 'message' => 'Cannot link a voucher that is already marked paid.'];

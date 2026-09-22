@@ -336,9 +336,9 @@ if ($isPoClassificationEdit) {
     $classificationSelectedVoucherId = !empty($linkedIdsEarly) ? (int) $linkedIdsEarly[0] : 0;
     $stockPurchaseVouchers = fetchStockPurchasePoVouchersForClassificationEdit($pdo, $company_id, $classificationEditPoId, $linkedIdsEarly);
     if (empty($stockPurchaseVouchers)) {
-        $stockPurchaseVoucherPickerHint = 'No approved Stock Purchase payment vouchers were found. On the Finance Payment Desk, vouchers must be Approved with Purpose = Stock Purchase (not General Payment).';
+        $stockPurchaseVoucherPickerHint = 'No approved Stock Purchase (STK) or General (GEN) payment vouchers were found. Vouchers must be Approved.';
     } else {
-        $stockPurchaseVoucherPickerHint = count($stockPurchaseVouchers) . ' approved Stock Purchase voucher(s) available (includes unpaid and any already linked to this PO).';
+        $stockPurchaseVoucherPickerHint = count($stockPurchaseVouchers) . ' approved STK/GEN voucher(s) available (includes unpaid and any already linked to this PO).';
     }
 } else {
     $stockPurchaseVouchers = fetchStockPurchasePoLinkableVouchers($pdo, $company_id);
@@ -347,12 +347,10 @@ $stockPurchaseVoucherPickerHint = $stockPurchaseVoucherPickerHint ?? '';
 $allowPostedVouchersInPicker = function_exists('stockPurchasePoAllowPostedVoucherPicker') && stockPurchasePoAllowPostedVoucherPicker();
 if (!$isPoClassificationEdit && empty($stockPurchaseVouchers)) {
     $stockPurchaseVoucherPickerHint = $allowPostedVouchersInPicker
-        ? 'No approved Stock Purchase payment vouchers are available. '
-        . 'This list shows vouchers with Purpose = Stock Purchase that are approved and not already linked to a PO (includes posted vouchers when limited-edit workflow is enabled). '
-        . 'General-purpose vouchers do not appear here.'
-        : 'No approved, unpaid Stock Purchase payment vouchers are available. '
-        . 'This list only shows vouchers with Purpose = Stock Purchase that are approved, not yet paid, and not already linked to a PO. '
-        . 'General-purpose vouchers do not appear here.';
+        ? 'No approved Stock Purchase (STK) or General (GEN) payment vouchers are available. '
+        . 'This list shows approved vouchers with Purpose = Stock Purchase or General that are not already linked to a PO (includes posted vouchers when limited-edit workflow is enabled).'
+        : 'No approved, unpaid Stock Purchase (STK) or General (GEN) payment vouchers are available. '
+        . 'This list shows approved vouchers with Purpose = Stock Purchase or General that are not yet paid and not already linked to a PO.';
 }
 
 // Ensure stocks_items rows exist for products on linked quotations before building the PO product picker.
@@ -1200,6 +1198,12 @@ foreach (($stockPurchaseVouchers ?? []) as $pv) {
     $label = function_exists('formatStockPurchasePoVoucherOptionLabel')
         ? formatStockPurchasePoVoucherOptionLabel($pv)
         : trim((string) ($pv['voucher_no'] ?? $pv['pv_number'] ?? ('PV-' . $pvId)));
+    $purpose = function_exists('resolvePaymentVoucherPurposeFromRow')
+        ? resolvePaymentVoucherPurposeFromRow($pv)
+        : 'general';
+    $purposeTag = function_exists('formatPaymentVoucherPurposeShortTag')
+        ? formatPaymentVoucherPurposeShortTag($pv)
+        : ($purpose === 'stock_purchase' ? 'STK' : 'GEN');
     $vouchersPayload[] = [
         'id' => $pvId,
         'voucher_no' => (string) ($pv['voucher_no'] ?? $pv['pv_number'] ?? ''),
@@ -1212,6 +1216,8 @@ foreach (($stockPurchaseVouchers ?? []) as $pv) {
         'is_paid' => (int) ($pv['is_paid'] ?? 0),
         'date_created' => (string) ($pv['date_created'] ?? ''),
         'prepared_by' => (string) ($pv['prepared_by'] ?? ''),
+        'purpose' => $purpose,
+        'purpose_tag' => $purposeTag,
         'label' => $label,
     ];
 }

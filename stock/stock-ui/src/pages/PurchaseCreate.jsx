@@ -125,13 +125,14 @@ function currencyFlagUrl(meta) {
 
 function voucherLabel(v) {
   if (v?.label) return String(v.label);
+  const tag = String(v?.purpose_tag || (String(v?.purpose || '').toLowerCase() === 'stock_purchase' ? 'STK' : 'GEN'));
   const no = v?.voucher_no || v?.pv_number || ('#' + (v?.id || ''));
   const payee = v?.payee_name || 'Unknown payee';
   const amount = v?.total_amount != null
     ? Number(v.total_amount).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : '';
   const cur = v?.currency || '';
-  return [no, payee, amount ? (cur + ' ' + amount).trim() : ''].filter(Boolean).join(' - ');
+  return [tag, no, payee, amount ? (cur + ' ' + amount).trim() : ''].filter(Boolean).join(' - ');
 }
 
 function itemsHaveProducts(rows) {
@@ -1137,6 +1138,7 @@ export default function PurchaseCreate({ data }) {
                   <div className="pe-voucher-selected">
                     {selectedVoucherRows.map((v) => (
                       <span key={v.id} className="pe-voucher-chip" title={voucherLabel(v)}>
+                        {v.purpose_tag ? `${v.purpose_tag} ` : ''}
                         {v.voucher_no || v.pv_number || `PV-${v.id}`}
                       </span>
                     ))}

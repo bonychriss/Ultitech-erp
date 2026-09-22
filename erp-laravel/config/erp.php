@@ -64,6 +64,16 @@ return [
             'legacy_api' => true, // clock actions stay under attendance/api
             'entry' => 'attendance.php',
         ],
+        'deliveries' => [
+            'enabled' => true,
+            'legacy_api' => true, // desk APIs stay under deliveries/deliveries-ui/api
+            'entry' => 'deliveries.php',
+        ],
+        'driver_kpi' => [
+            'enabled' => true,
+            'legacy_api' => true, // JSON stays under driver-kpi/api
+            'entry' => 'driver-kpi/index.php',
+        ],
     ],
 
     'react_dist' => [
@@ -84,6 +94,7 @@ return [
         'accounting' => 'modules/accounting/frontend/dist',
         'revenue' => 'modules/revenue/frontend/dist',
         'attendance' => 'attendance/attendance-ui/dist',
+        'deliveries' => 'deliveries/deliveries-ui/frontend/dist',
     ],
 
     'sales_laravel_desks' => [

@@ -84,6 +84,40 @@ function deliveries_load_create_payload(PDO $pdo): array
         $drivers = [];
     }
 
+    $employees = [];
+    try {
+        $sqlEmployees = "SELECT id, full_name, department FROM users
+            WHERE (is_active = 1 OR is_active IS NULL)
+              AND (department IS NULL OR department = '' OR LOWER(department) <> 'driver')
+            ORDER BY full_name
+            LIMIT 300";
+        $rows = $pdo->query($sqlEmployees)->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $row) {
+            $employees[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'full_name' => (string) ($row['full_name'] ?? ''),
+                'department' => (string) ($row['department'] ?? ''),
+            ];
+        }
+    } catch (Throwable $e) {
+        try {
+            $rows = $pdo->query(
+                "SELECT id, full_name, department FROM users
+                 WHERE department IS NULL OR department = '' OR LOWER(department) <> 'driver'
+                 ORDER BY full_name LIMIT 300"
+            )->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $row) {
+                $employees[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'full_name' => (string) ($row['full_name'] ?? ''),
+                    'department' => (string) ($row['department'] ?? ''),
+                ];
+            }
+        } catch (Throwable $e2) {
+            $employees = [];
+        }
+    }
+
     $deliveryNotes = [];
     try {
         $rows = $pdo->query(
@@ -122,6 +156,7 @@ function deliveries_load_create_payload(PDO $pdo): array
         'ok' => true,
         'data' => [
             'drivers' => $drivers,
+            'employees' => $employees,
             'deliveryNotes' => $deliveryNotes,
             'warehouses' => $warehouses,
             'invoices' => deliveries_load_sales_invoices(),

@@ -398,7 +398,6 @@ export default function DeliveryNotesPage() {
                   <th>Created By</th>
                   <th>Customer</th>
                   <th>Destination</th>
-                  <th>Items</th>
                 </tr>
               </thead>
               <tbody>
@@ -431,7 +430,6 @@ export default function DeliveryNotesPage() {
                         ) : null}
                       </td>
                       <td>{note.delivery_address || '-'}</td>
-                      <td>{note.item_count} item{note.item_count === 1 ? '' : 's'}</td>
                     </tr>
                   )
                 })}

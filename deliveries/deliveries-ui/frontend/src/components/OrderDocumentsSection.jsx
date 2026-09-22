@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
-  FileText, Download, ExternalLink, Copy, CheckCircle2, MessageCircle, Receipt,
+  FileText, Download, ExternalLink, Copy, CheckCircle2, MessageCircle, Receipt, Share2,
 } from 'lucide-react'
+import { copyTextToClipboard, shareOrCopyLink } from '../utils/clipboard.js'
 
 function DocCard({ title, subtitle, viewUrl, downloadUrl, tone = 'blue', icon: Icon = FileText }) {
   const tones = {
@@ -12,7 +13,7 @@ function DocCard({ title, subtitle, viewUrl, downloadUrl, tone = 'blue', icon: I
   return (
     <div className={`cv-doc-card ${tones[tone] || tones.blue}`}>
       <div className="cv-doc-card-icon">
-        <Icon size={22} aria-hidden="true" />
+        <Icon size={20} aria-hidden="true" />
       </div>
       <div className="cv-doc-card-body">
         <strong>{title}</strong>
@@ -36,6 +37,9 @@ function DocCard({ title, subtitle, viewUrl, downloadUrl, tone = 'blue', icon: I
 
 export default function OrderDocumentsSection({ documents, isClientSigned, shareUrl = '' }) {
   const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState('')
+  const inputRef = useRef(null)
+  const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 
   if (!documents?.hasDocuments) return null
 
@@ -47,12 +51,37 @@ export default function OrderDocumentsSection({ documents, isClientSigned, share
 
   async function copyLink() {
     if (!clientLink) return
-    try {
-      await navigator.clipboard.writeText(clientLink)
+    setCopyError('')
+    const ok = await copyTextToClipboard(clientLink, inputRef.current)
+    if (ok) {
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
-    } catch {
-      /* ignore */
+      return
+    }
+    try {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+      inputRef.current?.setSelectionRange(0, clientLink.length)
+    } catch { /* ignore */ }
+    setCopyError('Tap and hold the link, then choose Copy.')
+  }
+
+  async function shareLink() {
+    if (!clientLink) return
+    setCopyError('')
+    const result = await shareOrCopyLink(
+      {
+        title: 'Delivery documents',
+        text: `View and download your delivery documents here: ${clientLink}`,
+        url: clientLink,
+      },
+      inputRef.current,
+    )
+    if (result === 'copied') {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } else if (result === 'failed') {
+      setCopyError('Tap and hold the link, then choose Copy.')
     }
   }
 
@@ -72,16 +101,32 @@ export default function OrderDocumentsSection({ documents, isClientSigned, share
           <label className="cv-sign-share-label" htmlFor="od-doc-share-url">Client documents link</label>
           <div className="cv-sign-share-row">
             <input
+              ref={inputRef}
               id="od-doc-share-url"
               type="text"
               readOnly
               value={clientLink}
               className="cv-input cv-sign-share-input"
+              onFocus={(e) => {
+                e.target.select()
+                try { e.target.setSelectionRange(0, e.target.value.length) } catch { /* ignore */ }
+              }}
+              onClick={(e) => {
+                e.target.select()
+                try { e.target.setSelectionRange(0, e.target.value.length) } catch { /* ignore */ }
+              }}
             />
-            <button type="button" className="cv-sign-icon-btn" onClick={copyLink} title="Copy link">
+            <button type="button" className="cv-sign-icon-btn" onClick={copyLink} title="Copy link" aria-label="Copy link">
               {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
             </button>
+            {canNativeShare ? (
+              <button type="button" className="cv-sign-icon-btn" onClick={shareLink} title="Share link" aria-label="Share link">
+                <Share2 size={16} />
+              </button>
+            ) : null}
           </div>
+          {copied ? <p className="cv-doc-share-status" role="status">Link copied</p> : null}
+          {copyError ? <p className="cv-doc-share-status cv-doc-share-status--err">{copyError}</p> : null}
           <button type="button" className="cv-wa-btn" onClick={shareWhatsApp}>
             <MessageCircle size={16} aria-hidden="true" /> Share via WhatsApp
           </button>
@@ -95,7 +140,7 @@ export default function OrderDocumentsSection({ documents, isClientSigned, share
       {dn && (
         <DocCard
           title={`Delivery Note ${dn.number}`}
-          subtitle={canDownload ? 'Signed delivery note' : 'Preview � sign to finalize'}
+          subtitle={canDownload ? 'Signed delivery note' : 'Preview — sign to finalize'}
           viewUrl={dn.viewUrl}
           downloadUrl={canDownload ? dn.downloadUrl : dn.viewUrl}
           tone="blue"

@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 /**
- * Delivery Notes list (React).
+ * Delivery Notes list via Laravel + React.
  */
-require __DIR__ . '/deliveries-ui/render-delivery-notes.php';
+if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
+    $_GET['module'] = 'deliveries';
+}
+$_GET['desk'] = 'delivery_notes';
+
+require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'deliveries.php';

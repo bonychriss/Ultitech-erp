@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 /**
- * Create Delivery Note (React).
+ * Create Delivery Note via Laravel + React.
  */
-require __DIR__ . '/deliveries-ui/render-create-delivery-note.php';
+if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
+    $_GET['module'] = 'deliveries';
+}
+$_GET['desk'] = 'create_delivery_note';
+
+require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'deliveries.php';

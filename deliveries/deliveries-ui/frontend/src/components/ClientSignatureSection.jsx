@@ -3,6 +3,7 @@ import {
   QrCode, Smartphone, Copy, CheckCircle2, Loader2, PenLine, MessageCircle, AlertCircle,
 } from 'lucide-react'
 import { CFG } from '../config.js'
+import { copyTextToClipboard } from '../utils/clipboard.js'
 
 function qrImageUrl(verifyUrl) {
   if (!verifyUrl) return ''
@@ -83,13 +84,20 @@ export default function ClientSignatureSection({ order, csrfToken, onSigned }) {
 
   async function copyLink() {
     if (!verifyUrl) return
-    try {
-      await navigator.clipboard.writeText(verifyUrl)
+    const input = document.getElementById('od-verify-url')
+    const ok = await copyTextToClipboard(verifyUrl, input)
+    if (ok) {
       setCopied(true)
+      setError('')
       window.setTimeout(() => setCopied(false), 2000)
-    } catch {
-      setError('Could not copy link.')
+      return
     }
+    try {
+      input?.focus()
+      input?.select()
+      input?.setSelectionRange(0, verifyUrl.length)
+    } catch { /* ignore */ }
+    setError('Tap and hold the link, then choose Copy.')
   }
 
   function shareWhatsApp() {
@@ -222,7 +230,21 @@ export default function ClientSignatureSection({ order, csrfToken, onSigned }) {
 
                 <label className="cv-sign-share-label" htmlFor="od-verify-url">Signing link</label>
                 <div className="cv-sign-share-row">
-                  <input id="od-verify-url" type="text" readOnly value={verifyUrl} className="cv-input cv-sign-share-input" />
+                  <input
+                    id="od-verify-url"
+                    type="text"
+                    readOnly
+                    value={verifyUrl}
+                    className="cv-input cv-sign-share-input"
+                    onFocus={(e) => {
+                      e.target.select()
+                      try { e.target.setSelectionRange(0, e.target.value.length) } catch { /* ignore */ }
+                    }}
+                    onClick={(e) => {
+                      e.target.select()
+                      try { e.target.setSelectionRange(0, e.target.value.length) } catch { /* ignore */ }
+                    }}
+                  />
                   <button type="button" className="cv-sign-icon-btn" onClick={copyLink} title="Copy link">
                     {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
                   </button>

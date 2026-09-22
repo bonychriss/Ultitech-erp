@@ -308,8 +308,8 @@ switch ($active_module) {
             $dlvQs .= '&company_slug=' . rawurlencode($mfSlug);
         }
         $links = [
-            ['slug' => 'home', 'url' => $modUrl('deliveries/index?' . $dlvQs), 'label' => 'Home', 'bi' => 'truck'],
-            ['slug' => 'cart', 'url' => $modUrl('deliveries/trips.php?module=deliveries'), 'label' => 'Trips', 'bi' => 'map'],
+            ['slug' => 'home', 'url' => $modUrl('deliveries/hub?' . $dlvQs), 'label' => 'Home', 'bi' => 'truck'],
+            ['slug' => 'cart', 'url' => $modUrl('deliveries/index?' . $dlvQs), 'label' => 'Desk', 'bi' => 'list-ul'],
             ['slug' => 'modules', 'url' => $modUrl('select-module.php'), 'label' => 'Modules', 'bi' => 'grid'],
             ['slug' => 'account', 'url' => $modUrl($accountPath . '?module=deliveries'), 'label' => 'Account', 'bi' => $mfBiAccount],
             ['slug' => 'settings', 'url' => $modUrl('deliveries/create_delivery.php?module=deliveries'), 'label' => 'New', 'bi' => 'plus-circle'],
@@ -318,9 +318,11 @@ switch ($active_module) {
             $mf_active_slug = 'modules';
         } elseif (strpos($script, 'create_delivery') !== false) {
             $mf_active_slug = 'settings';
+        } elseif (strpos($script, 'hub') !== false) {
+            $mf_active_slug = 'home';
         } elseif (strpos($script, '/deliveries/') !== false) {
             if ($baseName === 'index.php' || preg_match('#/deliveries/index/?$#', $script)) {
-                $mf_active_slug = 'home';
+                $mf_active_slug = 'cart';
             } else {
                 $mf_active_slug = 'cart';
             }
@@ -421,6 +423,17 @@ switch ($active_module) {
         } else {
             $mf_active_slug = 'home';
         }
+        break;
+
+    case 'driver_kpi':
+        $links = [
+            ['slug' => 'home', 'url' => $modUrl('driver-kpi/index.php?module=driver_kpi'), 'label' => 'Record', 'bi' => 'truck'],
+            ['slug' => 'cart', 'url' => $modUrl('weekly_tasks/my_progress.php?module=tasks'), 'label' => 'Score', 'bi' => 'graph-up'],
+            ['slug' => 'modules', 'url' => $modUrl('select-module.php'), 'label' => 'Modules', 'bi' => 'grid'],
+            ['slug' => 'account', 'url' => $modUrl($accountPath . '?module=driver_kpi'), 'label' => 'Account', 'bi' => $mfBiAccount],
+            ['slug' => 'settings', 'url' => $modUrl('weekly_tasks/leaderboard.php?module=tasks'), 'label' => 'Board', 'bi' => 'trophy'],
+        ];
+        $mf_active_slug = strpos($script, 'select-module') !== false ? 'modules' : 'home';
         break;
 
     case 'tracking':

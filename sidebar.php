@@ -39,7 +39,10 @@ if (stripos($path_to_check, '/modules/warehouses/') !== false
 if (stripos($path_to_check, '/sales/') !== false) {
     $active_module = 'sales';
 }
-if (stripos($path_to_check, '/deliveries/') !== false) {
+if (stripos($path_to_check, '/deliveries/') !== false
+    || stripos($path_to_check, '/deliveries.php') !== false
+    || preg_match('#(^|/)deliveries\.php$#i', $path_to_check)
+) {
     $active_module = 'deliveries';
 }
 if (strpos($script_name, '/modules/expenses/') !== false) {
@@ -323,6 +326,10 @@ if ($active_module === 'deliveries') {
     $dlvDashQsEarly = 'module=deliveries';
     if ($currentSlug !== '') {
         $dlvDashQsEarly .= '&company_slug=' . rawurlencode($currentSlug);
+    }
+    $selEarly = (int) ($_GET['sel'] ?? 0);
+    if ($selEarly > 0) {
+        $dlvDashQsEarly .= '&sel=' . $selEarly;
     }
     $deliveriesDashboardUrlEarly = company_url('deliveries/index', $currentSlug !== '' ? $currentSlug : null);
     $dlvDashSepEarly = (strpos($deliveriesDashboardUrlEarly, '?') !== false) ? '&' : '?';

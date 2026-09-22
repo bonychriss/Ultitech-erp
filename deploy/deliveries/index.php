@@ -195,17 +195,13 @@ $pageTitle = "Delivery Logistics";
 
         <div class="quick-actions">
             <!-- Navigation Links -->
-            <a href="trips.php" class="btn-action">
+            <a href="index.php" class="btn-action">
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                <span>All Trips</span>
+                <span>Deliveries Dashboard</span>
             </a>
-            <a href="trips.php?action=new" class="btn-action">
+            <a href="manifest.php" class="btn-action">
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"></path></svg>
                 <span>New Trip Manifest</span>
-            </a>
-            <a href="view_trip.php" class="btn-action">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
-                <span>Driver View (Active)</span>
             </a>
         </div>
 
@@ -243,7 +239,7 @@ $pageTitle = "Delivery Logistics";
         <div class="alert-section">
             <div class="section-header" style="padding: 12px 16px; border-bottom: 1px solid #f3f4f6; margin-bottom:0;">
                 <h3 style="padding:0; border:none;">Recent Trips</h3>
-                <a href="trips.php" style="font-size:12px; color:#2563eb; text-decoration:none;">View All &rarr;</a>
+                <a href="index.php" style="font-size:12px; color:#2563eb; text-decoration:none;">View All &rarr;</a>
             </div>
             <table class="alert-table">
                 <thead>

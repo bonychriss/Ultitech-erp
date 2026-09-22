@@ -29,7 +29,13 @@ if (!$myStats) {
 perf_layout_start('my-progress', 'Your weekly completion and weighted score.');
 ?>
 
-<div class="perf-summary-grid" style="grid-template-columns:repeat(2,1fr);">
+<?php
+$driverKpi = is_array($myStats['driver_kpi'] ?? null) ? $myStats['driver_kpi'] : null;
+$driverKpiUrl = function_exists('company_url')
+    ? company_url('driver-kpi/index') . '?module=driver_kpi&week=' . (int) $weekOffset
+    : '../driver-kpi/index.php?module=driver_kpi&week=' . (int) $weekOffset;
+?>
+<div class="perf-summary-grid" style="grid-template-columns:repeat(<?= $driverKpi ? '3' : '2' ?>,1fr);">
     <article class="perf-summary-card">
         <div class="perf-summary-card__head">
             <span class="perf-summary-icon perf-summary-icon--blue"><i class="bi bi-graph-up-arrow"></i></span>
@@ -47,12 +53,28 @@ perf_layout_start('my-progress', 'Your weekly completion and weighted score.');
         <div class="perf-top-score" style="color:var(--perf-green)"><?= (int) $myStats['completed_points'] ?> / <?= (int) $myStats['total_points'] ?></div>
         <p class="perf-reward-text">Points earned from completed tasks</p>
     </article>
+    <?php if ($driverKpi): ?>
+    <article class="perf-summary-card">
+        <div class="perf-summary-card__head">
+            <span class="perf-summary-icon perf-summary-icon--blue"><i class="bi bi-truck"></i></span>
+            <span class="perf-summary-card__title perf-summary-card__title--blue">Driver KPI</span>
+        </div>
+        <div class="perf-top-score"><?= (int) round((float) ($myStats['driver_kpi_score'] ?? $driverKpi['score_pct'] ?? 0)) ?>%</div>
+        <p class="perf-reward-text">
+            On-time <?= number_format((float) ($driverKpi['on_time_pct'] ?? 0), 0) ?>% ·
+            Care <?= number_format((float) ($driverKpi['vehicle_care_pct'] ?? 0), 0) ?>% ·
+            Docs <?= number_format((float) ($driverKpi['documentation_pct'] ?? 0), 0) ?>%
+        </p>
+        <a href="<?= htmlspecialchars($driverKpiUrl, ENT_QUOTES, 'UTF-8') ?>" class="perf-summary-card__link perf-summary-card__link--blue">Update driver KPI</a>
+    </article>
+    <?php endif; ?>
 </div>
 
 <div class="perf-panel">
     <div class="perf-panel__head"><h3>Tip</h3></div>
     <div style="padding:20px;color:var(--perf-muted);">
         Use <strong>My Plan</strong> to add tasks and mark them complete. Higher-weight tasks improve your score faster.
+        Drivers can also record weekly scores in <a href="<?= htmlspecialchars($driverKpiUrl, ENT_QUOTES, 'UTF-8') ?>">Driver KPI</a> (on-time 40%, vehicle care 30%, documentation 30%).
     </div>
 </div>
 

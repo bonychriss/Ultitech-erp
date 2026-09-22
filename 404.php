@@ -21,5 +21,6 @@ $safeHome = htmlspecialchars($homeUrl, ENT_QUOTES, 'UTF-8');
 render404Page([
     'title' => 'Oops! Page not found',
     'message' => 'The page you are looking for might have been removed, renamed, or is temporarily unavailable.',
+    'homeUrl' => $homeUrl,
     'actionsHtml' => '<a class="error404-btn error404-btn-primary" href="' . $safeHome . '">Back to Home</a>',
 ]);

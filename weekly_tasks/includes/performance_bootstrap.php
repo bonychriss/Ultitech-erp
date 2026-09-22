@@ -14,6 +14,14 @@ if (is_file($wmHelpers)) {
     }
 }
 
+$dkpiHelpers = __DIR__ . '/../../driver-kpi/includes/driver_kpi_helpers.php';
+if (is_file($dkpiHelpers)) {
+    require_once $dkpiHelpers;
+    if (isset($GLOBALS['pdo']) && function_exists('dkpi_ensure_tables')) {
+        dkpi_ensure_tables($GLOBALS['pdo']);
+    }
+}
+
 global $pdo;
 
 $viewerId = (int) ($_SESSION['user_id'] ?? 0);

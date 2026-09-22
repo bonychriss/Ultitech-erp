@@ -1,16 +1,42 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Truck, List, Plus, Search, SlidersHorizontal, X,
-  Loader2, CheckCircle2, AlertCircle, Clock, AlertTriangle, Sparkles,
+  Truck, Plus, Search, SlidersHorizontal, X,
+  Loader2, CheckCircle2, AlertCircle, Clock, AlertTriangle, Sparkles, Gauge,
 } from 'lucide-react'
 import { CFG } from '../config.js'
 import { aiSearchDeliveries } from '../api/myDeliveries.js'
 import DeliveryKpiTraceModal from '../components/DeliveryKpiTraceModal.jsx'
+import CreateDeliveryModal from '../components/CreateDeliveryModal.jsx'
 import { resolveKpiTrace } from '../utils/kpiTrace.js'
 import { resolveDeliveryType, typePill } from '../utils/deliveryType.js'
 
 const URLS = CFG.data?.urls || {}
+
+class DashboardErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { error: null }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error }
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="dlv-page" style={{ padding: '1rem' }}>
+          <div className="dlv-flash dlv-flash--err" role="alert">
+            <AlertCircle size={18} aria-hidden="true" />
+            <span>{String(this.state.error?.message || this.state.error || 'Dashboard failed to load.')}</span>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const STATUS_GROUPS = {
   pending: ['request_pending', 'accepted', 'pending'],
@@ -165,6 +191,14 @@ function takeRestoredListState() {
 }
 
 export default function DeliveriesDashboardPage() {
+  return (
+    <DashboardErrorBoundary>
+      <DeliveriesDashboardPageInner />
+    </DashboardErrorBoundary>
+  )
+}
+
+function DeliveriesDashboardPageInner() {
   const initial = CFG.data || {}
   const restoredList = takeRestoredListState()
   const urlList = readListStateFromUrl()
@@ -205,12 +239,19 @@ export default function DeliveriesDashboardPage() {
     return Number(fromRestore || fromUrl || fromStore || 0) || 0
   })
   const [searchOpen, setSearchOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
   const [headerSearchMount, setHeaderSearchMount] = useState(null)
+  const [headerActionsMount, setHeaderActionsMount] = useState(null)
+  const [wideLayout, setWideLayout] = useState(() => (
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : true
+  ))
   const toastTimer = useRef(null)
   const searchWrapRef = useRef(null)
   const searchInputRef = useRef(null)
   const mobileSearchInputRef = useRef(null)
   const searchExpandRef = useRef(null)
+  const searchPanelRef = useRef(null)
+  const searchToggleRef = useRef(null)
   const filterDropdownRef = useRef(null)
   const filterBtnRef = useRef(null)
   const filterPanelRef = useRef(null)
@@ -225,22 +266,69 @@ export default function DeliveriesDashboardPage() {
     if (!CFG.apiUrl) return
     setLoading(true)
     try {
-      const res = await fetch(CFG.apiUrl, { headers: { Accept: 'application/json' } })
-      const payload = await res.json()
-      if (payload?.ok && payload.data) {
-        setData(payload.data)
-        if (payload.data.flash) setFlash(payload.data.flash)
+      const base = String(CFG.apiUrl)
+      const url = new URL(base, window.location.origin)
+      const pageParams = new URLSearchParams(window.location.search || '')
+      pageParams.forEach((value, key) => {
+        if (!url.searchParams.has(key)) url.searchParams.set(key, value)
+      })
+      if (highlightedId) url.searchParams.set('sel', String(highlightedId))
+      const res = await fetch(url.toString(), {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      })
+      const text = await res.text()
+      let payload = null
+      try {
+        payload = text ? JSON.parse(text) : null
+      } catch {
+        payload = null
       }
+      if (!res.ok || !payload?.ok || !payload.data) {
+        showToast('err', payload?.error || 'Could not refresh dashboard.')
+        return
+      }
+      setData(payload.data)
+      if (payload.data.flash) setFlash(payload.data.flash)
     } catch {
       showToast('err', 'Could not refresh dashboard.')
     } finally {
       setLoading(false)
     }
-  }, [showToast])
+  }, [showToast, highlightedId])
 
   useEffect(() => {
     if (!initial.stats) loadDashboard()
   }, [initial.stats, loadDashboard])
+
+  useEffect(() => {
+    if (!CFG.apiUrl || !highlightedId || !initial.stats) return undefined
+    let alive = true
+    ;(async () => {
+      try {
+        const base = String(CFG.apiUrl)
+        const url = new URL(base, window.location.origin)
+        url.searchParams.set('sel', String(highlightedId))
+        const res = await fetch(url.toString(), {
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin',
+        })
+        const text = await res.text()
+        const payload = text ? JSON.parse(text) : null
+        if (!alive || !payload?.ok || !payload.data) return
+        setData((prev) => ({
+          ...prev,
+          ...payload.data,
+          stats: { ...(prev.stats || {}), ...(payload.data.stats || {}) },
+          kpiTraces: payload.data.kpiTraces || prev.kpiTraces,
+          performance: payload.data.performance || prev.performance,
+        }))
+      } catch {
+        /* keep current performance card */
+      }
+    })()
+    return () => { alive = false }
+  }, [highlightedId, initial.stats])
 
   useEffect(() => {
     if (flash) {
@@ -250,9 +338,24 @@ export default function DeliveriesDashboardPage() {
     return undefined
   }, [flash])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setHeaderSearchMount(document.getElementById('dlv-header-search-mount'))
+    setHeaderActionsMount(document.getElementById('dlv-header-actions-mount'))
   }, [])
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const sync = () => setWideLayout(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  useEffect(() => {
+    const mobileHeader = Boolean(headerActionsMount?.isConnected) && !wideLayout
+    document.body.classList.toggle('dlv-has-header-actions', mobileHeader)
+    return () => document.body.classList.remove('dlv-has-header-actions')
+  }, [headerActionsMount, wideLayout])
 
   useEffect(() => {
     writeListStateToUrl(searchInput, filters, highlightedId)
@@ -293,10 +396,18 @@ export default function DeliveriesDashboardPage() {
   useEffect(() => {
     if (!searchOpen) return undefined
 
+    function isSearchUi(target) {
+      if (!(target instanceof Node)) return false
+      if (searchExpandRef.current?.contains(target)) return true
+      if (searchPanelRef.current?.contains(target)) return true
+      if (searchToggleRef.current?.contains(target)) return true
+      return false
+    }
+
     function handlePointerDown(event) {
-      if (!searchExpandRef.current?.contains(event.target) && searchInput.trim() === '') {
-        setSearchOpen(false)
-      }
+      if (isSearchUi(event.target)) return
+      if (searchInput.trim() !== '') return
+      setSearchOpen(false)
     }
 
     function handleKeyDown(event) {
@@ -304,14 +415,19 @@ export default function DeliveriesDashboardPage() {
     }
 
     const focusTimer = window.setTimeout(() => {
-      mobileSearchInputRef.current?.focus()
-    }, 180)
+      mobileSearchInputRef.current?.focus({ preventScroll: true })
+    }, 60)
 
-    document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
+    // Attach after the opening tap finishes so mobile ghost clicks don't close immediately.
+    const listenTimer = window.setTimeout(() => {
+      document.addEventListener('pointerdown', handlePointerDown, true)
+      document.addEventListener('keydown', handleKeyDown)
+    }, 0)
+
     return () => {
       window.clearTimeout(focusTimer)
-      document.removeEventListener('mousedown', handlePointerDown)
+      window.clearTimeout(listenTimer)
+      document.removeEventListener('pointerdown', handlePointerDown, true)
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [searchOpen, searchInput])
@@ -374,7 +490,7 @@ export default function DeliveriesDashboardPage() {
     }
   }, [filtersOpen])
 
-  const stats = data.stats || { activeTrips: 0, pending: 0, exceptions: 0 }
+  const stats = data.stats || { activeTrips: 0, pending: 0, performanceScore: 0 }
   const allOrders = useMemo(
     () => (data.orders || []).map((order) => ({
       ...order,
@@ -671,26 +787,139 @@ export default function DeliveriesDashboardPage() {
   }
 
   function openKpiTrace(key) {
-    if (key === 'exceptions') {
-      setActiveKpiTrace({
-        title: 'Exceptions',
-        headline: Number(stats.exceptions || 0).toLocaleString(),
-        comingSoon: true,
-      })
-      return
-    }
     const trace = resolveKpiTrace(key, data)
     if (trace) setActiveKpiTrace(trace)
   }
 
+  const performanceScore = Number(stats.performanceScore ?? data.performance?.score ?? 0)
+  const performanceDriver = String(stats.performanceDriver || data.performance?.driver_name || '')
+
   const kpis = [
-    { key: 'active', label: 'Active trips', value: Number(stats.activeTrips || 0).toLocaleString(), sub: 'Loading or in transit', color: 'blue', icon: <Truck size={17} /> },
-    { key: 'pending', label: 'Pending deliveries', value: Number(stats.pending || 0).toLocaleString(), sub: 'Awaiting dispatch', color: 'amber', icon: <Clock size={17} /> },
-    { key: 'exceptions', label: 'Exceptions', value: Number(stats.exceptions || 0).toLocaleString(), sub: 'Failed or returned', color: 'red', icon: <AlertTriangle size={17} /> },
+    {
+      key: 'active',
+      label: 'Active trips',
+      labelShort: 'Active',
+      value: Number(stats.activeTrips || 0).toLocaleString(),
+      color: 'blue',
+      icon: <Truck size={14} />,
+    },
+    {
+      key: 'pending',
+      label: 'Pending deliveries',
+      labelShort: 'Pending',
+      value: Number(stats.pending || 0).toLocaleString(),
+      color: 'amber',
+      icon: <Clock size={14} />,
+    },
+    {
+      key: 'performance',
+      label: 'Driver performance',
+      labelShort: 'Performance',
+      value: `${performanceScore.toFixed(1)}%`,
+      sub: performanceDriver || 'This week',
+      color: performanceScore >= 85 ? 'green' : (performanceScore >= 70 ? 'amber' : 'red'),
+      icon: <Gauge size={14} />,
+    },
   ]
 
   const hasSearchValue = searchInput.trim() !== ''
-  const desktopSearchField = renderSearchField(searchInputRef, 'dlv-dashboard-search-desktop', true)
+  const actionsMountReady = Boolean(headerActionsMount?.isConnected)
+  const searchMountReady = Boolean(headerSearchMount?.isConnected)
+
+  function renderToolbarActions(filterWrapRef, btnRef) {
+    return (
+      <>
+        <div className={`dlv-filter-dropdown${filtersOpen ? ' is-open' : ''}`} ref={filterWrapRef}>
+          <button
+            ref={btnRef}
+            type="button"
+            className={`dlv-filter-btn${filtersOpen ? ' is-active' : ''}`}
+            onClick={toggleFilters}
+            aria-expanded={filtersOpen}
+            aria-haspopup="dialog"
+            title="Filters"
+          >
+            <SlidersHorizontal size={22} aria-hidden="true" />
+            {hasAdvancedFilters(filters) && <span className="dlv-filter-dot" aria-hidden="true" />}
+          </button>
+        </div>
+
+        <a
+          href={urls.createDelivery || 'create_delivery.php'}
+          className="dlv-btn dlv-btn--primary dlv-btn--create"
+          aria-label="New delivery"
+          onClick={(e) => {
+            if (CFG.createInitUrl || CFG.createSubmitUrl) {
+              e.preventDefault()
+              setCreateOpen(true)
+            }
+          }}
+        >
+          <Plus size={22} aria-hidden="true" />
+          <span className="dlv-btn-label-desktop">New Delivery</span>
+          <span className="dlv-btn-label-mobile">New</span>
+        </a>
+      </>
+    )
+  }
+
+  function renderMobileSearch(expandRef, inputRef, panelId) {
+    const panel = searchOpen ? (
+      <>
+        <button
+          type="button"
+          className="dlv-search-scrim"
+          aria-label="Close search"
+          onClick={() => setSearchOpen(false)}
+        />
+        <div
+          id={panelId}
+          className="dlv-search-panel is-open dlv-search-panel--mobile-float"
+          ref={searchPanelRef}
+          role="search"
+        >
+          {renderSearchField(inputRef, panelId.replace('-panel', ''), true)}
+        </div>
+      </>
+    ) : null
+
+    return (
+      <div
+        className={`dlv-search-expand${searchOpen ? ' is-open' : ''}`}
+        ref={expandRef}
+      >
+        <button
+          ref={searchToggleRef}
+          type="button"
+          className={`dlv-search-toggle${searchOpen ? ' is-active' : ''}${hasSearchValue ? ' has-value' : ''}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            toggleMobileSearch()
+          }}
+          aria-expanded={searchOpen}
+          aria-controls={panelId}
+          title="Search deliveries"
+        >
+          <Search size={22} aria-hidden="true" />
+        </button>
+        {panel ? createPortal(panel, document.body) : null}
+      </div>
+    )
+  }
+
+  const headerActionsPortal = actionsMountReady
+    ? createPortal(
+      (
+        <>
+          {!wideLayout ? renderMobileSearch(searchExpandRef, mobileSearchInputRef, 'dlv-dashboard-search-mobile-panel') : null}
+          {renderToolbarActions(filterDropdownRef, filterBtnRef)}
+        </>
+      ),
+      headerActionsMount,
+    )
+    : null
 
   if (loading && !data.stats) {
     return (
@@ -705,6 +934,7 @@ export default function DeliveriesDashboardPage() {
 
   return (
     <div className="dlv-page">
+      <CreateDeliveryModal open={createOpen} onClose={() => setCreateOpen(false)} />
       {activeKpiTrace && (
         <DeliveryKpiTraceModal
           trace={activeKpiTrace}
@@ -727,7 +957,10 @@ export default function DeliveriesDashboardPage() {
         </div>
       )}
 
-      {headerSearchMount ? createPortal(desktopSearchField, headerSearchMount) : null}
+      {wideLayout && searchMountReady ? createPortal(
+        renderSearchField(searchInputRef, 'dlv-dashboard-search-desktop', true),
+        headerSearchMount,
+      ) : null}
 
       {aiNote && (
         <div className="dlv-ai-note" role="status">
@@ -739,50 +972,14 @@ export default function DeliveriesDashboardPage() {
         </div>
       )}
 
-      <div className="dlv-dashboard-toolbar" aria-label="Search and actions">
-        <div
-          className={`dlv-search-expand${searchOpen ? ' is-open' : ''}`}
-          ref={searchExpandRef}
-        >
-          <button
-            type="button"
-            className={`dlv-search-toggle${searchOpen ? ' is-active' : ''}${hasSearchValue ? ' has-value' : ''}`}
-            onClick={toggleMobileSearch}
-            aria-expanded={searchOpen}
-            aria-controls="dlv-dashboard-search-mobile-panel"
-            title="Search deliveries"
-          >
-            <Search size={18} aria-hidden="true" />
-          </button>
-          <div
-            id="dlv-dashboard-search-mobile-panel"
-            className={`dlv-search-panel${searchOpen ? ' is-open' : ''}`}
-          >
-            {renderSearchField(mobileSearchInputRef, 'dlv-dashboard-search-mobile', true)}
-          </div>
-        </div>
+      {headerActionsPortal}
 
-        <div className={`dlv-filter-dropdown${filtersOpen ? ' is-open' : ''}`} ref={filterDropdownRef}>
-          <button
-            ref={filterBtnRef}
-            type="button"
-            className={`dlv-filter-btn${filtersOpen ? ' is-active' : ''}`}
-            onClick={toggleFilters}
-            aria-expanded={filtersOpen}
-            aria-haspopup="dialog"
-            title="Filters"
-          >
-            <SlidersHorizontal size={18} aria-hidden="true" />
-            {hasAdvancedFilters(filters) && <span className="dlv-filter-dot" aria-hidden="true" />}
-          </button>
+      {!wideLayout && !actionsMountReady ? (
+        <div className="dlv-dashboard-toolbar" aria-label="Search and actions">
+          {renderMobileSearch(searchExpandRef, mobileSearchInputRef, 'dlv-dashboard-search-mobile-panel')}
+          {renderToolbarActions(filterDropdownRef, filterBtnRef)}
         </div>
-
-        <a href={urls.createDelivery || 'create_delivery.php'} className="dlv-btn dlv-btn--primary dlv-btn--create" aria-label="New delivery">
-          <Plus size={18} aria-hidden="true" />
-          <span className="dlv-btn-label-desktop">New Delivery</span>
-          <span className="dlv-btn-label-mobile">New</span>
-        </a>
-      </div>
+      ) : null}
 
       <div className="dlv-sticky-top">
         {(activeFilterChips.length > 0 || searchInput.trim() !== '') && (
@@ -816,9 +1013,12 @@ export default function DeliveriesDashboardPage() {
               title="Click to see contributing records"
             >
               <div className="dlv-kpi-text">
-                <span className="dlv-kpi-label">{k.label}</span>
+                <span className="dlv-kpi-label">
+                  <span className="dlv-kpi-label__full">{k.label}</span>
+                  <span className="dlv-kpi-label__short">{k.labelShort || k.label}</span>
+                </span>
                 <div className="dlv-kpi-value">{k.value}</div>
-                <div className="dlv-kpi-sub">{k.sub}</div>
+                {k.sub ? <div className="dlv-kpi-sub">{k.sub}</div> : null}
               </div>
               <span className={`dlv-kpi-badge dlv-badge--${k.color}`}>{k.icon}</span>
             </button>
@@ -827,70 +1027,99 @@ export default function DeliveriesDashboardPage() {
       </div>
 
       <div className="dlv-card">
-        <div className="dlv-card-head">
-          <h3 className="dlv-card-title">
-            <List size={18} aria-hidden="true" />
-            All Deliveries
-          </h3>
-          <span className="dlv-card-meta">
-            {filteredOrders.length} record{filteredOrders.length === 1 ? '' : 's'}
-          </span>
-        </div>
         {allOrders.length === 0 ? (
           <div className="dlv-empty">No deliveries recorded yet.</div>
         ) : filteredOrders.length === 0 ? (
           <div className="dlv-empty">No deliveries match your search or filters.</div>
         ) : (
-          <div className="dlv-table-wrap">
-            <table className="dlv-table dlv-table--full">
-              <thead>
-                <tr>
-                  <th>S/N</th>
-                  <th>Delivery</th>
-                  <th>Client</th>
-                  <th>Destination</th>
-                  <th>Description</th>
-                  <th>Status</th>
-                  <th>Type</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.map((order, idx) => {
-                  const pill = statusPill(order.status)
-                  const type = typePill(order.delivery_type)
-                  return (
-                    <tr
-                      key={order.id}
-                      data-delivery-id={order.id}
-                      className={`dlv-row${sameId(highlightedId, order.id) ? ' is-selected' : ''}`}
-                      onClick={() => openOrder(order.id)}
-                    >
-                      <td className="dlv-sn">{idx + 1}</td>
-                      <td className="dlv-ref">{order.delivery_number || '-'}</td>
-                      <td>
-                        {order.client_name || '-'}
-                        {order.client_phone ? (
-                          <>
-                            <br />
-                            <small className="dlv-muted">{order.client_phone}</small>
-                          </>
-                        ) : null}
-                      </td>
-                      <td>{order.delivery_address || '-'}</td>
-                      <td>{order.description || '-'}</td>
-                      <td className="dlv-status-cell"><span className={pill.cls}>{pill.label}</span></td>
-                      <td className="dlv-type-cell"><span className={type.cls}>{type.label}</span></td>
-                      <td className="dlv-muted">
+          <>
+            <div className="dlv-mobile-list" aria-label="Deliveries">
+              {filteredOrders.map((order, idx) => {
+                const pill = statusPill(order.status)
+                const type = typePill(order.delivery_type)
+                return (
+                  <button
+                    key={`m-${order.id}`}
+                    type="button"
+                    data-delivery-id={order.id}
+                    className={`dlv-mobile-card${sameId(highlightedId, order.id) ? ' is-selected' : ''}`}
+                    onClick={() => openOrder(order.id)}
+                  >
+                    <div className="dlv-mobile-card__top">
+                      <span className="dlv-mobile-card__sn">{idx + 1}</span>
+                      <span className="dlv-mobile-card__ref">{order.delivery_number || '-'}</span>
+                      <span className={pill.cls}>{pill.label}</span>
+                    </div>
+                    <div className="dlv-mobile-card__client">{order.client_name || '-'}</div>
+                    {order.client_phone ? (
+                      <div className="dlv-mobile-card__phone">{order.client_phone}</div>
+                    ) : null}
+                    <div className="dlv-mobile-card__dest">{order.delivery_address || '-'}</div>
+                    {order.description ? (
+                      <div className="dlv-mobile-card__desc">{order.description}</div>
+                    ) : null}
+                    <div className="dlv-mobile-card__meta">
+                      <span className={type.cls}>{type.label}</span>
+                      <span className="dlv-mobile-card__date">
                         {formatDate(order.created_at)}
-                        <br /><small>{formatTime(order.created_at)}</small>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                        {formatTime(order.created_at) ? ` · ${formatTime(order.created_at)}` : ''}
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="dlv-table-wrap dlv-table-wrap--desktop">
+              <table className="dlv-table dlv-table--full">
+                <thead>
+                  <tr>
+                    <th>S/N</th>
+                    <th>Delivery</th>
+                    <th>Client</th>
+                    <th>Destination</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOrders.map((order, idx) => {
+                    const pill = statusPill(order.status)
+                    const type = typePill(order.delivery_type)
+                    return (
+                      <tr
+                        key={order.id}
+                        data-delivery-id={order.id}
+                        className={`dlv-row${sameId(highlightedId, order.id) ? ' is-selected' : ''}`}
+                        onClick={() => openOrder(order.id)}
+                      >
+                        <td className="dlv-sn">{idx + 1}</td>
+                        <td>
+                          <div className="dlv-cell-main">{order.delivery_number || '-'}</div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{order.client_name || '-'}</div>
+                          {order.client_phone ? (
+                            <div className="dlv-cell-sub">{order.client_phone}</div>
+                          ) : null}
+                        </td>
+                        <td>{order.delivery_address || '-'}</td>
+                        <td>{order.description || '-'}</td>
+                        <td className="dlv-status-cell"><span className={pill.cls}>{pill.label}</span></td>
+                        <td className="dlv-type-cell"><span className={type.cls}>{type.label}</span></td>
+                        <td>
+                          <div>{formatDate(order.created_at)}</div>
+                          <div className="dlv-cell-sub">{formatTime(order.created_at)}</div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -83,9 +83,9 @@ if (function_exists('countPendingPaymentVoucherTasks')) {
 
 $pvTasksListUrl = $companyRoute('employee/pending-voucher-tasks.php') . '?module=voucher';
 
-$deliveriesDashUrl = $companyRoute('deliveries/index') . '?module=deliveries';
+$deliveriesHubUrl = $companyRoute('deliveries/hub') . '?module=deliveries';
 if ($currentCompanySlug !== '') {
-    $deliveriesDashUrl .= '&company_slug=' . rawurlencode($currentCompanySlug);
+    $deliveriesHubUrl .= '&company_slug=' . rawurlencode($currentCompanySlug);
 }
 
 $modules = [];
@@ -113,7 +113,7 @@ $push([
     'id' => 'deliveries',
     'label' => 'Delivery Logistics',
     'desc' => 'Fleet, Manifests & POD Tracking',
-    'href' => $deliveriesDashUrl,
+    'href' => $deliveriesHubUrl,
     'icon' => 'deliveries',
     'color' => '#0369a1',
 ]);
@@ -243,6 +243,14 @@ $push([
     'href' => $companyRoute('weekly_tasks/index.php') . '?module=tasks',
     'icon' => 'performance',
     'color' => '#e11d48',
+]);
+$push([
+    'id' => 'driver_kpi',
+    'label' => 'Driver KPI',
+    'desc' => 'On-time, vehicle care & documentation scores',
+    'href' => $companyRoute('driver-kpi/index') . '?module=driver_kpi',
+    'icon' => 'deliveries',
+    'color' => '#0e7490',
 ]);
 
 if ($isAdmin || $isRootAdminUsername) {

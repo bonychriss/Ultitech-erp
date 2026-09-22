@@ -156,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
         }
 
-        header("Location: view_trip.php?trip_id=" . $order['trip_id']);
+        header("Location: index.php");
         exit;
     } catch (Exception $e) {
         $error = "Error saving POD: " . $e->getMessage();

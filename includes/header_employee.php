@@ -16,7 +16,7 @@ $script = $_SERVER['SCRIPT_NAME'] ?? '';
 if (!isset($rootPath)) {
     if (strpos($script, '/modules/') !== false) {
         $rootPath = '../../';
-    } elseif (preg_match('#/(employee|todo|attendance|deliveries|dispatch|stock|weekly_tasks)(/|$)#', $script)) {
+    } elseif (preg_match('#/(employee|todo|attendance|deliveries|dispatch|stock|weekly_tasks|driver-kpi)(/|$)#', $script)) {
         $rootPath = '../';
     } else {
         $rootPath = '';
@@ -112,7 +112,8 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
 ?>
 <div class="d-flex w-100 min-vh-100 layout-main-wrapper">
     <?php 
-    if (!isset($_GET['print'])) {
+    $hideSidebar = !empty($hideSidebar ?? false);
+    if (!$hideSidebar && !isset($_GET['print'])) {
         $sidebarPath = __DIR__ . '/../sidebar.php';
         if (file_exists($sidebarPath)) {
             include_once $sidebarPath;
@@ -126,9 +127,11 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     <div class="header-content">
         <div class="header-left" style="display: flex; align-items: center; gap: 16px;">
             <!-- Mobile Toggle Button -->
+            <?php if (!$hideSidebar): ?>
             <button type="button" class="btn btn-link d-lg-none p-0 me-2 employee-header-menu-btn" onclick="toggleNativeSidebar()" style="color: #333; text-decoration: none;" aria-label="Open menu">
                 <span class="erp-hamburger" aria-hidden="true"><span></span><span></span><span></span></span>
             </button>
+            <?php endif; ?>
         </div>
 
         <?php if ($__employeeHeaderShowHeading): ?>

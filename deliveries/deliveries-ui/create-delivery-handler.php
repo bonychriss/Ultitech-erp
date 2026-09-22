@@ -42,9 +42,51 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
     $packageWeight = trim((string) ($input['package_weight'] ?? ''));
     $description = trim((string) ($input['description'] ?? ''));
     $deliveryNoteId = !empty($input['delivery_note_id']) ? (int) $input['delivery_note_id'] : null;
+    $requestKindRaw = strtolower(trim((string) ($input['request_kind'] ?? 'delivery')));
+    $requestKind = $requestKindRaw === 'client_visit' ? 'client_visit' : 'delivery';
+
+    $visitEmployees = [];
+    if ($requestKind === 'client_visit') {
+        $rawIds = $input['employee_ids'] ?? $input['visit_employee_ids'] ?? [];
+        if (is_string($rawIds)) {
+            $rawIds = preg_split('/\s*,\s*/', $rawIds) ?: [];
+        }
+        if (!is_array($rawIds)) {
+            $rawIds = [];
+        }
+        $idList = [];
+        foreach ($rawIds as $rawId) {
+            $id = (int) $rawId;
+            if ($id > 0) {
+                $idList[$id] = $id;
+            }
+        }
+        if ($idList !== []) {
+            $placeholders = implode(',', array_fill(0, count($idList), '?'));
+            try {
+                $stmtEmp = $pdo->prepare(
+                    "SELECT id, full_name FROM users WHERE id IN ($placeholders) ORDER BY full_name"
+                );
+                $stmtEmp->execute(array_values($idList));
+                foreach ($stmtEmp->fetchAll(PDO::FETCH_ASSOC) as $empRow) {
+                    $visitEmployees[] = [
+                        'id' => (int) ($empRow['id'] ?? 0),
+                        'name' => trim((string) ($empRow['full_name'] ?? '')),
+                    ];
+                }
+            } catch (Throwable $e) {
+                $visitEmployees = [];
+            }
+        }
+    }
+
     $driverId = $userId;
     if ($driverId <= 0) {
         return ['ok' => false, 'error' => 'You must be logged in to create a delivery.'];
+    }
+
+    if ($requestKind === 'client_visit' && $visitEmployees === []) {
+        return ['ok' => false, 'error' => 'Please select at least one employee who asked for this client visit.'];
     }
 
     if ($clientName === '' || $destination === '') {
@@ -121,11 +163,13 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
             }
         }
 
+        $visitEmployeesJson = $visitEmployees !== [] ? json_encode($visitEmployees, JSON_UNESCAPED_UNICODE) : null;
+
         $stmt = $pdo->prepare("
             INSERT INTO delivery_orders
             (requested_driver_id, trip_id, delivery_note_id, client_name, client_phone, delivery_address, pickup_location, delivery_deadline, route_cost, estimated_route_cost,
-             invoice_ref, sales_invoice_id, package_weight, package_description, receipt_file, invoice_file, status, created_by, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'request_pending', ?, NOW())
+             invoice_ref, sales_invoice_id, package_weight, package_description, request_kind, visit_employees, receipt_file, invoice_file, status, created_by, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'request_pending', ?, NOW())
         ");
         $stmt->execute([
             $driverId,
@@ -142,6 +186,8 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
             $salesInvoiceId > 0 ? $salesInvoiceId : null,
             $packageWeight,
             $description,
+            $requestKind,
+            $visitEmployeesJson,
             $receiptFilePath,
             $invFilePath,
             $userId,
@@ -159,7 +205,7 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
         }
 
         $dispatchResult = null;
-        $shouldCreateDispatch = $salesInvoiceId <= 0 && $invoiceRef === '';
+        $shouldCreateDispatch = $requestKind !== 'client_visit' && $salesInvoiceId <= 0 && $invoiceRef === '';
         if ($shouldCreateDispatch && function_exists('dispatch_create_note_from_delivery')) {
             $dispatchResult = dispatch_create_note_from_delivery($pdo, [
                 'pickup' => $pickup,

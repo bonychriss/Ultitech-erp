@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Usually, completing a trip means it's done. 
         }
 
-        header("Location: view_trip.php?trip_id=" . $tripId);
+        header("Location: index.php");
         exit;
     } catch (Exception $e) {
         die("Error updating trip: " . $e->getMessage());

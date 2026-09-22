@@ -12,6 +12,17 @@ RewriteRule ^payroll/(run-payroll|edit-payslip|payslip|settings|my-payslips)/?$ 
 # Attendance → Laravel + React clock desk
 RewriteRule ^attendance/?$ attendance/index.php?module=attendance [L,QSA,NC]
 RewriteRule ^attendance/index(\.php)?/?$ attendance/index.php?module=attendance [L,QSA,NC]
+
+# Deliveries → hub (module launcher) + React logistics desk
+RewriteRule ^deliveries/?$ deliveries/hub.php?module=deliveries [L,QSA,NC]
+RewriteRule ^deliveries/hub(\.php)?/?$ deliveries/hub.php?module=deliveries [L,QSA,NC]
+RewriteRule ^deliveries/index(\.php)?/?$ deliveries/index.php?module=deliveries [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^deliveries/([^./]+)/?$ deliveries/$1.php [L,QSA,NC]
+# Missing deliveries/* under ultimate/deliveries/ → parent deliveries/ (stops Oops 404s)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^deliveries/(.+)$ ../deliveries/$1?company_slug=ultimate&module=deliveries [L,QSA]
 # Legacy select-module / payroll paths → Laravel payroll bridge
 RewriteRule ^modules/payroll/?$ payroll.php [L,QSA,NC]
 RewriteRule ^modules/payroll/index(\.php)?/?$ payroll.php [L,QSA,NC]
@@ -128,6 +139,15 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^weekly_tasks/index(\.php)?/?$ ../weekly_tasks/index.php?company_slug=ultimate [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^weekly_tasks/(.+)$ ../weekly_tasks/$1?company_slug=ultimate [L,QSA]
+
+# Driver KPI — Delivery / Ride service recording desks
+RewriteRule ^driver-kpi/?$ driver-kpi/index.php?module=driver_kpi [L,QSA,NC]
+RewriteRule ^driver-kpi/index(\.php)?/?$ driver-kpi/index.php?module=driver_kpi [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^driver-kpi/([^./]+)/?$ driver-kpi/$1.php [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^driver-kpi/(.+)$ ../driver-kpi/$1?company_slug=ultimate [L,QSA]
 
 # Settings hub (extensionless select-module link → settings.php)
 RewriteRule ^admin/settings/?$ admin/settings.php [L,QSA,NC]

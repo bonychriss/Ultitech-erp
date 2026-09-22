@@ -179,6 +179,10 @@ if ($active_module === 'deliveries') {
     if ($__sidebarSlug !== '') {
         $dlvDashQsEarly .= '&company_slug=' . rawurlencode($__sidebarSlug);
     }
+    $selEarly = (int) ($_GET['sel'] ?? 0);
+    if ($selEarly > 0) {
+        $dlvDashQsEarly .= '&sel=' . $selEarly;
+    }
     $deliveriesDashboardUrlEarly = function_exists('company_url')
         ? company_url('deliveries/index', $__sidebarSlug !== '' ? $__sidebarSlug : null)
         : ($prefix . 'deliveries/index');

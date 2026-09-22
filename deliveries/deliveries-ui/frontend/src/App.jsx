@@ -1,4 +1,6 @@
 import { CFG } from './config.js'
+import DeliveriesHubPage from './pages/DeliveriesHubPage.jsx'
+import DriverKpiPage from './pages/DriverKpiPage.jsx'
 import DeliveriesDashboardPage from './pages/DeliveriesDashboardPage.jsx'
 import CreateDeliveryPage from './pages/CreateDeliveryPage.jsx'
 import MyDeliveriesPage from './pages/MyDeliveriesPage.jsx'
@@ -11,6 +13,8 @@ import FinalPage from './pages/FinalPage.jsx'
 
 export default function App() {
   const page = CFG.page || 'dashboard'
+  if (page === 'hub') return <DeliveriesHubPage />
+  if (page === 'driver-kpi') return <DriverKpiPage />
   if (page === 'create-delivery') return <CreateDeliveryPage />
   if (page === 'my-deliveries') return <MyDeliveriesPage />
   if (page === 'delivery-notes') return <DeliveryNotesPage />

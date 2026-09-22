@@ -36,6 +36,7 @@ $dlvConfig = [
     'apiUrl' => $assets['apiUrl'],
     'actionUrl' => $assets['actionUrl'],
     'aiSearchUrl' => $assets['aiSearchUrl'],
+    'kpiAiAssistUrl' => $assets['kpiAiAssistUrl'],
     'data' => $initData,
 ];
 
@@ -44,6 +45,7 @@ $employeeHeaderTitle = 'Dashboard';
 $employeeHeaderExtraClass = 'employee-header--deliveries';
 $hideHeaderCompanyBranding = true;
 $employeeHeaderCenterHtml = '<div id="dlv-header-search-mount" class="dlv-header-search-mount"></div>';
+$employeeHeaderRightHtml = '<div id="dlv-header-actions-mount" class="dlv-header-actions-mount"></div>';
 $GLOBALS['_erp_header_style_linked'] = false;
 ?>
 <!DOCTYPE html>
@@ -118,7 +120,7 @@ body.page-dlv-dashboard .employee-header--deliveries .header-content {
     display: flex !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
-    padding: 0.75rem 0 0.5rem !important;
+        padding: 0.75rem 0 0.25rem !important;
     min-height: 0;
     width: 100%;
     background: transparent !important;
@@ -147,14 +149,21 @@ body.page-dlv-dashboard .employee-header--deliveries .header-right.header-action
     overflow: visible;
     flex-shrink: 0;
 }
-body.page-dlv-dashboard .employee-header--deliveries .header-actions-tray .notif {
+body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount {
     order: 1;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+body.page-dlv-dashboard .employee-header--deliveries .header-actions-tray .notif {
+    order: 2;
     position: relative;
     z-index: 2;
     flex-shrink: 0;
 }
 body.page-dlv-dashboard .employee-header--deliveries .header-actions-tray #themeToggleBtn {
-    order: 2;
+    order: 3;
     display: inline-flex !important;
     flex-shrink: 0;
     visibility: visible !important;
@@ -185,12 +194,49 @@ body.page-dlv-dashboard .employee-header--deliveries .header-notif-bell-btn {
     flex-shrink: 0;
 }
 @media (min-width: 768px) {
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount {
+        display: inline-flex !important;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-filter-btn {
+        width: 2.25rem;
+        height: 2.25rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 50%;
+        background: #fff;
+        color: #475569;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        cursor: pointer;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-btn--create {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 38px;
+        padding: 0 16px;
+        border-radius: 10px;
+        background: #6d5df6;
+        color: #fff !important;
+        font-weight: 600;
+        font-size: 14px;
+        line-height: 1;
+        text-decoration: none;
+        box-shadow: 0 6px 16px rgba(109, 93, 246, .22);
+        white-space: nowrap;
+        border: none;
+        flex-shrink: 0;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-btn-label-mobile {
+        display: none;
+    }
     body.page-dlv-dashboard .employee-header--deliveries.employee-header--has-center-slot .header-content {
         display: grid !important;
         grid-template-columns: minmax(0, 1fr) minmax(280px, 440px) minmax(0, 1fr);
         align-items: center !important;
         gap: 0.75rem 1.25rem !important;
-        padding-bottom: 0.35rem !important;
+        padding-bottom: 0.15rem !important;
     }
     body.page-dlv-dashboard .employee-header--deliveries .header-left {
         display: none !important;
@@ -266,6 +312,160 @@ body.page-dlv-dashboard .employee-header--deliveries .header-notif-bell-btn {
     body.page-dlv-dashboard .employee-header--deliveries .employee-header-center-slot {
         display: none !important;
     }
+    body.page-dlv-dashboard .employee-header--deliveries .header-actions-tray .notif,
+    body.page-dlv-dashboard .employee-header--deliveries .header-actions-tray #themeToggleBtn {
+        display: none !important;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 0.35rem;
+        max-width: min(70vw, 16rem);
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-expand {
+        display: flex !important;
+        align-items: center;
+        flex: 0 0 auto;
+        min-width: 0;
+        position: relative;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-expand.is-open {
+        flex: 1 1 auto;
+        min-width: 8rem;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-toggle,
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-filter-btn {
+        width: 2.5rem;
+        height: 2.5rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 50% !important;
+        background: #fff;
+        color: #475569;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-toggle svg,
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-filter-btn svg,
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-btn--create svg {
+        width: 1.35rem !important;
+        height: 1.35rem !important;
+        flex-shrink: 0;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-btn--create {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 0.3rem;
+        min-height: 2.5rem;
+        padding: 0.4rem 0.85rem;
+        border-radius: 9999px !important;
+        background: #6d5df6;
+        color: #fff !important;
+        font-weight: 600;
+        font-size: 0.8125rem;
+        text-decoration: none;
+        border: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-btn-label-desktop {
+        display: none !important;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-btn-label-mobile {
+        display: inline !important;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-panel {
+        position: fixed !important;
+        top: calc(var(--header-height, 3rem) + 0.45rem) !important;
+        left: 0.75rem !important;
+        right: 0.75rem !important;
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        flex: none !important;
+        margin: 0 !important;
+        z-index: 1300 !important;
+        display: none;
+        padding: 0.55rem !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 14px !important;
+        background: #fff !important;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16) !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+        pointer-events: auto !important;
+        box-sizing: border-box !important;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-panel.is-open {
+        display: block !important;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-panel .dlv-search-field {
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 9999px !important;
+        background: #fff !important;
+        box-shadow: none !important;
+        overflow: hidden !important;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-panel .dlv-search-field:focus-within {
+        border-color: #a5b4fc !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-panel .dlv-search-icon {
+        position: absolute !important;
+        left: 0.85rem !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        color: #94a3b8 !important;
+        pointer-events: none !important;
+        z-index: 2 !important;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-panel .dlv-search-input,
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-panel input.dlv-search-input[type="search"] {
+        width: 100% !important;
+        height: 2.5rem !important;
+        margin: 0 !important;
+        padding: 0.55rem 2.75rem 0.55rem 2.35rem !important;
+        border: none !important;
+        border-radius: 9999px !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        font-size: 0.875rem !important;
+        color: #0f172a !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+    }
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-panel .dlv-ai-btn,
+    body.page-dlv-dashboard .employee-header--deliveries .dlv-header-actions-mount .dlv-search-panel button.dlv-ai-btn {
+        position: absolute !important;
+        right: 0.35rem !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: 1.85rem !important;
+        height: 1.85rem !important;
+        min-width: 1.85rem !important;
+        min-height: 1.85rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 50% !important;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+        color: #fff !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 3 !important;
+    }
 }
 main.main-content.dlv-react-root {
     flex: 1 1 auto;
@@ -337,7 +537,7 @@ main.main-content.dlv-react-root #root {
         align-self: center !important;
     }
     main.main-content.dlv-react-root {
-        padding: 0 0.75rem 1.5rem !important;
+        padding: 0.65rem 0.75rem 1.5rem !important;
     }
 }
 html[data-theme="dark"] body.page-dlv-dashboard,
@@ -364,7 +564,7 @@ html[data-theme="dark"] body.page-dlv-dashboard .employee-header--deliveries .em
     justify-content: flex-end !important;
     gap: 0.4rem !important;
     width: 100% !important;
-    margin: 0 0 12px !important;
+    margin: 0 !important;
     position: relative !important;
     z-index: 6 !important;
     visibility: visible !important;
@@ -402,7 +602,7 @@ html[data-theme="dark"] body.page-dlv-dashboard .employee-header--deliveries .em
     .dlv-dashboard-toolbar {
         justify-content: flex-start !important;
         min-height: 2.75rem !important;
-        margin: 0 0 10px !important;
+        margin: 0 !important;
     }
     .dlv-dashboard-toolbar .dlv-search-expand {
         display: flex !important;

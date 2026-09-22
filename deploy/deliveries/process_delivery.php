@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $orderId
         ]);
 
-        header("Location: view_trip.php?trip_id=" . $order['trip_id']);
+        header("Location: index.php");
         exit;
 
     } catch (Exception $e) {
@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 </head>
 <body>
     <div class="header">
-        <a href="view_trip.php?trip_id=<?= $order['trip_id'] ?>" style="color:white; text-decoration:none; font-size:12px;">&larr; Cancel</a>
+        <a href="index.php" style="color:white; text-decoration:none; font-size:12px;">&larr; Cancel</a>
         <h2 style="margin:5px 0 0 0;">Drop-Off</h2>
         <p style="margin:0; opacity:0.8; font-size:14px;"><?= htmlspecialchars($order['client_name']) ?></p>
     </div>

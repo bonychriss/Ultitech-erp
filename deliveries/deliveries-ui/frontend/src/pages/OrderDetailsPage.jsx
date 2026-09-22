@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  MapPin, CheckCircle2, AlertCircle,
+  CheckCircle2, AlertCircle,
   Loader2, X,
 } from 'lucide-react'
 import { CFG } from '../config.js'
@@ -253,11 +253,6 @@ export default function OrderDetailsPage() {
             >
               Back
             </a>
-            {order.trip_id > 0 && (
-              <a href={`${urls.viewTrip || 'view_trip.php'}&trip_id=${order.trip_id}`} className="cv-btn-ghost">
-                <MapPin size={15} aria-hidden="true" /> View trip
-              </a>
-            )}
           </div>
         </div>
       </div>

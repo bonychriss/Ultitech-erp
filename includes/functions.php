@@ -14407,6 +14407,12 @@ function ensureDeliveriesSchema() {
         if (!in_array('rejection_reason', $cols)) {
             $pdo->exec("ALTER TABLE delivery_orders ADD COLUMN rejection_reason TEXT NULL AFTER status");
         }
+        if (!in_array('request_kind', $cols)) {
+            $pdo->exec("ALTER TABLE delivery_orders ADD COLUMN request_kind VARCHAR(32) NULL DEFAULT 'delivery' AFTER package_description");
+        }
+        if (!in_array('visit_employees', $cols)) {
+            $pdo->exec("ALTER TABLE delivery_orders ADD COLUMN visit_employees TEXT NULL AFTER request_kind");
+        }
         if (!in_array('created_by', $cols)) {
             $pdo->exec("ALTER TABLE delivery_orders ADD COLUMN created_by INT NULL");
         }

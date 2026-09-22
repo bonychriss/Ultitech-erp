@@ -23,10 +23,181 @@ function cellText(value) {
   return text || '-'
 }
 
+function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
+  const metrics = Array.isArray(trace.metrics) ? trace.metrics : []
+  const calculation = Array.isArray(trace.calculation) ? trace.calculation : []
+  const suggestions = Array.isArray(trace.suggestions) ? trace.suggestions : []
+  const [selectedKey, setSelectedKey] = useState(null)
+
+  useEffect(() => {
+    setSelectedKey(null)
+  }, [trace])
+
+  const selectedMetric = metrics.find((metric) => (metric.key || metric.label) === selectedKey) || null
+  const metricTasks = Array.isArray(selectedMetric?.tasks) ? selectedMetric.tasks : []
+
+  return (
+    <>
+      {metrics.length > 0 ? (
+        <section className="dlv-trace-section">
+          <h3 className="dlv-trace-section-title">Score breakdown</h3>
+          <p className="dlv-perf-hint">Click a card to see the tasks that built that score.</p>
+          <div className="dlv-perf-metrics">
+            {metrics.map((metric) => {
+              const key = metric.key || metric.label
+              const selected = selectedKey === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className={`dlv-perf-metric${selected ? ' is-selected' : ''}`}
+                  aria-pressed={selected}
+                  onClick={() => setSelectedKey((prev) => (prev === key ? null : key))}
+                >
+                  <div className="dlv-perf-metric__head">
+                    <strong>{cellText(metric.label)}</strong>
+                    <span>{Number(metric.actual || 0).toFixed(1)}%</span>
+                  </div>
+                  <p className="dlv-perf-metric__desc">{cellText(metric.description)}</p>
+                  <div className="dlv-perf-metric__meta">
+                    <span>Target {Number(metric.target || 0).toFixed(0)}%</span>
+                    <span>Weight {Number(metric.weight || 0).toFixed(0)}%</span>
+                    <span>Achievement {Number(metric.achievement || 0).toFixed(1)}%</span>
+                  </div>
+                  <div className="dlv-perf-metric__bar" aria-hidden="true">
+                    <span style={{ width: `${Math.min(100, Math.max(0, Number(metric.actual || 0)))}%` }} />
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {selectedMetric ? (
+            <div className="dlv-perf-tasks" aria-live="polite">
+              <div className="dlv-perf-tasks__head">
+                <h4 className="dlv-perf-tasks__title">
+                  {cellText(selectedMetric.tasksTitle || `${selectedMetric.label} tasks`)}
+                </h4>
+                <span className="dlv-perf-tasks__count">{metricTasks.length}</span>
+              </div>
+              {metricTasks.length === 0 ? (
+                <p className="dlv-trace-empty">
+                  {cellText(selectedMetric.tasksEmpty || 'No tasks contributed to this score yet.')}
+                </p>
+              ) : (
+                <ol className="dlv-perf-task-list">
+                  {metricTasks.map((task) => (
+                    <li
+                      key={task.id || `${task.title}-${task.at}`}
+                      className={`dlv-perf-task${task.ok === false ? ' is-miss' : ' is-ok'}`}
+                    >
+                      <div className="dlv-perf-task__top">
+                        <strong>{cellText(task.title)}</strong>
+                        {task.at ? (
+                          <span className="dlv-trace-muted">{formatDate(task.at)}</span>
+                        ) : null}
+                      </div>
+                      <p className="dlv-perf-task__detail">{cellText(task.detail)}</p>
+                      <span className="dlv-perf-task__result">{cellText(task.result)}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {calculation.length > 0 ? (
+        <section className="dlv-trace-section">
+          <h3 className="dlv-trace-section-title">How it was obtained</h3>
+          <ol className="dlv-perf-calc">
+            {calculation.map((line, index) => (
+              <li key={`calc-${index}`}>{line}</li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
+      {suggestions.length > 0 ? (
+        <section className="dlv-trace-section">
+          <div className="dlv-trace-grade-head">
+            <h3 className="dlv-trace-section-title">AI suggestions</h3>
+            <span className="dlv-trace-ai-badge">
+              <Sparkles size={11} aria-hidden="true" />
+              Improve score
+            </span>
+          </div>
+          <ul className="dlv-perf-suggestions">
+            {suggestions.map((tip, index) => (
+              <li key={`tip-${index}`}>{tip}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {!selectedMetric ? (
+        <section className="dlv-trace-section">
+          <h3 className="dlv-trace-section-title">{itemsHeading || 'Completed deliveries this week'}</h3>
+          {items.length === 0 ? (
+            <p className="dlv-trace-empty">{emptyLabel || 'No completed deliveries in this week yet.'}</p>
+          ) : (
+            <div className="dlv-trace-table-wrap">
+              <table className="dlv-trace-table">
+                <thead>
+                  <tr>
+                    <th>Delivery</th>
+                    <th>Client</th>
+                    <th>Timing</th>
+                    <th>Signed</th>
+                    <th>Rating</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => (
+                    <tr key={`${item.id}-${item.deliveryNumber}`}>
+                      <td>
+                        <span className="dlv-trace-delivery-no">{cellText(item.deliveryNumber)}</span>
+                      </td>
+                      <td>
+                        <div>{cellText(item.clientName)}</div>
+                        {item.clientPhone ? (
+                          <small className="dlv-trace-muted">{item.clientPhone}</small>
+                        ) : null}
+                      </td>
+                      <td>{cellText(item.status)}</td>
+                      <td>{item.signed ? 'Yes' : 'No'}</td>
+                      <td>{item.rating ? `${item.rating}/5` : '-'}</td>
+                      <td className="dlv-trace-muted">{formatDate(item.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {trace.footnote ? <p className="dlv-trace-footnote">{trace.footnote}</p> : null}
+        </section>
+      ) : null}
+    </>
+  )
+}
+
 function renderItemsTable(trace, items, itemsHeading, emptyLabel, grading = {}) {
   const modalType = trace.modalType || 'deliveries'
   const gradesById = grading.gradesById || {}
   const gradesLoading = Boolean(grading.gradesLoading)
+
+  if (modalType === 'performance') {
+    return (
+      <PerformanceBreakdown
+        trace={trace}
+        items={items}
+        itemsHeading={itemsHeading}
+        emptyLabel={emptyLabel}
+      />
+    )
+  }
 
   if (modalType === 'notes') {
     return (
@@ -229,6 +400,8 @@ export default function DeliveryKpiTraceModal({ trace, traceKey = '', onClose, e
     ? 'No reviews contributed to this KPI.'
     : trace.modalType === 'customers'
     ? 'No customers contributed to this KPI.'
+    : trace.modalType === 'performance'
+    ? 'No completed deliveries contributed to this score yet.'
     : trace.itemsTitle?.toLowerCase().includes('trip')
       ? 'No trips contributed to this KPI.'
       : trace.itemsTitle?.toLowerCase().includes('note')

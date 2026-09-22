@@ -65,6 +65,9 @@ function statusPill(status) {
 
 function typePill(deliveryType) {
   const type = String(deliveryType || '').toLowerCase()
+  if (type === 'client visit') {
+    return { label: 'Client Visit', cls: 'dlv-vbadge dlv-vbadge--client-visit' }
+  }
   if (type === 'office trip') {
     return { label: 'Office Trip', cls: 'dlv-vbadge dlv-vbadge--office-trip' }
   }

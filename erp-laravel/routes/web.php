@@ -28,6 +28,8 @@ use App\Http\Controllers\AccountingPageController;
 use App\Http\Controllers\RevenueDeskPageController;
 use App\Http\Controllers\RevenuePageController;
 use App\Http\Controllers\AttendancePageController;
+use App\Http\Controllers\DeliveriesPageController;
+use App\Http\Controllers\DriverKpiPageController;
 use App\Domains\CashBook\DeskShell as CashBookDeskShell;
 use App\Domains\Revenue\DeskShell as RevenueDeskShell;
 use App\Http\Middleware\AttachErpContext;
@@ -112,4 +114,22 @@ Route::middleware([AttachErpContext::class])->group(function () {
     Route::get('/attendance', [AttendancePageController::class, 'show'])->name('attendance.page');
     Route::get('/attendance/analytics', [AttendancePageController::class, 'analytics'])->name('attendance.page.analytics');
     Route::get('/attendance/overtime', [AttendancePageController::class, 'overtime'])->name('attendance.page.overtime');
+
+    // Deliveries (React hub + dashboard; desk APIs stay under deliveries/deliveries-ui/api)
+    Route::get('/deliveries/hub', [DeliveriesPageController::class, 'hub'])->name('deliveries.page.hub');
+    Route::get('/deliveries', [DeliveriesPageController::class, 'hub'])->name('deliveries.page');
+    Route::get('/deliveries/index', [DeliveriesPageController::class, 'dashboard'])->name('deliveries.page.dashboard');
+    Route::get('/deliveries/dashboard', [DeliveriesPageController::class, 'dashboard'])->name('deliveries.page.dashboard.alias');
+    Route::get('/deliveries/create_delivery', [DeliveriesPageController::class, 'createDelivery'])->name('deliveries.page.create');
+    Route::get('/deliveries/create-delivery', [DeliveriesPageController::class, 'createDelivery'])->name('deliveries.page.create.alias');
+    Route::get('/deliveries/order_details', [DeliveriesPageController::class, 'orderDetails'])->name('deliveries.page.order_details');
+    Route::get('/deliveries/order-details', [DeliveriesPageController::class, 'orderDetails'])->name('deliveries.page.order_details.alias');
+    Route::get('/deliveries/delivery_notes', [DeliveriesPageController::class, 'deliveryNotes'])->name('deliveries.page.delivery_notes');
+    Route::get('/deliveries/delivery-notes', [DeliveriesPageController::class, 'deliveryNotes'])->name('deliveries.page.delivery_notes.alias');
+    Route::get('/deliveries/create_delivery_note', [DeliveriesPageController::class, 'createDeliveryNote'])->name('deliveries.page.create_delivery_note');
+    Route::get('/deliveries/create-delivery-note', [DeliveriesPageController::class, 'createDeliveryNote'])->name('deliveries.page.create_delivery_note.alias');
+
+    // Driver KPI (Delivery / Ride recordings; API stays under driver-kpi/api)
+    Route::get('/driver-kpi', [DriverKpiPageController::class, 'show'])->name('driver-kpi.page');
+    Route::get('/driver-kpi/index', [DriverKpiPageController::class, 'show'])->name('driver-kpi.page.index');
 });

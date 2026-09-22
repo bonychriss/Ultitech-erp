@@ -15,7 +15,7 @@ function deliveries_module_query(): string
     return $qs;
 }
 
-function deliveries_module_url(string $relativePath): string
+function deliveries_app_url(string $relativePath, array $query = []): string
 {
     $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
     $slug = function_exists('getRequestedCompanySlug') ? strtolower(trim(getRequestedCompanySlug())) : '';
@@ -31,7 +31,20 @@ function deliveries_module_url(string $relativePath): string
         $base = '/' . $relativePath;
     }
 
-    return $base . (strpos($base, '?') !== false ? '&' : '?') . deliveries_module_query();
+    if ($slug !== '' && !isset($query['company_slug'])) {
+        $query['company_slug'] = $slug;
+    }
+    if ($query === []) {
+        return $base;
+    }
+    return $base . (strpos($base, '?') !== false ? '&' : '?') . http_build_query($query);
+}
+
+function deliveries_module_url(string $relativePath): string
+{
+    return deliveries_app_url($relativePath, [
+        'module' => 'deliveries',
+    ]);
 }
 
 function deliveries_resolve_public_path(?string $path): string
@@ -211,6 +224,11 @@ function deliveries_load_dashboard_payload(PDO $pdo, array $query = []): array
         'exceptions' => $exceptions,
     ];
 
+    require_once __DIR__ . '/load-driver-performance.php';
+    $performance = deliveries_compute_driver_performance($pdo, $query);
+    $stats['performanceScore'] = (float) ($performance['score'] ?? 0);
+    $stats['performanceDriver'] = (string) ($performance['driver_name'] ?? '');
+
     $traceOrderRows = [];
     try {
         $stmtTraceOrders = $pdo->query("
@@ -225,7 +243,7 @@ function deliveries_load_dashboard_payload(PDO $pdo, array $query = []): array
         $traceOrderRows = [];
     }
 
-    $kpiTraces = deliveries_build_dashboard_kpi_traces($trips, $traceOrderRows, $stats);
+    $kpiTraces = deliveries_build_dashboard_kpi_traces($trips, $traceOrderRows, $stats, $performance);
 
     return [
         'ok' => true,
@@ -234,6 +252,7 @@ function deliveries_load_dashboard_payload(PDO $pdo, array $query = []): array
             'trips' => $trips,
             'orders' => $orders,
             'kpiTraces' => $kpiTraces,
+            'performance' => $performance,
             'isAdmin' => function_exists('isAdmin') ? isAdmin() : false,
             'csrfToken' => function_exists('csrf_token') ? csrf_token() : '',
             'companyName' => $companyName,
@@ -241,10 +260,11 @@ function deliveries_load_dashboard_payload(PDO $pdo, array $query = []): array
             'urls' => [
                 'modules' => $modulesUrl,
                 'dashboard' => deliveries_module_url('deliveries/index'),
-                'trips' => deliveries_module_url('deliveries/trips.php'),
+                'hub' => deliveries_module_url('deliveries/hub'),
                 'createDelivery' => deliveries_module_url('deliveries/create_delivery.php'),
-                'viewTrip' => deliveries_module_url('deliveries/view_trip.php'),
                 'orderDetails' => deliveries_module_url('deliveries/order_details.php'),
+                'driverKpiDelivery' => deliveries_app_url('driver-kpi/index', ['module' => 'driver_kpi', 'service' => 'delivery']),
+                'driverKpiRide' => deliveries_app_url('driver-kpi/index', ['module' => 'driver_kpi', 'service' => 'ride']),
             ],
             'flash' => $flash,
         ],
@@ -403,10 +423,11 @@ function deliveries_map_trip_trace_items(array $trips): array
 /**
  * @param list<array{id:int,trip_ref:string,driver_name:string,vehicle_id:string,status:string,stop_count:int,destinations?:string,created_at:string}> $trips
  * @param list<array<string,mixed>> $orderRows
- * @param array{activeTrips:int,pending:int,exceptions:int} $stats
- * @return array<string, array{title:string,headline:string,source:string,method:string,criteria:list<array{label:string,value:string}>,confirmation:string,items:list<array>,footnote:string,itemsTitle?:string}>
+ * @param array{activeTrips:int,pending:int,exceptions?:int,performanceScore?:float,performanceDriver?:string} $stats
+ * @param array<string,mixed>|null $performance
+ * @return array<string, array{title:string,headline:string,source:string,method:string,criteria:list<array{label:string,value:string}>,confirmation:string,items:list<array>,footnote:string,itemsTitle?:string,modalType?:string,metrics?:list<array>,calculation?:list<string>,suggestions?:list<string>}>
  */
-function deliveries_build_dashboard_kpi_traces(array $trips, array $orderRows, array $stats): array
+function deliveries_build_dashboard_kpi_traces(array $trips, array $orderRows, array $stats, ?array $performance = null): array
 {
     $baseCriteria = [
         ['label' => 'Scope', 'value' => 'All company deliveries and trips'],
@@ -427,10 +448,23 @@ function deliveries_build_dashboard_kpi_traces(array $trips, array $orderRows, a
     $tripItems = deliveries_map_trip_trace_items($trips);
     $activeTripItems = $filterByStatus($tripItems, ['loading', 'in_transit']);
     $pendingItems = $filterByStatus($orderItems, ['request_pending', 'accepted', 'pending']);
-    $exceptionItems = array_values(array_filter($orderItems, static function (array $item): bool {
-        $status = strtolower((string) ($item['status'] ?? ''));
-        return in_array($status, ['returned', 'failed', 'rejected'], true);
-    }));
+
+    $perf = is_array($performance) ? $performance : [];
+    $score = (float) ($perf['score'] ?? $stats['performanceScore'] ?? 0);
+    $driverName = (string) ($perf['driver_name'] ?? $stats['performanceDriver'] ?? 'Drivers');
+    $weekStart = (string) ($perf['week_start'] ?? '');
+    $weekEnd = (string) ($perf['week_end'] ?? '');
+    $weekLabel = ($weekStart !== '' && $weekEnd !== '')
+        ? (date('d M', strtotime($weekStart)) . ' - ' . date('d M Y', strtotime($weekEnd)))
+        : 'This week';
+
+    $perfCriteria = [
+        ['label' => 'Driver', 'value' => $driverName],
+        ['label' => 'Week', 'value' => $weekLabel],
+        ['label' => 'On-time (40%)', 'value' => number_format((float) ($perf['on_time_pct'] ?? 0), 1) . '% / target 95%'],
+        ['label' => 'Vehicle care (30%)', 'value' => number_format((float) ($perf['vehicle_care_pct'] ?? 0), 1) . '% / target 100%'],
+        ['label' => 'Documentation (30%)', 'value' => number_format((float) ($perf['documentation_pct'] ?? 0), 1) . '% / target 100%'],
+    ];
 
     return [
         'active' => [
@@ -458,17 +492,23 @@ function deliveries_build_dashboard_kpi_traces(array $trips, array $orderRows, a
             'items' => $pendingItems,
             'footnote' => '',
         ],
-        'exceptions' => [
-            'title' => 'Exceptions',
-            'headline' => $countLabel((int) ($stats['exceptions'] ?? count($exceptionItems))),
-            'source' => 'delivery_orders',
-            'method' => 'COUNT(*) where status is returned or failed.',
-            'criteria' => array_merge($baseCriteria, [
-                ['label' => 'Status', 'value' => 'returned, failed'],
-            ]),
-            'confirmation' => 'These deliveries could not be completed normally and need follow-up.',
-            'items' => $exceptionItems,
-            'footnote' => '',
+        'performance' => [
+            'title' => 'Driver performance',
+            'headline' => number_format($score, 1) . '%',
+            'source' => 'delivery_orders + driver_kpi_entries + customer reviews',
+            'method' => 'Weighted score from on-time deliveries (40%), vehicle care logs (30%), and signed docs + customer reviews (30%).',
+            'criteria' => $perfCriteria,
+            'confirmation' => $driverName . ' - score for ' . $weekLabel . ' from completed deliveries, signatures, reviews, and vehicle-care work logs.',
+            'items' => is_array($perf['items'] ?? null) ? $perf['items'] : [],
+            'itemsTitle' => 'Completed deliveries this week',
+            'footnote' => 'Targets: On-time 95% | Vehicle care 100% | Documentation 100%.',
+            'modalType' => 'performance',
+            'metrics' => is_array($perf['metrics'] ?? null) ? $perf['metrics'] : [],
+            'calculation' => is_array($perf['calculation'] ?? null) ? $perf['calculation'] : [],
+            'suggestions' => is_array($perf['suggestions'] ?? null) ? $perf['suggestions'] : [],
+            'driverName' => $driverName,
+            'weekLabel' => $weekLabel,
+            'score' => $score,
         ],
     ];
 }

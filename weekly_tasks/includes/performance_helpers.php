@@ -130,8 +130,90 @@ function perf_fetch_team_stats_from_plans(PDO $pdo, string $weekStartDate): arra
     return $rows;
 }
 
+function perf_blend_module_scores(PDO $pdo, string $weekStartDate, array $rows): array
+{
+    if (!function_exists('dkpi_module_scores_for_week')) {
+        return $rows;
+    }
+    $moduleScores = dkpi_module_scores_for_week($pdo, $weekStartDate);
+    if (!$moduleScores) {
+        return $rows;
+    }
+
+    $byId = [];
+    foreach ($rows as $idx => $row) {
+        $byId[(int) ($row['id'] ?? 0)] = $idx;
+    }
+
+    foreach ($moduleScores as $userId => $scoreRow) {
+        $detail = function_exists('dkpi_entry_from_score_row')
+            ? dkpi_entry_from_score_row($scoreRow)
+            : ['score_pct' => (float) ($scoreRow['score_pct'] ?? 0)];
+        $driverScore = (float) ($detail['score_pct'] ?? $scoreRow['score_pct'] ?? 0);
+
+        if (isset($byId[$userId])) {
+            $idx = $byId[$userId];
+            $rows[$idx]['driver_kpi_score'] = round($driverScore, 1);
+            $rows[$idx]['driver_kpi'] = $detail;
+            $missionScore = (float) ($rows[$idx]['score_pct'] ?? 0);
+            $hasMissions = (int) ($rows[$idx]['total_tasks'] ?? 0) > 0;
+            if ($hasMissions) {
+                $rows[$idx]['score_pct'] = (int) round(($missionScore + $driverScore) / 2);
+                $rows[$idx]['completion_rate'] = $rows[$idx]['score_pct'];
+                $rows[$idx]['data_source'] = ($rows[$idx]['data_source'] ?? 'missions') . '+driver_kpi';
+            } else {
+                $rows[$idx]['score_pct'] = (int) round($driverScore);
+                $rows[$idx]['completion_rate'] = $rows[$idx]['score_pct'];
+                $rows[$idx]['data_source'] = 'driver_kpi';
+                $rows[$idx]['total_tasks'] = max(1, (int) ($rows[$idx]['total_tasks'] ?? 0));
+                $rows[$idx]['completed_count'] = $driverScore >= 95 ? (int) $rows[$idx]['total_tasks'] : (int) round($rows[$idx]['total_tasks'] * ($driverScore / 100));
+            }
+        } else {
+            // User has driver KPI but no mission/plan row yet — surface them.
+            $st = $pdo->prepare('SELECT id, full_name, department, role, profile_photo FROM users WHERE id = ? AND is_active = 1 LIMIT 1');
+            $st->execute([$userId]);
+            $u = $st->fetch(PDO::FETCH_ASSOC);
+            if (!$u) {
+                continue;
+            }
+            $rows[] = [
+                'id' => (int) $u['id'],
+                'full_name' => $u['full_name'],
+                'department' => $u['department'],
+                'role' => $u['role'],
+                'profile_photo' => $u['profile_photo'],
+                'total_tasks' => 1,
+                'completed_count' => $driverScore >= 95 ? 1 : 0,
+                'pending_count' => $driverScore >= 95 ? 0 : 1,
+                'delayed_tasks' => 0,
+                'completion_rate' => round($driverScore, 1),
+                'award_points' => 0,
+                'score_pct' => (int) round($driverScore),
+                'total_points' => 100,
+                'completed_points' => (int) round($driverScore),
+                'plan_id' => null,
+                'data_source' => 'driver_kpi',
+                'driver_kpi_score' => round($driverScore, 1),
+                'driver_kpi' => $detail,
+            ];
+        }
+    }
+
+    usort($rows, static function ($a, $b) {
+        $sa = (int) ($a['score_pct'] ?? 0);
+        $sb = (int) ($b['score_pct'] ?? 0);
+        if ($sa === $sb) {
+            return strcasecmp((string) ($a['full_name'] ?? ''), (string) ($b['full_name'] ?? ''));
+        }
+        return $sb <=> $sa;
+    });
+
+    return $rows;
+}
+
 function perf_fetch_team_stats(PDO $pdo, string $weekStartDate): array
 {
+    $rows = [];
     if (perf_missions_available($pdo)) {
         perf_sync_mission_performance($pdo, $weekStartDate);
         $missionRows = perf_fetch_team_stats_from_missions($pdo, $weekStartDate);
@@ -144,11 +226,15 @@ function perf_fetch_team_stats(PDO $pdo, string $weekStartDate): array
             }
         }
         if ($hasMissionActivity) {
-            return $missionRows;
+            $rows = $missionRows;
         }
     }
 
-    return perf_fetch_team_stats_from_plans($pdo, $weekStartDate);
+    if (!$rows) {
+        $rows = perf_fetch_team_stats_from_plans($pdo, $weekStartDate);
+    }
+
+    return perf_blend_module_scores($pdo, $weekStartDate, $rows);
 }
 
 function perf_data_source(array $teamStats): string

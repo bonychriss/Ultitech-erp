@@ -74,13 +74,13 @@ $pageTitle = "Trip Manifest: " . $trip['trip_ref'];
     <main class="main-content">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <div>
-                <a href="trips.php" style="font-size:12px; color:#6b7280; text-decoration:none;">&larr; Back to Trips</a>
+                <a href="index.php" style="font-size:12px; color:#6b7280; text-decoration:none;">&larr; Back to Deliveries</a>
                 <h1 style="margin:4px 0 0 0; font-size:20px; font-family:var(--font-heading);">Manifest: <?= $trip['trip_ref'] ?></h1>
                 <p style="font-size:13px; color:#6b7280; margin:0;">Vehicle: <?= htmlspecialchars($trip['vehicle_id']) ?></p>
             </div>
             <div style="display:flex; gap:10px;">
                 <button onclick="document.forms[0].submit()" class="btn" style="background:none; color:#2563eb; padding:0; text-decoration:underline; border:none;">Print</button>
-                <a href="view_trip.php?trip_id=<?= $tripId ?>" class="btn" style="text-decoration:none; background:#059669;">Finish Loading & Go to Driver View</a>
+                <a href="index.php" class="btn" style="text-decoration:none; background:#059669;">Finish Loading & Go to Deliveries</a>
             </div>
         </div>
 

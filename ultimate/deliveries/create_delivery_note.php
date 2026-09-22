@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 /**
  * Tenant URL entry: /{company_slug}/deliveries/create_delivery_note.php
+ * Serves Create Delivery Note via Laravel + React.
  */
 $__sn = '/' . ltrim(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '')), '/');
 if (preg_match('#/([A-Za-z0-9-]+)/deliveries/create_delivery_note\.php#i', $__sn, $__m)) {
@@ -12,5 +13,6 @@ if (preg_match('#/([A-Za-z0-9-]+)/deliveries/create_delivery_note\.php#i', $__sn
 if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
     $_GET['module'] = 'deliveries';
 }
+$_GET['desk'] = 'create_delivery_note';
 
-require dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'deliveries' . DIRECTORY_SEPARATOR . 'deliveries-ui' . DIRECTORY_SEPARATOR . 'render-create-delivery-note.php';
+require dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'deliveries.php';

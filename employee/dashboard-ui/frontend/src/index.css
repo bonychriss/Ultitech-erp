@@ -263,31 +263,34 @@
 .ed-kpis {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
-.ed-kpi {
+.ed-kpi,
+.ed-card.ed-kpi {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: 8px;
+  padding: 8px 12px;
+  min-height: 0;
+  border-radius: 12px;
   text-decoration: none;
   color: inherit;
   transition: transform .15s ease, box-shadow .15s ease;
 }
-.ed-kpi:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15, 23, 42, .07); }
-.ed-kpi-text { min-width: 0; }
-.ed-kpi-label { font-size: 12px; color: #000; font-weight: 500; }
-.ed-kpi-value { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin: 3px 0 3px; color: #000; white-space: nowrap; }
-.ed-kpi--wide .ed-kpi-value { font-size: 16px; }
-.ed-kpi-sub { font-size: 11px; color: var(--ed-faint); font-weight: 500; }
+.ed-kpi:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(15, 23, 42, .06); }
+.ed-kpi-text { min-width: 0; display: flex; flex-direction: column; gap: 0; }
+.ed-kpi-label { font-size: 11px; color: #000; font-weight: 500; line-height: 1.2; }
+.ed-kpi-value { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; margin: 1px 0; color: #000; white-space: nowrap; line-height: 1.2; }
+.ed-kpi--wide .ed-kpi-value { font-size: 12.5px; }
+.ed-kpi-sub { font-size: 10px; color: var(--ed-faint); font-weight: 500; line-height: 1.2; }
 .ed-sub--amber { color: var(--ed-amber); }
 .ed-sub--green { color: var(--ed-green); }
 .ed-sub--blue { color: var(--ed-blue); }
 
 .ed-kpi-badge {
-  width: 36px; height: 36px;
+  width: 26px; height: 26px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;

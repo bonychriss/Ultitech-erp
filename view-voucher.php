@@ -116,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_action']) && is
         }
 
         try {
-            notifyUserVoucherStatus($voucher_id, $action);
+            notifyUserVoucherStatus($voucher_id, $action, $comments !== '' ? $comments : null);
         } catch (Exception $eN) { /* ignore */ }
 
         $_SESSION['success_msg'] = 'Voucher has been ' . $action . ' successfully.';

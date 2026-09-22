@@ -79,6 +79,51 @@ if (!function_exists('nc_card_period')) {
     }
 }
 
+if (!function_exists('nc_voucher_rejection_reason')) {
+    function nc_voucher_rejection_reason(array $n): string
+    {
+        $msg = trim((string) ($n['message'] ?? ''));
+        if (preg_match('/\bReason:\s*(.+)$/is', $msg, $m)) {
+            $fromMsg = trim((string) ($m[1] ?? ''));
+            if ($fromMsg !== '' && !preg_match('/^quick rejected/i', $fromMsg)) {
+                return $fromMsg;
+            }
+        }
+
+        $vid = 0;
+        if (function_exists('nc_guess_voucher_id_from_notification')) {
+            $vid = (int) nc_guess_voucher_id_from_notification($n);
+        } else {
+            $vid = (int) ($n['voucher_id'] ?? 0);
+        }
+        if ($vid <= 0) {
+            return '';
+        }
+
+        global $pdo;
+        if (!($pdo instanceof PDO)) {
+            return '';
+        }
+
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT comments FROM approval_logs
+                 WHERE voucher_id = ? AND LOWER(action) = 'rejected'
+                 ORDER BY id DESC LIMIT 1"
+            );
+            $stmt->execute([$vid]);
+            $comments = trim((string) ($stmt->fetchColumn() ?: ''));
+            if ($comments === '' || preg_match('/^quick rejected/i', $comments)) {
+                return '';
+            }
+
+            return $comments;
+        } catch (Throwable $e) {
+            return '';
+        }
+    }
+}
+
 if (!function_exists('nc_card_coach')) {
     /**
      * Google-style next-step tip shown after opening a notification.
@@ -88,6 +133,35 @@ if (!function_exists('nc_card_coach')) {
     {
         $title = strtolower(trim((string) ($n['title'] ?? '')));
         $blob = $title . ' ' . strtolower((string) ($n['message'] ?? ''));
+
+        if (str_contains($title, 'voucher rejected') || preg_match('/\bvoucher\s+rejected\b/', $blob)) {
+            $reason = nc_voucher_rejection_reason($n);
+            $body = $reason !== ''
+                ? ('Rejection reason: ' . $reason . "\n\nOpen the voucher, fix what was flagged, then resubmit it.")
+                : 'Open the voucher to review why it was rejected, fix the issues, then resubmit it.';
+
+            return [
+                'title' => 'Voucher was rejected',
+                'body' => $body,
+                'action' => 'Got it',
+            ];
+        }
+
+        if (str_contains($title, 'voucher approved') || preg_match('/\bvoucher\s+approved\b/', $blob)) {
+            return [
+                'title' => 'Voucher approved',
+                'body' => 'This voucher is approved. Continue with payment or posting when ready.',
+                'action' => 'Got it',
+            ];
+        }
+
+        if (str_contains($title, 'new voucher submitted') || preg_match('/\bnew voucher submitted\b/', $blob)) {
+            return [
+                'title' => 'Review this voucher',
+                'body' => 'Open the voucher, check the details, then approve or reject it.',
+                'action' => 'Got it',
+            ];
+        }
 
         if (str_contains($title, 'draft payroll') || preg_match('/\bdraft payroll\b/', $blob)) {
             return [

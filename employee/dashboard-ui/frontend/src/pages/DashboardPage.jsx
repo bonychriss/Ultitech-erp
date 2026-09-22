@@ -841,21 +841,21 @@ export default function DashboardPage() {
   const listBase = `${URLS.myVouchers}${URLS.myVouchers.includes('?') ? '&' : '?'}`
   const kpis = IS_ADMIN
     ? [
-        { key: 'total', label: 'Total Vouchers', value: formatInt(stats.total), sub: 'All time', subCls: '', color: 'indigo', icon: <FileText size={17} />, href: `${URLS.myVouchers}${PREPEND_MODULE}` },
-        { key: 'pending', label: 'Pending', value: formatInt(stats.pending), sub: 'Action needed', subCls: 'ed-sub--amber', color: 'amber', icon: <Clock size={17} />, href: `${listBase}status=pending${APPEND_MODULE}` },
-        { key: 'approved', label: 'Approved', value: formatInt(stats.approved), sub: `${pct(stats.approved, total)}% of total`, subCls: 'ed-sub--green', color: 'green', icon: <CheckCircle2 size={17} />, href: `${listBase}status=approved${APPEND_MODULE}` },
-        { key: 'rejected', label: 'Rejected', value: formatInt(stats.rejected), sub: 'Review', subCls: 'ed-sub--amber', color: 'red', icon: <XCircle size={17} />, href: `${listBase}status=rejected${APPEND_MODULE}` },
-        { key: 'paid', label: 'Paid', value: formatInt(stats.paid), sub: `${pct(stats.paid, total)}% of total`, subCls: 'ed-sub--blue', color: 'blue', icon: <CreditCard size={17} />, href: `${listBase}status=paid${APPEND_MODULE}` },
-        { key: 'posted', label: 'Posted', value: formatInt(stats.posted), sub: 'Ledger sync', subCls: 'ed-sub--green', color: 'indigo', icon: <Upload size={17} />, href: `${listBase}status=posted${APPEND_MODULE}` },
-        { key: 'draft', label: 'Needs Info', value: formatInt(stats.draft), sub: 'Drafts', subCls: '', color: 'amber', icon: <FileText size={17} />, href: `${listBase}status=draft${APPEND_MODULE}` },
-        { key: 'amount', label: 'Approved Volume', value: totalAmountLabel, sub: 'TZS / USD', subCls: '', color: 'blue', icon: <DollarSign size={17} />, href: `${listBase}status=approved${APPEND_MODULE}`, wide: true },
+        { key: 'total', label: 'Total Vouchers', value: formatInt(stats.total), sub: 'All time', subCls: '', color: 'indigo', icon: <FileText size={14} />, href: `${URLS.myVouchers}${PREPEND_MODULE}` },
+        { key: 'pending', label: 'Pending', value: formatInt(stats.pending), sub: 'Action needed', subCls: 'ed-sub--amber', color: 'amber', icon: <Clock size={14} />, href: `${listBase}status=pending${APPEND_MODULE}` },
+        { key: 'approved', label: 'Approved', value: formatInt(stats.approved), sub: `${pct(stats.approved, total)}% of total`, subCls: 'ed-sub--green', color: 'green', icon: <CheckCircle2 size={14} />, href: `${listBase}status=approved${APPEND_MODULE}` },
+        { key: 'rejected', label: 'Rejected', value: formatInt(stats.rejected), sub: 'Review', subCls: 'ed-sub--amber', color: 'red', icon: <XCircle size={14} />, href: `${listBase}status=rejected${APPEND_MODULE}` },
+        { key: 'paid', label: 'Paid', value: formatInt(stats.paid), sub: `${pct(stats.paid, total)}% of total`, subCls: 'ed-sub--blue', color: 'blue', icon: <CreditCard size={14} />, href: `${listBase}status=paid${APPEND_MODULE}` },
+        { key: 'posted', label: 'Posted', value: formatInt(stats.posted), sub: 'Ledger sync', subCls: 'ed-sub--green', color: 'indigo', icon: <Upload size={14} />, href: `${listBase}status=posted${APPEND_MODULE}` },
+        { key: 'draft', label: 'Needs Info', value: formatInt(stats.draft), sub: 'Drafts', subCls: '', color: 'amber', icon: <FileText size={14} />, href: `${listBase}status=draft${APPEND_MODULE}` },
+        { key: 'amount', label: 'Approved Volume', value: totalAmountLabel, sub: 'TZS / USD', subCls: '', color: 'blue', icon: <DollarSign size={14} />, href: `${listBase}status=approved${APPEND_MODULE}`, wide: true },
       ]
     : [
-        { key: 'total', label: 'Total Vouchers', value: formatInt(stats.total), sub: 'All time', subCls: '', color: 'indigo', icon: <FileText size={17} />, href: URLS.myVouchers },
-        { key: 'pending', label: 'Pending Approval', value: formatInt(stats.pending), sub: `${pct(stats.pending, total)}% of total`, subCls: 'ed-sub--amber', color: 'amber', icon: <Clock size={17} />, href: `${URLS.myVouchers}?status=pending` },
-        { key: 'approved', label: 'Approved', value: formatInt(stats.approved), sub: `${pct(stats.approved, total)}% of total`, subCls: 'ed-sub--green', color: 'green', icon: <CheckCircle2 size={17} />, href: `${URLS.myVouchers}?status=approved` },
-        { key: 'paid', label: 'Paid', value: formatInt(stats.paid), sub: `${pct(stats.paid, total)}% of total`, subCls: 'ed-sub--blue', color: 'blue', icon: <CreditCard size={17} />, href: `${URLS.myVouchers}?status=paid` },
-        { key: 'amount', label: 'Total Amount', value: totalAmountLabel, sub: 'All vouchers', subCls: '', color: 'indigo', icon: <DollarSign size={17} />, href: URLS.myVouchers, wide: true },
+        { key: 'total', label: 'Total Vouchers', value: formatInt(stats.total), sub: 'All time', subCls: '', color: 'indigo', icon: <FileText size={14} />, href: URLS.myVouchers },
+        { key: 'pending', label: 'Pending Approval', value: formatInt(stats.pending), sub: `${pct(stats.pending, total)}% of total`, subCls: 'ed-sub--amber', color: 'amber', icon: <Clock size={14} />, href: `${URLS.myVouchers}?status=pending` },
+        { key: 'approved', label: 'Approved', value: formatInt(stats.approved), sub: `${pct(stats.approved, total)}% of total`, subCls: 'ed-sub--green', color: 'green', icon: <CheckCircle2 size={14} />, href: `${URLS.myVouchers}?status=approved` },
+        { key: 'paid', label: 'Paid', value: formatInt(stats.paid), sub: `${pct(stats.paid, total)}% of total`, subCls: 'ed-sub--blue', color: 'blue', icon: <CreditCard size={14} />, href: `${URLS.myVouchers}?status=paid` },
+        { key: 'amount', label: 'Total Amount', value: totalAmountLabel, sub: 'All vouchers', subCls: '', color: 'indigo', icon: <DollarSign size={14} />, href: URLS.myVouchers, wide: true },
       ]
 
   if (loading) {

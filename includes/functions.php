@@ -8902,6 +8902,15 @@ function ensureNotificationsSchema()
             } catch (PDOException $e2) {
             }
         }
+
+        try {
+            $pdo->query('SELECT updated_at FROM notifications LIMIT 1');
+        } catch (PDOException $e) {
+            try {
+                $pdo->exec("ALTER TABLE notifications ADD COLUMN updated_at TIMESTAMP NULL DEFAULT NULL AFTER created_at");
+            } catch (PDOException $e2) {
+            }
+        }
     } catch (Throwable $e) {
         error_log('ensureNotificationsSchema: ' . $e->getMessage());
     }
@@ -8925,17 +8934,103 @@ function createNotification($opts)
     ]);
 }
 
+/**
+ * Create or update a voucher-linked notification so status changes replace the prior card
+ * (e.g. "New voucher submitted" → "Voucher APPROVED") instead of stacking duplicates.
+ *
+ * @param array{user_id?:?int,audience?:string,title?:string,message?:?string,type?:string,voucher_id?:?int} $opts
+ */
+function upsertVoucherNotification(array $opts): void
+{
+    global $pdo;
+    ensureNotificationsSchema();
+
+    $voucherId = (int) ($opts['voucher_id'] ?? 0);
+    if ($voucherId <= 0) {
+        createNotification($opts);
+
+        return;
+    }
+
+    $audience = strtolower(trim((string) ($opts['audience'] ?? 'user')));
+    if ($audience === '') {
+        $audience = 'user';
+    }
+    $userId = isset($opts['user_id']) && $opts['user_id'] !== null && $opts['user_id'] !== ''
+        ? (int) $opts['user_id']
+        : null;
+
+    try {
+        if ($audience === 'admin' || $audience === 'all') {
+            $stmt = $pdo->prepare(
+                'SELECT id FROM notifications WHERE voucher_id = ? AND audience = ? ORDER BY id DESC LIMIT 1'
+            );
+            $stmt->execute([$voucherId, $audience]);
+        } else {
+            $stmt = $pdo->prepare(
+                'SELECT id FROM notifications WHERE voucher_id = ? AND audience = ? AND user_id = ? ORDER BY id DESC LIMIT 1'
+            );
+            $stmt->execute([$voucherId, $audience, (int) $userId]);
+        }
+        $existingId = (int) ($stmt->fetchColumn() ?: 0);
+    } catch (Throwable $e) {
+        error_log('upsertVoucherNotification lookup: ' . $e->getMessage());
+        $existingId = 0;
+    }
+
+    if ($existingId > 0) {
+        try {
+            // Bump timestamps so the card moves into Today / This Week filters.
+            $hasUpdatedAt = false;
+            try {
+                $pdo->query('SELECT updated_at FROM notifications LIMIT 1');
+                $hasUpdatedAt = true;
+            } catch (Throwable $eCol) {
+                $hasUpdatedAt = false;
+            }
+
+            if ($hasUpdatedAt) {
+                $upd = $pdo->prepare(
+                    'UPDATE notifications
+                     SET title = ?, message = ?, type = ?, is_read = 0,
+                         created_at = NOW(), updated_at = NOW()
+                     WHERE id = ?'
+                );
+            } else {
+                $upd = $pdo->prepare(
+                    'UPDATE notifications
+                     SET title = ?, message = ?, type = ?, is_read = 0,
+                         created_at = NOW()
+                     WHERE id = ?'
+                );
+            }
+            $upd->execute([
+                (string) ($opts['title'] ?? ''),
+                $opts['message'] ?? null,
+                (string) ($opts['type'] ?? 'info'),
+                $existingId,
+            ]);
+
+            return;
+        } catch (Throwable $e) {
+            error_log('upsertVoucherNotification update: ' . $e->getMessage());
+        }
+    }
+
+    createNotification($opts);
+}
+
 function getNotificationsForCurrentUser($limit = 10)
 {
     global $pdo;
     ensureNotificationsSchema();
     if (isAdmin()) {
-        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, created_at FROM notifications WHERE audience IN ('admin','all') ORDER BY created_at DESC LIMIT ?");
+        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE audience IN ('admin','all') ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?");
         $stmt->bindValue(1, (int) $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
     } else if (isLoggedIn()) {
-        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, created_at FROM notifications WHERE (audience IN ('user','all') AND (user_id = ? OR audience='all')) ORDER BY created_at DESC LIMIT ?");
+        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE (audience IN ('user','all') AND (user_id = ? OR audience='all')) ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?");
         $stmt->bindValue(1, (int) $_SESSION['user_id'], PDO::PARAM_INT);
         $stmt->bindValue(2, (int) $limit, PDO::PARAM_INT);
         $stmt->execute();
@@ -8951,13 +9046,13 @@ function getNotificationsForCurrentUserPaged($limit = 20, $offset = 0)
     $limit = (int) $limit;
     $offset = (int) $offset;
     if (isAdmin()) {
-        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, created_at FROM notifications WHERE audience IN ('admin','all') ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE audience IN ('admin','all') ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ? OFFSET ?");
         $stmt->bindValue(1, $limit, PDO::PARAM_INT);
         $stmt->bindValue(2, $offset, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
     } else if (isLoggedIn()) {
-        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, created_at FROM notifications WHERE (audience IN ('user','all') AND (user_id = ? OR audience='all')) ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE (audience IN ('user','all') AND (user_id = ? OR audience='all')) ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ? OFFSET ?");
         $stmt->bindValue(1, (int) $_SESSION['user_id'], PDO::PARAM_INT);
         $stmt->bindValue(2, $limit, PDO::PARAM_INT);
         $stmt->bindValue(3, $offset, PDO::PARAM_INT);
@@ -9071,11 +9166,14 @@ function getNotificationCentreFeedPaged(int $limit = 20, int $offset = 0): array
     if (isAdmin()) {
         $sql = "
             SELECT * FROM (
-                SELECT 'core' AS src, n.id, n.title, n.message, n.type, n.is_read, n.created_at, n.voucher_id, CAST(NULL AS CHAR(512)) AS link_url
+                SELECT 'core' AS src, n.id, n.title, n.message, n.type, n.is_read,
+                    COALESCE(n.updated_at, n.created_at) AS created_at,
+                    n.voucher_id, CAST(NULL AS CHAR(512)) AS link_url
                 FROM notifications n
                 WHERE n.audience IN ('admin','all')
                 UNION ALL
-                SELECT 'system' AS src, s.id, s.title, s.message, s.type, s.is_read, s.created_at, CAST(NULL AS SIGNED) AS voucher_id, COALESCE(s.link, '') AS link_url
+                SELECT 'system' AS src, s.id, s.title, s.message, s.type, s.is_read, s.created_at,
+                    CAST(NULL AS SIGNED) AS voucher_id, COALESCE(s.link, '') AS link_url
                 FROM system_notifications s
                 WHERE s.user_id = ?
             ) AS u
@@ -9086,11 +9184,14 @@ function getNotificationCentreFeedPaged(int $limit = 20, int $offset = 0): array
     } else {
         $sql = "
             SELECT * FROM (
-                SELECT 'core' AS src, n.id, n.title, n.message, n.type, n.is_read, n.created_at, n.voucher_id, CAST(NULL AS CHAR(512)) AS link_url
+                SELECT 'core' AS src, n.id, n.title, n.message, n.type, n.is_read,
+                    COALESCE(n.updated_at, n.created_at) AS created_at,
+                    n.voucher_id, CAST(NULL AS CHAR(512)) AS link_url
                 FROM notifications n
                 WHERE (n.audience IN ('user','all') AND (n.user_id = ? OR n.audience='all'))
                 UNION ALL
-                SELECT 'system' AS src, s.id, s.title, s.message, s.type, s.is_read, s.created_at, CAST(NULL AS SIGNED) AS voucher_id, COALESCE(s.link, '') AS link_url
+                SELECT 'system' AS src, s.id, s.title, s.message, s.type, s.is_read, s.created_at,
+                    CAST(NULL AS SIGNED) AS voucher_id, COALESCE(s.link, '') AS link_url
                 FROM system_notifications s
                 WHERE s.user_id = ?
             ) AS u
@@ -9212,11 +9313,11 @@ function getHeaderNotificationsMerged(int $limit = 12, bool $includeCoreVoucherF
     if ($includeCoreVoucherFeed && tableExists('notifications', $pdo)) {
         try {
             if (isAdmin()) {
-                $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, created_at FROM notifications WHERE audience IN ('admin','all') ORDER BY created_at DESC LIMIT " . (int) $take);
+                $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE audience IN ('admin','all') ORDER BY COALESCE(updated_at, created_at) DESC LIMIT " . (int) $take);
                 $stmt->execute();
                 $core = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             } else {
-                $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, created_at FROM notifications WHERE (audience IN ('user','all') AND (user_id = ? OR audience='all')) ORDER BY created_at DESC LIMIT " . (int) $take);
+                $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE (audience IN ('user','all') AND (user_id = ? OR audience='all')) ORDER BY COALESCE(updated_at, created_at) DESC LIMIT " . (int) $take);
                 $stmt->execute([(int) $_SESSION['user_id']]);
                 $core = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             }
@@ -9353,44 +9454,96 @@ function notifyAdminsNewVoucher($voucher_id)
         return;
     $title = 'New voucher submitted';
     $msg = sprintf('Voucher %s submitted for %s (%.2f).', $v['voucher_no'], $v['payee_name'], $v['total_amount']);
-    createNotification([
+    upsertVoucherNotification([
         'user_id' => null,
         'audience' => 'admin',
         'title' => $title,
         'message' => $msg,
+        'type' => 'info',
         'voucher_id' => $voucher_id,
     ]);
 }
 
-function notifyUserVoucherStatus($voucher_id, $status)
+function notifyUserVoucherStatus($voucher_id, $status, $reason = null)
 {
     global $pdo;
     $companyId = (int) (currentCompanyId() ?? 0);
     if ($companyId <= 0) {
         return;
     }
-    // fetch owner
+    // fetch owner + display fields
     if (columnExists('payment_vouchers', 'company_id')) {
-        $stmt = $pdo->prepare("SELECT voucher_no, created_by FROM payment_vouchers WHERE id = ? AND company_id = ?");
+        $stmt = $pdo->prepare("SELECT voucher_no, created_by, payee_name, total_amount FROM payment_vouchers WHERE id = ? AND company_id = ?");
         $stmt->execute([$voucher_id, $companyId]);
     } else {
-        $stmt = $pdo->prepare("SELECT voucher_no, created_by FROM payment_vouchers WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT voucher_no, created_by, payee_name, total_amount FROM payment_vouchers WHERE id = ?");
         $stmt->execute([$voucher_id]);
     }
     $v = $stmt->fetch();
     if (!$v)
         return;
-    $title = 'Voucher ' . strtoupper($status);
-    if ($status === 'posted') {
-        $msg = sprintf('Your voucher %s has been posted (finalized).', $v['voucher_no']);
+
+    $statusKey = strtolower(trim((string) $status));
+    $reasonText = trim((string) ($reason ?? ''));
+    $voucherNo = (string) ($v['voucher_no'] ?? '');
+    $payee = trim((string) ($v['payee_name'] ?? ''));
+    $amount = (float) ($v['total_amount'] ?? 0);
+    $type = 'info';
+
+    if ($statusKey === 'posted') {
+        $title = 'Voucher POSTED';
+        $userMsg = sprintf('Your voucher %s has been posted (finalized).', $voucherNo);
+        $adminMsg = sprintf('Voucher %s was posted (finalized)%s.', $voucherNo, $payee !== '' ? ' for ' . $payee : '');
+        $type = 'success';
+    } elseif ($statusKey === 'rejected') {
+        $title = 'Voucher REJECTED';
+        $userMsg = sprintf('Your voucher %s has been rejected.', $voucherNo);
+        if ($reasonText !== '' && !preg_match('/^quick rejected/i', $reasonText)) {
+            $userMsg .= ' Reason: ' . $reasonText;
+        }
+        $adminMsg = sprintf('Voucher %s was rejected%s.', $voucherNo, $payee !== '' ? ' for ' . $payee : '');
+        if ($reasonText !== '' && !preg_match('/^quick rejected/i', $reasonText)) {
+            $adminMsg .= ' Reason: ' . $reasonText;
+        }
+        $type = 'danger';
+    } elseif ($statusKey === 'approved') {
+        $title = 'Voucher APPROVED';
+        $userMsg = sprintf('Your voucher %s has been approved.', $voucherNo);
+        $adminMsg = sprintf(
+            'Voucher %s was approved%s%s.',
+            $voucherNo,
+            $payee !== '' ? ' for ' . $payee : '',
+            $amount > 0 ? sprintf(' (%.2f)', $amount) : ''
+        );
+        $type = 'success';
+    } elseif ($statusKey === 'paid') {
+        $title = 'Voucher PAID';
+        $userMsg = sprintf('Your voucher %s has been paid.', $voucherNo);
+        $adminMsg = sprintf('Voucher %s was marked paid%s.', $voucherNo, $payee !== '' ? ' for ' . $payee : '');
+        $type = 'success';
     } else {
-        $msg = sprintf('Your voucher %s has been %s.', $v['voucher_no'], $status);
+        $title = 'Voucher ' . strtoupper($statusKey !== '' ? $statusKey : (string) $status);
+        $userMsg = sprintf('Your voucher %s has been %s.', $voucherNo, $status);
+        $adminMsg = sprintf('Voucher %s has been %s%s.', $voucherNo, $status, $payee !== '' ? ' for ' . $payee : '');
     }
-    createNotification([
+
+    // One card per voucher for the creator (status updates replace prior status cards).
+    upsertVoucherNotification([
         'user_id' => (int) $v['created_by'],
         'audience' => 'user',
         'title' => $title,
-        'message' => $msg,
+        'message' => $userMsg,
+        'type' => $type,
+        'voucher_id' => $voucher_id,
+    ]);
+
+    // Replace admin "New voucher submitted" with the latest status instead of stacking another card.
+    upsertVoucherNotification([
+        'user_id' => null,
+        'audience' => 'admin',
+        'title' => $title,
+        'message' => $adminMsg,
+        'type' => $type,
         'voucher_id' => $voucher_id,
     ]);
 }
@@ -13871,7 +14024,7 @@ function approveVoucherByAdmin($voucherId, $adminId)
     }
 }
 
-function rejectVoucherByAdmin($voucherId, $adminId)
+function rejectVoucherByAdmin($voucherId, $adminId, $reason = null)
 {
     global $pdo;
     try {
@@ -13884,10 +14037,12 @@ function rejectVoucherByAdmin($voucherId, $adminId)
             $stmt->execute([(int) $adminId, (int) $voucherId]);
         }
 
-        logVoucherAction($voucherId, $adminId, 'rejected', 'Quick rejected via dashboard');
+        $reasonText = trim((string) ($reason ?? ''));
+        $logComment = $reasonText !== '' ? $reasonText : 'Quick rejected via dashboard';
+        logVoucherAction($voucherId, $adminId, 'rejected', $logComment);
 
         try {
-            notifyUserVoucherStatus($voucherId, 'rejected');
+            notifyUserVoucherStatus($voucherId, 'rejected', $reasonText !== '' ? $reasonText : null);
         } catch (Exception $e) {
         }
         return true;

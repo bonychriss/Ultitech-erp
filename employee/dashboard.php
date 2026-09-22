@@ -16,7 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_
             header('Location: ' . company_url('employee/dashboard') . '?msg=approved'); exit;
         } elseif ($action === 'rejected') {
             if (!isAdmin()) throw new Exception('Not authorized');
-            rejectVoucherByAdmin($voucherId, (int)$_SESSION['user_id']);
+            $reason = trim((string) ($_POST['comments'] ?? $_POST['reason'] ?? ''));
+            rejectVoucherByAdmin($voucherId, (int)$_SESSION['user_id'], $reason !== '' ? $reason : null);
             header('Location: ' . company_url('employee/dashboard') . '?msg=rejected'); exit;
         } elseif ($action === 'delete') {
             if (canDeleteVoucher($voucherId, (int)$_SESSION['user_id'])) {

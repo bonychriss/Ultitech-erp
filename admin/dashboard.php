@@ -310,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['voucher_id'])) {
           logVoucherAction($voucher_id, $_SESSION['user_id'], $action, $comments);
           $pdo->commit();
           try {
-            notifyUserVoucherStatus($voucher_id, $action);
+            notifyUserVoucherStatus($voucher_id, $action, $comments !== '' ? $comments : null);
           } catch (Exception $eN) { /* ignore */
           }
           $success = 'Voucher has been ' . $action . ' successfully.';

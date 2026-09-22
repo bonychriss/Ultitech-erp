@@ -53,6 +53,11 @@ export default function SettingsPage() {
     sdlRate: '3.5',
     wcfRate: '0.5',
     taxRate: '0',
+    notifRunGenerated: true,
+    notifRunApproved: true,
+    notifRunPaid: true,
+    notifPayslipPublished: true,
+    notifPayslipEmailed: true,
   });
   const [bandModal, setBandModal] = useState(null);
   const [manualOpen, setManualOpen] = useState(false);
@@ -70,6 +75,11 @@ export default function SettingsPage() {
         sdlRate: String(data.settings?.sdlRate ?? '3.5'),
         wcfRate: String(data.settings?.wcfRate ?? '0.5'),
         taxRate: String(data.settings?.taxRate ?? '0'),
+        notifRunGenerated: String(data.settings?.notifRunGenerated ?? '1') !== '0',
+        notifRunApproved: String(data.settings?.notifRunApproved ?? '1') !== '0',
+        notifRunPaid: String(data.settings?.notifRunPaid ?? '1') !== '0',
+        notifPayslipPublished: String(data.settings?.notifPayslipPublished ?? '1') !== '0',
+        notifPayslipEmailed: String(data.settings?.notifPayslipEmailed ?? '1') !== '0',
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load settings.');
@@ -97,6 +107,11 @@ export default function SettingsPage() {
           sdlRate: String(res.data.settings.sdlRate ?? '3.5'),
           wcfRate: String(res.data.settings.wcfRate ?? '0.5'),
           taxRate: String(res.data.settings.taxRate ?? '0'),
+          notifRunGenerated: String(res.data.settings.notifRunGenerated ?? '1') !== '0',
+          notifRunApproved: String(res.data.settings.notifRunApproved ?? '1') !== '0',
+          notifRunPaid: String(res.data.settings.notifRunPaid ?? '1') !== '0',
+          notifPayslipPublished: String(res.data.settings.notifPayslipPublished ?? '1') !== '0',
+          notifPayslipEmailed: String(res.data.settings.notifPayslipEmailed ?? '1') !== '0',
         });
       }
       setNotice(res.message || 'Saved.');
@@ -118,6 +133,11 @@ export default function SettingsPage() {
       sdlRate: globalForm.sdlRate,
       wcfRate: globalForm.wcfRate,
       taxRate: globalForm.taxRate,
+      notifRunGenerated: globalForm.notifRunGenerated,
+      notifRunApproved: globalForm.notifRunApproved,
+      notifRunPaid: globalForm.notifRunPaid,
+      notifPayslipPublished: globalForm.notifPayslipPublished,
+      notifPayslipEmailed: globalForm.notifPayslipEmailed,
     });
   }
 
@@ -337,6 +357,61 @@ export default function SettingsPage() {
             </div>
           </div>
         </form>
+      </section>
+
+      <section className="pay-settings-card">
+        <div className="pay-settings-card-head">
+          <div>
+            <h2>Payroll notifications</h2>
+            <p>Choose which payroll events appear in the notification center.</p>
+          </div>
+        </div>
+        <div className="pay-settings-notif-grid">
+          {[
+            { key: 'notifRunGenerated', label: 'Draft payroll generated', hint: 'Admin & Finance' },
+            { key: 'notifRunApproved', label: 'Payroll approved', hint: 'Admin & Finance' },
+            { key: 'notifRunPaid', label: 'Payroll marked paid', hint: 'Admin & Finance' },
+            { key: 'notifPayslipPublished', label: 'Payslip sent to employee account', hint: 'Employees' },
+            { key: 'notifPayslipEmailed', label: 'Payslip emailed', hint: 'Employees' },
+          ].map((item) => (
+            <label key={item.key} className="pay-settings-switch pay-settings-notif-row">
+              <input
+                type="checkbox"
+                checked={Boolean(globalForm[item.key])}
+                disabled={saving}
+                onChange={(e) => setGlobalForm((c) => ({ ...c, [item.key]: e.target.checked }))}
+              />
+              <span>
+                <strong>{item.label}</strong>
+                <small>{item.hint}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className="pay-settings-notif-save">
+          <button
+            type="button"
+            className="pay-desk-btn pay-desk-btn-primary pay-desk-btn--pill"
+            disabled={saving}
+            onClick={() => runAction({
+              action: 'save_settings',
+              payDay: globalForm.payDay,
+              socialSecurityRate: globalForm.socialSecurityRate,
+              employerSocialSecurityRate: globalForm.employerSocialSecurityRate,
+              sdlRate: globalForm.sdlRate,
+              wcfRate: globalForm.wcfRate,
+              taxRate: globalForm.taxRate,
+              notifRunGenerated: globalForm.notifRunGenerated,
+              notifRunApproved: globalForm.notifRunApproved,
+              notifRunPaid: globalForm.notifRunPaid,
+              notifPayslipPublished: globalForm.notifPayslipPublished,
+              notifPayslipEmailed: globalForm.notifPayslipEmailed,
+            })}
+          >
+            {saving ? <Loader2 size={16} className="pay-desk-boot-spinner" /> : <Save size={16} aria-hidden="true" />}
+            Save notifications
+          </button>
+        </div>
       </section>
 
       {bandModal && (

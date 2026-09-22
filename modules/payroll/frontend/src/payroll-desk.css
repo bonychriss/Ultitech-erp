@@ -862,6 +862,94 @@ a.pay-desk-kpi-card:hover {
   flex-wrap: wrap;
 }
 
+.pay-desk-confirm-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.35rem 0.4rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pay-desk-confirm-link:hover:not(:disabled) {
+  background: transparent;
+  color: #0f172a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pay-desk-confirm-link--danger {
+  color: #dc2626;
+}
+
+.pay-desk-confirm-link--danger:hover:not(:disabled) {
+  color: #b91c1c;
+}
+
+.pay-desk-confirm-link--success {
+  color: #059669;
+}
+
+.pay-desk-confirm-link--success:hover:not(:disabled) {
+  color: #047857;
+}
+
+.pay-desk-confirm-link--primary {
+  color: #4f46e5;
+}
+
+.pay-desk-confirm-link--primary:hover:not(:disabled) {
+  color: #4338ca;
+}
+
+.pay-desk-confirm-link:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+html[data-theme="dark"] .pay-desk-confirm-link {
+  background: transparent;
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .pay-desk-confirm-link:hover:not(:disabled) {
+  background: transparent;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .pay-desk-confirm-link--danger {
+  color: #f87171;
+}
+
+html[data-theme="dark"] .pay-desk-confirm-link--danger:hover:not(:disabled) {
+  color: #fca5a5;
+}
+
+html[data-theme="dark"] .pay-desk-confirm-link--success {
+  color: #34d399;
+}
+
+html[data-theme="dark"] .pay-desk-confirm-link--success:hover:not(:disabled) {
+  color: #6ee7b7;
+}
+
+html[data-theme="dark"] .pay-desk-confirm-link--primary {
+  color: #a5b4fc;
+}
+
+html[data-theme="dark"] .pay-desk-confirm-link--primary:hover:not(:disabled) {
+  color: #c7d2fe;
+}
+
 .pay-desk-badge {
   display: inline-flex;
   align-items: center;
@@ -1027,6 +1115,66 @@ a.pay-desk-kpi-card:hover {
   flex-wrap: wrap;
   gap: 0.45rem;
   justify-content: flex-end;
+}
+
+.pay-run-toolbar-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.35rem;
+  margin: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pay-run-toolbar-action:hover:not(:disabled):not(.pay-run-toolbar-action--static) {
+  background: transparent;
+  color: #0f172a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pay-run-toolbar-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pay-run-toolbar-action--static {
+  cursor: default;
+  opacity: 0.9;
+}
+
+.pay-run-action-icon {
+  flex-shrink: 0;
+}
+
+.pay-run-action-icon--accounts {
+  color: #7c3aed;
+}
+
+.pay-run-action-icon--sent {
+  color: #16a34a;
+}
+
+.pay-run-action-icon--email {
+  color: #2563eb;
+}
+
+.pay-run-action-icon--excel {
+  color: #059669;
+}
+
+.pay-desk-icon-btn--email {
+  color: #2563eb;
 }
 
 .pay-run-deduct {
@@ -1313,17 +1461,26 @@ a.pay-desk-kpi-card:hover {
 .pay-run-modal .pay-desk-btn,
 .pay-run-modal .pay-desk-btn--pill,
 .pay-run-modal button.pay-desk-btn,
-.pay-run-modal a.pay-desk-btn,
-.pay-run-submit.pay-desk-btn {
+.pay-run-modal a.pay-desk-btn {
   border-radius: 9999px !important;
 }
 
 .pay-run-submit {
   width: 100%;
   justify-content: center;
-  padding: 0.85rem 1.35rem !important;
+  padding: 0.65rem 0.5rem;
+  font-size: 0.9375rem;
   font-weight: 700;
-  border-radius: 9999px !important;
+}
+
+.pay-run-submit.pay-desk-confirm-link {
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.pay-run-submit.pay-desk-confirm-link:hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .pay-run-modal {
@@ -1762,6 +1919,43 @@ a.pay-desk-kpi-card:hover {
   margin: 0;
 }
 
+.pay-settings-notif-grid {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.25rem 0 0.75rem;
+}
+
+.pay-settings-notif-row {
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.pay-settings-notif-row span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pay-settings-notif-row strong {
+  font-size: 0.875rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.pay-settings-notif-row small {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.pay-settings-notif-save {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .pay-settings-modal-form {
   display: flex;
   flex-direction: column;
@@ -1803,3 +1997,374 @@ a.pay-desk-kpi-card:hover {
 .pay-settings-manual-modal {
   width: min(34rem, calc(100vw - 1.5rem));
 }
+
+/* ── Dark theme: high-contrast payroll desk / run register ── */
+html[data-theme="dark"] .pay-desk-page {
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .pay-desk-boot-loading,
+html[data-theme="dark"] .pay-desk-loading,
+html[data-theme="dark"] .pay-desk-results-count,
+html[data-theme="dark"] .pay-desk-cell-sub,
+html[data-theme="dark"] .pay-run-sn,
+html[data-theme="dark"] .pay-run-calc-hint,
+html[data-theme="dark"] .pay-desk-empty-sub {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .pay-desk-search-field {
+  background: #1e293b !important;
+  border: 1px solid #94a3b8 !important;
+  box-shadow: none;
+  border-radius: 9999px;
+}
+
+html[data-theme="dark"] .pay-desk-search-field:focus-within {
+  border-color: #818cf8 !important;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.35);
+}
+
+html[data-theme="dark"] .pay-desk-search-icon {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .pay-desk-search-field:focus-within .pay-desk-search-icon {
+  color: #a5b4fc;
+}
+
+html[data-theme="dark"] .pay-desk-search-input,
+html[data-theme="dark"] .pay-desk-search-field .pay-desk-search-input,
+html[data-theme="dark"] input.pay-desk-search-input[type="search"] {
+  background: transparent !important;
+  color: #f8fafc !important;
+  caret-color: #f8fafc !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 9999px !important;
+}
+
+html[data-theme="dark"] .pay-desk-search-input::placeholder,
+html[data-theme="dark"] input.pay-desk-search-input[type="search"]::placeholder {
+  color: #cbd5e1 !important;
+  opacity: 1;
+}
+
+html[data-theme="dark"] .pay-desk-suggestions {
+  background: #1e293b;
+  border-color: #475569;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] .pay-desk-suggestion + .pay-desk-suggestion {
+  border-top-color: #334155;
+}
+
+html[data-theme="dark"] .pay-desk-suggestion:hover,
+html[data-theme="dark"] .pay-desk-suggestion.is-active {
+  background: #334155;
+}
+
+html[data-theme="dark"] .pay-desk-suggestion-name {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .pay-desk-suggestion-code,
+html[data-theme="dark"] .pay-desk-suggestion-empty {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .pay-run-action-icon--accounts {
+  color: #c4b5fd;
+}
+
+html[data-theme="dark"] .pay-run-action-icon--sent {
+  color: #4ade80;
+}
+
+html[data-theme="dark"] .pay-run-action-icon--email,
+html[data-theme="dark"] .pay-desk-icon-btn--email {
+  color: #60a5fa;
+}
+
+html[data-theme="dark"] .pay-run-action-icon--excel {
+  color: #34d399;
+}
+
+html[data-theme="dark"] .pay-run-toolbar-action {
+  background: transparent;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .pay-run-toolbar-action:hover:not(:disabled):not(.pay-run-toolbar-action--static) {
+  background: transparent;
+  color: #fff;
+}
+
+html[data-theme="dark"] .pay-desk-btn-secondary {
+  background: #1e293b;
+  border-color: #64748b;
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .pay-desk-btn-secondary:hover {
+  background: #334155;
+  border-color: #94a3b8;
+  color: #fff;
+}
+
+html[data-theme="dark"] .pay-desk-btn-secondary:disabled,
+html[data-theme="dark"] .pay-desk-btn:disabled {
+  background: #1e293b;
+  border-color: #475569;
+  color: #94a3b8;
+  opacity: 1;
+}
+
+html[data-theme="dark"] .pay-desk-table-wrap,
+html[data-theme="dark"] .pay-run-register-wrap {
+  background: #1e293b;
+  border: 1px solid #475569;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.08);
+}
+
+html[data-theme="dark"] .pay-desk-table,
+html[data-theme="dark"] .pay-run-table.pay-run-register {
+  color: #f1f5f9;
+  background: #1e293b;
+}
+
+html[data-theme="dark"] .pay-desk-table th,
+html[data-theme="dark"] .pay-run-table.pay-run-register thead th,
+html[data-theme="dark"] .pay-run-table.pay-run-register th,
+html[data-theme="dark"] .pay-run-table.pay-run-register td {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-bottom: 1px solid #475569 !important;
+}
+
+html[data-theme="dark"] .pay-desk-table thead th,
+html[data-theme="dark"] .pay-run-table.pay-run-register thead th {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border-bottom: 1px solid #64748b !important;
+}
+
+html[data-theme="dark"] .pay-desk-table tbody tr:hover,
+html[data-theme="dark"] .pay-desk-table tbody tr:hover td,
+html[data-theme="dark"] .pay-run-table.pay-run-register tbody tr:hover td,
+html[data-theme="dark"] .pay-run-table.pay-run-register tbody tr:hover td:nth-child(1),
+html[data-theme="dark"] .pay-run-table.pay-run-register tbody tr:hover td:nth-child(2) {
+  background: #334155 !important;
+}
+
+html[data-theme="dark"] .pay-run-table.pay-run-register thead th:nth-child(1),
+html[data-theme="dark"] .pay-run-table.pay-run-register thead th:nth-child(2) {
+  background: #0f172a !important;
+}
+
+html[data-theme="dark"] .pay-run-table.pay-run-register td:nth-child(1),
+html[data-theme="dark"] .pay-run-table.pay-run-register td:nth-child(2),
+html[data-theme="dark"] .pay-run-table.pay-run-register tfoot td:nth-child(1) {
+  background: #1e293b !important;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .pay-desk-table tfoot td,
+html[data-theme="dark"] .pay-run-table tfoot td {
+  background: #0f172a !important;
+  border-top: 1px solid #64748b !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .pay-desk-cell-main,
+html[data-theme="dark"] .pay-run-total-label {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .pay-desk-name,
+html[data-theme="dark"] .pay-desk-row-clickable .pay-desk-name {
+  color: #93c5fd;
+}
+
+html[data-theme="dark"] .pay-desk-name:hover,
+html[data-theme="dark"] .pay-desk-row-clickable:hover .pay-desk-name {
+  color: #bfdbfe;
+}
+
+html[data-theme="dark"] .pay-run-deduct {
+  color: #fca5a5;
+}
+
+html[data-theme="dark"] .pay-desk-table-wrap::-webkit-scrollbar-thumb,
+html[data-theme="dark"] .pay-run-register-wrap::-webkit-scrollbar-thumb {
+  background: #64748b;
+}
+
+html[data-theme="dark"] .pay-desk-table-wrap::-webkit-scrollbar-track,
+html[data-theme="dark"] .pay-run-register-wrap::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] .pay-desk-kpi-card,
+html[data-theme="dark"] .pay-desk-kpi,
+html[data-theme="dark"] .pay-run-summary,
+html[data-theme="dark"] .pay-run-form-card,
+html[data-theme="dark"] .pay-settings-card {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] a.pay-desk-kpi-card:hover {
+  border-color: #64748b !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  background: #334155 !important;
+}
+
+html[data-theme="dark"] .pay-desk-kpi-label,
+html[data-theme="dark"] .pay-run-summary-meta,
+html[data-theme="dark"] .pay-run-summary-payout-label,
+html[data-theme="dark"] .pay-desk-kpi-helper {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .pay-desk-kpi-value,
+html[data-theme="dark"] .pay-run-summary-title {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .pay-desk-kpi-icon--violet {
+  background: rgba(124, 58, 237, 0.22) !important;
+  color: #c4b5fd !important;
+}
+
+html[data-theme="dark"] .pay-desk-kpi-icon--indigo {
+  background: rgba(79, 70, 229, 0.22) !important;
+  color: #a5b4fc !important;
+}
+
+html[data-theme="dark"] .pay-desk-kpi-icon--amber {
+  background: rgba(217, 119, 6, 0.22) !important;
+  color: #fbbf24 !important;
+}
+
+html[data-theme="dark"] .pay-desk-kpi-icon--teal {
+  background: rgba(5, 150, 105, 0.22) !important;
+  color: #6ee7b7 !important;
+}
+
+html[data-theme="dark"] .pay-desk-kpi-icon--rose {
+  background: rgba(225, 29, 72, 0.22) !important;
+  color: #fda4af !important;
+}
+
+html[data-theme="dark"] .pay-desk-badge {
+  border: 1px solid transparent;
+}
+
+html[data-theme="dark"] .pay-desk-badge--paid {
+  background: rgba(21, 128, 61, 0.28) !important;
+  color: #86efac !important;
+  border-color: rgba(74, 222, 128, 0.35);
+}
+
+html[data-theme="dark"] .pay-desk-badge--approved {
+  background: rgba(3, 105, 161, 0.28) !important;
+  color: #7dd3fc !important;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+html[data-theme="dark"] .pay-desk-badge--draft {
+  background: rgba(148, 163, 184, 0.18) !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+html[data-theme="dark"] .pay-desk-amt,
+html[data-theme="dark"] .pay-desk-dept,
+html[data-theme="dark"] .pay-desk-table td {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .pay-desk-empty {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .pay-desk-empty-title {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .pay-desk-empty-icon {
+  color: #64748b;
+}
+
+html[data-theme="dark"] .pay-desk-filter-panel,
+html[data-theme="dark"] .pay-desk-modal,
+html[data-theme="dark"] .pay-desk-confirm-modal,
+html[data-theme="dark"] .pay-salary-edit-modal {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .pay-salary-edit-modal-title,
+html[data-theme="dark"] .pay-desk-confirm-body p {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .pay-desk-flash-error {
+  background: rgba(127, 29, 29, 0.35);
+  border-color: #b91c1c;
+  color: #fecaca;
+}
+
+html[data-theme="dark"] .pay-desk-flash-ok {
+  background: rgba(6, 78, 59, 0.35);
+  border-color: #059669;
+  color: #a7f3d0;
+}
+
+html[data-theme="dark"] .pay-run-field {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .pay-run-field select,
+html[data-theme="dark"] .pay-run-field input,
+html[data-theme="dark"] .pay-settings-field input,
+html[data-theme="dark"] .pay-settings-field select,
+html[data-theme="dark"] .pay-settings-field textarea {
+  background: #0f172a !important;
+  border-color: #64748b !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .pay-run-field select:focus,
+html[data-theme="dark"] .pay-run-field input:focus {
+  border-color: #818cf8 !important;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.28);
+}
+
+html[data-theme="dark"] .pay-run-form-hint {
+  background: rgba(59, 130, 246, 0.16) !important;
+  color: #bfdbfe !important;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+}
+
+html[data-theme="dark"] .pay-run-form-hint svg {
+  color: #93c5fd;
+}
+
+html[data-theme="dark"] .pay-desk-modal.pay-run-modal,
+html[data-theme="dark"] .pay-run-modal {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .pay-settings-modal-actions {
+  background: #1e293b;
+  border-top-color: #475569;
+}
+

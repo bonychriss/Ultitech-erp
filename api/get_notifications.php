@@ -53,8 +53,11 @@ if ($action === 'read' && isset($_GET['id'])) {
     } elseif (preg_match('/^s(\d+)$/', $raw, $m)) {
         markNotificationRead((int) $m[1]);
     } elseif (ctype_digit($raw)) {
-        // Legacy: numeric id treated as system_notifications
+        // Legacy: try system first, then core
         markNotificationRead((int) $raw);
+        if (function_exists('markCoreNotificationRead')) {
+            markCoreNotificationRead((int) $raw);
+        }
     }
     echo json_encode(['success' => true]);
     exit;

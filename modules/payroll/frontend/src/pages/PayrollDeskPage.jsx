@@ -488,12 +488,12 @@ export default function PayrollDeskPage() {
                   : `This will finalize figures for ${confirm.period}.`}
               </p>
               <div className="pay-desk-confirm-actions">
-                <button type="button" className="pay-desk-btn pay-desk-btn-secondary" onClick={() => setConfirm(null)}>
+                <button type="button" className="pay-desk-confirm-link" onClick={() => setConfirm(null)}>
                   Cancel
                 </button>
                 <button
                   type="button"
-                  className={`pay-desk-btn ${confirm.type === 'delete' ? 'pay-desk-btn-danger' : 'pay-desk-btn-success'}`}
+                  className={`pay-desk-confirm-link ${confirm.type === 'delete' ? 'pay-desk-confirm-link--danger' : 'pay-desk-confirm-link--success'}`}
                   onClick={async () => {
                     const { type, id } = confirm;
                     setConfirm(null);

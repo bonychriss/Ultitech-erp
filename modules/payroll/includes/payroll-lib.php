@@ -1630,6 +1630,11 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
         }
         $pdo->prepare('UPDATE ' . payroll_table('payroll_runs') . " SET status = 'approved' WHERE id = ?")->execute([$runId]);
         $message = 'Payroll run approved.';
+        payrollDeskNotifyEvent($pdo, 'run_approved', [
+            'runId' => $runId,
+            'periodLabel' => payrollDeskRunPeriodLabel($run),
+            'link' => payrollDeskPageUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]),
+        ]);
     } elseif ($action === 'revert') {
         if (!isAdmin()) {
             throw new RuntimeException('Unauthorized.');
@@ -1661,6 +1666,11 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
             throw $e;
         }
         $message = 'Payroll run marked as paid.';
+        payrollDeskNotifyEvent($pdo, 'run_paid', [
+            'runId' => $runId,
+            'periodLabel' => payrollDeskRunPeriodLabel($run),
+            'link' => payrollDeskPageUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]),
+        ]);
     } elseif ($action === 'delete') {
         if (!isAdmin()) {
             throw new RuntimeException('Unauthorized.');
@@ -1689,6 +1699,11 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
         $pdo->prepare('UPDATE ' . payroll_table('payroll_runs') . ' SET is_published = 1 WHERE id = ?')->execute([$runId]);
         $pdo->prepare('UPDATE ' . payroll_table('payslips') . ' SET is_published = 1 WHERE payroll_run_id = ?')->execute([$runId]);
         $message = 'Payroll slips have been sent to employee accounts.';
+        payrollDeskNotifyEvent($pdo, 'payslip_published', [
+            'runId' => $runId,
+            'periodLabel' => payrollDeskRunPeriodLabel($run),
+            'link' => payrollDeskPageUrl('my_payslips.php') . payrollDeskQueryString(),
+        ]);
     } elseif ($action === 'send_single_to_account') {
         if (!isAdmin()) {
             throw new RuntimeException('Unauthorized.');
@@ -1699,6 +1714,12 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
         $pdo->prepare('UPDATE ' . payroll_table('payslips') . ' SET is_published = 1 WHERE id = ? AND payroll_run_id = ?')
             ->execute([$payslipId, $runId]);
         $message = 'The payslip has been sent to the employee account.';
+        payrollDeskNotifyEvent($pdo, 'payslip_published', [
+            'runId' => $runId,
+            'payslipId' => $payslipId,
+            'periodLabel' => payrollDeskRunPeriodLabel($run),
+            'link' => payrollDeskPageUrl('my_payslips.php') . payrollDeskQueryString(),
+        ]);
     } elseif ($action === 'email_selected') {
         $canEmail = (function_exists('isAdmin') && isAdmin())
             || (function_exists('isFinanceOrAdmin') && isFinanceOrAdmin())
@@ -1733,6 +1754,13 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
         $message = $count === 1
             ? 'Sending payslip email…'
             : sprintf('Sending %d payslip emails…', $count);
+
+        payrollDeskNotifyEvent($pdo, 'payslip_emailed', [
+            'runId' => $runId,
+            'payslipIds' => $selectedIds,
+            'periodLabel' => payrollDeskRunPeriodLabel($run),
+            'link' => payrollDeskPageUrl('my_payslips.php') . payrollDeskQueryString(),
+        ]);
 
         // Return immediately; frontend starts a separate process request + polls status.
         return [
@@ -1798,6 +1826,8 @@ function payrollDeskRunAction(PDO $pdo, int $runId, string $action, int $payslip
  */
 function payrollDeskListSalaries(PDO $pdo): array
 {
+    payrollDeskEnsureExcelPayrollSchema($pdo);
+
     $query = '
         SELECT u.id, u.full_name, u.email, u.role, u.department,
                es.basic_salary, es.house_allowance, es.transport_allowance,
@@ -1805,6 +1835,7 @@ function payrollDeskListSalaries(PDO $pdo): array
         FROM users u
         LEFT JOIN ' . payroll_table('employee_salary') . ' es ON u.id = es.user_id
         WHERE u.is_active = 1 AND u.role = \'employee\'
+          AND COALESCE(es.excluded_from_payroll, 0) = 0
         ORDER BY u.full_name ASC
     ';
 
@@ -1954,12 +1985,13 @@ function payrollDeskSaveSalary(PDO $pdo, array $payload): void
     if ($stmt->fetch()) {
         $sql = 'UPDATE ' . payroll_table('employee_salary') . ' SET basic_salary=?, house_allowance=?, transport_allowance=?,
                 overtime_allowances=?, bonus_commission=?,
-                bank_name=?, account_number=?, tin_number=?, nssf_number=? WHERE user_id=?';
+                bank_name=?, account_number=?, tin_number=?, nssf_number=?,
+                excluded_from_payroll=0 WHERE user_id=?';
         $params = [$basic, $house, $transport, $overtime, $bonus, $bank, $account, $tin, $nssf, $userId];
     } else {
         $sql = 'INSERT INTO ' . payroll_table('employee_salary') . ' (basic_salary, house_allowance, transport_allowance,
                 overtime_allowances, bonus_commission,
-                bank_name, account_number, tin_number, nssf_number, user_id) VALUES (?,?,?,?,?,?,?,?,?,?)';
+                bank_name, account_number, tin_number, nssf_number, user_id, excluded_from_payroll) VALUES (?,?,?,?,?,?,?,?,?,?,0)';
         $params = [$basic, $house, $transport, $overtime, $bonus, $bank, $account, $tin, $nssf, $userId];
     }
 
@@ -1967,6 +1999,48 @@ function payrollDeskSaveSalary(PDO $pdo, array $payload): void
     $stmt->execute($params);
 
     payrollDeskJsonResponse(true, payrollDeskGetSalaryEmployee($pdo, $userId), 'Salary details updated.');
+}
+
+/**
+ * Hide an employee from the salaries desk / payroll generation without deleting their user account.
+ */
+function payrollDeskRemoveSalaryEmployee(PDO $pdo, int $userId): void
+{
+    payrollDeskEnsureExcelPayrollSchema($pdo);
+
+    if ($userId <= 0) {
+        payrollDeskJsonResponse(false, null, 'Employee id is required.', 422);
+    }
+
+    $stmt = $pdo->prepare('SELECT id, full_name FROM users WHERE id = ? AND is_active = 1 LIMIT 1');
+    $stmt->execute([$userId]);
+    $employee = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$employee) {
+        payrollDeskJsonResponse(false, null, 'Employee not found.', 404);
+    }
+
+    $stmt = $pdo->prepare('SELECT id FROM ' . payroll_table('employee_salary') . ' WHERE user_id = ? LIMIT 1');
+    $stmt->execute([$userId]);
+    if ($stmt->fetch()) {
+        $upd = $pdo->prepare(
+            'UPDATE ' . payroll_table('employee_salary') . ' SET excluded_from_payroll = 1 WHERE user_id = ?'
+        );
+        $upd->execute([$userId]);
+    } else {
+        $ins = $pdo->prepare(
+            'INSERT INTO ' . payroll_table('employee_salary')
+            . ' (user_id, basic_salary, house_allowance, transport_allowance, excluded_from_payroll)'
+            . ' VALUES (?, 0, 0, 0, 1)'
+        );
+        $ins->execute([$userId]);
+    }
+
+    $name = trim((string) ($employee['full_name'] ?? 'Employee'));
+    payrollDeskJsonResponse(
+        true,
+        payrollDeskSalariesInitPayload($pdo),
+        $name . ' removed from the salaries list.'
+    );
 }
 
 /**
@@ -2125,6 +2199,7 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
         FROM users u
         JOIN ' . payroll_table('employee_salary') . ' es ON u.id = es.user_id
         WHERE u.is_active = 1
+          AND COALESCE(es.excluded_from_payroll, 0) = 0
     ')->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
     if ($users === []) {
@@ -2216,12 +2291,21 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
 
     $periodDate = sprintf('%04d-%02d-01', $year, $month);
     $viewRunUrl = payrollDeskPageUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]);
+    $periodLabel = date('F Y', strtotime($periodDate));
+
+    payrollDeskNotifyEvent($pdo, 'run_generated', [
+        'runId' => $runId,
+        'periodLabel' => $periodLabel,
+        'employeeCount' => count($users),
+        'totalPayout' => $total_payout,
+        'link' => $viewRunUrl,
+    ]);
 
     return [
         'runId' => $runId,
         'totalPayout' => $total_payout,
         'employeeCount' => count($users),
-        'periodLabel' => date('F Y', strtotime($periodDate)),
+        'periodLabel' => $periodLabel,
         'viewRunUrl' => $viewRunUrl,
         'dashboardUrl' => payrollDeskPageUrl('index.php') . payrollDeskQueryString(),
     ];
@@ -2491,6 +2575,11 @@ function payrollDeskGetSettingsPayload(PDO $pdo): array
         'sdlRate' => '3.5',
         'wcfRate' => '0.5',
         'taxRate' => '0',
+        'notifRunGenerated' => '1',
+        'notifRunApproved' => '1',
+        'notifRunPaid' => '1',
+        'notifPayslipPublished' => '1',
+        'notifPayslipEmailed' => '1',
     ];
     $st = $pdo->query('SELECT * FROM ' . payroll_table('payroll_settings'));
     while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
@@ -2520,6 +2609,16 @@ function payrollDeskGetSettingsPayload(PDO $pdo): array
             $settings['wcfRate'] = $val;
         } elseif ($key === 'tax_rate') {
             $settings['taxRate'] = $val;
+        } elseif ($key === 'notif_run_generated') {
+            $settings['notifRunGenerated'] = $val === '' ? '1' : $val;
+        } elseif ($key === 'notif_run_approved') {
+            $settings['notifRunApproved'] = $val === '' ? '1' : $val;
+        } elseif ($key === 'notif_run_paid') {
+            $settings['notifRunPaid'] = $val === '' ? '1' : $val;
+        } elseif ($key === 'notif_payslip_published') {
+            $settings['notifPayslipPublished'] = $val === '' ? '1' : $val;
+        } elseif ($key === 'notif_payslip_emailed') {
+            $settings['notifPayslipEmailed'] = $val === '' ? '1' : $val;
         }
     }
 
@@ -2596,6 +2695,7 @@ function payrollDeskEnsureExcelPayrollSchema(PDO $pdo): void
 
     $addColumn($pdo, 'employee_salary', 'overtime_allowances', 'decimal(15,2) NOT NULL DEFAULT 0.00');
     $addColumn($pdo, 'employee_salary', 'bonus_commission', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+    $addColumn($pdo, 'employee_salary', 'excluded_from_payroll', 'tinyint(1) NOT NULL DEFAULT 0');
 
     $addColumn($pdo, 'payslips', 'overtime_allowances', 'decimal(15,2) NOT NULL DEFAULT 0.00');
     $addColumn($pdo, 'payslips', 'bonus_commission', 'decimal(15,2) NOT NULL DEFAULT 0.00');
@@ -2615,6 +2715,11 @@ function payrollDeskEnsureExcelPayrollSchema(PDO $pdo): void
                 ['employer_social_security_rate', '10', 'NSSF percentage (employer)'],
                 ['sdl_rate', '3.5', 'Skills Development Levy % of gross'],
                 ['wcf_rate', '0.5', 'Workers Compensation Fund % of gross'],
+                ['notif_run_generated', '1', 'Notify admin/finance when a draft payroll run is generated'],
+                ['notif_run_approved', '1', 'Notify admin/finance when a payroll run is approved'],
+                ['notif_run_paid', '1', 'Notify admin/finance when a payroll run is marked paid'],
+                ['notif_payslip_published', '1', 'Notify employees when payslips are sent to their accounts'],
+                ['notif_payslip_emailed', '1', 'Notify employees when a payslip email is queued/sent'],
             ];
             foreach ($defaults as $row) {
                 $stmt->execute($row);
@@ -2816,6 +2921,14 @@ function payrollDeskNormalizeRule(array $rule): array
  */
 function payrollDeskSaveGlobalSettings(PDO $pdo, array $payload): array
 {
+    $boolFlag = static function ($raw): string {
+        if (is_bool($raw)) {
+            return $raw ? '1' : '0';
+        }
+        $v = strtolower(trim((string) $raw));
+        return in_array($v, ['1', 'true', 'yes', 'on'], true) ? '1' : '0';
+    };
+
     $map = [
         'pay_day' => (string) ($payload['payDay'] ?? $payload['pay_day'] ?? '30'),
         'social_security_rate' => (string) ($payload['socialSecurityRate'] ?? $payload['social_security_rate'] ?? '10'),
@@ -2823,6 +2936,11 @@ function payrollDeskSaveGlobalSettings(PDO $pdo, array $payload): array
         'sdl_rate' => (string) ($payload['sdlRate'] ?? $payload['sdl_rate'] ?? '3.5'),
         'wcf_rate' => (string) ($payload['wcfRate'] ?? $payload['wcf_rate'] ?? '0.5'),
         'tax_rate' => (string) ($payload['taxRate'] ?? $payload['tax_rate'] ?? '0'),
+        'notif_run_generated' => $boolFlag($payload['notifRunGenerated'] ?? $payload['notif_run_generated'] ?? '1'),
+        'notif_run_approved' => $boolFlag($payload['notifRunApproved'] ?? $payload['notif_run_approved'] ?? '1'),
+        'notif_run_paid' => $boolFlag($payload['notifRunPaid'] ?? $payload['notif_run_paid'] ?? '1'),
+        'notif_payslip_published' => $boolFlag($payload['notifPayslipPublished'] ?? $payload['notif_payslip_published'] ?? '1'),
+        'notif_payslip_emailed' => $boolFlag($payload['notifPayslipEmailed'] ?? $payload['notif_payslip_emailed'] ?? '1'),
     ];
 
     $stmt = $pdo->prepare(
@@ -2973,3 +3091,210 @@ function payrollDeskDeleteRule(PDO $pdo, int $id): array
         'data' => payrollDeskGetSettingsPayload($pdo),
     ];
 }
+
+/**
+ * @param array<string,mixed> $run
+ */
+function payrollDeskRunPeriodLabel(array $run): string
+{
+    $year = (int) ($run['year'] ?? 0);
+    $month = (int) ($run['month'] ?? 0);
+    if ($year <= 0 || $month <= 0) {
+        return 'Payroll run';
+    }
+    $periodDate = sprintf('%04d-%02d-01', $year, $month);
+
+    return date('F Y', strtotime($periodDate));
+}
+
+function payrollDeskNotifSettingEnabled(PDO $pdo, string $key): bool
+{
+    payrollDeskEnsureExcelPayrollSchema($pdo);
+    if (!function_exists('payroll_table_exists') || !payroll_table_exists('payroll_settings')) {
+        return true;
+    }
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT setting_value FROM ' . payroll_table('payroll_settings') . ' WHERE setting_key = ? LIMIT 1'
+        );
+        $stmt->execute([$key]);
+        $val = $stmt->fetchColumn();
+        if ($val === false || $val === null || $val === '') {
+            return true;
+        }
+
+        return !in_array(strtolower(trim((string) $val)), ['0', 'false', 'off', 'no'], true);
+    } catch (Throwable $e) {
+        return true;
+    }
+}
+
+/**
+ * @return list<int>
+ */
+function payrollDeskStaffRecipientIds(PDO $pdo): array
+{
+    try {
+        $rows = $pdo->query(
+            "SELECT id, role, department FROM users WHERE COALESCE(is_active, 1) = 1"
+        )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $ids = [];
+    foreach ($rows as $row) {
+        $id = (int) ($row['id'] ?? 0);
+        if ($id <= 0) {
+            continue;
+        }
+        $role = strtolower(trim((string) ($row['role'] ?? '')));
+        $dept = trim((string) ($row['department'] ?? ''));
+        $isAdmin = $role === 'admin';
+        $isFinance = $isAdmin || preg_match('/\b(finance|account|accounts|accounting)\b/i', $dept) === 1;
+        if ($isAdmin || $isFinance) {
+            $ids[] = $id;
+        }
+    }
+
+    return array_values(array_unique($ids));
+}
+
+/**
+ * @param array<string,mixed> $ctx
+ */
+function payrollDeskNotifyEvent(PDO $pdo, string $event, array $ctx = []): void
+{
+    try {
+        $period = trim((string) ($ctx['periodLabel'] ?? 'this period'));
+        $link = (string) ($ctx['link'] ?? '');
+        $runId = (int) ($ctx['runId'] ?? 0);
+
+        if ($event === 'run_generated' && payrollDeskNotifSettingEnabled($pdo, 'notif_run_generated')) {
+            $count = (int) ($ctx['employeeCount'] ?? 0);
+            $title = 'Draft payroll ready';
+            $message = sprintf(
+                'A draft payroll run for %s was generated%s.',
+                $period,
+                $count > 0 ? ' (' . $count . ' employees)' : ''
+            );
+            payrollDeskNotifyUsers($pdo, payrollDeskStaffRecipientIds($pdo), $title, $message, $link, 'info');
+            return;
+        }
+
+        if ($event === 'run_approved' && payrollDeskNotifSettingEnabled($pdo, 'notif_run_approved')) {
+            payrollDeskNotifyUsers(
+                $pdo,
+                payrollDeskStaffRecipientIds($pdo),
+                'Payroll approved',
+                'Payroll for ' . $period . ' was approved and is ready for payout.',
+                $link !== '' ? $link : payrollDeskPageUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]),
+                'success'
+            );
+            return;
+        }
+
+        if ($event === 'run_paid' && payrollDeskNotifSettingEnabled($pdo, 'notif_run_paid')) {
+            payrollDeskNotifyUsers(
+                $pdo,
+                payrollDeskStaffRecipientIds($pdo),
+                'Payroll marked paid',
+                'Payroll for ' . $period . ' was marked as paid and posted to accounting.',
+                $link !== '' ? $link : payrollDeskPageUrl('view_run.php') . payrollDeskQueryString(['id' => $runId]),
+                'success'
+            );
+            return;
+        }
+
+        if ($event === 'payslip_published' && payrollDeskNotifSettingEnabled($pdo, 'notif_payslip_published')) {
+            $employeeIds = [];
+            $payslipId = (int) ($ctx['payslipId'] ?? 0);
+            if ($payslipId > 0) {
+                $st = $pdo->prepare('SELECT user_id FROM ' . payroll_table('payslips') . ' WHERE id = ? LIMIT 1');
+                $st->execute([$payslipId]);
+                $uid = (int) ($st->fetchColumn() ?: 0);
+                if ($uid > 0) {
+                    $employeeIds[] = $uid;
+                }
+            } elseif ($runId > 0) {
+                $st = $pdo->prepare(
+                    'SELECT DISTINCT user_id FROM ' . payroll_table('payslips')
+                    . ' WHERE payroll_run_id = ? AND COALESCE(is_published, 0) = 1'
+                );
+                $st->execute([$runId]);
+                $employeeIds = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN) ?: []);
+            }
+            $myLink = $link !== '' ? $link : (payrollDeskPageUrl('my_payslips.php') . payrollDeskQueryString());
+            payrollDeskNotifyUsers(
+                $pdo,
+                $employeeIds,
+                'Payslip available',
+                'Your payslip for ' . $period . ' is now available in My Payslips.',
+                $myLink,
+                'success'
+            );
+            return;
+        }
+
+        if ($event === 'payslip_emailed' && payrollDeskNotifSettingEnabled($pdo, 'notif_payslip_emailed')) {
+            $payslipIds = $ctx['payslipIds'] ?? [];
+            if (!is_array($payslipIds)) {
+                $payslipIds = [];
+            }
+            $payslipIds = array_values(array_unique(array_filter(array_map('intval', $payslipIds))));
+            if ($payslipIds === []) {
+                return;
+            }
+            $placeholders = implode(',', array_fill(0, count($payslipIds), '?'));
+            $st = $pdo->prepare(
+                'SELECT DISTINCT user_id FROM ' . payroll_table('payslips')
+                . ' WHERE id IN (' . $placeholders . ')'
+            );
+            $st->execute($payslipIds);
+            $employeeIds = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN) ?: []);
+            $myLink = $link !== '' ? $link : (payrollDeskPageUrl('my_payslips.php') . payrollDeskQueryString());
+            payrollDeskNotifyUsers(
+                $pdo,
+                $employeeIds,
+                'Payslip emailed',
+                'Your payslip for ' . $period . ' was sent to your email.',
+                $myLink,
+                'info'
+            );
+        }
+    } catch (Throwable $e) {
+        error_log('payrollDeskNotifyEvent: ' . $e->getMessage());
+    }
+}
+
+/**
+ * @param list<int> $userIds
+ */
+function payrollDeskNotifyUsers(PDO $pdo, array $userIds, string $title, string $message, string $link = '', string $type = 'info'): void
+{
+    $userIds = array_values(array_unique(array_filter(array_map('intval', $userIds), static fn (int $id): bool => $id > 0)));
+    if ($userIds === []) {
+        return;
+    }
+
+    $actorId = (int) ($_SESSION['user_id'] ?? 0);
+    foreach ($userIds as $userId) {
+        if ($actorId > 0 && $userId === $actorId) {
+            // Still notify the actor so their bell reflects team activity; keep as-is.
+        }
+        if (function_exists('createSystemNotification')) {
+            createSystemNotification($userId, $title, $message, $link !== '' ? $link : null, $type);
+            continue;
+        }
+        if (function_exists('createNotification')) {
+            createNotification([
+                'user_id' => $userId,
+                'audience' => 'user',
+                'title' => $title,
+                'message' => $message,
+                'type' => $type,
+            ]);
+        }
+    }
+}
+

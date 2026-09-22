@@ -63,7 +63,7 @@ if (!isset($_GET['print'])) {
     </div>
 </header>
 
-<div id="notif-backdrop" class="notif-backdrop" onclick="closeNotif()" style="background: transparent; cursor: default;"></div>
+<div id="notif-backdrop" class="notif-backdrop" onclick="closeNotif()" aria-hidden="true"></div>
 <script>
     // Unified Sidebar Toggle
     function toggleHeaderMenu(){
@@ -143,28 +143,89 @@ if (!isset($_GET['print'])) {
             if(container && container.classList.contains('show')) {
                 container.classList.remove('show');
             }
+            if (typeof closeNotif === 'function') closeNotif();
         }
     });
 
 
     // Clock Function Removed
+    function ensureNotifPanelOnBody() {
+        var dd = document.getElementById('notif-dd');
+        if (dd && dd.parentElement !== document.body) {
+            document.body.appendChild(dd);
+        }
+        var bd = document.getElementById('notif-backdrop');
+        if (bd && bd.parentElement !== document.body) {
+            document.body.appendChild(bd);
+        }
+    }
+
+    function persistNotifDrawerOpen(isOpen) {
+        try {
+            sessionStorage.setItem('ultitech_notif_drawer_open', isOpen ? '1' : '0');
+        } catch (e) {}
+    }
+
+    function setNotifDrawerOpen(isOpen) {
+        ensureNotifPanelOnBody();
+        var dd = document.getElementById('notif-dd');
+        var btn = document.querySelector('.sidebar-notif-trigger') || document.querySelector('.header-notif-bell-btn');
+        if (!dd) return false;
+        dd.classList.toggle('open', !!isOpen);
+        dd.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        if (btn) btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        syncNotifBackdrop(!!isOpen);
+        document.body.classList.toggle('notif-panel-open', !!isOpen);
+        persistNotifDrawerOpen(!!isOpen);
+        return true;
+    }
+
+    function restoreNotifDrawerOpen() {
+        var shouldOpen = false;
+        try {
+            shouldOpen = sessionStorage.getItem('ultitech_notif_drawer_open') === '1';
+        } catch (e) {}
+        if (!shouldOpen) return;
+        if (!setNotifDrawerOpen(true)) {
+            setTimeout(restoreNotifDrawerOpen, 50);
+        }
+    }
+
+    function syncNotifBackdrop(isOpen) {
+        var bd = document.getElementById('notif-backdrop');
+        if (!bd) return;
+        if (isOpen) {
+            bd.classList.add('is-open');
+            bd.style.display = 'block';
+        } else {
+            bd.classList.remove('is-open');
+            bd.style.display = 'none';
+        }
+    }
+
     function toggleNotif(e){
         if (e) { e.preventDefault(); e.stopPropagation(); }
+        ensureNotifPanelOnBody();
         var dd=document.getElementById('notif-dd');
         if(!dd) return;
-        dd.classList.toggle('open');
+        setNotifDrawerOpen(!dd.classList.contains('open'));
     }
     function closeNotif(){
-        var dd=document.getElementById('notif-dd'); 
-        if(dd) dd.classList.remove('open');
+        setNotifDrawerOpen(false);
+    }
+
+    ensureNotifPanelOnBody();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', restoreNotifDrawerOpen);
+    } else {
+        restoreNotifDrawerOpen();
     }
     
-    // Close dropdown when clicking outside
+    // Close drawer when clicking outside
     document.addEventListener('click', function(e) {
         var dd = document.getElementById('notif-dd');
-        var btn = e.target.closest('.notif .icon-btn');
+        var btn = e.target.closest('.header-notif-bell-btn, .notif .icon-btn, .sidebar-notif-trigger');
         
-        // If dropdown is open and click is outside dropdown AND outside toggle button
         if (dd && dd.classList.contains('open') && !dd.contains(e.target) && !btn) {
             closeNotif();
         }

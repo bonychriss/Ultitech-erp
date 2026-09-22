@@ -7,6 +7,7 @@ import {
   Inbox,
   Loader2,
   Mail,
+  Search,
   Send,
   Trash2,
   Wallet,
@@ -293,9 +294,10 @@ export default function ViewRunPage() {
       <div className="pay-desk-page-header pay-desk-page-header--desk">
         <div className="pay-desk-page-header-search">
           <div className="pay-desk-search-field">
+            <Search className="pay-desk-search-icon" size={16} aria-hidden="true" />
             <input
               type="search"
-              className="pay-desk-search-input pay-desk-search-input--plain"
+              className="pay-desk-search-input"
               placeholder="Search employees in this run..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -371,33 +373,33 @@ export default function ViewRunPage() {
             {can.sendAll && (
               <button
                 type="button"
-                className="pay-desk-btn pay-desk-btn-secondary"
+                className="pay-run-toolbar-action"
                 disabled={busy}
                 onClick={openSendAllConfirm}
               >
-                <Send size={14} aria-hidden="true" />
+                <Send size={15} className="pay-run-action-icon pay-run-action-icon--accounts" aria-hidden="true" />
                 Send to account
               </button>
             )}
             {run.isPublished && (
-              <span className="pay-desk-btn pay-desk-btn-secondary" style={{ opacity: 0.7, cursor: 'default' }}>
-                <CheckCircle2 size={14} aria-hidden="true" />
+              <span className="pay-run-toolbar-action pay-run-toolbar-action--static">
+                <CheckCircle2 size={15} className="pay-run-action-icon pay-run-action-icon--sent" aria-hidden="true" />
                 Sent to accounts
               </span>
             )}
             {can.email && (
               <button
                 type="button"
-                className="pay-desk-btn pay-desk-btn-secondary"
+                className="pay-run-toolbar-action"
                 disabled={busy}
                 onClick={openEmailConfirm}
               >
-                <Mail size={14} aria-hidden="true" />
+                <Mail size={15} className="pay-run-action-icon pay-run-action-icon--email" aria-hidden="true" />
                 Send via email
               </button>
             )}
-            <a href={links.exportExcel || '#'} className="pay-desk-btn pay-desk-btn-secondary">
-              <FileSpreadsheet size={14} aria-hidden="true" />
+            <a href={links.exportExcel || '#'} className="pay-run-toolbar-action">
+              <FileSpreadsheet size={15} className="pay-run-action-icon pay-run-action-icon--excel" aria-hidden="true" />
               Export Excel
             </a>
           </div>
@@ -423,14 +425,14 @@ export default function ViewRunPage() {
                   <th scope="col">Overtime &amp; allowances</th>
                   <th scope="col">Bonus / commission</th>
                   <th scope="col">Gross salaries</th>
-                  <th scope="col">Employee NSSF 10%</th>
+                  <th scope="col">Employee NSSF</th>
                   <th scope="col">Taxable salary</th>
                   <th scope="col">PAYE</th>
                   <th scope="col">Total deductions</th>
                   <th scope="col">Net salaries</th>
-                  <th scope="col">Employer NSSF 10%</th>
-                  <th scope="col">SDL 3.5%</th>
-                  <th scope="col">WCF 0.5%</th>
+                  <th scope="col">Employer NSSF</th>
+                  <th scope="col">SDL</th>
+                  <th scope="col">WCF</th>
                   <th scope="col">Employer cost</th>
                   <th scope="col" style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -530,18 +532,18 @@ export default function ViewRunPage() {
                             disabled={busy}
                             onClick={() => openSendSingleConfirm(slip)}
                           >
-                            <Send size={15} aria-hidden="true" />
+                            <Send size={15} className="pay-run-action-icon pay-run-action-icon--accounts" aria-hidden="true" />
                           </button>
                         )}
                         {can.email && (
                           <button
                             type="button"
-                            className="pay-desk-icon-btn pay-desk-icon-btn--approve"
+                            className="pay-desk-icon-btn pay-desk-icon-btn--email"
                             title="Send via email"
                             disabled={busy}
                             onClick={() => openEmailSingleConfirm(slip)}
                           >
-                            <Mail size={15} aria-hidden="true" />
+                            <Mail size={15} className="pay-run-action-icon pay-run-action-icon--email" aria-hidden="true" />
                           </button>
                         )}
                         {slip.isPublished && (

@@ -76,14 +76,14 @@ $totals = [
             <th class="header-main">OVERTIME &amp; ALLOWANCES</th>
             <th class="header-main">BONUS / COMMISSION</th>
             <th class="header-main">GROSS SALARIES</th>
-            <th class="header-main">EMPLOYEE NSSF 10%</th>
+            <th class="header-main">EMPLOYEE NSSF</th>
             <th class="header-main">TAXABLE SALARY</th>
             <th class="header-main">PAYE</th>
             <th class="header-main">TOTAL DEDUCTIONS</th>
             <th class="header-accent">NET SALARIES</th>
-            <th class="header-employer">EMPLOYER NSSF 10%</th>
-            <th class="header-employer">SDL 3.5%</th>
-            <th class="header-employer">WCF 0.5%</th>
+            <th class="header-employer">EMPLOYER NSSF</th>
+            <th class="header-employer">SDL</th>
+            <th class="header-employer">WCF</th>
             <th class="header-employer">EMPLOYER COST</th>
         </tr>
     </thead>

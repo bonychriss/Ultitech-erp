@@ -178,7 +178,7 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     </div>
 </header>
 
-<div id="notif-backdrop" class="notif-backdrop" onclick="closeNotif()" style="background: transparent; cursor: default;"></div>
+<div id="notif-backdrop" class="notif-backdrop" onclick="closeNotif()" aria-hidden="true"></div>
 <script>
     // Unified Sidebar Toggle
     function toggleHeaderMenu(){
@@ -264,89 +264,89 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
 
     // Clock Function Removed
     function positionMobileNotifDropdown() {
+        /* Right drawer uses fixed CSS; no anchor positioning. */
         var dd = document.getElementById('notif-dd');
-        var sidebarBtn = document.querySelector('.sidebar-notif-trigger');
-        var btn = sidebarBtn || document.querySelector('.header-notif-bell-btn');
-        if (!dd || !btn) {
-            if (dd) { dd.style.top = ''; dd.style.right = ''; dd.style.left = ''; }
-            return;
-        }
-        if (window.matchMedia('(max-width: 767.98px)').matches) {
-            if (sidebarBtn) {
-                dd.style.top = '';
-                dd.style.right = '';
-                dd.style.left = '';
-                return;
-            }
-            var r = btn.getBoundingClientRect();
-            dd.style.top = Math.round(r.bottom + 8) + 'px';
-            dd.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
-            dd.style.left = '';
-            return;
-        }
-        if (sidebarBtn) {
-            var rect = sidebarBtn.getBoundingClientRect();
-            dd.style.position = 'fixed';
-            dd.style.top = Math.round(rect.top) + 'px';
-            dd.style.left = Math.round(rect.right + 8) + 'px';
-            dd.style.right = 'auto';
-            return;
-        }
-        dd.style.position = '';
+        if (!dd) return;
         dd.style.top = '';
         dd.style.right = '';
         dd.style.left = '';
+        dd.style.bottom = '';
+        dd.style.position = '';
+    }
+
+    function ensureNotifPanelOnBody() {
+        var dd = document.getElementById('notif-dd');
+        if (dd && dd.parentElement !== document.body) {
+            document.body.appendChild(dd);
+        }
+        var bd = document.getElementById('notif-backdrop');
+        if (bd && bd.parentElement !== document.body) {
+            document.body.appendChild(bd);
+        }
+    }
+
+    function persistNotifDrawerOpen(isOpen) {
+        try {
+            sessionStorage.setItem('ultitech_notif_drawer_open', isOpen ? '1' : '0');
+        } catch (e) {}
+    }
+
+    function setNotifDrawerOpen(isOpen) {
+        ensureNotifPanelOnBody();
+        var dd = document.getElementById('notif-dd');
+        var btn = document.querySelector('.sidebar-notif-trigger') || document.querySelector('.header-notif-bell-btn');
+        if (!dd) return false;
+        if (typeof positionMobileNotifDropdown === 'function') {
+            positionMobileNotifDropdown();
+        }
+        dd.classList.toggle('open', !!isOpen);
+        dd.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        if (btn) btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        syncNotifBackdrop(!!isOpen);
+        document.body.classList.toggle('notif-panel-open', !!isOpen);
+        persistNotifDrawerOpen(!!isOpen);
+        return true;
+    }
+
+    function restoreNotifDrawerOpen() {
+        var shouldOpen = false;
+        try {
+            shouldOpen = sessionStorage.getItem('ultitech_notif_drawer_open') === '1';
+        } catch (e) {}
+        if (!shouldOpen) return;
+        if (!setNotifDrawerOpen(true)) {
+            setTimeout(restoreNotifDrawerOpen, 50);
+        }
     }
 
     function syncNotifBackdrop(isOpen) {
         var bd = document.getElementById('notif-backdrop');
         if (!bd) return;
-        if (isOpen && window.matchMedia('(max-width: 767.98px)').matches) {
+        if (isOpen) {
             bd.classList.add('is-open');
+            bd.style.display = 'block';
         } else {
             bd.classList.remove('is-open');
+            bd.style.display = 'none';
         }
     }
 
     function toggleNotif(e){
         if (e) { e.preventDefault(); e.stopPropagation(); }
+        ensureNotifPanelOnBody();
         var dd=document.getElementById('notif-dd');
-        var btn = e && e.currentTarget ? e.currentTarget : (document.querySelector('.sidebar-notif-trigger') || document.querySelector('.header-notif-bell-btn'));
         if(!dd) return;
-        var willOpen = !dd.classList.contains('open');
-        dd.classList.toggle('open');
-        dd.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
-        if (btn) btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-        if (willOpen && !dd.classList.contains('notif-dropdown--v2')) {
-            positionMobileNotifDropdown();
-        } else if (willOpen && document.querySelector('.sidebar-notif-trigger')) {
-            positionMobileNotifDropdown();
-        } else {
-            dd.style.top = '';
-            dd.style.right = '';
-            dd.style.left = '';
-            dd.style.position = '';
-        }
-        syncNotifBackdrop(dd.classList.contains('open'));
-        if (willOpen) document.body.classList.add('notif-panel-open');
-        else document.body.classList.remove('notif-panel-open');
+        setNotifDrawerOpen(!dd.classList.contains('open'));
     }
     function closeNotif(){
-        var dd=document.getElementById('notif-dd');
-        var btn = document.querySelector('.sidebar-notif-trigger') || document.querySelector('.header-notif-bell-btn');
-        if(dd) {
-            dd.classList.remove('open');
-            dd.setAttribute('aria-hidden', 'true');
-            dd.style.top = '';
-            dd.style.right = '';
-        }
-        if (btn) btn.setAttribute('aria-expanded', 'false');
-        syncNotifBackdrop(false);
-        document.body.classList.remove('notif-panel-open');
-        if (dd) {
-            dd.style.position = '';
-            dd.style.left = '';
-        }
+        setNotifDrawerOpen(false);
+    }
+
+    ensureNotifPanelOnBody();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', restoreNotifDrawerOpen);
+    } else {
+        restoreNotifDrawerOpen();
     }
 
     window.addEventListener('resize', function () {
@@ -356,12 +356,11 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
         }
     });
     
-    // Close dropdown when clicking outside
+    // Close drawer when clicking outside
     document.addEventListener('click', function(e) {
         var dd = document.getElementById('notif-dd');
-        var btn = e.target.closest('.header-notif-bell-btn, .notif .icon-btn');
+        var btn = e.target.closest('.header-notif-bell-btn, .notif .icon-btn, .sidebar-notif-trigger');
         
-        // If dropdown is open and click is outside dropdown AND outside toggle button
         if (dd && dd.classList.contains('open') && !dd.contains(e.target) && !btn) {
             closeNotif();
         }

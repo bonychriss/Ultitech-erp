@@ -270,6 +270,20 @@ export async function saveSalary(payload) {
   return data;
 }
 
+export async function removeSalaryEmployee(id) {
+  const res = await fetch(`${getApiBase()}/salary-remove.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ id }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok || data.error || data.success === false) {
+    throw new Error(data.error || data.message || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 export function buildEditSalaryUrl(employeeId, links = {}) {
   // Always use module page URL; ignore API-relative editSalaryBase from desk-init.
   const base = deskPageUrl('edit_salary.php');

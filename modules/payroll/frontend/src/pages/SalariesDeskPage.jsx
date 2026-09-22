@@ -5,6 +5,7 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
+  Trash2,
   Users,
   Wallet,
   CircleAlert,
@@ -15,6 +16,7 @@ import {
   deskPageUrl,
   fetchSalariesInit,
   formatAmount,
+  removeSalaryEmployee,
 } from '../api/payrollDesk';
 import EmployeeAvatar from '../components/EmployeeAvatar.jsx';
 import SalaryEditModal from '../components/SalaryEditModal.jsx';
@@ -75,6 +77,8 @@ export default function SalariesDeskPage() {
   const [notice, setNotice] = useState('');
   const [glowEmployeeId, setGlowEmployeeId] = useState(0);
   const [runModalOpen, setRunModalOpen] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(null);
+  const [removingId, setRemovingId] = useState(0);
   const filterWrapRef = useRef(null);
   const searchWrapRef = useRef(null);
   const glowRowRef = useRef(null);
@@ -143,6 +147,32 @@ export default function SalariesDeskPage() {
     await loadData();
     if (savedId > 0) {
       setGlowEmployeeId(savedId);
+    }
+  }
+
+  async function handleRemoveEmployee(emp) {
+    const id = Number(emp?.id) || 0;
+    if (id <= 0) return;
+    setRemovingId(id);
+    setError('');
+    try {
+      const res = await removeSalaryEmployee(id);
+      setConfirmRemove(null);
+      if (editingEmployeeId === id) {
+        closeEditor();
+      }
+      const payload = res?.data || res;
+      if (payload?.employees) {
+        setInit((prev) => ({ ...(prev || {}), ...payload }));
+      } else {
+        await loadData();
+      }
+      setNotice(res?.message || `${emp.fullName || 'Employee'} removed from the salaries list.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove employee.');
+      setConfirmRemove(null);
+    } finally {
+      setRemovingId(0);
     }
   }
 
@@ -518,6 +548,15 @@ export default function SalariesDeskPage() {
                         >
                           <img src={editIcon} alt="" className="pay-desk-edit-icon" aria-hidden="true" />
                         </button>
+                        <button
+                          type="button"
+                          className="pay-desk-icon-btn pay-desk-icon-btn--del"
+                          title="Remove from list"
+                          disabled={removingId === emp.id}
+                          onClick={() => setConfirmRemove(emp)}
+                        >
+                          <Trash2 size={15} aria-hidden="true" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -535,6 +574,57 @@ export default function SalariesDeskPage() {
           onClose={closeEditor}
           onSaved={handleSaved}
         />
+      )}
+
+      {confirmRemove && (
+        <div className="pay-desk-modal-backdrop" role="presentation" onClick={() => !removingId && setConfirmRemove(null)}>
+          <div
+            className="pay-desk-modal pay-desk-confirm-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pay-salary-remove-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="pay-salary-edit-modal-head">
+              <h2 id="pay-salary-remove-title" className="pay-salary-edit-modal-title">
+                Remove employee?
+              </h2>
+              <button
+                type="button"
+                className="pay-salary-edit-modal-close"
+                onClick={() => !removingId && setConfirmRemove(null)}
+                aria-label="Close"
+                disabled={Boolean(removingId)}
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="pay-desk-confirm-body">
+              <p>
+                {confirmRemove.fullName || 'This employee'} will be removed from the salaries list
+                and skipped in future payroll runs. Their user account stays active.
+              </p>
+              <div className="pay-desk-confirm-actions">
+                <button
+                  type="button"
+                  className="pay-desk-confirm-link"
+                  disabled={Boolean(removingId)}
+                  onClick={() => setConfirmRemove(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="pay-desk-confirm-link pay-desk-confirm-link--danger"
+                  disabled={Boolean(removingId)}
+                  onClick={() => handleRemoveEmployee(confirmRemove)}
+                >
+                  {removingId ? 'Removing…' : 'Yes, remove'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <RunPayrollModal

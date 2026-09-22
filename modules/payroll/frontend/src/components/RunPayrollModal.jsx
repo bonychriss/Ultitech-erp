@@ -198,7 +198,7 @@ export default function RunPayrollModal({ open, onClose, onGenerated }) {
 
                   <button
                     type="submit"
-                    className="pay-desk-btn pay-desk-btn-primary pay-desk-btn--pill pay-run-submit"
+                    className="pay-run-submit pay-desk-confirm-link pay-desk-confirm-link--primary"
                     disabled={submitting || setupRequired}
                   >
                     {submitting ? (

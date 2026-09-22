@@ -59,17 +59,25 @@ function Resolve-DeployUpload {
             )
         }
 
-        # Root entrypoints that have company stubs must not be uploaded as full apps
+        # Entrypoints that have company stubs must not be uploaded as full apps
         # into /ultimate/ (that loads ultimate/includes without env.php → localhost DB).
-        if ($rel -match '^([^/]+\.php)$') {
+        # Covers root (view-voucher.php) and nested (employee/dashboard.php, admin/...).
+        if ($rel -match '^((?:employee|admin|attendance|stock|deliveries|todo)/.+|[^/]+)\.php$') {
             $stubRel = "ultimate/$rel"
             $stubPath = Join-Path $RepoRoot ($stubRel -replace '/', [IO.Path]::DirectorySeparatorChar)
-            if (Test-Path $stubPath) {
+            if ((Test-Path $stubPath) -and ($rel -notmatch '^ultimate/')) {
                 return @(
                     @{ Local = $stubRel; RemoteBase = $RemoteBase; Remote = $rel },
                     @{ Local = $rel; RemoteBase = $parentBase; Remote = $rel }
                 )
             }
+        }
+
+        # App UI builds and shells live on the parent app root (stubs chdir there).
+        if ($rel -match '^(employee|admin)/') {
+            return @(
+                @{ Local = $rel; RemoteBase = $parentBase; Remote = $rel }
+            )
         }
 
         # Keep shared PHP/config/media on the parent app root, not under /ultimate/.

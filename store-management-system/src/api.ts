@@ -340,6 +340,7 @@ export async function receivePurchaseOrder(
     receiveQty: Record<string, number>;
     notes?: string;
     attachments?: File[];
+    confirmToStock?: boolean;
   }
 ): Promise<{ message: string }> {
   const formData = new FormData();
@@ -349,6 +350,9 @@ export async function receivePurchaseOrder(
   formData.append('source', payload.source);
   formData.append('receive_qty', JSON.stringify(payload.receiveQty));
   formData.append('notes', payload.notes ?? '');
+  if (payload.confirmToStock !== undefined) {
+    formData.append('confirm_to_stock', payload.confirmToStock ? '1' : '0');
+  }
 
   const files = payload.attachments ?? [];
   files.forEach((file, index) => {

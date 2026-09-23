@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { downloadVoucherPdf, printVoucher } from '../utils/pdf.js'
+import { CFG } from '../config.js'
 
 export default function VoucherActions({
   data,
@@ -10,6 +11,7 @@ export default function VoucherActions({
 }) {
   const [open, setOpen] = useState(false)
   const [dlState, setDlState] = useState('idle')
+  const [notifyState, setNotifyState] = useState('idle')
   const menuRef = useRef(null)
 
   const { voucher, permissions, actions, userPendingApprovals, pendingCount, notifyTarget, shareUrl } = data
@@ -36,6 +38,58 @@ export default function VoucherActions({
       setTimeout(() => { setDlState('idle') }, 2500)
     }
   }, [dlState, voucher.voucher_no])
+
+  const handleNotify = useCallback(async (e) => {
+    e.preventDefault()
+    if (!notifyTarget || notifyState === 'loading') return
+    setNotifyState('loading')
+    try {
+      const res = await fetch(CFG.notifyUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ voucher_id: voucher.id }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (json.ok && json.sent) {
+        setNotifyState('success')
+        if (window.Swal) {
+          window.Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: json.message || `Notified ${notifyTarget.role}`,
+            showConfirmButton: false,
+            timer: 2800,
+          })
+        }
+        setTimeout(() => setNotifyState('idle'), 2200)
+        setOpen(false)
+        return
+      }
+      const fallback = json.fallback_link || notifyTarget.link
+      if (fallback) {
+        window.open(fallback, '_blank', 'noopener,noreferrer')
+        setNotifyState('idle')
+        setOpen(false)
+        return
+      }
+      setNotifyState('error')
+      if (window.Swal) {
+        window.Swal.fire('WhatsApp', json.error || 'Could not send notification', 'error')
+      }
+      setTimeout(() => setNotifyState('idle'), 2500)
+    } catch {
+      if (notifyTarget.link) {
+        window.open(notifyTarget.link, '_blank', 'noopener,noreferrer')
+        setNotifyState('idle')
+        setOpen(false)
+        return
+      }
+      setNotifyState('error')
+      setTimeout(() => setNotifyState('idle'), 2500)
+    }
+  }, [notifyTarget, notifyState, voucher.id])
 
   const mainApproval = userPendingApprovals[0]
   const pairKeys = ['applicant', 'department manager']
@@ -153,9 +207,20 @@ export default function VoucherActions({
           )}
 
           {notifyTarget && (
-            <a href={notifyTarget.link} target="_blank" rel="noopener noreferrer" className="dropdown-item dropdown-item--success">
-              <i className="fab fa-whatsapp" aria-hidden="true" /> Notify {notifyTarget.role}
-            </a>
+            <button
+              type="button"
+              className="dropdown-item dropdown-item--success"
+              onClick={handleNotify}
+              disabled={notifyState === 'loading'}
+            >
+              {notifyState === 'loading' ? (
+                <><i className="fas fa-spinner fa-spin" aria-hidden="true" /> Sending WhatsApp...</>
+              ) : notifyState === 'success' ? (
+                <><i className="fas fa-check" aria-hidden="true" /> Sent to {notifyTarget.role}</>
+              ) : (
+                <><i className="fab fa-whatsapp" aria-hidden="true" /> Notify {notifyTarget.role}</>
+              )}
+            </button>
           )}
 
           {shareUrl && (

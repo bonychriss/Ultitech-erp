@@ -275,7 +275,7 @@ export default function App() {
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
             </button>
-            <h3 className="sms-excel-page-title">Confirm into stock</h3>
+            <h3 className="sms-excel-page-title">Receive into stock</h3>
           </div>
         ) : (
           <div className="sms-desk-page-header sms-desk-page-header--simple">
@@ -302,7 +302,8 @@ export default function App() {
           <StoreReceiveForm
             warehouseId={warehouseId}
             products={products}
-            canReceivePurchaseOrders={Boolean(config?.canManageProducts)}
+            canReceivePurchaseOrders={config?.canReceivePurchaseOrders !== false}
+            confirmPoToStock={config?.confirmPoToStock !== false && !config?.canManageProducts}
             onReceived={async () => {
               await refreshData();
               setView('list');

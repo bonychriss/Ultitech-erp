@@ -21,7 +21,7 @@ function viewVoucherUiPublicUrl(string $relativePath): string
 }
 
 /**
- * @return array{assetBase:string,cssFile:string,jsFile:string,cssVersion:string,jsVersion:string,apiUrl:string}|null
+ * @return array{assetBase:string,cssFile:string,jsFile:string,cssVersion:string,jsVersion:string,apiUrl:string,notifyUrl:string}|null
  */
 function viewVoucherUiLoadReactAssets(): ?array
 {
@@ -50,5 +50,6 @@ function viewVoucherUiLoadReactAssets(): ?array
         'cssVersion' => is_file($cssPath) ? (string) filemtime($cssPath) : (string) time(),
         'jsVersion' => is_file($jsPath) ? (string) filemtime($jsPath) : (string) time(),
         'apiUrl' => viewVoucherUiPublicUrl('api/init.php'),
+        'notifyUrl' => viewVoucherUiPublicUrl('api/whatsapp-notify.php'),
     ];
 }

@@ -132,6 +132,29 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
     void refreshPendingReceipts();
   }, [warehouseId, refreshPendingReceipts]);
 
+  useEffect(() => {
+    setGridRows((prev) => {
+      const hasManualContent = prev.some((row) => row.isManual && rowHasContent(row));
+      if (hasManualContent) return prev;
+      if (pendingReceipts.length === 0) {
+        return ensureTrailingEmptyRows([]);
+      }
+      const seeded: IncomingGridRow[] = pendingReceipts.map((receipt) => ({
+        rowId: `pending-${receipt.id}`,
+        receiptId: receipt.id,
+        productId: receipt.productId,
+        productSku: receipt.productSku || '',
+        productName: receipt.productName || '',
+        poReference: receipt.poReference || '',
+        qtyExpected: String(receipt.qtyExpected ?? ''),
+        qtyVerified: String(receipt.qtyExpected ?? ''),
+        notes: '',
+        isManual: false,
+      }));
+      return ensureTrailingEmptyRows(seeded);
+    });
+  }, [pendingReceipts]);
+
   const handleRowsChange = useCallback((rows: IncomingGridRow[]) => {
     setGridRows(ensureTrailingEmptyRows(rows));
   }, []);
@@ -222,6 +245,43 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
       removeRow(row.rowId);
       await onVerified();
       await refreshPendingReceipts();
+    }
+    setProcessingRowId(null);
+  };
+
+  const handleRejectOne = async (row: IncomingGridRow) => {
+    const product = resolveProduct(row);
+    const pending = product ? matchPendingReceipt(row, product, pendingReceipts) : undefined;
+    if (!pending && !row.receiptId) {
+      removeRow(row.rowId);
+      return;
+    }
+
+    setProcessingRowId(row.rowId);
+    try {
+      const receiptId = pending?.id || row.receiptId;
+      if (!receiptId) {
+        throw new Error('Pending receipt not found');
+      }
+      await verifyReceipt(warehouseId, {
+        receiptId,
+        qtyVerified: 0,
+        notes: row.notes.trim() || 'Rejected at store verification',
+      });
+      setStatusPopup({
+        title: 'Rejected',
+        message: 'Product was rejected — no stock was added.',
+        tone: 'info',
+      });
+      removeRow(row.rowId);
+      await onVerified();
+      await refreshPendingReceipts();
+    } catch (err) {
+      setStatusPopup({
+        title: 'Reject failed',
+        message: err instanceof Error ? err.message : 'Could not reject this product',
+        tone: 'error',
+      });
     }
     setProcessingRowId(null);
   };
@@ -387,7 +447,7 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
         key: 'actions',
         header: 'Confirm',
         letter: 'G',
-        width: '6.5rem',
+        width: '8rem',
         align: 'center',
         getValue: () => '',
         render: (row) => (
@@ -400,7 +460,7 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
                 e.stopPropagation();
                 void handleConfirmOne(row);
               }}
-              title="Confirm into stock"
+              title="Accept into stock"
             >
               {processingRowId === row.rowId ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -408,16 +468,16 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
                 <CheckCircle2 className="w-3.5 h-3.5" />
               )}
             </button>
-            {row.isManual && rowHasContent(row) && (
+            {(row.receiptId || rowHasContent(row)) && (
               <button
                 type="button"
                 className="sms-excel-action-btn"
                 disabled={processingRowId === row.rowId || confirmingAll}
                 onClick={(e) => {
                   e.stopPropagation();
-                  removeRow(row.rowId);
+                  void handleRejectOne(row);
                 }}
-                title="Remove row"
+                title="Reject — do not add to stock"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -457,7 +517,7 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
           }
           footer={
             <span className="sms-excel-hint">
-              The sheet starts empty. Pick a product, then a PO reference — Qty Expected fills from that PO line.
+              Pending deliveries from purchase orders appear here. Accept to add stock, or reject to discard without stocking.
             </span>
           }
         />

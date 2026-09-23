@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BadgeCheck,
-  CheckCircle2,
-  ChevronDown,
   ClipboardList,
   CloudUpload,
   Loader2,
@@ -22,6 +20,8 @@ import type { PurchaseOrderAttachment, PurchaseOrderLine, PurchaseOrderSummary }
 
 interface PurchaseOrderReceiveProps {
   warehouseId: number;
+  /** When true, accepted quantities go straight into warehouse stock. */
+  confirmToStock?: boolean;
   onReceived: () => Promise<void>;
 }
 
@@ -70,7 +70,11 @@ function LineProductThumb({ line }: { line: PurchaseOrderLine }) {
   );
 }
 
-export default function PurchaseOrderReceive({ warehouseId, onReceived }: PurchaseOrderReceiveProps) {
+export default function PurchaseOrderReceive({
+  warehouseId,
+  confirmToStock = true,
+  onReceived,
+}: PurchaseOrderReceiveProps) {
   const [orders, setOrders] = useState<PurchaseOrderSummary[]>([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrderSummary | null>(null);
@@ -81,7 +85,6 @@ export default function PurchaseOrderReceive({ warehouseId, onReceived }: Purcha
   const [attachments, setAttachments] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [poSearch, setPoSearch] = useState('');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -92,8 +95,6 @@ export default function PurchaseOrderReceive({ warehouseId, onReceived }: Purcha
     message: string;
     tone: 'success' | 'error' | 'info';
   } | null>(null);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadOrders = useCallback(async () => {
@@ -112,29 +113,6 @@ export default function PurchaseOrderReceive({ warehouseId, onReceived }: Purcha
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
-
-  useEffect(() => {
-    if (!dropdownOpen) return undefined;
-
-    const onPointerDown = (event: MouseEvent) => {
-      if (!dropdownRef.current?.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setDropdownOpen(false);
-    };
-
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    const focusTimer = window.setTimeout(() => searchInputRef.current?.focus(), 50);
-
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-      window.clearTimeout(focusTimer);
-    };
-  }, [dropdownOpen]);
 
   const filteredOrders = useMemo(() => {
     const q = poSearch.trim().toLowerCase();
@@ -211,8 +189,10 @@ export default function PurchaseOrderReceive({ warehouseId, onReceived }: Purcha
 
     if (Object.keys(payload).length === 0) {
       setStatusPopup({
-        title: 'Nothing to record',
-        message: 'Enter at least one quantity to record as delivered.',
+        title: 'Nothing to accept',
+        message: confirmToStock
+          ? 'Enter at least one quantity to accept into stock.'
+          : 'Enter at least one quantity to record as delivered.',
         tone: 'info',
       });
       return;
@@ -226,6 +206,7 @@ export default function PurchaseOrderReceive({ warehouseId, onReceived }: Purcha
         receiveQty: payload,
         notes: notes.trim(),
         attachments,
+        confirmToStock,
       });
       setSelectedKey('');
       setSelectedOrder(null);
@@ -235,16 +216,18 @@ export default function PurchaseOrderReceive({ warehouseId, onReceived }: Purcha
       setNotes('');
       setAttachments([]);
       setPoSearch('');
-      setDropdownOpen(false);
       setStatusPopup({
-        title: 'Delivery recorded',
+        title: confirmToStock ? 'Accepted into stock' : 'Delivery recorded',
         message: result.message,
         tone: 'success',
       });
       await loadOrders();
+      if (confirmToStock) {
+        await onReceived();
+      }
     } catch (err) {
       setStatusPopup({
-        title: 'Could not record delivery',
+        title: confirmToStock ? 'Could not accept into stock' : 'Could not record delivery',
         message: err instanceof Error ? err.message : 'Failed to receive purchase order',
         tone: 'error',
       });
@@ -273,12 +256,6 @@ export default function PurchaseOrderReceive({ warehouseId, onReceived }: Purcha
     setDetailsOpen(false);
   };
 
-  const selectOrder = (key: string) => {
-    setSelectedKey(key);
-    setDropdownOpen(false);
-    setPoSearch('');
-  };
-
   const addAttachmentFiles = useCallback((fileList: FileList | File[] | null) => {
     const next = Array.from(fileList ?? []);
     if (next.length === 0) return;
@@ -298,159 +275,112 @@ export default function PurchaseOrderReceive({ warehouseId, onReceived }: Purcha
 
   return (
     <div className="sms-incoming-layout">
-      <div className="sms-incoming-copy">
-        <h3 className="sms-incoming-title">
-          <ClipboardList className="w-5 h-5 text-indigo-600" />
-          Record delivery from purchase order
-        </h3>
-        <p className="sms-incoming-sub">
-          Record what the supplier delivered. Stock is not added yet — the store manager confirms quantities into this warehouse.
-        </p>
-      </div>
-
       {error && <div className="sms-alert sms-alert-error">{error}</div>}
 
       <form onSubmit={handleReceive} className="sms-incoming-stack">
-        <div className="sms-incoming-field">
-          <label className="sms-field-label" htmlFor="sms-po-dropdown-trigger">
-            Purchase order *
-          </label>
-
-          <div
-            className={`sms-po-dropdown${dropdownOpen ? ' is-open' : ''}`}
-            ref={dropdownRef}
-          >
-            <button
-              id="sms-po-dropdown-trigger"
-              type="button"
-              className="sms-po-dropdown-trigger"
-              aria-haspopup="listbox"
-              aria-expanded={dropdownOpen}
-              disabled={loadingOrders}
-              onClick={() => setDropdownOpen((open) => !open)}
-            >
-              <span className="sms-po-dropdown-trigger-main">
-                {loadingOrders ? (
-                  <span className="sms-po-dropdown-placeholder">Loading purchase orders…</span>
-                ) : selectedOrder ? (
-                  <>
-                    <span className="sms-po-picker-ref">
-                      {selectedOrder.poNumber || `PO #${selectedOrder.id}`}
-                    </span>
-                    <span className="sms-po-dropdown-trigger-sub">
-                      {selectedOrder.supplierName} · {selectedOrder.remainingQty} units pending
-                    </span>
-                  </>
-                ) : (
-                  <span className="sms-po-dropdown-placeholder">Select purchase order...</span>
-                )}
-              </span>
-              <span className="sms-po-dropdown-trigger-aside">
-                {selectedOrder && !dropdownOpen && (
-                  <span
-                    className="sms-po-dropdown-clear"
-                    role="button"
-                    tabIndex={0}
-                    aria-label="Clear selected purchase order"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      clearSelection();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        clearSelection();
-                      }
-                    }}
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </span>
-                )}
-                <ChevronDown className={`sms-po-dropdown-chevron${dropdownOpen ? ' is-open' : ''}`} />
-              </span>
-            </button>
-
-            {dropdownOpen && (
-              <div className="sms-po-dropdown-menu" role="listbox" aria-label="Purchase orders">
-                <div className="sms-incoming-search sms-incoming-search--dropdown">
-                  <Search className="sms-incoming-search-icon" aria-hidden="true" />
-                  <input
-                    ref={searchInputRef}
-                    type="search"
-                    className="sms-incoming-search-input"
-                    placeholder="Search PO number or supplier..."
-                    value={poSearch}
-                    onChange={(e) => setPoSearch(e.target.value)}
-                    aria-label="Search purchase orders"
-                  />
-                </div>
-
-                <div className="sms-po-dropdown-meta">
-                  {filteredOrders.length} of {orders.length} waiting to receive
-                </div>
-
-                {filteredOrders.length === 0 ? (
-                  <div className="sms-incoming-empty sms-incoming-empty--menu">
-                    No purchase orders match this search.
-                  </div>
-                ) : (
-                  <div className="sms-po-picker sms-po-picker--dropdown">
-                    {filteredOrders.map((order) => {
-                      const key = orderKey(order);
-                      const active = selectedKey === key;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          role="option"
-                          aria-selected={active}
-                          className={`sms-po-picker-item${active ? ' is-active' : ''}`}
-                          onClick={() => selectOrder(key)}
-                        >
-                          <div className="sms-po-picker-top">
-                            <span className="sms-po-picker-ref">
-                              {order.poNumber || `PO #${order.id}`}
-                            </span>
-                            {active && <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />}
-                          </div>
-                          <div className="sms-po-picker-supplier">
-                            {order.supplierName || 'Unknown supplier'}
-                          </div>
-                          <div className="sms-po-picker-meta">
-                            <span
-                              className={receiveStatusClass(
-                                order.receiveStatus || (order.receivedQty && order.receivedQty > 0
-                                  ? 'Partially received'
-                                  : 'Pending')
-                              )}
-                            >
-                              {order.receiveStatus ||
-                                (order.receivedQty && order.receivedQty > 0
-                                  ? 'Partially received'
-                                  : 'Pending')}
-                            </span>
-                            <span>{order.remainingQty} units pending</span>
-                            {order.createdAt ? <span>{formatDate(order.createdAt)}</span> : null}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
         <section className="sms-incoming-panel sms-incoming-panel--detail sms-incoming-panel--full">
           {!selectedOrder && !loadingDetail ? (
-            <div className="sms-incoming-empty sms-incoming-empty--tall">
-              <PackageCheck className="w-10 h-10 text-slate-300 mb-2" />
-              <div className="font-semibold text-slate-700">Select a purchase order</div>
-              <p className="text-sm text-slate-500 mt-1">
-                Click the dropdown above to choose a PO and load receive lines.
-              </p>
+            <div className="sms-po-open-list">
+              <div className="sms-po-open-list-head">
+                <div className="sms-po-open-list-title-row">
+                  <div className="font-semibold text-slate-800">
+                    {loadingOrders
+                      ? 'Loading purchase orders…'
+                      : `${filteredOrders.length} purchase order${filteredOrders.length === 1 ? '' : 's'} waiting`}
+                  </div>
+                  <div className="sms-incoming-search sms-incoming-search--inline">
+                    <Search className="sms-incoming-search-icon" aria-hidden="true" />
+                    <input
+                      type="search"
+                      className="sms-incoming-search-input"
+                      placeholder="Search PO number or supplier..."
+                      value={poSearch}
+                      onChange={(e) => setPoSearch(e.target.value)}
+                      aria-label="Search purchase orders"
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-slate-500 mt-1">
+                  {confirmToStock
+                    ? 'Select a PO below to review products and accept or reject quantities into stock.'
+                    : 'Select a PO below to record supplier delivery for the store.'}
+                </p>
+              </div>
+              {loadingOrders ? (
+                <div className="sms-incoming-empty">
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+                </div>
+              ) : filteredOrders.length === 0 ? (
+                <div className="sms-incoming-empty sms-incoming-empty--tall">
+                  <PackageCheck className="w-10 h-10 text-slate-300 mb-2" />
+                  <div className="font-semibold text-slate-700">No open purchase orders</div>
+                  <p className="text-sm text-slate-500 mt-1">
+                    When procurement creates receivable purchase orders, they will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="sms-po-open-table-wrap">
+                  <table className="sms-po-open-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">PO number</th>
+                        <th scope="col">Supplier</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" className="sms-po-open-table-num">
+                          Units pending
+                        </th>
+                        <th scope="col">Created</th>
+                        <th scope="col" className="sms-po-open-table-action">
+                          <span className="sr-only">Open</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredOrders.map((order) => {
+                        const key = orderKey(order);
+                        const status =
+                          order.receiveStatus ||
+                          (order.receivedQty && order.receivedQty > 0
+                            ? 'Partially received'
+                            : 'Pending');
+                        return (
+                          <tr
+                            key={key}
+                            className="sms-po-open-table-row"
+                            onClick={() => setSelectedKey(key)}
+                          >
+                            <td className="sms-po-open-table-po">
+                              {order.poNumber || `PO #${order.id}`}
+                            </td>
+                            <td>{order.supplierName || 'Unknown supplier'}</td>
+                            <td>
+                              <span className={receiveStatusClass(status)}>{status}</span>
+                            </td>
+                            <td className="sms-po-open-table-num">
+                              {Number(order.remainingQty || 0).toLocaleString()}
+                            </td>
+                            <td className="sms-po-open-table-date">
+                              {order.createdAt ? formatDate(order.createdAt) : '—'}
+                            </td>
+                            <td className="sms-po-open-table-action">
+                              <button
+                                type="button"
+                                className="sms-desk-btn sms-desk-btn-secondary sms-btn-rounded sms-po-open-table-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedKey(key);
+                                }}
+                              >
+                                Open
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -696,11 +626,19 @@ export default function PurchaseOrderReceive({ warehouseId, onReceived }: Purcha
 
                     <div className="sms-incoming-footer-actions">
                       <p className="sms-incoming-footer-hint">
-                        Stock stays pending until the store manager confirms.
+                        {confirmToStock
+                          ? 'Accepted quantities are added to warehouse stock immediately. Leave qty at 0 to reject a line.'
+                          : 'Stock stays pending until the store manager confirms.'}
                       </p>
                       <button type="submit" disabled={saving} className="sms-btn-primary sms-btn-rounded">
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
-                        Record delivery for store
+                        {saving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : confirmToStock ? (
+                          <PackageCheck className="w-4 h-4" />
+                        ) : (
+                          <Truck className="w-4 h-4" />
+                        )}
+                        {confirmToStock ? 'Accept into stock' : 'Record delivery for store'}
                       </button>
                     </div>
                   </div>

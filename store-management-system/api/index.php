@@ -2656,14 +2656,20 @@ try {
             break;
 
         case 'purchase_order_receive':
-            if (!sms_can_manage_products()) {
-                sms_error('Purchase orders are received by Procurement. Store manager verifies at the warehouse.', 403);
+            if (!sms_can_receive_warehouse_stock()) {
+                sms_error('You do not have permission to receive purchase orders into this warehouse.', 403);
             }
 
             $poId = (int) ($_POST['po_id'] ?? 0);
             $warehouseId = (int) ($_POST['warehouse_id'] ?? 0);
             $source = trim((string) ($_POST['source'] ?? 'stocks'));
             $notes = trim((string) ($_POST['notes'] ?? ''));
+            // Store keepers confirm into stock; procurement records delivery for later verify.
+            $confirmToStock = !sms_can_manage_products();
+            if (array_key_exists('confirm_to_stock', $_POST)) {
+                $rawConfirm = strtolower(trim((string) $_POST['confirm_to_stock']));
+                $confirmToStock = in_array($rawConfirm, ['1', 'true', 'yes', 'on'], true);
+            }
             $receiveQuantities = $_POST['receive_qty'] ?? [];
             if (is_string($receiveQuantities)) {
                 $decoded = json_decode($receiveQuantities, true);
@@ -2722,10 +2728,61 @@ try {
                 }
             }
 
+            $verifiedCount = 0;
+            $verifyErrors = [];
+            if ($confirmToStock && $receiptIds !== [] && function_exists('storeReceiptVerify')) {
+                foreach ($receiptIds as $receiptId) {
+                    if ($receiptId <= 0) {
+                        continue;
+                    }
+                    $qty = 0.0;
+                    try {
+                        $qStmt = $pdo->prepare('SELECT qty_expected FROM store_warehouse_receipts WHERE id = ? LIMIT 1');
+                        $qStmt->execute([$receiptId]);
+                        $qty = (float) ($qStmt->fetchColumn() ?: 0);
+                    } catch (Throwable $e) {
+                        $qty = 0.0;
+                    }
+                    if ($qty <= 0) {
+                        continue;
+                    }
+                    $verify = storeReceiptVerify(
+                        $pdo,
+                        $receiptId,
+                        $warehouseId,
+                        $qty,
+                        $notes !== '' ? $notes : null,
+                        $userId
+                    );
+                    if (!empty($verify['ok'])) {
+                        $verifiedCount++;
+                    } else {
+                        $verifyErrors[] = (string) ($verify['message'] ?? ('Receipt #' . $receiptId));
+                    }
+                }
+            }
+
+            if ($confirmToStock) {
+                $message = $verifiedCount > 0
+                    ? sprintf(
+                        'Accepted into stock: %d product line%s from the purchase order.',
+                        $verifiedCount,
+                        $verifiedCount === 1 ? '' : 's'
+                    )
+                    : (string) ($result['message'] ?? 'Delivery recorded.');
+                if ($verifyErrors !== []) {
+                    $message .= ' Some lines need manual confirm: ' . implode('; ', array_slice($verifyErrors, 0, 3));
+                }
+            } else {
+                $message = (string) ($result['message'] ?? 'Delivery recorded — awaiting store confirmation');
+            }
+
             sms_json([
                 'success' => true,
-                'message' => (string) ($result['message'] ?? 'Delivery recorded — awaiting store confirmation'),
+                'message' => $message,
                 'pending_count' => (int) ($result['pending_count'] ?? 0),
+                'verified_count' => $verifiedCount,
+                'confirm_to_stock' => $confirmToStock,
             ]);
             break;
 

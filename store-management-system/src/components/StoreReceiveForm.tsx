@@ -8,23 +8,25 @@ interface StoreReceiveFormProps {
   warehouseId: number;
   products: Product[];
   canReceivePurchaseOrders?: boolean;
+  confirmPoToStock?: boolean;
   onReceived: () => Promise<void>;
 }
 
 type ReceiveMode = 'purchase' | 'verify';
 
 /**
- * Two-step receive:
- * - Procurement records PO delivery ? pending receipt (no stock yet)
- * - Store manager confirms ? on-hand stock increases
+ * Warehouse receive:
+ * - Purchase orders: open POs from procurement for the store keeper to accept into stock
+ * - Pending confirmations: leftover pending receipts (e.g. procurement-only delivery records)
  */
 export default function StoreReceiveForm({
   warehouseId,
   products,
-  canReceivePurchaseOrders = false,
+  canReceivePurchaseOrders = true,
+  confirmPoToStock = true,
   onReceived,
 }: StoreReceiveFormProps) {
-  const [mode, setMode] = useState<ReceiveMode>('verify');
+  const [mode, setMode] = useState<ReceiveMode>(canReceivePurchaseOrders ? 'purchase' : 'verify');
 
   return (
     <div className="sms-form-shell sms-form-shell--excel">
@@ -33,30 +35,32 @@ export default function StoreReceiveForm({
           <button
             type="button"
             role="tab"
-            aria-selected={mode === 'verify'}
-            className={`sms-desk-btn sms-btn-rounded${mode === 'verify' ? ' sms-desk-btn-primary' : ' sms-desk-btn-secondary'}`}
-            onClick={() => setMode('verify')}
-          >
-            <ClipboardCheck className="w-4 h-4" />
-            <span>Confirm into stock</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
             aria-selected={mode === 'purchase'}
             className={`sms-desk-btn sms-btn-rounded${mode === 'purchase' ? ' sms-desk-btn-primary' : ' sms-desk-btn-secondary'}`}
             onClick={() => setMode('purchase')}
           >
             <Truck className="w-4 h-4" />
-            <span>Record delivery</span>
+            <span>Purchase orders</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'verify'}
+            className={`sms-desk-btn sms-btn-rounded${mode === 'verify' ? ' sms-desk-btn-primary' : ' sms-desk-btn-secondary'}`}
+            onClick={() => setMode('verify')}
+          >
+            <ClipboardCheck className="w-4 h-4" />
+            <span>Pending confirmations</span>
           </button>
         </div>
       )}
 
       {mode === 'purchase' && canReceivePurchaseOrders ? (
-        <div className="sms-form-card sms-form-card--flush">
-          <PurchaseOrderReceive warehouseId={warehouseId} onReceived={onReceived} />
-        </div>
+        <PurchaseOrderReceive
+          warehouseId={warehouseId}
+          confirmToStock={confirmPoToStock}
+          onReceived={onReceived}
+        />
       ) : (
         <VerifyReceipts warehouseId={warehouseId} products={products} onVerified={onReceived} />
       )}

@@ -266,6 +266,15 @@ try {
         }
     }
 
+    // After each approval step, optionally WhatsApp the next person (Kapso/Meta).
+    if (function_exists('maybeAutoSendVoucherWhatsApp')) {
+        try {
+            maybeAutoSendVoucherWhatsApp((int) $voucher_id, (string) ($_SESSION['full_name'] ?? $uname ?? ''));
+        } catch (Throwable $eWa) {
+            error_log('approve_voucher WhatsApp notify failed: ' . $eWa->getMessage());
+        }
+    }
+
     // Log after commit so approval_logs FK issues cannot roll back the approval.
     try {
         logVoucherAction($voucher_id, $userId, 'approved');

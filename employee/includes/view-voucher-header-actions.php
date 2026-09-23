@@ -98,10 +98,44 @@ if (!defined('VV_ACTIONS_STYLES_PRINTED')) {
 
             <?php if (strtolower($statusLower) === 'pending'):
                 $notifyTarget = getVoucherNotificationTarget($voucher, $_SESSION['full_name'] ?? '');
-                if ($notifyTarget && !empty($notifyTarget['link'])): ?>
-                <a href="<?= htmlspecialchars($notifyTarget['link']) ?>" target="_blank" rel="noopener" class="dropdown-item dropdown-item--success">
+                if ($notifyTarget && !empty($notifyTarget['link'])):
+                    $notifyApi = function_exists('viewVoucherUiPublicUrl')
+                        ? viewVoucherUiPublicUrl('api/whatsapp-notify.php')
+                        : (function_exists('app_url') ? app_url('/view-voucher-ui/api/whatsapp-notify.php') : '/view-voucher-ui/api/whatsapp-notify.php');
+                ?>
+                <button
+                    type="button"
+                    class="dropdown-item dropdown-item--success"
+                    data-voucher-id="<?= (int) ($voucher['id'] ?? 0) ?>"
+                    data-notify-url="<?= htmlspecialchars($notifyApi, ENT_QUOTES, 'UTF-8') ?>"
+                    data-fallback="<?= htmlspecialchars($notifyTarget['link'], ENT_QUOTES, 'UTF-8') ?>"
+                    onclick="(async function(btn){
+                        var url = btn.getAttribute('data-notify-url');
+                        var vid = btn.getAttribute('data-voucher-id');
+                        var fallback = btn.getAttribute('data-fallback');
+                        btn.disabled = true;
+                        try {
+                            var res = await fetch(url, {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {'Content-Type':'application/json','Accept':'application/json'},
+                                body: JSON.stringify({voucher_id: Number(vid)})
+                            });
+                            var j = await res.json().catch(function(){ return {}; });
+                            if (j.ok && j.sent) {
+                                if (window.Swal) Swal.fire({toast:true,position:'top-end',icon:'success',title:j.message||'WhatsApp sent',showConfirmButton:false,timer:2800});
+                                return;
+                            }
+                            window.open(j.fallback_link || fallback, '_blank');
+                        } catch (e) {
+                            window.open(fallback, '_blank');
+                        } finally {
+                            btn.disabled = false;
+                        }
+                    })(this)"
+                >
                     <i class="fab fa-whatsapp" aria-hidden="true"></i> Notify <?= htmlspecialchars($notifyTarget['role']) ?>
-                </a>
+                </button>
             <?php endif; endif; ?>
 
             <?php

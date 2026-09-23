@@ -89,14 +89,20 @@ function emptyForm() {
   return {
     displayPhone: '',
     businessAccountId: '',
+    provider: 'kapso',
     phoneNumberId: '',
     accessToken: '',
     accessTokenSet: false,
     accessTokenMasked: '',
+    kapsoApiKey: '',
+    kapsoApiKeySet: false,
+    kapsoApiKeyMasked: '',
+    kapsoBaseUrl: 'https://api.kapso.ai/meta/whatsapp',
     webhookVerifyToken: '',
     groupLink: '',
     autoReplyEnabled: false,
     autoReplyText: 'Thanks - our team will get back to you shortly.',
+    autoSendVouchers: true,
   }
 }
 
@@ -125,6 +131,7 @@ export default function WhatsAppSettingsPage() {
   const [notice, setNotice] = useState('')
   const [copied, setCopied] = useState('')
   const [showToken, setShowToken] = useState(false)
+  const [showKapsoKey, setShowKapsoKey] = useState(false)
   const [countryCode, setCountryCode] = useState(() => splitPhone(form.displayPhone).countryCode)
   const [nationalPhone, setNationalPhone] = useState(() => splitPhone(form.displayPhone).national)
   const [countryOpen, setCountryOpen] = useState(false)
@@ -198,8 +205,12 @@ export default function WhatsAppSettingsPage() {
       return null
     }
     if (s === 2) {
-      if (!form.phoneNumberId.trim()) return 'Enter the Phone Number ID from Meta.'
-      if (!form.accessTokenSet && !form.accessToken.trim()) {
+      if (!form.phoneNumberId.trim()) return 'Enter the Phone Number ID from Kapso/Meta.'
+      if (form.provider === 'kapso') {
+        if (!form.kapsoApiKeySet && !form.kapsoApiKey.trim()) {
+          return 'Enter your Kapso API key.'
+        }
+      } else if (!form.accessTokenSet && !form.accessToken.trim()) {
         return 'Enter a Meta Cloud API access token.'
       }
       return null
@@ -245,7 +256,7 @@ export default function WhatsAppSettingsPage() {
       const data = await parseJson(res)
       if (!res.ok || data.success === false) throw new Error(data.error || 'Save failed')
       const next = data.data || {}
-      const nextForm = { ...emptyForm(), ...(next.form || {}), accessToken: '' }
+      const nextForm = { ...emptyForm(), ...(next.form || {}), accessToken: '', kapsoApiKey: '' }
       setForm(nextForm)
       const parsed = splitPhone(nextForm.displayPhone)
       setCountryCode(parsed.countryCode)
@@ -476,9 +487,37 @@ export default function WhatsAppSettingsPage() {
               <div className="wizard-row">
                 <div className="wizard-aside">
                   <h2>
+                    Provider<span className="req">*</span>
+                  </h2>
+                  <p>Kapso proxies Meta Cloud API. Use Meta direct if you have Graph tokens.</p>
+                </div>
+                <div className="wizard-auth-fields">
+                  <label className="same-pass">
+                    <input
+                      type="radio"
+                      name="wa-provider"
+                      checked={form.provider !== 'meta'}
+                      onChange={() => patch('provider', 'kapso')}
+                    />
+                    Kapso (recommended)
+                  </label>
+                  <label className="same-pass">
+                    <input
+                      type="radio"
+                      name="wa-provider"
+                      checked={form.provider === 'meta'}
+                      onChange={() => patch('provider', 'meta')}
+                    />
+                    Meta Cloud API (direct)
+                  </label>
+                </div>
+              </div>
+              <div className="wizard-row">
+                <div className="wizard-aside">
+                  <h2>
                     Phone Number ID<span className="req">*</span>
                   </h2>
-                  <p>From Meta WhatsApp - API Setup. Required to send messages.</p>
+                  <p>From Kapso phone numbers or Meta WhatsApp API Setup.</p>
                 </div>
                 <div className="wizard-auth-fields">
                   <div className="field-line">
@@ -494,46 +533,106 @@ export default function WhatsAppSettingsPage() {
                   </div>
                 </div>
               </div>
-              <div className="wizard-row">
-                <div className="wizard-aside">
-                  <h2>
-                    Access token<span className="req">*</span>
-                  </h2>
-                  <p>Temporary or system user token with whatsapp_business_messaging.</p>
-                </div>
-                <div className="wizard-auth-fields">
-                  <div className="field-line">
-                    <KeyRound size={18} aria-hidden />
-                    <input
-                      type={showToken ? 'text' : 'password'}
-                      value={form.accessToken}
-                      onChange={(e) => patch('accessToken', e.target.value)}
-                      placeholder={form.accessTokenSet ? 'Leave blank to keep saved token' : 'Access token'}
-                      autoComplete="new-password"
-                      aria-label="Access token"
-                    />
-                    <button
-                      type="button"
-                      className="field-eye"
-                      onClick={() => setShowToken((v) => !v)}
-                      aria-label={showToken ? 'Hide token' : 'Show token'}
-                    >
-                      {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+              {form.provider === 'kapso' ? (
+                <>
+                  <div className="wizard-row">
+                    <div className="wizard-aside">
+                      <h2>
+                        Kapso API key<span className="req">*</span>
+                      </h2>
+                      <p>Project key from Kapso → Integrations → API keys.</p>
+                    </div>
+                    <div className="wizard-auth-fields">
+                      <div className="field-line">
+                        <KeyRound size={18} aria-hidden />
+                        <input
+                          type={showKapsoKey ? 'text' : 'password'}
+                          value={form.kapsoApiKey}
+                          onChange={(e) => patch('kapsoApiKey', e.target.value)}
+                          placeholder={form.kapsoApiKeySet ? 'Leave blank to keep saved key' : 'Kapso API key'}
+                          autoComplete="new-password"
+                          aria-label="Kapso API key"
+                        />
+                        <button
+                          type="button"
+                          className="field-eye"
+                          onClick={() => setShowKapsoKey((v) => !v)}
+                          aria-label={showKapsoKey ? 'Hide key' : 'Show key'}
+                        >
+                          {showKapsoKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      {form.kapsoApiKeySet ? (
+                        <p className="field-hint">Saved key: {form.kapsoApiKeyMasked || '****'}</p>
+                      ) : null}
+                    </div>
                   </div>
-                  {form.accessTokenSet ? (
-                    <p className="field-hint">Saved token: {form.accessTokenMasked || '****'}</p>
-                  ) : null}
+                  <div className="wizard-row">
+                    <div className="wizard-aside">
+                      <h2>Kapso base URL</h2>
+                      <p>Usually leave as the default Kapso Meta proxy.</p>
+                    </div>
+                    <div className="wizard-auth-fields">
+                      <div className="field-line">
+                        <Link2 size={18} aria-hidden />
+                        <input
+                          type="url"
+                          value={form.kapsoBaseUrl || 'https://api.kapso.ai/meta/whatsapp'}
+                          onChange={(e) => patch('kapsoBaseUrl', e.target.value)}
+                          placeholder="https://api.kapso.ai/meta/whatsapp"
+                          autoComplete="off"
+                          aria-label="Kapso base URL"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="wizard-row">
+                  <div className="wizard-aside">
+                    <h2>
+                      Access token<span className="req">*</span>
+                    </h2>
+                    <p>Temporary or system user token with whatsapp_business_messaging.</p>
+                  </div>
+                  <div className="wizard-auth-fields">
+                    <div className="field-line">
+                      <KeyRound size={18} aria-hidden />
+                      <input
+                        type={showToken ? 'text' : 'password'}
+                        value={form.accessToken}
+                        onChange={(e) => patch('accessToken', e.target.value)}
+                        placeholder={form.accessTokenSet ? 'Leave blank to keep saved token' : 'Access token'}
+                        autoComplete="new-password"
+                        aria-label="Access token"
+                      />
+                      <button
+                        type="button"
+                        className="field-eye"
+                        onClick={() => setShowToken((v) => !v)}
+                        aria-label={showToken ? 'Hide token' : 'Show token'}
+                      >
+                        {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    {form.accessTokenSet ? (
+                      <p className="field-hint">Saved token: {form.accessTokenMasked || '****'}</p>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-              {links.metaDocs ? (
-                <p className="wizard-note">
-                  Need the values?{' '}
+              )}
+              <p className="wizard-note">
+                Need the values?{' '}
+                {form.provider === 'kapso' && links.kapsoDocs ? (
+                  <a href={links.kapsoDocs} target="_blank" rel="noreferrer">
+                    Kapso send docs
+                  </a>
+                ) : links.metaDocs ? (
                   <a href={links.metaDocs} target="_blank" rel="noreferrer">
                     Meta Cloud API docs
                   </a>
-                </p>
-              ) : null}
+                ) : null}
+              </p>
             </>
           ) : null}
 
@@ -614,15 +713,46 @@ export default function WhatsAppSettingsPage() {
                   </div>
                 </div>
               </div>
+              <div className="wizard-row">
+                <div className="wizard-aside">
+                  <h2>Payment vouchers</h2>
+                  <p>Send WhatsApp from your business line when vouchers are created or approved.</p>
+                </div>
+                <div className="wizard-auth-fields">
+                  <label className="same-pass">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form.autoSendVouchers)}
+                      onChange={(e) => patch('autoSendVouchers', e.target.checked)}
+                    />
+                    Auto-send on create / approve
+                  </label>
+                  <p className="field-hint">
+                    Notify still works manually from the voucher Actions menu. Without API credentials it opens wa.me.
+                  </p>
+                </div>
+              </div>
               <div className="setup-summary">
                 <strong>Ready to register</strong>
                 <ul>
                   <li>Phone: {form.displayPhone || '-'}</li>
+                  <li>Provider: {form.provider === 'kapso' ? 'Kapso' : 'Meta'}</li>
                   <li>Phone Number ID: {form.phoneNumberId || '-'}</li>
                   <li>
-                    Token:{' '}
-                    {form.accessToken ? 'new value' : form.accessTokenSet ? 'keep saved' : 'missing'}
+                    {form.provider === 'kapso' ? 'Kapso key: ' : 'Token: '}
+                    {form.provider === 'kapso'
+                      ? form.kapsoApiKey
+                        ? 'new value'
+                        : form.kapsoApiKeySet
+                          ? 'keep saved'
+                          : 'missing'
+                      : form.accessToken
+                        ? 'new value'
+                        : form.accessTokenSet
+                          ? 'keep saved'
+                          : 'missing'}
                   </li>
+                  <li>Voucher auto-send: {form.autoSendVouchers ? 'on' : 'off'}</li>
                   <li>Group link: {form.groupLink ? 'set' : 'optional'}</li>
                 </ul>
               </div>

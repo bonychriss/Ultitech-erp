@@ -13694,6 +13694,9 @@ function cleanWhatsAppNumber($number)
     return ltrim($clean, '+');
 }
 
+// Cloud API send helpers (Meta Graph / Kapso) used by payment voucher Notify.
+require_once __DIR__ . '/whatsapp-cloud.php';
+
 /**
  * Generate WhatsApp Link
  */

@@ -584,6 +584,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $e3) {
             error_log('notifyCheckedByAssignee failed: ' . $e3->getMessage());
         }
+        // Best-effort WhatsApp Cloud API notify (Kapso/Meta) when enabled
+        if (!$isDraft && function_exists('maybeAutoSendVoucherWhatsApp')) {
+            try {
+                maybeAutoSendVoucherWhatsApp((int) $voucher_id, (string) ($_SESSION['full_name'] ?? ''));
+            } catch (Throwable $eWa) {
+                error_log('maybeAutoSendVoucherWhatsApp failed: ' . $eWa->getMessage());
+            }
+        }
 
         // Safe redirect
         if ($isDraft) {

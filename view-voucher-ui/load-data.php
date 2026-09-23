@@ -419,7 +419,11 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     if ($statusLower === 'pending' && function_exists('getVoucherNotificationTarget')) {
         $nt = getVoucherNotificationTarget($voucher, $_SESSION['full_name'] ?? '');
         if ($nt && !empty($nt['link'])) {
-            $notifyTarget = ['role' => (string) ($nt['role'] ?? ''), 'link' => (string) $nt['link']];
+            $notifyTarget = [
+                'role' => (string) ($nt['role'] ?? ''),
+                'link' => (string) $nt['link'],
+                'cloudConfigured' => function_exists('whatsappCloudIsConfigured') && whatsappCloudIsConfigured(),
+            ];
         }
     }
 

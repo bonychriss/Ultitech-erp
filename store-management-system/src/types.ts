@@ -36,6 +36,9 @@ export interface StoreConfig {
   companyLogoUrl?: string;
   manageWarehousesUrl: string;
   canManageProducts: boolean;
+  canReceivePurchaseOrders?: boolean;
+  /** When true, accepting a PO adds stock immediately (store keeper). */
+  confirmPoToStock?: boolean;
   isSystemAdmin?: boolean;
   manageProductsUrl: string;
 }

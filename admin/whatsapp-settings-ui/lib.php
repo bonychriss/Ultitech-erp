@@ -127,6 +127,16 @@ function whatsappSettingsUiSetSetting(PDO $pdo, string $key, string $value): voi
 function whatsappSettingsUiGetPayload(PDO $pdo): array
 {
     $token = whatsappSettingsUiGetSetting($pdo, 'whatsapp_access_token');
+    $kapsoKey = whatsappSettingsUiGetSetting($pdo, 'whatsapp_kapso_api_key');
+    $provider = strtolower(trim(whatsappSettingsUiGetSetting($pdo, 'whatsapp_provider', 'meta')));
+    if ($provider !== 'kapso') {
+        $provider = 'meta';
+    }
+    $phoneNumberId = whatsappSettingsUiGetSetting($pdo, 'whatsapp_phone_number_id');
+    $configured = $phoneNumberId !== '' && (
+        ($provider === 'kapso' && $kapsoKey !== '')
+        || ($provider === 'meta' && $token !== '')
+    );
     $slug = trim((string) ($_SESSION['company_slug'] ?? ''));
     $backUrl = $slug !== ''
         ? company_url('admin/settings.php?module=settings', $slug)
@@ -139,10 +149,15 @@ function whatsappSettingsUiGetPayload(PDO $pdo): array
         'form' => [
             'displayPhone' => whatsappSettingsUiGetSetting($pdo, 'whatsapp_display_phone'),
             'businessAccountId' => whatsappSettingsUiGetSetting($pdo, 'whatsapp_business_account_id'),
-            'phoneNumberId' => whatsappSettingsUiGetSetting($pdo, 'whatsapp_phone_number_id'),
+            'provider' => $provider,
+            'phoneNumberId' => $phoneNumberId,
             'accessToken' => '',
             'accessTokenSet' => $token !== '',
             'accessTokenMasked' => $token !== '' ? (str_repeat('*', max(0, strlen($token) - 4)) . substr($token, -4)) : '',
+            'kapsoApiKey' => '',
+            'kapsoApiKeySet' => $kapsoKey !== '',
+            'kapsoApiKeyMasked' => $kapsoKey !== '' ? (str_repeat('*', max(0, strlen($kapsoKey) - 4)) . substr($kapsoKey, -4)) : '',
+            'kapsoBaseUrl' => whatsappSettingsUiGetSetting($pdo, 'whatsapp_kapso_base_url', 'https://api.kapso.ai/meta/whatsapp'),
             'webhookVerifyToken' => (static function () use ($pdo): string {
                 $token = whatsappSettingsUiGetSetting($pdo, 'whatsapp_webhook_verify_token');
                 if ($token === '') {
@@ -154,15 +169,17 @@ function whatsappSettingsUiGetPayload(PDO $pdo): array
             'groupLink' => whatsappSettingsUiGetSetting($pdo, 'whatsapp_group_link'),
             'autoReplyEnabled' => whatsappSettingsUiGetSetting($pdo, 'whatsapp_auto_reply_enabled', '0') === '1',
             'autoReplyText' => whatsappSettingsUiGetSetting($pdo, 'whatsapp_auto_reply_text', 'Thanks - our team will get back to you shortly.'),
+            'autoSendVouchers' => whatsappSettingsUiGetSetting($pdo, 'whatsapp_auto_send_vouchers', '0') === '1',
         ],
         'links' => [
             'backUrl' => $backUrl,
             'botUrl' => $botUrl,
             'webhookUrl' => rtrim($botUrl, '/') . '/index.php/api/webhook',
             'metaDocs' => 'https://developers.facebook.com/docs/whatsapp/cloud-api',
+            'kapsoDocs' => 'https://docs.kapso.ai/docs/whatsapp/send-messages/text',
         ],
         'meta' => [
-            'configured' => whatsappSettingsUiGetSetting($pdo, 'whatsapp_phone_number_id') !== '' && $token !== '',
+            'configured' => $configured,
             'companySlug' => $slug,
         ],
     ];
@@ -181,11 +198,16 @@ function whatsappSettingsUiSavePayload(PDO $pdo, array $input): array
         'webhookVerifyToken' => 'whatsapp_webhook_verify_token',
         'groupLink' => 'whatsapp_group_link',
         'autoReplyText' => 'whatsapp_auto_reply_text',
+        'kapsoBaseUrl' => 'whatsapp_kapso_base_url',
     ];
     foreach ($map as $field => $key) {
         if (array_key_exists($field, $input)) {
             whatsappSettingsUiSetSetting($pdo, $key, trim((string) $input[$field]));
         }
+    }
+    if (array_key_exists('provider', $input)) {
+        $provider = strtolower(trim((string) $input['provider']));
+        whatsappSettingsUiSetSetting($pdo, 'whatsapp_provider', $provider === 'kapso' ? 'kapso' : 'meta');
     }
     if (array_key_exists('autoReplyEnabled', $input)) {
         whatsappSettingsUiSetSetting(
@@ -193,6 +215,19 @@ function whatsappSettingsUiSavePayload(PDO $pdo, array $input): array
             'whatsapp_auto_reply_enabled',
             !empty($input['autoReplyEnabled']) ? '1' : '0'
         );
+    }
+    if (array_key_exists('autoSendVouchers', $input)) {
+        whatsappSettingsUiSetSetting(
+            $pdo,
+            'whatsapp_auto_send_vouchers',
+            !empty($input['autoSendVouchers']) ? '1' : '0'
+        );
+    }
+    if (array_key_exists('kapsoApiKey', $input)) {
+        $kapsoKey = trim((string) $input['kapsoApiKey']);
+        if ($kapsoKey !== '') {
+            whatsappSettingsUiSetSetting($pdo, 'whatsapp_kapso_api_key', $kapsoKey);
+        }
     }
     if (array_key_exists('accessToken', $input)) {
         $token = trim((string) $input['accessToken']);

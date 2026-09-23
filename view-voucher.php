@@ -200,6 +200,9 @@ $flash = [
 
 $vvConfig = [
     'apiUrl' => $assets['apiUrl'],
+    'notifyUrl' => $assets['notifyUrl'] ?? (function_exists('viewVoucherUiPublicUrl')
+        ? viewVoucherUiPublicUrl('api/whatsapp-notify.php')
+        : app_url('/view-voucher-ui/api/whatsapp-notify.php')),
     'voucherId' => $voucher_id,
     'data' => $vvData,
     'flash' => $flash,

@@ -485,9 +485,19 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     }
 
     $declaredCount = isset($voucher['supporting_documents']) ? (int) $voucher['supporting_documents'] : 0;
-    $visibleAttachmentCount = count($attachmentRows) + count($salesOrderDocs) + count($purchaseOrderDocs) + ($swiftProxy ? 1 : 0);
-    $mismatch = ($declaredCount > 0 && empty($attachmentRows) && empty($salesOrderDocs) && empty($purchaseOrderDocs));
-    $headerCount = $mismatch ? max($declaredCount, $visibleAttachmentCount) : $visibleAttachmentCount;
+    $uploadedFileCount = count($attachmentRows);
+    $visibleAttachmentCount = $uploadedFileCount + count($salesOrderDocs) + count($purchaseOrderDocs) + ($swiftProxy ? 1 : 0);
+    // Heal ghost qty: form posted a file count but nothing was stored on disk/DB.
+    if ($declaredCount !== $uploadedFileCount) {
+        try {
+            $pdo->prepare('UPDATE payment_vouchers SET supporting_documents = ? WHERE id = ?')
+                ->execute([$uploadedFileCount, $voucherId]);
+            $declaredCount = $uploadedFileCount;
+            $voucher['supporting_documents'] = $uploadedFileCount;
+        } catch (Throwable $e) { /* ignore */ }
+    }
+    $mismatch = false;
+    $headerCount = $visibleAttachmentCount;
 
     $paidBeforeProperApproval = $isPaid && ($statusLower !== 'approved' || ($voucher['approver_role'] ?? null) !== (defined('ROLE_ADMIN') ? ROLE_ADMIN : 'admin'));
     $showAnomaly = $paidBeforeProperApproval && (isAdmin() || isFinance());
@@ -507,7 +517,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 'prepared_by' => (string) ($voucher['prepared_by'] ?? ''),
                 'creator_name' => (string) ($voucher['creator_name'] ?? ''),
                 'description' => (string) ($voucher['description'] ?? ''),
-                'supporting_documents' => (string) ($voucher['supporting_documents'] ?? '0'),
+                'supporting_documents' => (string) $visibleAttachmentCount,
                 'currency' => (string) ($voucher['currency'] ?? 'TZS'),
                 'total_amount' => (float) ($voucher['total_amount'] ?? 0),
                 'date_created' => (string) ($voucher['date_created'] ?? ''),

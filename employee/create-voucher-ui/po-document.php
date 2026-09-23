@@ -46,8 +46,9 @@ $displayNo = (string) ($ctx['display_po_number'] ?? ('PO-' . $poId));
 header('Content-Type: text/html; charset=utf-8');
 header('X-Frame-Options: SAMEORIGIN');
 header('Cache-Control: no-store, no-cache, must-revalidate');
+$isEmbed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
 ?><!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= $isEmbed ? ' class="po-embed"' : '' ?>>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -64,6 +65,25 @@ header('Cache-Control: no-store, no-cache, must-revalidate');
         }
         body {
             padding: 20px 16px 32px;
+        }
+        html.po-embed,
+        html.po-embed body {
+            overflow: hidden !important;
+            background: #fff;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        html.po-embed::-webkit-scrollbar,
+        html.po-embed body::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+        html.po-embed body {
+            padding: 8px;
+        }
+        html.po-embed .sheet-container {
+            box-shadow: none;
         }
         #order-content {
             margin: 0 auto;

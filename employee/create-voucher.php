@@ -783,14 +783,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // If any files uploaded, update the numeric count field to reflect reality
-            if ($uploadedCount > 0) {
-                try {
-                    $up = $pdo->prepare("UPDATE payment_vouchers SET supporting_documents = ? WHERE id = ?");
-                    $up->execute([$uploadedCount, $voucher_id]);
-                } catch (Exception $e) { /* ignore */
-                }
-            }
+        }
+        // Always sync count to files actually stored (avoids ghost "1 document" with empty folder).
+        try {
+            $up = $pdo->prepare("UPDATE payment_vouchers SET supporting_documents = ? WHERE id = ?");
+            $up->execute([$uploadedCount, $voucher_id]);
+        } catch (Exception $e) { /* ignore */
         }
         if (function_exists('app_log')) {
             app_log('create-voucher: uploadedCount=' . $uploadedCount);

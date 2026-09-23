@@ -208,9 +208,6 @@ $vvConfig = [
     'flash' => $flash,
 ];
 
-$employeeHeaderTitle = 'Voucher Preview';
-$hideHeaderCompanyBranding = true;
-$GLOBALS['_erp_header_style_linked'] = true;
 $vvBreadcrumbHome = $vvData['breadcrumbs']['home'];
 $vvBreadcrumbAll = $vvData['breadcrumbs']['all'];
 $employeeHeaderSubtitle = '<nav class="vv-breadcrumb" aria-label="Breadcrumb">'
@@ -227,242 +224,74 @@ $employeeHeaderRightHtml = '<div class="vv-header-status-actions no-print">'
     . '<span class="vv-status-badge ' . $statusClass . '">' . $statusLabel . '</span>'
     . '<div id="vv-actions-header-mount" class="vv-toolbar-desktop"></div>'
     . '</div>';
-$vvActionsInHeader = true;
 
-$vvStyleCss = app_url('/assets/css/style.css');
-$vvViewCss = app_url('/assets/css/voucher-view-page.css');
-$vvDlCss = app_url('/assets/css/download-button.css');
-$vvApprovalCss = app_url('/assets/css/approval-flow.css');
-$vvCssV = (string) time();
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Voucher - <?= htmlspecialchars($vvData['voucher']['voucher_no'] ?? '') ?></title>
-    <link rel="stylesheet" href="<?= htmlspecialchars($vvStyleCss) ?>?v=<?= $vvCssV ?>">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="<?= htmlspecialchars($vvDlCss) ?>?v=<?= $vvCssV ?>">
-    <link rel="stylesheet" href="<?= htmlspecialchars($vvViewCss) ?>?v=<?= $vvCssV ?>">
-    <link rel="stylesheet" href="<?= htmlspecialchars($vvApprovalCss) ?>?v=<?= $vvCssV ?>">
-    <link rel="stylesheet" crossorigin href="<?= htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') ?>">
-    <?php require __DIR__ . '/includes/approval-flow-styles.php'; ?>
-    <?php require __DIR__ . '/includes/voucher-view-actions-styles.php'; ?>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        window.__VV_CFG__ = <?= json_encode($vvConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
-    </script>
-    <?php require __DIR__ . '/includes/nav-back-script.php'; ?>
-    <style>
-        :root { --vv-page-bg: #ffffff; }
-        body.dashboard.vv-view-voucher-page,
-        body.dashboard.vv-view-voucher-page .layout-main-wrapper,
-        body.dashboard.vv-view-voucher-page .layout-main-wrapper > .d-flex.flex-column {
-            background: var(--vv-page-bg) !important;
-            font-family: 'Inter', 'Poppins', system-ui, sans-serif;
-        }
-        /* Flat top header — same as employee/dashboard.php */
-        body.dashboard.vv-view-voucher-page .header,
-        body.dashboard.vv-view-voucher-page .employee-header,
-        body.dashboard.vv-view-voucher-page .admin-header {
-            background: var(--vv-page-bg) !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-        body.dashboard.vv-view-voucher-page .employee-header .header-content,
-        body.dashboard.vv-view-voucher-page .admin-header .header-content {
-            align-items: flex-start !important;
-            position: relative !important;
-            gap: 12px;
-            max-width: 1240px !important;
-            margin: 0 auto !important;
-            width: 100%;
-            padding: 14px 20px 12px 12px !important;
-            min-height: 0 !important;
-        }
-        body.dashboard.vv-view-voucher-page .employee-header .employee-header-page-heading {
-            align-self: flex-start !important;
-            min-width: 0;
-            flex: 1 1 auto;
-            padding-right: 96px;
-        }
-        /* Utility icons (theme + bell) pinned top-right; status/actions on row below */
-        body.dashboard.vv-view-voucher-page .employee-header .header-actions-tray {
-            position: absolute !important;
-            top: 12px !important;
-            right: 20px !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            display: grid !important;
-            grid-template-columns: auto auto;
-            grid-template-rows: auto auto;
-            gap: 6px 10px;
-            align-items: center !important;
-            justify-items: center !important;
-            width: auto !important;
-            flex-wrap: nowrap !important;
-        }
-        body.dashboard.vv-view-voucher-page .header-actions-tray .theme-toggle-btn {
-            grid-column: 1;
-            grid-row: 1;
-            margin: 0 !important;
-        }
-        body.dashboard.vv-view-voucher-page .header-actions-tray .theme-toggle-btn:not(.theme-toggle-glass) {
-            width: 36px !important;
-            height: 36px !important;
-            min-width: 36px !important;
-        }
-        body.dashboard.vv-view-voucher-page .header-actions-tray .theme-toggle-btn.theme-toggle-glass {
-            width: auto !important;
-            height: auto !important;
-            min-width: 0 !important;
-        }
-        body.dashboard.vv-view-voucher-page .header-actions-tray .notif {
-            grid-column: 2;
-            grid-row: 1;
-        }
-        body.dashboard.vv-view-voucher-page .header-actions-tray .header-notif-bell-btn {
-            width: 36px !important;
-            height: 36px !important;
-            min-width: 36px !important;
-            min-height: 36px !important;
-        }
-        body.dashboard.vv-view-voucher-page .header-actions-tray .vv-header-status-actions {
-            grid-column: 1 / -1;
-            grid-row: 2;
-            justify-content: flex-end !important;
-            width: 100%;
-        }
-        body.dashboard.vv-view-voucher-page .vv-header-status-actions {
-            display: inline-flex !important;
-            align-items: center !important;
-            gap: 10px !important;
-        }
-        body.dashboard.vv-view-voucher-page .vv-status-badge {
-            display: inline-flex !important;
-            align-items: center !important;
-            height: 36px;
-            padding: 0 14px !important;
-            line-height: 1;
-        }
-        body.dashboard.vv-view-voucher-page .vv-actions-btn {
-            height: 36px !important;
-            min-height: 36px !important;
-            padding: 0 16px !important;
-            display: inline-flex !important;
-            align-items: center !important;
-        }
-        @media (max-width: 767.98px) {
-            body.dashboard.vv-view-voucher-page .employee-header .header-content {
-                padding: 8px 12px 6px !important;
-                align-items: center !important;
-                min-height: 0 !important;
-            }
-            body.dashboard.vv-view-voucher-page .employee-header .employee-header-page-heading {
-                padding-right: 84px !important;
-            }
-            body.dashboard.vv-view-voucher-page .employee-header .header-actions-tray {
-                top: 8px !important;
-                right: 12px !important;
-                display: flex !important;
-                grid-template-columns: none !important;
-                grid-template-rows: none !important;
-                flex-direction: row !important;
-                gap: 8px !important;
-            }
-            body.dashboard.vv-view-voucher-page .header-actions-tray .vv-header-status-actions {
-                display: none !important;
-            }
-            body.dashboard.vv-view-voucher-page .employee-header-page-title {
-                font-size: 1.05rem !important;
-                color: #111827 !important;
-            }
-            .main-content.vv-react-shell {
-                padding: 0.5rem 0.75rem 1.5rem !important;
-            }
-            body.dashboard.vv-view-voucher-page #root .vv-voucher-toolbar.voucher-actions-bar {
-                display: flex !important;
-                justify-content: space-between !important;
-                align-items: center !important;
-                margin-bottom: 10px !important;
-            }
-            body.dashboard.vv-view-voucher-page #root .vv-voucher-toolbar .vv-actions-btn {
-                width: auto !important;
-            }
-        }
-        .main-content.vv-react-shell {
-            width: 100% !important;
-            max-width: none !important;
-            padding: 0.25rem 1.25rem 2rem !important;
-            box-sizing: border-box;
-            background: var(--vv-page-bg) !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-        .main-content.vv-react-shell #root { width: 100%; max-width: none; margin: 0; }
-        @media (max-width: 1024px) {
-            .main-content.vv-react-shell { padding: 1rem 0.875rem 1.5rem !important; }
-        }
-        @media (max-width: 767.98px) {
-            .main-content.vv-react-shell { padding: 0.5rem 0.75rem 1.5rem !important; }
-        }
-        body.dashboard.vv-view-voucher-page #root .vv-voucher-toolbar.voucher-actions-bar {
-            display: flex;
-            margin-bottom: 16px;
-        }
-        @media (min-width: 768px) {
-            body.dashboard.vv-view-voucher-page.vv-actions-in-header #root .vv-voucher-toolbar.voucher-actions-bar {
-                display: none !important;
-            }
-        }
-        body.dashboard.vv-view-voucher-page .vv-actions-btn,
-        body.dashboard.vv-view-voucher-page .vv-header-actions .vv-actions-btn {
-            border-radius: 9999px !important;
-        }
-    </style>
-</head>
-<body class="dashboard vv-view-voucher-page vv-actions-in-header">
-    <?php
-    if (isAdmin()) {
-        require_once __DIR__ . '/includes/header_admin.php';
-    } else {
-        require_once __DIR__ . '/includes/header_employee.php';
+// Render via erp-laravel (ViewVoucherShell + React view-voucher-ui).
+if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
+    $_GET['module'] = 'voucher';
+}
+$_SESSION['active_module'] = 'voucher';
+
+$slug = trim((string) ($_SESSION['company_slug'] ?? (function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : '')));
+if ($slug === '' && function_exists('getRequestedCompanySlug')) {
+    $slug = trim((string) getRequestedCompanySlug());
+}
+$backUrl = $slug !== ''
+    ? company_url('select-module', $slug)
+    : (function_exists('app_url') ? app_url('/select-module.php') : '/select-module.php');
+
+$publicUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+    . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
+    . (string) ($_SERVER['REQUEST_URI'] ?? '/view-voucher.php');
+$publicUrl = strtok($publicUrl, '?') ?: $publicUrl;
+
+$dbName = '';
+try {
+    if (isset($pdo) && $pdo instanceof PDO) {
+        $dbName = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
     }
-    ?>
+} catch (Throwable $e) {
+    $dbName = '';
+}
 
-    <main class="main-content vv-react-shell">
-        <noscript><div class="alert alert-warning">JavaScript is required to view this voucher.</div></noscript>
-        <div id="root"></div>
-    </main>
+$GLOBALS['ERP_VOUCHER_CONTEXT'] = [
+    'user_id' => (int) ($_SESSION['user_id'] ?? 0),
+    'full_name' => (string) ($_SESSION['full_name'] ?? ''),
+    'company_id' => (int) ($_SESSION['company_id'] ?? 0),
+    'company_slug' => $slug,
+    'back_url' => $backUrl,
+    'voucher_url' => $publicUrl,
+    'app_root' => rtrim((string) (function_exists('app_url') ? app_url('/') : '/public_html'), '/'),
+    'db_name' => $dbName !== '' ? $dbName : (defined('DB_NAME') ? (string) DB_NAME : ''),
+    'is_admin' => function_exists('isAdmin') && isAdmin(),
+    'is_finance' => function_exists('isFinance') && isFinance(),
+    'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'voucher',
+    'page_title' => 'Payment Voucher - ' . (string) ($vvData['voucher']['voucher_no'] ?? ''),
+    'header_title' => 'Voucher Preview',
+    'header_subtitle' => $employeeHeaderSubtitle,
+    'header_right_html' => $employeeHeaderRightHtml,
+    'client_cfg' => $vvConfig,
+];
 
-    <script type="module" crossorigin src="<?= htmlspecialchars($assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'], ENT_QUOTES, 'UTF-8') ?>"></script>
-    <style id="vv-flat-overrides">
-        html body.dashboard.vv-view-voucher-page .vv-content-card,
-        html body.dashboard.vv-view-voucher-page .vv-preview-section,
-        html body.dashboard.vv-view-voucher-page .vv-card-approval,
-        html body.dashboard.vv-view-voucher-page .vv-card-docs,
-        html body.dashboard.vv-view-voucher-page .approval-card,
-        html body.dashboard.vv-view-voucher-page .documents-card {
-            background: transparent !important;
-            border: none !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-        }
-        html body.dashboard.vv-view-voucher-page .voucher-container,
-        html body.dashboard.vv-view-voucher-page .voucher-paper,
-        html body.dashboard.vv-view-voucher-page #voucherFull {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-        }
-    </style>
-</body>
-</html>
+$GLOBALS['ERP_CONTEXT'] = $GLOBALS['ERP_VOUCHER_CONTEXT'];
+$GLOBALS['ERP_ROUTE'] = '/voucher/view';
+$GLOBALS['ERP_VOUCHER_ROUTE'] = '/voucher/view';
+
+$laravelRoot = __DIR__ . '/erp-laravel';
+$laravelAutoload = $laravelRoot . '/vendor/autoload.php';
+$laravelEnv = $laravelRoot . '/.env';
+$laravelEnvExample = $laravelRoot . '/.env.example';
+if (!is_file($laravelEnv) && is_file($laravelEnvExample)) {
+    @copy($laravelEnvExample, $laravelEnv);
+}
+
+if (!is_file($laravelAutoload)) {
+    http_response_code(503);
+    echo '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;">';
+    echo '<h1>erp-laravel required</h1>';
+    echo '<p>Run <code>composer install</code> in <code>erp-laravel/</code>.</p>';
+    echo '</body></html>';
+    exit;
+}
+
+require $laravelRoot . '/bootstrap/erp-bridge.php';
+exit;

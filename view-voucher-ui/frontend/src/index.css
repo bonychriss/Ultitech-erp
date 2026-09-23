@@ -164,19 +164,6 @@
   border-color: #b91c1c !important;
 }
 
-.vv-doc-card--missing {
-  opacity: 0.92;
-  border-style: dashed;
-}
-.vv-doc-icon--missing {
-  color: #b45309;
-  background: #fffbeb;
-}
-.vv-doc-card-foot--missing {
-  justify-content: center;
-}
-.vv-doc-missing-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #92400e;
+.vv-gmail-card--missing .vv-gmail-type {
+  background: #f9ab00;
 }

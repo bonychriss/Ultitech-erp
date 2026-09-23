@@ -96,6 +96,7 @@ return [
         'attendance' => 'attendance/attendance-ui/dist',
         'deliveries' => 'deliveries/deliveries-ui/frontend/dist',
         'voucher' => 'employee/create-voucher-ui/frontend/dist',
+        'view_voucher' => 'view-voucher-ui/frontend/dist',
     ],
 
     'sales_laravel_desks' => [

@@ -40,6 +40,9 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     $linkedSalesOrders = function_exists('fetchLinkedSalesOrdersForVoucher')
         ? fetchLinkedSalesOrdersForVoucher($voucher)
         : [];
+    $linkedPurchaseOrders = function_exists('fetchLinkedStockPurchaseOrdersForVoucher')
+        ? fetchLinkedStockPurchaseOrdersForVoucher($voucher)
+        : [];
 
     $isPaid = isset($voucher['is_paid']) && (int) $voucher['is_paid'] === 1;
     $isPosted = isset($voucher['is_posted']) && (int) $voucher['is_posted'] === 1;
@@ -334,6 +337,25 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         $salesOrderDocs[] = ['id' => $soId, 'orderNumber' => $soNo, 'pdfLink' => $soPdfLink];
     }
 
+    $purchaseOrderDocs = [];
+    $poDocBase = function_exists('app_url')
+        ? app_url('/employee/create-voucher-ui/po-document.php')
+        : '/employee/create-voucher-ui/po-document.php';
+    foreach ($linkedPurchaseOrders as $linkedPo) {
+        $poId = (int) ($linkedPo['id'] ?? 0);
+        if ($poId <= 0) {
+            continue;
+        }
+        $poNo = (string) ($linkedPo['po_number'] ?? ('PO-' . $poId));
+        $purchaseOrderDocs[] = [
+            'id' => $poId,
+            'poNumber' => $poNo,
+            'supplierName' => (string) ($linkedPo['supplier_name'] ?? ''),
+            'status' => (string) ($linkedPo['status'] ?? ''),
+            'viewLink' => $poDocBase . (str_contains($poDocBase, '?') ? '&' : '?') . 'id=' . $poId,
+        ];
+    }
+
     // Comments
     $comments = [];
     try {
@@ -463,8 +485,8 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     }
 
     $declaredCount = isset($voucher['supporting_documents']) ? (int) $voucher['supporting_documents'] : 0;
-    $visibleAttachmentCount = count($attachmentRows) + count($salesOrderDocs) + ($swiftProxy ? 1 : 0);
-    $mismatch = ($declaredCount > 0 && empty($attachmentRows) && empty($salesOrderDocs));
+    $visibleAttachmentCount = count($attachmentRows) + count($salesOrderDocs) + count($purchaseOrderDocs) + ($swiftProxy ? 1 : 0);
+    $mismatch = ($declaredCount > 0 && empty($attachmentRows) && empty($salesOrderDocs) && empty($purchaseOrderDocs));
     $headerCount = $mismatch ? max($declaredCount, $visibleAttachmentCount) : $visibleAttachmentCount;
 
     $paidBeforeProperApproval = $isPaid && ($statusLower !== 'approved' || ($voucher['approver_role'] ?? null) !== (defined('ROLE_ADMIN') ? ROLE_ADMIN : 'admin'));
@@ -513,12 +535,13 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             ],
             'attachments' => $attachmentRows,
             'salesOrderDocs' => $salesOrderDocs,
+            'purchaseOrderDocs' => $purchaseOrderDocs,
             'swiftProxy' => $swiftProxy,
             'documents' => [
                 'headerCount' => $headerCount,
                 'declaredCount' => $declaredCount,
                 'mismatch' => $mismatch,
-                'hasSupporting' => !empty($attachmentRows) || !empty($salesOrderDocs) || !empty($swiftProxy),
+                'hasSupporting' => !empty($attachmentRows) || !empty($salesOrderDocs) || !empty($purchaseOrderDocs) || !empty($swiftProxy) || $declaredCount > 0,
             ],
             'comments' => array_map(static function ($vc) {
                 return [

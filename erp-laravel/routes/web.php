@@ -31,6 +31,7 @@ use App\Http\Controllers\AttendancePageController;
 use App\Http\Controllers\DeliveriesPageController;
 use App\Http\Controllers\DriverKpiPageController;
 use App\Http\Controllers\CreateVoucherPageController;
+use App\Http\Controllers\ViewVoucherPageController;
 use App\Domains\CashBook\DeskShell as CashBookDeskShell;
 use App\Domains\Revenue\DeskShell as RevenueDeskShell;
 use App\Http\Middleware\AttachErpContext;
@@ -102,8 +103,9 @@ Route::middleware([AttachErpContext::class])->group(function () {
         ->where('id', '[0-9]+')
         ->name('cashbook.api');
 
-    // Create Payment Voucher (React UI under employee/create-voucher-ui; POST stays on create-voucher.php)
+    // Create / View Payment Voucher (React UIs; POST actions stay on PHP entry scripts)
     Route::get('/voucher/create', [CreateVoucherPageController::class, 'show'])->name('voucher.page.create');
+    Route::get('/voucher/view', [ViewVoucherPageController::class, 'show'])->name('voucher.page.view');
 
     // Accounting hub
     Route::get('/accounting', [AccountingPageController::class, 'show'])->name('accounting.page');

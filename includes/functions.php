@@ -11813,30 +11813,73 @@ function getVoucherAttachments($voucherId)
 {
     global $pdo;
     ensureVoucherAttachmentsSchema();
-    // Prepend 'assets/' to file_path to fix broken links (since file_path stored as 'uploads/vouchers/...')
-    // OR just rely on the stored path if it's relative.
-    // Let's check how it's stored.
-    // addVoucherAttachment stores: $storedPath.
-    // If ensureVoucherUploadsDir returns .../assets/uploads/vouchers, then $storedPath is likely just 'uploads/vouchers/...' or full path?
-    // Let's look at addVoucherAttachment again. It inserts $storedPath.
-    // Users reported link: http://localhost/assets/uploads/vouchers/109/...
-    // This implies the stored path starts with 'assets/'.
-    // If we are at localhost/view-voucher.php, a link to 'assets/...' means localhost/assets/... which IS correct.
-    // BUT the user says the BROKEN link is http://localhost/assets/...
-    // This means the link currently has a leading slash: '/assets/...'.
-    // I need to remove that leading slash or prepend 'staff/'.
-    // Best fix: Ensure the returned path is relative to the site root, not absolute to server root.
-    
+    $voucherId = (int) $voucherId;
     $stmt = $pdo->prepare("SELECT id, file_path, original_name, mime_type, size_bytes, uploaded_at FROM voucher_attachments WHERE voucher_id = ? ORDER BY id");
-    $stmt->execute([(int) $voucherId]);
-    $rows = $stmt->fetchAll();
-    
-    // Fix paths to be relative to site root (prepend assets/)
+    $stmt->execute([$voucherId]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    // Normalize stored paths to include assets/ prefix when missing.
     foreach ($rows as &$row) {
-        if (strpos($row['file_path'], 'assets/') === false) {
-             $row['file_path'] = 'assets/' . $row['file_path'];
+        $fp = (string) ($row['file_path'] ?? '');
+        if ($fp !== '' && strpos($fp, 'assets/') === false && !preg_match('#^https?://#i', $fp)) {
+            $row['file_path'] = 'assets/' . ltrim($fp, '/');
         }
     }
+    unset($row);
+
+    // Fallback: discover files on disk that were never recorded in voucher_attachments.
+    $diskDir = dirname(__DIR__) . '/assets/uploads/vouchers/' . $voucherId;
+    if (is_dir($diskDir)) {
+        $known = [];
+        foreach ($rows as $row) {
+            $known[strtolower(basename((string) ($row['file_path'] ?? '')))] = true;
+            $known[strtolower((string) ($row['original_name'] ?? ''))] = true;
+        }
+        $scan = @scandir($diskDir) ?: [];
+        $syntheticId = -1;
+        foreach ($scan as $fileName) {
+            if ($fileName === '.' || $fileName === '..') {
+                continue;
+            }
+            $abs = $diskDir . DIRECTORY_SEPARATOR . $fileName;
+            if (!is_file($abs)) {
+                continue;
+            }
+            // SWIFT proof is shown separately via voucher.swift_document.
+            if (stripos($fileName, 'swift-proof') === 0 || stripos($fileName, 'swift_proof') === 0) {
+                continue;
+            }
+            $baseKey = strtolower($fileName);
+            if (isset($known[$baseKey])) {
+                continue;
+            }
+            $rel = 'assets/uploads/vouchers/' . $voucherId . '/' . $fileName;
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $mime = 'application/octet-stream';
+            if (in_array($ext, ['jpg', 'jpeg'], true)) {
+                $mime = 'image/jpeg';
+            } elseif ($ext === 'png') {
+                $mime = 'image/png';
+            } elseif ($ext === 'gif') {
+                $mime = 'image/gif';
+            } elseif ($ext === 'webp') {
+                $mime = 'image/webp';
+            } elseif ($ext === 'pdf') {
+                $mime = 'application/pdf';
+            }
+            $rows[] = [
+                'id' => $syntheticId--,
+                'file_path' => $rel,
+                'original_name' => $fileName,
+                'mime_type' => $mime,
+                'size_bytes' => (int) @filesize($abs),
+                'uploaded_at' => date('Y-m-d H:i:s', (int) @filemtime($abs)),
+                '_from_disk' => true,
+            ];
+            $known[$baseKey] = true;
+        }
+    }
+
     return $rows;
 }
 
@@ -11953,6 +11996,83 @@ function fetchLinkedSalesOrdersForVoucher(array $voucher, $companyId = null): ar
         foreach ($linkedIds as $sid) {
             $stmtSo->execute(array_merge([(int) $sid], getCompanyParam($cid)));
             $row = $stmtSo->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $orders[] = $row;
+            }
+        }
+    } catch (Throwable $e) {
+        return [];
+    }
+    return $orders;
+}
+
+/**
+ * Parse linked stock purchase order id(s) stored on a payment voucher row.
+ *
+ * @return int[]
+ */
+function parseLinkedStockPoIdsFromVoucher(array $voucher): array
+{
+    $linkedIds = [];
+    $idsRaw = trim((string) ($voucher['linked_stock_po_ids'] ?? ''));
+    if ($idsRaw !== '') {
+        $decoded = json_decode($idsRaw, true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $idVal) {
+                $idInt = (int) $idVal;
+                if ($idInt > 0) {
+                    $linkedIds[$idInt] = $idInt;
+                }
+            }
+        } else {
+            foreach (preg_split('/\s*,\s*/', $idsRaw) as $idVal) {
+                $idInt = (int) $idVal;
+                if ($idInt > 0) {
+                    $linkedIds[$idInt] = $idInt;
+                }
+            }
+        }
+    }
+    if (empty($linkedIds) && !empty($voucher['linked_stock_po_id'])) {
+        $idInt = (int) $voucher['linked_stock_po_id'];
+        if ($idInt > 0) {
+            $linkedIds[$idInt] = $idInt;
+        }
+    }
+    return array_values($linkedIds);
+}
+
+/**
+ * Purchase orders linked to a voucher (for Supporting Documents cards).
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function fetchLinkedStockPurchaseOrdersForVoucher(array $voucher): array
+{
+    global $pdo;
+    $linkedIds = parseLinkedStockPoIdsFromVoucher($voucher);
+    if ($linkedIds === [] || !function_exists('tableExists') || !tableExists('stocks_purchase_orders', $pdo)) {
+        return [];
+    }
+    $orders = [];
+    $hasSuppliers = tableExists('stocks_suppliers', $pdo);
+    try {
+        $sql = $hasSuppliers
+            ? "SELECT po.id, po.po_number, po.status, po.created_at,
+                      COALESCE(ss.name, CONCAT('Supplier #', po.supplier_id)) AS supplier_name
+               FROM stocks_purchase_orders po
+               LEFT JOIN stocks_suppliers ss ON ss.id = po.supplier_id
+               WHERE po.id = ?
+               LIMIT 1"
+            : "SELECT po.id, po.po_number, po.status, po.created_at,
+                      CONCAT('Supplier #', po.supplier_id) AS supplier_name
+               FROM stocks_purchase_orders po
+               WHERE po.id = ?
+               LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        foreach ($linkedIds as $poId) {
+            $stmt->execute([(int) $poId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row) {
                 $orders[] = $row;
             }

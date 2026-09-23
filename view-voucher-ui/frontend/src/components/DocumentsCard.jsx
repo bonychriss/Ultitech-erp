@@ -55,7 +55,8 @@ function DocCard({ iconClass, name, sub, onView, viewHref, downloadHref, onDelet
 }
 
 export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
-  const { attachments, salesOrderDocs, swiftProxy, documents, permissions } = data
+  const { attachments, salesOrderDocs, purchaseOrderDocs, swiftProxy, documents, permissions } = data
+  const poDocs = Array.isArray(purchaseOrderDocs) ? purchaseOrderDocs : []
   if (!documents.hasSupporting && !documents.mismatch) return null
 
   return (
@@ -81,6 +82,17 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
             />
           ))}
 
+          {poDocs.map((po) => (
+            <DocCard
+              key={`po-${po.id}`}
+              iconClass="fa-file-invoice"
+              name={`${po.poNumber}.pdf`}
+              sub={po.supplierName ? `Purchase Order — ${po.supplierName}` : 'Purchase Order'}
+              viewHref={po.viewLink}
+              downloadHref={po.viewLink}
+            />
+          ))}
+
           {attachments.map((att) => (
             <DocCard
               key={att.id}
@@ -90,7 +102,7 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
               missing={!!att.missing}
               onView={att.missing ? undefined : () => onPreview(att.proxyLink, 'supporting', att.isImage)}
               downloadHref={att.missing ? undefined : att.proxyLink}
-              canDelete={permissions.canDeleteAttachment}
+              canDelete={permissions.canDeleteAttachment && att.id > 0}
               onDelete={() => onDeleteAttachment(att.id)}
             />
           ))}

@@ -1,4 +1,4 @@
-import { Truck, Car, Wrench } from 'lucide-react'
+import { Truck, Car } from 'lucide-react'
 import { CFG } from '../config.js'
 
 const HUB_VIDEO =
@@ -23,8 +23,6 @@ function HubCard({ href, ariaLabel, icon, label, value, sub, tone }) {
 export default function DeliveriesHubPage() {
   const urls = CFG.data?.urls || {}
   const deliveryUrl = urls.dashboard || 'index.php?module=deliveries'
-  const vehicleCareUrl = urls.driverKpiDelivery
-    || '../driver-kpi/index?module=driver_kpi&service=delivery'
   const rideUrl = urls.driverKpiRide || '../driver-kpi/index?module=driver_kpi&service=ride'
   const modulesUrl = urls.modules || '../select-module.php'
 
@@ -43,7 +41,7 @@ export default function DeliveriesHubPage() {
 
       <div className="dlv-hub-page">
         <p className="dlv-hub__lede">
-          Open the delivery desk, or record vehicle care and ride performance.
+          Choose Delivery desk or Ride service performance tracking.
         </p>
 
         <div className="dlv-hub__cards" role="list">
@@ -55,15 +53,6 @@ export default function DeliveriesHubPage() {
             label="Delivery"
             value="Desk"
             sub="Trips, pending & POD tracking"
-          />
-          <HubCard
-            href={vehicleCareUrl}
-            ariaLabel="Record vehicle care for delivery"
-            tone="amber"
-            icon={<Wrench size={18} strokeWidth={2} />}
-            label="Vehicle care"
-            value="Record"
-            sub="Maintenance & daily inspections"
           />
           <HubCard
             href={rideUrl}

@@ -2357,6 +2357,14 @@ a.dlv-kpi-card--link {
 .dlv-perf-breakdown-head .dlv-trace-section-title {
   margin-bottom: 0;
 }
+.dlv-trace-section--flat,
+.dlv-perf-breakdown {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+}
 .dlv-perf-about {
   position: relative;
   flex-shrink: 0;

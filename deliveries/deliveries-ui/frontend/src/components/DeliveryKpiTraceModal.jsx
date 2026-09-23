@@ -130,7 +130,7 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
       ) : null}
 
       {activeMetrics.length > 0 ? (
-        <section className="dlv-trace-section">
+        <section className="dlv-trace-section dlv-trace-section--flat dlv-perf-breakdown">
           <div className="dlv-perf-breakdown-head">
             <h3 className="dlv-trace-section-title">Score breakdown</h3>
             {activeCalculation.length > 0 ? (

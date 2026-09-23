@@ -149,6 +149,25 @@ RewriteRule ^driver-kpi/([^./]+)/?$ driver-kpi/$1.php [L,QSA,NC]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^driver-kpi/(.+)$ ../driver-kpi/$1?company_slug=ultimate [L,QSA]
 
+# ERP desks live at app-root /erp/* (no physical ultimate/erp/ tree).
+# Extensionless .../index must map to index.php or Apache serves the custom 404.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^erp/outstanding-invoices/?$ ../erp/outstanding-invoices/index.php?company_slug=ultimate&module=outstanding [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^erp/outstanding-invoices/index(\.php)?/?$ ../erp/outstanding-invoices/index.php?company_slug=ultimate&module=outstanding [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^erp/outstanding-invoices/(.+)$ ../erp/outstanding-invoices/$1?company_slug=ultimate&module=outstanding [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^erp/(.+)/index/?$ ../erp/$1/index.php?company_slug=ultimate [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^erp/([^/]+)/?$ ../erp/$1/index.php?company_slug=ultimate [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^erp/(.+)$ ../erp/$1?company_slug=ultimate [L,QSA]
+
 # Settings hub (extensionless select-module link → settings.php)
 RewriteRule ^admin/settings/?$ admin/settings.php [L,QSA,NC]
 

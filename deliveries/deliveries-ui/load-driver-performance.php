@@ -84,6 +84,31 @@ function deliveries_performance_weighted_score(float $onTime, float $vehicleCare
  */
 function deliveries_performance_resolve_driver(PDO $pdo, array $query = []): array
 {
+    $forceId = (int) ($query['force_driver_id'] ?? 0);
+    if ($forceId > 0) {
+        $name = 'Driver';
+        try {
+            $nameStmt = $pdo->prepare('SELECT full_name FROM users WHERE id = ? LIMIT 1');
+            $nameStmt->execute([$forceId]);
+            $name = trim((string) ($nameStmt->fetchColumn() ?: 'Driver'));
+        } catch (Throwable $e) {
+            /* keep default */
+        }
+        return [
+            'driver_id' => $forceId,
+            'driver_name' => $name !== '' ? $name : 'Driver',
+            'scope' => 'forced',
+        ];
+    }
+
+    if (!empty($query['force_fleet'])) {
+        return [
+            'driver_id' => 0,
+            'driver_name' => 'All drivers',
+            'scope' => 'fleet',
+        ];
+    }
+
     $orderId = (int) ($query['sel'] ?? $query['order_id'] ?? 0);
     $sessionUserId = (int) ($_SESSION['user_id'] ?? 0);
     $sessionName = trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Driver'));
@@ -627,5 +652,108 @@ function deliveries_compute_driver_performance(PDO $pdo, array $query = []): arr
         'suggestions' => $suggestions,
         'metrics' => $metrics,
         'items' => $items,
+        'drivers' => [],
     ];
+}
+
+/**
+ * Ranked driver performance board for the current week.
+ *
+ * @return list<array<string,mixed>>
+ */
+function deliveries_list_driver_performance_board(PDO $pdo, array $query = []): array
+{
+    $week = deliveries_performance_week_bounds(isset($query['week_start']) ? (string) $query['week_start'] : null);
+    $weekStart = $week['week_start'];
+    $weekEnd = $week['week_end'];
+
+    $driverRows = [];
+    try {
+        $sql = "
+            SELECT DISTINCT
+                COALESCE(NULLIF(t.driver_id, 0), NULLIF(o.requested_driver_id, 0)) AS driver_id,
+                COALESCE(u.full_name, u2.full_name, 'Driver') AS driver_name
+            FROM delivery_orders o
+            LEFT JOIN delivery_trips t ON o.trip_id = t.id
+            LEFT JOIN users u ON t.driver_id = u.id
+            LEFT JOIN users u2 ON o.requested_driver_id = u2.id
+            WHERE o.status IN ('delivered', 'completed')
+              AND o.completion_time IS NOT NULL
+              AND o.completion_time BETWEEN ? AND ?
+              AND COALESCE(NULLIF(t.driver_id, 0), NULLIF(o.requested_driver_id, 0)) IS NOT NULL
+            ORDER BY driver_name ASC
+            LIMIT 100
+        ";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$weekStart . ' 00:00:00', $weekEnd . ' 23:59:59']);
+        $driverRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        $driverRows = [];
+    }
+
+    // Also include drivers with vehicle-care KPI entries this week (even with no completed deliveries).
+    try {
+        $helpers = dirname(__DIR__, 2) . '/driver-kpi/includes/driver_kpi_helpers.php';
+        if (is_file($helpers)) {
+            require_once $helpers;
+            if (function_exists('dkpi_list_entries')) {
+                $entries = dkpi_list_entries($pdo, $weekStart, null, 'delivery');
+                $seen = [];
+                foreach ($driverRows as $row) {
+                    $seen[(int) ($row['driver_id'] ?? 0)] = true;
+                }
+                foreach ($entries as $entry) {
+                    $id = (int) ($entry['user_id'] ?? 0);
+                    if ($id <= 0 || isset($seen[$id])) {
+                        continue;
+                    }
+                    $seen[$id] = true;
+                    $driverRows[] = [
+                        'driver_id' => $id,
+                        'driver_name' => trim((string) ($entry['full_name'] ?? $entry['driver_name'] ?? 'Driver')),
+                    ];
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        /* keep delivery-based list */
+    }
+
+    $board = [];
+    foreach ($driverRows as $row) {
+        $id = (int) ($row['driver_id'] ?? 0);
+        if ($id <= 0) {
+            continue;
+        }
+        $name = trim((string) ($row['driver_name'] ?? 'Driver'));
+        $perf = deliveries_compute_driver_performance($pdo, [
+            'force_driver_id' => $id,
+            'skip_ai' => 1,
+            'week_start' => $weekStart,
+        ]);
+        $board[] = [
+            'id' => $id,
+            'name' => $name !== '' ? $name : (string) ($perf['driver_name'] ?? 'Driver'),
+            'score' => (float) ($perf['score'] ?? 0),
+            'on_time_pct' => (float) ($perf['on_time_pct'] ?? 0),
+            'vehicle_care_pct' => (float) ($perf['vehicle_care_pct'] ?? 0),
+            'documentation_pct' => (float) ($perf['documentation_pct'] ?? 0),
+            'completed' => (int) ($perf['counts']['completed'] ?? 0),
+            'signed' => (int) ($perf['counts']['signed'] ?? 0),
+            'metrics' => is_array($perf['metrics'] ?? null) ? $perf['metrics'] : [],
+            'calculation' => is_array($perf['calculation'] ?? null) ? $perf['calculation'] : [],
+            'suggestions' => is_array($perf['suggestions'] ?? null) ? $perf['suggestions'] : [],
+            'items' => is_array($perf['items'] ?? null) ? $perf['items'] : [],
+        ];
+    }
+
+    usort($board, static function (array $a, array $b): int {
+        $scoreCmp = ($b['score'] <=> $a['score']);
+        if ($scoreCmp !== 0) {
+            return $scoreCmp;
+        }
+        return strcasecmp((string) $a['name'], (string) $b['name']);
+    });
+
+    return $board;
 }

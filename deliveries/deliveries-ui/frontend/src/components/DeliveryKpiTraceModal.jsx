@@ -27,23 +27,107 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
   const metrics = Array.isArray(trace.metrics) ? trace.metrics : []
   const calculation = Array.isArray(trace.calculation) ? trace.calculation : []
   const suggestions = Array.isArray(trace.suggestions) ? trace.suggestions : []
+  const drivers = Array.isArray(trace.drivers) ? trace.drivers : []
   const [selectedKey, setSelectedKey] = useState(null)
+  const [selectedDriverId, setSelectedDriverId] = useState(null)
 
   useEffect(() => {
     setSelectedKey(null)
+    setSelectedDriverId(null)
   }, [trace])
 
-  const selectedMetric = metrics.find((metric) => (metric.key || metric.label) === selectedKey) || null
+  const selectedDriver = drivers.find((row) => Number(row.id) === Number(selectedDriverId)) || null
+  const showDriverBoard = drivers.length > 0 && !selectedDriver
+
+  const activeMetrics = selectedDriver
+    ? (Array.isArray(selectedDriver.metrics) ? selectedDriver.metrics : [])
+    : metrics
+  const activeCalculation = selectedDriver
+    ? (Array.isArray(selectedDriver.calculation) ? selectedDriver.calculation : [])
+    : calculation
+  const activeSuggestions = selectedDriver
+    ? (Array.isArray(selectedDriver.suggestions) ? selectedDriver.suggestions : [])
+    : suggestions
+  const activeItems = selectedDriver
+    ? (Array.isArray(selectedDriver.items) ? selectedDriver.items : [])
+    : items
+
+  const selectedMetric = activeMetrics.find((metric) => (metric.key || metric.label) === selectedKey) || null
   const metricTasks = Array.isArray(selectedMetric?.tasks) ? selectedMetric.tasks : []
+
+  if (showDriverBoard) {
+    return (
+      <section className="dlv-trace-section">
+        <h3 className="dlv-trace-section-title">Drivers this week</h3>
+        <p className="dlv-perf-hint">Click a driver to open their score breakdown.</p>
+        {drivers.length === 0 ? (
+          <p className="dlv-trace-empty">No drivers with scored activity this week.</p>
+        ) : (
+          <div className="dlv-perf-drivers">
+            {drivers.map((driver, index) => {
+              const score = Number(driver.score || 0)
+              const tone = score >= 85 ? 'green' : (score >= 70 ? 'amber' : 'red')
+              return (
+                <button
+                  key={driver.id || `${driver.name}-${index}`}
+                  type="button"
+                  className={`dlv-perf-driver dlv-perf-driver--${tone}`}
+                  onClick={() => {
+                    setSelectedDriverId(driver.id)
+                    setSelectedKey(null)
+                  }}
+                >
+                  <span className="dlv-perf-driver__rank">{index + 1}</span>
+                  <span className="dlv-perf-driver__body">
+                    <strong>{cellText(driver.name)}</strong>
+                    <span className="dlv-perf-driver__meta">
+                      On-time {Number(driver.on_time_pct || 0).toFixed(0)}%
+                      {' | '}
+                      Vehicle {Number(driver.vehicle_care_pct || 0).toFixed(0)}%
+                      {' | '}
+                      Docs {Number(driver.documentation_pct || 0).toFixed(0)}%
+                      {' | '}
+                      {Number(driver.completed || 0)} completed
+                    </span>
+                  </span>
+                  <span className="dlv-perf-driver__score">{score.toFixed(1)}%</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+        {trace.footnote ? <p className="dlv-trace-footnote">{trace.footnote}</p> : null}
+      </section>
+    )
+  }
 
   return (
     <>
-      {metrics.length > 0 ? (
+      {selectedDriver ? (
+        <div className="dlv-perf-driver-nav">
+          <button
+            type="button"
+            className="dlv-perf-back"
+            onClick={() => {
+              setSelectedDriverId(null)
+              setSelectedKey(null)
+            }}
+          >
+            &larr; All drivers
+          </button>
+          <div className="dlv-perf-driver-nav__title">
+            <strong>{cellText(selectedDriver.name)}</strong>
+            <span>{Number(selectedDriver.score || 0).toFixed(1)}%</span>
+          </div>
+        </div>
+      ) : null}
+
+      {activeMetrics.length > 0 ? (
         <section className="dlv-trace-section">
           <h3 className="dlv-trace-section-title">Score breakdown</h3>
           <p className="dlv-perf-hint">Click a card to see the tasks that built that score.</p>
           <div className="dlv-perf-metrics">
-            {metrics.map((metric) => {
+            {activeMetrics.map((metric) => {
               const key = metric.key || metric.label
               const selected = selectedKey === key
               return (
@@ -108,18 +192,18 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
         </section>
       ) : null}
 
-      {calculation.length > 0 ? (
+      {activeCalculation.length > 0 ? (
         <section className="dlv-trace-section">
           <h3 className="dlv-trace-section-title">How it was obtained</h3>
           <ol className="dlv-perf-calc">
-            {calculation.map((line, index) => (
+            {activeCalculation.map((line, index) => (
               <li key={`calc-${index}`}>{line}</li>
             ))}
           </ol>
         </section>
       ) : null}
 
-      {suggestions.length > 0 ? (
+      {activeSuggestions.length > 0 ? (
         <section className="dlv-trace-section">
           <div className="dlv-trace-grade-head">
             <h3 className="dlv-trace-section-title">AI suggestions</h3>
@@ -129,7 +213,7 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
             </span>
           </div>
           <ul className="dlv-perf-suggestions">
-            {suggestions.map((tip, index) => (
+            {activeSuggestions.map((tip, index) => (
               <li key={`tip-${index}`}>{tip}</li>
             ))}
           </ul>
@@ -138,8 +222,12 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
 
       {!selectedMetric ? (
         <section className="dlv-trace-section">
-          <h3 className="dlv-trace-section-title">{itemsHeading || 'Completed deliveries this week'}</h3>
-          {items.length === 0 ? (
+          <h3 className="dlv-trace-section-title">
+            {selectedDriver
+              ? `Completed deliveries (${activeItems.length})`
+              : (itemsHeading || 'Completed deliveries this week')}
+          </h3>
+          {activeItems.length === 0 ? (
             <p className="dlv-trace-empty">{emptyLabel || 'No completed deliveries in this week yet.'}</p>
           ) : (
             <div className="dlv-trace-table-wrap">
@@ -155,7 +243,7 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => (
+                  {activeItems.map((item) => (
                     <tr key={`${item.id}-${item.deliveryNumber}`}>
                       <td>
                         <span className="dlv-trace-delivery-no">{cellText(item.deliveryNumber)}</span>

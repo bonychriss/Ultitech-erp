@@ -2347,6 +2347,97 @@ a.dlv-kpi-card--link {
   font-size: 0.8125rem;
   color: #64748b;
 }
+.dlv-perf-drivers {
+  display: grid;
+  gap: 0.55rem;
+}
+.dlv-perf-driver {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.dlv-perf-driver:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+.dlv-perf-driver__rank {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dlv-perf-driver__body {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.dlv-perf-driver__body strong {
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+.dlv-perf-driver__meta {
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+.dlv-perf-driver__score {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+.dlv-perf-driver--green .dlv-perf-driver__score { color: #15803d; }
+.dlv-perf-driver--amber .dlv-perf-driver__score { color: #b45309; }
+.dlv-perf-driver--red .dlv-perf-driver__score { color: #b91c1c; }
+.dlv-perf-driver-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.dlv-perf-back {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: #334155;
+  cursor: pointer;
+}
+.dlv-perf-back:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.dlv-perf-driver-nav__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+.dlv-perf-driver-nav__title span {
+  font-weight: 700;
+  color: #475569;
+}
 .dlv-perf-metric {
   display: block;
   width: 100%;

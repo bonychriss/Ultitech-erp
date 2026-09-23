@@ -225,9 +225,35 @@ function deliveries_load_dashboard_payload(PDO $pdo, array $query = []): array
     ];
 
     require_once __DIR__ . '/load-driver-performance.php';
-    $performance = deliveries_compute_driver_performance($pdo, $query);
+    $perfQuery = is_array($query) ? $query : [];
+    $perfQuery['skip_ai'] = 1;
+    $sessionDept = trim((string) ($_SESSION['department'] ?? ''));
+    if (strcasecmp($sessionDept, 'Driver') !== 0) {
+        unset($perfQuery['sel'], $perfQuery['order_id']);
+        $perfQuery['force_fleet'] = 1;
+    }
+    $performance = deliveries_compute_driver_performance($pdo, $perfQuery);
+    $driversBoard = [];
+    if (!empty($perfQuery['force_fleet']) || (string) ($performance['scope'] ?? '') === 'fleet') {
+        try {
+            $driversBoard = deliveries_list_driver_performance_board($pdo, $perfQuery);
+        } catch (Throwable $e) {
+            $driversBoard = [];
+        }
+    }
+    $performance['drivers'] = $driversBoard;
+    if ($driversBoard !== [] && (string) ($performance['scope'] ?? '') === 'fleet') {
+        $sum = 0.0;
+        foreach ($driversBoard as $row) {
+            $sum += (float) ($row['score'] ?? 0);
+        }
+        $avg = round($sum / max(1, count($driversBoard)), 2);
+        $performance['score'] = $avg;
+        $performance['driver_name'] = count($driversBoard) . ' drivers';
+    }
     $stats['performanceScore'] = (float) ($performance['score'] ?? 0);
     $stats['performanceDriver'] = (string) ($performance['driver_name'] ?? '');
+    $stats['performanceDrivers'] = count($driversBoard);
 
     $traceOrderRows = [];
     try {
@@ -506,6 +532,7 @@ function deliveries_build_dashboard_kpi_traces(array $trips, array $orderRows, a
             'metrics' => is_array($perf['metrics'] ?? null) ? $perf['metrics'] : [],
             'calculation' => is_array($perf['calculation'] ?? null) ? $perf['calculation'] : [],
             'suggestions' => is_array($perf['suggestions'] ?? null) ? $perf['suggestions'] : [],
+            'drivers' => is_array($perf['drivers'] ?? null) ? $perf['drivers'] : [],
             'driverName' => $driverName,
             'weekLabel' => $weekLabel,
             'score' => $score,

@@ -92,7 +92,6 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
     : items
 
   const selectedMetric = activeMetrics.find((metric) => (metric.key || metric.label) === selectedKey) || null
-  const metricTasks = Array.isArray(selectedMetric?.tasks) ? selectedMetric.tasks : []
 
   if (showDriverBoard) {
     return (
@@ -131,70 +130,83 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
       {activeMetrics.length > 0 ? (
         <section className="dlv-trace-section">
           <h3 className="dlv-trace-section-title">Score breakdown</h3>
-          <p className="dlv-perf-hint">Click a card to see the tasks that built that score.</p>
+          <p className="dlv-perf-hint">Click a metric to drop down the related deliveries or tasks.</p>
           <div className="dlv-perf-metrics">
             {activeMetrics.map((metric) => {
               const key = metric.key || metric.label
               const selected = selectedKey === key
+              const tasks = Array.isArray(metric.tasks) ? metric.tasks : []
+              const isOnTime = key === 'on_time'
               return (
-                <button
-                  key={key}
-                  type="button"
-                  className={`dlv-perf-metric${selected ? ' is-selected' : ''}`}
-                  aria-pressed={selected}
-                  onClick={() => setSelectedKey((prev) => (prev === key ? null : key))}
-                >
-                  <div className="dlv-perf-metric__head">
-                    <strong>{cellText(metric.label)}</strong>
-                    <span>{Number(metric.actual || 0).toFixed(1)}%</span>
-                  </div>
-                  <p className="dlv-perf-metric__desc">{cellText(metric.description)}</p>
-                  <div className="dlv-perf-metric__meta">
-                    <span>Target {Number(metric.target || 0).toFixed(0)}%</span>
-                    <span>Weight {Number(metric.weight || 0).toFixed(0)}%</span>
-                    <span>Achievement {Number(metric.achievement || 0).toFixed(1)}%</span>
-                  </div>
-                  <div className="dlv-perf-metric__bar" aria-hidden="true">
-                    <span style={{ width: `${Math.min(100, Math.max(0, Number(metric.actual || 0)))}%` }} />
-                  </div>
-                </button>
+                <div key={key} className={`dlv-perf-metric-block${selected ? ' is-open' : ''}`}>
+                  <button
+                    type="button"
+                    className={`dlv-perf-metric${selected ? ' is-selected' : ''}`}
+                    aria-expanded={selected}
+                    aria-pressed={selected}
+                    onClick={() => setSelectedKey((prev) => (prev === key ? null : key))}
+                  >
+                    <div className="dlv-perf-metric__head">
+                      <strong>{cellText(metric.label)}</strong>
+                      <span className="dlv-perf-metric__pct">{Number(metric.actual || 0).toFixed(1)}%</span>
+                    </div>
+                    <p className="dlv-perf-metric__desc">{cellText(metric.description)}</p>
+                    <div className="dlv-perf-metric__meta">
+                      <span>Target {Number(metric.target || 0).toFixed(0)}%</span>
+                      <span>Weight {Number(metric.weight || 0).toFixed(0)}%</span>
+                      <span>Achievement {Number(metric.achievement || 0).toFixed(1)}%</span>
+                    </div>
+                    <div className="dlv-perf-metric__bar" aria-hidden="true">
+                      <span style={{ width: `${Math.min(100, Math.max(0, Number(metric.actual || 0)))}%` }} />
+                    </div>
+                  </button>
+
+                  {selected ? (
+                    <div className="dlv-perf-dropdown" aria-live="polite">
+                      <div className="dlv-perf-dropdown__head">
+                        <span>
+                          {isOnTime
+                            ? 'Deliveries'
+                            : cellText(metric.tasksTitle || `${metric.label} tasks`)}
+                        </span>
+                        <span className="dlv-perf-dropdown__count">{tasks.length}</span>
+                      </div>
+                      {tasks.length === 0 ? (
+                        <p className="dlv-trace-empty">
+                          {cellText(
+                            metric.tasksEmpty
+                              || (isOnTime
+                                ? 'No completed deliveries for this driver this week.'
+                                : 'No tasks contributed to this score yet.'),
+                          )}
+                        </p>
+                      ) : (
+                        <ul className="dlv-perf-dropdown__list">
+                          {tasks.map((task) => (
+                            <li
+                              key={task.id || `${task.title}-${task.at}`}
+                              className={`dlv-perf-dropdown__item${task.ok === false ? ' is-miss' : ' is-ok'}`}
+                            >
+                              <div className="dlv-perf-dropdown__row">
+                                <strong>{cellText(task.title)}</strong>
+                                {task.at ? (
+                                  <span className="dlv-trace-muted">{formatDate(task.at)}</span>
+                                ) : null}
+                              </div>
+                              <p className="dlv-perf-dropdown__detail">{cellText(task.detail)}</p>
+                              {task.result ? (
+                                <span className="dlv-perf-dropdown__result">{cellText(task.result)}</span>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               )
             })}
           </div>
-
-          {selectedMetric ? (
-            <div className="dlv-perf-tasks" aria-live="polite">
-              <div className="dlv-perf-tasks__head">
-                <h4 className="dlv-perf-tasks__title">
-                  {cellText(selectedMetric.tasksTitle || `${selectedMetric.label} tasks`)}
-                </h4>
-                <span className="dlv-perf-tasks__count">{metricTasks.length}</span>
-              </div>
-              {metricTasks.length === 0 ? (
-                <p className="dlv-trace-empty">
-                  {cellText(selectedMetric.tasksEmpty || 'No tasks contributed to this score yet.')}
-                </p>
-              ) : (
-                <ol className="dlv-perf-task-list">
-                  {metricTasks.map((task) => (
-                    <li
-                      key={task.id || `${task.title}-${task.at}`}
-                      className={`dlv-perf-task${task.ok === false ? ' is-miss' : ' is-ok'}`}
-                    >
-                      <div className="dlv-perf-task__top">
-                        <strong>{cellText(task.title)}</strong>
-                        {task.at ? (
-                          <span className="dlv-trace-muted">{formatDate(task.at)}</span>
-                        ) : null}
-                      </div>
-                      <p className="dlv-perf-task__detail">{cellText(task.detail)}</p>
-                      <span className="dlv-perf-task__result">{cellText(task.result)}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
-          ) : null}
         </section>
       ) : null}
 

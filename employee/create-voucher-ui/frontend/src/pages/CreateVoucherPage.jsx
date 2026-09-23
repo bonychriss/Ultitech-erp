@@ -1,9 +1,52 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Plus, Trash2, UserPlus, Loader2, X, CheckCircle2, AlertCircle,
-  FileText, Info, Search, ChevronDown, Link2, UploadCloud, Check, Save,
+  FileText, Info, Search, ChevronDown, Link2, UploadCloud, Check, Save, Eye, ArrowLeft,
 } from 'lucide-react'
 import { CFG, CURRENCIES, IS_EDIT, IS_LIMITED, currencySymbol, currencyMeta, formatMoney } from '../config.js'
+
+const CV_DRAFT_KEY = `cv_create_draft_v1_${CFG.module || 'voucher'}`
+
+function readCreateDraft() {
+  if (IS_EDIT || typeof sessionStorage === 'undefined') return null
+  try {
+    const raw = sessionStorage.getItem(CV_DRAFT_KEY)
+    if (!raw) return null
+    const data = JSON.parse(raw)
+    if (!data || typeof data !== 'object') return null
+    // Ignore stale drafts older than 7 days.
+    const savedAt = Number(data.savedAt || 0)
+    if (savedAt > 0 && Date.now() - savedAt > 7 * 24 * 60 * 60 * 1000) {
+      sessionStorage.removeItem(CV_DRAFT_KEY)
+      return null
+    }
+    return data
+  } catch {
+    return null
+  }
+}
+
+function writeCreateDraft(snapshot) {
+  if (IS_EDIT || typeof sessionStorage === 'undefined') return
+  try {
+    sessionStorage.setItem(CV_DRAFT_KEY, JSON.stringify({ ...snapshot, savedAt: Date.now() }))
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function clearCreateDraft() {
+  if (typeof sessionStorage === 'undefined') return
+  try {
+    sessionStorage.removeItem(CV_DRAFT_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Snapshot restored once at boot (create mode only). */
+const BOOT_DRAFT = readCreateDraft()
 
 function newItem(seed = {}) {
   return {
@@ -16,6 +59,9 @@ function newItem(seed = {}) {
 }
 
 function initialItems() {
+  if (!IS_EDIT && Array.isArray(BOOT_DRAFT?.items) && BOOT_DRAFT.items.length > 0) {
+    return BOOT_DRAFT.items.map((row) => newItem(row))
+  }
   const rows = CFG.initial?.items
   if (Array.isArray(rows) && rows.length > 0) {
     return rows.map((row) => newItem(row))
@@ -24,11 +70,41 @@ function initialItems() {
 }
 
 function initialLinkedSO() {
+  if (!IS_EDIT && Array.isArray(BOOT_DRAFT?.linked_sales_order_ids) && BOOT_DRAFT.linked_sales_order_ids.length > 0) {
+    return new Set(BOOT_DRAFT.linked_sales_order_ids.map((id) => Number(id)).filter((id) => id > 0))
+  }
   const ids = CFG.initial?.linked_sales_order_ids
   if (Array.isArray(ids) && ids.length > 0) {
     return new Set(ids.map((id) => Number(id)).filter((id) => id > 0))
   }
   return new Set()
+}
+
+function initialLinkedPO() {
+  if (!IS_EDIT) {
+    if (Array.isArray(BOOT_DRAFT?.linked_stock_po_ids) && BOOT_DRAFT.linked_stock_po_ids.length > 0) {
+      return new Set(BOOT_DRAFT.linked_stock_po_ids.map((id) => Number(id)).filter((id) => id > 0))
+    }
+    const singleDraft = Number(BOOT_DRAFT?.linked_stock_po_id || 0)
+    if (singleDraft > 0) return new Set([singleDraft])
+  }
+  const ids = CFG.initial?.linked_stock_po_ids
+  if (Array.isArray(ids) && ids.length > 0) {
+    return new Set(ids.map((id) => Number(id)).filter((id) => id > 0))
+  }
+  const single = Number(CFG.initial?.linked_stock_po_id || 0)
+  return single > 0 ? new Set([single]) : new Set()
+}
+
+function draftOr(key, fallback) {
+  if (IS_EDIT || !BOOT_DRAFT || BOOT_DRAFT[key] === undefined || BOOT_DRAFT[key] === null) return fallback
+  return BOOT_DRAFT[key]
+}
+
+function poDocumentHref(poId) {
+  const base = String(CFG.poDocumentUrl || '').replace(/\?.*$/, '')
+  if (!base || !poId) return ''
+  return `${base}${base.includes('?') ? '&' : '?'}id=${encodeURIComponent(poId)}`
 }
 
 export default function CreateVoucherPage() {
@@ -41,31 +117,34 @@ export default function CreateVoucherPage() {
 
   const init = CFG.initial || {}
   const [payees, setPayees] = useState(CFG.payees)
-  const [payeeId, setPayeeId] = useState(init.payee_id ? String(init.payee_id) : '')
-  const [currency, setCurrency] = useState(init.currency || CFG.currencies[0] || 'TZS')
-  const [dateCreated, setDateCreated] = useState(init.date_created || CFG.today)
-  const [purpose, setPurpose] = useState(init.purpose || CFG.purposes[0]?.value || 'general')
-  const [isRestricted, setIsRestricted] = useState(!!init.is_restricted)
+  const [payeeId, setPayeeId] = useState(() => String(draftOr('payeeId', init.payee_id ? String(init.payee_id) : '') || ''))
+  const [currency, setCurrency] = useState(() => String(draftOr('currency', init.currency || CFG.currencies[0] || 'TZS') || 'TZS'))
+  const [dateCreated, setDateCreated] = useState(() => String(draftOr('dateCreated', init.date_created || CFG.today) || CFG.today))
+  const [purpose, setPurpose] = useState(() => String(draftOr('purpose', init.purpose || CFG.purposes[0]?.value || 'general') || 'general'))
+  const [isRestricted, setIsRestricted] = useState(() => !!draftOr('isRestricted', !!init.is_restricted))
   const [items, setItems] = useState(initialItems)
-  const [description, setDescription] = useState(init.description || '')
-  const [applicant, setApplicant] = useState(init.applicant || '')
-  const [departmentManager, setDepartmentManager] = useState(init.department_manager || '')
-  const [checkedBy, setCheckedBy] = useState(init.checked_by || '')
+  const [description, setDescription] = useState(() => String(draftOr('description', init.description || '') || ''))
+  const [applicant, setApplicant] = useState(() => String(draftOr('applicant', init.applicant || '') || ''))
+  const [departmentManager, setDepartmentManager] = useState(() => String(draftOr('departmentManager', init.department_manager || '') || ''))
+  const [checkedBy, setCheckedBy] = useState(() => String(draftOr('checkedBy', init.checked_by || '') || ''))
   const [files, setFiles] = useState([])
   const [existingAttachments, setExistingAttachments] = useState(() => [...CFG.attachments])
   const [selectedSO, setSelectedSO] = useState(initialLinkedSO)
-  const [linkedStockPoId, setLinkedStockPoId] = useState(
-    init.linked_stock_po_id ? String(init.linked_stock_po_id) : '',
-  )
+  const [selectedPO, setSelectedPO] = useState(initialLinkedPO)
   const [poSearch, setPoSearch] = useState('')
   const [poOpen, setPoOpen] = useState(false)
+  const [poViewDetail, setPoViewDetail] = useState(null)
+  const [poViewLoading, setPoViewLoading] = useState(false)
+  const [poViewError, setPoViewError] = useState('')
   const [soSearch, setSoSearch] = useState('')
   const [soOpen, setSoOpen] = useState(false)
   const [currencyOpen, setCurrencyOpen] = useState(false)
   const currencyRef = useRef(null)
 
   const isStockPurchase = purpose === 'stock_purchase'
-  const hasLinkedPo = !!linkedStockPoId
+  const hasLinkedPo = selectedPO.size > 0
+  const linkedStockPoId = hasLinkedPo ? String(Array.from(selectedPO)[0]) : ''
+  const linkedPoIdsCsv = Array.from(selectedPO).join(',')
 
   const [submitting, setSubmitting] = useState(false)
   const [showErrors, setShowErrors] = useState(false)
@@ -102,25 +181,77 @@ export default function CreateVoucherPage() {
   const purchaseOrders = CFG.purchaseOrders || []
   const filteredPO = useMemo(() => {
     const q = poSearch.trim().toLowerCase()
-    if (!q) return purchaseOrders
-    return purchaseOrders.filter((po) =>
-      [po.po_number, po.supplier_name, po.status]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q)),
-    )
-  }, [purchaseOrders, poSearch])
+    let rows = purchaseOrders
+    if (q) {
+      rows = purchaseOrders.filter((po) =>
+        [po.po_number, po.supplier_name, po.status]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q)),
+      )
+    }
+    // Keep selected POs at the very top of the popup list.
+    if (selectedPO.size === 0) return rows
+    const selected = []
+    const rest = []
+    rows.forEach((po) => {
+      if (selectedPO.has(Number(po.id))) selected.push(po)
+      else rest.push(po)
+    })
+    return [...selected, ...rest]
+  }, [purchaseOrders, poSearch, selectedPO])
 
-  const selectedPo = useMemo(
-    () => purchaseOrders.find((po) => String(po.id) === String(linkedStockPoId)) || null,
-    [purchaseOrders, linkedStockPoId],
+  const selectedPoRows = useMemo(
+    () => purchaseOrders.filter((po) => selectedPO.has(Number(po.id))),
+    [purchaseOrders, selectedPO],
   )
 
   // Keep a live snapshot for the unload handler (which binds once).
   latestRef.current = { payeeId, description, items }
 
+  // Persist create-form input so browser refresh keeps the user's work.
+  useEffect(() => {
+    if (IS_EDIT) return undefined
+    const t = window.setTimeout(() => {
+      writeCreateDraft({
+        payeeId,
+        currency,
+        dateCreated,
+        purpose,
+        isRestricted,
+        description,
+        applicant,
+        departmentManager,
+        checkedBy,
+        items: items.map((it) => ({
+          payment_type: it.payment_type || '',
+          budget_type: it.budget_type || '',
+          amount: it.amount || '',
+          item_description: it.item_description || '',
+        })),
+        linked_sales_order_ids: Array.from(selectedSO),
+        linked_stock_po_ids: Array.from(selectedPO),
+      })
+    }, 200)
+    return () => window.clearTimeout(t)
+  }, [
+    payeeId,
+    currency,
+    dateCreated,
+    purpose,
+    isRestricted,
+    description,
+    applicant,
+    departmentManager,
+    checkedBy,
+    items,
+    selectedSO,
+    selectedPO,
+  ])
+
   // Auto-save an editable DRAFT if the user leaves the page with meaningful,
   // unsubmitted input. Reuses the existing action=draft backend flow.
   // Disabled in edit mode — never create a new draft from an existing voucher.
+  // Browser refresh is primarily handled by sessionStorage above.
   useEffect(() => {
     if (IS_EDIT) return undefined
     function hasMeaningfulInput() {
@@ -134,9 +265,10 @@ export default function CreateVoucherPage() {
           it.budget_type !== '',
       )
     }
-    function autoSaveDraft() {
+    function autoSaveDraft(ev) {
       if (submittedRef.current || autoDraftedRef.current) return
       if (!formRef.current || !hasMeaningfulInput()) return
+      if (ev?.persisted) return
       autoDraftedRef.current = true
       try {
         const fd = new FormData(formRef.current)
@@ -188,6 +320,72 @@ export default function CreateVoucherPage() {
       // Last remaining row: clear it instead of removing the only line.
       return [{ ...newItem(), payment_type: '' }]
     })
+  }
+
+  function togglePO(id) {
+    const n = Number(id)
+    if (!(n > 0)) return
+    setSelectedPO((prev) => {
+      const next = new Set(prev)
+      if (next.has(n)) next.delete(n)
+      else next.add(n)
+      return next
+    })
+  }
+
+  function closePoModal() {
+    setPoOpen(false)
+    setPoSearch('')
+    setPoViewDetail(null)
+    setPoViewError('')
+    setPoViewLoading(false)
+  }
+
+  async function openPoView(poId) {
+    const id = Number(poId)
+    if (!(id > 0)) return
+    setPoViewError('')
+    setPoViewLoading(true)
+    // Show document frame immediately; use list row as fallback header while detail loads.
+    const listRow = purchaseOrders.find((po) => Number(po.id) === id) || null
+    setPoViewDetail({
+      id,
+      po_number: listRow?.po_number || `PO #${id}`,
+      supplier_name: listRow?.supplier_name || '',
+      status: listRow?.status || '',
+      document_url: poDocumentHref(id),
+      items: [],
+    })
+    try {
+      const fd = new FormData()
+      fd.append('action', 'ajax_view_po')
+      fd.append('po_id', String(id))
+      const res = await fetch(CFG.postUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+      const data = await res.json()
+      if (!data.success || !data.po) {
+        // Keep document iframe even if summary AJAX fails.
+        setPoViewDetail((prev) => ({
+          ...(prev || {}),
+          id,
+          document_url: poDocumentHref(id),
+        }))
+        if (!poDocumentHref(id)) {
+          setPoViewError(data.message || 'Could not load purchase order.')
+        }
+        return
+      }
+      setPoViewDetail({
+        ...data.po,
+        document_url: poDocumentHref(id),
+      })
+    } catch {
+      if (!poDocumentHref(id)) {
+        setPoViewError('Network error. Please try again.')
+        setPoViewDetail(null)
+      }
+    } finally {
+      setPoViewLoading(false)
+    }
   }
 
   function toggleSO(id) {
@@ -260,7 +458,7 @@ export default function CreateVoucherPage() {
     if (!applicant || !departmentManager || !checkedBy)
       return 'Please select Applicant, Department Manager, and Checked By.'
     if (isStockPurchase && !hasLinkedPo)
-      return 'Please select a Purchase Order for Stock Purchase vouchers.'
+      return 'Please select at least one Purchase Order for Stock Purchase vouchers.'
     return ''
   }
 
@@ -279,6 +477,7 @@ export default function CreateVoucherPage() {
     }
     setFormError('')
     submittedRef.current = true
+    clearCreateDraft()
     if (actionInputRef.current) {
       actionInputRef.current.value = IS_EDIT ? 'update' : 'create'
     }
@@ -401,6 +600,7 @@ export default function CreateVoucherPage() {
         <input type="hidden" name="general_manager" value={init.general_manager || ''} readOnly />
         <input type="hidden" name="linked_sales_order_ids" value={linkedIdsCsv} readOnly />
         <input type="hidden" name="linked_sales_order_id" value={Array.from(selectedSO)[0] || ''} readOnly />
+        <input type="hidden" name="linked_stock_po_ids" value={isStockPurchase ? linkedPoIdsCsv : ''} readOnly />
         <input type="hidden" name="linked_stock_po_id" value={isStockPurchase ? linkedStockPoId : ''} readOnly />
         <input type="hidden" name="supporting_documents" value={attachmentCount} readOnly />
 
@@ -761,76 +961,93 @@ export default function CreateVoucherPage() {
                 <div className="cv-row cv-row--top">
                   <label className="cv-label">Purchase Order {mark(hasLinkedPo)}</label>
                   <div className="cv-field">
-                    <p className="cv-attach-hint">Required for Stock Purchase vouchers. Select a PO from the system.</p>
-                    <div className={`cv-so${poOpen ? ' is-open' : ''}${showErrors && !hasLinkedPo ? ' is-invalid' : ''}${hasLinkedPo ? ' is-valid' : ''}`}>
+                    <p className="cv-attach-hint">Required for Stock Purchase vouchers. Select one or more POs from the system.</p>
+                    <div className={`cv-po-trigger-wrap${showErrors && !hasLinkedPo ? ' is-invalid' : ''}${hasLinkedPo ? ' is-valid' : ''}`}>
                       <button
                         type="button"
-                        className={`cv-so-toggle${invCls(hasLinkedPo)}`}
-                        onClick={() => !fieldsLocked && setPoOpen((v) => !v)}
-                        aria-expanded={poOpen}
+                        className={`cv-so-toggle cv-po-trigger${invCls(hasLinkedPo)}`}
+                        onClick={() => {
+                          if (fieldsLocked) return
+                          setPoSearch('')
+                          setPoViewDetail(null)
+                          setPoViewError('')
+                          setPoViewLoading(false)
+                          setPoOpen(true)
+                        }}
                         disabled={fieldsLocked}
                       >
                         <Link2 size={15} />
                         <span className="cv-so-toggle-label">
-                          {selectedPo
-                            ? `${selectedPo.po_number}${selectedPo.supplier_name ? ` — ${selectedPo.supplier_name}` : ''}`
-                            : 'Select purchase order'}
+                          {selectedPoRows.length === 0
+                            ? 'Select purchase order(s)'
+                            : selectedPoRows.length === 1
+                              ? `${selectedPoRows[0].po_number}${selectedPoRows[0].supplier_name ? ` — ${selectedPoRows[0].supplier_name}` : ''}`
+                              : `${selectedPoRows.length} purchase orders linked`}
                         </span>
                         <ChevronDown size={16} className="cv-so-chevron" />
                       </button>
-                      {poOpen && !fieldsLocked && (
-                        <div className="cv-so-body">
-                          <div className="cv-so-search">
-                            <Search size={14} />
-                            <input
-                              type="text"
-                              className="cv-so-search-input"
-                              placeholder="Search purchase orders..."
-                              value={poSearch}
-                              onChange={(e) => setPoSearch(e.target.value)}
-                              autoFocus
-                            />
-                          </div>
-                          <div className="cv-so-list">
-                            {purchaseOrders.length === 0 ? (
-                              <div className="cv-so-empty">No available purchase orders</div>
-                            ) : filteredPO.length === 0 ? (
-                              <div className="cv-so-empty">No purchase orders found</div>
-                            ) : (
-                              filteredPO.slice(0, 50).map((po) => (
-                                <button
-                                  key={po.id}
-                                  type="button"
-                                  className={`cv-so-item cv-so-item--btn${String(po.id) === String(linkedStockPoId) ? ' is-checked' : ''}`}
-                                  onClick={() => {
-                                    setLinkedStockPoId(String(po.id))
-                                    setPoOpen(false)
-                                    setPoSearch('')
-                                  }}
-                                >
-                                  <span className="cv-so-no">{po.po_number}</span>
-                                  <span className="cv-so-cust">{po.supplier_name || '—'}</span>
-                                  <span className="cv-so-status">{po.status || ''}</span>
-                                </button>
-                              ))
-                            )}
-                          </div>
-                          {hasLinkedPo && (
+                      {hasLinkedPo && !fieldsLocked && (
+                        <>
+                          {selectedPoRows.length === 1 && (
                             <button
                               type="button"
-                              className="cv-so-count cv-so-clear"
+                              className="cv-po-clear-btn"
                               onClick={() => {
-                                setLinkedStockPoId('')
-                                setPoOpen(false)
+                                setPoSearch('')
+                                setPoOpen(true)
+                                openPoView(selectedPoRows[0].id)
                               }}
+                              title={`View ${selectedPoRows[0].po_number}`}
+                              aria-label={`View ${selectedPoRows[0].po_number}`}
                             >
-                              Clear selection
+                              <Eye size={14} />
                             </button>
                           )}
-                        </div>
+                          <button
+                            type="button"
+                            className="cv-po-clear-btn"
+                            onClick={() => setSelectedPO(new Set())}
+                            title="Clear Purchase Orders"
+                            aria-label="Clear Purchase Orders"
+                          >
+                            <X size={14} />
+                          </button>
+                        </>
                       )}
                     </div>
-                    {fieldErr(hasLinkedPo, 'Please select a Purchase Order for Stock Purchase.')}
+                    {selectedPoRows.length > 1 && (
+                      <ul className="cv-po-chips">
+                        {selectedPoRows.map((po) => (
+                          <li key={po.id} className="cv-po-chip">
+                            <span className="cv-po-chip-no">{po.po_number}</span>
+                            <button
+                              type="button"
+                              className="cv-po-chip-view"
+                              title={`View ${po.po_number}`}
+                              onClick={() => {
+                                setPoSearch('')
+                                setPoOpen(true)
+                                openPoView(po.id)
+                              }}
+                            >
+                              <Eye size={12} />
+                            </button>
+                            {!fieldsLocked && (
+                              <button
+                                type="button"
+                                className="cv-po-chip-rm"
+                                onClick={() => togglePO(po.id)}
+                                title="Remove"
+                                aria-label={`Remove ${po.po_number}`}
+                              >
+                                <X size={12} />
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {fieldErr(hasLinkedPo, 'Please select at least one Purchase Order for Stock Purchase.')}
                   </div>
                 </div>
               )}
@@ -922,7 +1139,7 @@ export default function CreateVoucherPage() {
           </div>
           {!IS_EDIT && (
             <p className="cv-actions-hint">
-              <Info size={13} /> If you leave this page without submitting, your work is saved automatically as an editable draft.
+              <Info size={13} /> Your progress is kept if you refresh this page. Leaving without submitting also saves an editable draft.
             </p>
           )}
         </div>
@@ -976,11 +1193,268 @@ export default function CreateVoucherPage() {
               <button type="button" className="cv-btn-cancel" onClick={() => setPayeeModalOpen(false)}>Cancel</button>
               <button type="button" className="cv-btn-save" onClick={submitNewPayee} disabled={payeeSaving}>
                 {payeeSaving ? <Loader2 size={16} className="cv-spin" /> : <UserPlus size={16} />}
-                {payeeSaving ? 'Saving�' : 'Add Payee'}
+                {payeeSaving ? 'Saving…' : 'Add Payee'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {poOpen && createPortal(
+        <div
+          className="cv-modal-overlay"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) closePoModal() }}
+        >
+          <div
+            className={`cv-modal cv-modal--po${poViewDetail || poViewLoading || poViewError ? ' cv-modal--po-detail' : ''}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cv-po-modal-title"
+          >
+            <div className="cv-modal-head">
+              {(poViewDetail || poViewLoading || poViewError) ? (
+                <button
+                  type="button"
+                  className="cv-po-detail-back cv-po-detail-back--head"
+                  onClick={() => {
+                    setPoViewDetail(null)
+                    setPoViewError('')
+                    setPoViewLoading(false)
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                  <span>Back to list</span>
+                </button>
+              ) : (
+                <h3 id="cv-po-modal-title">Select Purchase Orders</h3>
+              )}
+              {(poViewDetail || poViewLoading || poViewError) && (
+                <h3 id="cv-po-modal-title" className="cv-po-modal-title-center">
+                  {poViewDetail?.po_number || 'Purchase Order'}
+                  {poViewDetail?.status ? (
+                    <span className="cv-po-detail-status cv-po-detail-status--inline">{poViewDetail.status}</span>
+                  ) : null}
+                </h3>
+              )}
+              <button type="button" className="cv-alert-x" onClick={closePoModal} aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+
+            {(poViewLoading || poViewError || poViewDetail) ? (
+              <div className="cv-po-detail">
+                {poViewLoading && !poViewDetail?.document_url && (
+                  <div className="cv-po-detail-loading">
+                    <Loader2 size={22} className="cv-spin" />
+                    <span>Loading purchase order…</span>
+                  </div>
+                )}
+
+                {!poViewLoading && poViewError && !poViewDetail?.document_url && (
+                  <div className="cv-po-detail-error">{poViewError}</div>
+                )}
+
+                {poViewDetail && poViewDetail.document_url ? (
+                  <div className="cv-po-doc-frame-wrap">
+                    {poViewLoading && (
+                      <div className="cv-po-doc-frame-loading">
+                        <Loader2 size={18} className="cv-spin" />
+                        Loading document…
+                      </div>
+                    )}
+                    <iframe
+                      key={poViewDetail.document_url}
+                      className="cv-po-doc-frame"
+                      title={`Purchase Order ${poViewDetail.po_number}`}
+                      src={poViewDetail.document_url}
+                    />
+                  </div>
+                ) : null}
+
+                {poViewDetail && !poViewDetail.document_url ? (
+                  <>
+                    <div className="cv-po-detail-hero">
+                      <div>
+                        <div className="cv-po-detail-no">{poViewDetail.po_number}</div>
+                        <div className="cv-po-detail-supplier">{poViewDetail.supplier_name || '—'}</div>
+                      </div>
+                      <span className="cv-po-detail-status">{poViewDetail.status || '—'}</span>
+                    </div>
+                    <div className="cv-po-detail-meta">
+                      <div>
+                        <span className="cv-po-detail-k">Type</span>
+                        <span className="cv-po-detail-v">{poViewDetail.purchase_type || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="cv-po-detail-k">Currency</span>
+                        <span className="cv-po-detail-v">{poViewDetail.currency || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="cv-po-detail-k">Created</span>
+                        <span className="cv-po-detail-v">
+                          {poViewDetail.created_at
+                            ? String(poViewDetail.created_at).slice(0, 10)
+                            : '—'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="cv-po-detail-items-head">Line items</div>
+                    {(poViewDetail.items || []).length === 0 ? (
+                      <div className="cv-so-empty">No line items on this purchase order</div>
+                    ) : (
+                      <div className="cv-po-detail-table-wrap">
+                        <table className="cv-po-detail-table">
+                          <thead>
+                            <tr>
+                              <th>Item</th>
+                              <th>Qty</th>
+                              <th>Unit</th>
+                              <th>Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {poViewDetail.items.map((it) => (
+                              <tr key={it.id || `${it.product_name}-${it.quantity}`}>
+                                <td>
+                                  <div className="cv-po-detail-item-name">{it.product_name}</div>
+                                  {it.product_code ? (
+                                    <div className="cv-po-detail-item-code">{it.product_code}</div>
+                                  ) : null}
+                                </td>
+                                <td>{Number(it.quantity || 0).toLocaleString()}</td>
+                                <td>{formatMoney(poViewDetail.currency, it.unit_price)}</td>
+                                <td>{formatMoney(poViewDetail.currency, it.line_total)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    <div className="cv-po-detail-totals">
+                      <span>Total</span>
+                      <strong>{formatMoney(poViewDetail.currency, poViewDetail.total_amount)}</strong>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            ) : (
+              <>
+                <div className="cv-po-modal-search">
+                  <Search size={16} />
+                  <input
+                    type="text"
+                    className="cv-po-modal-search-input"
+                    placeholder="Search purchase orders..."
+                    value={poSearch}
+                    onChange={(e) => setPoSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className="cv-po-modal-list">
+                  {purchaseOrders.length === 0 ? (
+                    <div className="cv-so-empty">No available purchase orders</div>
+                  ) : filteredPO.length === 0 ? (
+                    <div className="cv-so-empty">No purchase orders found</div>
+                  ) : (
+                    <>
+                      {!poSearch.trim() && (
+                        <div className="cv-po-modal-section-label">Current &amp; recent purchase orders</div>
+                      )}
+                      {filteredPO.map((po) => {
+                        const checked = selectedPO.has(Number(po.id))
+                        return (
+                          <div
+                            key={po.id}
+                            className={`cv-po-modal-item${checked ? ' is-checked' : ''}`}
+                          >
+                            <label className="cv-po-modal-select">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => togglePO(po.id)}
+                                disabled={fieldsLocked}
+                              />
+                              <span className="cv-po-modal-no">{po.po_number}</span>
+                              <span className="cv-po-modal-supplier">{po.supplier_name || '—'}</span>
+                              <span className="cv-po-modal-status">{po.status || ''}</span>
+                            </label>
+                            <button
+                              type="button"
+                              className="cv-po-modal-view"
+                              title={`View ${po.po_number}`}
+                              onClick={() => openPoView(po.id)}
+                            >
+                              <Eye size={15} />
+                              <span>View</span>
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div className="cv-modal-foot">
+              {(poViewDetail || poViewLoading || poViewError) ? (
+                <>
+                  {poViewDetail && !fieldsLocked && (
+                    <button
+                      type="button"
+                      className="cv-btn-cancel"
+                      onClick={() => {
+                        const id = Number(poViewDetail.id)
+                        if (id > 0 && !selectedPO.has(id)) togglePO(id)
+                        setPoViewDetail(null)
+                        setPoViewError('')
+                      }}
+                    >
+                      {selectedPO.has(Number(poViewDetail.id)) ? 'Selected' : 'Select this PO'}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="cv-btn-save"
+                    onClick={() => {
+                      setPoViewDetail(null)
+                      setPoViewError('')
+                      setPoViewLoading(false)
+                    }}
+                  >
+                    Done
+                  </button>
+                </>
+              ) : (
+                <>
+                  {hasLinkedPo && (
+                    <button
+                      type="button"
+                      className="cv-btn-cancel"
+                      onClick={() => setSelectedPO(new Set())}
+                      disabled={fieldsLocked}
+                    >
+                      Clear selection
+                    </button>
+                  )}
+                  <span className="cv-po-modal-count">
+                    {selectedPO.size > 0
+                      ? `${selectedPO.size} selected`
+                      : 'None selected'}
+                  </span>
+                  <button
+                    type="button"
+                    className="cv-btn-save"
+                    onClick={closePoModal}
+                  >
+                    Done
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

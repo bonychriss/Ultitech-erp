@@ -50,6 +50,12 @@ try {
         } catch (Throwable $e3) { /* ignore */
         }
     }
+    if (!in_array('linked_stock_po_ids', $pvColsInit, true)) {
+        try {
+            $pdo->exec("ALTER TABLE payment_vouchers ADD COLUMN linked_stock_po_ids TEXT NULL");
+        } catch (Throwable $ePoIds) { /* ignore */
+        }
+    }
 } catch (Throwable $e0) { /* ignore */
 }
 
@@ -104,20 +110,16 @@ try {
     $salesOrders = [];
 }
 
-// Purchase orders for Stock Purchase linking.
+// Purchase orders for Stock Purchase linking (all POs; newest / current first).
 $purchaseOrders = [];
 try {
     if (function_exists('tableExists') && tableExists('stocks_purchase_orders', $pdo)) {
-        $poCols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-        $hasPvLink = in_array('payment_voucher_id', $poCols, true);
         $hasSupplierJoin = function_exists('tableExists') && tableExists('stocks_suppliers', $pdo);
         $supplierSelect = $hasSupplierJoin
             ? "COALESCE(ss.name, CONCAT('Supplier #', po.supplier_id)) AS supplier_name"
             : "CONCAT('Supplier #', po.supplier_id) AS supplier_name";
         $join = $hasSupplierJoin ? 'LEFT JOIN stocks_suppliers ss ON ss.id = po.supplier_id' : '';
-        $where = $hasPvLink
-            ? 'WHERE (po.payment_voucher_id IS NULL OR po.payment_voucher_id = 0)'
-            : '';
+        // Current (not fully closed/received) first, then newest created.
         $purchaseOrders = $pdo->query("
             SELECT
                 po.id,
@@ -127,9 +129,14 @@ try {
                 {$supplierSelect}
             FROM stocks_purchase_orders po
             {$join}
-            {$where}
-            ORDER BY po.created_at DESC, po.id DESC
-            LIMIT 500
+            ORDER BY
+                CASE
+                    WHEN LOWER(TRIM(COALESCE(po.status, ''))) IN ('received', 'closed', 'cancelled', 'canceled', 'completed') THEN 1
+                    ELSE 0
+                END ASC,
+                po.created_at DESC,
+                po.id DESC
+            LIMIT 2000
         ")->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 } catch (Throwable $e) {
@@ -181,6 +188,132 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit;
 }
 
+// Inline PO preview for the create-voucher picker (no redirect to stock module).
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'ajax_view_po') {
+    header('Content-Type: application/json; charset=utf-8');
+    $poId = isset($_POST['po_id']) && is_numeric($_POST['po_id']) ? (int) $_POST['po_id'] : 0;
+    if ($poId <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid purchase order.']);
+        exit;
+    }
+    try {
+        if (!function_exists('fetchStockPurchaseOrderById')) {
+            echo json_encode(['success' => false, 'message' => 'Purchase order lookup unavailable.']);
+            exit;
+        }
+        $po = fetchStockPurchaseOrderById($pdo, $poId, true);
+        if (!$po) {
+            echo json_encode(['success' => false, 'message' => 'Purchase order not found.']);
+            exit;
+        }
+        $poTable = (string) ($po['_po_table'] ?? 'stocks_purchase_orders');
+        $isLegacy = ($poTable === 'purchases');
+        $items = [];
+        try {
+            if ($isLegacy && function_exists('tableExists') && tableExists('purchase_items', $pdo)) {
+                $hasProducts = tableExists('products', $pdo);
+                $sql = $hasProducts
+                    ? 'SELECT pi.id, pi.product_id, pi.quantity, pi.unit_price,
+                              (pi.quantity * pi.unit_price) AS line_total,
+                              COALESCE(pr.name, CONCAT(\'Product #\', pi.product_id)) AS product_name,
+                              COALESCE(pr.product_code, \'\') AS product_code
+                       FROM purchase_items pi
+                       LEFT JOIN products pr ON pr.id = pi.product_id
+                       WHERE pi.purchase_id = ?
+                       ORDER BY pi.id ASC'
+                    : 'SELECT pi.id, pi.product_id, pi.quantity, pi.unit_price,
+                              (pi.quantity * pi.unit_price) AS line_total,
+                              CONCAT(\'Product #\', pi.product_id) AS product_name,
+                              \'\' AS product_code
+                       FROM purchase_items pi
+                       WHERE pi.purchase_id = ?
+                       ORDER BY pi.id ASC';
+                $stmtItems = $pdo->prepare($sql);
+                $stmtItems->execute([$poId]);
+                $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } elseif (function_exists('tableExists') && tableExists('stocks_po_items', $pdo)) {
+                $hasStockItems = tableExists('stocks_items', $pdo);
+                $sql = $hasStockItems
+                    ? 'SELECT pi.id, pi.item_id AS product_id, pi.qty_ordered AS quantity, pi.unit_cost AS unit_price,
+                              (pi.qty_ordered * pi.unit_cost) AS line_total,
+                              COALESCE(si.name, CONCAT(\'Item #\', pi.item_id)) AS product_name,
+                              COALESCE(si.sku, \'\') AS product_code
+                       FROM stocks_po_items pi
+                       LEFT JOIN stocks_items si ON si.id = pi.item_id
+                       WHERE pi.po_id = ?
+                       ORDER BY pi.id ASC'
+                    : 'SELECT pi.id, pi.item_id AS product_id, pi.qty_ordered AS quantity, pi.unit_cost AS unit_price,
+                              (pi.qty_ordered * pi.unit_cost) AS line_total,
+                              CONCAT(\'Item #\', pi.item_id) AS product_name,
+                              \'\' AS product_code
+                       FROM stocks_po_items pi
+                       WHERE pi.po_id = ?
+                       ORDER BY pi.id ASC';
+                $stmtItems = $pdo->prepare($sql);
+                $stmtItems->execute([$poId]);
+                $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
+        } catch (Throwable $eItems) {
+            $items = [];
+        }
+
+        $currency = (string) ($po['currency'] ?? 'TZS');
+        $exchangeRate = (float) ($po['exchange_rate'] ?? 1);
+        if ($exchangeRate <= 0) {
+            $exchangeRate = 1.0;
+        }
+        $mappedItems = [];
+        $subtotal = 0.0;
+        foreach ($items as $row) {
+            $qty = (float) ($row['quantity'] ?? 0);
+            $unit = (float) ($row['unit_price'] ?? 0);
+            // stocks unit_cost is typically base/USD; convert for display when rate present
+            if (!$isLegacy && $exchangeRate != 1.0) {
+                $unit = $unit * $exchangeRate;
+            }
+            $lineTotal = isset($row['line_total']) ? (float) $row['line_total'] : ($qty * $unit);
+            if (!$isLegacy && $exchangeRate != 1.0 && isset($row['line_total'])) {
+                $lineTotal = (float) $row['line_total'] * $exchangeRate;
+            }
+            $subtotal += $lineTotal;
+            $mappedItems[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'product_name' => (string) ($row['product_name'] ?? 'Item'),
+                'product_code' => (string) ($row['product_code'] ?? ''),
+                'quantity' => $qty,
+                'unit_price' => $unit,
+                'line_total' => $lineTotal,
+            ];
+        }
+
+        $total = isset($po['total_amount']) ? (float) $po['total_amount'] : $subtotal;
+        if ($total <= 0) {
+            $total = $subtotal;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'po' => [
+                'id' => $poId,
+                'po_number' => (string) ($po['po_number'] ?? $po['purchase_no'] ?? ('PO-' . $poId)),
+                'supplier_name' => (string) ($po['supplier_name'] ?? ''),
+                'status' => (string) ($po['status'] ?? ''),
+                'purchase_type' => (string) ($po['purchase_type'] ?? 'domestic'),
+                'currency' => $currency,
+                'created_at' => (string) ($po['created_at'] ?? ''),
+                'supplier_invoice_no' => (string) ($po['supplier_invoice_no'] ?? ''),
+                'notes' => (string) ($po['notes'] ?? $po['remarks'] ?? ''),
+                'subtotal' => $subtotal,
+                'total_amount' => $total,
+                'items' => $mappedItems,
+            ],
+        ]);
+    } catch (Throwable $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $isDraft = isset($_POST['action']) && $_POST['action'] === 'draft';
     // Enable debug mode via URL parameter: ?debug=1 or via POST
@@ -202,15 +335,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $description = isset($_POST['description']) ? trim($_POST['description']) : '';
         $currency = $_POST['currency'] ?? 'TZS';
         $voucher_purpose = normalizePaymentVoucherPurpose($_POST['voucher_purpose'] ?? 'general');
-        $linked_stock_po_id = isset($_POST['linked_stock_po_id']) && is_numeric($_POST['linked_stock_po_id'])
-            ? (int) $_POST['linked_stock_po_id']
-            : 0;
-        if ($linked_stock_po_id > 0 && function_exists('fetchStockPurchaseOrderById')) {
-            $poRow = fetchStockPurchaseOrderById($pdo, $linked_stock_po_id, false);
-            if (!$poRow) {
-                $linked_stock_po_id = 0;
+        $linked_stock_po_ids_raw = trim((string) ($_POST['linked_stock_po_ids'] ?? ''));
+        $linked_stock_po_ids = [];
+        if ($linked_stock_po_ids_raw !== '') {
+            $parts = preg_split('/\s*,\s*/', $linked_stock_po_ids_raw);
+            if (is_array($parts)) {
+                foreach ($parts as $p) {
+                    $id = (int) $p;
+                    if ($id > 0) {
+                        $linked_stock_po_ids[$id] = $id;
+                    }
+                }
+            }
+        } elseif (isset($_POST['linked_stock_po_id']) && is_numeric($_POST['linked_stock_po_id'])) {
+            $id = (int) $_POST['linked_stock_po_id'];
+            if ($id > 0) {
+                $linked_stock_po_ids[$id] = $id;
             }
         }
+        $linked_stock_po_ids = array_values($linked_stock_po_ids);
+        if (!empty($linked_stock_po_ids) && function_exists('fetchStockPurchaseOrderById')) {
+            $validPoIds = [];
+            foreach ($linked_stock_po_ids as $poIdCheck) {
+                $poRow = fetchStockPurchaseOrderById($pdo, (int) $poIdCheck, false);
+                if ($poRow) {
+                    $validPoIds[] = (int) $poIdCheck;
+                }
+            }
+            $linked_stock_po_ids = $validPoIds;
+        }
+        $linked_stock_po_id = !empty($linked_stock_po_ids) ? (int) $linked_stock_po_ids[0] : 0;
         $linked_sales_order_ids_raw = trim((string) ($_POST['linked_sales_order_ids'] ?? ''));
         $linked_sales_order_ids = [];
         if ($linked_sales_order_ids_raw !== '') {
@@ -277,12 +431,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             // Stock Purchase vouchers require a linked Purchase Order from the system
             if ($voucher_purpose === 'stock_purchase') {
-                if ($linked_stock_po_id <= 0) {
-                    throw new Exception('Please select a Purchase Order for Stock Purchase vouchers');
+                if ($linked_stock_po_id <= 0 || empty($linked_stock_po_ids)) {
+                    throw new Exception('Please select at least one Purchase Order for Stock Purchase vouchers');
                 }
             } else {
                 $linked_stock_po_id = 0;
+                $linked_stock_po_ids = [];
             }
+        } elseif ($voucher_purpose !== 'stock_purchase') {
+            $linked_stock_po_id = 0;
+            $linked_stock_po_ids = [];
         }
 
         $createdBy = function_exists('resolveVoucherSessionUserId')
@@ -393,6 +551,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (in_array('linked_stock_po_id', $pvCols, true)) {
             $insertCols[] = 'linked_stock_po_id';
             $insertVals[] = ($linked_stock_po_id > 0 ? $linked_stock_po_id : null);
+        }
+        if (in_array('linked_stock_po_ids', $pvCols, true)) {
+            $insertCols[] = 'linked_stock_po_ids';
+            $insertVals[] = !empty($linked_stock_po_ids) ? json_encode(array_values($linked_stock_po_ids)) : null;
         }
         if (in_array('linked_sales_order_id', $pvCols, true)) {
             $insertCols[] = 'linked_sales_order_id';
@@ -634,14 +796,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             app_log('create-voucher: uploadedCount=' . $uploadedCount);
         }
 
-        // Bidirectional link: PO → voucher
-        if ($linked_stock_po_id > 0 && !$isDraft) {
+        // Bidirectional link: PO(s) → voucher
+        if (!empty($linked_stock_po_ids) && !$isDraft) {
             try {
                 if (function_exists('tableExists') && tableExists('stocks_purchase_orders', $pdo)) {
                     $poColsLink = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-                    if (in_array('payment_voucher_id', $poColsLink, true)) {
-                        $pdo->prepare('UPDATE stocks_purchase_orders SET payment_voucher_id = ? WHERE id = ?')
-                            ->execute([(int) $voucher_id, $linked_stock_po_id]);
+                    $hasPvId = in_array('payment_voucher_id', $poColsLink, true);
+                    $hasPvIds = in_array('payment_voucher_ids', $poColsLink, true);
+                    foreach ($linked_stock_po_ids as $poLinkId) {
+                        $poLinkId = (int) $poLinkId;
+                        if ($poLinkId <= 0) {
+                            continue;
+                        }
+                        if ($hasPvId) {
+                            $pdo->prepare('UPDATE stocks_purchase_orders SET payment_voucher_id = ? WHERE id = ?')
+                                ->execute([(int) $voucher_id, $poLinkId]);
+                        }
+                        if ($hasPvIds) {
+                            $curRow = $pdo->prepare('SELECT payment_voucher_ids FROM stocks_purchase_orders WHERE id = ? LIMIT 1');
+                            $curRow->execute([$poLinkId]);
+                            $rawIds = (string) ($curRow->fetchColumn() ?: '');
+                            $idsMap = [];
+                            if ($rawIds !== '' && function_exists('parseStockPurchasePoLinkedVoucherIds')) {
+                                foreach (parseStockPurchasePoLinkedVoucherIds(['payment_voucher_ids' => $rawIds]) as $vid) {
+                                    $idsMap[(int) $vid] = (int) $vid;
+                                }
+                            } elseif ($rawIds !== '') {
+                                $decoded = json_decode($rawIds, true);
+                                if (is_array($decoded)) {
+                                    foreach ($decoded as $vid) {
+                                        $vid = (int) $vid;
+                                        if ($vid > 0) {
+                                            $idsMap[$vid] = $vid;
+                                        }
+                                    }
+                                }
+                            }
+                            $idsMap[(int) $voucher_id] = (int) $voucher_id;
+                            $pdo->prepare('UPDATE stocks_purchase_orders SET payment_voucher_ids = ? WHERE id = ?')
+                                ->execute([json_encode(array_values($idsMap)), $poLinkId]);
+                        }
                     }
                 }
             } catch (Throwable $ePoLink) {

@@ -11208,6 +11208,16 @@ function ensureVoucherStockPurchaseSchema()
         }
     }
 
+    // payment_vouchers.linked_stock_po_ids (multi-PO link)
+    try {
+        $pdo->query("SELECT linked_stock_po_ids FROM payment_vouchers LIMIT 1");
+    } catch (PDOException $e) {
+        try {
+            $pdo->exec("ALTER TABLE payment_vouchers ADD COLUMN linked_stock_po_ids TEXT NULL AFTER linked_stock_po_id");
+        } catch (PDOException $e2) { /* ignore */
+        }
+    }
+
     // stocks_purchase_orders.payment_voucher_id
     try {
         $pdo->query("SELECT payment_voucher_id FROM stocks_purchase_orders LIMIT 1");

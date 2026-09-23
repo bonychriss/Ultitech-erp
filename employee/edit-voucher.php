@@ -100,6 +100,67 @@ try {
     $salesOrders = [];
 }
 
+// Purchase orders for Stock Purchase linking (match create-voucher).
+$purchaseOrders = [];
+try {
+    if (function_exists('tableExists') && tableExists('stocks_purchase_orders', $pdo)) {
+        $hasSupplierJoin = function_exists('tableExists') && tableExists('stocks_suppliers', $pdo);
+        $supplierSelect = $hasSupplierJoin
+            ? "COALESCE(ss.name, CONCAT('Supplier #', po.supplier_id)) AS supplier_name"
+            : "CONCAT('Supplier #', po.supplier_id) AS supplier_name";
+        $join = $hasSupplierJoin ? 'LEFT JOIN stocks_suppliers ss ON ss.id = po.supplier_id' : '';
+        $purchaseOrders = $pdo->query("
+            SELECT
+                po.id,
+                po.po_number,
+                po.status,
+                po.created_at,
+                {$supplierSelect}
+            FROM stocks_purchase_orders po
+            {$join}
+            ORDER BY
+                CASE
+                    WHEN LOWER(TRIM(COALESCE(po.status, ''))) IN ('received', 'closed', 'cancelled', 'canceled', 'completed') THEN 1
+                    ELSE 0
+                END ASC,
+                po.created_at DESC,
+                po.id DESC
+            LIMIT 2000
+        ")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+} catch (Throwable $e) {
+    $purchaseOrders = [];
+}
+
+// Ensure already-linked POs appear in the picker even if outside the recent LIMIT window.
+if (!empty($voucher) && function_exists('parseLinkedStockPoIdsFromVoucher') && function_exists('fetchStockPurchaseOrderById')) {
+    $ensurePoIds = parseLinkedStockPoIdsFromVoucher($voucher);
+    if ($ensurePoIds !== []) {
+        $have = [];
+        foreach ($purchaseOrders as $poRow) {
+            $have[(int) ($poRow['id'] ?? 0)] = true;
+        }
+        foreach ($ensurePoIds as $ensureId) {
+            $ensureId = (int) $ensureId;
+            if ($ensureId <= 0 || isset($have[$ensureId])) {
+                continue;
+            }
+            $extraPo = fetchStockPurchaseOrderById($pdo, $ensureId, false);
+            if (!$extraPo) {
+                continue;
+            }
+            $purchaseOrders[] = [
+                'id' => (int) ($extraPo['id'] ?? $ensureId),
+                'po_number' => (string) ($extraPo['po_number'] ?? ('PO-' . $ensureId)),
+                'status' => (string) ($extraPo['status'] ?? ''),
+                'created_at' => (string) ($extraPo['created_at'] ?? ''),
+                'supplier_name' => (string) ($extraPo['supplier_name'] ?? ''),
+            ];
+            $have[$ensureId] = true;
+        }
+    }
+}
+
 // Backend processing for new Payee via AJAX (match create-voucher)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'ajax_create_payee') {
     header('Content-Type: application/json');
@@ -204,6 +265,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
         }
         $linked_sales_order_ids = array_values($linked_sales_order_ids);
         $linked_sales_order_id = !empty($linked_sales_order_ids) ? (int) $linked_sales_order_ids[0] : 0;
+
+        $linked_stock_po_ids_raw = trim((string) ($_POST['linked_stock_po_ids'] ?? ''));
+        $linked_stock_po_ids = [];
+        if ($linked_stock_po_ids_raw !== '') {
+            foreach (preg_split('/\s*,\s*/', $linked_stock_po_ids_raw) as $p) {
+                $id = (int) $p;
+                if ($id > 0) {
+                    $linked_stock_po_ids[$id] = $id;
+                }
+            }
+        } elseif (isset($_POST['linked_stock_po_id']) && (int) $_POST['linked_stock_po_id'] > 0) {
+            $linked_stock_po_ids[(int) $_POST['linked_stock_po_id']] = (int) $_POST['linked_stock_po_id'];
+        }
+        $linked_stock_po_ids = array_values($linked_stock_po_ids);
+        if (!empty($linked_stock_po_ids) && function_exists('fetchStockPurchaseOrderById')) {
+            $validPoIds = [];
+            foreach ($linked_stock_po_ids as $poIdCheck) {
+                $poRow = fetchStockPurchaseOrderById($pdo, (int) $poIdCheck, false);
+                if ($poRow) {
+                    $validPoIds[] = (int) $poIdCheck;
+                }
+            }
+            $linked_stock_po_ids = $validPoIds;
+        }
+        if ($voucher_purpose !== 'stock_purchase') {
+            $linked_stock_po_ids = [];
+        }
+        $linked_stock_po_id = !empty($linked_stock_po_ids) ? (int) $linked_stock_po_ids[0] : 0;
+
         $description = trim($_POST['description']);
         $currency = $_POST['currency'];
         $supporting_documents = intval($_POST['supporting_documents']);
@@ -312,6 +402,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
                     $extraSets[] = 'linked_sales_order_ids = ?';
                     $extraVals[] = !empty($linked_sales_order_ids) ? json_encode($linked_sales_order_ids) : null;
                 }
+                if (in_array('linked_stock_po_id', $pvCols, true)) {
+                    $extraSets[] = 'linked_stock_po_id = ?';
+                    $extraVals[] = ($linked_stock_po_id > 0 ? $linked_stock_po_id : null);
+                }
+                if (in_array('linked_stock_po_ids', $pvCols, true)) {
+                    $extraSets[] = 'linked_stock_po_ids = ?';
+                    $extraVals[] = !empty($linked_stock_po_ids) ? json_encode(array_values($linked_stock_po_ids)) : null;
+                }
                 if (in_array('payee_id', $pvCols, true)) {
                     $extraSets[] = 'payee_id = ?';
                     $extraVals[] = ($payee_id > 0 ? $payee_id : null);
@@ -387,6 +485,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
                     $attCountStmt = $pdo->prepare('SELECT COUNT(*) AS c FROM voucher_attachments WHERE voucher_id = ?');
                     $attCountStmt->execute([$voucher_id]);
                     $realCount = (int)($attCountStmt->fetch()['c'] ?? $newUploads);
+                    $up = $pdo->prepare('UPDATE payment_vouchers SET supporting_documents = ? WHERE id = ?');
+                    $up->execute([$realCount, $voucher_id]);
+                } catch (Throwable $e) { /* ignore */ }
+            } else {
+                // Keep supporting_documents aligned with real rows even when no new files arrived.
+                try {
+                    $attCountStmt = $pdo->prepare('SELECT COUNT(*) AS c FROM voucher_attachments WHERE voucher_id = ?');
+                    $attCountStmt->execute([$voucher_id]);
+                    $realCount = (int) ($attCountStmt->fetchColumn() ?: 0);
                     $up = $pdo->prepare('UPDATE payment_vouchers SET supporting_documents = ? WHERE id = ?');
                     $up->execute([$realCount, $voucher_id]);
                 } catch (Throwable $e) { /* ignore */ }
@@ -505,6 +612,19 @@ $mapSalesOrders = static function (array $rows): array {
     return $out;
 };
 
+$mapPurchaseOrders = static function (array $rows): array {
+    $out = [];
+    foreach ($rows as $r) {
+        $out[] = [
+            'id' => (int) ($r['id'] ?? 0),
+            'po_number' => (string) ($r['po_number'] ?? ''),
+            'supplier_name' => (string) ($r['supplier_name'] ?? ''),
+            'status' => (string) ($r['status'] ?? ''),
+        ];
+    }
+    return $out;
+};
+
 $payeeName = trim((string) ($voucher['payee_name'] ?? ''));
 $selectedPayeeId = 0;
 if ($payeeName !== '') {
@@ -543,6 +663,38 @@ if (empty($linkedSoIds) && !empty($voucher['linked_sales_order_id'])) {
     }
 }
 $linkedSoIds = array_values($linkedSoIds);
+
+$linkedPoIds = [];
+if (function_exists('parseLinkedStockPoIdsFromVoucher')) {
+    $linkedPoIds = parseLinkedStockPoIdsFromVoucher($voucher);
+} else {
+    $rawPo = trim((string) ($voucher['linked_stock_po_ids'] ?? ''));
+    if ($rawPo !== '') {
+        $decodedPo = json_decode($rawPo, true);
+        if (is_array($decodedPo)) {
+            foreach ($decodedPo as $pid) {
+                $pid = (int) $pid;
+                if ($pid > 0) {
+                    $linkedPoIds[$pid] = $pid;
+                }
+            }
+        } else {
+            foreach (preg_split('/\s*,\s*/', $rawPo) as $pid) {
+                $pid = (int) $pid;
+                if ($pid > 0) {
+                    $linkedPoIds[$pid] = $pid;
+                }
+            }
+        }
+    }
+    if (empty($linkedPoIds) && !empty($voucher['linked_stock_po_id'])) {
+        $pid = (int) $voucher['linked_stock_po_id'];
+        if ($pid > 0) {
+            $linkedPoIds[$pid] = $pid;
+        }
+    }
+    $linkedPoIds = array_values($linkedPoIds);
+}
 
 $initialItems = [];
 foreach ($existing_items as $row) {
@@ -621,6 +773,13 @@ $editVoucherConfig = [
     'users' => $mapUserNames(is_array($allUsers) ? $allUsers : []),
     'financeUsers' => $mapUserNames(is_array($financeUsers) ? $financeUsers : []),
     'salesOrders' => $mapSalesOrders(is_array($salesOrders) ? $salesOrders : []),
+    'purchaseOrders' => $mapPurchaseOrders(is_array($purchaseOrders) ? $purchaseOrders : []),
+    'poDocumentUrl' => function_exists('app_url')
+        ? app_url('/employee/create-voucher-ui/po-document.php')
+        : 'create-voucher-ui/po-document.php',
+    'poViewBaseUrl' => function_exists('app_url')
+        ? app_url('/stock/modules/purchases/view_po.php')
+        : '/stock/modules/purchases/view_po.php',
     'initial' => [
         'payee_id' => $selectedPayeeId,
         'payee_name' => $payeeName,
@@ -635,6 +794,8 @@ $editVoucherConfig = [
         'prepared_by' => trim((string) ($voucher['prepared_by'] ?? '')),
         'general_manager' => trim((string) ($voucher['general_manager'] ?? '')),
         'linked_sales_order_ids' => $linkedSoIds,
+        'linked_stock_po_ids' => $linkedPoIds,
+        'linked_stock_po_id' => !empty($linkedPoIds) ? (int) $linkedPoIds[0] : 0,
         'items' => $initialItems,
     ],
     'attachments' => $initialAttachments,

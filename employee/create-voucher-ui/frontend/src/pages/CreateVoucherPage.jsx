@@ -430,9 +430,9 @@ export default function CreateVoucherPage() {
       })
     }
     setFiles(merged)
-    syncFileInput(merged)
-    // Reset input so the same file can be re-selected after remove.
+    // Reset then re-apply: clearing alone would wipe the FileList before submit.
     e.target.value = ''
+    syncFileInput(merged)
   }
   function markFileReady(key) {
     setFileStatus((prev) => {
@@ -515,6 +515,8 @@ export default function CreateVoucherPage() {
     if (actionInputRef.current) {
       actionInputRef.current.value = IS_EDIT ? 'update' : 'create'
     }
+    // Ensure React-managed File objects are actually on the input before native submit.
+    syncFileInput(files)
     setSubmitting(true)
     formRef.current.submit()
   }
@@ -1089,6 +1091,25 @@ export default function CreateVoucherPage() {
               <div className="cv-row cv-row--top">
                 <label className="cv-label">Supporting Files</label>
                 <div className="cv-field">
+                  {selectedPoRows.length > 0 && (
+                    <ul className="cv-file-list cv-file-list--existing">
+                      {selectedPoRows.map((po) => (
+                        <li key={`po-att-${po.id}`}>
+                          <FileText size={13} className="cv-file-ic" />
+                          <a
+                            className="cv-file-nm"
+                            href={`${CFG.poDocumentUrl || 'create-voucher-ui/po-document.php'}?id=${po.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={po.supplier_name ? `${po.po_number} — ${po.supplier_name}` : po.po_number}
+                          >
+                            {po.po_number}.pdf
+                          </a>
+                          <span className="cv-file-sz">Purchase Order</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   {existingAttachments.length > 0 && (
                     <ul className="cv-file-list cv-file-list--existing">
                       {existingAttachments.map((att) => (

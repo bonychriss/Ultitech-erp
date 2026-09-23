@@ -502,9 +502,21 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     $paidBeforeProperApproval = $isPaid && ($statusLower !== 'approved' || ($voucher['approver_role'] ?? null) !== (defined('ROLE_ADMIN') ? ROLE_ADMIN : 'admin'));
     $showAnomaly = $paidBeforeProperApproval && (isAdmin() || isFinance());
 
-    $editHref = 'edit-voucher.php?id=' . $voucherId . $moduleQs;
+    $editHref = function_exists('company_url')
+        ? company_url('edit-voucher.php')
+        : 'edit-voucher.php';
+    $editHref = $vvJoinQs($editHref, 'id=' . $voucherId);
+    if ($moduleQs !== '') {
+        $editHref = $vvJoinQs($editHref, ltrim($moduleQs, '?&'));
+    }
     if (!isAdmin()) {
-        $editHref = 'employee/edit-voucher.php?id=' . $voucherId . $moduleQs;
+        $editHref = function_exists('company_url')
+            ? company_url('employee/edit-voucher.php')
+            : 'employee/edit-voucher.php';
+        $editHref = $vvJoinQs($editHref, 'id=' . $voucherId);
+        if ($moduleQs !== '') {
+            $editHref = $vvJoinQs($editHref, ltrim($moduleQs, '?&'));
+        }
     }
 
     return [

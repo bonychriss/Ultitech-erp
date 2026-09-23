@@ -327,24 +327,14 @@ export default function CreateVoucherPage() {
 
   return (
     <div className="cv-shell">
-      <div className="cv-topbar">
-        <div>
-          <h1>{IS_EDIT ? 'Edit Payment Voucher' : 'Create Payment Voucher'}</h1>
-          <p>
-            {IS_LIMITED
-              ? 'Update classification details for this approved voucher.'
-              : IS_EDIT
-                ? (CFG.voucherNo ? `Updating ${CFG.voucherNo}` : 'Update this payment voucher.')
-                : 'Prepare a new payment voucher and route it for approval.'}
-          </p>
-        </div>
-        {IS_EDIT && CFG.voucherNo ? (
+      {IS_EDIT && CFG.voucherNo ? (
+        <div className="cv-topbar">
           <div className="cv-topbar-meta">
             <span className="cv-pill">{CFG.voucherNo}</span>
             {CFG.statusLabel ? <span className="cv-pill cv-pill--muted">{CFG.statusLabel}</span> : null}
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {flash && (
         <div className="cv-alert cv-alert--success">

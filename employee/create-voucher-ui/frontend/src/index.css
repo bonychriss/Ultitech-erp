@@ -98,9 +98,9 @@
 
 /* Sections */
 .cv-section {
-  padding-bottom: 2rem;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid var(--cv-divider);
+  padding-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
+  border-bottom: none;
   scroll-margin-top: 100px;
 }
 .cv-section-head { margin-bottom: 20px; }

@@ -540,29 +540,29 @@ function deliveries_compute_driver_performance(PDO $pdo, array $query = []): arr
 
     $suggestions = [];
     if ($completed > 0 && $onTimePct < 95) {
-        $suggestions[] = 'Finish deliveries before the agreed deadline - on-time target is 95%.';
+        $suggestions[] = 'Deliver on or before the agreed time. Aim for 95% on time.';
     }
     if ($completed <= 0) {
-        $suggestions[] = 'Complete and sign deliveries this week so on-time and documentation can be scored.';
+        $suggestions[] = 'Finish and sign deliveries this week so your score can be counted.';
     }
     if ($late > 0) {
-        $suggestions[] = $late . ' delivery/deliveries finished after the deadline - plan routes earlier.';
+        $suggestions[] = $late . ' delivery/deliveries were late. Start trips earlier next time.';
     }
     if ($unsigned > 0) {
-        $suggestions[] = 'Collect client signatures on all completed deliveries and return documents the same day.';
+        $suggestions[] = 'Get the client to sign every delivery and return papers the same day.';
     }
     if ($vehiclePct < 100) {
-        $suggestions[] = 'Log scheduled maintenance and daily vehicle inspections in Driver KPI -> Vehicle Care.';
+        $suggestions[] = 'Record vehicle checks and maintenance in Driver KPI under Vehicle Care.';
     }
     if ($rated === 0 && $completed > 0) {
-        $suggestions[] = 'Ask customers for a short rating/comment after delivery - reviews lift documentation.';
+        $suggestions[] = 'Ask the customer for a quick rating or short comment after delivery.';
     } elseif ($rated > 0 && ($ratingSum / max(1, $rated)) < 4) {
-        $suggestions[] = 'Follow up on lower customer ratings - feedback quality affects documentation.';
+        $suggestions[] = 'Check low ratings and fix what went wrong for the next trip.';
     }
     if ($suggestions === [] && $weighted >= 90) {
-        $suggestions[] = 'Strong week - keep the same on-time, paperwork, and vehicle-care rhythm.';
+        $suggestions[] = 'Great week. Keep delivering on time, signing papers, and checking the vehicle.';
     } elseif ($suggestions === []) {
-        $suggestions[] = 'Keep creating deliveries, collecting signatures on time, and logging vehicle care.';
+        $suggestions[] = 'Keep delivering, getting signatures, and logging vehicle care.';
     }
 
     $isInitApi = isset($_SERVER['SCRIPT_NAME']) && stripos((string) $_SERVER['SCRIPT_NAME'], 'init.php') !== false;

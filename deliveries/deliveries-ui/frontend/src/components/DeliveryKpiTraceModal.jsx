@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AlertTriangle, CircleHelp, Loader2, Send, Sparkles, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  BarChart3,
+  Car,
+  CircleHelp,
+  FileText,
+  Gauge,
+  Loader2,
+  Send,
+  Sparkles,
+  Timer,
+  X,
+} from 'lucide-react'
 import { fetchFeedbackGrades } from '../api/gradeFeedback.js'
 import { resolveKpiAiAssistUrl, sendKpiChatMessage } from '../api/kpiAssist.js'
 import FeedbackGradeBadge from './FeedbackGradeBadge.jsx'
@@ -23,9 +35,96 @@ function cellText(value) {
   return text || '-'
 }
 
-function DriverPerformanceBoard({ drivers, footnote, onSelectDriver }) {
+function metricTone(key) {
+  if (key === 'on_time') return 'green'
+  if (key === 'vehicle_care') return 'teal'
+  if (key === 'documentation') return 'purple'
+  return 'blue'
+}
+
+function MetricIcon({ toneKey }) {
+  const size = 18
+  if (toneKey === 'on_time') return <Timer size={size} aria-hidden="true" />
+  if (toneKey === 'vehicle_care') return <Car size={size} aria-hidden="true" />
+  if (toneKey === 'documentation') return <FileText size={size} aria-hidden="true" />
+  return <Gauge size={size} aria-hidden="true" />
+}
+
+function ScoreRing({ value, size = 52, stroke = 5 }) {
+  const pct = Math.min(100, Math.max(0, Number(value) || 0))
+  const radius = (size - stroke) / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (pct / 100) * circumference
+  return (
+    <svg
+      className="dlv-perf-score-ring"
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      aria-hidden="true"
+    >
+      <circle
+        className="dlv-perf-score-ring__track"
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        strokeWidth={stroke}
+      />
+      <circle
+        className="dlv-perf-score-ring__value"
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        strokeWidth={stroke}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+      <text
+        x="50%"
+        y="50%"
+        dominantBaseline="central"
+        textAnchor="middle"
+        className="dlv-perf-score-ring__label"
+      >
+        {pct.toFixed(1)}%
+      </text>
+    </svg>
+  )
+}
+
+function DriverPerformanceBoard({ drivers, footnote, onSelectDriver, title, headline, score }) {
   return (
     <section className="dlv-perf-board">
+      <div className="dlv-perf-summary dlv-perf-summary--board">
+        <div className="dlv-perf-summary__text">
+          <div className="dlv-perf-summary__title-row">
+            <span className="dlv-perf-summary__icon" aria-hidden="true">
+              <Gauge size={18} />
+            </span>
+            <div>
+              <h3 className="dlv-perf-summary__title">{cellText(title || 'Driver performance')}</h3>
+              <p className="dlv-perf-summary__sub">
+                {cellText(
+                  headline
+                    || 'Overall performance based on completed deliveries, vehicle care, documentation and on-time delivery.',
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="dlv-perf-summary__score" aria-label={`Overall score ${Number(score || 0).toFixed(1)} percent`}>
+          <ScoreRing value={score} />
+          <div className="dlv-perf-summary__score-copy">
+            <strong>Overall Score</strong>
+            <span>Driver performance</span>
+          </div>
+        </div>
+      </div>
+
       <header className="dlv-perf-board__head">
         <h3 className="dlv-perf-board__title">Drivers this week</h3>
         <p className="dlv-perf-board__hint">All drivers listed. Click one to open their score breakdown.</p>
@@ -36,8 +135,8 @@ function DriverPerformanceBoard({ drivers, footnote, onSelectDriver }) {
       ) : (
         <ul className="dlv-perf-board__list" role="list">
           {drivers.map((driver, index) => {
-            const score = Number(driver.score || 0)
-            const tone = score >= 85 ? 'green' : (score >= 70 ? 'amber' : 'red')
+            const driverScore = Number(driver.score || 0)
+            const tone = driverScore >= 85 ? 'green' : (driverScore >= 70 ? 'amber' : 'red')
             return (
               <li key={driver.id || `${driver.name}-${index}`}>
                 <button
@@ -49,7 +148,7 @@ function DriverPerformanceBoard({ drivers, footnote, onSelectDriver }) {
                   <span className="dlv-perf-driver__body">
                     <strong className="dlv-perf-driver__name">{cellText(driver.name)}</strong>
                   </span>
-                  <span className="dlv-perf-driver__score">{score.toFixed(1)}%</span>
+                  <span className="dlv-perf-driver__score">{driverScore.toFixed(1)}%</span>
                 </button>
               </li>
             )
@@ -62,7 +161,7 @@ function DriverPerformanceBoard({ drivers, footnote, onSelectDriver }) {
   )
 }
 
-function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
+function PerformanceBreakdown({ trace }) {
   const metrics = Array.isArray(trace.metrics) ? trace.metrics : []
   const calculation = Array.isArray(trace.calculation) ? trace.calculation : []
   const suggestions = Array.isArray(trace.suggestions) ? trace.suggestions : []
@@ -89,17 +188,15 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
   const activeSuggestions = selectedDriver
     ? (Array.isArray(selectedDriver.suggestions) ? selectedDriver.suggestions : [])
     : suggestions
-  const activeItems = selectedDriver
-    ? (Array.isArray(selectedDriver.items) ? selectedDriver.items : [])
-    : items
-
-  const selectedMetric = activeMetrics.find((metric) => (metric.key || metric.label) === selectedKey) || null
 
   if (showDriverBoard) {
     return (
       <DriverPerformanceBoard
         drivers={drivers}
         footnote={trace.footnote}
+        title={trace.title}
+        headline={trace.headline}
+        score={trace.score}
         onSelectDriver={(id) => {
           setSelectedDriverId(id)
           setSelectedKey(null)
@@ -108,31 +205,56 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
     )
   }
 
+  const overallScore = selectedDriver
+    ? Number(selectedDriver.score || 0)
+    : Number(trace.score || 0)
+
   return (
     <>
-      {selectedDriver ? (
-        <div className="dlv-perf-driver-nav">
-          <button
-            type="button"
-            className="dlv-perf-back"
-            onClick={() => {
-              setSelectedDriverId(null)
-              setSelectedKey(null)
-            }}
-          >
-            &larr; All drivers
-          </button>
-          <div className="dlv-perf-driver-nav__title">
-            <strong>{cellText(selectedDriver.name)}</strong>
-            <span>{Number(selectedDriver.score || 0).toFixed(1)}%</span>
+      <div className="dlv-perf-summary">
+        <div className="dlv-perf-summary__text">
+          {selectedDriver ? (
+            <button
+              type="button"
+              className="dlv-perf-back"
+              onClick={() => {
+                setSelectedDriverId(null)
+                setSelectedKey(null)
+              }}
+            >
+              &larr; All drivers
+            </button>
+          ) : null}
+          <div className="dlv-perf-summary__title-row">
+            <span className="dlv-perf-summary__icon" aria-hidden="true">
+              <Gauge size={18} />
+            </span>
+            <div>
+              <h3 className="dlv-perf-summary__title">
+                {selectedDriver ? cellText(selectedDriver.name) : 'Driver performance'}
+              </h3>
+              <p className="dlv-perf-summary__sub">
+                Overall performance based on completed deliveries, vehicle care, documentation and on-time delivery.
+              </p>
+            </div>
           </div>
         </div>
-      ) : null}
+        <div className="dlv-perf-summary__score" aria-label={`Overall score ${overallScore.toFixed(1)} percent`}>
+          <ScoreRing value={overallScore} />
+          <div className="dlv-perf-summary__score-copy">
+            <strong>Overall Score</strong>
+            <span>Driver performance</span>
+          </div>
+        </div>
+      </div>
 
       {activeMetrics.length > 0 ? (
         <section className="dlv-trace-section dlv-trace-section--flat dlv-perf-breakdown">
           <div className="dlv-perf-breakdown-head">
-            <h3 className="dlv-trace-section-title">Score breakdown</h3>
+            <h3 className="dlv-trace-section-title">
+              <BarChart3 size={16} aria-hidden="true" />
+              Score Breakdown
+            </h3>
             {activeCalculation.length > 0 ? (
               <div className="dlv-perf-about">
                 <button
@@ -166,27 +288,27 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
               const selected = selectedKey === key
               const tasks = Array.isArray(metric.tasks) ? metric.tasks : []
               const isOnTime = key === 'on_time'
+              const tone = metricTone(key)
+              const actual = Math.min(100, Math.max(0, Number(metric.actual || 0)))
               return (
                 <div key={key} className={`dlv-perf-metric-block${selected ? ' is-open' : ''}`}>
                   <button
                     type="button"
-                    className={`dlv-perf-metric${selected ? ' is-selected' : ''}`}
+                    className={`dlv-perf-metric dlv-perf-metric--${tone}${selected ? ' is-selected' : ''}`}
                     aria-expanded={selected}
                     aria-pressed={selected}
                     onClick={() => setSelectedKey((prev) => (prev === key ? null : key))}
                   >
                     <div className="dlv-perf-metric__head">
+                      <span className={`dlv-perf-metric__icon dlv-perf-metric__icon--${tone}`}>
+                        <MetricIcon toneKey={key} />
+                      </span>
                       <strong>{cellText(metric.label)}</strong>
-                      <span className="dlv-perf-metric__pct">{Number(metric.actual || 0).toFixed(1)}%</span>
+                      <span className="dlv-perf-metric__pct">{actual.toFixed(1)}%</span>
                     </div>
                     <p className="dlv-perf-metric__desc">{cellText(metric.description)}</p>
-                    <div className="dlv-perf-metric__meta">
-                      <span>Target {Number(metric.target || 0).toFixed(0)}%</span>
-                      <span>Weight {Number(metric.weight || 0).toFixed(0)}%</span>
-                      <span>Achievement {Number(metric.achievement || 0).toFixed(1)}%</span>
-                    </div>
                     <div className="dlv-perf-metric__bar" aria-hidden="true">
-                      <span style={{ width: `${Math.min(100, Math.max(0, Number(metric.actual || 0)))}%` }} />
+                      <span style={{ width: `${actual}%` }} />
                     </div>
                   </button>
 
@@ -240,67 +362,26 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
       ) : null}
 
       {activeSuggestions.length > 0 ? (
-        <section className="dlv-trace-section">
-          <div className="dlv-trace-grade-head">
-            <h3 className="dlv-trace-section-title">AI suggestions</h3>
-            <span className="dlv-trace-ai-badge">
-              <Sparkles size={11} aria-hidden="true" />
-              Improve score
-            </span>
+        <section className="dlv-trace-section dlv-trace-section--flat dlv-perf-tips">
+          <div className="dlv-perf-breakdown-head">
+            <h3 className="dlv-trace-section-title">
+              <Sparkles size={16} aria-hidden="true" />
+              AI suggestions
+            </h3>
           </div>
-          <ul className="dlv-perf-suggestions">
-            {activeSuggestions.map((tip, index) => (
-              <li key={`tip-${index}`}>{tip}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {!selectedMetric ? (
-        <section className="dlv-trace-section">
-          <h3 className="dlv-trace-section-title">
-            {selectedDriver
-              ? `Completed deliveries (${activeItems.length})`
-              : (itemsHeading || 'Completed deliveries this week')}
-          </h3>
-          {activeItems.length === 0 ? (
-            <p className="dlv-trace-empty">{emptyLabel || 'No completed deliveries in this week yet.'}</p>
-          ) : (
-            <div className="dlv-trace-table-wrap">
-              <table className="dlv-trace-table">
-                <thead>
-                  <tr>
-                    <th>Delivery</th>
-                    <th>Client</th>
-                    <th>Timing</th>
-                    <th>Signed</th>
-                    <th>Rating</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeItems.map((item) => (
-                    <tr key={`${item.id}-${item.deliveryNumber}`}>
-                      <td>
-                        <span className="dlv-trace-delivery-no">{cellText(item.deliveryNumber)}</span>
-                      </td>
-                      <td>
-                        <div>{cellText(item.clientName)}</div>
-                        {item.clientPhone ? (
-                          <small className="dlv-trace-muted">{item.clientPhone}</small>
-                        ) : null}
-                      </td>
-                      <td>{cellText(item.status)}</td>
-                      <td>{item.signed ? 'Yes' : 'No'}</td>
-                      <td>{item.rating ? `${item.rating}/5` : '-'}</td>
-                      <td className="dlv-trace-muted">{formatDate(item.createdAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="dlv-perf-tip">
+            <div className="dlv-perf-tip__head">
+              <span className="dlv-perf-tip__icon" aria-hidden="true">
+                <Sparkles size={14} />
+              </span>
+              <strong>Improve score</strong>
             </div>
-          )}
-          {trace.footnote ? <p className="dlv-trace-footnote">{trace.footnote}</p> : null}
+            <ul className="dlv-perf-tip__list">
+              {activeSuggestions.map((tip, index) => (
+                <li key={`tip-${index}`}>{tip}</li>
+              ))}
+            </ul>
+          </div>
         </section>
       ) : null}
     </>
@@ -316,9 +397,6 @@ function renderItemsTable(trace, items, itemsHeading, emptyLabel, grading = {}) 
     return (
       <PerformanceBreakdown
         trace={trace}
-        items={items}
-        itemsHeading={itemsHeading}
-        emptyLabel={emptyLabel}
       />
     )
   }
@@ -635,11 +713,17 @@ export default function DeliveryKpiTraceModal({ trace, traceKey = '', onClose, e
         aria-labelledby="dlv-kpi-trace-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="dlv-trace-head">
-          <div className="dlv-trace-head-text">
-            <h2 id="dlv-kpi-trace-title" className="dlv-trace-title">{trace.title}</h2>
-            <p className="dlv-trace-headline">{trace.headline}</p>
-          </div>
+        <div className={`dlv-trace-head${isPerformanceTrace ? ' dlv-trace-head--performance' : ''}`}>
+          {isPerformanceTrace ? (
+            <div className="dlv-trace-head-text dlv-trace-head-text--sr">
+              <h2 id="dlv-kpi-trace-title" className="dlv-trace-title">{trace.title || 'Driver performance'}</h2>
+            </div>
+          ) : (
+            <div className="dlv-trace-head-text">
+              <h2 id="dlv-kpi-trace-title" className="dlv-trace-title">{trace.title}</h2>
+              <p className="dlv-trace-headline">{trace.headline}</p>
+            </div>
+          )}
           <button type="button" className="dlv-trace-close" onClick={onClose} aria-label="Close">
             <X size={20} aria-hidden="true" />
           </button>

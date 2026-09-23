@@ -527,7 +527,7 @@ function deliveries_build_dashboard_kpi_traces(array $trips, array $orderRows, a
             'confirmation' => $driverName . ' - score for ' . $weekLabel . ' from completed deliveries, signatures, reviews, and vehicle-care work logs.',
             'items' => is_array($perf['items'] ?? null) ? $perf['items'] : [],
             'itemsTitle' => 'Completed deliveries this week',
-            'footnote' => 'Targets: On-time 95% | Vehicle care 100% | Documentation 100%.',
+            'footnote' => '',
             'modalType' => 'performance',
             'metrics' => is_array($perf['metrics'] ?? null) ? $perf['metrics'] : [],
             'calculation' => is_array($perf['calculation'] ?? null) ? $perf['calculation'] : [],

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AlertTriangle, Loader2, Send, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, CircleHelp, Loader2, Send, Sparkles, X } from 'lucide-react'
 import { fetchFeedbackGrades } from '../api/gradeFeedback.js'
 import { resolveKpiAiAssistUrl, sendKpiChatMessage } from '../api/kpiAssist.js'
 import FeedbackGradeBadge from './FeedbackGradeBadge.jsx'
@@ -69,10 +69,12 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
   const drivers = Array.isArray(trace.drivers) ? trace.drivers : []
   const [selectedKey, setSelectedKey] = useState(null)
   const [selectedDriverId, setSelectedDriverId] = useState(null)
+  const [howOpen, setHowOpen] = useState(false)
 
   useEffect(() => {
     setSelectedKey(null)
     setSelectedDriverId(null)
+    setHowOpen(false)
   }, [trace])
 
   const selectedDriver = drivers.find((row) => Number(row.id) === Number(selectedDriverId)) || null
@@ -129,7 +131,34 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
 
       {activeMetrics.length > 0 ? (
         <section className="dlv-trace-section">
-          <h3 className="dlv-trace-section-title">Score breakdown</h3>
+          <div className="dlv-perf-breakdown-head">
+            <h3 className="dlv-trace-section-title">Score breakdown</h3>
+            {activeCalculation.length > 0 ? (
+              <div className="dlv-perf-about">
+                <button
+                  type="button"
+                  className={`dlv-perf-about__btn${howOpen ? ' is-open' : ''}`}
+                  aria-expanded={howOpen}
+                  aria-controls="dlv-perf-how-panel"
+                  title="How it was obtained"
+                  onClick={() => setHowOpen((prev) => !prev)}
+                >
+                  <CircleHelp size={16} aria-hidden="true" />
+                  <span className="dlv-perf-about__label">About</span>
+                </button>
+                {howOpen ? (
+                  <div id="dlv-perf-how-panel" className="dlv-perf-about__panel" role="region" aria-label="How it was obtained">
+                    <strong className="dlv-perf-about__title">How it was obtained</strong>
+                    <ol className="dlv-perf-calc">
+                      {activeCalculation.map((line, index) => (
+                        <li key={`calc-${index}`}>{line}</li>
+                      ))}
+                    </ol>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
           <p className="dlv-perf-hint">Click a metric to drop down the related deliveries or tasks.</p>
           <div className="dlv-perf-metrics">
             {activeMetrics.map((metric) => {
@@ -207,17 +236,6 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
               )
             })}
           </div>
-        </section>
-      ) : null}
-
-      {activeCalculation.length > 0 ? (
-        <section className="dlv-trace-section">
-          <h3 className="dlv-trace-section-title">How it was obtained</h3>
-          <ol className="dlv-perf-calc">
-            {activeCalculation.map((line, index) => (
-              <li key={`calc-${index}`}>{line}</li>
-            ))}
-          </ol>
         </section>
       ) : null}
 

@@ -662,164 +662,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // -------------------------------------------------------------------------
-// Render the React front-end shell (replaces the legacy voucher-form-page.php).
-// All POST handling above is preserved and reused by the React form, which
-// submits multipart/form-data back to this same page.
+// Render via erp-laravel (Domains/Voucher + React create-voucher-ui).
+// POST create/draft/payee stays above; form still posts back to this URL.
 // -------------------------------------------------------------------------
-require_once __DIR__ . '/create-voucher-ui/lib.php';
+if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
+    $_GET['module'] = 'voucher';
+}
+$_SESSION['active_module'] = 'voucher';
 
-$assets = createVoucherUiLoadReactAssets();
-if ($assets === null) {
+$slug = trim((string) ($_SESSION['company_slug'] ?? (function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : '')));
+if ($slug === '' && function_exists('getRequestedCompanySlug')) {
+    $slug = trim((string) getRequestedCompanySlug());
+}
+$backUrl = $slug !== ''
+    ? company_url('select-module', $slug)
+    : (function_exists('app_url') ? app_url('/select-module.php') : '/select-module.php');
+
+$publicUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+    . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
+    . (string) ($_SERVER['REQUEST_URI'] ?? '/employee/create-voucher.php');
+$publicUrl = strtok($publicUrl, '?') ?: $publicUrl;
+
+$dbName = '';
+try {
+    if (isset($pdo) && $pdo instanceof PDO) {
+        $dbName = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+    }
+} catch (Throwable $e) {
+    $dbName = '';
+}
+
+$GLOBALS['ERP_VOUCHER_CONTEXT'] = [
+    'user_id' => (int) ($_SESSION['user_id'] ?? 0),
+    'full_name' => (string) ($_SESSION['full_name'] ?? ''),
+    'company_id' => (int) ($_SESSION['company_id'] ?? 0),
+    'company_slug' => $slug,
+    'back_url' => $backUrl,
+    'voucher_url' => $publicUrl,
+    'app_root' => rtrim((string) (function_exists('app_url') ? app_url('/') : '/public_html'), '/'),
+    'db_name' => $dbName !== '' ? $dbName : (defined('DB_NAME') ? (string) DB_NAME : ''),
+    'is_admin' => function_exists('isAdmin') && isAdmin(),
+    'is_finance' => function_exists('isFinance') && isFinance(),
+    'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'voucher',
+    'client_cfg_data' => [
+        'payees' => is_array($payees) ? $payees : [],
+        'users' => is_array($allUsers) ? $allUsers : [],
+        'financeUsers' => is_array($financeUsers) ? $financeUsers : [],
+        'salesOrders' => is_array($salesOrders) ? $salesOrders : [],
+        'flash' => $voucherCreateSuccess,
+        'error' => $error,
+        'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'voucher',
+    ],
+];
+
+$GLOBALS['ERP_CONTEXT'] = $GLOBALS['ERP_VOUCHER_CONTEXT'];
+$GLOBALS['ERP_CONTEXT']['module'] = $GLOBALS['ERP_VOUCHER_CONTEXT']['module'];
+$GLOBALS['ERP_ROUTE'] = '/voucher/create';
+$GLOBALS['ERP_VOUCHER_ROUTE'] = '/voucher/create';
+
+$laravelRoot = dirname(__DIR__) . '/erp-laravel';
+$laravelAutoload = $laravelRoot . '/vendor/autoload.php';
+$laravelEnv = $laravelRoot . '/.env';
+$laravelEnvExample = $laravelRoot . '/.env.example';
+if (!is_file($laravelEnv) && is_file($laravelEnvExample)) {
+    @copy($laravelEnvExample, $laravelEnv);
+}
+
+if (!is_file($laravelAutoload)) {
     http_response_code(503);
-    header('Content-Type: text/html; charset=utf-8');
-    echo '<!DOCTYPE html><html><head><title>Create Voucher</title></head><body style="font-family:sans-serif;padding:2rem;">';
-    echo '<h1>Create Voucher</h1>';
-    echo '<p>The React UI has not been built yet. Run <code>npm install</code> and <code>npm run build</code> inside <code>employee/create-voucher-ui/frontend/</code>.</p>';
+    echo '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;">';
+    echo '<h1>erp-laravel required</h1>';
+    echo '<p>Run <code>composer install</code> in <code>erp-laravel/</code>.</p>';
     echo '</body></html>';
     exit;
 }
 
-$mapUserNames = static function (array $rows): array {
-    $out = [];
-    foreach ($rows as $r) {
-        $name = trim((string) ($r['full_name'] ?? ''));
-        if ($name !== '') {
-            $out[] = ['full_name' => $name];
-        }
-    }
-    return $out;
-};
-
-$mapPayees = static function (array $rows): array {
-    $out = [];
-    foreach ($rows as $r) {
-        $out[] = [
-            'id' => (int) ($r['id'] ?? 0),
-            'name' => (string) ($r['name'] ?? ''),
-            'type' => (string) ($r['type'] ?? ''),
-        ];
-    }
-    return $out;
-};
-
-$mapSalesOrders = static function (array $rows): array {
-    $out = [];
-    foreach ($rows as $r) {
-        $out[] = [
-            'id' => (int) ($r['id'] ?? 0),
-            'order_number' => (string) ($r['order_number'] ?? ''),
-            'customer_name' => (string) ($r['customer_name'] ?? ''),
-            'salesperson_name' => (string) ($r['salesperson_name'] ?? ''),
-            'status' => (string) ($r['status'] ?? ''),
-        ];
-    }
-    return $out;
-};
-
-$cvPostUrl = function_exists('company_url')
-    ? company_url('employee/create-voucher.php')
-    : 'create-voucher.php';
-if (!empty($_SERVER['QUERY_STRING'])) {
-    $cvPostUrl .= (str_contains($cvPostUrl, '?') ? '&' : '?') . $_SERVER['QUERY_STRING'];
-}
-
-$cvCancelUrl = function_exists('company_url')
-    ? company_url('employee/my-vouchers.php')
-    : 'my-vouchers.php';
-$cvCancelUrl .= $voucherModuleQs !== ''
-    ? ((str_contains($cvCancelUrl, '?') ? '&' : '?') . ltrim($voucherModuleQs, '?'))
-    : '';
-
-$createVoucherConfig = [
-    'postUrl' => $cvPostUrl,
-    'cancelUrl' => $cvCancelUrl,
-    'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'voucher',
-    'preparedBy' => trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? '')),
-    'today' => date('Y-m-d'),
-    'canRestrict' => (isAdmin() || isFinance()),
-    'currencies' => ['TZS', 'USD', 'CNY'],
-    'purposes' => [
-        ['value' => 'general', 'label' => 'General Payment'],
-        ['value' => 'stock_purchase', 'label' => 'Stock Purchase'],
-    ],
-    'paymentTypes' => ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment'],
-    'budgetTypes' => [
-        'Operational Expenses',
-        'Procurement & Supplies',
-        'Employee Costs',
-        'Sales & Marketing',
-        'Logistics & Delivery',
-        'Administration & Management',
-        'Projects & Capital Expenditure (CAPEX)',
-        'Financial Obligations',
-        'Tax & Compliance',
-        'Others / Miscellaneous',
-    ],
-    'payees' => $mapPayees(is_array($payees) ? $payees : []),
-    'users' => $mapUserNames(is_array($allUsers) ? $allUsers : []),
-    'financeUsers' => $mapUserNames(is_array($financeUsers) ? $financeUsers : []),
-    'salesOrders' => $mapSalesOrders(is_array($salesOrders) ? $salesOrders : []),
-    'flash' => $voucherCreateSuccess,
-    'error' => $error,
-];
-
-$page_title = 'Create Voucher';
-$employeeHeaderTitle = '';
-$hideHeaderCompanyBranding = true;
-$GLOBALS['_erp_header_style_linked'] = false;
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Voucher</title>
-    <script>
-    (function() {
-        var t = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', t);
-    })();
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" crossorigin href="<?= htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') ?>">
-    <script>
-        window.__CV_CFG__ = <?= json_encode($createVoucherConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
-    </script>
-    <style>
-        :root { --bg-body: #f8fafc; }
-        body.dashboard { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
-        html, body.dashboard, .main-content, .layout-main-wrapper { scrollbar-width: none !important; -ms-overflow-style: none !important; }
-        html::-webkit-scrollbar, body.dashboard::-webkit-scrollbar, .main-content::-webkit-scrollbar, .layout-main-wrapper::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
-        .main-content.create-voucher-react-root {
-            width: 100% !important;
-            max-width: none !important;
-            padding: 0.5rem 1.25rem 2.5rem !important;
-            box-sizing: border-box;
-            background: #f8fafc !important;
-        }
-        .main-content.create-voucher-react-root #root { width: 100%; max-width: none; margin: 0; }
-        @media (max-width: 1024px) { .main-content.create-voucher-react-root { padding: 1rem 0.875rem 1.5rem !important; } }
-        @media (max-width: 767.98px) { .main-content.create-voucher-react-root { padding: 0.875rem 0.75rem 1.5rem !important; } }
-        body.dashboard .header,
-        body.dashboard .employee-header {
-            background: #f8fafc !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-    </style>
-</head>
-<body class="dashboard">
-    <?php require_once __DIR__ . '/../includes/header_employee.php'; ?>
-
-    <main class="main-content create-voucher-react-root">
-        <noscript>
-            <div class="alert alert-warning">JavaScript is required to create a voucher.</div>
-        </noscript>
-        <div id="root"></div>
-    </main>
-
-    <script type="module" crossorigin src="<?= htmlspecialchars($assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'], ENT_QUOTES, 'UTF-8') ?>"></script>
-</body>
-</html>
+require $laravelRoot . '/bootstrap/erp-bridge.php';
+exit;

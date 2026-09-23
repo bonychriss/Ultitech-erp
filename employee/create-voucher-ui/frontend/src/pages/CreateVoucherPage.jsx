@@ -5,14 +5,6 @@ import {
 } from 'lucide-react'
 import { CFG, CURRENCIES, IS_EDIT, IS_LIMITED, currencySymbol, currencyMeta, formatMoney } from '../config.js'
 
-const SECTIONS = [
-  { id: 'cv-general', label: 'General' },
-  { id: 'cv-items', label: 'Payment Details' },
-  { id: 'cv-description', label: 'Description' },
-  { id: 'cv-approvals', label: 'Approvals' },
-  { id: 'cv-attachments', label: 'Attachments' },
-]
-
 function newItem(seed = {}) {
   return {
     key: Math.random().toString(36).slice(2),
@@ -71,7 +63,6 @@ export default function CreateVoucherPage() {
   const [showErrors, setShowErrors] = useState(false)
   const [formError, setFormError] = useState(CFG.error || '')
   const [flash, setFlash] = useState(CFG.flash || null)
-  const [activeSection, setActiveSection] = useState(SECTIONS[0].id)
 
   // New payee modal
   const [payeeModalOpen, setPayeeModalOpen] = useState(false)
@@ -99,24 +90,6 @@ export default function CreateVoucherPage() {
         .some((v) => String(v).toLowerCase().includes(q)),
     )
   }, [salesOrders, soSearch])
-
-  // Scroll-spy
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)
-        if (visible[0]) setActiveSection(visible[0].target.id)
-      },
-      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.25, 0.5, 1] },
-    )
-    SECTIONS.forEach((s) => {
-      const el = document.getElementById(s.id)
-      if (el) observer.observe(el)
-    })
-    return () => observer.disconnect()
-  }, [])
 
   // Keep a live snapshot for the unload handler (which binds once).
   latestRef.current = { payeeId, description, items }
@@ -171,10 +144,6 @@ export default function CreateVoucherPage() {
 
   const selectedCurrency = currencyMeta(currency)
 
-  function scrollToSection(id) {
-    const el = document.getElementById(id)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
 
   function updateItem(key, patch) {
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)))
@@ -190,7 +159,11 @@ export default function CreateVoucherPage() {
     })
   }
   function removeItem(key) {
-    setItems((prev) => (prev.length > 1 ? prev.filter((it) => it.key !== key) : prev))
+    setItems((prev) => {
+      if (prev.length > 1) return prev.filter((it) => it.key !== key)
+      // Last remaining row: clear it instead of removing the only line.
+      return [{ ...newItem(), payment_type: '' }]
+    })
   }
 
   function toggleSO(id) {
@@ -413,19 +386,6 @@ export default function CreateVoucherPage() {
         <input type="hidden" name="linked_sales_order_id" value={Array.from(selectedSO)[0] || ''} readOnly />
         <input type="hidden" name="supporting_documents" value={attachmentCount} readOnly />
 
-        <nav className="cv-nav" aria-label="Form sections">
-          {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`cv-nav-item${activeSection === s.id ? ' is-active' : ''}`}
-              onClick={() => scrollToSection(s.id)}
-            >
-              {s.label}
-            </button>
-          ))}
-        </nav>
-
         <div className="cv-main">
           {/* GENERAL */}
           <section id="cv-general" className="cv-section">
@@ -433,157 +393,161 @@ export default function CreateVoucherPage() {
               <h2>General Information</h2>
               <p>Who is being paid, in which currency, and when.</p>
             </header>
-
-            <div className="cv-row">
-              <label className="cv-label">Payee {mark(filled.payee)}</label>
-              <div className="cv-field">
-                <div className="cv-payee-row">
-                  <select
-                    name="payee_id"
-                    className={`cv-select${invCls(filled.payee)}`}
-                    value={payeeId}
-                    onChange={(e) => setPayeeId(e.target.value)}
-                    required
-                    disabled={fieldsLocked}
-                  >
-                    <option value="">Select payee</option>
-                    {payees.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                  {!fieldsLocked && (
-                    <button type="button" className="cv-btn-ghost" onClick={() => setPayeeModalOpen(true)}>
-                      <UserPlus size={15} /> New
-                    </button>
-                  )}
-                </div>
-                {fieldErr(filled.payee, 'Please select a payee.')}
-              </div>
-            </div>
-
-            <div className="cv-row">
-              <label className="cv-label">Currency</label>
-              <div className="cv-field cv-field--narrow">
-                <div className={`cv-currency${currencyOpen ? ' is-open' : ''}`} ref={currencyRef}>
-                  <button
-                    type="button"
-                    className="cv-currency-btn"
-                    onClick={() => !fieldsLocked && setCurrencyOpen((v) => !v)}
-                    aria-haspopup="listbox"
-                    aria-expanded={currencyOpen}
-                    disabled={fieldsLocked}
-                  >
-                    <img className="cv-flag" src={`https://flagcdn.com/32x24/${selectedCurrency.flag}.png`} alt="" loading="lazy" />
-                    <span className="cv-currency-code">{selectedCurrency.code}</span>
-                    <span className="cv-currency-name">{selectedCurrency.name}</span>
-                    <ChevronDown size={16} className="cv-currency-chev" />
-                  </button>
-                  {currencyOpen && (
-                    <div className="cv-currency-menu" role="listbox">
-                      {CURRENCIES.map((c) => (
-                        <button
-                          key={c.code}
-                          type="button"
-                          role="option"
-                          aria-selected={c.code === currency}
-                          className={`cv-currency-opt${c.code === currency ? ' is-sel' : ''}`}
-                          onClick={() => { setCurrency(c.code); setCurrencyOpen(false) }}
-                        >
-                          <img className="cv-flag" src={`https://flagcdn.com/32x24/${c.flag}.png`} alt="" loading="lazy" />
-                          <span className="cv-currency-code">{c.code}</span>
-                          <span className="cv-currency-name">{c.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <input type="hidden" name="currency" value={currency} />
-                </div>
-              </div>
-            </div>
-
-            <div className="cv-row">
-              <label className="cv-label">Date {mark(filled.date)}</label>
-              <div className="cv-field cv-field--narrow">
-                <input type="date" name="date_created" className={`cv-input${invCls(filled.date)}`} value={dateCreated} onChange={(e) => setDateCreated(e.target.value)} required disabled={fieldsLocked} />
-                {fieldErr(filled.date, 'Please choose a date.')}
-              </div>
-            </div>
-
-            <div className="cv-row">
-              <label className="cv-label">Purpose</label>
-              <div className="cv-field cv-field--narrow">
-                <select name="voucher_purpose" className={`cv-select${purpose ? ' is-valid' : ''}`} value={purpose} onChange={(e) => setPurpose(e.target.value)}>
-                  {CFG.purposes.map((p) => (<option key={p.value} value={p.value}>{p.label}</option>))}
-                </select>
-              </div>
-            </div>
-
-            {CFG.canRestrict && (
+            <div className="cv-card">
               <div className="cv-row">
-                <label className="cv-label">Restricted</label>
+                <label className="cv-label">Payee {mark(filled.payee)}</label>
                 <div className="cv-field">
-                  <label className="cv-check">
-                    <input type="checkbox" name="is_restricted" value="1" checked={isRestricted} onChange={(e) => setIsRestricted(e.target.checked)} disabled={fieldsLocked} />
-                    <span>Mark this voucher as restricted (visible to Finance/Admin only)</span>
-                  </label>
+                  <div className="cv-payee-row">
+                    <select
+                      name="payee_id"
+                      className={`cv-select${invCls(filled.payee)}`}
+                      value={payeeId}
+                      onChange={(e) => setPayeeId(e.target.value)}
+                      required
+                      disabled={fieldsLocked}
+                    >
+                      <option value="">Select payee</option>
+                      {payees.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    {!fieldsLocked && (
+                      <button type="button" className="cv-btn-ghost" onClick={() => setPayeeModalOpen(true)}>
+                        <UserPlus size={15} /> New
+                      </button>
+                    )}
+                  </div>
+                  {fieldErr(filled.payee, 'Please select a payee.')}
                 </div>
               </div>
-            )}
 
-            {salesOrders.length > 0 && (
-              <div className="cv-row cv-row--top">
-                <label className="cv-label">Link Sales Orders</label>
-                <div className="cv-field">
-                  <div className={`cv-so${soOpen ? ' is-open' : ''}`}>
-                    <button
-                      type="button"
-                      className="cv-so-toggle"
-                      onClick={() => setSoOpen((v) => !v)}
-                      aria-expanded={soOpen}
-                    >
-                      <Link2 size={15} />
-                      <span className="cv-so-toggle-label">
-                        {selectedSO.size > 0
-                          ? `${selectedSO.size} sales order${selectedSO.size > 1 ? 's' : ''} linked`
-                          : 'Link sales orders (optional)'}
-                      </span>
-                      <ChevronDown size={16} className="cv-so-chevron" />
-                    </button>
-                    {soOpen && (
-                      <div className="cv-so-body">
-                        <div className="cv-so-search">
-                          <Search size={14} />
-                          <input
-                            type="text"
-                            className="cv-so-search-input"
-                            placeholder="Search sales orders..."
-                            value={soSearch}
-                            onChange={(e) => setSoSearch(e.target.value)}
-                          />
+              <div className="cv-row cv-row--split">
+                <div className="cv-split-col">
+                  <label className="cv-label">Currency</label>
+                  <div className="cv-field">
+                    <div className={`cv-currency${currencyOpen ? ' is-open' : ''}`} ref={currencyRef}>
+                      <button
+                        type="button"
+                        className="cv-currency-btn"
+                        onClick={() => !fieldsLocked && setCurrencyOpen((v) => !v)}
+                        aria-haspopup="listbox"
+                        aria-expanded={currencyOpen}
+                        disabled={fieldsLocked}
+                      >
+                        <img className="cv-flag" src={`https://flagcdn.com/32x24/${selectedCurrency.flag}.png`} alt="" loading="lazy" />
+                        <span className="cv-currency-code">{selectedCurrency.code}</span>
+                        <span className="cv-currency-name">{selectedCurrency.name}</span>
+                        <ChevronDown size={16} className="cv-currency-chev" />
+                      </button>
+                      {currencyOpen && (
+                        <div className="cv-currency-menu" role="listbox">
+                          {CURRENCIES.map((c) => (
+                            <button
+                              key={c.code}
+                              type="button"
+                              role="option"
+                              aria-selected={c.code === currency}
+                              className={`cv-currency-opt${c.code === currency ? ' is-sel' : ''}`}
+                              onClick={() => { setCurrency(c.code); setCurrencyOpen(false) }}
+                            >
+                              <img className="cv-flag" src={`https://flagcdn.com/32x24/${c.flag}.png`} alt="" loading="lazy" />
+                              <span className="cv-currency-code">{c.code}</span>
+                              <span className="cv-currency-name">{c.name}</span>
+                            </button>
+                          ))}
                         </div>
-                        <div className="cv-so-list">
-                          {filteredSO.length === 0 ? (
-                            <div className="cv-so-empty">No sales orders found</div>
-                          ) : (
-                            filteredSO.slice(0, 50).map((so) => (
-                              <label key={so.id} className={`cv-so-item${selectedSO.has(so.id) ? ' is-checked' : ''}`}>
-                                <input type="checkbox" checked={selectedSO.has(so.id)} onChange={() => toggleSO(so.id)} />
-                                <span className="cv-so-no">{so.order_number}</span>
-                                <span className="cv-so-cust">{so.customer_name}</span>
-                                <span className="cv-so-status">{so.status}</span>
-                              </label>
-                            ))
-                          )}
-                        </div>
-                        {selectedSO.size > 0 && (
-                          <div className="cv-so-count">{selectedSO.size} sales order{selectedSO.size > 1 ? 's' : ''} linked</div>
-                        )}
-                      </div>
-                    )}
+                      )}
+                      <input type="hidden" name="currency" value={currency} />
+                    </div>
+                  </div>
+                </div>
+                <div className="cv-split-col">
+                  <label className="cv-label">Date {mark(filled.date)}</label>
+                  <div className="cv-field">
+                    <input type="date" name="date_created" className={`cv-input${invCls(filled.date)}`} value={dateCreated} onChange={(e) => setDateCreated(e.target.value)} required disabled={fieldsLocked} />
+                    {fieldErr(filled.date, 'Please choose a date.')}
                   </div>
                 </div>
               </div>
-            )}
+
+              <div className="cv-row cv-row--split">
+                <div className="cv-split-col">
+                  <label className="cv-label">Purpose</label>
+                  <div className="cv-field">
+                    <select name="voucher_purpose" className={`cv-select${purpose ? ' is-valid' : ''}`} value={purpose} onChange={(e) => setPurpose(e.target.value)}>
+                      {CFG.purposes.map((p) => (<option key={p.value} value={p.value}>{p.label}</option>))}
+                    </select>
+                  </div>
+                </div>
+                {CFG.canRestrict ? (
+                  <div className="cv-split-col">
+                    <label className="cv-label">Restricted</label>
+                    <div className="cv-field">
+                      <label className="cv-check">
+                        <input type="checkbox" name="is_restricted" value="1" checked={isRestricted} onChange={(e) => setIsRestricted(e.target.checked)} disabled={fieldsLocked} />
+                        <span>Mark this voucher as restricted (visible to Finance/Admin only)</span>
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="cv-split-col" aria-hidden="true" />
+                )}
+              </div>
+              {salesOrders.length > 0 && (
+                <div className="cv-row cv-row--top">
+                  <label className="cv-label">Link Sales Orders</label>
+                  <div className="cv-field">
+                    <div className={`cv-so${soOpen ? ' is-open' : ''}`}>
+                      <button
+                        type="button"
+                        className="cv-so-toggle"
+                        onClick={() => setSoOpen((v) => !v)}
+                        aria-expanded={soOpen}
+                      >
+                        <Link2 size={15} />
+                        <span className="cv-so-toggle-label">
+                          {selectedSO.size > 0
+                            ? `${selectedSO.size} sales order${selectedSO.size > 1 ? 's' : ''} linked`
+                            : 'Link sales orders (optional)'}
+                        </span>
+                        <ChevronDown size={16} className="cv-so-chevron" />
+                      </button>
+                      {soOpen && (
+                        <div className="cv-so-body">
+                          <div className="cv-so-search">
+                            <Search size={14} />
+                            <input
+                              type="text"
+                              className="cv-so-search-input"
+                              placeholder="Search sales orders..."
+                              value={soSearch}
+                              onChange={(e) => setSoSearch(e.target.value)}
+                            />
+                          </div>
+                          <div className="cv-so-list">
+                            {filteredSO.length === 0 ? (
+                              <div className="cv-so-empty">No sales orders found</div>
+                            ) : (
+                              filteredSO.slice(0, 50).map((so) => (
+                                <label key={so.id} className={`cv-so-item${selectedSO.has(so.id) ? ' is-checked' : ''}`}>
+                                  <input type="checkbox" checked={selectedSO.has(so.id)} onChange={() => toggleSO(so.id)} />
+                                  <span className="cv-so-no">{so.order_number}</span>
+                                  <span className="cv-so-cust">{so.customer_name}</span>
+                                  <span className="cv-so-status">{so.status}</span>
+                                </label>
+                              ))
+                            )}
+                          </div>
+                          {selectedSO.size > 0 && (
+                            <div className="cv-so-count">{selectedSO.size} sales order{selectedSO.size > 1 ? 's' : ''} linked</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
 
           {/* ITEMS */}
@@ -598,15 +562,10 @@ export default function CreateVoucherPage() {
             <div className="cv-items">
               {items.map((it, idx) => (
                 <div className="cv-item" key={it.key}>
-                  <div className="cv-item-head">
-                    <span className="cv-item-no">Item {idx + 1}</span>
-                    {items.length > 1 && !fieldsLocked && (
-                      <button type="button" className="cv-item-del" onClick={() => removeItem(it.key)} aria-label="Remove item">
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                  </div>
                   <div className="cv-item-grid">
+                    <div className="cv-item-sn" aria-label={`Item ${idx + 1}`}>
+                      <span className="cv-item-sn-num">{idx + 1}</span>
+                    </div>
                     <div className="cv-item-cell">
                       <label>Payment Type</label>
                       {idx === 0 ? (
@@ -677,6 +636,13 @@ export default function CreateVoucherPage() {
                         disabled={fieldsLocked}
                       />
                     </div>
+                    {!fieldsLocked && (
+                      <div className="cv-item-actions">
+                        <button type="button" className="cv-item-del" onClick={() => removeItem(it.key)} aria-label="Remove item" title="Remove item">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {/* payee name carried per item to satisfy backend name[] */}
                   <input type="hidden" name="name[]" value={payeeName} readOnly />
@@ -703,20 +669,22 @@ export default function CreateVoucherPage() {
               <h2>Description</h2>
               <p>Explain the purpose and context of this payment.</p>
             </header>
-            <div className="cv-row cv-row--top">
-              <label className="cv-label">Description {mark(filled.description)}</label>
-              <div className="cv-field">
-                <textarea
-                  name="description"
-                  className={`cv-textarea${invCls(filled.description)}`}
-                  rows={7}
-                  placeholder="Describe what this voucher is for..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
-                  disabled={fieldsLocked}
-                />
-                {fieldErr(filled.description, 'Please enter a description.')}
+            <div className="cv-card">
+              <div className="cv-row cv-row--top">
+                <label className="cv-label">Description {mark(filled.description)}</label>
+                <div className="cv-field">
+                  <textarea
+                    name="description"
+                    className={`cv-textarea${invCls(filled.description)}`}
+                    rows={5}
+                    placeholder="Describe what this voucher is for..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                    disabled={fieldsLocked}
+                  />
+                  {fieldErr(filled.description, 'Please enter a description.')}
+                </div>
               </div>
             </div>
           </section>
@@ -728,34 +696,38 @@ export default function CreateVoucherPage() {
               <p>Choose who applies for, reviews and checks this voucher.</p>
             </header>
 
-            <div className="cv-row">
-              <label className="cv-label">Applicant {mark(filled.applicant)}</label>
-              <div className="cv-field cv-field--narrow">
-                <select name="applicant" className={`cv-select${invCls(filled.applicant)}`} value={applicant} onChange={(e) => setApplicant(e.target.value)} required disabled={fieldsLocked}>
-                  <option value="">Select...</option>
-                  {CFG.users.map((u) => (<option key={u.full_name} value={u.full_name}>{u.full_name}</option>))}
-                </select>
-                {fieldErr(filled.applicant, 'Please select an applicant.')}
-              </div>
-            </div>
-            <div className="cv-row">
-              <label className="cv-label">Department Manager {mark(filled.departmentManager)}</label>
-              <div className="cv-field cv-field--narrow">
-                <select name="department_manager" className={`cv-select${invCls(filled.departmentManager)}`} value={departmentManager} onChange={(e) => setDepartmentManager(e.target.value)} required disabled={fieldsLocked}>
-                  <option value="">Select...</option>
-                  {CFG.users.map((u) => (<option key={u.full_name} value={u.full_name}>{u.full_name}</option>))}
-                </select>
-                {fieldErr(filled.departmentManager, 'Please select a department manager.')}
-              </div>
-            </div>
-            <div className="cv-row">
-              <label className="cv-label">Checked By {mark(filled.checkedBy)}</label>
-              <div className="cv-field cv-field--narrow">
-                <select name="checked_by" className={`cv-select${invCls(filled.checkedBy)}`} value={checkedBy} onChange={(e) => setCheckedBy(e.target.value)} required disabled={fieldsLocked}>
-                  <option value="">Select...</option>
-                  {CFG.financeUsers.map((u) => (<option key={u.full_name} value={u.full_name}>{u.full_name}</option>))}
-                </select>
-                {fieldErr(filled.checkedBy, 'Please select who checks this voucher.')}
+            <div className="cv-card">
+              <div className="cv-row cv-row--split cv-row--split-3">
+                <div className="cv-split-col">
+                  <label className="cv-label">Applicant {mark(filled.applicant)}</label>
+                  <div className="cv-field">
+                    <select name="applicant" className={`cv-select${invCls(filled.applicant)}`} value={applicant} onChange={(e) => setApplicant(e.target.value)} required disabled={fieldsLocked}>
+                      <option value="">Select...</option>
+                      {CFG.users.map((u) => (<option key={u.full_name} value={u.full_name}>{u.full_name}</option>))}
+                    </select>
+                    {fieldErr(filled.applicant, 'Please select an applicant.')}
+                  </div>
+                </div>
+                <div className="cv-split-col">
+                  <label className="cv-label">Department Manager {mark(filled.departmentManager)}</label>
+                  <div className="cv-field">
+                    <select name="department_manager" className={`cv-select${invCls(filled.departmentManager)}`} value={departmentManager} onChange={(e) => setDepartmentManager(e.target.value)} required disabled={fieldsLocked}>
+                      <option value="">Select...</option>
+                      {CFG.users.map((u) => (<option key={u.full_name} value={u.full_name}>{u.full_name}</option>))}
+                    </select>
+                    {fieldErr(filled.departmentManager, 'Please select a department manager.')}
+                  </div>
+                </div>
+                <div className="cv-split-col">
+                  <label className="cv-label">Checked By {mark(filled.checkedBy)}</label>
+                  <div className="cv-field">
+                    <select name="checked_by" className={`cv-select${invCls(filled.checkedBy)}`} value={checkedBy} onChange={(e) => setCheckedBy(e.target.value)} required disabled={fieldsLocked}>
+                      <option value="">Select...</option>
+                      {CFG.financeUsers.map((u) => (<option key={u.full_name} value={u.full_name}>{u.full_name}</option>))}
+                    </select>
+                    {fieldErr(filled.checkedBy, 'Please select who checks this voucher.')}
+                  </div>
+                </div>
               </div>
             </div>
           </section>

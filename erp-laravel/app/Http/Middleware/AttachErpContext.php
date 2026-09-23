@@ -26,6 +26,7 @@ class AttachErpContext
             ?? $GLOBALS['ERP_ATTENDANCE_CONTEXT']
             ?? $GLOBALS['ERP_DELIVERIES_CONTEXT']
             ?? $GLOBALS['ERP_DRIVER_KPI_CONTEXT']
+            ?? $GLOBALS['ERP_VOUCHER_CONTEXT']
             ?? null;
         if (!is_array($erp) || empty($erp['user_id'])) {
             abort(401, 'ERP login required. Open this page from the ERP menu.');

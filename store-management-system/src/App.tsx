@@ -26,6 +26,38 @@ import type { OutgoingKind } from './components/StoreOutgoingForm';
 type MovementFilter = 'all' | 'in' | 'out';
 type DeskView = 'list' | 'receive' | 'outgoing' | 'detail';
 
+function readDeskViewFromUrl(): DeskView {
+  const params = new URLSearchParams(window.location.search);
+  const raw = (params.get('view') || '').toLowerCase();
+  if (raw === 'receive' || raw === 'outgoing') return raw;
+  return 'list';
+}
+
+/** Update query string without dropping module=warehouses (or other existing params). */
+function syncDeskUrl(patch: { view?: DeskView; warehouseId?: number | null }) {
+  const params = new URLSearchParams(window.location.search);
+  if (patch.view !== undefined) {
+    if (patch.view === 'receive' || patch.view === 'outgoing') {
+      params.set('view', patch.view);
+    } else {
+      params.delete('view');
+    }
+  }
+  if (patch.warehouseId !== undefined) {
+    if (patch.warehouseId && patch.warehouseId > 0) {
+      params.set('warehouse_id', String(patch.warehouseId));
+    } else {
+      params.delete('warehouse_id');
+    }
+  }
+  const qs = params.toString();
+  const next = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (next !== current) {
+    window.history.replaceState({}, '', next);
+  }
+}
+
 export default function App() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -35,7 +67,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [loadingMovements, setLoadingMovements] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<DeskView>('list');
+  const [view, setView] = useState<DeskView>(() => readDeskViewFromUrl());
   const [searchTerm, setSearchTerm] = useState('');
   const [movementFilter, setMovementFilter] = useState<MovementFilter>('all');
   const [outgoingProductId, setOutgoingProductId] = useState<string | null>(null);
@@ -114,6 +146,10 @@ export default function App() {
     }, 250);
     return () => window.clearTimeout(timer);
   }, [warehouseId, searchTerm, loadMovements, loading]);
+
+  useEffect(() => {
+    syncDeskUrl({ view, warehouseId });
+  }, [view, warehouseId]);
 
   const selectedWarehouse = warehouses.find((w) => w.id === warehouseId) ?? null;
 
@@ -306,7 +342,6 @@ export default function App() {
             confirmPoToStock={config?.confirmPoToStock !== false && !config?.canManageProducts}
             onReceived={async () => {
               await refreshData();
-              setView('list');
             }}
           />
         ) : view === 'outgoing' ? (

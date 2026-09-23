@@ -29,6 +29,41 @@ function orderKey(order: PurchaseOrderSummary): string {
   return `${order.source}:${order.id}`;
 }
 
+function readSelectedPoKeyFromUrl(): string {
+  const params = new URLSearchParams(window.location.search);
+  const poId = String(params.get('po_id') || params.get('po') || '').trim();
+  if (!poId) return '';
+  const source = String(params.get('po_source') || 'stocks').trim() || 'stocks';
+  return `${source}:${poId}`;
+}
+
+function syncSelectedPoUrl(key: string) {
+  const params = new URLSearchParams(window.location.search);
+  if (!key) {
+    params.delete('po_id');
+    params.delete('po');
+    params.delete('po_source');
+  } else {
+    const sep = key.indexOf(':');
+    const source = sep >= 0 ? key.slice(0, sep) : 'stocks';
+    const poId = sep >= 0 ? key.slice(sep + 1) : key;
+    if (poId) {
+      params.set('po_id', poId);
+      params.set('po_source', source || 'stocks');
+      params.delete('po');
+      if (!params.get('view')) {
+        params.set('view', 'receive');
+      }
+    }
+  }
+  const qs = params.toString();
+  const next = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (next !== current) {
+    window.history.replaceState({}, '', next);
+  }
+}
+
 function formatDate(iso: string): string {
   if (!iso) return '';
   const d = new Date(iso.includes('T') ? iso : `${iso}T12:00:00`);
@@ -76,7 +111,7 @@ export default function PurchaseOrderReceive({
   onReceived,
 }: PurchaseOrderReceiveProps) {
   const [orders, setOrders] = useState<PurchaseOrderSummary[]>([]);
-  const [selectedKey, setSelectedKey] = useState('');
+  const [selectedKey, setSelectedKey] = useState(() => readSelectedPoKeyFromUrl());
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrderSummary | null>(null);
   const [lines, setLines] = useState<PurchaseOrderLine[]>([]);
   const [poAttachments, setPoAttachments] = useState<PurchaseOrderAttachment[]>([]);
@@ -131,51 +166,59 @@ export default function PurchaseOrderReceive({
     });
   }, [orders, poSearch]);
 
-  const loadOrderDetail = useCallback(
-    async (key: string) => {
-      if (!key) {
-        setSelectedOrder(null);
-        setLines([]);
-        setPoAttachments([]);
-        setReceiveQty({});
-        return;
-      }
+  const loadOrderDetail = useCallback(async (key: string) => {
+    if (!key) {
+      setSelectedOrder(null);
+      setLines([]);
+      setPoAttachments([]);
+      setReceiveQty({});
+      return;
+    }
 
-      const order = orders.find((o) => orderKey(o) === key);
-      if (!order) return;
+    const sep = key.indexOf(':');
+    const source = (sep >= 0 ? key.slice(0, sep) : 'stocks') || 'stocks';
+    const poId = sep >= 0 ? key.slice(sep + 1) : key;
+    if (!poId) return;
 
-      setLoadingDetail(true);
-      setError(null);
-      try {
-        const data = await fetchPurchaseOrder(order.id, order.source);
-        setSelectedOrder(data.order);
-        setLines(data.lines);
-        setPoAttachments(data.attachments);
-        const defaults: Record<string, string> = {};
-        for (const line of data.lines) {
-          if (line.qtyRemaining > 0) {
-            defaults[line.lineId] = String(line.qtyRemaining);
-          }
+    setLoadingDetail(true);
+    setError(null);
+    try {
+      const data = await fetchPurchaseOrder(poId, source);
+      setSelectedOrder(data.order);
+      setLines(data.lines);
+      setPoAttachments(data.attachments);
+      const defaults: Record<string, string> = {};
+      for (const line of data.lines) {
+        if (line.qtyRemaining > 0) {
+          defaults[line.lineId] = String(line.qtyRemaining);
         }
-        setReceiveQty(defaults);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load purchase order');
-        setSelectedOrder(null);
-        setLines([]);
-        setPoAttachments([]);
-        setReceiveQty({});
-      } finally {
-        setLoadingDetail(false);
       }
-    },
-    [orders]
-  );
+      setReceiveQty(defaults);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load purchase order');
+      setSelectedOrder(null);
+      setLines([]);
+      setPoAttachments([]);
+      setReceiveQty({});
+    } finally {
+      setLoadingDetail(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (selectedKey) {
-      loadOrderDetail(selectedKey);
+      void loadOrderDetail(selectedKey);
+    } else {
+      setSelectedOrder(null);
+      setLines([]);
+      setPoAttachments([]);
+      setReceiveQty({});
     }
   }, [selectedKey, loadOrderDetail]);
+
+  useEffect(() => {
+    syncSelectedPoUrl(selectedKey);
+  }, [selectedKey]);
 
   const handleReceive = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -439,6 +482,7 @@ export default function PurchaseOrderReceive({
                 </div>
               ) : lines.length > 0 ? (
                 <>
+                  <div className="sms-incoming-lines-card">
                   <div className="sms-po-lines-toolbar">
                     <span className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                       <span className="sms-po-details-icon sms-po-details-icon--indigo">
@@ -514,6 +558,7 @@ export default function PurchaseOrderReceive({
                         })}
                       </tbody>
                     </table>
+                  </div>
                   </div>
 
                   <div className="sms-incoming-footer">

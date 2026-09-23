@@ -1002,11 +1002,17 @@ body.dashboard.vv-view-voucher-page .step-date {
     overflow: hidden !important;
 }
 
+.vv-gmail-thumb--pdf {
+    background: #525659;
+    overflow: hidden !important;
+}
+
+.vv-gmail-thumb--pdf iframe,
 .vv-gmail-thumb--embed iframe {
     position: absolute;
     top: 0;
     left: 0;
-    /* Large viewport so PO/PDF content fits without internal scrollbars, then scaled into the chip */
+    /* Large viewport so content fits without internal scrollbars, then scaled into the chip */
     width: 840px;
     height: 1100px;
     border: 0;
@@ -1019,6 +1025,11 @@ body.dashboard.vv-view-voucher-page .step-date {
     -ms-overflow-style: none !important;
 }
 
+.vv-gmail-thumb--pdf iframe {
+    background: #525659;
+}
+
+.vv-gmail-thumb--pdf iframe::-webkit-scrollbar,
 .vv-gmail-thumb--embed iframe::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;

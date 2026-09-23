@@ -11,7 +11,7 @@ function fileKind(iconClass, name = '') {
   return { label: 'FILE', tone: 'file' }
 }
 
-function withEmbedPreview(url) {
+function withPoEmbed(url) {
   if (!url) return url
   try {
     const u = new URL(url, window.location.href)
@@ -20,6 +20,17 @@ function withEmbedPreview(url) {
   } catch {
     return url + (String(url).includes('?') ? '&' : '?') + 'embed=1'
   }
+}
+
+function isHtmlDocUrl(url) {
+  const s = String(url || '')
+  return /po-document\.php|view_po\.php|print.*\.php/i.test(s)
+}
+
+function pdfPreviewUrl(url) {
+  if (!url) return url
+  const base = String(url).split('#')[0]
+  return `${base}#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0`
 }
 
 function truncateName(name, max = 16) {
@@ -34,7 +45,7 @@ function truncateName(name, max = 16) {
   return `${s.slice(0, max - 1)}…`
 }
 
-function DocPreviewThumb({ isImage, previewUrl, missing, kindLabel }) {
+function DocPreviewThumb({ isImage, previewUrl, missing, kindLabel, htmlEmbed }) {
   if (missing) {
     return (
       <div className="vv-gmail-thumb vv-gmail-thumb--empty">
@@ -50,16 +61,31 @@ function DocPreviewThumb({ isImage, previewUrl, missing, kindLabel }) {
       </div>
     )
   }
-  if (previewUrl) {
+  // HTML docs (PO sheet) — sandboxed iframe is fine.
+  if (htmlEmbed && previewUrl) {
     return (
       <div className="vv-gmail-thumb vv-gmail-thumb--embed">
         <iframe
-          src={previewUrl}
+          src={withPoEmbed(previewUrl)}
           title="Document preview"
           loading="lazy"
           tabIndex={-1}
           scrolling="no"
           sandbox="allow-same-origin allow-scripts allow-popups"
+        />
+      </div>
+    )
+  }
+  // PDFs: do NOT sandbox (Chrome PDF viewer needs plugins). Fit first page.
+  if (previewUrl && kindLabel === 'PDF') {
+    return (
+      <div className="vv-gmail-thumb vv-gmail-thumb--pdf">
+        <iframe
+          src={pdfPreviewUrl(previewUrl)}
+          title="PDF preview"
+          loading="lazy"
+          tabIndex={-1}
+          scrolling="no"
         />
       </div>
     )
@@ -85,6 +111,7 @@ function GmailAttachCard({
   onDelete,
   canDelete,
   missing,
+  htmlEmbed,
 }) {
   const kind = fileKind(iconClass, name)
   const open = () => {
@@ -96,6 +123,8 @@ function GmailAttachCard({
     onView?.()
   }
 
+  const thumbUrl = previewUrl || viewHref || downloadHref || undefined
+
   return (
     <article
       className={`vv-gmail-card${missing ? ' vv-gmail-card--missing' : ''}`}
@@ -104,13 +133,10 @@ function GmailAttachCard({
       <button type="button" className="vv-gmail-card-hit" onClick={open} disabled={!!missing} aria-label={`Open ${name}`}>
         <DocPreviewThumb
           isImage={!!isImage}
-          previewUrl={
-            previewUrl || viewHref || downloadHref
-              ? withEmbedPreview(previewUrl || viewHref || downloadHref)
-              : undefined
-          }
+          previewUrl={thumbUrl}
           missing={missing}
           kindLabel={kind.label}
+          htmlEmbed={htmlEmbed || isHtmlDocUrl(thumbUrl)}
         />
       </button>
 
@@ -184,6 +210,7 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
               viewHref={so.pdfLink}
               downloadHref={so.pdfLink}
               previewUrl={so.pdfLink}
+              htmlEmbed={isHtmlDocUrl(so.pdfLink)}
             />
           ))}
 
@@ -196,6 +223,7 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
               viewHref={po.viewLink}
               downloadHref={po.viewLink}
               previewUrl={po.viewLink}
+              htmlEmbed
             />
           ))}
 

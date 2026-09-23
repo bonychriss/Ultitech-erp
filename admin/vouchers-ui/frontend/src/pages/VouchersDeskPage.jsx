@@ -4,6 +4,7 @@ import {
   Ban,
   CheckCircle2,
   CreditCard,
+  Eye,
   Loader2,
   Lock,
   MessageCircle,
@@ -311,12 +312,7 @@ function RowActionsMenu({
     })
   }
   if (canEdit) {
-    items.push({
-      key: 'edit',
-      label: 'Edit',
-      icon: <Pencil size={14} aria-hidden="true" />,
-      href: `${URLS.edit}?id=${v.id}${APPEND_MODULE}`,
-    })
+    // Edit is shown as an inline icon button; skip the overflow menu entry.
   }
   if (canDelete) {
     items.push({
@@ -343,6 +339,30 @@ function RowActionsMenu({
 
   return (
     <div className="pv-actions-menu">
+      <a
+        className="pv-icon-btn pv-icon-btn--view"
+        href={`${URLS.view}?id=${v.id}${APPEND_MODULE}`}
+        title="View"
+        aria-label="View voucher"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <CreditCard size={15} aria-hidden="true" style={{ display: 'none' }} />
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      </a>
+      {canEdit ? (
+        <a
+          className="pv-icon-btn pv-icon-btn--edit"
+          href={`${URLS.edit}?id=${v.id}${APPEND_MODULE}`}
+          title="Edit"
+          aria-label="Edit voucher"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Pencil size={14} aria-hidden="true" />
+        </a>
+      ) : null}
       <button
         type="button"
         className={`pv-star${v.is_reference ? ' is-marked' : ''}`}
@@ -359,7 +379,7 @@ function RowActionsMenu({
           ref={btnRef}
           type="button"
           className={`pv-icon-btn pv-menu-trigger${open ? ' is-open' : ''}`}
-          title="Actions"
+          title="More actions"
           aria-label="Open actions menu"
           aria-haspopup="menu"
           aria-expanded={open}

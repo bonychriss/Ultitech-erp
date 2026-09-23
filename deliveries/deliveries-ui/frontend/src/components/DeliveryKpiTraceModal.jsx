@@ -28,7 +28,7 @@ function DriverPerformanceBoard({ drivers, footnote, onSelectDriver }) {
     <section className="dlv-perf-board">
       <header className="dlv-perf-board__head">
         <h3 className="dlv-perf-board__title">Drivers this week</h3>
-        <p className="dlv-perf-board__hint">Click a driver to open their score breakdown.</p>
+        <p className="dlv-perf-board__hint">All drivers listed. Click one to open their score breakdown.</p>
       </header>
 
       {drivers.length === 0 ? (

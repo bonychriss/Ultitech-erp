@@ -658,6 +658,7 @@ function deliveries_compute_driver_performance(PDO $pdo, array $query = []): arr
 
 /**
  * Ranked driver performance board for the current week.
+ * Includes all Driver-department users (0% when no weekly activity).
  *
  * @return list<array<string,mixed>>
  */
@@ -667,7 +668,32 @@ function deliveries_list_driver_performance_board(PDO $pdo, array $query = []): 
     $weekStart = $week['week_start'];
     $weekEnd = $week['week_end'];
 
-    $driverRows = [];
+    $byId = [];
+
+    // 1) All accounts in the Driver department
+    try {
+        $stmt = $pdo->query("
+            SELECT id AS driver_id, full_name AS driver_name
+            FROM users
+            WHERE department = 'Driver'
+            ORDER BY full_name ASC
+            LIMIT 200
+        ");
+        foreach (($stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : []) as $row) {
+            $id = (int) ($row['driver_id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $byId[$id] = [
+                'driver_id' => $id,
+                'driver_name' => trim((string) ($row['driver_name'] ?? 'Driver')),
+            ];
+        }
+    } catch (Throwable $e) {
+        /* fall through */
+    }
+
+    // 2) Anyone who completed a delivery this week (covers non-department assignments)
     try {
         $sql = "
             SELECT DISTINCT
@@ -681,34 +707,37 @@ function deliveries_list_driver_performance_board(PDO $pdo, array $query = []): 
               AND o.completion_time IS NOT NULL
               AND o.completion_time BETWEEN ? AND ?
               AND COALESCE(NULLIF(t.driver_id, 0), NULLIF(o.requested_driver_id, 0)) IS NOT NULL
-            ORDER BY driver_name ASC
-            LIMIT 100
+            LIMIT 200
         ";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$weekStart . ' 00:00:00', $weekEnd . ' 23:59:59']);
-        $driverRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $id = (int) ($row['driver_id'] ?? 0);
+            if ($id <= 0 || isset($byId[$id])) {
+                continue;
+            }
+            $byId[$id] = [
+                'driver_id' => $id,
+                'driver_name' => trim((string) ($row['driver_name'] ?? 'Driver')),
+            ];
+        }
     } catch (Throwable $e) {
-        $driverRows = [];
+        /* keep department list */
     }
 
-    // Also include drivers with vehicle-care KPI entries this week (even with no completed deliveries).
+    // 3) Drivers with KPI entries this week
     try {
         $helpers = dirname(__DIR__, 2) . '/driver-kpi/includes/driver_kpi_helpers.php';
         if (is_file($helpers)) {
             require_once $helpers;
             if (function_exists('dkpi_list_entries')) {
                 $entries = dkpi_list_entries($pdo, $weekStart, null, 'delivery');
-                $seen = [];
-                foreach ($driverRows as $row) {
-                    $seen[(int) ($row['driver_id'] ?? 0)] = true;
-                }
                 foreach ($entries as $entry) {
                     $id = (int) ($entry['user_id'] ?? 0);
-                    if ($id <= 0 || isset($seen[$id])) {
+                    if ($id <= 0 || isset($byId[$id])) {
                         continue;
                     }
-                    $seen[$id] = true;
-                    $driverRows[] = [
+                    $byId[$id] = [
                         'driver_id' => $id,
                         'driver_name' => trim((string) ($entry['full_name'] ?? $entry['driver_name'] ?? 'Driver')),
                     ];
@@ -716,8 +745,13 @@ function deliveries_list_driver_performance_board(PDO $pdo, array $query = []): 
             }
         }
     } catch (Throwable $e) {
-        /* keep delivery-based list */
+        /* keep existing list */
     }
+
+    $driverRows = array_values($byId);
+    usort($driverRows, static function (array $a, array $b): int {
+        return strcasecmp((string) ($a['driver_name'] ?? ''), (string) ($b['driver_name'] ?? ''));
+    });
 
     $board = [];
     foreach ($driverRows as $row) {

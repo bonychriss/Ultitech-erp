@@ -128,6 +128,7 @@ export default function CreateVoucherPage() {
   const [departmentManager, setDepartmentManager] = useState(() => String(draftOr('departmentManager', init.department_manager || '') || ''))
   const [checkedBy, setCheckedBy] = useState(() => String(draftOr('checkedBy', init.checked_by || '') || ''))
   const [files, setFiles] = useState([])
+  const [fileStatus, setFileStatus] = useState({}) // key -> 'loading' | 'ready'
   const [existingAttachments, setExistingAttachments] = useState(() => [...CFG.attachments])
   const [selectedSO, setSelectedSO] = useState(initialLinkedSO)
   const [selectedPO, setSelectedPO] = useState(initialLinkedPO)
@@ -398,6 +399,9 @@ export default function CreateVoucherPage() {
   }
 
   // Sync the React-managed file list back into the real <input> so the form submits it.
+  function fileKey(f) {
+    return `${f.name}__${f.size}__${f.lastModified || 0}`
+  }
   function syncFileInput(list) {
     if (!fileInputRef.current) return
     const dt = new DataTransfer()
@@ -407,19 +411,49 @@ export default function CreateVoucherPage() {
   function onFileChange(e) {
     const picked = Array.from(e.target.files || [])
     if (picked.length === 0) return
-    const existing = new Set(files.map((f) => `${f.name}__${f.size}`))
+    const existing = new Set(files.map((f) => fileKey(f)))
     const merged = [...files]
+    const newKeys = []
     picked.forEach((f) => {
-      const key = `${f.name}__${f.size}`
-      if (!existing.has(key)) { merged.push(f); existing.add(key) }
+      const key = fileKey(f)
+      if (!existing.has(key)) {
+        merged.push(f)
+        existing.add(key)
+        newKeys.push(key)
+      }
     })
+    if (newKeys.length > 0) {
+      setFileStatus((prev) => {
+        const next = { ...prev }
+        newKeys.forEach((k) => { next[k] = 'loading' })
+        return next
+      })
+    }
     setFiles(merged)
     syncFileInput(merged)
+    // Reset input so the same file can be re-selected after remove.
+    e.target.value = ''
+  }
+  function markFileReady(key) {
+    setFileStatus((prev) => {
+      if (prev[key] === 'ready') return prev
+      return { ...prev, [key]: 'ready' }
+    })
   }
   function removeFile(idx) {
+    const removed = files[idx]
     const next = files.filter((_, i) => i !== idx)
     setFiles(next)
     syncFileInput(next)
+    if (removed) {
+      const key = fileKey(removed)
+      setFileStatus((prev) => {
+        if (!(key in prev)) return prev
+        const copy = { ...prev }
+        delete copy[key]
+        return copy
+      })
+    }
   }
 
   async function removeExistingAttachment(att) {
@@ -1098,22 +1132,40 @@ export default function CreateVoucherPage() {
                   )}
                   {files.length > 0 && (
                     <ul className="cv-file-list">
-                      {files.map((f, i) => (
-                        <li key={`${f.name}-${i}`}>
-                          <FileText size={13} className="cv-file-ic" />
-                          <span className="cv-file-nm" title={f.name}>{f.name}</span>
-                          <span className="cv-file-sz">{(f.size / 1024).toFixed(0)} KB</span>
-                          <button
-                            type="button"
-                            className="cv-file-rm"
-                            onClick={() => removeFile(i)}
-                            title="Remove this file"
-                            aria-label={`Remove ${f.name}`}
-                          >
-                            <X size={14} />
-                          </button>
-                        </li>
-                      ))}
+                      {files.map((f, i) => {
+                        const key = fileKey(f)
+                        const status = fileStatus[key] || 'ready'
+                        const loading = status === 'loading'
+                        return (
+                          <li key={`${key}-${i}`} className={`cv-file-row${loading ? ' is-loading' : ' is-ready'}`}>
+                            <div className="cv-file-row-main">
+                              <FileText size={13} className="cv-file-ic" />
+                              <span className="cv-file-nm" title={f.name}>{f.name}</span>
+                              <span className="cv-file-sz">{(f.size / 1024).toFixed(0)} KB</span>
+                              <span className={`cv-file-status${loading ? '' : ' is-ready'}`}>
+                                {loading ? 'Attaching…' : 'Ready'}
+                              </span>
+                              <button
+                                type="button"
+                                className="cv-file-rm"
+                                onClick={() => removeFile(i)}
+                                title="Remove this file"
+                                aria-label={`Remove ${f.name}`}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                            <div className="cv-file-progress" aria-hidden="true">
+                              <span
+                                className={`cv-file-progress-bar${loading ? ' is-animating' : ' is-done'}`}
+                                onAnimationEnd={() => {
+                                  if (loading) markFileReady(key)
+                                }}
+                              />
+                            </div>
+                          </li>
+                        )
+                      })}
                     </ul>
                   )}
                   <div className="cv-row cv-row--sub">

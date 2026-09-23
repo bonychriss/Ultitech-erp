@@ -738,75 +738,77 @@ export default function CreateVoucherPage() {
               <h2>Attachments</h2>
               <p>Upload supporting documents (PDF, images, Office files).</p>
             </header>
-            <div className="cv-row cv-row--top">
-              <label className="cv-label">Supporting Files</label>
-              <div className="cv-field">
-                {existingAttachments.length > 0 && (
-                  <ul className="cv-file-list cv-file-list--existing">
-                    {existingAttachments.map((att) => (
-                      <li key={att.id}>
-                        <FileText size={13} className="cv-file-ic" />
-                        <a className="cv-file-nm" href={attachmentHref(att)} target="_blank" rel="noreferrer" title={att.original_name}>
-                          {att.original_name}
-                        </a>
-                        {att.size_bytes ? (
-                          <span className="cv-file-sz">{(Number(att.size_bytes) / 1024).toFixed(0)} KB</span>
-                        ) : null}
-                        {!IS_LIMITED && (
+            <div className="cv-card">
+              <div className="cv-row cv-row--top">
+                <label className="cv-label">Supporting Files</label>
+                <div className="cv-field">
+                  {existingAttachments.length > 0 && (
+                    <ul className="cv-file-list cv-file-list--existing">
+                      {existingAttachments.map((att) => (
+                        <li key={att.id}>
+                          <FileText size={13} className="cv-file-ic" />
+                          <a className="cv-file-nm" href={attachmentHref(att)} target="_blank" rel="noreferrer" title={att.original_name}>
+                            {att.original_name}
+                          </a>
+                          {att.size_bytes ? (
+                            <span className="cv-file-sz">{(Number(att.size_bytes) / 1024).toFixed(0)} KB</span>
+                          ) : null}
+                          {!IS_LIMITED && (
+                            <button
+                              type="button"
+                              className="cv-file-rm"
+                              onClick={() => removeExistingAttachment(att)}
+                              title="Remove this file"
+                              aria-label={`Remove ${att.original_name}`}
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {!IS_LIMITED && (
+                    <label className="cv-file">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        name="supporting_files[]"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.doc,.docx,.xls,.xlsx,image/*,application/pdf"
+                        onChange={onFileChange}
+                      />
+                      <UploadCloud size={28} className="cv-file-icon" aria-hidden="true" />
+                      <span className="cv-file-title">Upload a file</span>
+                      <span className="cv-file-sub">Click to browse, or drag &amp; drop files here</span>
+                    </label>
+                  )}
+                  {files.length > 0 && (
+                    <ul className="cv-file-list">
+                      {files.map((f, i) => (
+                        <li key={`${f.name}-${i}`}>
+                          <FileText size={13} className="cv-file-ic" />
+                          <span className="cv-file-nm" title={f.name}>{f.name}</span>
+                          <span className="cv-file-sz">{(f.size / 1024).toFixed(0)} KB</span>
                           <button
                             type="button"
                             className="cv-file-rm"
-                            onClick={() => removeExistingAttachment(att)}
+                            onClick={() => removeFile(i)}
                             title="Remove this file"
-                            aria-label={`Remove ${att.original_name}`}
+                            aria-label={`Remove ${f.name}`}
                           >
                             <X size={14} />
                           </button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {!IS_LIMITED && (
-                  <label className="cv-file">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      name="supporting_files[]"
-                      multiple
-                      accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.doc,.docx,.xls,.xlsx,image/*,application/pdf"
-                      onChange={onFileChange}
-                    />
-                    <UploadCloud size={28} className="cv-file-icon" aria-hidden="true" />
-                    <span className="cv-file-title">Upload a file</span>
-                    <span className="cv-file-sub">Click to browse, or drag &amp; drop files here</span>
-                  </label>
-                )}
-                {files.length > 0 && (
-                  <ul className="cv-file-list">
-                    {files.map((f, i) => (
-                      <li key={`${f.name}-${i}`}>
-                        <FileText size={13} className="cv-file-ic" />
-                        <span className="cv-file-nm" title={f.name}>{f.name}</span>
-                        <span className="cv-file-sz">{(f.size / 1024).toFixed(0)} KB</span>
-                        <button
-                          type="button"
-                          className="cv-file-rm"
-                          onClick={() => removeFile(i)}
-                          title="Remove this file"
-                          aria-label={`Remove ${f.name}`}
-                        >
-                          <X size={14} />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <div className="cv-row cv-row--sub">
-                  <label className="cv-sublabel">Attached documents</label>
-                  <div className="cv-doc-count">
-                    <strong>{attachmentCount}</strong>
-                    <span>{attachmentCount === 1 ? 'file attached' : 'files attached'}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="cv-row cv-row--sub">
+                    <label className="cv-sublabel">Attached documents</label>
+                    <div className="cv-doc-count">
+                      <strong>{attachmentCount}</strong>
+                      <span>{attachmentCount === 1 ? 'file attached' : 'files attached'}</span>
+                    </div>
                   </div>
                 </div>
               </div>

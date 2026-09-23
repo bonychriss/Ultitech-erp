@@ -117,8 +117,8 @@ final class VoucherShell
     {
         return <<<'CSS'
 <style>
-:root { --bg-body: #ffffff; }
-body.page-create-voucher.dashboard { background-color: #ffffff; font-family: 'Inter', sans-serif; }
+:root { --bg-body: #f1f5f9; }
+body.page-create-voucher.dashboard { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
 html, body.page-create-voucher.dashboard, .main-content, .layout-main-wrapper { scrollbar-width: none !important; -ms-overflow-style: none !important; }
 html::-webkit-scrollbar, body.page-create-voucher.dashboard::-webkit-scrollbar, .main-content::-webkit-scrollbar, .layout-main-wrapper::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
 body.page-create-voucher.dashboard .layout-main-wrapper { align-items: stretch; }
@@ -131,12 +131,12 @@ body.page-create-voucher,
 body.page-create-voucher.dashboard,
 body.page-create-voucher .layout-main-wrapper,
 body.page-create-voucher .layout-main-wrapper > .flex-grow-1 {
-    background: #ffffff !important;
+    background: #f1f5f9 !important;
 }
 body.page-create-voucher .header,
 body.page-create-voucher .employee-header,
 body.page-create-voucher .employee-header.employee-header--create-voucher {
-    background: #ffffff !important;
+    background: #f1f5f9 !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 1.25rem !important;
@@ -154,7 +154,7 @@ main.main-content.create-voucher-react-root {
     max-width: none !important;
     padding: 0 1.25rem 2rem !important;
     box-sizing: border-box;
-    background: #ffffff !important;
+    background: #f1f5f9 !important;
     overflow: auto !important;
 }
 main.main-content.create-voucher-react-root #root { width: 100%; max-width: none; margin: 0; }

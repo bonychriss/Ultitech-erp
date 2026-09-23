@@ -23,6 +23,54 @@ function cellText(value) {
   return text || '-'
 }
 
+function DriverPerformanceBoard({ drivers, footnote, onSelectDriver }) {
+  return (
+    <section className="dlv-perf-board">
+      <header className="dlv-perf-board__head">
+        <h3 className="dlv-perf-board__title">Drivers this week</h3>
+        <p className="dlv-perf-board__hint">Click a driver to open their score breakdown.</p>
+      </header>
+
+      {drivers.length === 0 ? (
+        <p className="dlv-trace-empty">No drivers with scored activity this week.</p>
+      ) : (
+        <ul className="dlv-perf-board__list" role="list">
+          {drivers.map((driver, index) => {
+            const score = Number(driver.score || 0)
+            const tone = score >= 85 ? 'green' : (score >= 70 ? 'amber' : 'red')
+            return (
+              <li key={driver.id || `${driver.name}-${index}`}>
+                <button
+                  type="button"
+                  className={`dlv-perf-driver dlv-perf-driver--${tone}`}
+                  onClick={() => onSelectDriver(driver.id)}
+                >
+                  <span className="dlv-perf-driver__rank" aria-hidden="true">{index + 1}</span>
+                  <span className="dlv-perf-driver__body">
+                    <strong className="dlv-perf-driver__name">{cellText(driver.name)}</strong>
+                    <span className="dlv-perf-driver__meta">
+                      On-time {Number(driver.on_time_pct || 0).toFixed(0)}%
+                      {' | '}
+                      Vehicle {Number(driver.vehicle_care_pct || 0).toFixed(0)}%
+                      {' | '}
+                      Docs {Number(driver.documentation_pct || 0).toFixed(0)}%
+                      {' | '}
+                      {Number(driver.completed || 0)} completed
+                    </span>
+                  </span>
+                  <span className="dlv-perf-driver__score">{score.toFixed(1)}%</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {footnote ? <p className="dlv-perf-board__footnote">{footnote}</p> : null}
+    </section>
+  )
+}
+
 function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
   const metrics = Array.isArray(trace.metrics) ? trace.metrics : []
   const calculation = Array.isArray(trace.calculation) ? trace.calculation : []
@@ -57,47 +105,14 @@ function PerformanceBreakdown({ trace, items, itemsHeading, emptyLabel }) {
 
   if (showDriverBoard) {
     return (
-      <section className="dlv-trace-section">
-        <h3 className="dlv-trace-section-title">Drivers this week</h3>
-        <p className="dlv-perf-hint">Click a driver to open their score breakdown.</p>
-        {drivers.length === 0 ? (
-          <p className="dlv-trace-empty">No drivers with scored activity this week.</p>
-        ) : (
-          <div className="dlv-perf-drivers">
-            {drivers.map((driver, index) => {
-              const score = Number(driver.score || 0)
-              const tone = score >= 85 ? 'green' : (score >= 70 ? 'amber' : 'red')
-              return (
-                <button
-                  key={driver.id || `${driver.name}-${index}`}
-                  type="button"
-                  className={`dlv-perf-driver dlv-perf-driver--${tone}`}
-                  onClick={() => {
-                    setSelectedDriverId(driver.id)
-                    setSelectedKey(null)
-                  }}
-                >
-                  <span className="dlv-perf-driver__rank">{index + 1}</span>
-                  <span className="dlv-perf-driver__body">
-                    <strong>{cellText(driver.name)}</strong>
-                    <span className="dlv-perf-driver__meta">
-                      On-time {Number(driver.on_time_pct || 0).toFixed(0)}%
-                      {' | '}
-                      Vehicle {Number(driver.vehicle_care_pct || 0).toFixed(0)}%
-                      {' | '}
-                      Docs {Number(driver.documentation_pct || 0).toFixed(0)}%
-                      {' | '}
-                      {Number(driver.completed || 0)} completed
-                    </span>
-                  </span>
-                  <span className="dlv-perf-driver__score">{score.toFixed(1)}%</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
-        {trace.footnote ? <p className="dlv-trace-footnote">{trace.footnote}</p> : null}
-      </section>
+      <DriverPerformanceBoard
+        drivers={drivers}
+        footnote={trace.footnote}
+        onSelectDriver={(id) => {
+          setSelectedDriverId(id)
+          setSelectedKey(null)
+        }}
+      />
     )
   }
 
@@ -505,6 +520,10 @@ export default function DeliveryKpiTraceModal({ trace, traceKey = '', onClose, e
   const [gradesNote, setGradesNote] = useState('')
   const chatEndRef = useRef(null)
   const isReviewsTrace = trace.modalType === 'reviews'
+  const isPerformanceTrace = trace.modalType === 'performance'
+  const performanceDrivers = Array.isArray(trace.drivers) ? trace.drivers : []
+  const showPerformanceBoardOnly = isPerformanceTrace && performanceDrivers.length > 0
+  const showAssistant = assistantEnabled && !showPerformanceBoardOnly
 
   useEffect(() => {
     setChatInput('')
@@ -568,7 +587,7 @@ export default function DeliveryKpiTraceModal({ trace, traceKey = '', onClose, e
   async function handleChatSubmit(event) {
     event.preventDefault()
     const question = chatInput.trim()
-    if (!question || chatLoading || !assistantEnabled) return
+    if (!question || chatLoading || !showAssistant) return
 
     const nextMessages = [...chatMessages, { role: 'user', content: question }]
     setChatMessages(nextMessages)
@@ -589,7 +608,7 @@ export default function DeliveryKpiTraceModal({ trace, traceKey = '', onClose, e
   return createPortal(
     <div className="dlv-trace-backdrop" onClick={onClose} role="presentation">
       <div
-        className="dlv-trace-modal"
+        className={`dlv-trace-modal${isPerformanceTrace ? ' dlv-trace-modal--performance' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="dlv-kpi-trace-title"
@@ -605,7 +624,7 @@ export default function DeliveryKpiTraceModal({ trace, traceKey = '', onClose, e
           </button>
         </div>
 
-        <div className="dlv-trace-body">
+        <div className={`dlv-trace-body${isPerformanceTrace ? ' dlv-trace-body--performance' : ''}`}>
           {comingSoon ? (
             <div className="dlv-trace-coming-soon">
               <div className="dlv-trace-soon-hero" aria-hidden="true">
@@ -638,7 +657,7 @@ export default function DeliveryKpiTraceModal({ trace, traceKey = '', onClose, e
             </div>
           ) : (
             <>
-              {assistantEnabled ? (
+              {showAssistant ? (
                 <section className="dlv-trace-section dlv-trace-section--chat">
                   <div className="dlv-trace-chat-head">
                     <h3 className="dlv-trace-section-title">Ask assistant</h3>

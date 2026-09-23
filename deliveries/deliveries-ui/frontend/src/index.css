@@ -2347,6 +2347,48 @@ a.dlv-kpi-card--link {
   font-size: 0.8125rem;
   color: #64748b;
 }
+.dlv-trace-modal--performance {
+  width: min(34rem, calc(100vw - 1.5rem));
+}
+.dlv-trace-body--performance {
+  gap: 0;
+}
+.dlv-perf-board {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.95rem 1rem 0.85rem;
+  background: #fff;
+}
+.dlv-perf-board__head {
+  margin-bottom: 0.75rem;
+}
+.dlv-perf-board__title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.dlv-perf-board__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+.dlv-perf-board__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+}
+.dlv-perf-board__footnote {
+  margin: 0.85rem 0 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
 .dlv-perf-drivers {
   display: grid;
   gap: 0.55rem;
@@ -2357,7 +2399,7 @@ a.dlv-kpi-card--link {
   gap: 0.75rem;
   align-items: center;
   width: 100%;
-  padding: 0.75rem 0.9rem;
+  padding: 0.8rem 0.9rem;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #fff;
@@ -2369,32 +2411,35 @@ a.dlv-kpi-card--link {
 }
 .dlv-perf-driver:hover {
   border-color: #cbd5e1;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  background: #f8fafc;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 .dlv-perf-driver__rank {
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.65rem;
+  height: 1.65rem;
   border-radius: 999px;
-  background: #f1f5f9;
-  color: #475569;
+  background: #eef2f7;
+  color: #64748b;
   font-size: 0.75rem;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 .dlv-perf-driver__body {
   display: grid;
   gap: 0.2rem;
   min-width: 0;
 }
-.dlv-perf-driver__body strong {
+.dlv-perf-driver__name {
   font-size: 0.9rem;
+  font-weight: 700;
   color: #0f172a;
 }
 .dlv-perf-driver__meta {
   font-size: 0.75rem;
-  color: #64748b;
+  color: #94a3b8;
   line-height: 1.35;
 }
 .dlv-perf-driver__score {

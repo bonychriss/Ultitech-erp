@@ -263,6 +263,7 @@ function deliveries_compute_driver_performance(PDO $pdo, array $query = []): arr
         $deadlineRaw = trim((string) ($row['delivery_deadline'] ?? ''));
         $completionRaw = trim((string) ($row['completion_time'] ?? ''));
         $isOnTime = false;
+        $countsTowardOnTime = false;
         $timingLabel = 'No deadline';
 
         if ($deadlineRaw !== '' && $completionRaw !== '') {
@@ -272,6 +273,7 @@ function deliveries_compute_driver_performance(PDO $pdo, array $query = []): arr
                 if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $deadlineRaw)) {
                     $deadlineTs = strtotime($deadlineRaw . ' 23:59:59') ?: $deadlineTs;
                 }
+                $countsTowardOnTime = true;
                 $isOnTime = $completionTs <= $deadlineTs;
                 $timingLabel = $isOnTime ? 'On time' : 'Late';
                 if ($isOnTime) {
@@ -281,15 +283,13 @@ function deliveries_compute_driver_performance(PDO $pdo, array $query = []): arr
                 }
             } else {
                 $noDeadline++;
-                $isOnTime = true;
-                $onTime++;
-                $timingLabel = 'Completed';
+                $isOnTime = false;
+                $timingLabel = 'Completed (invalid deadline)';
             }
         } elseif ($completionRaw !== '') {
-            // No agreed deadline: count completed deliveries as on-time evidence
+            // No agreed deadline: cannot judge on-time, so exclude from on-time rate
             $noDeadline++;
-            $isOnTime = true;
-            $onTime++;
+            $isOnTime = false;
             $timingLabel = 'Completed (no deadline)';
         } else {
             $noDeadline++;
@@ -334,6 +334,7 @@ function deliveries_compute_driver_performance(PDO $pdo, array $query = []): arr
             'driverName' => (string) ($row['driver_name'] ?? ''),
             'onTime' => $isOnTime,
             'deadline' => $deadlineRaw,
+            'onTimeScored' => $countsTowardOnTime,
         ];
         $items[] = $item;
 
@@ -344,12 +345,17 @@ function deliveries_compute_driver_performance(PDO $pdo, array $query = []): arr
         if ($completionRaw !== '') {
             $onTimeDetail .= ' | completed ' . $completionRaw;
         }
+        if ($countsTowardOnTime) {
+            $onTimeResult = $isOnTime ? 'Counted toward on-time score' : 'Late - did not count as on-time';
+        } else {
+            $onTimeResult = 'No deadline set - not scored for on-time';
+        }
         $onTimeTasks[] = [
             'id' => 'ot-' . (int) ($row['id'] ?? 0),
             'title' => $deliveryNumber . ' - ' . ($clientName !== '' ? $clientName : 'Client'),
             'detail' => $onTimeDetail,
-            'result' => $isOnTime ? 'Counted toward score' : 'Late - did not count as on-time',
-            'ok' => $isOnTime,
+            'result' => $onTimeResult,
+            'ok' => $countsTowardOnTime ? $isOnTime : false,
             'at' => $completedAt,
         ];
 
@@ -380,12 +386,18 @@ function deliveries_compute_driver_performance(PDO $pdo, array $query = []): arr
         $onTimePct = 0.0;
         $onTimeHow = 'No completed deliveries this week, so on-time scored 0%.';
     } else {
-        $onTimePct = round(($onTime / $completed) * 100, 2);
-        $onTimeHow = $onTime . ' of ' . $completed . ' completed deliveries were on or before the agreed deadline';
-        if ($noDeadline > 0) {
-            $onTimeHow .= ' (incl. ' . $noDeadline . ' without a set deadline counted as completed)';
+        $scoredForOnTime = $onTime + $late;
+        if ($scoredForOnTime <= 0) {
+            $onTimePct = 0.0;
+            $onTimeHow = $completed . ' completed delivery/deliveries this week, but none had an agreed deadline, so on-time scored 0%.';
+        } else {
+            $onTimePct = round(($onTime / $scoredForOnTime) * 100, 2);
+            $onTimeHow = $onTime . ' of ' . $scoredForOnTime . ' deliveries with a set deadline were on or before that deadline'
+                . ' - on-time ' . rtrim(rtrim(number_format($onTimePct, 1), '0'), '.') . '%.';
         }
-        $onTimeHow .= ' - on-time ' . rtrim(rtrim(number_format($onTimePct, 1), '0'), '.') . '%.';
+        if ($noDeadline > 0) {
+            $onTimeHow .= ' ' . $noDeadline . ' completed without a deadline were not scored for on-time.';
+        }
         if ($createdCount > 0) {
             $onTimeHow .= ' ' . $createdCount . ' delivery request(s) were created this week.';
         }

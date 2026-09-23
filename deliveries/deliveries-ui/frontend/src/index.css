@@ -2490,24 +2490,32 @@ a.dlv-kpi-card--link {
 .dlv-perf-metric {
   display: block;
   width: 100%;
-  padding: 0.85rem 1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
+  padding: 0.65rem 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   text-align: left;
   font: inherit;
   color: inherit;
   cursor: pointer;
-  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+  transition: color .15s ease;
 }
 .dlv-perf-metric:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  border-color: transparent;
+  box-shadow: none;
+  background: transparent;
+}
+.dlv-perf-metric:hover .dlv-perf-metric__head strong {
+  color: #1d4ed8;
 }
 .dlv-perf-metric.is-selected {
-  border-color: #6366f1;
-  background: #f8fafc;
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25);
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+.dlv-perf-metric.is-selected .dlv-perf-metric__head strong {
+  color: #1d4ed8;
 }
 .dlv-perf-metric__head {
   display: flex;

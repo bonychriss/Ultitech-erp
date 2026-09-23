@@ -430,6 +430,27 @@ a.cv-file-nm:hover { color: var(--cv-accent); text-decoration: underline; }
 .cv-so-item:hover { background: #f8fafc; }
 .cv-so-item.is-checked { background: #faf5ff; }
 .cv-so-item input { width: 15px; height: 15px; accent-color: var(--cv-accent); }
+.cv-so-item--btn {
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  grid-template-columns: minmax(90px,140px) 1fr auto;
+}
+.cv-so-item--btn:hover { background: #f8fafc; }
+.cv-so.is-invalid .cv-so-toggle { box-shadow: inset 0 0 0 1px var(--cv-danger); }
+.cv-so.is-valid .cv-so-toggle { box-shadow: inset 0 0 0 1px #86efac; }
+.cv-so-clear {
+  display: block;
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--cv-border);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.cv-so-clear:hover { background: #fef2f2; color: var(--cv-danger); }
 .cv-so-no { font-weight: 600; color: var(--cv-text); }
 .cv-so-cust { color: var(--cv-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cv-so-status { font-size: 11px; text-transform: capitalize; color: var(--cv-muted); }

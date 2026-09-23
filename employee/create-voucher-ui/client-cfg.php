@@ -10,6 +10,7 @@ declare(strict_types=1);
  *   users?: list<array<string,mixed>>,
  *   financeUsers?: list<array<string,mixed>>,
  *   salesOrders?: list<array<string,mixed>>,
+ *   purchaseOrders?: list<array<string,mixed>>,
  *   flash?: array{title?:string,message?:string,variant?:string}|null,
  *   error?: string,
  *   module?: string,
@@ -49,6 +50,19 @@ function createVoucherBuildClientCfg(array $data = []): array
                 'order_number' => (string) ($r['order_number'] ?? ''),
                 'customer_name' => (string) ($r['customer_name'] ?? ''),
                 'salesperson_name' => (string) ($r['salesperson_name'] ?? ''),
+                'status' => (string) ($r['status'] ?? ''),
+            ];
+        }
+        return $out;
+    };
+
+    $mapPurchaseOrders = static function (array $rows): array {
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = [
+                'id' => (int) ($r['id'] ?? 0),
+                'po_number' => (string) ($r['po_number'] ?? ''),
+                'supplier_name' => (string) ($r['supplier_name'] ?? ''),
                 'status' => (string) ($r['status'] ?? ''),
             ];
         }
@@ -112,6 +126,7 @@ function createVoucherBuildClientCfg(array $data = []): array
         'users' => $mapUserNames(is_array($data['users'] ?? null) ? $data['users'] : []),
         'financeUsers' => $mapUserNames(is_array($data['financeUsers'] ?? null) ? $data['financeUsers'] : []),
         'salesOrders' => $mapSalesOrders(is_array($data['salesOrders'] ?? null) ? $data['salesOrders'] : []),
+        'purchaseOrders' => $mapPurchaseOrders(is_array($data['purchaseOrders'] ?? null) ? $data['purchaseOrders'] : []),
         'flash' => $data['flash'] ?? null,
         'error' => (string) ($data['error'] ?? ''),
     ];

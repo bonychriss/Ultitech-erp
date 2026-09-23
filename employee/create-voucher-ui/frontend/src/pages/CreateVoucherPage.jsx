@@ -5,12 +5,6 @@ import {
 } from 'lucide-react'
 import { CFG, CURRENCIES, IS_EDIT, IS_LIMITED, currencySymbol, currencyMeta, formatMoney } from '../config.js'
 
-const PO_NAME_PREFIX = '[PO] '
-
-function isPoAttachmentName(name) {
-  return String(name || '').trim().toUpperCase().startsWith(PO_NAME_PREFIX.toUpperCase())
-}
-
 function newItem(seed = {}) {
   return {
     key: Math.random().toString(36).slice(2),
@@ -58,25 +52,20 @@ export default function CreateVoucherPage() {
   const [departmentManager, setDepartmentManager] = useState(init.department_manager || '')
   const [checkedBy, setCheckedBy] = useState(init.checked_by || '')
   const [files, setFiles] = useState([])
-  const [poFile, setPoFile] = useState(null)
   const [existingAttachments, setExistingAttachments] = useState(() => [...CFG.attachments])
   const [selectedSO, setSelectedSO] = useState(initialLinkedSO)
+  const [linkedStockPoId, setLinkedStockPoId] = useState(
+    init.linked_stock_po_id ? String(init.linked_stock_po_id) : '',
+  )
+  const [poSearch, setPoSearch] = useState('')
+  const [poOpen, setPoOpen] = useState(false)
   const [soSearch, setSoSearch] = useState('')
   const [soOpen, setSoOpen] = useState(false)
   const [currencyOpen, setCurrencyOpen] = useState(false)
   const currencyRef = useRef(null)
-  const poFileInputRef = useRef(null)
 
   const isStockPurchase = purpose === 'stock_purchase'
-  const existingPoAttachments = useMemo(
-    () => existingAttachments.filter((a) => isPoAttachmentName(a.original_name)),
-    [existingAttachments],
-  )
-  const existingOtherAttachments = useMemo(
-    () => existingAttachments.filter((a) => !isPoAttachmentName(a.original_name)),
-    [existingAttachments],
-  )
-  const hasPoAttachment = !!poFile || existingPoAttachments.length > 0
+  const hasLinkedPo = !!linkedStockPoId
 
   const [submitting, setSubmitting] = useState(false)
   const [showErrors, setShowErrors] = useState(false)
@@ -109,6 +98,22 @@ export default function CreateVoucherPage() {
         .some((v) => String(v).toLowerCase().includes(q)),
     )
   }, [salesOrders, soSearch])
+
+  const purchaseOrders = CFG.purchaseOrders || []
+  const filteredPO = useMemo(() => {
+    const q = poSearch.trim().toLowerCase()
+    if (!q) return purchaseOrders
+    return purchaseOrders.filter((po) =>
+      [po.po_number, po.supplier_name, po.status]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
+    )
+  }, [purchaseOrders, poSearch])
+
+  const selectedPo = useMemo(
+    () => purchaseOrders.find((po) => String(po.id) === String(linkedStockPoId)) || null,
+    [purchaseOrders, linkedStockPoId],
+  )
 
   // Keep a live snapshot for the unload handler (which binds once).
   latestRef.current = { payeeId, description, items }
@@ -219,16 +224,6 @@ export default function CreateVoucherPage() {
     syncFileInput(next)
   }
 
-  function onPoFileChange(e) {
-    const picked = e.target.files?.[0] || null
-    setPoFile(picked)
-  }
-
-  function clearPoFile() {
-    setPoFile(null)
-    if (poFileInputRef.current) poFileInputRef.current.value = ''
-  }
-
   async function removeExistingAttachment(att) {
     if (IS_LIMITED) return
     if (!window.confirm(`Remove attachment "${att.original_name}"?`)) return
@@ -264,8 +259,8 @@ export default function CreateVoucherPage() {
       return 'Please add at least one payment item with a payment type, budget type and amount.'
     if (!applicant || !departmentManager || !checkedBy)
       return 'Please select Applicant, Department Manager, and Checked By.'
-    if (isStockPurchase && !hasPoAttachment)
-      return 'Please attach a Purchase Order for Stock Purchase vouchers.'
+    if (isStockPurchase && !hasLinkedPo)
+      return 'Please select a Purchase Order for Stock Purchase vouchers.'
     return ''
   }
 
@@ -326,7 +321,7 @@ export default function CreateVoucherPage() {
   const validItemCount = items.filter(
     (it) => it.payment_type && it.budget_type && (parseFloat(it.amount) || 0) > 0,
   ).length
-  const attachmentCount = existingOtherAttachments.length + files.length
+  const attachmentCount = existingAttachments.length + files.length
   const fieldsLocked = IS_LIMITED
 
   // Per-field required state (live)
@@ -338,7 +333,7 @@ export default function CreateVoucherPage() {
     applicant: !!applicant,
     departmentManager: !!departmentManager,
     checkedBy: !!checkedBy,
-    ...(isStockPurchase ? { purchaseOrder: hasPoAttachment } : {}),
+    ...(isStockPurchase ? { purchaseOrder: hasLinkedPo } : {}),
   }
   const requiredKeys = Object.keys(filled)
   const requiredDone = requiredKeys.filter((k) => filled[k]).length
@@ -406,6 +401,7 @@ export default function CreateVoucherPage() {
         <input type="hidden" name="general_manager" value={init.general_manager || ''} readOnly />
         <input type="hidden" name="linked_sales_order_ids" value={linkedIdsCsv} readOnly />
         <input type="hidden" name="linked_sales_order_id" value={Array.from(selectedSO)[0] || ''} readOnly />
+        <input type="hidden" name="linked_stock_po_id" value={isStockPurchase ? linkedStockPoId : ''} readOnly />
         <input type="hidden" name="supporting_documents" value={attachmentCount} readOnly />
 
         <div className="cv-main">
@@ -763,70 +759,78 @@ export default function CreateVoucherPage() {
             <div className="cv-card">
               {isStockPurchase && (
                 <div className="cv-row cv-row--top">
-                  <label className="cv-label">Purchase Order {mark(hasPoAttachment)}</label>
+                  <label className="cv-label">Purchase Order {mark(hasLinkedPo)}</label>
                   <div className="cv-field">
-                    <p className="cv-attach-hint">Required for Stock Purchase vouchers.</p>
-                    {existingPoAttachments.length > 0 && (
-                      <ul className="cv-file-list cv-file-list--existing">
-                        {existingPoAttachments.map((att) => (
-                          <li key={att.id}>
-                            <FileText size={13} className="cv-file-ic" />
-                            <a className="cv-file-nm" href={attachmentHref(att)} target="_blank" rel="noreferrer" title={att.original_name}>
-                              {att.original_name.replace(/^\[PO\]\s*/i, '')}
-                            </a>
-                            {att.size_bytes ? (
-                              <span className="cv-file-sz">{(Number(att.size_bytes) / 1024).toFixed(0)} KB</span>
-                            ) : null}
-                            {!IS_LIMITED && (
-                              <button
-                                type="button"
-                                className="cv-file-rm"
-                                onClick={() => removeExistingAttachment(att)}
-                                title="Remove this Purchase Order"
-                                aria-label={`Remove ${att.original_name}`}
-                              >
-                                <X size={14} />
-                              </button>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {!IS_LIMITED && (
-                      <label className={`cv-file cv-file--po${showErrors && !hasPoAttachment ? ' is-invalid' : ''}${hasPoAttachment ? ' is-valid' : ''}`}>
-                        <input
-                          ref={poFileInputRef}
-                          type="file"
-                          name="purchase_order_file"
-                          accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx,image/*,application/pdf"
-                          onChange={onPoFileChange}
-                        />
-                        <UploadCloud size={28} className="cv-file-icon" aria-hidden="true" />
-                        <span className="cv-file-title">
-                          {poFile ? 'Replace Purchase Order' : 'Attach Purchase Order'}
+                    <p className="cv-attach-hint">Required for Stock Purchase vouchers. Select a PO from the system.</p>
+                    <div className={`cv-so${poOpen ? ' is-open' : ''}${showErrors && !hasLinkedPo ? ' is-invalid' : ''}${hasLinkedPo ? ' is-valid' : ''}`}>
+                      <button
+                        type="button"
+                        className={`cv-so-toggle${invCls(hasLinkedPo)}`}
+                        onClick={() => !fieldsLocked && setPoOpen((v) => !v)}
+                        aria-expanded={poOpen}
+                        disabled={fieldsLocked}
+                      >
+                        <Link2 size={15} />
+                        <span className="cv-so-toggle-label">
+                          {selectedPo
+                            ? `${selectedPo.po_number}${selectedPo.supplier_name ? ` — ${selectedPo.supplier_name}` : ''}`
+                            : 'Select purchase order'}
                         </span>
-                        <span className="cv-file-sub">PDF, image, or Office file</span>
-                      </label>
-                    )}
-                    {poFile && (
-                      <ul className="cv-file-list">
-                        <li>
-                          <FileText size={13} className="cv-file-ic" />
-                          <span className="cv-file-nm" title={poFile.name}>{poFile.name}</span>
-                          <span className="cv-file-sz">{(poFile.size / 1024).toFixed(0)} KB</span>
-                          <button
-                            type="button"
-                            className="cv-file-rm"
-                            onClick={clearPoFile}
-                            title="Remove this Purchase Order"
-                            aria-label={`Remove ${poFile.name}`}
-                          >
-                            <X size={14} />
-                          </button>
-                        </li>
-                      </ul>
-                    )}
-                    {fieldErr(hasPoAttachment, 'Please attach a Purchase Order for Stock Purchase.')}
+                        <ChevronDown size={16} className="cv-so-chevron" />
+                      </button>
+                      {poOpen && !fieldsLocked && (
+                        <div className="cv-so-body">
+                          <div className="cv-so-search">
+                            <Search size={14} />
+                            <input
+                              type="text"
+                              className="cv-so-search-input"
+                              placeholder="Search purchase orders..."
+                              value={poSearch}
+                              onChange={(e) => setPoSearch(e.target.value)}
+                              autoFocus
+                            />
+                          </div>
+                          <div className="cv-so-list">
+                            {purchaseOrders.length === 0 ? (
+                              <div className="cv-so-empty">No available purchase orders</div>
+                            ) : filteredPO.length === 0 ? (
+                              <div className="cv-so-empty">No purchase orders found</div>
+                            ) : (
+                              filteredPO.slice(0, 50).map((po) => (
+                                <button
+                                  key={po.id}
+                                  type="button"
+                                  className={`cv-so-item cv-so-item--btn${String(po.id) === String(linkedStockPoId) ? ' is-checked' : ''}`}
+                                  onClick={() => {
+                                    setLinkedStockPoId(String(po.id))
+                                    setPoOpen(false)
+                                    setPoSearch('')
+                                  }}
+                                >
+                                  <span className="cv-so-no">{po.po_number}</span>
+                                  <span className="cv-so-cust">{po.supplier_name || '—'}</span>
+                                  <span className="cv-so-status">{po.status || ''}</span>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                          {hasLinkedPo && (
+                            <button
+                              type="button"
+                              className="cv-so-count cv-so-clear"
+                              onClick={() => {
+                                setLinkedStockPoId('')
+                                setPoOpen(false)
+                              }}
+                            >
+                              Clear selection
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {fieldErr(hasLinkedPo, 'Please select a Purchase Order for Stock Purchase.')}
                   </div>
                 </div>
               )}
@@ -834,9 +838,9 @@ export default function CreateVoucherPage() {
               <div className="cv-row cv-row--top">
                 <label className="cv-label">Supporting Files</label>
                 <div className="cv-field">
-                  {existingOtherAttachments.length > 0 && (
+                  {existingAttachments.length > 0 && (
                     <ul className="cv-file-list cv-file-list--existing">
-                      {existingOtherAttachments.map((att) => (
+                      {existingAttachments.map((att) => (
                         <li key={att.id}>
                           <FileText size={13} className="cv-file-ic" />
                           <a className="cv-file-nm" href={attachmentHref(att)} target="_blank" rel="noreferrer" title={att.original_name}>
@@ -898,12 +902,8 @@ export default function CreateVoucherPage() {
                   <div className="cv-row cv-row--sub">
                     <label className="cv-sublabel">Attached documents</label>
                     <div className="cv-doc-count">
-                      <strong>{attachmentCount + (hasPoAttachment ? 1 : 0)}</strong>
-                      <span>
-                        {(attachmentCount + (hasPoAttachment ? 1 : 0)) === 1
-                          ? 'file attached'
-                          : 'files attached'}
-                      </span>
+                      <strong>{attachmentCount}</strong>
+                      <span>{attachmentCount === 1 ? 'file attached' : 'files attached'}</span>
                     </div>
                   </div>
                 </div>

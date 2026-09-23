@@ -37,6 +37,7 @@ export const CFG = {
   users: RAW.users || [],
   financeUsers: RAW.financeUsers || [],
   salesOrders: RAW.salesOrders || [],
+  purchaseOrders: RAW.purchaseOrders || [],
   initial: RAW.initial || null,
   attachments: Array.isArray(RAW.attachments) ? RAW.attachments : [],
   flash: RAW.flash || null,

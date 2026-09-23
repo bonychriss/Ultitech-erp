@@ -27,6 +27,9 @@ requireLogin();
 if (function_exists('voucher_bootstrap_operational_pdo')) {
     voucher_bootstrap_operational_pdo();
 }
+if (function_exists('ensureVoucherStockPurchaseSchema')) {
+    ensureVoucherStockPurchaseSchema();
+}
 
 // Ensure payment_vouchers can store linked sales order reference.
 try {
@@ -580,8 +583,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'webp', 'bmp'];
         $maxSize = 10 * 1024 * 1024; // 10MB per file
-        $needsUploadDir = (!empty($_FILES['supporting_files']['name']) && is_array($_FILES['supporting_files']['name']))
-            || (!empty($_FILES['purchase_order_file']['name']));
+        $needsUploadDir = (!empty($_FILES['supporting_files']['name']) && is_array($_FILES['supporting_files']['name']));
 
         if ($needsUploadDir) {
             ensureVoucherAttachmentsSchema();
@@ -592,25 +594,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if (is_dir($voucherDir) && !is_writable($voucherDir)) {
                 @chmod($voucherDir, 0775);
-            }
-
-            // Dedicated Purchase Order attachment (Stock Purchase)
-            if (
-                !empty($_FILES['purchase_order_file']['name'])
-                && (int) ($_FILES['purchase_order_file']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK
-            ) {
-                $uploadOneFile(
-                    (string) $_FILES['purchase_order_file']['name'],
-                    (string) $_FILES['purchase_order_file']['tmp_name'],
-                    (string) ($_FILES['purchase_order_file']['type'] ?? 'application/octet-stream'),
-                    (int) ($_FILES['purchase_order_file']['size'] ?? 0),
-                    $allowedExt,
-                    $maxSize,
-                    $voucherDir,
-                    (int) $voucher_id,
-                    $createdBy,
-                    '[PO] '
-                );
             }
 
             if (!empty($_FILES['supporting_files']) && isset($_FILES['supporting_files']['name']) && is_array($_FILES['supporting_files']['name'])) {
@@ -649,6 +632,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (function_exists('app_log')) {
             app_log('create-voucher: uploadedCount=' . $uploadedCount);
+        }
+
+        // Bidirectional link: PO → voucher
+        if ($linked_stock_po_id > 0 && !$isDraft) {
+            try {
+                if (function_exists('tableExists') && tableExists('stocks_purchase_orders', $pdo)) {
+                    $poColsLink = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                    if (in_array('payment_voucher_id', $poColsLink, true)) {
+                        $pdo->prepare('UPDATE stocks_purchase_orders SET payment_voucher_id = ? WHERE id = ?')
+                            ->execute([(int) $voucher_id, $linked_stock_po_id]);
+                    }
+                }
+            } catch (Throwable $ePoLink) {
+                error_log('create-voucher PO link failed: ' . $ePoLink->getMessage());
+            }
         }
 
         // Log the creation (catch any logging errors separately)
@@ -808,6 +806,7 @@ $GLOBALS['ERP_VOUCHER_CONTEXT'] = [
         'users' => is_array($allUsers) ? $allUsers : [],
         'financeUsers' => is_array($financeUsers) ? $financeUsers : [],
         'salesOrders' => is_array($salesOrders) ? $salesOrders : [],
+        'purchaseOrders' => is_array($purchaseOrders) ? $purchaseOrders : [],
         'flash' => $voucherCreateSuccess,
         'error' => $error,
         'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'voucher',

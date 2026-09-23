@@ -250,6 +250,20 @@ function RowActionsMenu({
   }, [open, onClose])
 
   const items = []
+  items.push({
+    key: 'view',
+    label: 'View',
+    icon: <Eye size={14} aria-hidden="true" />,
+    href: `${URLS.view}?id=${v.id}${APPEND_MODULE}`,
+  })
+  if (canEdit) {
+    items.push({
+      key: 'edit',
+      label: 'Edit',
+      icon: <Pencil size={14} aria-hidden="true" />,
+      href: `${URLS.edit}?id=${v.id}${APPEND_MODULE}`,
+    })
+  }
   if (v.my_pending_approval_id) {
     items.push({
       key: 'approve-link',
@@ -311,9 +325,6 @@ function RowActionsMenu({
       onClick: () => { onMarkPosted(v.id); onClose() },
     })
   }
-  if (canEdit) {
-    // Edit is shown as an inline icon button; skip the overflow menu entry.
-  }
   if (canDelete) {
     items.push({
       key: 'delete',
@@ -339,30 +350,6 @@ function RowActionsMenu({
 
   return (
     <div className="pv-actions-menu">
-      <a
-        className="pv-icon-btn pv-icon-btn--view"
-        href={`${URLS.view}?id=${v.id}${APPEND_MODULE}`}
-        title="View"
-        aria-label="View voucher"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <CreditCard size={15} aria-hidden="true" style={{ display: 'none' }} />
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      </a>
-      {canEdit ? (
-        <a
-          className="pv-icon-btn pv-icon-btn--edit"
-          href={`${URLS.edit}?id=${v.id}${APPEND_MODULE}`}
-          title="Edit"
-          aria-label="Edit voucher"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Pencil size={14} aria-hidden="true" />
-        </a>
-      ) : null}
       <button
         type="button"
         className={`pv-star${v.is_reference ? ' is-marked' : ''}`}
@@ -374,21 +361,19 @@ function RowActionsMenu({
       >
         <Star size={14} fill={v.is_reference ? 'currentColor' : 'none'} aria-hidden="true" />
       </button>
-      {items.length > 0 ? (
-        <button
-          ref={btnRef}
-          type="button"
-          className={`pv-icon-btn pv-menu-trigger${open ? ' is-open' : ''}`}
-          title="More actions"
-          aria-label="Open actions menu"
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={onToggle}
-        >
-          <MoreVertical size={16} aria-hidden="true" />
-        </button>
-      ) : null}
-      {open && items.length > 0
+      <button
+        ref={btnRef}
+        type="button"
+        className={`pv-icon-btn pv-menu-trigger${open ? ' is-open' : ''}`}
+        title="Actions"
+        aria-label="Open actions menu"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <MoreVertical size={16} aria-hidden="true" />
+      </button>
+      {open
         ? createPortal(
             <div ref={menuRef} className="pv-menu-pop" role="menu" style={menuStyle}>
               {items.map((item) =>
@@ -430,7 +415,7 @@ export default function VouchersDeskPage() {
   const [draftFilters, setDraftFilters] = useState(() => filtersFromUrl())
   const prefixTouchedRef = useRef(false)
   const [vouchers, setVouchers] = useState([])
-  const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total_records: 0 })
+  const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total_records: 0, per_page: 100 })
   const [prefixOptions, setPrefixOptions] = useState([])
   const [payAccounts, setPayAccounts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -481,7 +466,7 @@ export default function VouchersDeskPage() {
     try {
       const data = await fetchVouchers(activeFilters)
       setVouchers(Array.isArray(data.vouchers) ? data.vouchers : [])
-      setPagination(data.pagination || { page: 1, total_pages: 1, total_records: 0 })
+      setPagination(data.pagination || { page: 1, total_pages: 1, total_records: 0, per_page: 100 })
       setPrefixOptions(Array.isArray(data.prefix_options) ? data.prefix_options : [])
       if (Array.isArray(data.pay_accounts)) setPayAccounts(data.pay_accounts)
       // Do not auto-apply the server's default (current) prefix; default to All Prefixes.
@@ -1156,9 +1141,20 @@ export default function VouchersDeskPage() {
         </div>
       )}
 
-      <div className="pv-card">
-        <div className="pv-card-head">
-          <span className="pv-card-title">{FEAT.pageTitle}</span>
+      <div className="pv-results">
+        <div className="pv-results-head">
+          <span className="pv-results-count">
+            {loading
+              ? 'Loading…'
+              : (() => {
+                  const total = Number(pagination.total_records || 0)
+                  const per = Number(pagination.per_page || vouchers.length || 100)
+                  if (total <= 0) return 'No vouchers'
+                  const start = (showingPage - 1) * per + 1
+                  const end = Math.min(showingPage * per, total)
+                  return `Showing ${start}–${end} of ${total}`
+                })()}
+          </span>
           <ExportMenu
             exportingExcel={exportingExcel}
             exportingPdf={exportingPdf}
@@ -1224,18 +1220,22 @@ export default function VouchersDeskPage() {
                     >
                       <td>{v.sn}</td>
                       <td className="pv-voucher-no">
-                        {v.voucher_no}
-                        {v.is_restricted ? <Lock size={12} aria-label="Restricted" style={{ marginLeft: 4, verticalAlign: 'middle' }} /> : null}
+                        <span className="pv-voucher-no-main">{v.voucher_no}</span>
+                        {v.is_restricted ? <Lock size={12} aria-label="Restricted" className="pv-lock-ic" /> : null}
                       </td>
                       {canView ? (
                         <>
-                          <td>{v.payee_name}</td>
                           <td>
-                            {v.prepared_by}
-                            {v.department ? <><br /><small>{v.department}</small></> : null}
+                            <span className="pv-payee">{v.payee_name}</span>
+                          </td>
+                          <td>
+                            <span className="pv-prepared">{v.prepared_by}</span>
+                            {v.department ? <span className="pv-dept">{v.department}</span> : null}
                           </td>
                           <td className="pv-desc">{v.description}</td>
-                          <td className="pv-col-amount">{formatAmount(v.currency, v.total_amount)}</td>
+                          <td className="pv-col-amount">
+                            <span className="pv-amount">{formatAmount(v.currency, v.total_amount)}</span>
+                          </td>
                         </>
                       ) : (
                         <>
@@ -1243,8 +1243,8 @@ export default function VouchersDeskPage() {
                         </>
                       )}
                       <td>
-                        {formatDate(v.date_created)}
-                        <br /><small>{formatTime(v.created_at)}</small>
+                        <span className="pv-date">{formatDate(v.date_created)}</span>
+                        {formatTime(v.created_at) ? <span className="pv-time">{formatTime(v.created_at)}</span> : null}
                       </td>
                       <td className="pv-status-cell">
                         <span className={statusBadgeClass(v)}>{v.display_status}</span>

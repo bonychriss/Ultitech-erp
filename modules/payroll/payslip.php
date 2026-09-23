@@ -27,6 +27,17 @@ $slip = $stmt->fetch();
 
 if (!$slip) die("Payslip not found.");
 
+// Heal zero PAYE / wrong employer statutory (e.g. WCF stored at 50% instead of 0.5%).
+if (is_file(__DIR__ . '/includes/payroll-lib.php')) {
+    require_once __DIR__ . '/includes/payroll-lib.php';
+    if (function_exists('payrollDeskRecalculatePayslipStatutory')) {
+        $healed = payrollDeskRecalculatePayslipStatutory($pdo, $id, false);
+        if (is_array($healed) && $healed !== []) {
+            $slip = array_merge($slip, $healed);
+        }
+    }
+}
+
 // Base URL for absolute paths
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';

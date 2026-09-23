@@ -388,6 +388,65 @@ function WorkLogTable({ items, onRemove }) {
   )
 }
 
+function entryWorkCount(entry) {
+  const log = Array.isArray(entry?.work_log) ? entry.work_log : []
+  return log.length
+}
+
+function EntriesTable({ entries, selectedUserId, onSelect }) {
+  if (!entries.length) return null
+  return (
+    <div className="dkpi-desk-table-wrap">
+      <table className="dkpi-desk-table">
+        <thead>
+          <tr>
+            <th>Driver</th>
+            <th>Work items</th>
+            <th>On-time</th>
+            <th>Vehicle care</th>
+            <th>Documentation</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((row) => {
+            const uid = Number(row.user_id || row.id || 0)
+            const selected = uid === Number(selectedUserId)
+            const score = row.weighted_score != null ? Number(row.weighted_score) : null
+            return (
+              <tr
+                key={`${uid}-${row.service_type || 'entry'}`}
+                className={selected ? 'is-selected' : ''}
+                onClick={() => onSelect(uid)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onSelect(uid)
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-pressed={selected}
+              >
+                <td>
+                  <strong>{row.full_name || `Driver #${uid}`}</strong>
+                </td>
+                <td>{entryWorkCount(row)}</td>
+                <td>{fmtPct(row.on_time_pct ?? 0)}</td>
+                <td>{fmtPct(row.vehicle_care_pct ?? 0)}</td>
+                <td>{fmtPct(row.documentation_pct ?? 0)}</td>
+                <td>
+                  <strong>{score != null ? fmtPct(score) : '-'}</strong>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export default function DriverKpiPage() {
   const boot = CFG.data || {}
   const urls = boot.urls || {}
@@ -552,6 +611,12 @@ export default function DriverKpiPage() {
     }
   }, [modalOpen, scoreModalOpen])
 
+  useEffect(() => {
+    if (!flash || modalOpen || scoreModalOpen) return undefined
+    const timer = window.setTimeout(() => setFlash(null), 4000)
+    return () => window.clearTimeout(timer)
+  }, [flash, modalOpen, scoreModalOpen])
+
   const openModal = () => {
     setFlash(null)
     setError(null)
@@ -637,7 +702,7 @@ export default function DriverKpiPage() {
     loadDesk(service, weekOffset, Number(uid))
   }
 
-  const persistEntry = async (nextWorkLog) => {
+  const persistEntry = async (nextWorkLog, { closeForm = false } = {}) => {
     setSaving(true)
     setFlash(null)
     setError(null)
@@ -646,6 +711,9 @@ export default function DriverKpiPage() {
       if (ok) {
         setFlash('Work log saved. Performance updated automatically.')
         await loadDesk(service, weekOffset, selectedUserId)
+        if (closeForm) {
+          setModalOpen(false)
+        }
         return true
       }
       setError('Could not save work log or calculate performance.')
@@ -736,7 +804,7 @@ export default function DriverKpiPage() {
       setDraftLetterId('')
       const uploadInput = document.getElementById('dkpi-upload-file')
       if (uploadInput) uploadInput.value = ''
-      await persistEntry(next)
+      await persistEntry(next, { closeForm: true })
     } catch (err) {
       setError(err.message || 'Could not save work log')
       setSaving(false)
@@ -757,6 +825,16 @@ export default function DriverKpiPage() {
 
   return (
     <div className={`dkpi-page${loading ? ' is-loading' : ''}`}>
+      {!modalOpen && !scoreModalOpen && flash ? (
+        <div className="dkpi-flash dkpi-flash--success dkpi-flash--page" role="status">
+          {flash}
+        </div>
+      ) : null}
+      {!modalOpen && !scoreModalOpen && error ? (
+        <div className="dkpi-flash dkpi-flash--error dkpi-flash--page" role="alert">
+          {error}
+        </div>
+      ) : null}
       <section className="dkpi-dashboard" aria-label="Dashboard">
         <div className="dkpi-dashboard__top">
           <div className="dkpi-dashboard__leading">
@@ -879,15 +957,45 @@ export default function DriverKpiPage() {
         </div>
       </section>
 
-      {workLog.length > 0 ? (
-        <section className="dkpi-week-log" aria-label="This week work log">
-          <div className="dkpi-week-log__head">
-            <h2>This week</h2>
-            <span>{logCount} logged</span>
+      <section className="dkpi-week-log" aria-label="This week recordings">
+        <div className="dkpi-week-log__head">
+          <h2>{isAdmin ? 'Drivers this week' : 'This week'}</h2>
+          <span>
+            {isAdmin
+              ? `${entryCount} driver${entryCount === 1 ? '' : 's'}`
+              : `${logCount} logged`}
+          </span>
+        </div>
+
+        {isAdmin ? (
+          entries.length > 0 ? (
+            <EntriesTable
+              entries={entries}
+              selectedUserId={selectedUserId}
+              onSelect={(uid) => onUserChange(uid)}
+            />
+          ) : (
+            <p className="dkpi-empty">No driver recordings for this week yet.</p>
+          )
+        ) : null}
+
+        {isAdmin && entries.length > 0 ? (
+          <div className="dkpi-week-log__subhead">
+            <h3>Work log — {driverName}</h3>
+            <span>{logCount} item{logCount === 1 ? '' : 's'}</span>
           </div>
+        ) : null}
+
+        {workLog.length > 0 ? (
           <WorkLogTable items={workLog} onRemove={canUseWorkLog ? removeWorkItem : null} />
-        </section>
-      ) : null}
+        ) : (
+          <p className="dkpi-empty">
+            {canUseWorkLog
+              ? `No work logged yet for ${driverName}. Click Work log to add.`
+              : `No work logged yet for ${driverName}.`}
+          </p>
+        )}
+      </section>
 
       {modalOpen ? (
         <div className="dkpi-modal" role="dialog" aria-modal="true" aria-labelledby="dkpi-modal-title">

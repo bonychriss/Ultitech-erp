@@ -17,10 +17,16 @@ class SalesDashboardPageController extends Controller
         $erp = $request->attributes->get('erp') ?? [];
         $slug = (string) ($erp['company_slug'] ?? '');
 
-        $initUrl = function_exists('company_url') && $slug !== ''
-            ? company_url('sales', $slug)
-            : (function_exists('app_url') ? app_url('/sales.php') : '/sales.php');
-        $initUrl .= (str_contains($initUrl, '?') ? '&' : '?') . 'api=init';
+        // Prefer helper (trailing-slash pretty URL). Inline fallback avoids DirectorySlash
+        // 301 to http://…/sales/ which breaks same-origin fetch with "Failed to fetch".
+        if (function_exists('sales_laravel_api_url')) {
+            $initUrl = sales_laravel_api_url('init');
+        } else {
+            $initUrl = function_exists('company_url') && $slug !== ''
+                ? rtrim(company_url('sales', $slug), '/') . '/'
+                : (function_exists('app_url') ? app_url('/sales.php') : '/sales.php');
+            $initUrl .= (str_contains($initUrl, '?') ? '&' : '?') . 'api=init';
+        }
 
         $apiBase = function_exists('app_url')
             ? rtrim((string) app_url('/modules/sales/dashboard/api'), '/')

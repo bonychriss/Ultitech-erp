@@ -32,6 +32,8 @@ interface ExcelGridProps<T> {
   columns: ExcelColumn<T>[];
   rowKey: (row: T) => string;
   sheetName?: string;
+  /** `plain` drops the fake Excel chrome (title bar, ribbon, formula bar, sheet tabs). */
+  variant?: 'excel' | 'plain';
   onRowsChange?: (rows: T[]) => void;
   emptyMessage?: string;
   footer?: React.ReactNode;
@@ -59,6 +61,7 @@ export default function ExcelGrid<T>({
   columns,
   rowKey,
   sheetName = 'Sheet1',
+  variant = 'excel',
   onRowsChange,
   emptyMessage = 'No rows',
   footer,
@@ -71,6 +74,7 @@ export default function ExcelGrid<T>({
   const [active, setActive] = useState<{ rowId: string; colKey: string } | null>(null);
   const [zoom, setZoom] = useState(100);
   const [ribbonTab, setRibbonTab] = useState<'home' | 'data' | 'view'>('home');
+  const isPlain = variant === 'plain';
 
   const displayRows = useMemo(() => {
     if (!onCreateEmptyRow || minEmptyRows <= 0) return rows;
@@ -280,129 +284,140 @@ export default function ExcelGrid<T>({
   };
 
   return (
-    <div className="sms-excel-window" style={{ zoom: zoom / 100 }}>
-      <div className="sms-excel-chrome">
-      {/* Title bar */}
-      <div className="sms-excel-titlebar">
-        <div className="sms-excel-titlebar-left">
-          <span className="sms-excel-logo" aria-hidden="true">X</span>
-          <div className="sms-excel-titlebar-copy">
-            <span className="sms-excel-app">Excel</span>
-            <span className="sms-excel-filename">{sheetName}.xlsx - Warehouse Stock</span>
+    <div
+      className={`sms-excel-window${isPlain ? ' sms-excel-window--plain' : ''}`}
+      style={isPlain ? undefined : { zoom: zoom / 100 }}
+    >
+      {!isPlain && (
+        <div className="sms-excel-chrome">
+          {/* Title bar */}
+          <div className="sms-excel-titlebar">
+            <div className="sms-excel-titlebar-left">
+              <span className="sms-excel-logo" aria-hidden="true">X</span>
+              <div className="sms-excel-titlebar-copy">
+                <span className="sms-excel-app">Excel</span>
+                <span className="sms-excel-filename">{sheetName}.xlsx - Warehouse Stock</span>
+              </div>
+            </div>
+            <div className="sms-excel-window-controls" aria-hidden="true">
+              <span className="sms-excel-win-btn" />
+              <span className="sms-excel-win-btn" />
+              <span className="sms-excel-win-btn sms-excel-win-btn-close" />
+            </div>
+          </div>
+
+          {/* Quick access toolbar */}
+          <div className="sms-excel-qat">
+            <button type="button" className="sms-excel-qat-btn" title="Save"><Save className="w-3.5 h-3.5" /></button>
+            <button type="button" className="sms-excel-qat-btn" title="Undo"><Undo2 className="w-3.5 h-3.5" /></button>
+            <button type="button" className="sms-excel-qat-btn" title="Redo"><Redo2 className="w-3.5 h-3.5" /></button>
+          </div>
+
+          {/* Ribbon */}
+          <div className="sms-excel-ribbon">
+            <div className="sms-excel-ribbon-tabs-row">
+              <div className="sms-excel-ribbon-tabs">
+                {(['home', 'data', 'view'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    className={`sms-excel-ribbon-tab${ribbonTab === tab ? ' is-active' : ''}`}
+                    onClick={() => setRibbonTab(tab)}
+                  >
+                    {tab === 'home' ? 'Home' : tab === 'data' ? 'Data' : 'View'}
+                  </button>
+                ))}
+              </div>
+              {ribbonActions ? <div className="sms-excel-ribbon-actions">{ribbonActions}</div> : null}
+            </div>
+            <div className="sms-excel-ribbon-body">
+              {ribbonTab === 'home' && (
+                <>
+                  <div className="sms-excel-ribbon-group">
+                    <div className="sms-excel-ribbon-group-items">
+                      <button type="button" className="sms-excel-ribbon-btn" title="Paste"><Copy className="w-4 h-4" /><span>Paste</span></button>
+                      <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" title="Cut"><Scissors className="w-3.5 h-3.5" /></button>
+                      <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" title="Copy"><Copy className="w-3.5 h-3.5" /></button>
+                    </div>
+                    <span className="sms-excel-ribbon-group-label">Clipboard</span>
+                  </div>
+                  <div className="sms-excel-ribbon-group">
+                    <div className="sms-excel-ribbon-group-items">
+                      <select className="sms-excel-ribbon-select" defaultValue="Calibri" aria-label="Font">
+                        <option>Calibri</option>
+                        <option>Arial</option>
+                      </select>
+                      <select className="sms-excel-ribbon-select sms-excel-ribbon-select-sm" defaultValue="11" aria-label="Font size">
+                        <option>11</option>
+                        <option>12</option>
+                      </select>
+                      <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" title="Bold"><Bold className="w-3.5 h-3.5" /></button>
+                      <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" title="Italic"><Italic className="w-3.5 h-3.5" /></button>
+                    </div>
+                    <span className="sms-excel-ribbon-group-label">Font</span>
+                  </div>
+                  <div className="sms-excel-ribbon-group">
+                    <div className="sms-excel-ribbon-group-items">
+                      <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" title="Align left"><AlignLeft className="w-3.5 h-3.5" /></button>
+                    </div>
+                    <span className="sms-excel-ribbon-group-label">Alignment</span>
+                  </div>
+                </>
+              )}
+              {ribbonTab === 'data' && (
+                <div className="sms-excel-ribbon-group">
+                  <div className="sms-excel-ribbon-group-items">
+                    <span className="sms-excel-ribbon-note">Edit cells directly - Tab to move - Ctrl+V to paste from Excel</span>
+                  </div>
+                  <span className="sms-excel-ribbon-group-label">Edit</span>
+                </div>
+              )}
+              {ribbonTab === 'view' && (
+                <div className="sms-excel-ribbon-group">
+                  <div className="sms-excel-ribbon-group-items">
+                    <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" onClick={() => setZoom((z) => Math.max(80, z - 10))}><Minus className="w-3.5 h-3.5" /></button>
+                    <span className="sms-excel-ribbon-zoom">{zoom}%</span>
+                    <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" onClick={() => setZoom((z) => Math.min(130, z + 10))}><Plus className="w-3.5 h-3.5" /></button>
+                  </div>
+                  <span className="sms-excel-ribbon-group-label">Zoom</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Name box + formula bar */}
+          <div className="sms-excel-formula">
+            <button type="button" className="sms-excel-fx" title="Insert function">fx</button>
+            <span className="sms-excel-name-box">{activeCellLabel || ''}</span>
+            <span className="sms-excel-formula-divider" />
+            <input
+              type="text"
+              className="sms-excel-formula-input"
+              value={active ? activeValue : ''}
+              readOnly={!active}
+              placeholder="Select a cell to edit"
+              onChange={() => undefined}
+            />
           </div>
         </div>
-        <div className="sms-excel-window-controls" aria-hidden="true">
-          <span className="sms-excel-win-btn" />
-          <span className="sms-excel-win-btn" />
-          <span className="sms-excel-win-btn sms-excel-win-btn-close" />
-        </div>
-      </div>
+      )}
 
-      {/* Quick access toolbar */}
-      <div className="sms-excel-qat">
-        <button type="button" className="sms-excel-qat-btn" title="Save"><Save className="w-3.5 h-3.5" /></button>
-        <button type="button" className="sms-excel-qat-btn" title="Undo"><Undo2 className="w-3.5 h-3.5" /></button>
-        <button type="button" className="sms-excel-qat-btn" title="Redo"><Redo2 className="w-3.5 h-3.5" /></button>
-      </div>
-
-      {/* Ribbon */}
-      <div className="sms-excel-ribbon">
-        <div className="sms-excel-ribbon-tabs-row">
-          <div className="sms-excel-ribbon-tabs">
-            {(['home', 'data', 'view'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                className={`sms-excel-ribbon-tab${ribbonTab === tab ? ' is-active' : ''}`}
-                onClick={() => setRibbonTab(tab)}
-              >
-                {tab === 'home' ? 'Home' : tab === 'data' ? 'Data' : 'View'}
-              </button>
-            ))}
-          </div>
-          {ribbonActions ? <div className="sms-excel-ribbon-actions">{ribbonActions}</div> : null}
-        </div>
-        <div className="sms-excel-ribbon-body">
-          {ribbonTab === 'home' && (
-            <>
-              <div className="sms-excel-ribbon-group">
-                <div className="sms-excel-ribbon-group-items">
-                  <button type="button" className="sms-excel-ribbon-btn" title="Paste"><Copy className="w-4 h-4" /><span>Paste</span></button>
-                  <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" title="Cut"><Scissors className="w-3.5 h-3.5" /></button>
-                  <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" title="Copy"><Copy className="w-3.5 h-3.5" /></button>
-                </div>
-                <span className="sms-excel-ribbon-group-label">Clipboard</span>
-              </div>
-              <div className="sms-excel-ribbon-group">
-                <div className="sms-excel-ribbon-group-items">
-                  <select className="sms-excel-ribbon-select" defaultValue="Calibri" aria-label="Font">
-                    <option>Calibri</option>
-                    <option>Arial</option>
-                  </select>
-                  <select className="sms-excel-ribbon-select sms-excel-ribbon-select-sm" defaultValue="11" aria-label="Font size">
-                    <option>11</option>
-                    <option>12</option>
-                  </select>
-                  <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" title="Bold"><Bold className="w-3.5 h-3.5" /></button>
-                  <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" title="Italic"><Italic className="w-3.5 h-3.5" /></button>
-                </div>
-                <span className="sms-excel-ribbon-group-label">Font</span>
-              </div>
-              <div className="sms-excel-ribbon-group">
-                <div className="sms-excel-ribbon-group-items">
-                  <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" title="Align left"><AlignLeft className="w-3.5 h-3.5" /></button>
-                </div>
-                <span className="sms-excel-ribbon-group-label">Alignment</span>
-              </div>
-            </>
-          )}
-          {ribbonTab === 'data' && (
-            <div className="sms-excel-ribbon-group">
-              <div className="sms-excel-ribbon-group-items">
-                <span className="sms-excel-ribbon-note">Edit cells directly - Tab to move - Ctrl+V to paste from Excel</span>
-              </div>
-              <span className="sms-excel-ribbon-group-label">Edit</span>
-            </div>
-          )}
-          {ribbonTab === 'view' && (
-            <div className="sms-excel-ribbon-group">
-              <div className="sms-excel-ribbon-group-items">
-                <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" onClick={() => setZoom((z) => Math.max(80, z - 10))}><Minus className="w-3.5 h-3.5" /></button>
-                <span className="sms-excel-ribbon-zoom">{zoom}%</span>
-                <button type="button" className="sms-excel-ribbon-btn sms-excel-ribbon-btn-sm" onClick={() => setZoom((z) => Math.min(130, z + 10))}><Plus className="w-3.5 h-3.5" /></button>
-              </div>
-              <span className="sms-excel-ribbon-group-label">Zoom</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Name box + formula bar */}
-      <div className="sms-excel-formula">
-        <button type="button" className="sms-excel-fx" title="Insert function">fx</button>
-        <span className="sms-excel-name-box">{activeCellLabel || ''}</span>
-        <span className="sms-excel-formula-divider" />
-        <input
-          type="text"
-          className="sms-excel-formula-input"
-          value={active ? activeValue : ''}
-          readOnly={!active}
-          placeholder="Select a cell to edit"
-          onChange={() => undefined}
-        />
-      </div>
-      </div>
+      {isPlain && ribbonActions ? (
+        <div className="sms-excel-plain-toolbar">{ribbonActions}</div>
+      ) : null}
 
       {/* Grid */}
       <div className="sms-excel-scroll" ref={tableRef}>
         <table className="sms-excel-table">
           <thead>
-            <tr className="sms-excel-letters">
-              <th className="sms-excel-corner" />
-              {columns.map((col, i) => (
-                <th key={col.key} style={{ width: col.width }}>{col.letter || colLetter(i)}</th>
-              ))}
-            </tr>
+            {!isPlain && (
+              <tr className="sms-excel-letters">
+                <th className="sms-excel-corner" />
+                {columns.map((col, i) => (
+                  <th key={col.key} style={{ width: col.width }}>{col.letter || colLetter(i)}</th>
+                ))}
+              </tr>
+            )}
             <tr className="sms-excel-headers">
               <th className="sms-excel-row-head">#</th>
               {columns.map((col) => (
@@ -436,28 +451,29 @@ export default function ExcelGrid<T>({
         </table>
       </div>
 
-      {/* Sheet tabs (bottom) */}
-      <div className="sms-excel-bottom-bar">
-        <div className="sms-excel-sheet-tabs">
-          <button type="button" className="sms-excel-sheet-nav" aria-label="Previous sheet">&lt;</button>
-          <span className="sms-excel-sheet-tab is-active">{sheetName}</span>
-          <button type="button" className="sms-excel-sheet-add" aria-label="Add sheet">+</button>
-        </div>
-        <div className="sms-excel-statusbar">
-          <span className="sms-excel-status-item">Ready</span>
-          {numericSum && (
-            <span className="sms-excel-status-item">
-              Sum: {numericSum.sum.toLocaleString()} | Count: {numericSum.count}
-            </span>
-          )}
-          <span className="sms-excel-status-item">{displayRows.length} rows</span>
-          <div className="sms-excel-status-zoom">
-            <button type="button" onClick={() => setZoom((z) => Math.max(80, z - 10))} aria-label="Zoom out">-</button>
-            <span>{zoom}%</span>
-            <button type="button" onClick={() => setZoom((z) => Math.min(130, z + 10))} aria-label="Zoom in">+</button>
+      {!isPlain && (
+        <div className="sms-excel-bottom-bar">
+          <div className="sms-excel-sheet-tabs">
+            <button type="button" className="sms-excel-sheet-nav" aria-label="Previous sheet">&lt;</button>
+            <span className="sms-excel-sheet-tab is-active">{sheetName}</span>
+            <button type="button" className="sms-excel-sheet-add" aria-label="Add sheet">+</button>
+          </div>
+          <div className="sms-excel-statusbar">
+            <span className="sms-excel-status-item">Ready</span>
+            {numericSum && (
+              <span className="sms-excel-status-item">
+                Sum: {numericSum.sum.toLocaleString()} | Count: {numericSum.count}
+              </span>
+            )}
+            <span className="sms-excel-status-item">{displayRows.length} rows</span>
+            <div className="sms-excel-status-zoom">
+              <button type="button" onClick={() => setZoom((z) => Math.max(80, z - 10))} aria-label="Zoom out">-</button>
+              <span>{zoom}%</span>
+              <button type="button" onClick={() => setZoom((z) => Math.min(130, z + 10))} aria-label="Zoom in">+</button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {footer && <div className="sms-excel-footer">{footer}</div>}
     </div>

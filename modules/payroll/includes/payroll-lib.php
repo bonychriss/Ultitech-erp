@@ -450,6 +450,11 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
         throw new RuntimeException('Run id is required.');
     }
 
+    // Fix stored statutory amounts (PAYE / WCF %) before building the desk payload.
+    if (function_exists('payrollDeskRecalculateRunStatutory')) {
+        payrollDeskRecalculateRunStatutory($pdo, $runId, false);
+    }
+
     $stmt = $pdo->prepare('SELECT * FROM ' . payroll_table('payroll_runs') . ' WHERE id = ? LIMIT 1');
     $stmt->execute([$runId]);
     $run = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -2455,8 +2460,8 @@ function payrollDeskSavePayslip(PDO $pdo, int $payslipId, array $payload): array
     $adjustment = (float) ($payload['monthly_adjustment'] ?? $payload['monthlyAdjustment'] ?? 0);
     $other = (float) ($payload['other_deductions'] ?? $payload['otherDeductions'] ?? 0);
     $remarks = trim((string) ($payload['remarks'] ?? ''));
-    $manualNssf = array_key_exists('nssf_deduction', $payload) || array_key_exists('nssfDeduction', $payload);
-    $manualTax = array_key_exists('tax_deduction', $payload) || array_key_exists('taxDeduction', $payload);
+    $manualNssf = !empty($payload['manual_nssf'] ?? $payload['manualNssf'] ?? false);
+    $manualTax = !empty($payload['manual_tax'] ?? $payload['manualTax'] ?? false);
 
     // Excel: Gross = Basic + (OT & allowances) + Bonus (+ legacy adjustment)
     $gross = $basic + $allowances + $bonus + $adjustment;
@@ -2731,27 +2736,30 @@ function payrollDeskEnsureExcelPayrollSchema(PDO $pdo): void
 }
 
 /**
+ * Settings store human percentages (10, 3.5, 0.5). Do not treat 0.5 as a fraction
+ * or WCF 0.5% becomes 50%.
+ *
  * @param array<string,string|float|int> $settings
  * @return array{employeeNssfRate:float,employerNssfRate:float,sdlRate:float,wcfRate:float}
  */
 function payrollDeskStatutoryRates(array $settings): array
 {
-    $employee = (float) ($settings['social_security_rate'] ?? $settings['nssf_rate'] ?? 10);
-    if ($employee > 0 && $employee < 1) {
-        $employee *= 100;
-    }
-    $employer = (float) ($settings['employer_social_security_rate'] ?? 10);
-    if ($employer > 0 && $employer < 1) {
-        $employer *= 100;
-    }
-    $sdl = (float) ($settings['sdl_rate'] ?? 3.5);
-    if ($sdl > 0 && $sdl < 1) {
-        $sdl *= 100;
-    }
-    $wcf = (float) ($settings['wcf_rate'] ?? 0.5);
-    if ($wcf > 0 && $wcf < 1) {
-        $wcf *= 100;
-    }
+    $asPercent = static function ($raw, float $default): float {
+        $value = (float) $raw;
+        if (!is_finite($value) || $value < 0) {
+            $value = $default;
+        }
+        // Legacy only: 0.10 meaning 10%. Never scale 0.5 (0.5% WCF).
+        if ($value > 0 && $value < 0.05) {
+            $value *= 100;
+        }
+        return $value;
+    };
+
+    $employee = $asPercent($settings['social_security_rate'] ?? $settings['nssf_rate'] ?? 10, 10.0);
+    $employer = $asPercent($settings['employer_social_security_rate'] ?? 10, 10.0);
+    $sdl = $asPercent($settings['sdl_rate'] ?? 3.5, 3.5);
+    $wcf = $asPercent($settings['wcf_rate'] ?? 0.5, 0.5);
 
     return [
         'employeeNssfRate' => $employee / 100,
@@ -2774,28 +2782,17 @@ function payrollDeskComputeStatutoryAmounts(
     array $taxBands,
     array $rates
 ): array {
-    $employeeNssf = $gross * (float) ($rates['employeeNssfRate'] ?? 0.1);
-    $taxable = $gross - $employeeNssf;
+    $employeeNssf = round($gross * (float) ($rates['employeeNssfRate'] ?? 0.1), 2);
+    $taxable = round($gross - $employeeNssf, 2);
 
-    $paye = 0.0;
-    foreach ($taxBands as $band) {
-        $max = $band['max_salary'] !== null ? (float) $band['max_salary'] : PHP_FLOAT_MAX;
-        $min = (float) ($band['min_salary'] ?? 0);
-        if ($taxable >= $min && $taxable <= $max) {
-            $threshold = $min > 0 ? $min - 1 : 0;
-            $excess = $taxable - $threshold;
-            $rate = (float) ($band['tax_rate'] ?? 0) / 100;
-            $paye = (float) ($band['offset_amount'] ?? 0) + ($excess * $rate);
-            break;
-        }
-    }
+    $paye = payrollDeskComputePayeFromBands($taxable, $taxBands);
 
-    $employerNssf = $gross * (float) ($rates['employerNssfRate'] ?? 0.1);
-    $sdl = $gross * (float) ($rates['sdlRate'] ?? 0.035);
-    $wcf = $gross * (float) ($rates['wcfRate'] ?? 0.005);
-    $employerCost = $gross + $employerNssf + $sdl + $wcf;
-    $totalDeductions = $employeeNssf + $paye + $otherDeductions;
-    $net = $gross - $totalDeductions;
+    $employerNssf = round($gross * (float) ($rates['employerNssfRate'] ?? 0.1), 2);
+    $sdl = round($gross * (float) ($rates['sdlRate'] ?? 0.035), 2);
+    $wcf = round($gross * (float) ($rates['wcfRate'] ?? 0.005), 2);
+    $employerCost = round($gross + $employerNssf + $sdl + $wcf, 2);
+    $totalDeductions = round($employeeNssf + $paye + $otherDeductions, 2);
+    $net = round($gross - $totalDeductions, 2);
 
     return [
         'gross' => $gross,
@@ -2809,6 +2806,203 @@ function payrollDeskComputeStatutoryAmounts(
         'net' => $net,
         'totalDeductions' => $totalDeductions,
     ];
+}
+
+/**
+ * Tanzania-style PAYE from configured bands.
+ * Bands use shared endpoints (e.g. 270000 / 520000). Non-first bands are
+ * (min, max] so the tax-free ceiling stays untaxed and upper shared edges
+ * stay in the lower rate band.
+ *
+ * @param list<array<string,mixed>> $taxBands
+ */
+function payrollDeskComputePayeFromBands(float $taxable, array $taxBands): float
+{
+    if ($taxable <= 0 || $taxBands === []) {
+        return 0.0;
+    }
+
+    usort($taxBands, static function (array $a, array $b): int {
+        return ((float) ($a['min_salary'] ?? 0)) <=> ((float) ($b['min_salary'] ?? 0));
+    });
+
+    $matched = null;
+    $count = count($taxBands);
+    foreach ($taxBands as $index => $band) {
+        $min = (float) ($band['min_salary'] ?? 0);
+        $maxRaw = $band['max_salary'] ?? null;
+        $max = ($maxRaw === null || $maxRaw === '') ? null : (float) $maxRaw;
+
+        if ($index === 0) {
+            $inBand = $taxable + 0.00001 >= $min
+                && ($max === null || $taxable <= $max + 0.00001);
+        } else {
+            // Amount above this band's min (shared endpoint belongs to previous band).
+            $inBand = $taxable > $min + 0.00001
+                && ($max === null || $taxable <= $max + 0.00001);
+        }
+
+        // Last open-ended band catches anything above its min.
+        if ($index === $count - 1 && $max === null && $taxable > $min + 0.00001) {
+            $inBand = true;
+        }
+
+        if ($inBand) {
+            $matched = $band;
+            break;
+        }
+    }
+
+    if ($matched === null) {
+        // Fallback: highest band whose min is below taxable (covers tiny gaps).
+        for ($i = $count - 1; $i >= 0; $i--) {
+            $min = (float) ($taxBands[$i]['min_salary'] ?? 0);
+            if ($taxable + 0.00001 >= $min) {
+                $matched = $taxBands[$i];
+                break;
+            }
+        }
+    }
+
+    if ($matched === null) {
+        return 0.0;
+    }
+
+    $min = (float) ($matched['min_salary'] ?? 0);
+    $rate = (float) ($matched['tax_rate'] ?? 0) / 100;
+    $offset = (float) ($matched['offset_amount'] ?? 0);
+    // Tax applies to amount above the band floor (TRA "amount above X").
+    $excess = max(0.0, $taxable - $min);
+    if ($min <= 0.0 && (float) ($matched['tax_rate'] ?? 0) == 0.0) {
+        return 0.0;
+    }
+
+    return round($offset + ($excess * $rate), 2);
+}
+
+/**
+ * Recompute and persist NSSF/PAYE/net/employer statutory for one payslip.
+ *
+ * @return array<string,mixed>|null Updated payslip row or null when unchanged / missing
+ */
+function payrollDeskRecalculatePayslipStatutory(PDO $pdo, int $payslipId, bool $force = false): ?array
+{
+    if ($payslipId <= 0) {
+        return null;
+    }
+    payrollDeskEnsureExcelPayrollSchema($pdo);
+    $st = $pdo->prepare('SELECT * FROM ' . payroll_table('payslips') . ' WHERE id = ? LIMIT 1');
+    $st->execute([$payslipId]);
+    $slip = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$slip) {
+        return null;
+    }
+
+    $basic = (float) ($slip['basic_salary'] ?? 0);
+    $allowances = (float) ($slip['total_allowances'] ?? 0);
+    $bonus = (float) ($slip['bonus_commission'] ?? 0);
+    $adjustment = (float) ($slip['monthly_adjustment'] ?? 0);
+    $other = (float) ($slip['other_deductions'] ?? 0);
+    $gross = $basic + $allowances + $bonus + $adjustment;
+    $storedTax = (float) ($slip['tax_deduction'] ?? 0);
+    $storedWcf = (float) ($slip['wcf_amount'] ?? 0);
+    $storedSdl = (float) ($slip['sdl_amount'] ?? 0);
+    $storedEmployerNssf = (float) ($slip['employer_nssf'] ?? 0);
+
+    $settings = payrollDeskLoadSettingsMap($pdo);
+    $rates = payrollDeskStatutoryRates($settings);
+    $taxBands = payrollDeskLoadActiveTaxBands($pdo);
+    if ($taxBands === []) {
+        return null;
+    }
+    $calc = payrollDeskComputeStatutoryAmounts($gross, $other, $taxBands, $rates);
+
+    $employerDrift = abs($calc['wcf'] - $storedWcf) > 0.05
+        || abs($calc['sdl'] - $storedSdl) > 0.05
+        || abs($calc['employerNssf'] - $storedEmployerNssf) > 0.05;
+    $taxNeedsHeal = $storedTax <= 0.009 && $calc['paye'] > 0.009;
+
+    if (!$force && !$employerDrift && !$taxNeedsHeal) {
+        return $slip;
+    }
+
+    $nssf = $force ? $calc['employeeNssf'] : (float) ($slip['nssf_deduction'] ?? $calc['employeeNssf']);
+    $tax = ($force || $taxNeedsHeal) ? $calc['paye'] : $storedTax;
+    $taxable = round($gross - $nssf, 2);
+    $net = round($gross - $nssf - $tax - $other, 2);
+    $employerNssf = $calc['employerNssf'];
+    $sdl = $calc['sdl'];
+    $wcf = $calc['wcf'];
+    $employerCost = round($gross + $employerNssf + $sdl + $wcf, 2);
+    $runId = (int) ($slip['payroll_run_id'] ?? 0);
+
+    $upd = $pdo->prepare(
+        'UPDATE ' . payroll_table('payslips') . '
+         SET gross_salary = ?, taxable_salary = ?, nssf_deduction = ?, tax_deduction = ?,
+             employer_nssf = ?, sdl_amount = ?, wcf_amount = ?, employer_cost = ?, net_salary = ?
+         WHERE id = ?'
+    );
+    $upd->execute([
+        round($gross, 2),
+        $taxable,
+        $nssf,
+        $tax,
+        $employerNssf,
+        $sdl,
+        $wcf,
+        $employerCost,
+        $net,
+        $payslipId,
+    ]);
+
+    if ($runId > 0) {
+        $pdo->prepare(
+            'UPDATE ' . payroll_table('payroll_runs') . '
+             SET total_payout = (SELECT SUM(net_salary) FROM ' . payroll_table('payslips') . ' WHERE payroll_run_id = ?)
+             WHERE id = ?'
+        )->execute([$runId, $runId]);
+    }
+
+    $st->execute([$payslipId]);
+    $fresh = $st->fetch(PDO::FETCH_ASSOC);
+
+    return $fresh ?: $slip;
+}
+
+/**
+ * Recalculate statutory amounts for every payslip in a run.
+ *
+ * @return int Number of payslips updated
+ */
+function payrollDeskRecalculateRunStatutory(PDO $pdo, int $runId, bool $force = false): int
+{
+    if ($runId <= 0) {
+        return 0;
+    }
+    $st = $pdo->prepare('SELECT id FROM ' . payroll_table('payslips') . ' WHERE payroll_run_id = ?');
+    $st->execute([$runId]);
+    $ids = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    $updated = 0;
+    foreach ($ids as $payslipId) {
+        $before = null;
+        $sel = $pdo->prepare('SELECT tax_deduction, wcf_amount, sdl_amount, employer_nssf, net_salary FROM ' . payroll_table('payslips') . ' WHERE id = ?');
+        $sel->execute([(int) $payslipId]);
+        $before = $sel->fetch(PDO::FETCH_ASSOC) ?: null;
+        $after = payrollDeskRecalculatePayslipStatutory($pdo, (int) $payslipId, $force);
+        if (!is_array($after) || $before === null) {
+            continue;
+        }
+        if (
+            abs((float) ($after['tax_deduction'] ?? 0) - (float) ($before['tax_deduction'] ?? 0)) > 0.009
+            || abs((float) ($after['wcf_amount'] ?? 0) - (float) ($before['wcf_amount'] ?? 0)) > 0.009
+            || abs((float) ($after['sdl_amount'] ?? 0) - (float) ($before['sdl_amount'] ?? 0)) > 0.009
+            || abs((float) ($after['employer_nssf'] ?? 0) - (float) ($before['employer_nssf'] ?? 0)) > 0.009
+            || abs((float) ($after['net_salary'] ?? 0) - (float) ($before['net_salary'] ?? 0)) > 0.009
+        ) {
+            $updated++;
+        }
+    }
+    return $updated;
 }
 
 /**
@@ -2839,6 +3033,28 @@ function payrollDeskLoadActiveTaxBands(PDO $pdo): array
     if (!function_exists('payroll_table_exists') || !payroll_table_exists('payroll_tax_bands')) {
         return [];
     }
+    $rows = $pdo->query(
+        'SELECT * FROM ' . payroll_table('payroll_tax_bands') . ' WHERE is_active = 1 ORDER BY min_salary ASC'
+    )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    if ($rows !== []) {
+        return $rows;
+    }
+
+    // Seed Tanzania PAYE defaults when the table is empty.
+    try {
+        $pdo->exec(
+            'INSERT INTO ' . payroll_table('payroll_tax_bands')
+            . ' (`min_salary`, `max_salary`, `tax_rate`, `offset_amount`, `description`, `is_active`) VALUES
+            (0, 270000, 0, 0, \'0% (No tax)\', 1),
+            (270000, 520000, 8, 0, \'8% of amount above 270,000\', 1),
+            (520000, 760000, 20, 20000, \'20,000 + 20% of amount above 520,000\', 1),
+            (760000, 1000000, 25, 68000, \'68,000 + 25% of amount above 760,000\', 1),
+            (1000000, NULL, 30, 128000, \'128,000 + 30% of amount above 1,000,000\', 1)'
+        );
+    } catch (Throwable $e) {
+        return [];
+    }
+
     return $pdo->query(
         'SELECT * FROM ' . payroll_table('payroll_tax_bands') . ' WHERE is_active = 1 ORDER BY min_salary ASC'
     )->fetchAll(PDO::FETCH_ASSOC) ?: [];

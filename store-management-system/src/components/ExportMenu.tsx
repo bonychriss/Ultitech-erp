@@ -1,13 +1,10 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FileDown, FileSpreadsheet, Loader2, Upload } from 'lucide-react';
+import { FileDown, Loader2, Upload } from 'lucide-react';
 
 interface ExportMenuProps {
-  exportingExcel?: boolean;
   exportingPdf?: boolean;
-  excelDisabled?: boolean;
   pdfDisabled?: boolean;
-  onExportExcel: () => void;
   onExportPdf: () => void;
 }
 
@@ -18,11 +15,8 @@ interface MenuPosition {
 }
 
 export default function ExportMenu({
-  exportingExcel = false,
   exportingPdf = false,
-  excelDisabled = false,
   pdfDisabled = false,
-  onExportExcel,
   onExportPdf,
 }: ExportMenuProps) {
   const [open, setOpen] = useState(false);
@@ -30,8 +24,8 @@ export default function ExportMenu({
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
-  const busy = exportingExcel || exportingPdf;
-  const allDisabled = busy || (excelDisabled && pdfDisabled);
+  const busy = exportingPdf;
+  const allDisabled = busy || pdfDisabled;
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) {
@@ -44,7 +38,7 @@ export default function ExportMenu({
       if (!trigger) return;
 
       const rect = trigger.getBoundingClientRect();
-      const panelHeight = panelRef.current?.offsetHeight ?? 96;
+      const panelHeight = panelRef.current?.offsetHeight ?? 48;
       const panelWidth = panelRef.current?.offsetWidth ?? 168;
       const gap = 6;
       const spaceBelow = window.innerHeight - rect.bottom;
@@ -82,7 +76,6 @@ export default function ExportMenu({
       if (event.key === 'Escape') setOpen(false);
     };
 
-    // Close on outside mousedown so menu-item onClick still fires reliably.
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
     return () => {
@@ -122,30 +115,6 @@ export default function ExportMenu({
                 : { top: 0, left: 0, visibility: 'hidden' }
             }
           >
-            <button
-              type="button"
-              role="menuitem"
-              className="sms-export-menu-item"
-              disabled={excelDisabled || exportingExcel}
-              title={
-                excelDisabled
-                  ? 'No results to export'
-                  : 'Export results as Excel'
-              }
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setOpen(false);
-                onExportExcel();
-              }}
-            >
-              {exportingExcel ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-              )}
-              Export Excel
-            </button>
             <button
               type="button"
               role="menuitem"

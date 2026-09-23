@@ -2560,7 +2560,9 @@ function sales_laravel_api_url(string $api, array $extraQuery = []): string
     }
 
     if ($slug !== '' && function_exists('company_url')) {
-        $base = company_url('sales', $slug);
+        // Trailing slash avoids Apache DirectorySlash 301 → http://…/sales/
+        // (mixed-content redirect makes browser fetch() throw "Failed to fetch").
+        $base = rtrim(company_url('sales', $slug), '/') . '/';
     } else {
         $base = sales_app_url('/sales.php');
     }

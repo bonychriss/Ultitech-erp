@@ -436,7 +436,7 @@ export default function VerifyReceipts({ warehouseId, products, onVerified }: Ve
           rows={gridRows}
           columns={incomingColumns}
           rowKey={(row) => row.rowId}
-          sheetName="Incoming"
+          variant="plain"
           onRowsChange={handleRowsChange}
           onCreateEmptyRow={createManualRow}
           padVisualRows={12}

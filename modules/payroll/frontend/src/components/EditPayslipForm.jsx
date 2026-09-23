@@ -125,10 +125,10 @@ export default function EditPayslipForm({
         overtimeAllowances: Number(form.overtimeAllowances) || 0,
         bonusCommission: Number(form.bonusCommission) || 0,
         monthlyAdjustment: Number(form.monthlyAdjustment) || 0,
-        nssfDeduction: Number(form.nssfDeduction) || 0,
-        taxDeduction: Number(form.taxDeduction) || 0,
         otherDeductions: Number(form.otherDeductions) || 0,
         remarks: form.remarks,
+        // Keep NSSF/PAYE auto-calculated from earnings + tax bands.
+        recalculateStatutory: true,
       });
       setInit(res.data || init);
       const next = res.data?.payslip || {};

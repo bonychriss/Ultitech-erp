@@ -56,6 +56,35 @@ function sms_can_manage_products(): bool
     return in_array($role, ['admin', 'procurement'], true);
 }
 
+/**
+ * Store keepers (and procurement/admin) may list POs and confirm deliveries into warehouse stock.
+ */
+function sms_can_receive_warehouse_stock(): bool
+{
+    if (sms_can_manage_products() || sms_is_system_admin()) {
+        return true;
+    }
+    $role = strtolower(trim((string) ($_SESSION['role'] ?? '')));
+    if ($role === '') {
+        return !empty($_SESSION['user_id']);
+    }
+    return in_array($role, [
+        'admin',
+        'administrator',
+        'procurement',
+        'warehouse',
+        'warehouses',
+        'store',
+        'storekeeper',
+        'store_keeper',
+        'store-manager',
+        'store_manager',
+        'employee',
+        'staff',
+        'user',
+    ], true) || !empty($_SESSION['user_id']);
+}
+
 function sms_is_system_admin(): bool
 {
     if (function_exists('isAdmin') && isAdmin()) {
@@ -659,7 +688,7 @@ function sms_fetch_receivable_purchase_orders(PDO $pdo): array
         if (in_array('company_id', $poCols, true) && $companyId > 0) {
             $sql .= ' AND p.company_id = ' . (int) $companyId;
         }
-        $sql .= ' GROUP BY p.id HAVING remaining_qty > 0 ORDER BY p.created_at DESC LIMIT 50';
+        $sql .= ' GROUP BY p.id HAVING remaining_qty > 0 ORDER BY p.created_at DESC LIMIT 200';
 
         try {
             foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -696,7 +725,7 @@ function sms_fetch_receivable_purchase_orders(PDO $pdo): array
         if (in_array('company_id', $legacyCols, true) && $companyId > 0) {
             $legacySql .= ' AND p.company_id = ' . (int) $companyId;
         }
-        $legacySql .= ' GROUP BY p.id HAVING remaining_qty > 0 ORDER BY p.created_at DESC LIMIT 50';
+        $legacySql .= ' GROUP BY p.id HAVING remaining_qty > 0 ORDER BY p.created_at DESC LIMIT 200';
 
         try {
             foreach ($pdo->query($legacySql)->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -714,7 +743,7 @@ function sms_fetch_receivable_purchase_orders(PDO $pdo): array
         return strcmp((string) ($b['createdAt'] ?? ''), (string) ($a['createdAt'] ?? ''));
     });
 
-    return array_slice($orders, 0, 50);
+    return array_slice($orders, 0, 200);
 }
 
 /**
@@ -1804,6 +1833,8 @@ try {
                         ? (string) getCompanyLogoUrl()
                         : '',
                     'canManageProducts' => sms_can_manage_products(),
+                    'canReceivePurchaseOrders' => sms_can_receive_warehouse_stock(),
+                    'confirmPoToStock' => !sms_can_manage_products(),
                     'isSystemAdmin' => sms_is_system_admin(),
                     'manageProductsUrl' => function_exists('app_url')
                         ? app_url('stock/modules/products/index.php')

@@ -1104,6 +1104,7 @@ a.dlv-kpi-card--link {
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  overflow: auto;
 }
 .dkpi-modal__backdrop {
   position: absolute;
@@ -1126,6 +1127,7 @@ a.dlv-kpi-card--link {
   border-radius: 16px;
   box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
   overflow: hidden;
+  margin: auto;
 }
 .dkpi-modal__head {
   display: flex;
@@ -1135,6 +1137,7 @@ a.dlv-kpi-card--link {
   padding: 16px 18px 12px;
   border-bottom: 1px solid var(--dkpi-line);
   background: #fff;
+  flex-shrink: 0;
 }
 .dkpi-modal__title-row {
   display: flex;
@@ -1164,9 +1167,13 @@ a.dlv-kpi-card--link {
   background: transparent;
 }
 .dkpi-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 16px 18px 20px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .dkpi-service-tabs {
   display: grid;
@@ -1332,6 +1339,23 @@ a.dlv-kpi-card--link {
   font-size: 12px;
   color: var(--dkpi-muted);
 }
+.dkpi-week-log__subhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 1.15rem 0 0.65rem;
+}
+.dkpi-week-log__subhead h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dkpi-ink);
+}
+.dkpi-week-log__subhead span {
+  font-size: 12px;
+  color: var(--dkpi-muted);
+}
 .dkpi-desk-table-wrap {
   overflow: auto;
   border: 1px solid #e2e8f0;
@@ -1361,6 +1385,12 @@ a.dlv-kpi-card--link {
 }
 .dkpi-desk-table tbody tr:hover {
   background: #fafafa;
+}
+.dkpi-desk-table tbody tr.is-selected {
+  background: #eff6ff;
+}
+.dkpi-desk-table tbody tr[role="button"] {
+  cursor: pointer;
 }
 .dkpi-desk-table__muted {
   color: var(--dkpi-muted);
@@ -1554,6 +1584,9 @@ a.dlv-kpi-card--link {
   background: #fef2f2;
   color: var(--dkpi-bad);
   border: 1px solid #fecaca;
+}
+.dkpi-flash--page {
+  margin: 0 0 14px;
 }
 .dkpi-layout {
   display: grid;

@@ -20,7 +20,6 @@ import ExportPdfModal, { type ExportPdfRange } from './components/ExportPdfModal
 import WarningConfirmPopup from './components/WarningConfirmPopup';
 import { deleteWarehouseMovement, fetchInit, fetchMovements, fetchProducts } from './api';
 import { exportMovementsPdf } from './utils/exportMovementsPdf';
-import { exportMovementsExcel } from './utils/excelWarehouse';
 import type { Product, StockMovement, StoreConfig, Warehouse } from './types';
 import type { OutgoingKind } from './components/StoreOutgoingForm';
 
@@ -43,7 +42,6 @@ export default function App() {
   const [outgoingKind, setOutgoingKind] = useState<OutgoingKind>('sold');
   const [selectedMovement, setSelectedMovement] = useState<StockMovement | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const [exportingExcel, setExportingExcel] = useState(false);
   const [exportPdfOpen, setExportPdfOpen] = useState(false);
   const [exportPdfError, setExportPdfError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -184,45 +182,6 @@ export default function App() {
       setError(err instanceof Error ? err.message : 'Failed to delete product record');
     } finally {
       setDeletingId(null);
-    }
-  };
-
-  const handleExportExcel = async () => {
-    if (!selectedWarehouse || !warehouseId) {
-      setError('Select a warehouse before exporting.');
-      return;
-    }
-
-    setExportingExcel(true);
-    setError(null);
-    try {
-      let rows = listedMovements;
-      if (rows.length === 0) {
-        const { movements: exportRows } = await fetchMovements(warehouseId, {
-          search: searchTerm.trim() || undefined,
-          type: movementFilter === 'all' ? undefined : movementFilter,
-        });
-        rows = exportRows
-          .filter((m) => m.movementType === 'in' || m.movementType === 'out')
-          .map((m) => ({
-            ...m,
-            imageUrl: m.imageUrl || products.find((p) => p.id === m.productId)?.imageUrl || '',
-          }));
-      }
-
-      if (rows.length === 0) {
-        setError('No results to export as Excel.');
-        return;
-      }
-
-      await exportMovementsExcel(
-        rows,
-        selectedWarehouse.name || selectedWarehouse.code || 'warehouse'
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to export Excel');
-    } finally {
-      setExportingExcel(false);
     }
   };
 
@@ -484,13 +443,8 @@ export default function App() {
               </button>
             )}
             <ExportMenu
-              exportingExcel={exportingExcel}
               exportingPdf={exportingPdf}
-              excelDisabled={loadingMovements}
               pdfDisabled={loadingMovements}
-              onExportExcel={() => {
-                void handleExportExcel();
-              }}
               onExportPdf={openExportPdf}
             />
           </div>

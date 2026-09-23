@@ -3849,6 +3849,33 @@ html[data-theme="dark"] .sms-incoming-card {
   max-height: none;
 }
 
+.sms-excel-window--plain {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  font-family: inherit;
+  min-height: calc(100vh - 10rem);
+}
+
+.sms-excel-plain-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+html[data-theme="dark"] .sms-excel-window--plain {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .sms-excel-plain-toolbar {
+  background: #0f172a;
+  border-bottom-color: #334155;
+}
+
 .sms-excel-chrome {
   position: sticky;
   top: 0;

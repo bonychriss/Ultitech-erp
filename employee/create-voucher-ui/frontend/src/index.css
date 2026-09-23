@@ -380,6 +380,14 @@
   transition: border-color 0.15s, background 0.15s;
 }
 .cv-file:hover { border-color: var(--cv-accent); background: #faf5ff; }
+.cv-file.is-invalid { border-color: var(--cv-danger); background: #fef2f2; }
+.cv-file.is-valid { border-color: #86efac; }
+.cv-attach-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--cv-muted);
+}
+.cv-file--po { margin-bottom: 0; }
 .cv-file input { display: none; }
 .cv-file-icon { color: var(--cv-accent); margin-bottom: 4px; }
 .cv-file-title { font-size: 14px; font-weight: 600; color: var(--cv-accent); }

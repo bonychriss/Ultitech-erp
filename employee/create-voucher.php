@@ -101,6 +101,38 @@ try {
     $salesOrders = [];
 }
 
+// Purchase orders for Stock Purchase linking.
+$purchaseOrders = [];
+try {
+    if (function_exists('tableExists') && tableExists('stocks_purchase_orders', $pdo)) {
+        $poCols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $hasPvLink = in_array('payment_voucher_id', $poCols, true);
+        $hasSupplierJoin = function_exists('tableExists') && tableExists('stocks_suppliers', $pdo);
+        $supplierSelect = $hasSupplierJoin
+            ? "COALESCE(ss.name, CONCAT('Supplier #', po.supplier_id)) AS supplier_name"
+            : "CONCAT('Supplier #', po.supplier_id) AS supplier_name";
+        $join = $hasSupplierJoin ? 'LEFT JOIN stocks_suppliers ss ON ss.id = po.supplier_id' : '';
+        $where = $hasPvLink
+            ? 'WHERE (po.payment_voucher_id IS NULL OR po.payment_voucher_id = 0)'
+            : '';
+        $purchaseOrders = $pdo->query("
+            SELECT
+                po.id,
+                po.po_number,
+                po.status,
+                po.created_at,
+                {$supplierSelect}
+            FROM stocks_purchase_orders po
+            {$join}
+            {$where}
+            ORDER BY po.created_at DESC, po.id DESC
+            LIMIT 500
+        ")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+} catch (Throwable $e) {
+    $purchaseOrders = [];
+}
+
 // Backend processing for new Payee via AJAX (for this page's own modal)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'ajax_create_payee') {
     // Simple permission check: any logged in user can add payee
@@ -167,6 +199,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $description = isset($_POST['description']) ? trim($_POST['description']) : '';
         $currency = $_POST['currency'] ?? 'TZS';
         $voucher_purpose = normalizePaymentVoucherPurpose($_POST['voucher_purpose'] ?? 'general');
+        $linked_stock_po_id = isset($_POST['linked_stock_po_id']) && is_numeric($_POST['linked_stock_po_id'])
+            ? (int) $_POST['linked_stock_po_id']
+            : 0;
+        if ($linked_stock_po_id > 0 && function_exists('fetchStockPurchaseOrderById')) {
+            $poRow = fetchStockPurchaseOrderById($pdo, $linked_stock_po_id, false);
+            if (!$poRow) {
+                $linked_stock_po_id = 0;
+            }
+        }
         $linked_sales_order_ids_raw = trim((string) ($_POST['linked_sales_order_ids'] ?? ''));
         $linked_sales_order_ids = [];
         if ($linked_sales_order_ids_raw !== '') {
@@ -230,6 +271,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Ensure prepared_by is not empty (should always be set from session, but check anyway)
             if (empty($prepared_by)) {
                 throw new Exception('Prepared By information is missing. Please contact support.');
+            }
+            // Stock Purchase vouchers require a linked Purchase Order from the system
+            if ($voucher_purpose === 'stock_purchase') {
+                if ($linked_stock_po_id <= 0) {
+                    throw new Exception('Please select a Purchase Order for Stock Purchase vouchers');
+                }
+            } else {
+                $linked_stock_po_id = 0;
             }
         }
 
@@ -340,7 +389,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         appendPaymentVoucherPurposeToInsert($insertCols, $insertVals, $pdo, $voucher_purpose, $pvCols);
         if (in_array('linked_stock_po_id', $pvCols, true)) {
             $insertCols[] = 'linked_stock_po_id';
-            $insertVals[] = null;
+            $insertVals[] = ($linked_stock_po_id > 0 ? $linked_stock_po_id : null);
         }
         if (in_array('linked_sales_order_id', $pvCols, true)) {
             $insertCols[] = 'linked_sales_order_id';
@@ -491,7 +540,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Handle file uploads for supporting documents
         $uploadedCount = 0;
-        if (!empty($_FILES['supporting_files']) && isset($_FILES['supporting_files']['name']) && is_array($_FILES['supporting_files']['name'])) {
+        $uploadOneFile = static function (
+            string $orig,
+            string $tmp,
+            string $mime,
+            int $size,
+            array $allowedExt,
+            int $maxSize,
+            string $voucherDir,
+            int $voucherId,
+            int $createdBy,
+            string $namePrefix = ''
+        ) use (&$uploadedCount): bool {
+            if ($size <= 0 || $size > $maxSize) {
+                return false;
+            }
+            $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+            if (!in_array($ext, $allowedExt, true)) {
+                return false;
+            }
+            $safeBase = preg_replace('/[^A-Za-z0-9_-]+/', '_', pathinfo($orig, PATHINFO_FILENAME));
+            if ($safeBase === '') {
+                $safeBase = 'file';
+            }
+            $unique = $safeBase . '_' . date('YmdHis') . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
+            $destAbs = $voucherDir . DIRECTORY_SEPARATOR . $unique;
+            $destRel = 'assets/uploads/vouchers/' . $voucherId . '/' . $unique;
+            if (!@move_uploaded_file($tmp, $destAbs)) {
+                return false;
+            }
+            $storedName = $namePrefix !== '' ? ($namePrefix . ltrim($orig)) : $orig;
+            addVoucherAttachment($voucherId, $destRel, $storedName, $mime, $size, $createdBy);
+            $uploadedCount++;
+            if (function_exists('app_log')) {
+                app_log('create-voucher: file uploaded original=' . $storedName . ' stored=' . $destRel . ' size=' . $size);
+            }
+            return true;
+        };
+
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'webp', 'bmp'];
+        $maxSize = 10 * 1024 * 1024; // 10MB per file
+        $needsUploadDir = (!empty($_FILES['supporting_files']['name']) && is_array($_FILES['supporting_files']['name']))
+            || (!empty($_FILES['purchase_order_file']['name']));
+
+        if ($needsUploadDir) {
             ensureVoucherAttachmentsSchema();
             $baseDir = ensureVoucherUploadsDir();
             $voucherDir = $baseDir . DIRECTORY_SEPARATOR . $voucher_id;
@@ -502,43 +594,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 @chmod($voucherDir, 0775);
             }
 
-            $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'doc', 'docx', 'xls', 'xlsx'];
-            $maxSize = 10 * 1024 * 1024; // 10MB per file
-            $names = $_FILES['supporting_files']['name'];
-            $tmps = $_FILES['supporting_files']['tmp_name'];
-            $types = $_FILES['supporting_files']['type'];
-            $sizes = $_FILES['supporting_files']['size'];
-            $errs = $_FILES['supporting_files']['error'];
-            $count = count($names);
-            for ($i = 0; $i < $count; $i++) {
-                if (!isset($names[$i]) || $errs[$i] !== UPLOAD_ERR_OK)
-                    continue;
-                $orig = $names[$i];
-                $size = (int) ($sizes[$i] ?? 0);
-                $mime = (string) ($types[$i] ?? 'application/octet-stream');
-                $tmp = $tmps[$i];
-                if ($size <= 0 || $size > $maxSize)
-                    continue;
-                $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
-                if (!in_array($ext, $allowedExt, true))
-                    continue;
-                // Build a safe unique file name
-                $safeBase = preg_replace('/[^A-Za-z0-9_-]+/', '_', pathinfo($orig, PATHINFO_FILENAME));
-                if ($safeBase === '') {
-                    $safeBase = 'file';
-                }
-                $unique = $safeBase . '_' . date('YmdHis') . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
-                $destAbs = $voucherDir . DIRECTORY_SEPARATOR . $unique;
-                $destRel = 'assets/uploads/vouchers/' . $voucher_id . '/' . $unique; // relative path for web
-                if (@move_uploaded_file($tmp, $destAbs)) {
-                    // record row
-                    addVoucherAttachment($voucher_id, $destRel, $orig, $mime, $size, $createdBy);
-                    $uploadedCount++;
-                    if (function_exists('app_log')) {
-                        app_log('create-voucher: file uploaded original=' . $orig . ' stored=' . $destRel . ' size=' . $size);
+            // Dedicated Purchase Order attachment (Stock Purchase)
+            if (
+                !empty($_FILES['purchase_order_file']['name'])
+                && (int) ($_FILES['purchase_order_file']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK
+            ) {
+                $uploadOneFile(
+                    (string) $_FILES['purchase_order_file']['name'],
+                    (string) $_FILES['purchase_order_file']['tmp_name'],
+                    (string) ($_FILES['purchase_order_file']['type'] ?? 'application/octet-stream'),
+                    (int) ($_FILES['purchase_order_file']['size'] ?? 0),
+                    $allowedExt,
+                    $maxSize,
+                    $voucherDir,
+                    (int) $voucher_id,
+                    $createdBy,
+                    '[PO] '
+                );
+            }
+
+            if (!empty($_FILES['supporting_files']) && isset($_FILES['supporting_files']['name']) && is_array($_FILES['supporting_files']['name'])) {
+                $names = $_FILES['supporting_files']['name'];
+                $tmps = $_FILES['supporting_files']['tmp_name'];
+                $types = $_FILES['supporting_files']['type'];
+                $sizes = $_FILES['supporting_files']['size'];
+                $errs = $_FILES['supporting_files']['error'];
+                $count = count($names);
+                for ($i = 0; $i < $count; $i++) {
+                    if (!isset($names[$i]) || $errs[$i] !== UPLOAD_ERR_OK) {
+                        continue;
                     }
+                    $uploadOneFile(
+                        (string) $names[$i],
+                        (string) $tmps[$i],
+                        (string) ($types[$i] ?? 'application/octet-stream'),
+                        (int) ($sizes[$i] ?? 0),
+                        $allowedExt,
+                        $maxSize,
+                        $voucherDir,
+                        (int) $voucher_id,
+                        $createdBy
+                    );
                 }
             }
+
             // If any files uploaded, update the numeric count field to reflect reality
             if ($uploadedCount > 0) {
                 try {

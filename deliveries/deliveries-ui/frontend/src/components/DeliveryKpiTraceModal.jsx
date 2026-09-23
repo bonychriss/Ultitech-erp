@@ -48,15 +48,6 @@ function DriverPerformanceBoard({ drivers, footnote, onSelectDriver }) {
                   <span className="dlv-perf-driver__rank" aria-hidden="true">{index + 1}</span>
                   <span className="dlv-perf-driver__body">
                     <strong className="dlv-perf-driver__name">{cellText(driver.name)}</strong>
-                    <span className="dlv-perf-driver__meta">
-                      On-time {Number(driver.on_time_pct || 0).toFixed(0)}%
-                      {' | '}
-                      Vehicle {Number(driver.vehicle_care_pct || 0).toFixed(0)}%
-                      {' | '}
-                      Docs {Number(driver.documentation_pct || 0).toFixed(0)}%
-                      {' | '}
-                      {Number(driver.completed || 0)} completed
-                    </span>
                   </span>
                   <span className="dlv-perf-driver__score">{score.toFixed(1)}%</span>
                 </button>

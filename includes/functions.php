@@ -13005,13 +13005,16 @@ function fetchStockPurchaseVoucherQuotationLinesForPo(
     return $lines;
 }
 
-/** Public URL to download/print a sales order as PDF. */
-function salesOrderPrintPdfUrl(int $orderId): string
+/** Public URL to view/print a sales order (browser view; use autodownload=1 to force save). */
+function salesOrderPrintPdfUrl(int $orderId, bool $forceDownload = false): string
 {
     if ($orderId <= 0) {
         return '';
     }
-    $path = '/modules/sales/orders/print.php?id=' . $orderId . '&download=1';
+    $query = 'id=' . $orderId;
+    if ($forceDownload) {
+        $query .= '&autodownload=1';
+    }
     $slug = '';
     if (!empty($_SESSION['company_slug'])) {
         $slug = strtolower(trim((string) $_SESSION['company_slug']));
@@ -13019,8 +13022,10 @@ function salesOrderPrintPdfUrl(int $orderId): string
         $slug = strtolower(trim(getRequestedCompanySlug()));
     }
     if ($slug !== '' && function_exists('company_url')) {
-        return company_url('modules/sales/orders/print.php', $slug) . '?id=' . $orderId . '&download=1';
+        return company_url('modules/sales/orders/print.php', $slug) . '?' . $query;
     }
+    $path = '/modules/sales/orders/print.php?' . $query;
+
     return function_exists('app_url') ? app_url($path) : $path;
 }
 

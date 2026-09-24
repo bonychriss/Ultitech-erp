@@ -8,8 +8,14 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-$auto_print = isset($_GET['download']);
 $embedMode = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
+// View in browser by default. Force-save only with autodownload=1 (or download=pdf/force).
+// Legacy download=1 used to auto-download; that blocked in-app viewing.
+$downloadParam = isset($_GET['download']) ? strtolower(trim((string) $_GET['download'])) : '';
+$auto_print = !$embedMode && (
+    isset($_GET['autodownload'])
+    || in_array($downloadParam, ['pdf', 'force'], true)
+);
 
 if ($id <= 0) {
     http_response_code(400);

@@ -194,18 +194,26 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
       </div>
       <div className="vv-card-body">
         <div className="vv-gmail-list" role="list">
-          {salesOrderDocs.map((so) => (
-            <GmailAttachCard
-              key={`so-${so.id}`}
-              iconClass="fa-file-pdf"
-              name={`${so.orderNumber}.pdf`}
-              sub="Sales Order"
-              viewHref={so.pdfLink}
-              downloadHref={so.pdfLink}
-              previewUrl={so.pdfLink}
-              htmlEmbed={isHtmlDocUrl(so.pdfLink)}
-            />
-          ))}
+          {salesOrderDocs.map((so) => {
+            const viewUrl = withPoEmbed(String(so.pdfLink || '').replace(/([?&])download=1(&|$)/, '$1').replace(/[?&]$/, ''))
+            const downloadUrl = (() => {
+              const base = String(so.pdfLink || '').replace(/([?&])download=1(&|$)/, '$1').replace(/[?&]$/, '')
+              if (!base) return undefined
+              return base + (base.includes('?') ? '&' : '?') + 'autodownload=1'
+            })()
+            return (
+              <GmailAttachCard
+                key={`so-${so.id}`}
+                iconClass="fa-file-pdf"
+                name={`${so.orderNumber}.pdf`}
+                sub="Sales Order"
+                onView={() => onPreview(viewUrl, 'supporting', false)}
+                downloadHref={downloadUrl}
+                previewUrl={viewUrl}
+                htmlEmbed
+              />
+            )
+          })}
 
           {poDocs.map((po) => (
             <GmailAttachCard

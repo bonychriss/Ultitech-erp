@@ -187,7 +187,25 @@ export function DocPreviewModal({ open, onClose, url, kind, isImage }) {
     fileExt = ''
   }
   const isImg = Boolean(isImage) || imgExt.includes(pathExt) || imgExt.includes(fileExt)
-  const title = kind === 'swift' ? 'SWIFT Payment Proof' : 'Supporting Document'
+  const title =
+    kind === 'swift' ? 'SWIFT Payment Proof' : kind === 'sales_order' ? 'Sales Order' : 'Supporting Document'
+
+  const frameSrc = (() => {
+    if (isImg || !url) return url
+    // HTML print sheets (sales orders / PO docs) render cleaner with embed=1
+    if (/orders\/print\.php|po-document\.php|view_po\.php/i.test(String(url))) {
+      try {
+        const u = new URL(url, window.location.href)
+        u.searchParams.set('embed', '1')
+        u.searchParams.delete('download')
+        u.searchParams.delete('autodownload')
+        return u.pathname + u.search + u.hash
+      } catch {
+        return url
+      }
+    }
+    return url
+  })()
 
   return (
     <div className="no-print" style={{ display: 'flex', position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 3000 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
@@ -225,7 +243,7 @@ export function DocPreviewModal({ open, onClose, url, kind, isImage }) {
             />
           ) : (
             <iframe
-              src={url}
+              src={frameSrc}
               title="PDF Preview"
               style={{
                 width: 'min(100%, 960px)',

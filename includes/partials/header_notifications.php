@@ -18,6 +18,9 @@ $notifIsSidebar = ($notifDisplayMode === 'sidebar');
 
 $ncAllItems = [];
 try {
+    if (function_exists('reconcileStalePaymentVoucherActionNotificationsForUser')) {
+        reconcileStalePaymentVoucherActionNotificationsForUser();
+    }
     if (empty($GLOBALS['_ultitech_skip_nc_feed_in_header']) && function_exists('getNotificationCentreFeedPaged')) {
         $ncAllItems = getNotificationCentreFeedPaged(60, 0);
     }
@@ -364,13 +367,27 @@ function headerNotifItemClick(ev, el) {
         root.innerHTML =
             '<div class="nc-coach-scrim" data-nc-coach-dismiss="1"></div>' +
             '<div class="nc-coach-card">' +
-                '<p class="nc-coach-kicker">Next step</p>' +
-                '<h3 class="nc-coach-title">' + escapeHtml(data.title || 'Continue') + '</h3>' +
+                '<div class="nc-coach-header">' +
+                    '<div class="nc-coach-icon" aria-hidden="true">' +
+                        '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                            '<path d="M7 3.5h7.2L17.5 7v13.5H7V3.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+                            '<path d="M14.2 3.5V7H17.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+                            '<path d="M9.2 11h5.6M9.2 14h4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+                            '<path d="M9.4 18.2c1.1-.9 2-.7 2.8.1.7.7 1.5 1 2.6.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+                        '</svg>' +
+                    '</div>' +
+                    '<div class="nc-coach-heading">' +
+                        '<p class="nc-coach-kicker">Next step</p>' +
+                        '<h3 class="nc-coach-title">' + escapeHtml(data.title || 'Continue') + '</h3>' +
+                    '</div>' +
+                '</div>' +
                 '<p class="nc-coach-body">' + escapeHtml(data.body || '') + '</p>' +
-                '<div class="nc-coach-actions">' +
-                    '<button type="button" class="nc-coach-btn" data-nc-coach-dismiss="1">' +
-                        escapeHtml(data.action || 'Got it') +
-                    '</button>' +
+                '<div class="nc-coach-footer">' +
+                    '<div class="nc-coach-actions">' +
+                        '<button type="button" class="nc-coach-btn" data-nc-coach-dismiss="1">' +
+                            escapeHtml(data.action || 'Got it') +
+                        '</button>' +
+                    '</div>' +
                 '</div>' +
             '</div>';
 
@@ -389,7 +406,9 @@ function headerNotifItemClick(ev, el) {
         document.addEventListener('keydown', onKey);
         document.body.appendChild(root);
         var btn = root.querySelector('.nc-coach-btn');
-        if (btn) btn.focus();
+        if (btn) {
+            try { btn.blur(); } catch (e) {}
+        }
     };
 
     function boot() {

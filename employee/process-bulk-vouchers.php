@@ -18,7 +18,7 @@ $file = $_FILES['csv_file']['tmp_name'];
 $handle = fopen($file, 'r');
 
 // 1. Define Valid Options
-$validPaymentTypes = ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment'];
+$validPaymentTypes = ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment', 'Credit'];
 $validBudgetTypes = [
     'Operational Expenses', 'Procurement & Supplies', 'Employee Costs', 
     'Sales & Marketing', 'Logistics & Delivery', 'Administration & Management',

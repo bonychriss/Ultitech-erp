@@ -233,6 +233,11 @@ $__adminHeaderIsEmpty = !$__adminHeaderShowHeading && !$__adminHeaderCenter && !
         setNotifDrawerOpen(false);
     }
 
+    // Expose for coach tip / other modules
+    window.setNotifDrawerOpen = setNotifDrawerOpen;
+    window.toggleNotif = toggleNotif;
+    window.closeNotif = closeNotif;
+
     ensureNotifPanelOnBody();
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', restoreNotifDrawerOpen);
@@ -249,6 +254,10 @@ $__adminHeaderIsEmpty = !$__adminHeaderShowHeading && !$__adminHeaderCenter && !
     
     // Close drawer when clicking outside
     document.addEventListener('click', function(e) {
+        if (window.__ultitechIgnoreNotifOutsideClickUntil
+            && Date.now() < window.__ultitechIgnoreNotifOutsideClickUntil) {
+            return;
+        }
         var dd = document.getElementById('notif-dd');
         var btn = e.target.closest('.header-notif-bell-btn, .notif .icon-btn, .sidebar-notif-trigger');
         

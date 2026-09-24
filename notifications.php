@@ -13,6 +13,14 @@ if (!in_array($filter, ['today', 'week', 'earlier'], true)) {
     $filter = 'today';
 }
 
+if (function_exists('reconcileStalePaymentVoucherActionNotificationsForUser')) {
+    try {
+        reconcileStalePaymentVoucherActionNotificationsForUser();
+    } catch (Throwable $e) {
+        /* ignore */
+    }
+}
+
 $allItems = getNotificationCentreFeedPaged(80, 0);
 
 $ncPeriodOf = static function ($createdAt): string {

@@ -7,6 +7,113 @@ if (!isset($ncItems) || !is_array($ncItems)) {
     $ncItems = [];
 }
 
+if (!function_exists('nc_is_voucher_action_notification')) {
+    /**
+     * True when the notification asks the user to sign / approve / check / pay / post a voucher.
+     */
+    function nc_is_voucher_action_notification(array $n): bool
+    {
+        $blob = strtolower(trim((string) ($n['title'] ?? '') . ' ' . (string) ($n['message'] ?? '')));
+        if ($blob === '') {
+            return false;
+        }
+        if (preg_match('/\b(sign payment voucher|sign as applicant|sign as department|sign as checked|approve as department|check payment voucher|voucher requires checking|final approval needed|mark voucher as paid|mark as paid|post payment voucher|post voucher)\b/', $blob)) {
+            return true;
+        }
+        if (preg_match('/\b(please open voucher|waiting for you to sign|ready for your signature|needs your (signature|approval)|sign as)\b/', $blob)) {
+            return true;
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('nc_voucher_action_rank')) {
+    /**
+     * Lower = higher in the list. Sign/check/approve before paid/post before other items.
+     */
+    function nc_voucher_action_rank(array $n): int
+    {
+        $blob = strtolower(trim((string) ($n['title'] ?? '') . ' ' . (string) ($n['message'] ?? '')));
+        if (preg_match('/\bsign as applicant|sign payment voucher\b/', $blob)) {
+            return 0;
+        }
+        if (preg_match('/\bsign as department|approve as department\b/', $blob)) {
+            return 1;
+        }
+        if (preg_match('/\bsign as checked|check payment|requires checking\b/', $blob)) {
+            return 2;
+        }
+        if (preg_match('/\bfinal approval\b/', $blob)) {
+            return 3;
+        }
+        if (preg_match('/\bmark.*paid\b/', $blob)) {
+            return 4;
+        }
+        if (preg_match('/\bpost (payment )?voucher\b/', $blob)) {
+            return 5;
+        }
+        if (nc_is_voucher_action_notification($n)) {
+            return 6;
+        }
+
+        return 100;
+    }
+}
+
+if (!function_exists('nc_sort_action_notifications_first')) {
+    /**
+     * Keep all notifications, but put voucher action items (sign/approve/…) on top.
+     *
+     * @param list<array<string,mixed>> $items
+     * @return list<array<string,mixed>>
+     */
+    function nc_sort_action_notifications_first(array $items): array
+    {
+        if (count($items) < 2) {
+            return $items;
+        }
+
+        $indexed = [];
+        foreach ($items as $i => $n) {
+            $indexed[] = ['i' => $i, 'n' => $n];
+        }
+
+        usort($indexed, static function ($a, $b) {
+            $na = $a['n'];
+            $nb = $b['n'];
+            $ra = nc_voucher_action_rank($na);
+            $rb = nc_voucher_action_rank($nb);
+            if ($ra !== $rb) {
+                return $ra <=> $rb;
+            }
+
+            $ua = (int) ($na['is_read'] ?? 0) === 0 ? 0 : 1;
+            $ub = (int) ($nb['is_read'] ?? 0) === 0 ? 0 : 1;
+            if ($ua !== $ub) {
+                return $ua <=> $ub;
+            }
+
+            $ta = strtotime((string) ($na['created_at'] ?? '')) ?: 0;
+            $tb = strtotime((string) ($nb['created_at'] ?? '')) ?: 0;
+            if ($ta !== $tb) {
+                return $tb <=> $ta; // newest first within same bucket
+            }
+
+            return $a['i'] <=> $b['i'];
+        });
+
+        $out = [];
+        foreach ($indexed as $row) {
+            $out[] = $row['n'];
+        }
+
+        return $out;
+    }
+}
+
+$ncItems = nc_sort_action_notifications_first($ncItems);
+
 if (!function_exists('nc_format_notification_message')) {
     function nc_format_notification_message(string $message): string
     {
@@ -163,6 +270,49 @@ if (!function_exists('nc_card_coach')) {
             ];
         }
 
+        if (str_contains($title, 'sign payment voucher') || preg_match('/\bsign as applicant\b/', $blob)) {
+            return [
+                'title' => 'Your signature is needed',
+                'body' => 'Open the voucher and sign as Applicant to move it to the next approver.',
+                'action' => 'Got it',
+            ];
+        }
+        if (str_contains($title, 'approve as department manager') || preg_match('/\bdepartment manager\b/', $blob) && preg_match('/\bsign|approve\b/', $blob)) {
+            return [
+                'title' => 'Department Manager approval',
+                'body' => 'Open the voucher and sign as Department Manager when it is your turn.',
+                'action' => 'Got it',
+            ];
+        }
+        if (str_contains($title, 'check payment voucher') || preg_match('/\bchecked by\b/', $blob) || preg_match('/\brequires checking\b/', $blob)) {
+            return [
+                'title' => 'Check this voucher',
+                'body' => 'Open the voucher, review the details, then sign as Checked By.',
+                'action' => 'Got it',
+            ];
+        }
+        if (str_contains($title, 'final approval') || preg_match('/\bfinal approval\b/', $blob)) {
+            return [
+                'title' => 'Final approval needed',
+                'body' => 'Open the voucher and give final approval so Finance can mark it paid.',
+                'action' => 'Got it',
+            ];
+        }
+        if (str_contains($title, 'mark voucher as paid') || preg_match('/\bmark.*paid\b/', $blob)) {
+            return [
+                'title' => 'Mark as paid',
+                'body' => 'When payment is complete, open the voucher and mark it as paid.',
+                'action' => 'Got it',
+            ];
+        }
+        if (str_contains($title, 'post payment voucher') || preg_match('/\bpost.*voucher\b/', $blob)) {
+            return [
+                'title' => 'Post this voucher',
+                'body' => 'Open the voucher and post it to finalize bookkeeping.',
+                'action' => 'Got it',
+            ];
+        }
+
         if (str_contains($title, 'draft payroll') || preg_match('/\bdraft payroll\b/', $blob)) {
             return [
                 'title' => 'Review this draft payroll',
@@ -293,22 +443,36 @@ foreach ($ncItems as $n):
     $tone = $visual['tone'];
     $coach = nc_card_coach($n);
     $classes = 'nc-card nc-card--tone-' . $tone . ($isUnread ? ' is-unread' : '');
+    if (nc_is_voucher_action_notification($n)) {
+        $classes .= ' nc-card--pv-action';
+    }
+    $voucherIdAttr = 0;
+    if (function_exists('nc_guess_voucher_id_from_notification')) {
+        $voucherIdAttr = (int) nc_guess_voucher_id_from_notification($n);
+    } else {
+        $voucherIdAttr = (int) ($n['voucher_id'] ?? 0);
+    }
+    $voucherNoAttr = '';
+    $msgBlob = (string) ($n['title'] ?? '') . ' ' . (string) ($n['message'] ?? '');
+    if (preg_match('/\b(PV\/[A-Z0-9][A-Z0-9\/\-]+)\b/i', $msgBlob, $vm)) {
+        $voucherNoAttr = strtoupper(trim((string) ($vm[1] ?? '')));
+    }
+    $cardDataAttrs = 'data-notif-id="' . htmlspecialchars($compositeId, ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-nc-period="' . htmlspecialchars($period, ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-nc-coach-title="' . htmlspecialchars($coach['title'], ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-nc-coach-body="' . htmlspecialchars($coach['body'], ENT_QUOTES, 'UTF-8') . '"'
+        . ' data-nc-coach-action="' . htmlspecialchars($coach['action'], ENT_QUOTES, 'UTF-8') . '"'
+        . ($voucherIdAttr > 0 ? ' data-voucher-id="' . (int) $voucherIdAttr . '"' : '')
+        . ($voucherNoAttr !== '' ? ' data-voucher-no="' . htmlspecialchars($voucherNoAttr, ENT_QUOTES, 'UTF-8') . '"' : '')
+        . (nc_is_voucher_action_notification($n) ? ' data-pv-action="1"' : '');
     if ($href !== ''): ?>
     <a href="<?= htmlspecialchars($href, ENT_QUOTES, 'UTF-8') ?>"
         class="<?= htmlspecialchars($classes, ENT_QUOTES, 'UTF-8') ?>"
-        data-notif-id="<?= htmlspecialchars($compositeId, ENT_QUOTES, 'UTF-8') ?>"
-        data-nc-period="<?= htmlspecialchars($period, ENT_QUOTES, 'UTF-8') ?>"
-        data-nc-coach-title="<?= htmlspecialchars($coach['title'], ENT_QUOTES, 'UTF-8') ?>"
-        data-nc-coach-body="<?= htmlspecialchars($coach['body'], ENT_QUOTES, 'UTF-8') ?>"
-        data-nc-coach-action="<?= htmlspecialchars($coach['action'], ENT_QUOTES, 'UTF-8') ?>"
+        <?= $cardDataAttrs ?>
         onclick="if (typeof headerNotifItemClick === 'function') { headerNotifItemClick(event, this); }">
     <?php else: ?>
     <article class="<?= htmlspecialchars($classes, ENT_QUOTES, 'UTF-8') ?>"
-        data-notif-id="<?= htmlspecialchars($compositeId, ENT_QUOTES, 'UTF-8') ?>"
-        data-nc-period="<?= htmlspecialchars($period, ENT_QUOTES, 'UTF-8') ?>"
-        data-nc-coach-title="<?= htmlspecialchars($coach['title'], ENT_QUOTES, 'UTF-8') ?>"
-        data-nc-coach-body="<?= htmlspecialchars($coach['body'], ENT_QUOTES, 'UTF-8') ?>"
-        data-nc-coach-action="<?= htmlspecialchars($coach['action'], ENT_QUOTES, 'UTF-8') ?>">
+        <?= $cardDataAttrs ?>>
     <?php endif; ?>
         <span class="nc-card-icon nc-card-icon--<?= htmlspecialchars($tone, ENT_QUOTES, 'UTF-8') ?>" aria-hidden="true">
             <i class="<?= htmlspecialchars($iconFa, ENT_QUOTES, 'UTF-8') ?>"></i>

@@ -219,12 +219,33 @@ export default function ViewVoucherPage() {
         approval={approveTarget}
         rolesStr={approveRoles}
         data={data}
-        onSuccess={() => {
+        onSuccess={(result) => {
+          const remainingCount = Number(result?.remaining_count || 0)
+          try {
+            if (typeof window.ultitechForgetPvHighlight === 'function') {
+              window.ultitechForgetPvHighlight(data?.voucher?.id, data?.voucher?.voucher_no)
+            }
+            if (remainingCount > 0) {
+              sessionStorage.setItem('ultitech_pv_coach_reshow', '1')
+              if (typeof window.ultitechRequestPvCoachReshow === 'function') {
+                window.ultitechRequestPvCoachReshow()
+              }
+            }
+          } catch { /* ignore */ }
           if (window.erpNavBack && typeof window.erpNavBack.pruneSameDocument === 'function') {
             try { window.erpNavBack.pruneSameDocument(window.location.href) } catch { /* ignore */ }
           }
-          // Replace (not reload) so history has no duplicate voucher entry.
-          window.location.replace(window.location.href)
+          try {
+            const next = new URL(window.location.href)
+            if (remainingCount > 0) {
+              next.searchParams.set('pv_coach', '1')
+            } else {
+              next.searchParams.delete('pv_coach')
+            }
+            window.location.replace(next.toString())
+          } catch {
+            window.location.replace(window.location.href)
+          }
         }}
       />
       <DocPreviewModal

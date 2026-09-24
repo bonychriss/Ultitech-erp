@@ -115,6 +115,14 @@ if (strpos(str_replace('\\', '/', $script_name), '/employee/personalization/') !
 if ($current_page === 'dashboard.php' && strpos($script_name, '/employee/') !== false && (!isset($_GET['module']))) {
     $active_module = 'voucher';
 }
+if ($current_page === 'dashboard.php' && strpos(str_replace('\\', '/', $script_name), '/admin/') !== false
+    && (!isset($_GET['module']) || (string) $_GET['module'] === '' || (string) $_GET['module'] === 'voucher')) {
+    $active_module = 'voucher';
+}
+if (in_array($current_page, array('all-vouchers.php', 'my-vouchers.php', 'pending-voucher-tasks.php', 'create-voucher.php', 'view-voucher.php'), true)
+    && (!isset($_GET['module']) || (string) $_GET['module'] === '' || (string) $_GET['module'] === 'voucher')) {
+    $active_module = 'voucher';
+}
 $isCompanySettingsPage = ($current_page === 'company-settings.php')
     && (stripos(str_replace('\\', '/', $script_name . ($_SERVER['REQUEST_URI'] ?? '')), 'company-settings.php') !== false);
 if ($isCompanySettingsPage) {
@@ -1133,7 +1141,7 @@ if (!isset($_GET['print'])) {
 <!-- Bootstrap 5 Sidebar CSS -->
 <style>
     :root {
-        --sidebar-width: 250px;
+        --sidebar-width: 212px;
         --sidebar-collapsed-width: 70px;
          /* Fallbacks if theme CSS fails to load */
         --sidebar-bg: transparent;
@@ -1263,7 +1271,7 @@ if (!isset($_GET['print'])) {
         /* Background and colors controlled by sidebar_themes.css */
         display: flex;
         flex-direction: column;
-        padding: 1rem 0.75rem; /* Better breathing room */
+        padding: 0.85rem 0.5rem; /* Tighter horizontal padding for more content room */
         transition: width 0.3s ease;
         overflow-y: auto; /* Scroll internally if menu is long */
         overflow-x: hidden;
@@ -1831,7 +1839,7 @@ if (!isset($_GET['print'])) {
     <div class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none justify-content-between w-100 sidebar-header">
         <div class="d-flex align-items-center logo-container" style="gap: 10px;">
             <?php if ($sidebarCompanyLogoUrl !== ''): ?>
-                <div style="max-height: 50px; max-width: 180px; display: flex; align-items: center; justify-content: flex-start; overflow: hidden; flex-shrink: 0;">
+                <div style="max-height: 50px; max-width: 150px; display: flex; align-items: center; justify-content: flex-start; overflow: hidden; flex-shrink: 0;">
                     <img src="<?= htmlspecialchars($sidebarCompanyLogoUrl) ?>" alt="Company Logo" style="max-height: 45px; max-width: 100%; object-fit: contain;">
                 </div>
             <?php else: ?>
@@ -2120,6 +2128,15 @@ if (!isset($_GET['print'])) {
         </li>
     </ul>
     <?php endif; ?>
+
+    <?php
+    // Google-style directing tip when opening Payment Vouchers with pending actions.
+    // Kept outside the Quick block so it still boots even if that section is skipped.
+    $pvTurnCoachPartial = __DIR__ . '/includes/partials/pv_turn_coach.php';
+    if (is_file($pvTurnCoachPartial)) {
+        require $pvTurnCoachPartial;
+    }
+    ?>
 
     <?php if ($active_module !== 'analytics'): ?>
     <div class="px-3 mb-2 mt-4 small fw-bold text-muted sidebar-text" style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5;">

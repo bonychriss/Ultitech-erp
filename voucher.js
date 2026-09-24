@@ -65,6 +65,7 @@ function addVoucherItem(data = null) {
                 <option value="Cash Payment" ${(data && data.payment_type === 'Cash Payment') || (!isFirstItem && existingType === 'Cash Payment') ? 'selected' : ''}>Cash Payment</option>
                 <option value="Cheque" ${(data && data.payment_type === 'Cheque') || (!isFirstItem && existingType === 'Cheque') ? 'selected' : ''}>Cheque</option>
                 <option value="Mobile Payment" ${(data && data.payment_type === 'Mobile Payment') || (!isFirstItem && existingType === 'Mobile Payment') ? 'selected' : ''}>Mobile Payment</option>
+                <option value="Credit" ${(data && data.payment_type === 'Credit') || (!isFirstItem && existingType === 'Credit') ? 'selected' : ''}>Credit</option>
             </select>
         </div>
         

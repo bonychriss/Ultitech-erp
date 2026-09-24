@@ -79,7 +79,7 @@ class CreateVoucherPageController extends Controller
                 ['value' => 'general', 'label' => 'General Payment'],
                 ['value' => 'stock_purchase', 'label' => 'Stock Purchase'],
             ],
-            'paymentTypes' => ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment'],
+            'paymentTypes' => ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment', 'Credit'],
             'budgetTypes' => [],
             'payees' => [],
             'users' => [],

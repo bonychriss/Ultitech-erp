@@ -318,6 +318,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
         if ($applicant === '' || $department_manager === '' || $checked_by === '') {
             throw new Exception('Please select Applicant, Department Manager, and Checked By');
         }
+        if ($voucher_purpose === 'stock_purchase') {
+            if ($linked_stock_po_id <= 0 || empty($linked_stock_po_ids)) {
+                throw new Exception('Please select at least one Purchase Order for Stock Purchase vouchers');
+            }
+        }
+        // General payment vouchers require at least one supporting file (existing or new)
+        if (function_exists('paymentVoucherRequiresSupportingFiles')
+            && paymentVoucherRequiresSupportingFiles($voucher_purpose)) {
+            $existingAttCount = 0;
+            try {
+                $attCnt = $pdo->prepare('SELECT COUNT(*) FROM voucher_attachments WHERE voucher_id = ?');
+                $attCnt->execute([(int) $voucher_id]);
+                $existingAttCount = (int) $attCnt->fetchColumn();
+            } catch (Throwable $eAtt) {
+                $existingAttCount = is_array($attachments ?? null) ? count($attachments) : 0;
+            }
+            $queuedFiles = function_exists('countQueuedSupportingFileUploads')
+                ? countQueuedSupportingFileUploads($_FILES['supporting_files'] ?? null)
+                : 0;
+            if (($existingAttCount + $queuedFiles) < 1) {
+                throw new Exception('Please upload at least one supporting file for General Payment vouchers');
+            }
+        }
         
         // Validate voucher items
         $items = [];
@@ -756,7 +779,7 @@ $editVoucherConfig = [
         ['value' => 'general', 'label' => 'General Payment'],
         ['value' => 'stock_purchase', 'label' => 'Stock Purchase'],
     ],
-    'paymentTypes' => ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment'],
+    'paymentTypes' => ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment', 'Credit'],
     'budgetTypes' => [
         'Operational Expenses',
         'Procurement & Supplies',

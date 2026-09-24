@@ -3,6 +3,9 @@ RewriteEngine On
 # Physical /ultimate/ directory: pretty-URL aliases for company "ultimate" only.
 # Parent .htaccess tenant rules do not apply once Apache is inside this real folder.
 
+# Root API scripts (coach, notifications, etc.) — no physical ultimate/api/
+RewriteRule ^api/([^/]+\.php)$ ../api/$1?company_slug=ultimate [L,QSA,NC]
+
 RewriteRule ^login/?$ login.php [L,QSA,NC]
 RewriteRule ^register/?$ register.php [L,QSA,NC]
 RewriteRule ^select-module/?$ select-module.php [L,QSA,NC]

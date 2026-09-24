@@ -313,6 +313,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['voucher_id'])) {
             notifyUserVoucherStatus($voucher_id, $action, $comments !== '' ? $comments : null);
           } catch (Exception $eN) { /* ignore */
           }
+          if ($action === 'approved' && function_exists('notifyPaymentVoucherCurrentTurn')) {
+            try {
+              if (function_exists('markPaymentVoucherActionNotificationsResolved')) {
+                markPaymentVoucherActionNotificationsResolved((int) $voucher_id, (int) ($_SESSION['user_id'] ?? 0));
+              }
+              notifyPaymentVoucherCurrentTurn((int) $voucher_id);
+            } catch (Throwable $eTurn) { /* ignore */
+            }
+          }
           $success = 'Voucher has been ' . $action . ' successfully.';
         } catch (Exception $ex) {
           if ($pdo->inTransaction()) {
@@ -447,7 +456,7 @@ $employeeHeaderRightHtml = null;
         .main-content.dashboard-react-root {
             width: 100% !important;
             max-width: none !important;
-            padding: 0.35rem 1.25rem 2rem !important;
+            padding: 0.5rem 0.75rem 2rem !important;
             box-sizing: border-box;
             background: #f1f5f9 !important;
         }

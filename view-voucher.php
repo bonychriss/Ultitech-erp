@@ -119,6 +119,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_action']) && is
             notifyUserVoucherStatus($voucher_id, $action, $comments !== '' ? $comments : null);
         } catch (Exception $eN) { /* ignore */ }
 
+        if ($action === 'approved' && function_exists('notifyPaymentVoucherCurrentTurn')) {
+            try {
+                if (function_exists('markPaymentVoucherActionNotificationsResolved')) {
+                    markPaymentVoucherActionNotificationsResolved((int) $voucher_id, (int) ($_SESSION['user_id'] ?? 0));
+                }
+                notifyPaymentVoucherCurrentTurn((int) $voucher_id);
+            } catch (Throwable $eTurn) { /* ignore */ }
+        }
+
         $_SESSION['success_msg'] = 'Voucher has been ' . $action . ' successfully.';
         $vvRedirectToSelf();
     } catch (Exception $ex) {

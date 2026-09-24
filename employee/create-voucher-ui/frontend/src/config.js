@@ -20,7 +20,7 @@ export const CFG = {
     { value: 'general', label: 'General Payment' },
     { value: 'stock_purchase', label: 'Stock Purchase' },
   ],
-  paymentTypes: RAW.paymentTypes || ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment'],
+  paymentTypes: RAW.paymentTypes || ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment', 'Credit'],
   budgetTypes: RAW.budgetTypes || [
     'Operational Expenses',
     'Procurement & Supplies',

@@ -2557,7 +2557,7 @@ function resolveVoucherSessionUserId(PDO $pdo): int
  */
 function resolveVoucherSessionDisplayName(PDO $pdo): string
 {
-    foreach (array('full_name', 'username') as $sessionKey) {
+    foreach (array('full_name', 'name', 'username') as $sessionKey) {
         $label = trim((string) ($_SESSION[$sessionKey] ?? ''));
         if ($label !== '') {
             return $label;
@@ -2801,14 +2801,29 @@ function userIsVoucherApprovalRoleAssignee(array $voucher, $roleKey, $userName, 
     if ($assignee === '') {
         return false;
     }
-    if ($userName !== '' && strcasecmp($assignee, $userName) === 0) {
-        return true;
+
+    $candidateNames = array();
+    if ($userName !== '') {
+        $candidateNames[] = $userName;
     }
-    if ($userName !== '' && function_exists('normalizePersonNameKey')) {
-        if (normalizePersonNameKey($userName) === normalizePersonNameKey($assignee)) {
+    foreach (array('full_name', 'name', 'username') as $sk) {
+        $v = trim((string) ($_SESSION[$sk] ?? ''));
+        if ($v !== '') {
+            $candidateNames[] = $v;
+        }
+    }
+    $candidateNames = array_values(array_unique($candidateNames));
+
+    foreach ($candidateNames as $cand) {
+        if (strcasecmp($assignee, $cand) === 0) {
+            return true;
+        }
+        if (function_exists('normalizePersonNameKey')
+            && normalizePersonNameKey($cand) === normalizePersonNameKey($assignee)) {
             return true;
         }
     }
+
     if ($userId > 0 && $pdo instanceof PDO) {
         $assigneeUserId = resolveVoucherUserIdByDisplayName($pdo, $assignee);
         if ($assigneeUserId > 0 && $assigneeUserId === $userId) {
@@ -3743,6 +3758,20 @@ function getCurrentPaymentVoucherTurn(PDO $pdo, array $voucher): ?array
         }
         if (!voucherApprovalRoleIsApproved($pdo, $voucherId, $step['role_key'])) {
             $assigneeUserId = resolveVoucherUserIdByDisplayName($pdo, $assigneeName);
+            if ($assigneeUserId <= 0 && erp_connection_has_table($pdo, 'approvals')) {
+                try {
+                    $stUid = $pdo->prepare(
+                        "SELECT approver_id FROM approvals
+                         WHERE voucher_id = ? AND status = 'pending' AND LOWER(TRIM(role)) = ?
+                           AND approver_id IS NOT NULL AND approver_id > 0
+                         ORDER BY id DESC LIMIT 1"
+                    );
+                    $stUid->execute(array($voucherId, $step['role_key']));
+                    $assigneeUserId = (int) ($stUid->fetchColumn() ?: 0);
+                } catch (Throwable $e) {
+                    $assigneeUserId = 0;
+                }
+            }
             return array(
                 'action' => $step['action'],
                 'role_key' => $step['role_key'],
@@ -3825,6 +3854,44 @@ function userHasPaymentVoucherTurn(PDO $pdo, array $voucher, int $userId, string
         return true;
     }
 
+    // Fallback: pending approvals row assigned to this user for the current role.
+    $voucherId = (int) ($voucher['id'] ?? 0);
+    if ($userId > 0 && $voucherId > 0 && erp_connection_has_table($pdo, 'approvals')) {
+        try {
+            $st = $pdo->prepare(
+                "SELECT 1 FROM approvals
+                 WHERE voucher_id = ?
+                   AND status = 'pending'
+                   AND approver_id = ?
+                   AND LOWER(TRIM(role)) = ?
+                 LIMIT 1"
+            );
+            $st->execute(array($voucherId, $userId, $roleKey));
+            if ($st->fetchColumn()) {
+                return true;
+            }
+            // Some tenants store role labels with punctuation differences — match any pending row for this user
+            // when the turn role is one of the core sign roles.
+            if (in_array($roleKey, array('applicant', 'department manager', 'checked by'), true)) {
+                $st2 = $pdo->prepare(
+                    "SELECT LOWER(TRIM(role)) FROM approvals
+                     WHERE voucher_id = ? AND status = 'pending' AND approver_id = ?"
+                );
+                $st2->execute(array($voucherId, $userId));
+                $roles = $st2->fetchAll(PDO::FETCH_COLUMN) ?: array();
+                foreach ($roles as $r) {
+                    $nk = function_exists('normalizeVoucherApprovalRoleKey')
+                        ? normalizeVoucherApprovalRoleKey($r)
+                        : strtolower(trim((string) $r));
+                    if ($nk === $roleKey) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
     return false;
 }
 
@@ -3860,41 +3927,54 @@ function getPendingPaymentVoucherTasks(PDO $pdo, ?int $userId = null, ?string $u
     $where = array();
     $params = array();
 
+    // Always include vouchers where this user is a named assignee or pending approver.
+    // Admins/finance also see paid/post queue, but personal sign turns must not be drowned
+    // out by a blind "recent vouchers" scan.
+    $nameCandidates = array();
+    if ($userName !== '') {
+        $nameCandidates[] = $userName;
+    }
+    foreach (array('full_name', 'name', 'username') as $sk) {
+        $v = trim((string) ($_SESSION[$sk] ?? ''));
+        if ($v !== '') {
+            $nameCandidates[] = $v;
+        }
+    }
+    $nameCandidates = array_values(array_unique(array_filter($nameCandidates, static function ($n) {
+        return trim((string) $n) !== '';
+    })));
+
+    $personalParts = array();
+    foreach ($nameCandidates as $cand) {
+        foreach (array('applicant', 'department_manager', 'checked_by') as $col) {
+            $personalParts[] = "LOWER(TRIM($col)) = LOWER(?)";
+            $params[] = $cand;
+        }
+    }
+    if ($userId > 0 && erp_connection_has_table($pdo, 'approvals')) {
+        $personalParts[] = "id IN (
+            SELECT DISTINCT voucher_id FROM approvals
+            WHERE status = 'pending' AND approver_id = ?
+        )";
+        $params[] = $userId;
+    }
+
+    $personalSql = $personalParts ? ('(' . implode(' OR ', $personalParts) . ')') : '0=1';
+
     if ($isAdminUser || $isFinanceUser) {
         $where[] = "(
-            status IN ('confirming', 'pending')
+            (
+                status IN ('confirming', 'pending')
+                AND {$personalSql}
+            )
             OR (status = 'approved' AND (IFNULL(is_paid,0) = 0 OR IFNULL(is_posted,0) = 0))
+            OR (
+                status IN ('confirming', 'pending')
+            )
         )";
     } else {
         $where[] = "status IN ('confirming', 'pending')";
-        $nameParts = array();
-        if ($userName !== '') {
-            foreach (array('applicant', 'department_manager', 'checked_by') as $col) {
-                $nameParts[] = "LOWER(TRIM($col)) = LOWER(?)";
-                $params[] = $userName;
-            }
-        }
-        if ($userId > 0) {
-            // Also catch by resolved user id via approvals table when present.
-            if (erp_connection_has_table($pdo, 'approvals')) {
-                $where[] = "(
-                    " . ($nameParts ? implode(' OR ', $nameParts) : '0=1') . "
-                    OR id IN (
-                        SELECT DISTINCT voucher_id FROM approvals
-                        WHERE status = 'pending' AND approver_id = ?
-                    )
-                )";
-                $params[] = $userId;
-            } elseif ($nameParts) {
-                $where[] = '(' . implode(' OR ', $nameParts) . ')';
-            } else {
-                return array();
-            }
-        } elseif ($nameParts) {
-            $where[] = '(' . implode(' OR ', $nameParts) . ')';
-        } else {
-            return array();
-        }
+        $where[] = $personalSql;
     }
 
     if (function_exists('companyScopeSql')) {
@@ -3910,8 +3990,18 @@ function getPendingPaymentVoucherTasks(PDO $pdo, ?int $userId = null, ?string $u
         }
     }
 
+    // Prefer rows that mention the user, then newest.
+    $orderExtra = '';
+    if ($userName !== '') {
+        $orderExtra = "CASE
+            WHEN LOWER(TRIM(applicant)) = LOWER(" . $pdo->quote($userName) . ") THEN 0
+            WHEN LOWER(TRIM(department_manager)) = LOWER(" . $pdo->quote($userName) . ") THEN 0
+            WHEN LOWER(TRIM(checked_by)) = LOWER(" . $pdo->quote($userName) . ") THEN 0
+            ELSE 1 END ASC, ";
+    }
+
     $sql = 'SELECT ' . $select . ' FROM payment_vouchers WHERE ' . implode(' AND ', $where)
-        . ' ORDER BY COALESCE(date_created, created_at) DESC, id DESC LIMIT ' . (int) ($limit * 4);
+        . ' ORDER BY ' . $orderExtra . 'COALESCE(date_created, created_at) DESC, id DESC LIMIT ' . (int) max(80, $limit * 8);
 
     try {
         $st = $pdo->prepare($sql);
@@ -3923,7 +4013,12 @@ function getPendingPaymentVoucherTasks(PDO $pdo, ?int $userId = null, ?string $u
     }
 
     $out = array();
+    $seen = array();
     foreach ($rows as $row) {
+        $vid = (int) ($row['id'] ?? 0);
+        if ($vid <= 0 || isset($seen[$vid])) {
+            continue;
+        }
         if (!userHasPaymentVoucherTurn($pdo, $row, $userId, $userName)) {
             continue;
         }
@@ -3931,7 +4026,7 @@ function getPendingPaymentVoucherTasks(PDO $pdo, ?int $userId = null, ?string $u
         if ($turn === null) {
             continue;
         }
-        $vid = (int) ($row['id'] ?? 0);
+        $seen[$vid] = true;
         $viewUrl = function_exists('company_url')
             ? company_url('employee/view-voucher.php?id=' . $vid . '&module=voucher')
             : (function_exists('app_url') ? app_url('/employee/view-voucher.php?id=' . $vid . '&module=voucher') : '/employee/view-voucher.php?id=' . $vid);
@@ -7829,6 +7924,19 @@ function markVoucherPaidStrict($voucher_id, $user_id)
         notifyUserVoucherStatus($voucher_id, 'paid');
     } catch (Exception $eN) { /* ignore */
     }
+    if (function_exists('markPaymentVoucherActionNotificationsResolved')) {
+        try {
+            markPaymentVoucherActionNotificationsResolved((int) $voucher_id, (int) $user_id);
+        } catch (Throwable $eResolved) { /* ignore */
+        }
+    }
+    // Next turn: post voucher (Finance / Admin)
+    if (function_exists('notifyPaymentVoucherCurrentTurn')) {
+        try {
+            notifyPaymentVoucherCurrentTurn((int) $voucher_id);
+        } catch (Throwable $eTurn) { /* ignore */
+        }
+    }
     return ['ok' => true];
 }
 
@@ -7880,6 +7988,12 @@ function markVoucherPosted($voucher_id, $user_id)
     try {
         notifyUserVoucherStatus($voucher_id, 'posted');
     } catch (Exception $eN) { /* ignore */
+    }
+    if (function_exists('markPaymentVoucherActionNotificationsResolved')) {
+        try {
+            markPaymentVoucherActionNotificationsResolved((int) $voucher_id, (int) $user_id);
+        } catch (Throwable $eResolved) { /* ignore */
+        }
     }
     return ['ok' => true, 'error' => null];
 }
@@ -9601,6 +9715,418 @@ function notifyCheckedByAssignee($voucher_id)
         if (function_exists('app_log')) {
             app_log('notifyCheckedByAssignee failed for voucher ' . $voucher_id . ': ' . $e->getMessage());
         }
+    }
+}
+
+/**
+ * Title/body for the person whose turn it is on a payment voucher.
+ *
+ * @param array{action?:string,role_label?:string} $turn
+ * @return array{title:string,message:string,type:string}
+ */
+function paymentVoucherTurnNotificationCopy(array $turn, string $voucherNo): array
+{
+    $voucherNo = trim($voucherNo) !== '' ? trim($voucherNo) : 'this voucher';
+    $action = (string) ($turn['action'] ?? '');
+    $role = trim((string) ($turn['role_label'] ?? 'your role'));
+
+    switch ($action) {
+        case 'sign_applicant':
+            return [
+                'title' => 'Sign payment voucher',
+                'message' => sprintf('Please open voucher %s and sign as Applicant.', $voucherNo),
+                'type' => 'info',
+            ];
+        case 'sign_dept_manager':
+            return [
+                'title' => 'Approve as Department Manager',
+                'message' => sprintf('Please open voucher %s and sign as Department Manager.', $voucherNo),
+                'type' => 'info',
+            ];
+        case 'sign_checked_by':
+            return [
+                'title' => 'Check payment voucher',
+                'message' => sprintf('Please open voucher %s and sign as Checked By.', $voucherNo),
+                'type' => 'info',
+            ];
+        case 'final_approve':
+            return [
+                'title' => 'Final approval needed',
+                'message' => sprintf('Voucher %s is ready for final approval.', $voucherNo),
+                'type' => 'warning',
+            ];
+        case 'mark_paid':
+            return [
+                'title' => 'Mark voucher as paid',
+                'message' => sprintf('Voucher %s is approved. Mark it as paid when payment is complete.', $voucherNo),
+                'type' => 'warning',
+            ];
+        case 'post':
+            return [
+                'title' => 'Post payment voucher',
+                'message' => sprintf('Voucher %s is paid. Post it to finalize bookkeeping.', $voucherNo),
+                'type' => 'warning',
+            ];
+        default:
+            return [
+                'title' => 'Payment voucher action needed',
+                'message' => sprintf('Voucher %s needs your attention as %s.', $voucherNo, $role),
+                'type' => 'info',
+            ];
+    }
+}
+
+/**
+ * Notify Applicant, Department Manager, and Checked By when a voucher is created.
+ * Dedupes when the same person holds multiple roles.
+ */
+function notifyPaymentVoucherAssigneesOnCreate($voucher_id): void
+{
+    global $pdo;
+    $voucher_id = (int) $voucher_id;
+    if ($voucher_id <= 0 || !($pdo instanceof PDO)) {
+        return;
+    }
+
+    $companyId = (int) (currentCompanyId() ?? 0);
+    try {
+        if ($companyId > 0 && columnExists('payment_vouchers', 'company_id')) {
+            $stmt = $pdo->prepare(
+                'SELECT voucher_no, applicant, department_manager, checked_by
+                 FROM payment_vouchers WHERE id = ? AND company_id = ? LIMIT 1'
+            );
+            $stmt->execute([$voucher_id, $companyId]);
+        } else {
+            $stmt = $pdo->prepare(
+                'SELECT voucher_no, applicant, department_manager, checked_by
+                 FROM payment_vouchers WHERE id = ? LIMIT 1'
+            );
+            $stmt->execute([$voucher_id]);
+        }
+        $v = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$v) {
+            return;
+        }
+    } catch (Throwable $e) {
+        error_log('notifyPaymentVoucherAssigneesOnCreate load: ' . $e->getMessage());
+        return;
+    }
+
+    $voucherNo = (string) ($v['voucher_no'] ?? '');
+    $roles = [
+        'applicant' => [
+            'label' => 'Applicant',
+            'title' => 'Sign payment voucher',
+            'message' => sprintf('You are listed as Applicant on voucher %s. Sign it when it is your turn.', $voucherNo),
+        ],
+        'department_manager' => [
+            'label' => 'Department Manager',
+            'title' => 'Approve as Department Manager',
+            'message' => sprintf('You are listed as Department Manager on voucher %s. Approve it when it is your turn.', $voucherNo),
+        ],
+        'checked_by' => [
+            'label' => 'Checked By',
+            'title' => 'Check payment voucher',
+            'message' => sprintf('You are listed as Checked By on voucher %s. Review and sign when it is your turn.', $voucherNo),
+        ],
+    ];
+
+    $notified = [];
+    foreach ($roles as $field => $meta) {
+        $name = trim((string) ($v[$field] ?? ''));
+        if ($name === '') {
+            continue;
+        }
+        $uid = (int) resolveVoucherUserIdByDisplayName($pdo, $name);
+        if ($uid <= 0 || isset($notified[$uid])) {
+            continue;
+        }
+        $notified[$uid] = true;
+        try {
+            upsertVoucherNotification([
+                'user_id' => $uid,
+                'audience' => 'user',
+                'title' => $meta['title'],
+                'message' => $meta['message'],
+                'type' => 'info',
+                'voucher_id' => $voucher_id,
+            ]);
+        } catch (Throwable $e) {
+            error_log('notifyPaymentVoucherAssigneesOnCreate notify: ' . $e->getMessage());
+        }
+    }
+}
+
+/**
+ * True when a notification title/message is a payment-voucher action ask
+ * (sign / approve / check / pay / post), not a status update.
+ */
+function isPaymentVoucherActionNotificationText(string $title, string $message = ''): bool
+{
+    $blob = strtolower(trim($title . ' ' . $message));
+    if ($blob === '') {
+        return false;
+    }
+    if (preg_match('/\b(sign payment voucher|sign as applicant|sign as department|sign as checked|approve as department|check payment voucher|voucher requires checking|final approval needed|mark voucher as paid|mark as paid|post payment voucher|post voucher|you are listed as)\b/', $blob)) {
+        return true;
+    }
+    if (preg_match('/\b(please open voucher|waiting for you to sign|ready for your signature|needs your (signature|approval)|sign as)\b/', $blob)) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Mark action notifications for a voucher as read (objective done for that user).
+ * Pass $userId for a specific user; omit to clear all audiences on that voucher.
+ */
+function markPaymentVoucherActionNotificationsResolved(int $voucher_id, ?int $userId = null): int
+{
+    global $pdo;
+    $voucher_id = (int) $voucher_id;
+    if ($voucher_id <= 0 || !($pdo instanceof PDO)) {
+        return 0;
+    }
+    try {
+        ensureNotificationsSchema();
+    } catch (Throwable $e) {
+        return 0;
+    }
+
+    try {
+        if ($userId !== null && (int) $userId > 0) {
+            $uid = (int) $userId;
+            $actingIsAdmin = false;
+            try {
+                $actingIsAdmin = function_exists('isAdmin') && isAdmin()
+                    && (int) ($_SESSION['user_id'] ?? 0) === $uid;
+            } catch (Throwable $eAdm) {
+                $actingIsAdmin = false;
+            }
+
+            if ($actingIsAdmin) {
+                $stmt = $pdo->prepare(
+                    'SELECT id, title, message
+                     FROM notifications
+                     WHERE voucher_id = ?
+                       AND is_read = 0
+                       AND (
+                            (audience IN (\'user\', \'all\') AND user_id = ?)
+                         OR audience IN (\'admin\', \'all\')
+                       )'
+                );
+                $stmt->execute([$voucher_id, $uid]);
+            } else {
+                $stmt = $pdo->prepare(
+                    'SELECT id, title, message
+                     FROM notifications
+                     WHERE voucher_id = ?
+                       AND is_read = 0
+                       AND audience IN (\'user\', \'all\')
+                       AND user_id = ?'
+                );
+                $stmt->execute([$voucher_id, $uid]);
+            }
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } else {
+            $stmt = $pdo->prepare(
+                'SELECT id, title, message
+                 FROM notifications
+                 WHERE voucher_id = ? AND is_read = 0'
+            );
+            $stmt->execute([$voucher_id]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+    } catch (Throwable $e) {
+        error_log('markPaymentVoucherActionNotificationsResolved select: ' . $e->getMessage());
+        return 0;
+    }
+
+    $ids = [];
+    foreach ($rows as $row) {
+        if (!isPaymentVoucherActionNotificationText((string) ($row['title'] ?? ''), (string) ($row['message'] ?? ''))) {
+            continue;
+        }
+        $ids[] = (int) ($row['id'] ?? 0);
+    }
+    $ids = array_values(array_filter($ids));
+    if ($ids === []) {
+        return 0;
+    }
+
+    try {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $upd = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id IN ({$placeholders})");
+        $upd->execute($ids);
+        return (int) $upd->rowCount();
+    } catch (Throwable $e) {
+        error_log('markPaymentVoucherActionNotificationsResolved update: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+/**
+ * Mark a user's unread PV action notifications as read when that voucher
+ * is no longer pending for them (already signed / next person / done).
+ */
+function reconcileStalePaymentVoucherActionNotificationsForUser(?int $userId = null): int
+{
+    global $pdo;
+    if (!($pdo instanceof PDO) || !isLoggedIn()) {
+        return 0;
+    }
+    $userId = (int) ($userId ?? ($_SESSION['user_id'] ?? 0));
+    if ($userId <= 0) {
+        return 0;
+    }
+
+    $pendingIds = [];
+    try {
+        $userName = function_exists('resolveVoucherSessionDisplayName')
+            ? resolveVoucherSessionDisplayName($pdo)
+            : trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? ''));
+        $tasks = function_exists('getPendingPaymentVoucherTasks')
+            ? getPendingPaymentVoucherTasks($pdo, $userId, $userName, 100)
+            : [];
+        foreach ($tasks as $t) {
+            $vid = (int) ($t['id'] ?? 0);
+            if ($vid > 0) {
+                $pendingIds[$vid] = true;
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('reconcileStalePV pending: ' . $e->getMessage());
+    }
+
+    try {
+        ensureNotificationsSchema();
+        if (function_exists('isAdmin') && isAdmin()) {
+            $stmt = $pdo->prepare(
+                "SELECT id, title, message, voucher_id
+                 FROM notifications
+                 WHERE is_read = 0
+                   AND voucher_id IS NOT NULL AND voucher_id > 0
+                   AND audience IN ('admin','all')"
+            );
+            $stmt->execute();
+        } else {
+            $stmt = $pdo->prepare(
+                "SELECT id, title, message, voucher_id
+                 FROM notifications
+                 WHERE is_read = 0
+                   AND voucher_id IS NOT NULL AND voucher_id > 0
+                   AND audience IN ('user','all')
+                   AND (user_id = ? OR audience = 'all')"
+            );
+            $stmt->execute([$userId]);
+        }
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        error_log('reconcileStalePV select: ' . $e->getMessage());
+        return 0;
+    }
+
+    $ids = [];
+    foreach ($rows as $row) {
+        $vid = (int) ($row['voucher_id'] ?? 0);
+        if ($vid <= 0 || isset($pendingIds[$vid])) {
+            continue;
+        }
+        if (!isPaymentVoucherActionNotificationText((string) ($row['title'] ?? ''), (string) ($row['message'] ?? ''))) {
+            continue;
+        }
+        $ids[] = (int) ($row['id'] ?? 0);
+    }
+    $ids = array_values(array_filter($ids));
+    if ($ids === []) {
+        return 0;
+    }
+
+    try {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $upd = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE id IN ({$placeholders})");
+        $upd->execute($ids);
+        return (int) $upd->rowCount();
+    } catch (Throwable $e) {
+        error_log('reconcileStalePV update: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+/**
+ * Notify whoever currently owns the voucher workflow turn (sign / final approve / paid / post).
+ */
+function notifyPaymentVoucherCurrentTurn($voucher_id): void
+{
+    global $pdo;
+    $voucher_id = (int) $voucher_id;
+    if ($voucher_id <= 0 || !($pdo instanceof PDO)) {
+        return;
+    }
+
+    $companyId = (int) (currentCompanyId() ?? 0);
+    try {
+        $select = 'id, voucher_no, applicant, department_manager, checked_by, prepared_by, general_manager,
+                   status, IFNULL(is_paid,0) AS is_paid, IFNULL(is_posted,0) AS is_posted, approved_by, created_by';
+        if ($companyId > 0 && columnExists('payment_vouchers', 'company_id')) {
+            $stmt = $pdo->prepare("SELECT {$select} FROM payment_vouchers WHERE id = ? AND company_id = ? LIMIT 1");
+            $stmt->execute([$voucher_id, $companyId]);
+        } else {
+            $stmt = $pdo->prepare("SELECT {$select} FROM payment_vouchers WHERE id = ? LIMIT 1");
+            $stmt->execute([$voucher_id]);
+        }
+        $voucher = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$voucher) {
+            return;
+        }
+    } catch (Throwable $e) {
+        error_log('notifyPaymentVoucherCurrentTurn load: ' . $e->getMessage());
+        return;
+    }
+
+    $turn = getCurrentPaymentVoucherTurn($pdo, $voucher);
+    if ($turn === null) {
+        return;
+    }
+
+    $copy = paymentVoucherTurnNotificationCopy($turn, (string) ($voucher['voucher_no'] ?? ''));
+    $action = (string) ($turn['action'] ?? '');
+
+    try {
+        if ($action === 'final_approve' || $action === 'mark_paid' || $action === 'post') {
+            upsertVoucherNotification([
+                'user_id' => null,
+                'audience' => 'admin',
+                'title' => $copy['title'],
+                'message' => $copy['message'],
+                'type' => $copy['type'],
+                'voucher_id' => $voucher_id,
+            ]);
+            return;
+        }
+
+        $uid = (int) ($turn['assignee_user_id'] ?? 0);
+        if ($uid <= 0) {
+            $name = trim((string) ($turn['assignee_name'] ?? ''));
+            if ($name !== '') {
+                $uid = (int) resolveVoucherUserIdByDisplayName($pdo, $name);
+            }
+        }
+        if ($uid <= 0) {
+            return;
+        }
+
+        upsertVoucherNotification([
+            'user_id' => $uid,
+            'audience' => 'user',
+            'title' => $copy['title'],
+            'message' => $copy['message'],
+            'type' => $copy['type'],
+            'voucher_id' => $voucher_id,
+        ]);
+    } catch (Throwable $e) {
+        error_log('notifyPaymentVoucherCurrentTurn notify: ' . $e->getMessage());
     }
 }
 
@@ -12403,6 +12929,42 @@ function salesOrderPrintPdfUrl(int $orderId): string
         return company_url('modules/sales/orders/print.php', $slug) . '?id=' . $orderId . '&download=1';
     }
     return function_exists('app_url') ? app_url($path) : $path;
+}
+
+/**
+ * Count successfully queued supporting files in a $_FILES['supporting_files'] payload.
+ */
+function countQueuedSupportingFileUploads($files = null): int
+{
+    $files = $files ?? ($_FILES['supporting_files'] ?? null);
+    if (empty($files) || !isset($files['name'])) {
+        return 0;
+    }
+    $names = is_array($files['name']) ? $files['name'] : [$files['name']];
+    $errs = isset($files['error'])
+        ? (is_array($files['error']) ? $files['error'] : [$files['error']])
+        : [];
+    $count = 0;
+    foreach ($names as $i => $name) {
+        $name = trim((string) $name);
+        if ($name === '') {
+            continue;
+        }
+        $err = (int) ($errs[$i] ?? UPLOAD_ERR_NO_FILE);
+        if ($err === UPLOAD_ERR_OK) {
+            $count++;
+        }
+    }
+
+    return $count;
+}
+
+/**
+ * True when a general (non–stock-purchase) voucher must have supporting files.
+ */
+function paymentVoucherRequiresSupportingFiles(string $voucherPurpose): bool
+{
+    return normalizePaymentVoucherPurpose($voucherPurpose) === 'general';
 }
 
 /**

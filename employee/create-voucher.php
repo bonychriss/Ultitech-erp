@@ -438,6 +438,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $linked_stock_po_id = 0;
                 $linked_stock_po_ids = [];
             }
+            // General payment vouchers require at least one supporting file
+            if (function_exists('paymentVoucherRequiresSupportingFiles')
+                && paymentVoucherRequiresSupportingFiles($voucher_purpose)) {
+                $queuedFiles = function_exists('countQueuedSupportingFileUploads')
+                    ? countQueuedSupportingFileUploads($_FILES['supporting_files'] ?? null)
+                    : 0;
+                if ($queuedFiles < 1) {
+                    throw new Exception('Please upload at least one supporting file for General Payment vouchers');
+                }
+            }
         } elseif ($voucher_purpose !== 'stock_purchase') {
             $linked_stock_po_id = 0;
             $linked_stock_po_ids = [];
@@ -867,11 +877,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $e2) {
             error_log('notifyAdminsNewVoucher failed: ' . $e2->getMessage());
         }
-        // Notify selected Finance user (Checked By)
-        try {
-            notifyCheckedByAssignee($voucher_id);
-        } catch (Throwable $e3) {
-            error_log('notifyCheckedByAssignee failed: ' . $e3->getMessage());
+        // Inform Applicant, Department Manager, and Checked By
+        if (!$isDraft && function_exists('notifyPaymentVoucherAssigneesOnCreate')) {
+            try {
+                notifyPaymentVoucherAssigneesOnCreate($voucher_id);
+            } catch (Throwable $e3) {
+                error_log('notifyPaymentVoucherAssigneesOnCreate failed: ' . $e3->getMessage());
+            }
+        }
+        // Ping whoever's turn it is first (usually Applicant)
+        if (!$isDraft && function_exists('notifyPaymentVoucherCurrentTurn')) {
+            try {
+                notifyPaymentVoucherCurrentTurn($voucher_id);
+            } catch (Throwable $e3b) {
+                error_log('notifyPaymentVoucherCurrentTurn failed: ' . $e3b->getMessage());
+            }
         }
         // Best-effort WhatsApp Cloud API notify (Kapso/Meta) when enabled
         if (!$isDraft && function_exists('maybeAutoSendVoucherWhatsApp')) {

@@ -366,7 +366,29 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
         throw new Error(res.ok ? 'Invalid server response' : `Request failed (${res.status})`)
       }
       if (j && j.success) {
-        onSuccess()
+        const remainingCount = Number(j.remaining_count || 0)
+        try {
+          if (typeof window.ultitechForgetPvHighlight === 'function') {
+            window.ultitechForgetPvHighlight(data?.voucher?.id, data?.voucher?.voucher_no)
+          }
+          if (remainingCount > 0) {
+            sessionStorage.setItem('ultitech_pv_coach_reshow', '1')
+            sessionStorage.setItem(
+              'ultitech_pv_coach_reshow_payload',
+              JSON.stringify({
+                remaining_count: remainingCount,
+                remaining: Array.isArray(j.remaining) ? j.remaining : [],
+                at: Date.now(),
+              })
+            )
+            if (typeof window.ultitechRequestPvCoachReshow === 'function') {
+              window.ultitechRequestPvCoachReshow()
+            }
+          }
+        } catch (_) { /* ignore */ }
+        if (typeof onSuccess === 'function') {
+          onSuccess(j)
+        }
       } else {
         const msg = j && j.message ? j.message : 'Approve failed'
         if (typeof window.Swal !== 'undefined') {

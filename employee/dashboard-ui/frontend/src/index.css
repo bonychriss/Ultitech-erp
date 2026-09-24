@@ -320,31 +320,48 @@
 .ed-card-link:hover { text-decoration: underline; }
 .ed-empty { padding: 28px 10px; text-align: center; color: var(--ed-faint); font-size: 13px; }
 
-/* ---- Table (matches my-vouchers desk) ---- */
+/* ---- Table (matches All Vouchers desk) ---- */
 .ed-table-wrap {
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 14px;
   overflow: hidden;
   -webkit-overflow-scrolling: touch;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, .06);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, .08);
   max-width: 100%;
+  width: 100%;
+  padding: 0;
 }
-.ed-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+.ed-table {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: fixed;
+}
 .ed-table thead th {
   background: #1e293b;
   color: #f8fafc;
   font-weight: 600;
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: .04em;
-  padding: 10px 8px;
+  padding: 14px 12px;
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.25;
+}
+.ed-table thead th:first-child {
+  border-top-left-radius: 10px;
+}
+.ed-table thead th:last-child {
+  border-top-right-radius: 10px;
 }
 .ed-table tbody td {
-  font-size: 12px;
-  padding: 9px 8px;
+  font-size: 13px;
+  padding: 14px 12px;
   border-bottom: 1px solid #e5e7eb;
   vertical-align: middle;
   color: #334155;
@@ -360,8 +377,7 @@
 }
 .ed-ta-right { text-align: right; }
 .ed-ta-center { text-align: center; }
-.ed-vno { font-weight: 600; color: #334155; white-space: nowrap; }
-.ed-amt { font-weight: 600; color: #334155; white-space: nowrap; text-align: right; }
+.ed-vno { font-weight: 600; color: #334155; white-space: nowrap; overflow: visible; text-overflow: clip; }
 .ed-muted { color: #94a3b8; white-space: nowrap; }
 
 /* ---- Voucher status badges (matches my-vouchers) ---- */
@@ -397,30 +413,163 @@
 .ed-vbadge--rejected { background: #fee2e2; color: #b91c1c; }
 .ed-vbadge--draft { background: #f1f5f9; color: #64748b; }
 
-/* ---- Full desk table extras (fixed layout, fits viewport without h-scroll) ---- */
-.ed-table--full { min-width: 0; width: 100%; }
-.ed-table--full th, .ed-table--full td { overflow: hidden; text-overflow: ellipsis; }
-.ed-table--full th:first-child,
-.ed-table--full td:first-child { text-align: center; width: 4%; }
-/* Column widths as percentages summing to 100% so the table always fits.
-   Columns 2-9 are stable; Share (via class) is conditional; Actions via class. */
-.ed-table--full th:nth-child(2), .ed-table--full td:nth-child(2) { width: 9%; }   /* Voucher No */
-.ed-table--full th:nth-child(3), .ed-table--full td:nth-child(3) { width: 12%; }  /* Payee */
-.ed-table--full th:nth-child(4), .ed-table--full td:nth-child(4) { width: 9%; }   /* Prepared By */
-.ed-table--full th:nth-child(5), .ed-table--full td:nth-child(5) { width: 24%; }  /* Description */
-.ed-table--full th:nth-child(6), .ed-table--full td:nth-child(6) { width: 9%; }   /* Amount */
-.ed-table--full th:nth-child(7), .ed-table--full td:nth-child(7) { width: 9%; }   /* Date */
-.ed-table--full th:nth-child(8), .ed-table--full td:nth-child(8) { width: 9%; }   /* Status */
-.ed-table--full th:nth-child(9), .ed-table--full td.ed-doc-cell { width: 4%; }    /* Docs */
-.ed-table--full td.ed-share-cell { width: 4%; }                                    /* Share */
-.ed-sn { color: #64748b; }
-.ed-table--full td.ed-desc { max-width: 420px; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; word-break: break-word; }
+/* ---- Full desk table — fit card width, no clipping, clear Amount↔Date gap ---- */
+.ed-table--full {
+  min-width: 0 !important;
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.ed-table--full th,
+.ed-table--full td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  min-width: 0 !important;
+}
+.ed-table--full th:nth-child(1),
+.ed-table--full td:nth-child(1),
+.ed-table--full td.ed-sn,
+.ed-table--full th.ed-col-sn {
+  text-align: center;
+  width: 3.5%;
+  white-space: nowrap;
+  text-overflow: clip;
+  padding-left: 8px !important;
+  padding-right: 6px !important;
+}
+.ed-table--full th:nth-child(2),
+.ed-table--full td:nth-child(2) { width: 16%; }   /* Voucher No */
+.ed-table--full th:nth-child(3),
+.ed-table--full td:nth-child(3) { width: 10%; }   /* Payee */
+.ed-table--full th:nth-child(4),
+.ed-table--full td:nth-child(4) { width: 9%; }    /* Prepared By */
+.ed-table--full th:nth-child(5),
+.ed-table--full td:nth-child(5) { width: 20%; }   /* Description */
+.ed-table--full th:nth-child(6),
+.ed-table--full td:nth-child(6) {
+  width: 14%;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  padding-right: 1rem !important;
+  padding-left: 0.5rem !important;
+}
+.ed-table--full th:nth-child(7),
+.ed-table--full td:nth-child(7) {
+  width: 12%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  padding-left: 0.75rem !important;
+  padding-right: 0.5rem !important;
+}
+.ed-table--full th:nth-child(8),
+.ed-table--full td:nth-child(8) { width: 9%; }    /* Status */
+.ed-table--full th:nth-child(9),
+.ed-table--full td:nth-child(9) { width: 7%; }    /* Share or Actions */
+.ed-table--full th:nth-child(10),
+.ed-table--full td:nth-child(10) { width: 6.5%; } /* Actions when Share on */
+.ed-table--full td.ed-share-cell { width: 4.5%; }
+.ed-table--full td.ed-row-actions,
+.ed-table--full th.ed-col-actions {
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible;
+  padding-right: 12px !important;
+}
+
+.ed-sn { color: #64748b; white-space: nowrap; }
+.ed-col-desc { width: 20%; min-width: 0; }
+.ed-col-vno,
+.ed-table--full td.ed-vno {
+  width: 16%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.ed-vno {
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+.ed-amt {
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
+  vertical-align: middle;
+}
+.ed-table--full td.ed-col-amt,
+.ed-table--full th.ed-col-amt {
+  width: 14%;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  padding-right: 1rem !important;
+  padding-left: 0.5rem !important;
+}
+.ed-table--full td.ed-date-cell,
+.ed-table--full th.ed-col-date {
+  width: 12%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  padding-left: 0.75rem !important;
+  padding-right: 0.5rem !important;
+}
+.ed-date-cell {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+.ed-date-cell small {
+  display: block;
+  white-space: nowrap;
+  overflow: visible;
+}
+.ed-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  color: #475569;
+  line-height: 1.35;
+}
+.ed-table--full td.ed-col-desc,
+.ed-table--full th.ed-col-desc,
+.ed-table--full td:nth-child(5) {
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: normal;
+}
 .ed-payee-cell, .ed-prep-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ed-prep-cell small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.ed-vno { overflow: hidden; text-overflow: ellipsis; }
 .ed-doc-link { display: inline-flex; align-items: center; gap: 3px; color: #475569; text-decoration: none; }
 .ed-doc-link:hover { color: #2563eb; }
-.ed-table--full td.ed-row-actions { width: 7%; text-align: center; }
+.ed-table--full td.ed-row-actions {
+  width: 7%;
+  text-align: center;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  min-width: 0 !important;
+  padding-right: 12px !important;
+}
 .ed-row-actions { white-space: nowrap; }
 .ed-row-actions .ed-icon-btn, .ed-row-actions .ed-star { padding: 3px; }
 .ed-actions-menu { display: inline-flex; align-items: center; gap: 2px; position: relative; }
@@ -643,15 +792,15 @@ html[data-theme="dark"] .ed-modal-label input[type="file"] {
     display: none !important;
   }
   .ed-table-wrap {
-    overflow-x: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     border-radius: 10px;
-    margin: 0 -2px;
+    margin: 0;
   }
   .ed-table.ed-table--full {
-    table-layout: auto;
+    table-layout: fixed;
     width: 100%;
-    min-width: 0;
+    min-width: 0 !important;
   }
   .ed-table--full th,
   .ed-table--full td {
@@ -694,11 +843,14 @@ html[data-theme="dark"] .ed-modal-label input[type="file"] {
   .ed-col-vno {
     white-space: nowrap;
     font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
   .ed-payee-cell,
   .ed-col-payee {
-    min-width: 5.5rem;
-    max-width: 7.5rem;
+    min-width: 0;
+    max-width: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -707,11 +859,17 @@ html[data-theme="dark"] .ed-modal-label input[type="file"] {
   .ed-col-amt {
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: clip;
+    min-width: 0;
   }
   .ed-date-cell,
   .ed-col-date {
     white-space: nowrap;
     font-size: 11px;
+    overflow: hidden;
+    text-overflow: clip;
+    min-width: 0;
   }
   .ed-status-cell,
   .ed-col-status {

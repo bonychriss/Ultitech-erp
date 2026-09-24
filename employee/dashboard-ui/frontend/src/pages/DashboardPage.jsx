@@ -11,7 +11,6 @@ import {
   Loader2,
   Lock,
   MoreVertical,
-  Paperclip,
   Pencil,
   Plus,
   Search,
@@ -429,11 +428,20 @@ function statusPill(row) {
   return { label: label || 'Pending', cls: 'ed-vbadge ed-vbadge--pending' }
 }
 
+function startOfLocalDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return '-'
   const normalized = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T')
   const d = new Date(normalized)
   if (Number.isNaN(d.getTime())) return dateStr
+  const day = startOfLocalDay(d)
+  const today = startOfLocalDay(new Date())
+  const diffDays = Math.round((today - day) / 86400000)
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   return `${dd}/${mm}/${d.getFullYear()}`
@@ -1117,8 +1125,20 @@ export default function DashboardPage() {
         ) : filteredVouchers.length === 0 ? (
           <div className="ed-empty">No vouchers match your search.</div>
         ) : (
-          <div className="ed-table-wrap">
+            <div className="ed-table-wrap">
             <table className="ed-table ed-table--full">
+              <colgroup>
+                <col className="ed-col-sn" style={{ width: '3.5%' }} />
+                <col className="ed-col-vno" style={{ width: '16%' }} />
+                <col className="ed-col-payee" style={{ width: '10%' }} />
+                <col className="ed-col-prep" style={{ width: '9%' }} />
+                <col className="ed-col-desc" style={{ width: SHARE_ENABLED ? '14%' : '18%' }} />
+                <col className="ed-col-amt" style={{ width: '13%' }} />
+                <col className="ed-col-date" style={{ width: '12%' }} />
+                <col className="ed-col-status" style={{ width: '9%' }} />
+                {SHARE_ENABLED ? <col className="ed-col-share" style={{ width: '4.5%' }} /> : null}
+                <col className="ed-col-actions" style={{ width: SHARE_ENABLED ? '7%' : '7.5%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th className="ed-col-sn">S/N</th>
@@ -1129,7 +1149,6 @@ export default function DashboardPage() {
                   <th className="ed-ta-right ed-col-amt">Amount</th>
                   <th className="ed-col-date">Date Created</th>
                   <th className="ed-col-status">Status</th>
-                  <th className="ed-col-docs ed-hide-mobile">Docs</th>
                   {SHARE_ENABLED && <th className="ed-col-share ed-hide-mobile">Share</th>}
                   <th className="ed-col-actions">Actions</th>
                 </tr>
@@ -1158,8 +1177,12 @@ export default function DashboardPage() {
                             <span title={r.prepared_by}>{r.prepared_by}</span>
                             {r.department ? <><br /><small className="ed-muted">{r.department}</small></> : null}
                           </td>
-                          <td className="ed-desc ed-hide-mobile" title={r.description}>{r.description}</td>
-                          <td className="ed-ta-right ed-amt">{formatAmount(r.currency, r.total_amount)}</td>
+                          <td className="ed-col-desc ed-hide-mobile">
+                            <div className="ed-desc" title={r.description}>{r.description || '—'}</div>
+                          </td>
+                          <td className="ed-ta-right ed-col-amt">
+                            <span className="ed-amt">{formatAmount(r.currency, r.total_amount)}</span>
+                          </td>
                         </>
                       ) : (
                         <td colSpan={4} className="ed-restricted ed-restricted-span">(Restricted Content)</td>
@@ -1169,21 +1192,6 @@ export default function DashboardPage() {
                         <br /><small>{formatTime(r.created_at)}</small>
                       </td>
                       <td className="ed-status-cell"><span className={pill.cls}>{pill.label}</span></td>
-                      <td className="ed-doc-cell ed-hide-mobile" onClick={(e) => e.stopPropagation()}>
-                        {canView && r.attachment_count > 0 ? (
-                          <a
-                            href={`${URLS.view}?id=${r.id}${APPEND_MODULE}#attachments`}
-                            className="ed-doc-link"
-                            title={`View ${r.attachment_count} attachment(s)`}
-                            onClick={() => rememberListBeforeOpen(r.id)}
-                          >
-                            <Paperclip size={13} aria-hidden="true" />
-                            <span>{r.attachment_count}</span>
-                          </a>
-                        ) : (
-                          <span className="ed-muted">0</span>
-                        )}
-                      </td>
                       {SHARE_ENABLED && (
                         <td className="ed-share-cell ed-hide-mobile" onClick={(e) => e.stopPropagation()}>
                           {canView ? (

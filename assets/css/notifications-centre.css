@@ -488,7 +488,8 @@
 .notif-dropdown--v2 .nc-list {
     flex: 1 1 auto;
     min-height: 0;
-    padding: 2px 6px 16px;
+    gap: 10px;
+    padding: 8px 12px 14px;
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -498,6 +499,34 @@
 
 .notif-dropdown--v2 .nc-list .nc-card {
     flex-shrink: 0;
+    border-bottom: none;
+}
+
+/* Coach-hit = still pending action. Action cards no longer highlight solely for is-unread. */
+.notif-dropdown--v2 .nc-card.is-unread:not(.nc-card--pv-action),
+.nc-card.nc-card--pv-coach-hit {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    padding: 14px 14px 14px 16px;
+    border-radius: 12px !important;
+    border: none !important;
+    border-left: 3px solid #1a73e8 !important;
+    background: #eef4ff !important;
+    box-shadow: none !important;
+    animation: none !important;
+}
+
+.notif-dropdown--v2 .nc-card.is-unread:not(.nc-card--pv-action):hover,
+.nc-card.nc-card--pv-coach-hit:hover {
+    background: #e8f0fe !important;
+}
+
+html[data-theme="dark"] .notif-dropdown--v2 .nc-card.is-unread:not(.nc-card--pv-action),
+html[data-theme="dark"] .nc-card.nc-card--pv-coach-hit {
+    background: rgba(138, 180, 248, 0.12) !important;
+    box-shadow: none !important;
+    border-left-color: #8ab4f8 !important;
 }
 
 .notif-dropdown--v2 .nc-view-all-footer {
@@ -710,11 +739,11 @@ html[data-theme="dark"] .notif-backdrop.is-open {
     pointer-events: auto;
     background: #fff;
     color: #202124;
-    border-radius: 8px;
+    border-radius: 16px;
     box-shadow:
         0 1px 2px rgba(60, 64, 67, 0.3),
         0 2px 6px 2px rgba(60, 64, 67, 0.15);
-    padding: 20px 20px 12px;
+    padding: 22px 22px 16px;
     font-family: "Google Sans", "Segoe UI", Roboto, Arial, sans-serif;
     animation: nc-coach-in 0.22s ease-out;
 }
@@ -730,20 +759,44 @@ html[data-theme="dark"] .notif-backdrop.is-open {
     }
 }
 
+.nc-coach-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.nc-coach-icon {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #e8f0fe;
+    color: #1a73e8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nc-coach-heading {
+    min-width: 0;
+    padding-top: 1px;
+}
+
 .nc-coach-kicker {
-    margin: 0 0 6px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.02em;
+    margin: 0 0 4px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     color: #5f6368;
     text-transform: uppercase;
 }
 
 .nc-coach-title {
-    margin: 0 0 8px;
+    margin: 0;
     font-size: 1.125rem;
-    font-weight: 500;
-    line-height: 1.35;
+    font-weight: 600;
+    line-height: 1.3;
     color: #202124;
 }
 
@@ -756,6 +809,12 @@ html[data-theme="dark"] .notif-backdrop.is-open {
     white-space: pre-wrap;
 }
 
+.nc-coach-footer {
+    border-top: 1px solid #e8eaed;
+    padding-top: 14px;
+    margin: 0 -2px;
+}
+
 .nc-coach-actions {
     display: flex;
     justify-content: flex-end;
@@ -764,25 +823,31 @@ html[data-theme="dark"] .notif-backdrop.is-open {
 
 .nc-coach-btn {
     appearance: none;
-    border: none;
-    background: transparent;
-    color: #1a73e8;
+    border: none !important;
+    background: #1a73e8 !important;
+    color: #fff !important;
     font-size: 0.875rem;
     font-weight: 500;
     letter-spacing: 0.01em;
-    padding: 10px 12px;
-    border-radius: 4px;
+    padding: 10px 22px;
+    border-radius: 999px !important;
     cursor: pointer;
     line-height: 1;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .nc-coach-btn:hover {
-    background: rgba(26, 115, 232, 0.08);
+    background: #1765cc !important;
 }
 
-.nc-coach-btn:focus-visible {
-    outline: 2px solid #1a73e8;
-    outline-offset: 2px;
+.nc-coach-btn:focus,
+.nc-coach-btn:focus-visible,
+.nc-coach-btn:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #1557b0 !important;
 }
 
 html[data-theme="dark"] .nc-coach-scrim {
@@ -793,6 +858,11 @@ html[data-theme="dark"] .nc-coach-card {
     background: #303134;
     color: #e8eaed;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] .nc-coach-icon {
+    background: rgba(138, 180, 248, 0.16);
+    color: #8ab4f8;
 }
 
 html[data-theme="dark"] .nc-coach-kicker {
@@ -807,10 +877,343 @@ html[data-theme="dark"] .nc-coach-body {
     color: #bdc1c6;
 }
 
+html[data-theme="dark"] .nc-coach-footer {
+    border-top-color: #3c4043;
+}
+
 html[data-theme="dark"] .nc-coach-btn {
+    background: #8ab4f8 !important;
+    color: #202124 !important;
+}
+
+html[data-theme="dark"] .nc-coach-btn:hover,
+html[data-theme="dark"] .nc-coach-btn:focus,
+html[data-theme="dark"] .nc-coach-btn:focus-visible,
+html[data-theme="dark"] .nc-coach-btn:active {
+    background: #aecbfa !important;
+}
+
+/* ── Payment-voucher turn coach (Google directing style) ── */
+html.pv-coach-open .layout-main-wrapper > .main-content,
+html.pv-coach-open .content-wrapper,
+html.pv-coach-open main,
+html.pv-coach-open .employee-dashboard,
+html.pv-coach-open .admin-dashboard,
+html.pv-coach-open #root {
+    filter: blur(2.5px);
+    transition: filter 0.2s ease;
+}
+
+.pv-coach-root {
+    position: fixed;
+    inset: 0;
+    z-index: 10060;
+    pointer-events: none;
+}
+
+.pv-coach-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(248, 250, 252, 0.22);
+    pointer-events: auto;
+    backdrop-filter: blur(1px);
+}
+
+.pv-coach-guide {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.pv-coach-guide-path {
+    filter: drop-shadow(0 1px 1px rgba(26, 115, 232, 0.25));
+}
+
+.pv-coach-card {
+    position: fixed;
+    z-index: 3;
+    width: min(380px, calc(100vw - 24px));
+    pointer-events: auto;
+    background: #fff;
+    color: #202124;
+    border-radius: 16px;
+    box-shadow:
+        0 1px 2px rgba(60, 64, 67, 0.18),
+        0 8px 24px rgba(60, 64, 67, 0.18),
+        0 16px 40px rgba(26, 115, 232, 0.08);
+    padding: 18px 18px 14px;
+    font-family: "Google Sans", "Segoe UI", Roboto, Arial, sans-serif;
+    animation: pv-coach-in 0.24s ease-out;
+}
+
+@keyframes pv-coach-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.pv-coach-beak {
+    position: absolute;
+    left: -8px;
+    top: 42px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    transform: rotate(45deg);
+    border-radius: 2px;
+    box-shadow: -2px 2px 4px rgba(60, 64, 67, 0.08);
+}
+
+.pv-coach-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #9aa0a6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.pv-coach-close:hover {
+    background: rgba(60, 64, 67, 0.08);
+    color: #5f6368;
+}
+
+.pv-coach-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding-right: 28px;
+    margin-bottom: 10px;
+}
+
+.pv-coach-icon {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e8f0fe;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pv-coach-head-text {
+    min-width: 0;
+    padding-top: 2px;
+}
+
+.pv-coach-kicker {
+    margin: 0 0 4px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #80868b;
+    text-transform: uppercase;
+}
+
+.pv-coach-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #174ea6;
+}
+
+.pv-coach-body {
+    margin: 0 0 18px;
+    font-size: 0.9rem;
+    font-weight: 400;
+    line-height: 1.55;
+    color: #5f6368;
+    white-space: pre-wrap;
+}
+
+.pv-coach-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.pv-coach-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 10px 14px;
+    border-radius: 999px !important;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.pv-coach-btn--ghost {
+    color: #5f6368;
+    padding-left: 4px;
+    border-radius: 999px !important;
+}
+
+.pv-coach-btn--ghost:hover {
+    color: #202124;
+    background: transparent;
+}
+
+.pv-coach-btn--primary,
+button.pv-coach-btn.pv-coach-btn--primary {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #1a73e8 !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+    border-radius: 999px !important;
+    min-height: 36px;
+    padding: 8px 22px !important;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.pv-coach-btn--primary:hover {
+    background: #1765cc;
+}
+
+.pv-coach-btn--primary:focus,
+.pv-coach-btn--primary:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+.pv-coach-btn--ghost:focus-visible {
+    outline: 2px solid #1a73e8;
+    outline-offset: 2px;
+}
+
+.sidebar-notif-item.pv-coach-target-wrap,
+.pv-coach-target {
+    position: relative;
+    z-index: 10061;
+}
+
+.sidebar-notif-item.pv-coach-target-wrap {
+    isolation: isolate;
+}
+
+.sidebar-notif-item.pv-coach-target-wrap .sidebar-notif-trigger,
+.sidebar-notif-item.pv-coach-target-wrap .header-notif-bell-btn {
+    background: #e8f0fe !important;
+    color: #1a73e8 !important;
+    border-radius: 10px !important;
+    box-shadow: inset 0 0 0 1px rgba(26, 115, 232, 0.18);
+}
+
+.sidebar-notif-item.pv-coach-target-wrap .sidebar-notif-trigger i,
+.sidebar-notif-item.pv-coach-target-wrap .header-notif-bell-btn i,
+.sidebar-notif-item.pv-coach-target-wrap .sidebar-notif-label {
+    color: #1a73e8 !important;
+}
+
+.pv-coach-live-badge {
+    position: absolute;
+    top: 8px;
+    left: 28px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #1a73e8;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 0 0 2px #fff;
+    z-index: 2;
+    pointer-events: none;
+}
+
+html[data-theme="dark"] .pv-coach-scrim {
+    background: rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .pv-coach-card,
+html[data-theme="dark"] .pv-coach-beak {
+    background: #303134;
+    color: #e8eaed;
+}
+
+html[data-theme="dark"] .pv-coach-beak {
+    box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .pv-coach-icon {
+    background: rgba(138, 180, 248, 0.16);
+}
+
+html[data-theme="dark"] .pv-coach-kicker {
+    color: #9aa0a6;
+}
+
+html[data-theme="dark"] .pv-coach-title {
     color: #8ab4f8;
 }
 
-html[data-theme="dark"] .nc-coach-btn:hover {
-    background: rgba(138, 180, 248, 0.12);
+html[data-theme="dark"] .pv-coach-body {
+    color: #bdc1c6;
+}
+
+html[data-theme="dark"] .pv-coach-btn--ghost {
+    color: #9aa0a6;
+}
+
+html[data-theme="dark"] .pv-coach-btn--primary {
+    background: #8ab4f8;
+    color: #202124 !important;
+}
+
+html[data-theme="dark"] .pv-coach-close {
+    color: #9aa0a6;
+}
+
+html[data-theme="dark"] .sidebar-notif-item.pv-coach-target-wrap .sidebar-notif-trigger,
+html[data-theme="dark"] .sidebar-notif-item.pv-coach-target-wrap .header-notif-bell-btn {
+    background: rgba(138, 180, 248, 0.16) !important;
+    color: #8ab4f8 !important;
+}
+
+html[data-theme="dark"] .pv-coach-live-badge {
+    box-shadow: 0 0 0 2px #202124;
+}
+
+@media (max-width: 991.98px) {
+    .pv-coach-card {
+        left: 12px !important;
+        right: 12px !important;
+        width: auto !important;
+        bottom: 16px !important;
+        top: auto !important;
+    }
+    .pv-coach-beak,
+    .pv-coach-guide {
+        display: none;
+    }
+    .pv-coach-live-badge {
+        left: auto;
+        right: 12px;
+        top: 10px;
+    }
 }

@@ -9,7 +9,6 @@ import {
   Lock,
   MessageCircle,
   MoreVertical,
-  Paperclip,
   Pencil,
   Search,
   SlidersHorizontal,
@@ -105,6 +104,56 @@ function filtersFromUrl() {
   }
 }
 
+function selectedIdFromUrl() {
+  if (typeof window === 'undefined') return 0
+  const usp = new URLSearchParams(window.location.search)
+  return Number(usp.get('sel') || 0) || 0
+}
+
+function writeSelectedIdToUrl(selectedId) {
+  if (typeof window === 'undefined' || !window.history?.replaceState) return
+  const url = new URL(window.location.href)
+  if (selectedId) url.searchParams.set('sel', String(selectedId))
+  else url.searchParams.delete('sel')
+  const next = url.pathname + url.search + url.hash
+  const cur = window.location.pathname + window.location.search + window.location.hash
+  if (next !== cur) {
+    window.history.replaceState(window.history.state, '', next)
+  }
+}
+
+let consumedRestore = undefined
+function takeRestoredListState() {
+  if (consumedRestore !== undefined) return consumedRestore
+  consumedRestore = null
+  if (typeof window === 'undefined' || !window.erpNavBack || typeof window.erpNavBack.consumeRestore !== 'function') {
+    return null
+  }
+  const restored = window.erpNavBack.consumeRestore()
+  consumedRestore = restored && restored.state ? restored.state : null
+  return consumedRestore
+}
+
+function rememberListAndView(id, listState) {
+  if (typeof window === 'undefined') {
+    window.location.href = `${URLS.view}?id=${id}${APPEND_MODULE}`
+    return
+  }
+  const state = { ...(listState || {}), selectedId: id }
+  writeSelectedIdToUrl(id)
+  if (window.erpNavBack && typeof window.erpNavBack.push === 'function') {
+    window.erpNavBack.push({
+      href: window.location.href,
+      state,
+    })
+  }
+  const dest = new URL(URLS.view, window.location.href)
+  dest.search = ''
+  dest.searchParams.set('id', String(id))
+  if (MODULE) dest.searchParams.set('module', MODULE)
+  window.location.href = dest.href
+}
+
 
 function formatAmount(currency, amount) {
   const value = Number(amount) || 0
@@ -114,11 +163,20 @@ function formatAmount(currency, amount) {
   })}`.trim()
 }
 
+function startOfLocalDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return '-'
   const normalized = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T')
   const d = new Date(normalized)
   if (Number.isNaN(d.getTime())) return dateStr
+  const day = startOfLocalDay(d)
+  const today = startOfLocalDay(new Date())
+  const diffDays = Math.round((today - day) / 86400000)
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   return `${dd}/${mm}/${d.getFullYear()}`
@@ -411,6 +469,7 @@ function RowActionsMenu({
 }
 
 export default function VouchersDeskPage() {
+  const restoredList = takeRestoredListState()
   const [filters, setFilters] = useState(() => filtersFromUrl())
   const [draftFilters, setDraftFilters] = useState(() => filtersFromUrl())
   const prefixTouchedRef = useRef(false)
@@ -423,9 +482,16 @@ export default function VouchersDeskPage() {
   const [flash, setFlash] = useState(() =>
     typeof window !== 'undefined' && window.__VOUCHERS_FLASH__ ? String(window.__VOUCHERS_FLASH__) : '',
   )
-  const [highlightId, setHighlightId] = useState(() =>
+  const [createHighlightId, setCreateHighlightId] = useState(() =>
     typeof window !== 'undefined' && window.__VOUCHERS_HIGHLIGHT__ ? Number(window.__VOUCHERS_HIGHLIGHT__) : 0,
   )
+  const [selectedId, setSelectedId] = useState(() => {
+    const fromRestore = restoredList && restoredList.selectedId
+    const fromFlash = typeof window !== 'undefined' && window.__VOUCHERS_HIGHLIGHT__
+      ? Number(window.__VOUCHERS_HIGHLIGHT__)
+      : 0
+    return Number(fromRestore || selectedIdFromUrl() || fromFlash || 0) || 0
+  })
 
   const [searchInput, setSearchInput] = useState(() => filtersFromUrl().search)
   const [previewVouchers, setPreviewVouchers] = useState([])
@@ -487,17 +553,31 @@ export default function VouchersDeskPage() {
     return () => window.clearTimeout(t)
   }, [flash])
 
-  // Scroll to and briefly highlight a newly created voucher (from create-voucher redirect).
+  // Persist selected row in the URL (dashboard-style) so Back restores the highlight.
   useEffect(() => {
-    if (!highlightId || loading) return undefined
-    if (!vouchers.some((v) => Number(v.id) === highlightId)) return undefined
-    const el = document.querySelector(`[data-vid="${highlightId}"]`)
-    if (el && typeof el.scrollIntoView === 'function') {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-    const t = window.setTimeout(() => setHighlightId(0), 5000)
+    writeSelectedIdToUrl(selectedId)
+  }, [selectedId])
+
+  // Scroll to selected / newly created row.
+  useEffect(() => {
+    const id = selectedId || createHighlightId
+    if (!id || loading) return undefined
+    if (!vouchers.some((v) => Number(v.id) === Number(id))) return undefined
+    const timer = window.setTimeout(() => {
+      const el = document.querySelector(`[data-vid="${id}"]`)
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    }, 80)
+    return () => window.clearTimeout(timer)
+  }, [selectedId, createHighlightId, vouchers, loading])
+
+  // Brief green box animation for a newly created voucher only.
+  useEffect(() => {
+    if (!createHighlightId) return undefined
+    const t = window.setTimeout(() => setCreateHighlightId(0), 5000)
     return () => window.clearTimeout(t)
-  }, [highlightId, vouchers, loading])
+  }, [createHighlightId])
 
   // Suggestions dropdown outside-click
   useEffect(() => {
@@ -564,6 +644,7 @@ export default function VouchersDeskPage() {
 
   function onSearchChange(value) {
     setSearchInput(value)
+    setSelectedId(0)
     window.clearTimeout(suggestTimer.current)
     const q = value.trim()
     if (q === '') {
@@ -784,7 +865,13 @@ export default function VouchersDeskPage() {
   }
 
   function goView(id) {
-    window.location.href = `${URLS.view}?id=${id}${APPEND_MODULE}`
+    setSelectedId(id)
+    rememberListAndView(id, {
+      search: searchInput,
+      filters,
+      note: aiNote,
+      selectedId: id,
+    })
   }
 
   function quickApprove(id, action) {
@@ -1043,7 +1130,7 @@ export default function VouchersDeskPage() {
                       <button
                         key={v.id}
                         type="button"
-                        className="pv-suggest-card"
+                        className={`pv-suggest-card${Number(v.id) === selectedId ? ' is-selected' : ''}`}
                         onMouseDown={(e) => {
                           e.preventDefault()
                           goView(v.id)
@@ -1190,17 +1277,28 @@ export default function VouchersDeskPage() {
           <>
             <div className="pv-table-wrap">
               <table className="pv-table pv-table--full">
+                <colgroup>
+                  <col style={{ width: '3.5%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: FEAT.share ? '14%' : '18%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '9%' }} />
+                  {FEAT.share ? <col style={{ width: '4.5%' }} /> : null}
+                  <col style={{ width: FEAT.share ? '7%' : '7.5%' }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>S/N</th>
                     <th>Voucher No.</th>
                     <th>Payee</th>
                     <th>Prepared By</th>
-                    <th>Description</th>
+                    <th className="pv-col-desc">Description</th>
                     <th className="pv-col-amount">Amount</th>
                     <th>Date Created</th>
                     <th>Status</th>
-                    <th>Docs</th>
                     {FEAT.share && <th>Share</th>}
                     <th>Actions</th>
                   </tr>
@@ -1214,7 +1312,7 @@ export default function VouchersDeskPage() {
                     <tr
                       key={v.id}
                       data-vid={v.id}
-                      className={`pv-row${canView ? '' : ' pv-row--locked'}${Number(v.id) === highlightId ? ' pv-row--highlight' : ''}`}
+                      className={`pv-row${canView ? '' : ' pv-row--locked'}${Number(v.id) === selectedId ? ' is-selected' : ''}${Number(v.id) === createHighlightId ? ' pv-row--highlight' : ''}`}
                       onClick={canView ? () => goView(v.id) : undefined}
                       style={canView ? undefined : { cursor: 'default' }}
                     >
@@ -1232,7 +1330,9 @@ export default function VouchersDeskPage() {
                             <span className="pv-prepared">{v.prepared_by}</span>
                             {v.department ? <span className="pv-dept">{v.department}</span> : null}
                           </td>
-                          <td className="pv-desc">{v.description}</td>
+                          <td className="pv-col-desc">
+                            <div className="pv-desc">{v.description || '—'}</div>
+                          </td>
                           <td className="pv-col-amount">
                             <span className="pv-amount">{formatAmount(v.currency, v.total_amount)}</span>
                           </td>
@@ -1248,20 +1348,6 @@ export default function VouchersDeskPage() {
                       </td>
                       <td className="pv-status-cell">
                         <span className={statusBadgeClass(v)}>{v.display_status}</span>
-                      </td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        {canView && v.attachment_count > 0 ? (
-                          <a
-                            href={`${URLS.view}?id=${v.id}${APPEND_MODULE}#attachments`}
-                            className="pv-doc-link"
-                            title={`View ${v.attachment_count} attachment(s)`}
-                          >
-                            <Paperclip size={13} aria-hidden="true" />
-                            <span>{v.attachment_count}</span>
-                          </a>
-                        ) : (
-                          <span className="pv-muted">0</span>
-                        )}
                       </td>
                       {FEAT.share && (
                         <td onClick={(e) => e.stopPropagation()}>

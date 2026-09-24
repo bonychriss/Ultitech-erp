@@ -345,6 +345,10 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
         setNotifDrawerOpen(false);
     }
 
+    window.setNotifDrawerOpen = setNotifDrawerOpen;
+    window.toggleNotif = toggleNotif;
+    window.closeNotif = closeNotif;
+
     ensureNotifPanelOnBody();
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', restoreNotifDrawerOpen);
@@ -361,6 +365,10 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     
     // Close drawer when clicking outside
     document.addEventListener('click', function(e) {
+        if (window.__ultitechIgnoreNotifOutsideClickUntil
+            && Date.now() < window.__ultitechIgnoreNotifOutsideClickUntil) {
+            return;
+        }
         var dd = document.getElementById('notif-dd');
         var btn = e.target.closest('.header-notif-bell-btn, .notif .icon-btn, .sidebar-notif-trigger');
         

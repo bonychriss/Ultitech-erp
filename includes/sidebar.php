@@ -553,7 +553,7 @@ if (!function_exists('sidebar_link_is_current')) {
 
 ?>
 
-<div class="d-flex flex-column flex-shrink-0 p-3 text-dark bg-white sidebar-container shadow-sm" style="width: 250px; height: 100vh; position: fixed; top: 0; left: 0; z-index: 1000; border-right: 1px solid #e2e8f0;">
+<div class="d-flex flex-column flex-shrink-0 p-3 text-dark bg-white sidebar-container shadow-sm" style="width: 212px; height: 100vh; position: fixed; top: 0; left: 0; z-index: 1000; border-right: 1px solid #e2e8f0;">
     <div class="d-flex align-items-center justify-content-between mb-3 mb-md-0 me-md-auto w-100 sidebar-header-content">
         <a href="<?= app_url('select-module.php') ?>" class="d-flex align-items-center text-dark text-decoration-none sidebar-logo gap-2">
             <?php 
@@ -735,7 +735,7 @@ if (!function_exists('sidebar_link_is_current')) {
 <style>
     /* Reset Sidebar width variable used in style.css */
     :root {
-        --sidebar-width: 250px !important;
+        --sidebar-width: 212px !important;
     }
 
     .exp-module-update-badge {
@@ -881,8 +881,8 @@ if (!function_exists('sidebar_link_is_current')) {
     /* Adjust main content to sit right of fixed sidebar */
     @media (min-width: 768px) {
         .main-content, .header, header, .admin-header {
-            margin-left: 250px !important;
-            width: calc(100% - 250px) !important;
+            margin-left: 212px !important;
+            width: calc(100% - 212px) !important;
             max-width: none !important;
             border-left: 1px solid #dee2e6;
         }

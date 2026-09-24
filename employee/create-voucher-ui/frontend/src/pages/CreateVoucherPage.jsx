@@ -143,9 +143,11 @@ export default function CreateVoucherPage() {
   const currencyRef = useRef(null)
 
   const isStockPurchase = purpose === 'stock_purchase'
+  const isGeneralPurpose = !isStockPurchase
   const hasLinkedPo = selectedPO.size > 0
   const linkedStockPoId = hasLinkedPo ? String(Array.from(selectedPO)[0]) : ''
   const linkedPoIdsCsv = Array.from(selectedPO).join(',')
+  const hasSupportingFiles = existingAttachments.length + files.length > 0
 
   const [submitting, setSubmitting] = useState(false)
   const [showErrors, setShowErrors] = useState(false)
@@ -493,6 +495,8 @@ export default function CreateVoucherPage() {
       return 'Please select Applicant, Department Manager, and Checked By.'
     if (isStockPurchase && !hasLinkedPo)
       return 'Please select at least one Purchase Order for Stock Purchase vouchers.'
+    if (isGeneralPurpose && !hasSupportingFiles)
+      return 'Please upload at least one supporting file for General Payment vouchers.'
     return ''
   }
 
@@ -569,6 +573,7 @@ export default function CreateVoucherPage() {
     departmentManager: !!departmentManager,
     checkedBy: !!checkedBy,
     ...(isStockPurchase ? { purchaseOrder: hasLinkedPo } : {}),
+    ...(isGeneralPurpose ? { supportingFiles: hasSupportingFiles } : {}),
   }
   const requiredKeys = Object.keys(filled)
   const requiredDone = requiredKeys.filter((k) => filled[k]).length
@@ -990,7 +995,11 @@ export default function CreateVoucherPage() {
           <section id="cv-attachments" className="cv-section">
             <header className="cv-section-head">
               <h2>Attachments</h2>
-              <p>Upload supporting documents (PDF, images, Office files).</p>
+              <p>
+                {isGeneralPurpose
+                  ? 'Supporting files are required for General Payment vouchers (PDF, images, Office files).'
+                  : 'Upload supporting documents (PDF, images, Office files).'}
+              </p>
             </header>
             <div className="cv-card">
               {isStockPurchase && (
@@ -1089,8 +1098,13 @@ export default function CreateVoucherPage() {
               )}
 
               <div className="cv-row cv-row--top">
-                <label className="cv-label">Supporting Files</label>
-                <div className="cv-field">
+                <label className="cv-label">
+                  Supporting Files{isGeneralPurpose ? <> {mark(hasSupportingFiles)}</> : null}
+                </label>
+                <div className={`cv-field${isGeneralPurpose && showErrors && !hasSupportingFiles ? ' is-invalid' : ''}${isGeneralPurpose && hasSupportingFiles ? ' is-valid' : ''}`}>
+                  {isGeneralPurpose && (
+                    <p className="cv-attach-hint">Required for General Payment vouchers. Attach invoices, receipts, or other proof.</p>
+                  )}
                   {selectedPoRows.length > 0 && (
                     <ul className="cv-file-list cv-file-list--existing">
                       {selectedPoRows.map((po) => (
@@ -1147,10 +1161,11 @@ export default function CreateVoucherPage() {
                         onChange={onFileChange}
                       />
                       <UploadCloud size={28} className="cv-file-icon" aria-hidden="true" />
-                      <span className="cv-file-title">Upload a file</span>
+                      <span className="cv-file-title">{isGeneralPurpose ? 'Upload a required file' : 'Upload a file'}</span>
                       <span className="cv-file-sub">Click to browse, or drag &amp; drop files here</span>
                     </label>
                   )}
+                  {fieldErr(isGeneralPurpose ? hasSupportingFiles : true, 'Please upload at least one supporting file.')}
                   {files.length > 0 && (
                     <ul className="cv-file-list">
                       {files.map((f, i) => {

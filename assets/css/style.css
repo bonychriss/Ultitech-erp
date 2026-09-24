@@ -2491,7 +2491,7 @@ input[type="reset"] {
     /* VFD Blue */
     --hover-bg: #f8f9fa;
     --text-dark: #333333;
-    --sidebar-width: 250px;
+    --sidebar-width: 212px;
     --header-height: 70px;
 }
 
@@ -2946,7 +2946,7 @@ body.sidebar-collapsed .sidebar-logo {
     bottom: 0;
     left: -280px;
     /* Hidden off-screen */
-    width: 250px;
+    width: var(--sidebar-width, 212px);
     height: 100vh !important;
     z-index: 2000 !important;
     /* Above everything including header */

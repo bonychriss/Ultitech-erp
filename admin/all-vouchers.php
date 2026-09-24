@@ -222,7 +222,7 @@ $employeeHeaderRightHtml = null;
         .main-content.vouchers-react-root {
             width: 100% !important;
             max-width: none !important;
-            padding: 0.35rem 1.25rem 2rem !important;
+            padding: 0.5rem 0.75rem 2rem !important;
             box-sizing: border-box;
             background: #f1f5f9 !important;
         }

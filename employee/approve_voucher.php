@@ -266,6 +266,24 @@ try {
         }
     }
 
+    // Clear this user's "sign/approve/check" notification for this voucher (objective done).
+    if (function_exists('markPaymentVoucherActionNotificationsResolved')) {
+        try {
+            markPaymentVoucherActionNotificationsResolved((int) $voucher_id, (int) $userId);
+        } catch (Throwable $eResolved) {
+            error_log('approve_voucher resolve notifs failed: ' . $eResolved->getMessage());
+        }
+    }
+
+    // In-app notify the next person in the chain (sign / final approve / paid / post).
+    if (function_exists('notifyPaymentVoucherCurrentTurn')) {
+        try {
+            notifyPaymentVoucherCurrentTurn((int) $voucher_id);
+        } catch (Throwable $eTurn) {
+            error_log('approve_voucher turn notify failed: ' . $eTurn->getMessage());
+        }
+    }
+
     // After each approval step, optionally WhatsApp the next person (Kapso/Meta).
     if (function_exists('maybeAutoSendVoucherWhatsApp')) {
         try {
@@ -282,8 +300,43 @@ try {
         error_log('approve_voucher log failed voucher ' . $voucher_id . ': ' . $logEx->getMessage());
     }
 
-    echo json_encode(['success' => true, 'message' => 'Approved successfully', 'signature_path' => $signaturePath]);
-    file_put_contents($logFile, "Approval SUCCESS. Signature: $signaturePath\n", FILE_APPEND);
+    $remainingCount = 0;
+    $remainingTasks = [];
+    try {
+        if (function_exists('getPendingPaymentVoucherTasks')) {
+            $displayName = function_exists('resolveVoucherSessionDisplayName')
+                ? resolveVoucherSessionDisplayName($pdo)
+                : trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? $uname ?? ''));
+            $remainingTasks = getPendingPaymentVoucherTasks($pdo, (int) $userId, $displayName, 8);
+            if (!is_array($remainingTasks)) {
+                $remainingTasks = [];
+            }
+            // Never count the voucher that was just signed.
+            $remainingTasks = array_values(array_filter($remainingTasks, static function ($t) use ($voucher_id) {
+                return (int) ($t['id'] ?? 0) !== (int) $voucher_id;
+            }));
+            $remainingCount = count($remainingTasks);
+        }
+    } catch (Throwable $eRem) {
+        error_log('approve_voucher remaining tasks: ' . $eRem->getMessage());
+    }
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Approved successfully',
+        'signature_path' => $signaturePath,
+        'remaining_count' => $remainingCount,
+        'remaining' => array_map(static function ($t) {
+            return [
+                'id' => (int) ($t['id'] ?? 0),
+                'voucher_no' => (string) ($t['voucher_no'] ?? ''),
+                'action_key' => (string) ($t['action_key'] ?? ''),
+                'action_label' => (string) ($t['action_label'] ?? ''),
+                'view_url' => (string) ($t['view_url'] ?? ''),
+            ];
+        }, array_slice($remainingTasks, 0, 5)),
+    ]);
+    file_put_contents($logFile, "Approval SUCCESS. Signature: $signaturePath remaining={$remainingCount}\n", FILE_APPEND);
     exit;
 } catch (Throwable $e) {
     file_put_contents($logFile, 'EXCEPTION: ' . $e->getMessage() . "\n", FILE_APPEND);

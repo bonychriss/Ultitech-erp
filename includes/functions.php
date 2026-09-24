@@ -155,7 +155,7 @@ if (!function_exists('resolveEffectiveTenantDbConnection')) {
         }
 
         // Dedicated tenant DBs (e.g. Roadmaster) must never be remapped to DATA_DB_NAME
-        // just because payment_vouchers is empty — that steals Ultimate's users/data.
+        // just because payment_vouchers is empty â€” that steals Ultimate's users/data.
         $roadmasterDb = isset($GLOBALS['ROADMASTER_DB_NAME']) ? trim((string) $GLOBALS['ROADMASTER_DB_NAME']) : '';
         $isRoadmasterTenant = ($tenantDbName !== ''
             && $tenantDbName !== $mainDbName
@@ -278,7 +278,7 @@ if (!function_exists('redirect')) {
 
 /**
  * Session flash (set with message + type, or display once and clear).
- * Compatible with pages using: flash('success', 'text'); … flash('success');
+ * Compatible with pages using: flash('success', 'text'); â€¦ flash('success');
  */
 if (!function_exists('flash')) {
     function flash(string $name, string $text = '', string $type = 'success')
@@ -313,7 +313,7 @@ if (!defined('APP_BASE_PATH')) {
 }
 
 // Build a full URL path using APP_BASE_PATH.
-// Example: app_url('/employee/dashboard.php') → '/payment-voucher-system/employee/dashboard.php' (local) or '/employee/dashboard.php' (prod)
+// Example: app_url('/employee/dashboard.php') â†’ '/payment-voucher-system/employee/dashboard.php' (local) or '/employee/dashboard.php' (prod)
 if (!function_exists('app_url')) {
     function app_url($path = '/')
     {
@@ -335,7 +335,7 @@ if (!function_exists('app_url')) {
         }
 
         // Never double-prefix when callers pass a path that already includes APP_BASE_PATH
-        // (e.g. REQUEST_URI used as ?next= → /ultitech_erp/ultimate/...).
+        // (e.g. REQUEST_URI used as ?next= â†’ /ultitech_erp/ultimate/...).
         if ($base !== '' && ($p === $base || str_starts_with($p, $base . '/'))) {
             return $p . $suffix;
         }
@@ -655,7 +655,7 @@ function slugifyCompanyName(string $name): string
 }
 
 /**
- * Legacy tenant DBs use a single-row company_settings table (company_name, company_logo, …).
+ * Legacy tenant DBs use a single-row company_settings table (company_name, company_logo, â€¦).
  * Multi-company admin expects key/value rows (company_id, setting_key, setting_value).
  * Renames the legacy table to company_profile and creates the KV table when needed.
  */
@@ -852,7 +852,7 @@ function documentSequencesPdo($fallbackPdo = null): ?PDO
 }
 
 /**
- * Extract PV/XXX/YYYY/ from a voucher number (e.g. PV/UGT/2026/011 → PV/UGT/2026/).
+ * Extract PV/XXX/YYYY/ from a voucher number (e.g. PV/UGT/2026/011 â†’ PV/UGT/2026/).
  */
 function parsePaymentVoucherNumberPrefix($voucherNo): string
 {
@@ -935,7 +935,7 @@ function buildPaymentVoucherListOrderBySql(string $sort, string $alias = 'pv'): 
             CAST(SUBSTRING_INDEX({$a}.voucher_no, '/', -1) AS UNSIGNED) DESC,
             {$a}.id DESC";
     }
-    // newest / desc — creation order (auto-increment id)
+    // newest / desc â€” creation order (auto-increment id)
     return "ORDER BY {$a}.id DESC";
 }
 
@@ -981,7 +981,7 @@ function paymentVoucherListNumberHtml(?string $voucherNo): string
 {
     $no = htmlspecialchars(trim((string) $voucherNo), ENT_QUOTES, 'UTF-8');
 
-    return $no !== '' ? $no : '—';
+    return $no !== '' ? $no : 'â€”';
 }
 
 /**
@@ -1617,7 +1617,7 @@ function isUltimatePrimaryCompanyId($companyId = null, $explicitPdo = null): boo
 }
 
 /**
- * Schema source for cloning empty trial tables (structure only — never copy rows).
+ * Schema source for cloning empty trial tables (structure only â€” never copy rows).
  */
 function erp_trial_schema_source_database_name(): string
 {
@@ -1669,7 +1669,7 @@ function erp_ensure_shared_trial_database(): ?string
         );
     } catch (Throwable $e) {
         error_log('erp_ensure_shared_trial_database CREATE: ' . $e->getMessage());
-        // May already exist without CREATE privilege — try connecting.
+        // May already exist without CREATE privilege â€” try connecting.
     }
 
     $trialPdo = function_exists('connectToTenantDatabase')
@@ -1888,7 +1888,7 @@ function erp_ensure_trial_database_company_id_columns(PDO $pdo): void
             }
             $pdo->exec('ALTER TABLE `' . str_replace('`', '``', $table) . '` ADD COLUMN company_id INT NULL DEFAULT NULL, ADD INDEX idx_company_id (company_id)');
         } catch (Throwable $e) {
-            // Column may already exist or table engine may reject — ignore.
+            // Column may already exist or table engine may reject â€” ignore.
         }
     }
 }
@@ -1991,7 +1991,7 @@ function getCompanyPlanInfo(?int $companyId = null): array
         $daysRemaining = (int) max(0, (int) ceil(($endsTs - $now) / 86400));
     }
 
-    // Auto-flip trial → expired when the end date has passed (same shared DB).
+    // Auto-flip trial â†’ expired when the end date has passed (same shared DB).
     if ($status === 'trial' && $endsTs !== false && $endsTs < $now) {
         $status = 'expired';
         try {
@@ -2025,7 +2025,7 @@ function isCompanySubscriptionAccessAllowed(?int $companyId = null): bool
     return !empty($info['access_allowed']);
 }
 
-/** Mark company paid in place (same shared database — no data migration). */
+/** Mark company paid in place (same shared database â€” no data migration). */
 function markCompanyPlanPaid(int $companyId): bool
 {
     if ($companyId <= 0) {
@@ -3081,10 +3081,10 @@ function loadPaymentVoucherApprovalRoleFlagsBatch(PDO $pdo, array $voucherIds): 
  * Resolve the viewer-facing Payment Voucher status label.
  *
  * Before Checked By completes, status is user-specific (Confirming vs Signed).
- * After Checked By completes, status is global (Pending → Approved).
+ * After Checked By completes, status is global (Pending â†’ Approved).
  * Paid / Posted / Rejected / Draft overlays are preserved.
  *
- * Does NOT change payment_vouchers.status — display only.
+ * Does NOT change payment_vouchers.status â€” display only.
  *
  * @param array<string,mixed> $voucher
  * @param array{user_id?:int,full_name?:string} $viewer
@@ -3149,7 +3149,7 @@ function resolvePaymentVoucherDisplayStatus(PDO $pdo = null, array $voucher = ar
         return $finish('Draft', 'draft', $draftKey, true);
     }
 
-    // Global Pending from DB — no need to inspect approval rows.
+    // Global Pending from DB â€” no need to inspect approval rows.
     if ($statusLower === 'pending') {
         return $finish('Pending', 'pending', 'pending', false);
     }
@@ -3782,7 +3782,7 @@ function getCurrentPaymentVoucherTurn(PDO $pdo, array $voucher): ?array
         }
     }
 
-    // Core employee signatures complete → final / GM approve (admins).
+    // Core employee signatures complete â†’ final / GM approve (admins).
     if (function_exists('voucherCoreApprovalRolesComplete')
         && voucherCoreApprovalRolesComplete($pdo, $voucherId, $voucher)
         && function_exists('userCanVoucherGeneralManagerApprove')) {
@@ -3870,7 +3870,7 @@ function userHasPaymentVoucherTurn(PDO $pdo, array $voucher, int $userId, string
             if ($st->fetchColumn()) {
                 return true;
             }
-            // Some tenants store role labels with punctuation differences — match any pending row for this user
+            // Some tenants store role labels with punctuation differences â€” match any pending row for this user
             // when the turn role is one of the core sign roles.
             if (in_array($roleKey, array('applicant', 'department manager', 'checked by'), true)) {
                 $st2 = $pdo->prepare(
@@ -4632,7 +4632,7 @@ function userCompanyIndexIsEmpty($explicitPdo = null): bool
 }
 
 /**
- * True only when index is empty (bootstrap) — avoids scanning all tenant DBs on every login.
+ * True only when index is empty (bootstrap) â€” avoids scanning all tenant DBs on every login.
  */
 function shouldUseLoginIndexTenantFallback($explicitPdo = null): bool
 {
@@ -4640,7 +4640,7 @@ function shouldUseLoginIndexTenantFallback($explicitPdo = null): bool
 }
 
 /**
- * Run full tenant → index sync automatically when the index is empty (once per request).
+ * Run full tenant â†’ index sync automatically when the index is empty (once per request).
  * Pass $force = true to rebuild even when rows already exist (manual repair).
  *
  * @return array|null sync summary from syncAllTenantUsersToIndex()
@@ -5560,7 +5560,7 @@ if (!function_exists('ultitechReservedPathSegments')) {
             'index.php', 'my-account.php', 'debug_login.php', 'debug_db_connections.php', 'debug_online.php',
             'debug_system_full.php', 'debug_create_voucher.php', 'debug_voucher_applicant.php', 'debug_todo_index.php', 'hc.php', 'ping.php',
             'login', 'logout', 'register', 'select-module', 'suggest',
-            // Top-level ERP module folders — never treat as company slugs
+            // Top-level ERP module folders â€” never treat as company slugs
             'accounting', 'banking', 'balances', 'payroll', 'sales', 'finance', 'expenses', 'letters', 'letter',
             'todo', 'reports', 'logistics', 'crm', 'petty-cash', 'replenishments', 'replenishment', 'categories',
             'weekly_tasks', 'customer_statement', 'view-voucher-ui', 'revenue', 'revenue_entries',
@@ -5665,7 +5665,7 @@ function company_url(string $path = 'select-module', $slug = null): string
 }
 
 /**
- * Pretty URL for a Stock desk routed via stock.php → erp-laravel.
+ * Pretty URL for a Stock desk routed via stock.php â†’ erp-laravel.
  *
  * @param array<string,scalar|null> $query
  */
@@ -5856,7 +5856,7 @@ function isSuperAdmin(): bool
 
 /**
  * Ultimate Trading platform system admin (email allowlist).
- * Cross-company tenant tools must use this — not every isSuperAdmin()/company admin.
+ * Cross-company tenant tools must use this â€” not every isSuperAdmin()/company admin.
  */
 function isUltimateSystemAdmin(): bool
 {
@@ -6196,7 +6196,7 @@ function isGenericCompanyLogoPlaceholder(string $path): bool
 }
 
 /**
- * Logo URL from Admin → Company Settings → Branding (same source as company-settings.php preview).
+ * Logo URL from Admin â†’ Company Settings â†’ Branding (same source as company-settings.php preview).
  */
 function resolveCompanyBrandingLogoUrl($companyId = null): string
 {
@@ -6664,7 +6664,7 @@ function authenticate($userOrEmail, $password, $companySlug = null)
         $sql = "SELECT id, username, email, password, full_name, role, department{$companySelect}{$statusSelect}{$approvalSelect} FROM users WHERE (username = ? OR email = ?){$extraWhere}";
         $params = [$userOrEmail, $userOrEmail];
         // Single-DB: scope user to control-plane company_id. Tenant DB: users often use
-        // a local company_id (e.g. 1) — the database itself is already scoped to the tenant.
+        // a local company_id (e.g. 1) â€” the database itself is already scoped to the tenant.
         if ($selectedCompany && $hasCompanyColumn && (!$tenantDb || !$tenantReachable)) {
             $sql .= " AND company_id = ?";
             $params[] = (int) ($selectedCompany['id'] ?? 0);
@@ -7633,7 +7633,7 @@ function saveApprovedVoucherLimitedClassification(PDO $pdo, int $voucherId, int 
         $pdo->prepare('UPDATE payment_vouchers SET ' . implode(', ', $sets) . ' WHERE id = ?')->execute($vals);
 
         $comment = sprintf(
-            'Limited classification update: purpose %s → %s; linked sales orders [%s] → [%s]',
+            'Limited classification update: purpose %s â†’ %s; linked sales orders [%s] â†’ [%s]',
             $oldPurpose,
             $purpose,
             implode(',', $oldLinked),
@@ -9050,7 +9050,7 @@ function createNotification($opts)
 
 /**
  * Create or update a voucher-linked notification so status changes replace the prior card
- * (e.g. "New voucher submitted" → "Voucher APPROVED") instead of stacking duplicates.
+ * (e.g. "New voucher submitted" â†’ "Voucher APPROVED") instead of stacking duplicates.
  *
  * @param array{user_id?:?int,audience?:string,title?:string,message?:?string,type?:string,voucher_id?:?int} $opts
  */
@@ -10521,7 +10521,7 @@ function buildPaymentVoucherStockPoLinkablePurposeWhereSql($alias = 'pv', $pvCol
             . " OR ({$norm} LIKE '%stock%' AND {$norm} LIKE '%purchase%'))";
     }
 
-    // No purpose columns → treat rows as general (eligible for PO link).
+    // No purpose columns â†’ treat rows as general (eligible for PO link).
     if ($parts === []) {
         return '1 = 1';
     }
@@ -11663,12 +11663,12 @@ function stockPurchasePoVoucherDescriptionPreview(array $pv, int $maxLen = 60): 
         if (mb_strlen($text) <= $maxLen) {
             return $text;
         }
-        return rtrim(mb_substr($text, 0, $maxLen - 1)) . '…';
+        return rtrim(mb_substr($text, 0, $maxLen - 1)) . 'â€¦';
     }
     if (strlen($text) <= $maxLen) {
         return $text;
     }
-    return rtrim(substr($text, 0, $maxLen - 1)) . '…';
+    return rtrim(substr($text, 0, $maxLen - 1)) . 'â€¦';
 }
 
 /**
@@ -12960,7 +12960,7 @@ function countQueuedSupportingFileUploads($files = null): int
 }
 
 /**
- * True when a general (non–stock-purchase) voucher must have supporting files.
+ * True when a general (nonâ€“stock-purchase) voucher must have supporting files.
  */
 function paymentVoucherRequiresSupportingFiles(string $voucherPurpose): bool
 {
@@ -14387,7 +14387,9 @@ function cleanWhatsAppNumber($number)
 }
 
 // Cloud API send helpers (Meta Graph / Kapso) used by payment voucher Notify.
-require_once __DIR__ . '/whatsapp-cloud.php';
+if (is_file(__DIR__ . '/whatsapp-cloud.php')) {
+    require_once __DIR__ . '/whatsapp-cloud.php';
+}
 
 /**
  * Generate WhatsApp Link
@@ -14471,7 +14473,7 @@ function getVoucherNotificationTarget($voucher, $currentUserFullName)
         $targetRole = 'Applicant';
     }
     // 2. If I am Applicant (or Prepared By acting for Applicant), notify Dept Manager
-    //    (skip Dept Manager when they are the same person — one signature covers both)
+    //    (skip Dept Manager when they are the same person â€” one signature covers both)
     else if ($me === $applicant || ($me === $preparedBy && $preparedBy === $applicant)) {
         if ($applicant !== '' && $applicant === $deptMgr) {
             $targetName = $voucher['checked_by'];
@@ -15505,7 +15507,7 @@ function repairAttendanceSettingsTable(PDO $pdo): void
 }
 
 /**
- * Clock-in / daily attendance module (staff/attendance) â€” settings + per-day records.
+ * Clock-in / daily attendance module (staff/attendance) Ã¢â‚¬â€ settings + per-day records.
  * Separate from legacy GPS "attendance" table created by ensureAttendanceSchemaFix().
  */
 function ensureAttendanceClockModuleSchema()
@@ -15790,7 +15792,7 @@ function seedExpenseCategories() {
             'Freight Forwarding', 'Port Handling & Clearance Fees'
         ],
         'Administration & Management' => [
-            'Directorsâ€™ Allowances', 'Professional Fees', 'Consultancy Fees', 'Subscription & Membership Fees', 'Software & IT Support', 'Bank Charges'
+            'DirectorsÃ¢â‚¬â„¢ Allowances', 'Professional Fees', 'Consultancy Fees', 'Subscription & Membership Fees', 'Software & IT Support', 'Bank Charges'
         ],
         'Projects & Capital Expenditure (CAPEX)' => [
             'Renovation & Construction Costs', 'Machinery & Equipment Purchase', 'Office Furniture & Fixtures', 'Vehicle Purchase', 'Computer & IT Equipment'
@@ -16038,7 +16040,7 @@ function renderDashboardVoucherListFragments(array $state): array
 }
 
 /**
- * Page numbers to show in a numbered pagination bar (e.g. 1–10 when total is large).
+ * Page numbers to show in a numbered pagination bar (e.g. 1â€“10 when total is large).
  */
 function paginationPageWindow(int $currentPage, int $totalPages, int $maxButtons = 10): array
 {

@@ -165,6 +165,17 @@ export interface PurchaseOrderAttachment {
   kind?: string;
 }
 
+export interface LinkedPaymentVoucher {
+  id: string;
+  voucherNo: string;
+  payeeName: string;
+  status: string;
+  amount: number;
+  currency: string;
+  viewUrl: string;
+  attachments: PurchaseOrderAttachment[];
+}
+
 export interface PurchaseOrderLine {
   lineId: string;
   productId: string;

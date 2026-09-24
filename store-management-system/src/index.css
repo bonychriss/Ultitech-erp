@@ -2226,6 +2226,28 @@ html[data-theme="dark"] .sms-export-menu-item:hover:not(:disabled) {
   padding-top: 0.15rem;
 }
 
+.sms-incoming-linked-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.sms-incoming-file-chip--voucher {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+.sms-po-details-voucher-files {
+  margin: 0.35rem 0 0.5rem 1rem;
+}
+
+.sms-po-details-voucher-payee {
+  color: #64748b;
+  font-size: 0.85em;
+}
+
 .sms-incoming-linked-label {
   display: inline-flex;
   align-items: center;

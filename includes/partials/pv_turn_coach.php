@@ -2,6 +2,9 @@
 /**
  * Boot the Google-style PV coach tip on voucher pages.
  * Tip content is loaded from api/pv_coach.php (works even if sidebar $pdo/tasks fail).
+ *
+ * Laravel voucher shells rewrite SCRIPT_NAME to /voucher/create|/voucher/view,
+ * so detection also uses REQUEST_URI, ERP_ROUTE, and active_module.
  */
 if (empty($_SESSION['user_id'])) {
     return;
@@ -10,10 +13,14 @@ if (empty($_SESSION['user_id'])) {
 if (!empty($GLOBALS['_ultitech_pv_turn_coach_rendered'])) {
     return;
 }
-$GLOBALS['_ultitech_pv_turn_coach_rendered'] = true;
 
 $activeModule = strtolower(trim((string) ($active_module ?? ($_SESSION['active_module'] ?? ''))));
+$moduleParam = strtolower(trim((string) ($_GET['module'] ?? '')));
 $scriptPath = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+$requestUri = str_replace('\\', '/', (string) ($_SERVER['REQUEST_URI'] ?? ''));
+$erpRoute = strtolower(trim((string) ($GLOBALS['ERP_ROUTE'] ?? $GLOBALS['ERP_VOUCHER_ROUTE'] ?? '')));
+$pathBlob = strtolower($scriptPath . ' ' . $requestUri . ' ' . $erpRoute);
+
 $voucherPages = array(
     'dashboard.php',
     'all-vouchers.php',
@@ -31,10 +38,17 @@ foreach ($voucherPages as $vp) {
         break;
     }
 }
-$moduleParam = strtolower(trim((string) ($_GET['module'] ?? '')));
+if (!$onVoucherPage && preg_match('#(create-voucher|view-voucher|edit-voucher|my-vouchers|all-vouchers|pending-voucher|/voucher/create|/voucher/view)#', $pathBlob)) {
+    $onVoucherPage = true;
+}
+if (!$onVoucherPage && (str_starts_with($erpRoute, '/voucher/') || $activeModule === 'voucher' || $moduleParam === 'voucher')) {
+    $onVoucherPage = true;
+}
 if ($activeModule !== 'voucher' && $moduleParam !== 'voucher' && !$onVoucherPage) {
     return;
 }
+
+$GLOBALS['_ultitech_pv_turn_coach_rendered'] = true;
 
 // Use app_url (not company_url): /{slug}/api/pv_coach.php 404s when a physical
 // /{slug}/ folder exists and blocks the tenant rewrite.

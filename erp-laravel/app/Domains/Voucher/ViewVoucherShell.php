@@ -93,6 +93,7 @@ final class ViewVoucherShell
             'hideHeaderCompanyBranding' => true,
             'employeeHeaderExtraClass' => 'employee-header--view-voucher',
             'mainRootClass' => 'vv-react-shell view-voucher-react-root',
+            'active_module' => 'voucher',
         ];
     }
 

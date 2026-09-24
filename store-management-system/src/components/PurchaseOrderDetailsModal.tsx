@@ -14,18 +14,19 @@ import {
   Truck,
   X,
 } from 'lucide-react';
-import type { PurchaseOrderAttachment, PurchaseOrderLine, PurchaseOrderSummary } from '../types';
+import type { LinkedPaymentVoucher, PurchaseOrderAttachment, PurchaseOrderLine, PurchaseOrderSummary } from '../types';
 
 interface PurchaseOrderDetailsModalProps {
   order: PurchaseOrderSummary;
   lines: PurchaseOrderLine[];
   attachments?: PurchaseOrderAttachment[];
+  linkedVouchers?: LinkedPaymentVoucher[];
   currencySymbol?: string;
   onClose: () => void;
 }
 
 function formatDate(iso: string): string {
-  if (!iso) return 'ù';
+  if (!iso) return '?';
   const d = new Date(iso.includes('T') ? iso : `${iso}T12:00:00`);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString(undefined, {
@@ -82,6 +83,7 @@ export default function PurchaseOrderDetailsModal({
   order,
   lines,
   attachments = [],
+  linkedVouchers = [],
   currencySymbol = 'TSh',
   onClose,
 }: PurchaseOrderDetailsModalProps) {
@@ -146,7 +148,7 @@ export default function PurchaseOrderDetailsModal({
               </div>
               <div>
                 <span className="sms-field-label">Type</span>
-                <div className="sms-po-details-value">{order.purchaseType || 'ù'}</div>
+                <div className="sms-po-details-value">{order.purchaseType || '?'}</div>
               </div>
             </div>
             <div className="sms-po-details-meta-card">
@@ -217,6 +219,40 @@ export default function PurchaseOrderDetailsModal({
             </div>
           </div>
 
+          {linkedVouchers.length > 0 && (
+            <div className="sms-linked-attachments sms-po-details-attachments">
+              <span className="sms-field-label">
+                <ExternalLink className="w-3.5 h-3.5 inline mr-1" />
+                Linked payment vouchers
+              </span>
+              <ul className="sms-file-list">
+                {linkedVouchers.map((voucher) => (
+                  <li key={voucher.id} className="sms-po-details-voucher">
+                    <a href={voucher.viewUrl || '#'} target="_blank" rel="noopener noreferrer">
+                      {voucher.voucherNo || `PV #${voucher.id}`}
+                    </a>
+                    {voucher.payeeName ? (
+                      <span className="sms-po-details-voucher-payee"> ? {voucher.payeeName}</span>
+                    ) : null}
+                    {voucher.status ? <span className="sms-po-pill ml-2">{voucher.status}</span> : null}
+                    {voucher.attachments.length > 0 && (
+                      <ul className="sms-file-list sms-po-details-voucher-files">
+                        {voucher.attachments.map((file) => (
+                          <li key={file.id}>
+                            <a href={file.url} target="_blank" rel="noopener noreferrer">
+                              {file.name || 'Attachment'}
+                            </a>
+                            {file.kind === 'swift' ? <span className="sms-po-pill ml-2">SWIFT</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {attachments.length > 0 && (
             <div className="sms-linked-attachments sms-po-details-attachments">
               <span className="sms-field-label">
@@ -261,7 +297,7 @@ export default function PurchaseOrderDetailsModal({
                     <td>
                       <div className="font-semibold text-slate-900">{line.productName}</div>
                       <div className="sms-product-meta">
-                        <span className="sms-sku">{line.productSku || 'ó'}</span>
+                        <span className="sms-sku">{line.productSku || '?'}</span>
                       </div>
                     </td>
                     <td className="text-center font-mono">{line.qtyOrdered}</td>
@@ -289,7 +325,7 @@ export default function PurchaseOrderDetailsModal({
         <div className="sms-modal-foot">
           <span className="sms-modal-foot-hint">
             <ExternalLink className="w-3.5 h-3.5" />
-            Review only ù receive quantities are set in the form behind this popup
+            Review only ? receive quantities are set in the form behind this popup
           </span>
           <button type="button" className="sms-desk-btn sms-desk-btn-primary" onClick={onClose}>
             Close

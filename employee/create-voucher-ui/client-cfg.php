@@ -127,12 +127,16 @@ function createVoucherBuildClientCfg(array $data = []): array
         'financeUsers' => $mapUserNames(is_array($data['financeUsers'] ?? null) ? $data['financeUsers'] : []),
         'salesOrders' => $mapSalesOrders(is_array($data['salesOrders'] ?? null) ? $data['salesOrders'] : []),
         'purchaseOrders' => $mapPurchaseOrders(is_array($data['purchaseOrders'] ?? null) ? $data['purchaseOrders'] : []),
-        'poViewBaseUrl' => function_exists('app_url')
-            ? app_url('/stock/modules/purchases/view_po.php')
-            : '/stock/modules/purchases/view_po.php',
-        'poDocumentUrl' => function_exists('app_url')
-            ? app_url('/employee/create-voucher-ui/po-document.php')
-            : 'create-voucher-ui/po-document.php',
+        'poViewBaseUrl' => function_exists('company_url')
+            ? company_url('stock/modules/purchases/view_po.php')
+            : (function_exists('app_url')
+                ? app_url('/stock/modules/purchases/view_po.php')
+                : '/stock/modules/purchases/view_po.php'),
+        'poDocumentUrl' => function_exists('company_url')
+            ? company_url('employee/create-voucher-ui/po-document.php')
+            : (function_exists('app_url')
+                ? app_url('/employee/create-voucher-ui/po-document.php')
+                : 'create-voucher-ui/po-document.php'),
         'flash' => $data['flash'] ?? null,
         'error' => (string) ($data['error'] ?? ''),
     ];

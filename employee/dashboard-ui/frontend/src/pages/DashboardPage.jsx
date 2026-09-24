@@ -261,6 +261,15 @@ function RowActionsMenu({
       href: `${URLS.edit}?id=${r.id}${APPEND_MODULE}`,
     })
   }
+  if (SHARE_ENABLED && r.can_view !== false) {
+    items.push({
+      key: 'share',
+      label: 'Share on WhatsApp',
+      icon: <WhatsAppIcon size={14} />,
+      className: 'ed-menu-share',
+      onClick: () => { shareOnWhatsApp(r); onClose() },
+    })
+  }
   if (r.can_delete) {
     items.push({
       key: 'delete',
@@ -1128,16 +1137,15 @@ export default function DashboardPage() {
             <div className="ed-table-wrap">
             <table className="ed-table ed-table--full">
               <colgroup>
-                <col className="ed-col-sn" style={{ width: '3.5%' }} />
-                <col className="ed-col-vno" style={{ width: '16%' }} />
-                <col className="ed-col-payee" style={{ width: '10%' }} />
-                <col className="ed-col-prep" style={{ width: '9%' }} />
-                <col className="ed-col-desc" style={{ width: SHARE_ENABLED ? '14%' : '18%' }} />
-                <col className="ed-col-amt" style={{ width: '13%' }} />
-                <col className="ed-col-date" style={{ width: '12%' }} />
-                <col className="ed-col-status" style={{ width: '9%' }} />
-                {SHARE_ENABLED ? <col className="ed-col-share" style={{ width: '4.5%' }} /> : null}
-                <col className="ed-col-actions" style={{ width: SHARE_ENABLED ? '7%' : '7.5%' }} />
+                <col className="ed-col-sn" style={{ width: '3%' }} />
+                <col className="ed-col-vno" style={{ width: '12%' }} />
+                <col className="ed-col-payee" style={{ width: '9%' }} />
+                <col className="ed-col-prep" style={{ width: '8%' }} />
+                <col className="ed-col-desc" style={{ width: '30%' }} />
+                <col className="ed-col-amt" style={{ width: '11%' }} />
+                <col className="ed-col-date" style={{ width: '10%' }} />
+                <col className="ed-col-status" style={{ width: '8%' }} />
+                <col className="ed-col-actions" style={{ width: '7%' }} />
               </colgroup>
               <thead>
                 <tr>
@@ -1149,7 +1157,6 @@ export default function DashboardPage() {
                   <th className="ed-ta-right ed-col-amt">Amount</th>
                   <th className="ed-col-date">Date Created</th>
                   <th className="ed-col-status">Status</th>
-                  {SHARE_ENABLED && <th className="ed-col-share ed-hide-mobile">Share</th>}
                   <th className="ed-col-actions">Actions</th>
                 </tr>
               </thead>
@@ -1192,21 +1199,6 @@ export default function DashboardPage() {
                         <br /><small>{formatTime(r.created_at)}</small>
                       </td>
                       <td className="ed-status-cell"><span className={pill.cls}>{pill.label}</span></td>
-                      {SHARE_ENABLED && (
-                        <td className="ed-share-cell ed-hide-mobile" onClick={(e) => e.stopPropagation()}>
-                          {canView ? (
-                            <button
-                              type="button"
-                              className="ed-icon-btn ed-icon-wa"
-                              title="Share on WhatsApp"
-                              aria-label="Share on WhatsApp"
-                              onClick={() => shareOnWhatsApp(r)}
-                            >
-                              <WhatsAppIcon size={16} />
-                            </button>
-                          ) : null}
-                        </td>
-                      )}
                       <td className="ed-row-actions" onClick={(e) => e.stopPropagation()}>
                         {canView ? (
                           <RowActionsMenu

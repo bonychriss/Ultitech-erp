@@ -10,6 +10,16 @@ if (!function_exists('requireLogin')) {
     require_once __DIR__ . '/../../includes/functions.php';
 }
 
+// API clients expect JSON — do not redirect to an HTML login page.
+if (!function_exists('isLoggedIn') || !isLoggedIn()) {
+    if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'Please sign in again to load the warehouse.']);
+    exit;
+}
+
 requireLogin();
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -1056,6 +1066,229 @@ function sms_fetch_po_attachments(PDO $pdo, int $poId, string $source = 'stocks'
     return $attachments;
 }
 
+/**
+ * Public URL for app-root assets (voucher uploads, etc.).
+ */
+function sms_public_asset_url(string $relativePath): string
+{
+    $relative = ltrim(str_replace('\\', '/', $relativePath), '/');
+    if ($relative === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $relative)) {
+        return $relative;
+    }
+    if (strpos($relative, 'assets/') === false && !preg_match('#^(uploads|stock)/#i', $relative)) {
+        $relative = 'assets/' . $relative;
+    }
+    if (function_exists('app_url')) {
+        return app_url($relative);
+    }
+
+    return '/' . $relative;
+}
+
+/**
+ * View URL for a payment voucher.
+ */
+function sms_voucher_view_url(int $voucherId): string
+{
+    if ($voucherId <= 0) {
+        return '';
+    }
+    $path = 'employee/view-voucher.php?id=' . $voucherId . '&module=voucher';
+    if (function_exists('company_url')) {
+        return company_url($path);
+    }
+    if (function_exists('app_url')) {
+        return app_url($path);
+    }
+
+    return '/' . $path;
+}
+
+/**
+ * @return list<int>
+ */
+function sms_po_linked_voucher_ids(array $po, PDO $pdo, int $poId): array
+{
+    $ids = [];
+    $single = (int) ($po['payment_voucher_id'] ?? 0);
+    if ($single > 0) {
+        $ids[$single] = $single;
+    }
+
+    $raw = trim((string) ($po['payment_voucher_ids'] ?? ''));
+    if ($raw !== '') {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $vid) {
+                $vid = (int) $vid;
+                if ($vid > 0) {
+                    $ids[$vid] = $vid;
+                }
+            }
+        } else {
+            foreach (preg_split('/\s*,\s*/', $raw) ?: [] as $token) {
+                $vid = (int) $token;
+                if ($vid > 0) {
+                    $ids[$vid] = $vid;
+                }
+            }
+        }
+    }
+
+    if ($poId > 0) {
+        try {
+            if (tableExists('payment_vouchers', $pdo)) {
+                $pvCols = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                if (in_array('linked_stock_po_id', $pvCols, true)) {
+                    $stmt = $pdo->prepare('SELECT id FROM payment_vouchers WHERE linked_stock_po_id = ? ORDER BY id DESC');
+                    $stmt->execute([$poId]);
+                    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) ?: [] as $vid) {
+                        $vid = (int) $vid;
+                        if ($vid > 0) {
+                            $ids[$vid] = $vid;
+                        }
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    if ($ids === [] && sms_purchase_workflow_loaded() && function_exists('stockPurchaseExpandPoLinkedVoucherIds')) {
+        foreach (stockPurchaseExpandPoLinkedVoucherIds($po, $poId) as $vid) {
+            $vid = (int) $vid;
+            if ($vid > 0) {
+                $ids[$vid] = $vid;
+            }
+        }
+    }
+
+    return array_values($ids);
+}
+
+/**
+ * Linked payment vouchers (and their supporting files) for a purchase order.
+ *
+ * @return list<array{id:string,voucherNo:string,payeeName:string,status:string,amount:float,currency:string,viewUrl:string,attachments:list<array{id:string,name:string,url:string,kind:string}>}>
+ */
+function sms_fetch_po_linked_vouchers(PDO $pdo, array $po, int $poId): array
+{
+    $voucherIds = sms_po_linked_voucher_ids($po, $pdo, $poId);
+    if ($voucherIds === []) {
+        return [];
+    }
+
+    $voucherPdo = $pdo;
+    if (!tableExists('payment_vouchers', $voucherPdo) && function_exists('erp_data_pdo')) {
+        $alt = erp_data_pdo();
+        if ($alt instanceof PDO && tableExists('payment_vouchers', $alt)) {
+            $voucherPdo = $alt;
+        }
+    }
+    if (!tableExists('payment_vouchers', $voucherPdo)) {
+        return [];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($voucherIds), '?'));
+    $select = 'id, voucher_no, payee_name, status, total_amount';
+    try {
+        $pvCols = $voucherPdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        if (in_array('currency', $pvCols, true)) {
+            $select .= ', currency';
+        }
+        if (in_array('swift_document', $pvCols, true)) {
+            $select .= ', swift_document';
+        }
+    } catch (Throwable $e) {
+        $pvCols = [];
+    }
+
+    $rows = [];
+    try {
+        $stmt = $voucherPdo->prepare("SELECT {$select} FROM payment_vouchers WHERE id IN ({$placeholders}) ORDER BY id ASC");
+        $stmt->execute($voucherIds);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $hasAttachmentsTable = tableExists('voucher_attachments', $voucherPdo);
+    $linked = [];
+
+    foreach ($rows as $row) {
+        $vid = (int) ($row['id'] ?? 0);
+        if ($vid <= 0) {
+            continue;
+        }
+
+        $attachments = [];
+        $seenUrls = [];
+
+        if ($hasAttachmentsTable) {
+            try {
+                if (function_exists('getVoucherAttachments')) {
+                    $attRows = getVoucherAttachments($vid);
+                } else {
+                    $attStmt = $voucherPdo->prepare(
+                        'SELECT id, file_path, original_name FROM voucher_attachments WHERE voucher_id = ? ORDER BY id ASC'
+                    );
+                    $attStmt->execute([$vid]);
+                    $attRows = $attStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                }
+                foreach ($attRows as $att) {
+                    $path = trim((string) ($att['file_path'] ?? ''));
+                    $url = sms_public_asset_url($path);
+                    if ($url === '' || isset($seenUrls[$url])) {
+                        continue;
+                    }
+                    $seenUrls[$url] = true;
+                    $name = trim((string) ($att['original_name'] ?? ''));
+                    if ($name === '') {
+                        $name = basename($path) ?: 'Attachment';
+                    }
+                    $attachments[] = [
+                        'id' => 'pv-file-' . $vid . '-' . (int) ($att['id'] ?? 0),
+                        'name' => $name,
+                        'url' => $url,
+                        'kind' => 'payment_voucher',
+                    ];
+                }
+            } catch (Throwable $e) {
+            }
+        }
+
+        $swiftPath = trim((string) ($row['swift_document'] ?? ''));
+        if ($swiftPath !== '') {
+            $swiftUrl = sms_public_asset_url($swiftPath);
+            if ($swiftUrl !== '' && !isset($seenUrls[$swiftUrl])) {
+                $seenUrls[$swiftUrl] = true;
+                $attachments[] = [
+                    'id' => 'pv-swift-' . $vid,
+                    'name' => 'SWIFT / bank proof',
+                    'url' => $swiftUrl,
+                    'kind' => 'swift',
+                ];
+            }
+        }
+
+        $linked[] = [
+            'id' => (string) $vid,
+            'voucherNo' => (string) ($row['voucher_no'] ?? ('PV #' . $vid)),
+            'payeeName' => (string) ($row['payee_name'] ?? ''),
+            'status' => (string) ($row['status'] ?? ''),
+            'amount' => (float) ($row['total_amount'] ?? 0),
+            'currency' => (string) ($row['currency'] ?? 'TZS'),
+            'viewUrl' => sms_voucher_view_url($vid),
+            'attachments' => $attachments,
+        ];
+    }
+
+    return $linked;
+}
+
 function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = 'stocks'): ?array
 {
     if ($poId <= 0) {
@@ -1103,6 +1336,7 @@ function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = '
             ])),
             'lines' => $lines,
             'attachments' => sms_fetch_po_attachments($pdo, $poId, 'legacy'),
+            'linkedVouchers' => sms_fetch_po_linked_vouchers($pdo, $po, $poId),
         ];
     }
 
@@ -1178,6 +1412,7 @@ function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = '
         ])),
         'lines' => $lines,
         'attachments' => sms_fetch_po_attachments($pdo, $poId, 'stocks'),
+        'linkedVouchers' => sms_fetch_po_linked_vouchers($pdo, $po, $poId),
     ];
 }
 
@@ -1836,12 +2071,16 @@ try {
                     'canReceivePurchaseOrders' => sms_can_receive_warehouse_stock(),
                     'confirmPoToStock' => !sms_can_manage_products(),
                     'isSystemAdmin' => sms_is_system_admin(),
-                    'manageProductsUrl' => function_exists('app_url')
-                        ? app_url('stock/modules/products/index.php')
-                        : '../stock/modules/products/index.php',
-                    'manageWarehousesUrl' => function_exists('app_url')
-                        ? app_url('stock/modules/warehouses/index.php')
-                        : '../stock/modules/warehouses/index.php',
+                    'manageProductsUrl' => function_exists('company_url')
+                        ? company_url('stock/modules/products/index.php')
+                        : (function_exists('app_url')
+                            ? app_url('stock/modules/products/index.php')
+                            : '../stock/modules/products/index.php'),
+                    'manageWarehousesUrl' => function_exists('company_url')
+                        ? company_url('store-management-system/index.php') . '?module=warehouses'
+                        : (function_exists('app_url')
+                            ? app_url('store-management-system/index.php') . '?module=warehouses'
+                            : '../store-management-system/index.php?module=warehouses'),
                 ],
             ]);
             break;
@@ -2652,6 +2891,7 @@ try {
                 'order' => $detail['order'],
                 'lines' => $detail['lines'],
                 'attachments' => $detail['attachments'] ?? [],
+                'linkedVouchers' => $detail['linkedVouchers'] ?? [],
             ]);
             break;
 

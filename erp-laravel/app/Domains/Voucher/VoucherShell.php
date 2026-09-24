@@ -56,6 +56,8 @@ final class VoucherShell
             'hideHeaderCompanyBranding' => true,
             'employeeHeaderExtraClass' => 'employee-header--create-voucher',
             'mainRootClass' => 'create-voucher-react-root',
+            // Keep sidebar + Google coach tip on Laravel /voucher/create (SCRIPT_NAME is not create-voucher.php).
+            'active_module' => 'voucher',
         ];
     }
 

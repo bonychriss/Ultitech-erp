@@ -3,6 +3,7 @@ import type {
   LabelPerPageOption,
   LabelProduct,
   LabelsInitData,
+  LinkedPaymentVoucher,
   MovementStats,
   PendingReceipt,
   PendingInvoice,
@@ -60,7 +61,18 @@ async function request<T>(action: string, options: RequestInit & { params?: Reco
     credentials: 'same-origin',
   });
 
-  const data = await response.json();
+  const raw = await response.text();
+  let data: { success?: boolean; error?: string } & T;
+  try {
+    data = JSON.parse(raw) as { success?: boolean; error?: string } & T;
+  } catch {
+    const looksHtml = /^\s*</.test(raw) || raw.includes('<!DOCTYPE');
+    throw new Error(
+      looksHtml
+        ? 'Store API returned a web page instead of data. Refresh the page, or sign in again.'
+        : `Invalid API response (${response.status})`
+    );
+  }
   if (!response.ok || data.success === false) {
     throw new Error(data.error || `Request failed (${response.status})`);
   }
@@ -321,15 +333,26 @@ export async function fetchProductPoReferences(
 export async function fetchPurchaseOrder(
   poId: string,
   source: string
-): Promise<{ order: PurchaseOrderSummary; lines: PurchaseOrderLine[]; attachments: PurchaseOrderAttachment[] }> {
+): Promise<{
+  order: PurchaseOrderSummary;
+  lines: PurchaseOrderLine[];
+  attachments: PurchaseOrderAttachment[];
+  linkedVouchers: LinkedPaymentVoucher[];
+}> {
   const data = await request<{
     order: PurchaseOrderSummary;
     lines: PurchaseOrderLine[];
     attachments?: PurchaseOrderAttachment[];
+    linkedVouchers?: LinkedPaymentVoucher[];
   }>('purchase_order', {
     params: { po_id: poId, source },
   });
-  return { order: data.order, lines: data.lines, attachments: data.attachments ?? [] };
+  return {
+    order: data.order,
+    lines: data.lines,
+    attachments: data.attachments ?? [],
+    linkedVouchers: data.linkedVouchers ?? [],
+  };
 }
 
 export async function receivePurchaseOrder(

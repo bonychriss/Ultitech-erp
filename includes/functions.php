@@ -5445,19 +5445,29 @@ function buildLoginAttemptSlugs(string $preferredSlug, $controlPdo = null): arra
 function resolvePostLoginRedirectUrl(string $companySlug = '', string $next = ''): string
 {
     $next = trim($next);
+    $slug = strtolower(trim($companySlug));
     if ($next !== '') {
         if (preg_match('#^https?://#i', $next) || str_starts_with($next, '//')) {
             $next = '';
         } else {
             $next = str_replace('\\', '/', $next);
             if ($next !== '' && !str_contains($next, '..')) {
+                $path = (string) (parse_url($next, PHP_URL_PATH) ?? $next);
+                $query = (string) (parse_url($next, PHP_URL_QUERY) ?? '');
+                $rel = function_exists('ultitechTenantAppPathPrefix') ? ultitechTenantAppPathPrefix($path) : '';
+                if ($rel !== '' && $slug !== '') {
+                    $url = company_url($rel, $slug);
+                    if ($query !== '') {
+                        $url .= (str_contains($url, '?') ? '&' : '?') . $query;
+                    }
+                    return $url;
+                }
                 // app_url() strips an existing APP_BASE_PATH prefix so REQUEST_URI next= is safe.
                 return app_url($next);
             }
         }
     }
 
-    $slug = strtolower(trim($companySlug));
     if ($slug !== '') {
         return company_url('select-module', $slug);
     }
@@ -5662,6 +5672,86 @@ function company_url(string $path = 'select-module', $slug = null): string
         return app_url('/' . ltrim($path, '/'));
     }
     return app_url('/' . $resolvedSlug . '/' . ltrim($path, '/'));
+}
+
+/**
+ * Paths that must be company-prefixed (/ultimate/employee/..., not /employee/...).
+ * Bare URLs hit the public app root and confuse users with login/"404" behavior.
+ */
+function ultitechTenantAppPathPrefix(string $path): string
+{
+    $path = '/' . ltrim(str_replace('\\', '/', $path), '/');
+    if (defined('APP_BASE_PATH')) {
+        $base = trim((string) APP_BASE_PATH, '/');
+        if ($base !== '') {
+            $prefix = '/' . $base;
+            if ($path === $prefix) {
+                $path = '/';
+            } elseif (str_starts_with($path, $prefix . '/')) {
+                $path = substr($path, strlen($prefix));
+                if ($path === '' || $path[0] !== '/') {
+                    $path = '/' . ltrim($path, '/');
+                }
+            }
+        }
+    }
+    if (preg_match(
+        '#^/(employee|admin|stock|attendance|deliveries|todo|store-management-system|modules)(/|$)#i',
+        $path
+    )) {
+        return ltrim($path, '/');
+    }
+    return '';
+}
+
+/**
+ * If the request is a tenant app URL without a company slug, 302 to /{slug}/...
+ * Uses session company, else the default active company (ultimate on this site).
+ */
+function redirectBareTenantPathToCompanyUrl(): void
+{
+    if (!function_exists('isCompanyScopingEnabled') || !isCompanyScopingEnabled()) {
+        return;
+    }
+    if (function_exists('getRequestedCompanySlug') && getRequestedCompanySlug() !== '') {
+        return;
+    }
+    if (headers_sent()) {
+        return;
+    }
+
+    $requestUri = trim((string) ($_SERVER['REQUEST_URI'] ?? ''));
+    if ($requestUri === '' || !str_starts_with($requestUri, '/') || str_starts_with($requestUri, '//') || str_contains($requestUri, '..')) {
+        return;
+    }
+
+    $path = (string) (parse_url($requestUri, PHP_URL_PATH) ?? '');
+    $query = (string) (parse_url($requestUri, PHP_URL_QUERY) ?? '');
+    $rel = ultitechTenantAppPathPrefix($path);
+    if ($rel === '') {
+        return;
+    }
+
+    $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+    if ($slug === '' && !empty($_SESSION['company_id']) && function_exists('resolveCompanySlugById')) {
+        $slug = strtolower(trim(resolveCompanySlugById((int) $_SESSION['company_id'])));
+    }
+    if ($slug === '' && function_exists('defaultCompanyId') && function_exists('resolveCompanySlugById')) {
+        $cid = (int) (defaultCompanyId() ?: 0);
+        if ($cid > 0) {
+            $slug = strtolower(trim(resolveCompanySlugById($cid)));
+        }
+    }
+    if ($slug === '') {
+        return;
+    }
+
+    $url = company_url($rel, $slug);
+    if ($query !== '') {
+        $url .= (str_contains($url, '?') ? '&' : '?') . $query;
+    }
+    header('Location: ' . $url, true, 302);
+    exit;
 }
 
 /**
@@ -6928,6 +7018,9 @@ function requireLogin()
 {
     global $pdo;
     ensureMultiCompanyControlSchema();
+    if (function_exists('redirectBareTenantPathToCompanyUrl')) {
+        redirectBareTenantPathToCompanyUrl();
+    }
     $requestedCompanySlug = getRequestedCompanySlug();
     $loginNext = '';
     $requestUri = trim((string) ($_SERVER['REQUEST_URI'] ?? ''));

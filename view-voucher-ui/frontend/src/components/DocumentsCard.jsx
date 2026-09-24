@@ -33,7 +33,7 @@ function pdfPreviewUrl(url) {
   return `${base}#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0`
 }
 
-function truncateName(name, max = 16) {
+function truncateName(name, max = 28) {
   const s = String(name || '')
   if (s.length <= max) return s
   const dot = s.lastIndexOf('.')
@@ -61,7 +61,6 @@ function DocPreviewThumb({ isImage, previewUrl, missing, kindLabel, htmlEmbed })
       </div>
     )
   }
-  // HTML docs (PO sheet) — sandboxed iframe is fine.
   if (htmlEmbed && previewUrl) {
     return (
       <div className="vv-gmail-thumb vv-gmail-thumb--embed">
@@ -76,7 +75,6 @@ function DocPreviewThumb({ isImage, previewUrl, missing, kindLabel, htmlEmbed })
       </div>
     )
   }
-  // PDFs: do NOT sandbox (Chrome PDF viewer needs plugins). Fit first page.
   if (previewUrl && kindLabel === 'PDF') {
     return (
       <div className="vv-gmail-thumb vv-gmail-thumb--pdf">
@@ -129,6 +127,7 @@ function GmailAttachCard({
     <article
       className={`vv-gmail-card${missing ? ' vv-gmail-card--missing' : ''}`}
       title={sub ? `${name}\n${sub}` : name}
+      role="listitem"
     >
       <button type="button" className="vv-gmail-card-hit" onClick={open} disabled={!!missing} aria-label={`Open ${name}`}>
         <DocPreviewThumb
@@ -145,40 +144,34 @@ function GmailAttachCard({
           {kind.label}
         </span>
         <span className="vv-gmail-fname">{truncateName(name)}</span>
-        <span className="vv-gmail-dogear" aria-hidden="true" />
+        {!missing && downloadHref ? (
+          <a
+            href={downloadHref}
+            download
+            rel="noopener noreferrer"
+            className="vv-gmail-foot-action"
+            title="Download"
+            aria-label={`Download ${name}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <i className="fas fa-download" aria-hidden="true" />
+          </a>
+        ) : null}
+        {!missing && canDelete && onDelete ? (
+          <button
+            type="button"
+            className="vv-gmail-foot-action vv-gmail-foot-action--danger"
+            title="Remove"
+            aria-label={`Delete ${name}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete()
+            }}
+          >
+            <i className="fas fa-trash" aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
-
-      {!missing && (
-        <div className="vv-gmail-card-actions">
-          {downloadHref ? (
-            <a
-              href={downloadHref}
-              download
-              rel="noopener noreferrer"
-              className="vv-gmail-action"
-              title="Download"
-              aria-label={`Download ${name}`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <i className="fas fa-download" aria-hidden="true" />
-            </a>
-          ) : null}
-          {canDelete && onDelete ? (
-            <button
-              type="button"
-              className="vv-gmail-action vv-gmail-action--danger"
-              title="Remove"
-              aria-label={`Delete ${name}`}
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete()
-              }}
-            >
-              <i className="fas fa-trash" aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
-      )}
     </article>
   )
 }

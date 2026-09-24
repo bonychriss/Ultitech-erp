@@ -104,7 +104,8 @@ function draftOr(key, fallback) {
 function poDocumentHref(poId) {
   const base = String(CFG.poDocumentUrl || '').replace(/\?.*$/, '')
   if (!base || !poId) return ''
-  return `${base}${base.includes('?') ? '&' : '?'}id=${encodeURIComponent(poId)}`
+  const join = base.includes('?') ? '&' : '?'
+  return `${base}${join}id=${encodeURIComponent(poId)}&embed=1`
 }
 
 export default function CreateVoucherPage() {

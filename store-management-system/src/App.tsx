@@ -285,11 +285,26 @@ export default function App() {
     return (
       <div className="sms-desk-page sms-desk-empty">
         <WarehouseIcon className="sms-desk-empty-icon" />
-        <p className="sms-desk-empty-title">No active warehouse found</p>
-        <p className="sms-desk-empty-sub">Create a warehouse from the Warehouses menu first.</p>
-        <a href={config?.manageWarehousesUrl || '#'} className="sms-desk-btn sms-desk-btn-secondary">
-          Go to Warehouses
-        </a>
+        <p className="sms-desk-empty-title">
+          {error ? 'Could not load warehouse' : 'No active warehouse found'}
+        </p>
+        <p className="sms-desk-empty-sub">
+          {error || 'Create a warehouse from the Warehouses menu first.'}
+        </p>
+        {!error && (
+          <a href={config?.manageWarehousesUrl || '#'} className="sms-desk-btn sms-desk-btn-secondary">
+            Go to Warehouses
+          </a>
+        )}
+        {error && (
+          <button
+            type="button"
+            className="sms-desk-btn sms-desk-btn-secondary"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        )}
       </div>
     );
   }

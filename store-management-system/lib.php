@@ -10,8 +10,14 @@ declare(strict_types=1);
 function storeManagementUiPublicUrl(string $relativePath): string
 {
     $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
+    $path = 'store-management-system/' . $relativePath;
+    // Tenant URLs must include the company slug (/ultimate/...), otherwise the
+    // bare /store-management-system/api path resolves as "Company not found".
+    if (function_exists('company_url')) {
+        return company_url($path);
+    }
     if (function_exists('app_url')) {
-        return app_url('store-management-system/' . $relativePath);
+        return app_url($path);
     }
     return './' . $relativePath;
 }

@@ -165,6 +165,15 @@ export interface PurchaseOrderAttachment {
   kind?: string;
 }
 
+export interface LinkedPaymentVoucherItem {
+  id: string;
+  paymentType: string;
+  budgetType: string;
+  name: string;
+  amount: number;
+  description: string;
+}
+
 export interface LinkedPaymentVoucher {
   id: string;
   voucherNo: string;
@@ -172,7 +181,13 @@ export interface LinkedPaymentVoucher {
   status: string;
   amount: number;
   currency: string;
+  description?: string;
+  dateCreated?: string;
+  purpose?: string;
+  preparedBy?: string;
+  supportingDocuments?: number;
   viewUrl: string;
+  items?: LinkedPaymentVoucherItem[];
   attachments: PurchaseOrderAttachment[];
 }
 

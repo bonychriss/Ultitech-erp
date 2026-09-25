@@ -2346,6 +2346,87 @@ html[data-theme="dark"] .sms-export-menu-item:hover:not(:disabled) {
   color: #94a3b8;
 }
 
+.sms-pv-group--open .sms-pv-group-head {
+  border-bottom-color: #e2e8f0;
+}
+
+.sms-pv-details {
+  border-bottom: 1px solid #eef2f7;
+  background: #fff;
+}
+
+.sms-pv-details-scroll {
+  padding: 0.55rem 0.65rem 0.35rem;
+  overflow-x: auto;
+}
+
+.sms-pv-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  color: #334155;
+  background: #fff;
+}
+
+.sms-pv-detail-table th,
+.sms-pv-detail-table td {
+  border: 1px solid #e2e8f0;
+  padding: 0.35rem 0.5rem;
+  vertical-align: top;
+  text-align: left;
+}
+
+.sms-pv-detail-table--meta th {
+  width: 12%;
+  background: #f8fafc;
+  font-weight: 650;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.sms-pv-detail-table--meta td {
+  width: 38%;
+}
+
+.sms-pv-detail-table--lines {
+  margin-top: 0.45rem;
+}
+
+.sms-pv-detail-table--lines thead th {
+  background: #f1f5f9;
+  font-weight: 650;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.sms-pv-detail-num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sms-pv-detail-amount {
+  font-weight: 650;
+  color: #0f172a;
+}
+
+.sms-pv-detail-empty {
+  text-align: center !important;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.sms-pv-details-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.35rem 0.65rem 0.55rem;
+}
+
+button.sms-pv-group-open {
+  cursor: pointer;
+  font: inherit;
+}
+
 .sms-gmail-card {
   position: relative;
   display: flex;

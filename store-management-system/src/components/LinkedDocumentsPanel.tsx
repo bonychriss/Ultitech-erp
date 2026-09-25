@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { Download, ExternalLink, FileText, Paperclip } from 'lucide-react';
-import type { LinkedPaymentVoucher, PurchaseOrderAttachment } from '../types';
+import type { LinkedPaymentVoucher, LinkedPaymentVoucherItem, PurchaseOrderAttachment } from '../types';
 
 function isImageName(name: string, url = ''): boolean {
   return /\.(png|jpe?g|gif|webp|bmp)$/i.test(name) || /\.(png|jpe?g|gif|webp|bmp)(\?|$)/i.test(url);
-}
-
-function isPdfName(name: string, url = ''): boolean {
-  return /\.pdf$/i.test(name) || /\.pdf(\?|#|$)/i.test(url);
 }
 
 function truncateName(name: string, max = 28): string {
@@ -22,23 +18,31 @@ function truncateName(name: string, max = 28): string {
   return `${s.slice(0, max - 1)}…`;
 }
 
-function formatAmount(amount: number, currency: string): string {
-  if (!Number.isFinite(amount) || amount <= 0) return '';
+function formatMoney(amount: number, currency = 'TZS'): string {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return '—';
   try {
     return new Intl.NumberFormat(undefined, {
       style: 'currency',
       currency: currency || 'TZS',
-      maximumFractionDigits: 0,
-    }).format(amount);
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(n);
   } catch {
-    return `${currency || 'TZS'} ${amount.toLocaleString()}`;
+    return `${currency || 'TZS'} ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 }
 
-function pdfPreviewUrl(url: string): string {
-  if (!url) return url;
-  const base = String(url).split('#')[0];
-  return `${base}#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0`;
+function formatAmount(amount: number, currency: string): string {
+  if (!Number.isFinite(amount) || amount <= 0) return '';
+  return formatMoney(amount, currency);
+}
+
+function formatDate(raw: string): string {
+  if (!raw) return '—';
+  const d = new Date(raw.includes('T') ? raw : `${raw}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function DocThumb({
@@ -54,13 +58,6 @@ function DocThumb({
     return (
       <div className="sms-gmail-thumb sms-gmail-thumb--image">
         <img src={url} alt="" loading="lazy" />
-      </div>
-    );
-  }
-  if (isPdfName(name, url) && url) {
-    return (
-      <div className="sms-gmail-thumb sms-gmail-thumb--pdf">
-        <iframe src={pdfPreviewUrl(url)} title="PDF preview" loading="lazy" tabIndex={-1} scrolling="no" />
       </div>
     );
   }
@@ -154,6 +151,133 @@ function DocPreviewModal({
   );
 }
 
+function VoucherDetailsBody({ voucher }: { voucher: LinkedPaymentVoucher }) {
+  const items: LinkedPaymentVoucherItem[] = voucher.items ?? [];
+  const currency = voucher.currency || 'TZS';
+
+  return (
+    <div className="sms-pv-modal-body">
+      <table className="sms-pv-detail-table sms-pv-detail-table--meta">
+        <tbody>
+          <tr>
+            <th scope="row">Voucher No</th>
+            <td>{voucher.voucherNo || `PV #${voucher.id}`}</td>
+            <th scope="row">Date</th>
+            <td>{formatDate(voucher.dateCreated || '')}</td>
+          </tr>
+          <tr>
+            <th scope="row">Payee</th>
+            <td>{voucher.payeeName || '—'}</td>
+            <th scope="row">Prepared by</th>
+            <td>{voucher.preparedBy || '—'}</td>
+          </tr>
+          <tr>
+            <th scope="row">Description</th>
+            <td>{voucher.description || '—'}</td>
+            <th scope="row">Supporting docs</th>
+            <td>{voucher.supportingDocuments ?? voucher.attachments.length}</td>
+          </tr>
+          <tr>
+            <th scope="row">Currency</th>
+            <td>{currency}</td>
+            <th scope="row">Amount</th>
+            <td className="sms-pv-detail-amount">{formatMoney(voucher.amount, currency)}</td>
+          </tr>
+          <tr>
+            <th scope="row">Status</th>
+            <td>
+              <span className="sms-po-pill">{voucher.status || '—'}</span>
+            </td>
+            <th scope="row">Purpose</th>
+            <td>{voucher.purpose || '—'}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table className="sms-pv-detail-table sms-pv-detail-table--lines">
+        <thead>
+          <tr>
+            <th>Payment type</th>
+            <th>Budget type</th>
+            <th>Name</th>
+            <th className="sms-pv-detail-num">Amount</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="sms-pv-detail-empty">
+                No line items on this voucher
+              </td>
+            </tr>
+          ) : (
+            items.map((item) => (
+              <tr key={item.id || `${item.name}-${item.amount}`}>
+                <td>{item.paymentType || '—'}</td>
+                <td>{item.budgetType || '—'}</td>
+                <td>{item.name || '—'}</td>
+                <td className="sms-pv-detail-num">{formatMoney(item.amount, currency)}</td>
+                <td>{item.description || '—'}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      {voucher.viewUrl ? (
+        <div className="sms-pv-details-foot">
+          <a
+            href={voucher.viewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sms-pv-group-open"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Full voucher page
+          </a>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function VoucherPreviewModal({
+  voucher,
+  onClose,
+}: {
+  voucher: LinkedPaymentVoucher;
+  onClose: () => void;
+}) {
+  const title = voucher.voucherNo || `PV #${voucher.id}`;
+  return (
+    <div
+      className="sms-doc-preview-overlay"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="sms-doc-preview-panel sms-doc-preview-panel--voucher"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        <div className="sms-doc-preview-head">
+          <div className="sms-doc-preview-title">{title}</div>
+          <button type="button" className="sms-doc-preview-close" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <div className="sms-doc-preview-body sms-doc-preview-body--voucher">
+          <VoucherDetailsBody voucher={voucher} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface LinkedDocumentsPanelProps {
   linkedVouchers: LinkedPaymentVoucher[];
   poAttachments: PurchaseOrderAttachment[];
@@ -161,6 +285,7 @@ interface LinkedDocumentsPanelProps {
 
 export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: LinkedDocumentsPanelProps) {
   const [preview, setPreview] = useState<{ title: string; url: string; isImage: boolean } | null>(null);
+  const [openVoucher, setOpenVoucher] = useState<LinkedPaymentVoucher | null>(null);
 
   if (linkedVouchers.length === 0 && poAttachments.length === 0) {
     return null;
@@ -195,17 +320,14 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
                         <div className="sms-pv-group-no">{voucher.voucherNo || `PV #${voucher.id}`}</div>
                         {meta ? <div className="sms-pv-group-meta">{meta}</div> : null}
                       </div>
-                      {voucher.viewUrl ? (
-                        <a
-                          href={voucher.viewUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="sms-pv-group-open"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Open voucher
-                        </a>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="sms-pv-group-open"
+                        onClick={() => setOpenVoucher(voucher)}
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Open voucher
+                      </button>
                     </div>
                   </header>
 
@@ -294,6 +416,10 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
           isImage={preview.isImage}
           onClose={() => setPreview(null)}
         />
+      )}
+
+      {openVoucher && (
+        <VoucherPreviewModal voucher={openVoucher} onClose={() => setOpenVoucher(null)} />
       )}
     </div>
   );

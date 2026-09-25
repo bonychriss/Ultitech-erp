@@ -1184,11 +1184,10 @@ function sms_fetch_po_linked_vouchers(PDO $pdo, array $po, int $poId): array
     $select = 'id, voucher_no, payee_name, status, total_amount';
     try {
         $pvCols = $voucherPdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-        if (in_array('currency', $pvCols, true)) {
-            $select .= ', currency';
-        }
-        if (in_array('swift_document', $pvCols, true)) {
-            $select .= ', swift_document';
+        foreach (['currency', 'swift_document', 'description', 'date_created', 'purpose', 'prepared_by', 'supporting_documents'] as $col) {
+            if (in_array($col, $pvCols, true)) {
+                $select .= ', ' . $col;
+            }
         }
     } catch (Throwable $e) {
         $pvCols = [];
@@ -1204,6 +1203,7 @@ function sms_fetch_po_linked_vouchers(PDO $pdo, array $po, int $poId): array
     }
 
     $hasAttachmentsTable = tableExists('voucher_attachments', $voucherPdo);
+    $hasItemsTable = tableExists('voucher_items', $voucherPdo);
     $linked = [];
 
     foreach ($rows as $row) {
@@ -1262,6 +1262,28 @@ function sms_fetch_po_linked_vouchers(PDO $pdo, array $po, int $poId): array
             }
         }
 
+        $items = [];
+        if ($hasItemsTable) {
+            try {
+                $itemStmt = $voucherPdo->prepare(
+                    'SELECT id, payment_type, budget_type, name, amount, description
+                     FROM voucher_items WHERE voucher_id = ? ORDER BY id ASC'
+                );
+                $itemStmt->execute([$vid]);
+                foreach ($itemStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $item) {
+                    $items[] = [
+                        'id' => (string) ($item['id'] ?? ''),
+                        'paymentType' => (string) ($item['payment_type'] ?? ''),
+                        'budgetType' => (string) ($item['budget_type'] ?? ''),
+                        'name' => (string) ($item['name'] ?? ''),
+                        'amount' => (float) ($item['amount'] ?? 0),
+                        'description' => (string) ($item['description'] ?? ''),
+                    ];
+                }
+            } catch (Throwable $e) {
+            }
+        }
+
         $linked[] = [
             'id' => (string) $vid,
             'voucherNo' => (string) ($row['voucher_no'] ?? ('PV #' . $vid)),
@@ -1269,7 +1291,13 @@ function sms_fetch_po_linked_vouchers(PDO $pdo, array $po, int $poId): array
             'status' => (string) ($row['status'] ?? ''),
             'amount' => (float) ($row['total_amount'] ?? 0),
             'currency' => (string) ($row['currency'] ?? 'TZS'),
+            'description' => (string) ($row['description'] ?? ''),
+            'dateCreated' => (string) ($row['date_created'] ?? ''),
+            'purpose' => (string) ($row['purpose'] ?? ''),
+            'preparedBy' => (string) ($row['prepared_by'] ?? ''),
+            'supportingDocuments' => (int) ($row['supporting_documents'] ?? count($attachments)),
             'viewUrl' => sms_voucher_view_url($vid),
+            'items' => $items,
             'attachments' => $attachments,
         ];
     }

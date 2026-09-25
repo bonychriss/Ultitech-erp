@@ -294,16 +294,6 @@ export default function PurchaseOrderReceive({
     }
   };
 
-  const fillAllRemaining = () => {
-    const next: Record<string, string> = {};
-    for (const line of lines) {
-      if (line.qtyRemaining > 0) {
-        next[line.lineId] = String(line.qtyRemaining);
-      }
-    }
-    setReceiveQty(next);
-  };
-
   const clearSelection = () => {
     setSelectedKey('');
     setSelectedOrder(null);
@@ -505,15 +495,6 @@ export default function PurchaseOrderReceive({
                       </span>
                       Line items delivered
                     </span>
-                    <div className="sms-po-lines-toolbar-actions">
-                      <button
-                        type="button"
-                        onClick={fillAllRemaining}
-                        className="sms-desk-btn sms-desk-btn-secondary sms-desk-btn-sm"
-                      >
-                        Fill all remaining
-                      </button>
-                    </div>
                   </div>
 
                   <div className="sms-table-wrap sms-incoming-lines">

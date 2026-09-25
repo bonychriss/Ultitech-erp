@@ -15534,6 +15534,181 @@ function markNotificationRead($id)
 }
 
 /**
+ * Per-user soft dismissals so shared core notifications are not deleted for everyone.
+ */
+function ensureUserNotificationDismissalsTable(): void
+{
+    global $pdo;
+    static $ensured = false;
+    if ($ensured || !($pdo instanceof PDO)) {
+        return;
+    }
+    try {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS user_notification_dismissals (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                source VARCHAR(16) NOT NULL,
+                notification_id INT NOT NULL,
+                dismissed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_user_src_notif (user_id, source, notification_id),
+                KEY idx_user_dismissals (user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
+        $ensured = true;
+    } catch (Throwable $e) {
+        error_log('ensureUserNotificationDismissalsTable: ' . $e->getMessage());
+    }
+}
+
+/**
+ * @return array{core:array<int,true>,system:array<int,true>}
+ */
+function getDismissedNotificationIdMaps(int $userId): array
+{
+    global $pdo;
+    $maps = ['core' => [], 'system' => []];
+    if ($userId <= 0 || !($pdo instanceof PDO)) {
+        return $maps;
+    }
+    ensureUserNotificationDismissalsTable();
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT source, notification_id FROM user_notification_dismissals WHERE user_id = ?'
+        );
+        $stmt->execute([$userId]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $src = strtolower(trim((string) ($row['source'] ?? '')));
+            if ($src !== 'core' && $src !== 'system') {
+                continue;
+            }
+            $nid = (int) ($row['notification_id'] ?? 0);
+            if ($nid > 0) {
+                $maps[$src][$nid] = true;
+            }
+        }
+    } catch (Throwable $e) {
+        /* ignore */
+    }
+
+    return $maps;
+}
+
+function dismissNotificationForCurrentUser(string $compositeId): bool
+{
+    global $pdo;
+    if (!isLoggedIn() || !($pdo instanceof PDO)) {
+        return false;
+    }
+    $raw = trim($compositeId);
+    $source = '';
+    $id = 0;
+    if (preg_match('/^s(\d+)$/i', $raw, $m)) {
+        $source = 'system';
+        $id = (int) $m[1];
+    } elseif (preg_match('/^c(\d+)$/i', $raw, $m)) {
+        $source = 'core';
+        $id = (int) $m[1];
+    } elseif (ctype_digit($raw)) {
+        $source = 'system';
+        $id = (int) $raw;
+    }
+    if ($source === '' || $id <= 0) {
+        return false;
+    }
+
+    $uid = (int) ($_SESSION['user_id'] ?? 0);
+    if ($uid <= 0) {
+        return false;
+    }
+
+    // Mark read as part of dismiss so badges clear.
+    if ($source === 'system') {
+        markNotificationRead($id);
+    } else {
+        markCoreNotificationRead($id);
+    }
+
+    ensureUserNotificationDismissalsTable();
+    try {
+        $stmt = $pdo->prepare(
+            'INSERT INTO user_notification_dismissals (user_id, source, notification_id)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE dismissed_at = CURRENT_TIMESTAMP'
+        );
+        $stmt->execute([$uid, $source, $id]);
+
+        return true;
+    } catch (Throwable $e) {
+        error_log('dismissNotificationForCurrentUser: ' . $e->getMessage());
+
+        return false;
+    }
+}
+
+/**
+ * Dismiss all currently read notifications for the logged-in user (centre + header).
+ */
+function clearReadNotificationsForCurrentUser(): int
+{
+    if (!isLoggedIn()) {
+        return 0;
+    }
+    $items = function_exists('getNotificationCentreFeedPaged')
+        ? getNotificationCentreFeedPaged(200, 0, false)
+        : [];
+    $cleared = 0;
+    foreach ($items as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        if (!empty($row['is_read']) && (int) $row['is_read'] === 1) {
+            $src = strtolower(trim((string) ($row['src'] ?? $row['source'] ?? 'core')));
+            $id = (int) ($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $composite = ($src === 'system' ? 's' : 'c') . $id;
+            if (dismissNotificationForCurrentUser($composite)) {
+                $cleared++;
+            }
+        }
+    }
+
+    return $cleared;
+}
+
+/**
+ * @template T of array<string,mixed>
+ * @param list<T> $rows
+ * @param 'core'|'system' $source
+ * @return list<T>
+ */
+function filterOutDismissedNotifications(array $rows, string $source, ?int $userId = null): array
+{
+    $uid = $userId ?? (int) ($_SESSION['user_id'] ?? 0);
+    if ($uid <= 0 || $rows === []) {
+        return $rows;
+    }
+    $maps = getDismissedNotificationIdMaps($uid);
+    $src = $source === 'system' ? 'system' : 'core';
+    $dismissed = $maps[$src] ?? [];
+    if ($dismissed === []) {
+        return $rows;
+    }
+    $out = [];
+    foreach ($rows as $row) {
+        $id = (int) ($row['id'] ?? 0);
+        if ($id > 0 && isset($dismissed[$id])) {
+            continue;
+        }
+        $out[] = $row;
+    }
+
+    return $out;
+}
+
+/**
  * Unread warehouse→procurement PO verify reminders for popup on select-module / stock.
  *
  * @return list<array{id:int,title:string,message:string,link:?string,type:string}>

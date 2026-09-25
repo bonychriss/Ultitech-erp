@@ -6,6 +6,7 @@ namespace App\Domains\Notifications;
 
 /**
  * Notifications centre React shell (Vite dist under notifications-ui/frontend).
+ * Page chrome matches create-voucher (slate canvas, Inter, header padding).
  */
 final class NotificationsShell
 {
@@ -54,21 +55,22 @@ final class NotificationsShell
         }
 
         $headMarkup = $this->commonHeadExtras()
-            . '<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">' . "\n"
+            . '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">' . "\n"
+            . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' . "\n"
             . '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n"
             . $this->chromeCss() . "\n"
             . '<script>window.__NOTIFICATIONS_CFG__ = ' . $bootJson . ';</script>';
 
         return [
             'pageTitle' => 'Notifications',
-            'bodyClass' => 'page-products-desk page-notifications-react page-notifications-wide page-erp-laravel has-mobile-footer',
+            'bodyClass' => 'page-notifications-react page-notifications-wide page-erp-laravel',
             'headMarkup' => $headMarkup,
             'footerScripts' => '<script type="module" crossorigin src="'
                 . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8')
                 . '"></script>',
-            'employeeHeaderTitle' => null,
+            'employeeHeaderTitle' => '',
             'hideHeaderCompanyBranding' => true,
-            'employeeHeaderExtraClass' => 'employee-header--products-desk',
+            'employeeHeaderExtraClass' => 'employee-header--notifications',
             'mainRootClass' => 'nc-react-root',
         ];
     }
@@ -76,7 +78,7 @@ final class NotificationsShell
     private function commonHeadExtras(): string
     {
         $parts = [
-            '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">',
+            '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">',
         ];
         if (function_exists('app_url')) {
             $erpStylePath = rtrim((string) config('erp.app_root'), '\\/') . '/assets/css/style.css';
@@ -94,6 +96,10 @@ final class NotificationsShell
     {
         return <<<'CSS'
 <style>
+:root { --bg-body: #f1f5f9; }
+body.page-notifications-react.dashboard { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
+html, body.page-notifications-react.dashboard, .main-content, .layout-main-wrapper { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+html::-webkit-scrollbar, body.page-notifications-react.dashboard::-webkit-scrollbar, .main-content::-webkit-scrollbar, .layout-main-wrapper::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
 body.page-notifications-react.dashboard .layout-main-wrapper { align-items: stretch; }
 body.page-notifications-react.dashboard .layout-main-wrapper > .flex-grow-1 {
     min-height: 0;
@@ -104,30 +110,33 @@ body.page-notifications-react,
 body.page-notifications-react.dashboard,
 body.page-notifications-react .layout-main-wrapper,
 body.page-notifications-react .layout-main-wrapper > .flex-grow-1 {
-    background: #f3f4f6 !important;
+    background: #f1f5f9 !important;
 }
-body.page-notifications-react .employee-header.employee-header--products-desk {
-    background: #f3f4f6 !important;
+body.page-notifications-react .header,
+body.page-notifications-react .employee-header,
+body.page-notifications-react .employee-header.employee-header--notifications {
+    background: #f1f5f9 !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 1.25rem !important;
     margin-bottom: 0;
     height: auto !important;
     min-height: 0;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 1020 !important;
 }
-body.page-notifications-react .employee-header--products-desk::after { display: none !important; }
+body.page-notifications-react .employee-header--notifications .header-content {
+    background: transparent !important;
+    padding: 0.5rem 0 !important;
+}
+body.page-notifications-react .employee-header--notifications::after { display: none !important; }
 main.main-content.nc-react-root {
     flex: 1 1 auto;
     width: 100% !important;
     max-width: none !important;
     margin: 0 !important;
-    padding: 0 !important;
-    overflow: auto !important;
+    padding: 0 1.25rem 2rem !important;
     box-sizing: border-box;
-    background: transparent !important;
+    background: #f1f5f9 !important;
+    overflow: auto !important;
 }
 main.main-content.nc-react-root #root {
     width: 100%;
@@ -135,19 +144,15 @@ main.main-content.nc-react-root #root {
     margin: 0;
     min-height: 320px;
 }
-@media (max-width: 991.98px) {
-    body.page-notifications-react .employee-header.employee-header--products-desk {
-        background: transparent !important;
-    }
+@media (max-width: 767.98px) {
+    main.main-content.nc-react-root { padding: 0 0.75rem 1.5rem !important; }
 }
 html[data-theme="dark"] body.page-notifications-react,
 html[data-theme="dark"] body.page-notifications-react.dashboard,
 html[data-theme="dark"] body.page-notifications-react .layout-main-wrapper,
 html[data-theme="dark"] body.page-notifications-react .layout-main-wrapper > .flex-grow-1,
-html[data-theme="dark"] body.page-notifications-react main.main-content.nc-react-root {
-    background: #0f172a !important;
-}
-html[data-theme="dark"] body.page-notifications-react .employee-header.employee-header--products-desk {
+html[data-theme="dark"] body.page-notifications-react .employee-header,
+html[data-theme="dark"] main.main-content.nc-react-root {
     background: #0f172a !important;
 }
 </style>

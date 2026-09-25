@@ -1,47 +1,99 @@
 import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
+  Banknote,
   Bell,
+  Boxes,
   Check,
+  ClipboardList,
+  Clock,
   FileText,
+  Gauge,
+  LineChart,
   Mail,
   Package,
+  Receipt,
   Settings,
-  ArrowLeftRight,
+  Shield,
+  Sparkles,
+  Truck,
+  Users,
   Wallet,
+  Wrench,
 } from 'lucide-react'
 
 function getCfg() {
   return window.__NOTIFICATIONS_CFG__ || {}
 }
 
-const TONE_CLASS = {
-  blue: 'nc-tone-blue',
-  green: 'nc-tone-green',
-  teal: 'nc-tone-teal',
-  sky: 'nc-tone-sky',
-  amber: 'nc-tone-amber',
-  rose: 'nc-tone-rose',
-  slate: 'nc-tone-slate',
+const ICON_COLORS = {
+  voucher: { bg: '#fff7ed', fg: '#ea580c' },
+  payroll: { bg: '#eff6ff', fg: '#3b82f6' },
+  sales: { bg: '#f0fdfa', fg: '#14b8a6' },
+  stock: { bg: '#f0f9ff', fg: '#0ea5e9' },
+  deliveries: { bg: '#eff6ff', fg: '#3b82f6' },
+  driver_kpi: { bg: '#f0fdfa', fg: '#14b8a6' },
+  attendance: { bg: '#f0fdf4', fg: '#22c55e' },
+  letter: { bg: '#f0f9ff', fg: '#38bdf8' },
+  finance: { bg: '#f0fdf4', fg: '#10b981' },
+  suggest: { bg: '#fffbeb', fg: '#f59e0b' },
+  admin: { bg: '#f8fafc', fg: '#64748b' },
+  tasks: { bg: '#eef2ff', fg: '#6366f1' },
+  system: { bg: '#f5f3ff', fg: '#8b5cf6' },
+  general: { bg: '#f8fafc', fg: '#64748b' },
 }
 
-function IconFor({ icon, tone }) {
-  const props = { size: 18, strokeWidth: 2, 'aria-hidden': true }
+function iconStyle(item) {
+  if (item.icon === 'check') return { background: '#f0fdf4', color: '#22c55e' }
+  if (item.icon === 'alert') return { background: '#fff1f2', color: '#f43f5e' }
+  const c = ICON_COLORS[item.module] || ICON_COLORS.general
+  return { background: c.bg, color: c.fg }
+}
+
+function IconFor({ icon, color }) {
+  const props = {
+    size: 18,
+    strokeWidth: 1.75,
+    'aria-hidden': true,
+    color: color || 'currentColor',
+  }
   switch (icon) {
-    case 'check':
-      return <Check {...props} />
-    case 'file':
-      return <FileText {...props} />
-    case 'money':
+    case 'voucher':
+      return <Receipt {...props} />
+    case 'payroll':
       return <Wallet {...props} />
-    case 'swap':
-      return <ArrowLeftRight {...props} />
-    case 'alert':
-      return <AlertTriangle {...props} />
-    case 'mail':
-      return <Mail {...props} />
+    case 'sales':
+      return <LineChart {...props} />
+    case 'stock':
+      return <Boxes {...props} />
     case 'package':
       return <Package {...props} />
+    case 'truck':
+      return <Truck {...props} />
+    case 'kpi':
+      return <Gauge {...props} />
+    case 'clock':
+      return <Clock {...props} />
+    case 'mail':
+      return <Mail {...props} />
+    case 'money':
+      return <Banknote {...props} />
+    case 'spark':
+      return <Sparkles {...props} />
+    case 'shield':
+      return <Shield {...props} />
+    case 'tasks':
+      return <ClipboardList {...props} />
+    case 'system':
+      return <Wrench {...props} />
+    case 'file':
+      return <FileText {...props} />
+    case 'users':
+      return <Users {...props} />
+    case 'check':
+      return <Check {...props} />
+    case 'alert':
+      return <AlertTriangle {...props} />
     default:
       return <Bell {...props} />
   }
@@ -124,82 +176,99 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="nc-page nc-page--wide">
-      <div className="nc-panel nc-panel--wide">
-        <header className="nc-page-header nc-page-header--wide">
-          <h1 className="nc-page-title">Notifications</h1>
-          <div className="nc-page-header-actions">
+    <div className="ncr-shell">
+      <div className="ncr-main">
+        <header className="ncr-topbar">
+          <h1 className="ncr-title">Notifications</h1>
+          <div className="ncr-topbar-actions">
             {countUnread > 0 ? (
               <button
                 type="button"
-                className="nc-mark-all-btn"
+                className="ncr-mark-all"
                 disabled={marking}
                 onClick={onMarkAll}
               >
                 {marking ? 'Marking…' : 'Mark all as read'}
               </button>
             ) : (
-              <span className="nc-mark-all-btn is-disabled">Mark all as read</span>
+              <span className="ncr-mark-all is-disabled">Mark all as read</span>
             )}
             {cfg.settingsUrl ? (
               <a
                 href={cfg.settingsUrl}
-                className="nc-settings-btn"
+                className="ncr-settings"
                 title="Settings"
                 aria-label="Settings"
               >
-                <Settings size={18} strokeWidth={2} aria-hidden />
+                <Settings size={18} strokeWidth={1.75} aria-hidden />
               </a>
             ) : null}
           </div>
         </header>
 
-        <div className="nc-list nc-list--wide">
+        <div className="ncr-list">
           {totalItems === 0 ? (
-            <div className="nc-empty">
-              <div className="nc-empty-icon" aria-hidden>
+            <div className="ncr-empty">
+              <div className="ncr-empty-icon" aria-hidden>
                 <Bell size={28} strokeWidth={1.75} />
               </div>
-              <p className="nc-empty-title">You're all caught up</p>
-              <p className="nc-empty-sub">No notifications to show right now.</p>
+              <p className="ncr-empty-title">You're all caught up</p>
+              <p className="ncr-empty-sub">No notifications to show right now.</p>
             </div>
           ) : (
             SECTION_META.map(({ key, label }) => {
               const items = sections[key] || []
               if (!items.length) return null
               return (
-                <section key={key} className="nc-section" aria-label={label}>
-                  <h2 className="nc-section-heading">{label}</h2>
-                  <div className="nc-section-list">
+                <section key={key} className="ncr-section" aria-label={label}>
+                  <h2 className="ncr-section-heading">{label}</h2>
+                  <div className="ncr-section-list">
                     {items.map((item) => {
-                      const tone = TONE_CLASS[item.tone] || TONE_CLASS.slate
+                      const mod = String(item.module || 'general').replace(/[^a-z0-9_]/gi, '')
+                      const statusClass =
+                        item.icon === 'check'
+                          ? 'nc-status-check'
+                          : item.icon === 'alert'
+                            ? 'nc-status-alert'
+                            : ''
                       const className = [
-                        'nc-card',
-                        tone,
+                        'ncr-row',
                         item.isUnread ? 'is-unread' : '',
                       ]
                         .filter(Boolean)
                         .join(' ')
+                      const iconClass = [
+                        'nc-r-icon',
+                        mod ? `nc-mod-${mod}` : '',
+                        statusClass,
+                      ]
+                        .filter(Boolean)
+                        .join(' ')
+                      const colors = iconStyle(item)
 
                       const body = (
                         <>
-                          <span className={`nc-card-icon ${tone}`} aria-hidden>
-                            <IconFor icon={item.icon} tone={item.tone} />
+                          <span
+                            className={iconClass}
+                            style={colors}
+                            aria-hidden
+                          >
+                            <IconFor icon={item.icon} color={colors.color} />
                           </span>
-                          <div className="nc-card-body">
-                            <div className="nc-card-title-row">
-                              <h3 className="nc-card-title">{item.title}</h3>
-                              <div className="nc-card-meta-inline">
+                          <div className="ncr-row-body">
+                            <div className="ncr-row-title-row">
+                              <h3 className="ncr-row-title">{item.title}</h3>
+                              <div className="ncr-row-meta">
                                 {item.timeLabel ? (
-                                  <time className="nc-card-time">{item.timeLabel}</time>
+                                  <time className="ncr-row-time">{item.timeLabel}</time>
                                 ) : null}
                                 {item.isUnread ? (
-                                  <span className="nc-card-unread-dot" aria-label="Unread" />
+                                  <span className="ncr-unread-dot" aria-label="Unread" />
                                 ) : null}
                               </div>
                             </div>
                             {item.message ? (
-                              <p className="nc-card-message">{item.message}</p>
+                              <p className="ncr-row-message">{item.message}</p>
                             ) : null}
                           </div>
                         </>

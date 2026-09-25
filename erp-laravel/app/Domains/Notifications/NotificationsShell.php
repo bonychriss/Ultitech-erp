@@ -48,7 +48,11 @@ final class NotificationsShell
 
         $bootJson = json_encode(
             $windowCfg,
-            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)
+            JSON_UNESCAPED_SLASHES
+            | JSON_UNESCAPED_UNICODE
+            | JSON_HEX_TAG
+            | JSON_HEX_AMP
+            | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)
         );
         if ($bootJson === false) {
             $bootJson = '{"sections":{"today":[],"yesterday":[],"earlier":[]},"countUnread":0}';

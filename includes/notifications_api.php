@@ -36,6 +36,19 @@ if ($method === 'POST') {
         }
         echo json_encode(['ok' => true]);
         exit;
+    } elseif ($action === 'dismiss') {
+        $rawId = isset($_POST['id']) ? trim((string) $_POST['id']) : '';
+        if ($rawId === '' || !dismissNotificationForCurrentUser($rawId)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'invalid id']);
+            exit;
+        }
+        echo json_encode(['ok' => true]);
+        exit;
+    } elseif ($action === 'clear_read') {
+        $cleared = clearReadNotificationsForCurrentUser();
+        echo json_encode(['ok' => true, 'cleared' => $cleared]);
+        exit;
     }
     http_response_code(400);
     echo json_encode(['error' => 'unknown action']);

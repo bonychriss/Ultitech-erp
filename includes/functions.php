@@ -9554,7 +9554,7 @@ function nc_notification_href(array $n): string
  *
  * @return list<array<string,mixed>>
  */
-function getNotificationCentreFeedPaged(int $limit = 20, int $offset = 0): array
+function getNotificationCentreFeedPaged(int $limit = 20, int $offset = 0, bool $includeDismissed = false): array
 {
     global $pdo;
     if (!isLoggedIn()) {
@@ -9604,7 +9604,24 @@ function getNotificationCentreFeedPaged(int $limit = 20, int $offset = 0): array
         $stmt->execute([$uid, $uid]);
     }
 
-    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    if ($includeDismissed || $rows === []) {
+        return $rows;
+    }
+
+    $maps = getDismissedNotificationIdMaps($uid);
+    $out = [];
+    foreach ($rows as $row) {
+        $src = strtolower(trim((string) ($row['src'] ?? 'core')));
+        $src = $src === 'system' ? 'system' : 'core';
+        $id = (int) ($row['id'] ?? 0);
+        if ($id > 0 && isset($maps[$src][$id])) {
+            continue;
+        }
+        $out[] = $row;
+    }
+
+    return $out;
 }
 
 function getUnreadCountForCurrentUser()
@@ -9790,6 +9807,22 @@ function getHeaderNotificationsMerged(int $limit = 12, bool $includeCoreVoucherF
         return strtotime($b['created_at'] ?: 'now') <=> strtotime($a['created_at'] ?: 'now');
     });
 
+    $uid = (int) ($_SESSION['user_id'] ?? 0);
+    if ($uid > 0) {
+        $maps = getDismissedNotificationIdMaps($uid);
+        $filtered = [];
+        foreach ($merged as $row) {
+            $src = strtolower(trim((string) ($row['source'] ?? 'core')));
+            $src = $src === 'system' ? 'system' : 'core';
+            $id = (int) ($row['id'] ?? 0);
+            if ($id > 0 && isset($maps[$src][$id])) {
+                continue;
+            }
+            $filtered[] = $row;
+        }
+        $merged = $filtered;
+    }
+
     return array_slice($merged, 0, $limit);
 }
 
@@ -9807,12 +9840,12 @@ function getUnreadCoreNotificationsForPoll(int $userId, int $limit = 15): array
         $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, created_at FROM notifications WHERE audience IN ('admin','all') AND is_read = 0 ORDER BY created_at DESC LIMIT " . (int) $limit);
         $stmt->execute();
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        return filterOutDismissedNotifications($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [], 'core', $userId);
     }
     $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, created_at FROM notifications WHERE is_read = 0 AND audience IN ('user','all') AND (user_id = ? OR audience='all') ORDER BY created_at DESC LIMIT " . (int) $limit);
     $stmt->execute([$userId]);
 
-    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    return filterOutDismissedNotifications($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [], 'core', $userId);
 }
 
 function markCoreNotificationRead(int $id): bool
@@ -15519,7 +15552,7 @@ function getUnreadNotifications($userId)
     ensureNotificationsTable();
     $stmt = $pdo->prepare("SELECT * FROM system_notifications WHERE user_id = ? AND is_read = 0 ORDER BY created_at DESC");
     $stmt->execute([$userId]);
-    return $stmt->fetchAll();
+    return filterOutDismissedNotifications($stmt->fetchAll() ?: [], 'system', (int) $userId);
 }
 
 function markNotificationRead($id)

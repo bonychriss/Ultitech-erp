@@ -20,6 +20,7 @@ import {
   Users,
   Wallet,
   Wrench,
+  Trash2,
 } from 'lucide-react'
 
 function getCfg() {
@@ -99,14 +100,16 @@ function IconFor({ icon, color }) {
   }
 }
 
-async function markAllRead(apiUrl) {
-  const body = new URLSearchParams({ action: 'mark_all_read' })
-  await fetch(apiUrl, {
+async function postNotifAction(apiUrl, fields) {
+  const body = new URLSearchParams(fields)
+  const res = await fetch(apiUrl, {
     method: 'POST',
     body,
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
   })
+  if (!res.ok) throw new Error('request failed')
+  return res.json().catch(() => ({ ok: true }))
 }
 
 function markOneRead(apiUrl, id) {
@@ -118,6 +121,34 @@ function markOneRead(apiUrl, id) {
   }).catch(() => {})
 }
 
+function removeItemFromSections(sections, id) {
+  const next = {}
+  for (const key of Object.keys(sections)) {
+    next[key] = (sections[key] || []).filter((row) => row.id !== id)
+  }
+  return next
+}
+
+function countUnreadInSections(sections) {
+  let n = 0
+  for (const key of Object.keys(sections)) {
+    for (const row of sections[key] || []) {
+      if (row.isUnread) n += 1
+    }
+  }
+  return n
+}
+
+function countReadInSections(sections) {
+  let n = 0
+  for (const key of Object.keys(sections)) {
+    for (const row of sections[key] || []) {
+      if (!row.isUnread) n += 1
+    }
+  }
+  return n
+}
+
 const SECTION_META = [
   { key: 'today', label: 'Today' },
   { key: 'yesterday', label: 'Yesterday' },
@@ -126,10 +157,11 @@ const SECTION_META = [
 
 export default function NotificationsPage() {
   const cfg = getCfg()
+  const apiUrl = cfg.markAllApi || '/includes/notifications_api.php'
   const initialSections = cfg.sections || { today: [], yesterday: [], earlier: [] }
   const [sections, setSections] = useState(initialSections)
   const [countUnread, setCountUnread] = useState(Number(cfg.countUnread || 0))
-  const [marking, setMarking] = useState(false)
+  const [busy, setBusy] = useState(false)
 
   const totalItems = useMemo(() => {
     return (
@@ -139,11 +171,13 @@ export default function NotificationsPage() {
     )
   }, [sections])
 
+  const readCount = useMemo(() => countReadInSections(sections), [sections])
+
   const onMarkAll = async () => {
-    if (countUnread <= 0 || marking) return
-    setMarking(true)
+    if (countUnread <= 0 || busy) return
+    setBusy(true)
     try {
-      await markAllRead(cfg.markAllApi || '/includes/notifications_api.php')
+      await postNotifAction(apiUrl, { action: 'mark_all_read' })
       setSections((prev) => {
         const next = {}
         for (const key of Object.keys(prev)) {
@@ -155,7 +189,47 @@ export default function NotificationsPage() {
     } catch {
       /* ignore */
     } finally {
-      setMarking(false)
+      setBusy(false)
+    }
+  }
+
+  const onClearRead = async () => {
+    if (readCount <= 0 || busy) return
+    setBusy(true)
+    try {
+      await postNotifAction(apiUrl, { action: 'clear_read' })
+      setSections((prev) => {
+        const next = {}
+        for (const key of Object.keys(prev)) {
+          next[key] = (prev[key] || []).filter((item) => item.isUnread)
+        }
+        return next
+      })
+    } catch {
+      /* ignore */
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onDismiss = async (event, item) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (busy || !item?.id) return
+    setBusy(true)
+    const prevSections = sections
+    const nextSections = removeItemFromSections(sections, item.id)
+    setSections(nextSections)
+    if (item.isUnread) {
+      setCountUnread((n) => Math.max(0, n - 1))
+    }
+    try {
+      await postNotifAction(apiUrl, { action: 'dismiss', id: item.id })
+    } catch {
+      setSections(prevSections)
+      setCountUnread(countUnreadInSections(prevSections))
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -181,14 +255,24 @@ export default function NotificationsPage() {
         <header className="ncr-topbar">
           <h1 className="ncr-title">Notifications</h1>
           <div className="ncr-topbar-actions">
+            {readCount > 0 ? (
+              <button
+                type="button"
+                className="ncr-clear-read"
+                disabled={busy}
+                onClick={onClearRead}
+              >
+                Clear read
+              </button>
+            ) : null}
             {countUnread > 0 ? (
               <button
                 type="button"
                 className="ncr-mark-all"
-                disabled={marking}
+                disabled={busy}
                 onClick={onMarkAll}
               >
-                {marking ? 'Marking…' : 'Mark all as read'}
+                {busy ? 'Working...' : 'Mark all as read'}
               </button>
             ) : (
               <span className="ncr-mark-all is-disabled">Mark all as read</span>
@@ -246,54 +330,53 @@ export default function NotificationsPage() {
                         .join(' ')
                       const colors = iconStyle(item)
 
-                      const body = (
-                        <>
-                          <span
-                            className={iconClass}
-                            style={colors}
-                            aria-hidden
-                          >
-                            <IconFor icon={item.icon} color={colors.color} />
-                          </span>
-                          <div className="ncr-row-body">
-                            <div className="ncr-row-title-row">
-                              <h3 className="ncr-row-title">{item.title}</h3>
-                              <div className="ncr-row-meta">
-                                {item.timeLabel ? (
-                                  <time className="ncr-row-time">{item.timeLabel}</time>
-                                ) : null}
-                                {item.isUnread ? (
-                                  <span className="ncr-unread-dot" aria-label="Unread" />
-                                ) : null}
-                              </div>
-                            </div>
-                            {item.message ? (
-                              <p className="ncr-row-message">{item.message}</p>
-                            ) : null}
-                          </div>
-                        </>
-                      )
-
-                      if (item.href) {
-                        return (
-                          <a
-                            key={item.id}
-                            href={item.href}
-                            className={className}
-                            onClick={() => onItemActivate(item)}
-                          >
-                            {body}
-                          </a>
-                        )
+                      const openItem = () => {
+                        onItemActivate(item)
+                        if (item.href) {
+                          window.location.href = item.href
+                        }
                       }
 
                       return (
-                        <article
-                          key={item.id}
-                          className={className}
-                          onClick={() => onItemActivate(item)}
-                        >
-                          {body}
+                        <article key={item.id} className={className}>
+                          <button
+                            type="button"
+                            className="ncr-row-main"
+                            onClick={openItem}
+                          >
+                            <span
+                              className={iconClass}
+                              style={colors}
+                              aria-hidden
+                            >
+                              <IconFor icon={item.icon} color={colors.color} />
+                            </span>
+                            <div className="ncr-row-body">
+                              <div className="ncr-row-title-row">
+                                <h3 className="ncr-row-title">{item.title}</h3>
+                                <div className="ncr-row-meta">
+                                  {item.timeLabel ? (
+                                    <time className="ncr-row-time">{item.timeLabel}</time>
+                                  ) : null}
+                                  {item.isUnread ? (
+                                    <span className="ncr-unread-dot" aria-label="Unread" />
+                                  ) : null}
+                                </div>
+                              </div>
+                              {item.message ? (
+                                <p className="ncr-row-message">{item.message}</p>
+                              ) : null}
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            className="ncr-dismiss"
+                            title="Dismiss"
+                            aria-label="Dismiss notification"
+                            onClick={(e) => onDismiss(e, item)}
+                          >
+                            <Trash2 size={15} strokeWidth={1.75} aria-hidden />
+                          </button>
                         </article>
                       )
                     })}

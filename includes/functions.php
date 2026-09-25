@@ -10041,58 +10041,123 @@ function notifyCheckedByAssignee($voucher_id)
 }
 
 /**
+ * Resolve a display name for who created/prepared a payment voucher.
+ *
+ * @param array<string,mixed> $voucher
+ */
+function paymentVoucherNotificationCreatorName(array $voucher): string
+{
+    global $pdo;
+    foreach (['prepared_by', 'applicant'] as $field) {
+        $name = trim((string) ($voucher[$field] ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+    }
+    $createdBy = (int) ($voucher['created_by'] ?? 0);
+    if ($createdBy > 0 && $pdo instanceof PDO) {
+        try {
+            $hasName = columnExists('users', 'name');
+            $displayExpr = $hasName
+                ? "TRIM(COALESCE(NULLIF(TRIM(full_name), ''), NULLIF(TRIM(name), ''), username, ''))"
+                : "TRIM(COALESCE(NULLIF(TRIM(full_name), ''), username, ''))";
+            $st = $pdo->prepare("SELECT {$displayExpr} AS dn FROM users WHERE id = ? LIMIT 1");
+            $st->execute([$createdBy]);
+            $dn = trim((string) ($st->fetchColumn() ?: ''));
+            if ($dn !== '') {
+                return $dn;
+            }
+        } catch (Throwable $e) {
+            /* ignore */
+        }
+    }
+
+    return 'a colleague';
+}
+
+/**
  * Title/body for the person whose turn it is on a payment voucher.
  *
  * @param array{action?:string,role_label?:string} $turn
  * @return array{title:string,message:string,type:string}
  */
-function paymentVoucherTurnNotificationCopy(array $turn, string $voucherNo): array
+function paymentVoucherTurnNotificationCopy(array $turn, string $voucherNo, string $createdByName = ''): array
 {
     $voucherNo = trim($voucherNo) !== '' ? trim($voucherNo) : 'this voucher';
     $action = (string) ($turn['action'] ?? '');
     $role = trim((string) ($turn['role_label'] ?? 'your role'));
+    $creator = trim($createdByName) !== '' ? trim($createdByName) : 'a colleague';
 
     switch ($action) {
         case 'sign_applicant':
             return [
-                'title' => 'Sign payment voucher',
-                'message' => sprintf('Please open voucher %s and sign as Applicant.', $voucherNo),
+                'title' => 'Payment Voucher – Signature Required',
+                'message' => sprintf(
+                    'Payment voucher **%s** created by **%s** requires your signature as **Applicant**.',
+                    $voucherNo,
+                    $creator
+                ),
                 'type' => 'info',
             ];
         case 'sign_dept_manager':
             return [
-                'title' => 'Approve as Department Manager',
-                'message' => sprintf('Please open voucher %s and sign as Department Manager.', $voucherNo),
+                'title' => 'Payment Voucher – Approval Required',
+                'message' => sprintf(
+                    'Payment voucher **%s** created by **%s** requires your approval as **Department Manager**.',
+                    $voucherNo,
+                    $creator
+                ),
                 'type' => 'info',
             ];
         case 'sign_checked_by':
             return [
-                'title' => 'Check payment voucher',
-                'message' => sprintf('Please open voucher %s and sign as Checked By.', $voucherNo),
+                'title' => 'Payment Voucher – Check Required',
+                'message' => sprintf(
+                    'Payment voucher **%s** created by **%s** requires your review as **Checked By**.',
+                    $voucherNo,
+                    $creator
+                ),
                 'type' => 'info',
             ];
         case 'final_approve':
             return [
-                'title' => 'Final approval needed',
-                'message' => sprintf('Voucher %s is ready for final approval.', $voucherNo),
+                'title' => 'Payment Voucher – Final Approval',
+                'message' => sprintf(
+                    'Payment voucher **%s** created by **%s** is ready for **final approval**.',
+                    $voucherNo,
+                    $creator
+                ),
                 'type' => 'warning',
             ];
         case 'mark_paid':
             return [
-                'title' => 'Mark voucher as paid',
-                'message' => sprintf('Voucher %s is approved. Mark it as paid when payment is complete.', $voucherNo),
+                'title' => 'Payment Voucher – Mark as Paid',
+                'message' => sprintf(
+                    'Payment voucher **%s** created by **%s** is approved. Mark it as **paid** when payment is complete.',
+                    $voucherNo,
+                    $creator
+                ),
                 'type' => 'warning',
             ];
         case 'post':
             return [
-                'title' => 'Post payment voucher',
-                'message' => sprintf('Voucher %s is paid. Post it to finalize bookkeeping.', $voucherNo),
+                'title' => 'Payment Voucher – Post Required',
+                'message' => sprintf(
+                    'Payment voucher **%s** created by **%s** is paid. **Post** it to finalize bookkeeping.',
+                    $voucherNo,
+                    $creator
+                ),
                 'type' => 'warning',
             ];
         default:
             return [
-                'title' => 'Payment voucher action needed',
-                'message' => sprintf('Voucher %s needs your attention as %s.', $voucherNo, $role),
+                'title' => 'Payment Voucher – Action Needed',
+                'message' => sprintf(
+                    'Payment voucher **%s** created by **%s** needs your attention as **%s**.',
+                    $voucherNo,
+                    $creator,
+                    $role
+                ),
                 'type' => 'info',
             ];
     }
@@ -10135,21 +10200,34 @@ function notifyPaymentVoucherAssigneesOnCreate($voucher_id): void
     }
 
     $voucherNo = (string) ($v['voucher_no'] ?? '');
+    $creator = paymentVoucherNotificationCreatorName($v);
     $roles = [
         'applicant' => [
             'label' => 'Applicant',
-            'title' => 'Sign payment voucher',
-            'message' => sprintf('You are listed as Applicant on voucher %s. Sign it when it is your turn.', $voucherNo),
+            'title' => 'Payment Voucher – Signature Required',
+            'message' => sprintf(
+                'Payment voucher **%s** created by **%s** requires your signature as **Applicant**.',
+                $voucherNo,
+                $creator
+            ),
         ],
         'department_manager' => [
             'label' => 'Department Manager',
-            'title' => 'Approve as Department Manager',
-            'message' => sprintf('You are listed as Department Manager on voucher %s. Approve it when it is your turn.', $voucherNo),
+            'title' => 'Payment Voucher – Approval Required',
+            'message' => sprintf(
+                'Payment voucher **%s** created by **%s** requires your approval as **Department Manager**.',
+                $voucherNo,
+                $creator
+            ),
         ],
         'checked_by' => [
             'label' => 'Checked By',
-            'title' => 'Check payment voucher',
-            'message' => sprintf('You are listed as Checked By on voucher %s. Review and sign when it is your turn.', $voucherNo),
+            'title' => 'Payment Voucher – Check Required',
+            'message' => sprintf(
+                'Payment voucher **%s** created by **%s** requires your review as **Checked By**.',
+                $voucherNo,
+                $creator
+            ),
         ],
     ];
 
@@ -10189,10 +10267,10 @@ function isPaymentVoucherActionNotificationText(string $title, string $message =
     if ($blob === '') {
         return false;
     }
-    if (preg_match('/\b(sign payment voucher|sign as applicant|sign as department|sign as checked|approve as department|check payment voucher|voucher requires checking|final approval needed|mark voucher as paid|mark as paid|post payment voucher|post voucher|you are listed as)\b/', $blob)) {
+    if (preg_match('/\b(sign payment voucher|sign as applicant|sign as department|sign as checked|approve as department|check payment voucher|voucher requires checking|final approval needed|mark voucher as paid|mark as paid|post payment voucher|post voucher|you are listed as|payment voucher –|signature required|approval required|check required)\b/', $blob)) {
         return true;
     }
-    if (preg_match('/\b(please open voucher|waiting for you to sign|ready for your signature|needs your (signature|approval)|sign as)\b/', $blob)) {
+    if (preg_match('/\b(please open voucher|waiting for you to sign|ready for your signature|needs your (signature|approval)|sign as|requires your (signature|approval|review))\b/', $blob)) {
         return true;
     }
 
@@ -10412,7 +10490,11 @@ function notifyPaymentVoucherCurrentTurn($voucher_id): void
         return;
     }
 
-    $copy = paymentVoucherTurnNotificationCopy($turn, (string) ($voucher['voucher_no'] ?? ''));
+    $copy = paymentVoucherTurnNotificationCopy(
+        $turn,
+        (string) ($voucher['voucher_no'] ?? ''),
+        paymentVoucherNotificationCreatorName($voucher)
+    );
     $action = (string) ($turn['action'] ?? '');
 
     try {

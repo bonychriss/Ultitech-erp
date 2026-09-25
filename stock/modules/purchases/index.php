@@ -287,7 +287,7 @@ $poStatusClass = static function (string $status): string {
         'Approved' => 'po-desk-badge--approved',
         'Supplier Responded' => 'po-desk-badge--pending',
         'Negotiation Requested' => 'po-desk-badge--pending',
-        'Awaiting Warehouse' => 'po-desk-badge--pending',
+        'Awaiting Warehouse' => 'po-desk-badge--awaiting',
         'Received' => 'po-desk-badge--received',
         'Cancelled' => 'po-desk-badge--rejected',
     ];

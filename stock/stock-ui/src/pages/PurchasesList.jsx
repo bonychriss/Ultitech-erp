@@ -71,8 +71,11 @@ function formatDate(d) {
 }
 
 function StatusBadge({ status, label, className }) {
+  const tone = String(className || '')
+    .replace('po-desk-badge--', 'po-desk-status--')
+    .trim();
   return (
-    <span className={`po-desk-badge ${className || 'po-desk-badge--draft'}`} title={status || label || ''}>
+    <span className={`po-desk-status ${tone || 'po-desk-status--draft'}`} title={status || label || ''}>
       {label || status || '—'}
     </span>
   );

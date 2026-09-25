@@ -118,7 +118,11 @@
 }
 
 .po-desk-kpi-money {
-  font-size: 1.05rem !important;
+  font-size: 0.95rem !important;
+}
+
+.po-desk .prod-desk-kpi-grid {
+  gap: 0.65rem;
 }
 
 .po-desk .prod-desk-search-field {
@@ -141,17 +145,38 @@
 .po-desk .prod-desk-kpi-card,
 .po-desk .prod-desk-kpi-card.po-desk-kpi-card--clickable,
 .po-desk button.prod-desk-kpi-card {
-  border-radius: 18px !important;
+  border-radius: 14px !important;
   background: #fff !important;
   border: 1px solid #e2e8f0 !important;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   overflow: hidden;
   appearance: none;
   -webkit-appearance: none;
+  padding: 0.55rem 0.75rem !important;
+  gap: 0.55rem !important;
+  min-height: 0;
 }
 
 .po-desk .prod-desk-kpi-icon {
-  border-radius: 14px;
+  width: 2rem !important;
+  height: 2rem !important;
+  border-radius: 10px !important;
+}
+
+.po-desk .prod-desk-kpi-icon svg {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+}
+
+.po-desk .prod-desk-kpi-label {
+  font-size: 0.65rem !important;
+  line-height: 1.15 !important;
+  margin-bottom: 0.05rem !important;
+}
+
+.po-desk .prod-desk-kpi-value {
+  font-size: 1.05rem !important;
+  line-height: 1.2 !important;
 }
 
 .po-desk .prod-desk-kpi-card.po-desk-kpi-card--clickable {
@@ -313,6 +338,42 @@
 .po-desk-badge--import {
   background: #eef2ff;
   color: #4338ca;
+}
+
+/* Status: font color only (no pill background) */
+.po-desk-status {
+  display: inline;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.po-desk-status--approved {
+  color: #15803d;
+}
+
+.po-desk-status--pending {
+  color: #c2410c;
+}
+
+.po-desk-status--received {
+  color: #1d4ed8;
+}
+
+.po-desk-status--awaiting {
+  color: #b45309;
+}
+
+.po-desk-status--rejected {
+  color: #b91c1c;
+}
+
+.po-desk-status--draft {
+  color: #64748b;
 }
 
 .po-desk-badge--approved {

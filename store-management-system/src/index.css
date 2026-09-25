@@ -2201,7 +2201,51 @@ html[data-theme="dark"] .sms-receive-card .font-semibold {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.65rem 1rem;
+  padding: 0.55rem 0.85rem;
+}
+
+.sms-receive-card .sms-incoming-lines .sms-table th {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.625rem;
+}
+
+.sms-receive-card .sms-incoming-lines .sms-table td {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.75rem;
+}
+
+.sms-receive-card .sms-col-image {
+  width: 2.75rem;
+  padding-right: 0.35rem !important;
+}
+
+.sms-receive-card .sms-product-thumb,
+.sms-receive-card .sms-po-details-thumb {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.4rem;
+}
+
+.sms-receive-card .sms-product-meta {
+  margin-top: 0.05rem;
+  font-size: 0.625rem;
+}
+
+.sms-receive-card .sms-sku {
+  padding: 0.05rem 0.3rem;
+  font-size: 0.6rem;
+}
+
+.sms-receive-card .sms-po-qty-input {
+  max-width: 4.25rem;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.35rem;
+  font-size: 0.75rem;
+}
+
+.sms-receive-card .sms-receive-status {
+  padding: 0.12rem 0.4rem;
+  font-size: 0.625rem;
 }
 
 .sms-receive-card-icon {
@@ -2224,25 +2268,104 @@ html[data-theme="dark"] .sms-receive-card .font-semibold {
   letter-spacing: -0.01em;
 }
 
+.sms-receive-card .sms-pv-groups {
+  padding: 0 0.75rem 0.55rem;
+  gap: 0.3rem;
+}
+
+.sms-receive-card .sms-gmail-list {
+  padding: 0 0.75rem 0.55rem;
+  gap: 8px;
+}
+
+.sms-receive-card--linked .sms-pv-group {
+  border-radius: 6px;
+}
+
+.sms-receive-card--linked .sms-pv-group-head {
+  padding: 0.25rem 0.5rem;
+  border-bottom: none;
+}
+
+.sms-receive-card--linked .sms-pv-group-title-row {
+  gap: 0.35rem;
+}
+
+.sms-receive-card--linked .sms-pv-group-no {
+  font-size: 0.72rem;
+  line-height: 1.15;
+}
+
+.sms-receive-card--linked .sms-pv-group-meta {
+  margin-top: 0;
+  font-size: 0.625rem;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sms-receive-card--linked .sms-pv-group-open {
+  padding: 0.12rem 0.35rem;
+  font-size: 0.625rem;
+  border-radius: 4px;
+  gap: 0.15rem;
+}
+
+.sms-receive-card--linked .sms-pv-group-open .lucide,
+.sms-receive-card--linked .sms-pv-group-open svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.sms-receive-card--linked .sms-gmail-type {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.55rem;
+  border-radius: 4px;
+}
+
+.sms-receive-card--linked .sms-gmail-card {
+  width: 108px;
+  border-radius: 5px;
+}
+
+.sms-receive-card--linked .sms-gmail-thumb {
+  height: 48px;
+  max-height: 48px;
+}
+
+.sms-receive-card--linked .sms-gmail-thumb--pdf iframe {
+  transform: scale(0.105);
+}
+
+.sms-receive-card--linked .sms-gmail-thumb-badge {
+  min-width: 26px;
+  height: 30px;
+  font-size: 9px;
+}
+
+.sms-receive-card--linked .sms-gmail-card-foot {
+  min-height: 22px;
+  padding: 2px 5px;
+  gap: 3px;
+}
+
+.sms-receive-card--linked .sms-gmail-fname {
+  font-size: 0.6rem;
+}
+
 .sms-receive-card-badge {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  padding: 0.15rem 0.5rem;
+  padding: 0.1rem 0.4rem;
   border-radius: 9999px;
   background: #f1f5f9;
   color: #64748b;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 600;
   white-space: nowrap;
-}
-
-.sms-receive-card .sms-pv-groups {
-  padding: 0 1rem 0.9rem;
-}
-
-.sms-receive-card .sms-gmail-list {
-  padding: 0 1rem 0.9rem;
 }
 
 .sms-receive-card .sms-incoming-footer-fields {

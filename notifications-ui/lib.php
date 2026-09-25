@@ -495,15 +495,20 @@ function notificationsUiNormalizeItem(array $n): array
  *   countUnread:int,
  *   markAllApi:string,
  *   markReadApi:string,
- *   settingsUrl:string
+ *   settingsUrl:string,
+ *   listUrl:string,
+ *   prefsApi:string,
+ *   page:string,
+ *   preferences:array<string,mixed>
  * }
  */
-function notificationsUiBuildPayload(): array
+function notificationsUiBuildPayload(string $page = 'list'): array
 {
+    $page = strtolower(trim($page)) === 'settings' ? 'settings' : 'list';
+
     // Ensure card helpers (visual / href / relative time) are available.
     $cardsPartial = dirname(__DIR__) . '/includes/partials/notifications_centre_cards.php';
     if (is_file($cardsPartial)) {
-        // Define helpers only  avoid rendering by pre-setting empty list and capturing output.
         $ncItems = [];
         ob_start();
         require $cardsPartial;
@@ -517,12 +522,8 @@ function notificationsUiBuildPayload(): array
         }
     }
 
-    $allItems = function_exists('getNotificationCentreFeedPaged')
-        ? getNotificationCentreFeedPaged(120, 0)
-        : [];
-    if (function_exists('nc_sort_action_notifications_first')) {
-        $allItems = nc_sort_action_notifications_first($allItems);
-    }
+    $prefs = notificationsUiGetPreferences();
+    $enabledModules = is_array($prefs['modules'] ?? null) ? $prefs['modules'] : [];
 
     $sections = [
         'today' => [],
@@ -530,21 +531,35 @@ function notificationsUiBuildPayload(): array
         'earlier' => [],
     ];
     $countUnread = 0;
-    foreach ($allItems as $row) {
-        if (!is_array($row)) {
-            continue;
+
+    if ($page === 'list') {
+        $allItems = function_exists('getNotificationCentreFeedPaged')
+            ? getNotificationCentreFeedPaged(120, 0)
+            : [];
+        if (function_exists('nc_sort_action_notifications_first')) {
+            $allItems = nc_sort_action_notifications_first($allItems);
         }
-        $item = notificationsUiNormalizeItem($row);
-        $period = $item['period'];
-        if ($period === 'today') {
-            $sections['today'][] = $item;
-        } elseif ($period === 'yesterday') {
-            $sections['yesterday'][] = $item;
-        } else {
-            $sections['earlier'][] = $item;
-        }
-        if (!empty($item['isUnread'])) {
-            $countUnread++;
+
+        foreach ($allItems as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $item = notificationsUiNormalizeItem($row);
+            $mod = (string) ($item['module'] ?? 'general');
+            if (isset($enabledModules[$mod]) && !$enabledModules[$mod]) {
+                continue;
+            }
+            $period = $item['period'];
+            if ($period === 'today') {
+                $sections['today'][] = $item;
+            } elseif ($period === 'yesterday') {
+                $sections['yesterday'][] = $item;
+            } else {
+                $sections['earlier'][] = $item;
+            }
+            if (!empty($item['isUnread'])) {
+                $countUnread++;
+            }
         }
     }
 
@@ -554,15 +569,173 @@ function notificationsUiBuildPayload(): array
     $markReadApi = function_exists('app_url')
         ? app_url('/api/get_notifications.php')
         : '/api/get_notifications.php';
+    $prefsApi = $markAllApi;
+    $listUrl = function_exists('company_url')
+        ? company_url('notifications.php')
+        : (function_exists('app_url') ? app_url('/notifications.php') : '/notifications.php');
     $settingsUrl = function_exists('company_url')
-        ? company_url('employee/account.php')
-        : (function_exists('app_url') ? app_url('/employee/account.php') : '/employee/account.php');
+        ? company_url('notifications/settings.php')
+        : (function_exists('app_url') ? app_url('/notifications/settings.php') : '/notifications/settings.php');
 
     return [
+        'page' => $page,
         'sections' => $sections,
         'countUnread' => $countUnread,
         'markAllApi' => $markAllApi,
         'markReadApi' => $markReadApi,
+        'prefsApi' => $prefsApi,
+        'listUrl' => $listUrl,
         'settingsUrl' => $settingsUrl,
+        'preferences' => $prefs,
+        'moduleOptions' => notificationsUiModuleOptions(),
     ];
+}
+
+/**
+ * @return list<array{id:string,label:string,color:string}>
+ */
+function notificationsUiModuleOptions(): array
+{
+    return [
+        ['id' => 'voucher', 'label' => 'Payment voucher', 'color' => '#0f766e'],
+        ['id' => 'payroll', 'label' => 'Payroll', 'color' => '#1d4ed8'],
+        ['id' => 'sales', 'label' => 'Sales', 'color' => '#15803d'],
+        ['id' => 'stock', 'label' => 'Stock / Purchases', 'color' => '#1e3a8a'],
+        ['id' => 'deliveries', 'label' => 'Deliveries', 'color' => '#0369a1'],
+        ['id' => 'driver_kpi', 'label' => 'Driver KPI', 'color' => '#0e7490'],
+        ['id' => 'attendance', 'label' => 'Attendance', 'color' => '#c2410c'],
+        ['id' => 'letter', 'label' => 'Letter', 'color' => '#E6B800'],
+        ['id' => 'finance', 'label' => 'Finance', 'color' => '#0d9488'],
+        ['id' => 'suggest', 'label' => 'Suggestions', 'color' => '#ca8a04'],
+        ['id' => 'admin', 'label' => 'Admin', 'color' => '#4b5563'],
+        ['id' => 'tasks', 'label' => 'Tasks', 'color' => '#e11d48'],
+        ['id' => 'system', 'label' => 'System', 'color' => '#4b5563'],
+        ['id' => 'general', 'label' => 'General', 'color' => '#64748b'],
+    ];
+}
+
+/**
+ * @return array{modules:array<string,bool>,emailAlerts:bool}
+ */
+function notificationsUiDefaultPreferences(): array
+{
+    $modules = [];
+    foreach (notificationsUiModuleOptions() as $opt) {
+        $modules[(string) $opt['id']] = true;
+    }
+
+    return [
+        'modules' => $modules,
+        'emailAlerts' => false,
+    ];
+}
+
+function notificationsUiEnsurePreferencesTable(): void
+{
+    global $pdo;
+    if (!($pdo instanceof PDO)) {
+        return;
+    }
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    try {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS user_notification_preferences (
+                user_id INT NOT NULL PRIMARY KEY,
+                prefs_json TEXT NOT NULL,
+                updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
+        $done = true;
+    } catch (Throwable $e) {
+        /* ignore */
+    }
+}
+
+/**
+ * @return array{modules:array<string,bool>,emailAlerts:bool}
+ */
+function notificationsUiGetPreferences(?int $userId = null): array
+{
+    $defaults = notificationsUiDefaultPreferences();
+    $uid = $userId ?? (int) ($_SESSION['user_id'] ?? 0);
+    if ($uid <= 0) {
+        return $defaults;
+    }
+    global $pdo;
+    if (!($pdo instanceof PDO)) {
+        return $defaults;
+    }
+    notificationsUiEnsurePreferencesTable();
+    try {
+        $st = $pdo->prepare('SELECT prefs_json FROM user_notification_preferences WHERE user_id = ? LIMIT 1');
+        $st->execute([$uid]);
+        $raw = $st->fetchColumn();
+        if (!is_string($raw) || $raw === '') {
+            return $defaults;
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return $defaults;
+        }
+        $modules = $defaults['modules'];
+        if (isset($decoded['modules']) && is_array($decoded['modules'])) {
+            foreach ($modules as $key => $_) {
+                if (array_key_exists($key, $decoded['modules'])) {
+                    $modules[$key] = (bool) $decoded['modules'][$key];
+                }
+            }
+        }
+
+        return [
+            'modules' => $modules,
+            'emailAlerts' => !empty($decoded['emailAlerts']),
+        ];
+    } catch (Throwable $e) {
+        return $defaults;
+    }
+}
+
+/**
+ * @param array<string,mixed> $prefs
+ * @return array{modules:array<string,bool>,emailAlerts:bool}|null
+ */
+function notificationsUiSavePreferences(array $prefs, ?int $userId = null): ?array
+{
+    $uid = $userId ?? (int) ($_SESSION['user_id'] ?? 0);
+    if ($uid <= 0) {
+        return null;
+    }
+    global $pdo;
+    if (!($pdo instanceof PDO)) {
+        return null;
+    }
+    notificationsUiEnsurePreferencesTable();
+    $normalized = notificationsUiDefaultPreferences();
+    if (isset($prefs['modules']) && is_array($prefs['modules'])) {
+        foreach ($normalized['modules'] as $key => $_) {
+            if (array_key_exists($key, $prefs['modules'])) {
+                $normalized['modules'][$key] = (bool) $prefs['modules'][$key];
+            }
+        }
+    }
+    $normalized['emailAlerts'] = !empty($prefs['emailAlerts']);
+    $json = json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false) {
+        return null;
+    }
+    try {
+        $st = $pdo->prepare(
+            'INSERT INTO user_notification_preferences (user_id, prefs_json, updated_at)
+             VALUES (?, ?, NOW())
+             ON DUPLICATE KEY UPDATE prefs_json = VALUES(prefs_json), updated_at = NOW()'
+        );
+        $st->execute([$uid, $json]);
+
+        return $normalized;
+    } catch (Throwable $e) {
+        return null;
+    }
 }

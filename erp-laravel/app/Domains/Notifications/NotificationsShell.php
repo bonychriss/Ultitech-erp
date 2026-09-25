@@ -37,7 +37,8 @@ final class NotificationsShell
             return null;
         }
 
-        $payload = notificationsUiBuildPayload();
+        $page = strtolower(trim((string) ($cfg['page'] ?? 'list'))) === 'settings' ? 'settings' : 'list';
+        $payload = notificationsUiBuildPayload($page);
         $windowCfg = array_merge($payload, [
             'companySlug' => (string) ($cfg['companySlug'] ?? ''),
             'backUrl' => (string) ($cfg['backUrl'] ?? ''),
@@ -55,7 +56,7 @@ final class NotificationsShell
             | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)
         );
         if ($bootJson === false) {
-            $bootJson = '{"sections":{"today":[],"yesterday":[],"earlier":[]},"countUnread":0}';
+            $bootJson = '{"page":"list","sections":{"today":[],"yesterday":[],"earlier":[]},"countUnread":0}';
         }
 
         $headMarkup = $this->commonHeadExtras()
@@ -65,9 +66,12 @@ final class NotificationsShell
             . $this->chromeCss() . "\n"
             . '<script>window.__NOTIFICATIONS_CFG__ = ' . $bootJson . ';</script>';
 
+        $pageTitle = $page === 'settings' ? 'Notification settings' : 'Notifications';
+
         return [
-            'pageTitle' => 'Notifications',
-            'bodyClass' => 'page-notifications-react page-notifications-wide page-erp-laravel',
+            'pageTitle' => $pageTitle,
+            'bodyClass' => 'page-notifications-react page-notifications-wide page-erp-laravel'
+                . ($page === 'settings' ? ' page-notifications-settings' : ''),
             'headMarkup' => $headMarkup,
             'footerScripts' => '<script type="module" crossorigin src="'
                 . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8')

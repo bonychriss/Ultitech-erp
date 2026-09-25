@@ -124,6 +124,7 @@ Route::middleware([AttachErpContext::class])->group(function () {
 
     // Notifications centre (React; mark-read APIs stay on PHP includes/api)
     Route::get('/notifications', [NotificationsPageController::class, 'show'])->name('notifications.page');
+    Route::get('/notifications/settings', [NotificationsPageController::class, 'settings'])->name('notifications.page.settings');
 
     // Deliveries (React hub + dashboard; desk APIs stay under deliveries/deliveries-ui/api)
     Route::get('/deliveries/hub', [DeliveriesPageController::class, 'hub'])->name('deliveries.page.hub');

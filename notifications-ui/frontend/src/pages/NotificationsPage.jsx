@@ -362,8 +362,8 @@ export default function NotificationsPage() {
               <a
                 href={cfg.settingsUrl}
                 className="ncr-settings"
-                title="Settings"
-                aria-label="Settings"
+                title="Notification settings"
+                aria-label="Notification settings"
               >
                 <Settings size={18} strokeWidth={1.75} aria-hidden />
               </a>

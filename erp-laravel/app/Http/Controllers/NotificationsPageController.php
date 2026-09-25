@@ -14,10 +14,21 @@ class NotificationsPageController extends Controller
 {
     public function show(Request $request): View|Response
     {
+        return $this->render($request, 'list');
+    }
+
+    public function settings(Request $request): View|Response
+    {
+        return $this->render($request, 'settings');
+    }
+
+    private function render(Request $request, string $page): View|Response
+    {
         $erp = $request->attributes->get('erp') ?? [];
 
         $viewData = (new NotificationsShell())->viewData([
             'erp' => is_array($erp) ? $erp : [],
+            'page' => $page,
             'companySlug' => (string) ($erp['company_slug'] ?? ''),
             'backUrl' => (string) ($erp['back_url'] ?? ''),
         ]);

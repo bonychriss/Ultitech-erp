@@ -49,6 +49,45 @@ if ($method === 'POST') {
         $cleared = clearReadNotificationsForCurrentUser();
         echo json_encode(['ok' => true, 'cleared' => $cleared]);
         exit;
+    } elseif ($action === 'get_prefs' || $action === 'save_prefs') {
+        $lib = dirname(__DIR__) . '/notifications-ui/lib.php';
+        if (is_file($lib)) {
+            require_once $lib;
+        }
+        if ($action === 'get_prefs') {
+            echo json_encode([
+                'ok' => true,
+                'preferences' => function_exists('notificationsUiGetPreferences')
+                    ? notificationsUiGetPreferences()
+                    : ['modules' => [], 'emailAlerts' => false],
+                'moduleOptions' => function_exists('notificationsUiModuleOptions')
+                    ? notificationsUiModuleOptions()
+                    : [],
+            ]);
+            exit;
+        }
+        $modules = $_POST['modules'] ?? null;
+        if (is_string($modules)) {
+            $decoded = json_decode($modules, true);
+            $modules = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($modules)) {
+            $modules = [];
+        }
+        $emailAlerts = !empty($_POST['emailAlerts']) && (string) $_POST['emailAlerts'] !== '0';
+        $saved = function_exists('notificationsUiSavePreferences')
+            ? notificationsUiSavePreferences([
+                'modules' => $modules,
+                'emailAlerts' => $emailAlerts,
+            ])
+            : null;
+        if ($saved === null) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'save failed']);
+            exit;
+        }
+        echo json_encode(['ok' => true, 'preferences' => $saved]);
+        exit;
     }
     http_response_code(400);
     echo json_encode(['error' => 'unknown action']);

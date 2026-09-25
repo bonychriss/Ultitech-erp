@@ -543,6 +543,9 @@ final class DeliveriesShell
 
         $userId = (int) ($_SESSION['user_id'] ?? 0);
         $department = trim((string) ($_SESSION['department'] ?? ''));
+        $isDriver = function_exists('userHasAccessRole')
+            ? userHasAccessRole('Driver')
+            : (strcasecmp($department, 'Driver') === 0);
 
         return [
             'drivers' => [],
@@ -553,7 +556,7 @@ final class DeliveriesShell
                 'id' => $userId,
                 'fullName' => trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? '')),
                 'department' => $department,
-                'isDriver' => strcasecmp($department, 'Driver') === 0,
+                'isDriver' => $isDriver,
             ],
             'csrfToken' => function_exists('csrf_token') ? csrf_token() : '',
             'createDispatch' => $createDispatch,

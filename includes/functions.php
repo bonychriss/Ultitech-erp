@@ -6901,6 +6901,9 @@ function authenticate($userOrEmail, $password, $companySlug = null)
             $_SESSION['full_name'] = $user['full_name'];
             $_SESSION['role'] = $user['role'];
             $_SESSION['department'] = $user['department'];
+            if (function_exists('hydrateSessionAccessRoles')) {
+                hydrateSessionAccessRoles(is_array($user) ? $user : null);
+            }
             if (!empty($user['email'])) {
                 $_SESSION['email'] = normalizeLoginEmail($user['email']);
             }
@@ -6984,6 +6987,189 @@ function isCompanyAdmin()
     return $role === $roleCoAdmin || $role === 'company_admin' || $role === 'company admin';
 }
 
+/**
+ * Ensure users.extra_roles exists (JSON array of additional department/access roles).
+ */
+function ensureUsersExtraRolesColumn($explicitPdo = null): bool
+{
+    global $pdo;
+    $db = $explicitPdo instanceof PDO ? $explicitPdo : ($pdo instanceof PDO ? $pdo : null);
+    if (!$db instanceof PDO) {
+        return false;
+    }
+    static $ready = [];
+    $key = spl_object_id($db);
+    if (!empty($ready[$key])) {
+        return true;
+    }
+    try {
+        if (function_exists('columnExists') && columnExists('users', 'extra_roles', $db)) {
+            $ready[$key] = true;
+            return true;
+        }
+        $db->exec('ALTER TABLE users ADD COLUMN extra_roles TEXT NULL');
+        $ready[$key] = true;
+        return true;
+    } catch (Throwable $e) {
+        try {
+            if (function_exists('columnExists') && columnExists('users', 'extra_roles', $db)) {
+                $ready[$key] = true;
+                return true;
+            }
+        } catch (Throwable $e2) {
+        }
+        return false;
+    }
+}
+
+/**
+ * @param mixed $raw
+ * @return list<string>
+ */
+function parseUserExtraRoles($raw): array
+{
+    if (is_array($raw)) {
+        $list = $raw;
+    } else {
+        $str = trim((string) $raw);
+        if ($str === '') {
+            return [];
+        }
+        $decoded = json_decode($str, true);
+        $list = is_array($decoded) ? $decoded : [];
+    }
+    $out = [];
+    foreach ($list as $item) {
+        $name = trim((string) $item);
+        if ($name === '') {
+            continue;
+        }
+        $key = mb_strtolower($name);
+        if (isset($out[$key])) {
+            continue;
+        }
+        $out[$key] = $name;
+    }
+    return array_values($out);
+}
+
+/**
+ * @param list<string>|string|null $extraRoles
+ * @return list<string>
+ */
+function userAccessRolesFromParts(string $department, $extraRoles = null): array
+{
+    $roles = [];
+    $dept = trim($department);
+    if ($dept !== '') {
+        $roles[mb_strtolower($dept)] = $dept;
+    }
+    foreach (parseUserExtraRoles($extraRoles) as $role) {
+        $roles[mb_strtolower($role)] = $role;
+    }
+    return array_values($roles);
+}
+
+/**
+ * @return list<string>
+ */
+function currentUserAccessRoles(): array
+{
+    if (!empty($_SESSION['access_roles']) && is_array($_SESSION['access_roles'])) {
+        return array_values(array_filter(array_map('strval', $_SESSION['access_roles'])));
+    }
+    return userAccessRolesFromParts(
+        (string) ($_SESSION['department'] ?? ''),
+        $_SESSION['extra_roles'] ?? []
+    );
+}
+
+/**
+ * Match a department/access role against the current user's primary + extra roles.
+ * Examples: Driver, Warehouse, Finance, Store.
+ */
+function userHasAccessRole(string $roleOrPattern): bool
+{
+    if (function_exists('isAdmin') && isAdmin()) {
+        return true;
+    }
+    $needle = strtolower(trim($roleOrPattern));
+    if ($needle === '') {
+        return false;
+    }
+    $aliases = [
+        'driver' => ['driver', 'drivers', 'fleet', 'logistics'],
+        'drivers' => ['driver', 'drivers', 'fleet', 'logistics'],
+        'warehouse' => ['warehouse', 'warehouses', 'store', 'stores', 'inventory', 'storekeeper', 'store keeper'],
+        'store' => ['warehouse', 'warehouses', 'store', 'stores', 'inventory', 'storekeeper', 'store keeper'],
+        'finance' => ['finance', 'account', 'accounts', 'accounting'],
+        'accounting' => ['finance', 'account', 'accounts', 'accounting'],
+        'procurement' => ['procurement', 'purchasing', 'purchase'],
+        'sales' => ['sales', 'selling'],
+    ];
+    $needles = $aliases[$needle] ?? [$needle];
+    foreach (currentUserAccessRoles() as $role) {
+        $hay = strtolower(trim((string) $role));
+        if ($hay === '') {
+            continue;
+        }
+        foreach ($needles as $n) {
+            if ($hay === $n || str_contains($hay, $n) || preg_match('/\b' . preg_quote($n, '/') . '\b/', $hay)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Load access roles into the session (primary department + extra_roles).
+ *
+ * @param array<string,mixed>|null $user
+ */
+function hydrateSessionAccessRoles(?array $user = null): void
+{
+    global $pdo;
+    $department = trim((string) ($user['department'] ?? $_SESSION['department'] ?? ''));
+    $extraRaw = $user['extra_roles'] ?? null;
+    if ($extraRaw === null && isset($_SESSION['extra_roles'])) {
+        $extraRaw = $_SESSION['extra_roles'];
+    }
+    if ($extraRaw === null && !empty($_SESSION['user_id']) && $pdo instanceof PDO) {
+        try {
+            ensureUsersExtraRolesColumn($pdo);
+            if (columnExists('users', 'extra_roles', $pdo)) {
+                $st = $pdo->prepare('SELECT department, extra_roles FROM users WHERE id = ? LIMIT 1');
+                $st->execute([(int) $_SESSION['user_id']]);
+                $row = $st->fetch(PDO::FETCH_ASSOC);
+                if (is_array($row)) {
+                    if ($department === '') {
+                        $department = trim((string) ($row['department'] ?? ''));
+                    }
+                    $extraRaw = $row['extra_roles'] ?? null;
+                }
+            }
+        } catch (Throwable $e) {
+            $extraRaw = null;
+        }
+    }
+    $extra = parseUserExtraRoles($extraRaw);
+    $_SESSION['extra_roles'] = $extra;
+    $_SESSION['access_roles'] = userAccessRolesFromParts($department, $extra);
+    if ($department !== '' && empty($_SESSION['department'])) {
+        $_SESSION['department'] = $department;
+    }
+}
+
+/**
+ * @param list<string> $roles
+ */
+function encodeUserExtraRoles(array $roles): string
+{
+    $clean = parseUserExtraRoles($roles);
+    return $clean === [] ? '[]' : (string) json_encode(array_values($clean), JSON_UNESCAPED_UNICODE);
+}
+
 // Simple CSRF token utilities (idempotent). Stores tokens per session.
 function csrf_token()
 {
@@ -6997,20 +7183,24 @@ function verify_csrf($token)
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], (string) $token);
 }
 
-// Finance users: identified by department value 'Finance' (case-insensitive).
-// Admins are not treated as Finance by default for actions restricted to Finance only,
-// but you can expand this if needed.
+// Finance users: identified by department / access role containing finance/account.
+// Admins are treated as Finance for restricted finance actions.
 function isFinance()
 {
     // Admins have full access to finance controls
-    if (isAdmin())
+    if (isAdmin()) {
         return true;
+    }
 
-    if (!isset($_SESSION['department']))
+    if (function_exists('userHasAccessRole') && userHasAccessRole('Finance')) {
+        return true;
+    }
+
+    if (!isset($_SESSION['department'])) {
         return false;
+    }
     $dept = trim((string) $_SESSION['department']);
     // Treat any department string that contains "finance" or "account" (case-insensitive) as Finance.
-    // This matches "Finance", "Accounts", "Accounting", "Finance Dept", etc.
     return (preg_match('/\b(finance|account|accounts|accounting)\b/i', $dept) === 1);
 }
 
@@ -7059,6 +7249,9 @@ function requireLogin()
             }
         }
         exit;
+    }
+    if (empty($_SESSION['access_roles']) && function_exists('hydrateSessionAccessRoles')) {
+        hydrateSessionAccessRoles();
     }
     if (isCompanyScopingEnabled() && empty($_SESSION['company_id'])) {
         $resolvedCompanyId = currentCompanyId();

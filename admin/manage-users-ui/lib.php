@@ -134,6 +134,33 @@ function manageUsersIsSystemAdminRow($user): bool
 }
 
 /**
+ * Department labels usable as access roles (primary + extras).
+ *
+ * @param list<string> $departments
+ * @return list<string>
+ */
+function manageUsersAccessRoleOptions(array $departments = []): array
+{
+    $base = $departments !== []
+        ? $departments
+        : ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Management'];
+    $extras = ['Warehouse', 'Store', 'Inventory'];
+    $out = [];
+    foreach (array_merge($base, $extras) as $item) {
+        $name = trim((string) $item);
+        if ($name === '') {
+            continue;
+        }
+        $key = mb_strtolower($name);
+        if (isset($out[$key])) {
+            continue;
+        }
+        $out[$key] = $name;
+    }
+    return array_values($out);
+}
+
+/**
  * @return int[]
  */
 function manageUsersBulkResetEligibleIds($pdo, $hasCompanyId, $companyId, $currentUserId, $includeSelf, $includeSystemAdmin): array
@@ -192,6 +219,12 @@ function manageUsersUiGetPayload(): array
             'full_name' => (string) ($u['full_name'] ?? ''),
             'email' => (string) ($u['email'] ?? ''),
             'department' => (string) ($u['department'] ?? ''),
+            'extra_roles' => function_exists('parseUserExtraRoles')
+                ? parseUserExtraRoles($u['extra_roles'] ?? null)
+                : [],
+            'access_roles' => function_exists('userAccessRolesFromParts')
+                ? userAccessRolesFromParts((string) ($u['department'] ?? ''), $u['extra_roles'] ?? null)
+                : array_values(array_filter([(string) ($u['department'] ?? '')])),
             'role' => (string) ($u['role'] ?? ''),
             'is_active' => (int) ($u['is_active'] ?? 0),
             'voucher_count' => (int) ($u['voucher_count'] ?? 0),
@@ -216,6 +249,7 @@ function manageUsersUiGetPayload(): array
         'bulkResetEligibleCount' => (int) ($state['bulkResetEligibleCount'] ?? 0),
         'bulkHasSystemAdmin' => !empty($state['bulkHasSystemAdmin']),
         'departments' => $state['departments'] ?? [],
+        'accessRoleOptions' => $state['accessRoleOptions'] ?? manageUsersAccessRoleOptions($state['departments'] ?? []),
         'pwFlash' => $state['pwFlash'],
         'bulkPwFlash' => $state['bulkPwFlash'],
     ];

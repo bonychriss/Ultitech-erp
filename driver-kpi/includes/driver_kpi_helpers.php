@@ -1179,7 +1179,14 @@ function dkpi_user_department(PDO $pdo, int $userId): string
     if ($userId <= 0) {
         return '';
     }
-    $st = $pdo->prepare('SELECT department FROM users WHERE id = ? LIMIT 1');
+    $cols = 'department';
+    if (function_exists('ensureUsersExtraRolesColumn')) {
+        ensureUsersExtraRolesColumn($pdo);
+    }
+    if (function_exists('columnExists') && columnExists('users', 'extra_roles', $pdo)) {
+        $cols .= ', extra_roles';
+    }
+    $st = $pdo->prepare("SELECT {$cols} FROM users WHERE id = ? LIMIT 1");
     $st->execute([$userId]);
     $row = $st->fetch(PDO::FETCH_ASSOC);
     return trim((string) ($row['department'] ?? ''));
@@ -1187,20 +1194,74 @@ function dkpi_user_department(PDO $pdo, int $userId): string
 
 function dkpi_user_is_driver(PDO $pdo, int $userId): bool
 {
-    return dkpi_is_driver_department(dkpi_user_department($pdo, $userId));
+    if ($userId <= 0) {
+        return false;
+    }
+    if ($userId === (int) ($_SESSION['user_id'] ?? 0) && function_exists('userHasAccessRole')) {
+        return userHasAccessRole('Driver');
+    }
+    $cols = 'department';
+    if (function_exists('ensureUsersExtraRolesColumn')) {
+        ensureUsersExtraRolesColumn($pdo);
+    }
+    if (function_exists('columnExists') && columnExists('users', 'extra_roles', $pdo)) {
+        $cols .= ', extra_roles';
+    }
+    $st = $pdo->prepare("SELECT {$cols} FROM users WHERE id = ? LIMIT 1");
+    $st->execute([$userId]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    if (!is_array($row)) {
+        return false;
+    }
+    if (function_exists('userAccessRolesFromParts')) {
+        foreach (userAccessRolesFromParts((string) ($row['department'] ?? ''), $row['extra_roles'] ?? null) as $role) {
+            if (dkpi_is_driver_department($role)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    return dkpi_is_driver_department((string) ($row['department'] ?? ''));
 }
 
 function dkpi_list_employees(PDO $pdo): array
 {
+    $hasExtra = false;
+    if (function_exists('ensureUsersExtraRolesColumn')) {
+        ensureUsersExtraRolesColumn($pdo);
+    }
+    if (function_exists('columnExists') && columnExists('users', 'extra_roles', $pdo)) {
+        $hasExtra = true;
+    }
+    $select = $hasExtra
+        ? 'id, full_name, department, role, extra_roles'
+        : 'id, full_name, department, role';
     $st = $pdo->query(
-        "SELECT id, full_name, department, role
+        "SELECT {$select}
          FROM users
          WHERE is_active = 1
            AND LOWER(TRIM(COALESCE(role,''))) NOT IN ('admin','administrator','superadmin','super_admin','company_admin')
-           AND LOWER(TRIM(COALESCE(department,''))) IN ('driver','drivers')
          ORDER BY full_name ASC"
     );
-    return $st ? ($st->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+    $rows = $st ? ($st->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+    $out = [];
+    foreach ($rows as $row) {
+        $roles = function_exists('userAccessRolesFromParts')
+            ? userAccessRolesFromParts((string) ($row['department'] ?? ''), $row['extra_roles'] ?? null)
+            : [trim((string) ($row['department'] ?? ''))];
+        $isDriver = false;
+        foreach ($roles as $role) {
+            if (dkpi_is_driver_department($role)) {
+                $isDriver = true;
+                break;
+            }
+        }
+        if ($isDriver) {
+            unset($row['extra_roles']);
+            $out[] = $row;
+        }
+    }
+    return $out;
 }
 
 function dkpi_module_scores_for_week(PDO $pdo, string $weekStart, ?string $source = null): array

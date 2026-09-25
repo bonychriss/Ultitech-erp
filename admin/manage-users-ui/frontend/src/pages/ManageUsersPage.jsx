@@ -24,7 +24,7 @@ function initials(name) {
 }
 
 function formatJoined(iso) {
-  if (!iso) return 'ù'
+  if (!iso) return '¬ù'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   const dd = String(d.getDate()).padStart(2, '0')
@@ -102,6 +102,7 @@ export default function ManageUsersPage() {
   const formAction = initial.formAction || 'manage-users.php'
   const currentUserId = initial.currentUserId || 0
   const departments = initial.departments || ['Procurement', 'IT', 'Finance', 'Sales', 'Driver']
+  const accessRoleOptions = initial.accessRoleOptions || [...departments, 'Warehouse', 'Store']
 
   const [search, setSearch] = useState('')
   const [filterRole, setFilterRole] = useState('all')
@@ -115,6 +116,9 @@ export default function ManageUsersPage() {
   const [passwordUser, setPasswordUser] = useState(null)
   const [deptOpen, setDeptOpen] = useState(false)
   const [deptUser, setDeptUser] = useState(null)
+  const [rolesOpen, setRolesOpen] = useState(false)
+  const [rolesUser, setRolesUser] = useState(null)
+  const [rolesSelected, setRolesSelected] = useState([])
   const [bulkOpen, setBulkOpen] = useState(false)
 
   const users = initial.users || []
@@ -123,7 +127,7 @@ export default function ManageUsersPage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
     return users.filter((u) => {
-      const blob = `${u.full_name} ${u.username} ${u.email} ${u.department}`.toLowerCase()
+      const blob = `${u.full_name} ${u.username} ${u.email} ${u.department} ${(u.extra_roles || []).join(' ')} ${(u.access_roles || []).join(' ')}`.toLowerCase()
       const matchQ = !q || blob.includes(q)
       const matchRole = filterRole === 'all' || u.role === filterRole
       const matchStatus = filterStatus === 'all' || String(u.is_active) === filterStatus
@@ -319,18 +323,27 @@ export default function ManageUsersPage() {
                     <td>{u.email}</td>
                     <td>
                       {!isAdmin ? (
-                        <button
-                          type="button"
-                          className="mu-link"
-                          onClick={() => {
-                            setDeptUser(u)
-                            setDeptOpen(true)
-                          }}
-                        >
-                          {u.department || 'ù'}
-                        </button>
+                        <div className="mu-dept-cell">
+                          <button
+                            type="button"
+                            className="mu-link"
+                            onClick={() => {
+                              setDeptUser(u)
+                              setDeptOpen(true)
+                            }}
+                          >
+                            {u.department || '-'}
+                          </button>
+                          {(u.extra_roles || []).length > 0 && (
+                            <div className="mu-extra-roles">
+                              {(u.extra_roles || []).map((r) => (
+                                <span key={r} className="mu-pill mu-pill-role-extra">{r}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       ) : (
-                        <span className="mu-muted">{u.department || 'ù'}</span>
+                        <span className="mu-muted">{u.department || '-'}</span>
                       )}
                     </td>
                     <td>
@@ -362,17 +375,31 @@ export default function ManageUsersPage() {
                           {openMenuId === u.id && (
                             <div className="actions-dropdown-menu show">
                               {!isAdmin && (
-                                <button
-                                  type="button"
-                                  className="actions-dropdown-item"
-                                  onClick={() => {
-                                    setDeptUser(u)
-                                    setDeptOpen(true)
-                                    setOpenMenuId(null)
-                                  }}
-                                >
-                                  <i className="fas fa-building" /> Change Dept
-                                </button>
+                                <>
+                                  <button
+                                    type="button"
+                                    className="actions-dropdown-item"
+                                    onClick={() => {
+                                      setDeptUser(u)
+                                      setDeptOpen(true)
+                                      setOpenMenuId(null)
+                                    }}
+                                  >
+                                    <i className="fas fa-building" /> Change Dept
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="actions-dropdown-item"
+                                    onClick={() => {
+                                      setRolesUser(u)
+                                      setRolesSelected([...(u.extra_roles || [])])
+                                      setRolesOpen(true)
+                                      setOpenMenuId(null)
+                                    }}
+                                  >
+                                    <i className="fas fa-user-tag" /> Manage Roles
+                                  </button>
+                                </>
                               )}
                               <button
                                 type="button"
@@ -457,7 +484,7 @@ export default function ManageUsersPage() {
                           )}
                         </div>
                       ) : (
-                        <span className="mu-muted">ù</span>
+                        <span className="mu-muted">¬ù</span>
                       )}
                     </td>
                   </tr>
@@ -476,7 +503,7 @@ export default function ManageUsersPage() {
           {perPage > 0 && totalPages > 1 ? (
             <div className="mu-pagination">
               <button type="button" className="mu-page-btn" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
-                ã
+                ¬ù
               </button>
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let p = Math.max(1, Math.min(safePage - 2, totalPages - 4)) + i
@@ -498,7 +525,7 @@ export default function ManageUsersPage() {
                 disabled={safePage >= totalPages}
                 onClick={() => setPage(safePage + 1)}
               >
-                õ
+                ¬ù
               </button>
             </div>
           ) : (
@@ -563,6 +590,49 @@ export default function ManageUsersPage() {
             ))}
           </select>
           <ModalActions onCancel={() => setDeptOpen(false)} submitLabel="Update" />
+        </form>
+      </Overlay>
+
+      <Overlay open={rolesOpen} onClose={() => setRolesOpen(false)} wide>
+        <ModalHead title="Manage Access Roles" onClose={() => setRolesOpen(false)} />
+        <p className="mu-modal-sub">
+          For <strong>{rolesUser?.full_name}</strong>. Primary department stays{' '}
+          <strong>{rolesUser?.department || '-'}</strong>. Tick extra roles so they can also use those features
+          (e.g. Driver + Warehouse).
+        </p>
+        <form method="POST" action={formAction}>
+          <input type="hidden" name="user_id" value={rolesUser?.id || ''} />
+          <input type="hidden" name="action" value="change_access_roles" />
+          <div className="mu-roles-grid">
+            {accessRoleOptions.map((role) => {
+              const primary = String(rolesUser?.department || '').toLowerCase() === String(role).toLowerCase()
+              const checked = primary || rolesSelected.some((r) => String(r).toLowerCase() === String(role).toLowerCase())
+              return (
+                <label key={role} className={`mu-role-chip${primary ? ' is-primary' : ''}${checked && !primary ? ' is-on' : ''}`}>
+                  <input
+                    type="checkbox"
+                    name="access_roles[]"
+                    value={role}
+                    disabled={primary}
+                    checked={checked}
+                    onChange={(e) => {
+                      if (primary) return
+                      setRolesSelected((prev) => {
+                        if (e.target.checked) {
+                          return prev.some((r) => String(r).toLowerCase() === String(role).toLowerCase())
+                            ? prev
+                            : [...prev, role]
+                        }
+                        return prev.filter((r) => String(r).toLowerCase() !== String(role).toLowerCase())
+                      })
+                    }}
+                  />
+                  <span>{role}{primary ? ' (primary)' : ''}</span>
+                </label>
+              )
+            })}
+          </div>
+          <ModalActions onCancel={() => setRolesOpen(false)} submitLabel="Save roles" />
         </form>
       </Overlay>
 
@@ -725,3 +795,4 @@ function PasswordPair({ prefix, fieldNames, copyRef, inputRef }) {
     </>
   )
 }
+

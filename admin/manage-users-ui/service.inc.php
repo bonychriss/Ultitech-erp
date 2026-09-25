@@ -14,6 +14,9 @@ function manageUsersUi_collect_state(): array
 
     $hasCompanyId = columnExists('users', 'company_id', $pdo);
 $company_id = (int) currentCompanyId();
+if (function_exists('ensureUsersExtraRolesColumn')) {
+    ensureUsersExtraRolesColumn($pdo);
+}
 
 $manageUsersFormAction = 'manage-users.php';
 $manageUsersQuery = array();
@@ -277,7 +280,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("UPDATE users SET department = ? WHERE id = ?");
                     $stmt->execute([$newDept, $user_id]);
                 }
+                // Drop the new primary department from extra_roles if it was listed there.
+                if (function_exists('ensureUsersExtraRolesColumn') && ensureUsersExtraRolesColumn($pdo) && columnExists('users', 'extra_roles', $pdo)) {
+                    $extraStmt = $hasCompanyId
+                        ? $pdo->prepare('SELECT extra_roles FROM users WHERE id = ? AND company_id = ? LIMIT 1')
+                        : $pdo->prepare('SELECT extra_roles FROM users WHERE id = ? LIMIT 1');
+                    $extraStmt->execute($hasCompanyId ? [$user_id, $company_id] : [$user_id]);
+                    $extraRow = $extraStmt->fetch(PDO::FETCH_ASSOC);
+                    $extras = function_exists('parseUserExtraRoles') ? parseUserExtraRoles($extraRow['extra_roles'] ?? null) : [];
+                    $newKey = mb_strtolower(trim((string) $newDept));
+                    $extras = array_values(array_filter($extras, static function ($r) use ($newKey) {
+                        return mb_strtolower(trim((string) $r)) !== $newKey;
+                    }));
+                    $encoded = function_exists('encodeUserExtraRoles') ? encodeUserExtraRoles($extras) : json_encode($extras);
+                    $up = $hasCompanyId
+                        ? $pdo->prepare('UPDATE users SET extra_roles = ? WHERE id = ? AND company_id = ?')
+                        : $pdo->prepare('UPDATE users SET extra_roles = ? WHERE id = ?');
+                    $up->execute($hasCompanyId ? [$encoded, $user_id, $company_id] : [$encoded, $user_id]);
+                }
                 $success = "User department updated to $newDept successfully.";
+                break;
+
+            case 'change_access_roles':
+                if ($user_id <= 0) {
+                    $error = 'Invalid user.';
+                    break;
+                }
+                if (!function_exists('ensureUsersExtraRolesColumn') || !ensureUsersExtraRolesColumn($pdo) || !columnExists('users', 'extra_roles', $pdo)) {
+                    $error = 'Access roles are not available on this database yet.';
+                    break;
+                }
+                $targetUser = manageUsersFetchUser($pdo, $user_id, $hasCompanyId, $company_id);
+                if (!$targetUser) {
+                    $error = 'User not found.';
+                    break;
+                }
+                if (manageUsersIsSystemAdminRow($targetUser)) {
+                    $error = 'Cannot change access roles of system admin. This user is protected.';
+                    break;
+                }
+                if (($targetUser['role'] ?? '') === 'admin') {
+                    $error = 'Cannot change access roles of an administrator.';
+                    break;
+                }
+                $primaryDept = trim((string) ($targetUser['department'] ?? ''));
+                $posted = $_POST['access_roles'] ?? [];
+                if (!is_array($posted)) {
+                    $posted = [$posted];
+                }
+                $roleOptions = manageUsersAccessRoleOptions();
+                try {
+                    if ($company_id > 0 && function_exists('fetchCompanySettingsMap')) {
+                        $settingsMap = fetchCompanySettingsMap($pdo, $company_id);
+                        $raw = trim((string) ($settingsMap['departments'] ?? ''));
+                        if ($raw !== '') {
+                            $decoded = json_decode($raw, true);
+                            if (is_array($decoded) && $decoded !== []) {
+                                $roleOptions = manageUsersAccessRoleOptions(array_map('strval', $decoded));
+                            }
+                        }
+                    }
+                } catch (Throwable $e) {
+                    // keep defaults
+                }
+                $allowed = [];
+                foreach ($roleOptions as $opt) {
+                    $allowed[mb_strtolower(trim((string) $opt))] = trim((string) $opt);
+                }
+                $extras = [];
+                foreach ($posted as $item) {
+                    $name = trim((string) $item);
+                    if ($name === '') {
+                        continue;
+                    }
+                    $key = mb_strtolower($name);
+                    if ($primaryDept !== '' && $key === mb_strtolower($primaryDept)) {
+                        continue;
+                    }
+                    if (!isset($allowed[$key])) {
+                        continue;
+                    }
+                    $extras[$key] = $allowed[$key];
+                }
+                $encoded = function_exists('encodeUserExtraRoles') ? encodeUserExtraRoles(array_values($extras)) : json_encode(array_values($extras));
+                if ($hasCompanyId) {
+                    $stmt = $pdo->prepare('UPDATE users SET extra_roles = ? WHERE id = ? AND company_id = ?');
+                    $stmt->execute([$encoded, $user_id, $company_id]);
+                } else {
+                    $stmt = $pdo->prepare('UPDATE users SET extra_roles = ? WHERE id = ?');
+                    $stmt->execute([$encoded, $user_id]);
+                }
+                if ((int) ($_SESSION['user_id'] ?? 0) === $user_id && function_exists('hydrateSessionAccessRoles')) {
+                    hydrateSessionAccessRoles([
+                        'department' => $primaryDept,
+                        'extra_roles' => $encoded,
+                    ]);
+                }
+                $count = count($extras);
+                $success = $count > 0
+                    ? ('Access roles updated (' . $count . ' additional). User can use features for '
+                        . ($primaryDept !== '' ? $primaryDept . ' + ' : '')
+                        . implode(', ', array_values($extras)) . '. Ask the user to refresh or re-login if already signed in.')
+                    : ('Additional access roles cleared. User keeps primary department'
+                        . ($primaryDept !== '' ? ': ' . $primaryDept : '') . '.');
                 break;
                 
             case 'delete':
@@ -628,6 +733,8 @@ foreach ($users as $u) {
         $departments = $defaultDepartments;
     }
 
+    $accessRoleOptions = manageUsersAccessRoleOptions($departments);
+
     return [
         'formAction' => $manageUsersFormAction,
         'currentUserId' => (int) ($_SESSION['user_id'] ?? 0),
@@ -640,6 +747,7 @@ foreach ($users as $u) {
         'bulkResetEligibleCount' => (int) $bulkResetEligibleCount,
         'bulkHasSystemAdmin' => $bulkHasSystemAdmin,
         'departments' => $departments,
+        'accessRoleOptions' => $accessRoleOptions,
         'pwFlash' => $pwFlash,
         'bulkPwFlash' => $bulkPwFlash,
     ];

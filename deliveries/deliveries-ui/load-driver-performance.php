@@ -161,7 +161,9 @@ function deliveries_performance_resolve_driver(PDO $pdo, array $query = []): arr
         }
     }
 
-    $isDriver = strcasecmp($sessionDept, 'Driver') === 0;
+    $isDriver = function_exists('userHasAccessRole')
+        ? userHasAccessRole('Driver')
+        : (strcasecmp($sessionDept, 'Driver') === 0);
     if ($isDriver && $sessionUserId > 0) {
         return [
             'driver_id' => $sessionUserId,

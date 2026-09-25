@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/cashbook/*',
             'stock',
             'stock/desk/*',
+            'admin/desk/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -150,7 +150,9 @@ function deliveries_load_create_payload(PDO $pdo): array
 
     $userId = (int) ($_SESSION['user_id'] ?? 0);
     $department = trim((string) ($_SESSION['department'] ?? ''));
-    $isDriver = strcasecmp($department, 'Driver') === 0;
+    $isDriver = function_exists('userHasAccessRole')
+        ? userHasAccessRole('Driver')
+        : (strcasecmp($department, 'Driver') === 0);
 
     return [
         'ok' => true,

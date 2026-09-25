@@ -74,6 +74,13 @@ function sms_can_receive_warehouse_stock(): bool
     if (sms_can_manage_products() || sms_is_system_admin()) {
         return true;
     }
+    if (function_exists('userHasAccessRole') && (
+        userHasAccessRole('Warehouse')
+        || userHasAccessRole('Store')
+        || userHasAccessRole('Procurement')
+    )) {
+        return true;
+    }
     $role = strtolower(trim((string) ($_SESSION['role'] ?? '')));
     if ($role === '') {
         return !empty($_SESSION['user_id']);

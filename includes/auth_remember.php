@@ -301,6 +301,9 @@ function loginUserById(int $userId, string $companySlug): bool
     $_SESSION['full_name'] = (string) ($user['full_name'] ?? '');
     $_SESSION['role'] = (string) ($user['role'] ?? '');
     $_SESSION['department'] = (string) ($user['department'] ?? '');
+    if (function_exists('hydrateSessionAccessRoles')) {
+        hydrateSessionAccessRoles(is_array($user) ? $user : null);
+    }
     if (!empty($user['email']) && function_exists('normalizeLoginEmail')) {
         $_SESSION['email'] = normalizeLoginEmail((string) $user['email']);
     }

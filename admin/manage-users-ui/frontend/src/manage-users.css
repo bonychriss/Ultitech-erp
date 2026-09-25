@@ -427,3 +427,42 @@ table.mu-table tbody tr:hover { background: #fafbff; }
   cursor: pointer;
   white-space: nowrap;
 }
+.mu-dept-cell { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.mu-extra-roles { display: flex; flex-wrap: wrap; gap: 4px; }
+.mu-pill-role-extra {
+  background: #f3e8ff;
+  color: #6d28d9;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.625rem;
+  padding: 2px 6px;
+}
+.mu-roles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+.mu-role-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--mu-border);
+  border-radius: 999px !important;
+  font-size: 0.75rem;
+  cursor: pointer;
+  background: #fff;
+  margin: 0;
+}
+.mu-role-chip input { margin: 0; }
+.mu-role-chip.is-primary {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: default;
+}
+.mu-role-chip.is-on {
+  border-color: #c4b5fd;
+  background: #f5f3ff;
+  color: #5b21b6;
+}

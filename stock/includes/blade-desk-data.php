@@ -727,7 +727,9 @@ if (!function_exists('stock_blade_products_list_data')) {
             'hasItemType' => $hasItemType,
             'showCost' => $showCost,
             'baseUrl' => $base,
-            'searchApiUrl' => $base . 'modules/products/api/search.php',
+            'searchApiUrl' => function_exists('stock_products_api_url')
+                ? stock_products_api_url('search.php')
+                : ($base . 'modules/products/api/search.php'),
             'uploadsUrl' => stock_blade_desk_url('uploads', ['folder' => 'uploads']),
             'urls' => [
                 'list' => stock_blade_desk_url('products'),
@@ -910,7 +912,11 @@ if (!function_exists('stock_blade_product_create_data')) {
             'currencies' => ['TZS', 'USD', 'EUR'],
             'defaultCurrency' => 'TZS',
             'listUrl' => stock_blade_desk_url('products'),
-            'createApiUrl' => $base . 'modules/products/api/create-product.php',
+            // Must use company-prefixed API URL (/ultimate/stock/...) so POST is not
+            // 302-redirected (browsers turn redirected POST into GET → 405).
+            'createApiUrl' => function_exists('stock_products_api_url')
+                ? stock_products_api_url('create-product.php')
+                : ($base . 'modules/products/api/create-product.php'),
             'baseUrl' => $base,
         ];
     }

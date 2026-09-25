@@ -22,8 +22,14 @@ if ($wantsJson && (!function_exists('isLoggedIn') || !isLoggedIn())) {
 requireLogin();
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    // Browsers that followed a slug 302 after POST arrive as GET — send them back to the form.
+    if (!$wantsJson && function_exists('stock_desk_url')) {
+        header('Location: ' . stock_desk_url('product-create'));
+        exit;
+    }
     http_response_code(405);
-    echo json_encode(['ok' => false, 'error' => 'Method not allowed']);
+    header('Allow: POST');
+    echo json_encode(['ok' => false, 'error' => 'Method not allowed — use POST to create a product.']);
     exit;
 }
 

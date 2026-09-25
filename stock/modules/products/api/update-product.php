@@ -23,7 +23,8 @@ requireLogin();
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     http_response_code(405);
-    echo json_encode(['ok' => false, 'error' => 'Method not allowed']);
+    header('Allow: POST');
+    echo json_encode(['ok' => false, 'error' => 'Method not allowed — use POST to update a product.']);
     exit;
 }
 

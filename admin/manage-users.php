@@ -32,6 +32,41 @@ if ($userId <= 0) {
     exit;
 }
 
+// Handle mutations in legacy PHP, then redirect to GET (avoids Laravel 419 CSRF).
+if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+    $state = manageUsersUi_collect_state();
+    if (!empty($state['success'])) {
+        $_SESSION['manage_users_flash_success'] = (string) $state['success'];
+    }
+    if (!empty($state['error'])) {
+        $_SESSION['manage_users_flash_error'] = (string) $state['error'];
+    }
+    if (!empty($state['pwFlash']) && is_array($state['pwFlash'])) {
+        $_SESSION['manage_users_pw_flash'] = $state['pwFlash'];
+    }
+    if (!empty($state['bulkPwFlash']) && is_array($state['bulkPwFlash'])) {
+        $_SESSION['manage_users_bulk_pw_flash'] = $state['bulkPwFlash'];
+    }
+    $qs = [];
+    if (!empty($_GET['module'])) {
+        $qs['module'] = (string) $_GET['module'];
+    }
+    if (!empty($_GET['company_slug'])) {
+        $qs['company_slug'] = (string) $_GET['company_slug'];
+    } elseif (function_exists('getRequestedCompanySlug')) {
+        $slugRedirect = trim((string) getRequestedCompanySlug());
+        if ($slugRedirect !== '') {
+            $qs['company_slug'] = $slugRedirect;
+        }
+    }
+    $target = 'manage-users.php';
+    if ($qs !== []) {
+        $target .= '?' . http_build_query($qs);
+    }
+    header('Location: ' . $target);
+    exit;
+}
+
 $slug = trim((string) ($_SESSION['company_slug'] ?? (function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : '')));
 if ($slug === '' && function_exists('getRequestedCompanySlug')) {
     $slug = trim((string) getRequestedCompanySlug());

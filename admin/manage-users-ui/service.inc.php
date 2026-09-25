@@ -702,6 +702,15 @@ foreach ($users as $u) {
         unset($_SESSION['manage_users_bulk_pw_flash']);
     }
 
+    if ($success === null && !empty($_SESSION['manage_users_flash_success'])) {
+        $success = (string) $_SESSION['manage_users_flash_success'];
+        unset($_SESSION['manage_users_flash_success']);
+    }
+    if ($error === null && !empty($_SESSION['manage_users_flash_error'])) {
+        $error = (string) $_SESSION['manage_users_flash_error'];
+        unset($_SESSION['manage_users_flash_error']);
+    }
+
     $defaultDepartments = ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Management'];
     $departments = $defaultDepartments;
     try {

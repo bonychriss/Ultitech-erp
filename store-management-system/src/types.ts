@@ -199,6 +199,7 @@ export interface PurchaseOrderLine {
   qtyOrdered: number;
   qtyReceived: number;
   qtyRemaining: number;
+  currentStock?: number;
   receiveStatus?: 'Pending' | 'Partially received' | 'Received' | string;
   unitCost: number;
   imageUrl?: string;

@@ -332,20 +332,25 @@ export async function fetchProductPoReferences(
 
 export async function fetchPurchaseOrder(
   poId: string,
-  source: string
+  source: string,
+  warehouseId?: number
 ): Promise<{
   order: PurchaseOrderSummary;
   lines: PurchaseOrderLine[];
   attachments: PurchaseOrderAttachment[];
   linkedVouchers: LinkedPaymentVoucher[];
 }> {
+  const params: Record<string, string> = { po_id: poId, source };
+  if (warehouseId && warehouseId > 0) {
+    params.warehouse_id = String(warehouseId);
+  }
   const data = await request<{
     order: PurchaseOrderSummary;
     lines: PurchaseOrderLine[];
     attachments?: PurchaseOrderAttachment[];
     linkedVouchers?: LinkedPaymentVoucher[];
   }>('purchase_order', {
-    params: { po_id: poId, source },
+    params,
   });
   return {
     order: data.order,

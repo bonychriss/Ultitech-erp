@@ -684,10 +684,48 @@ function sms_map_po_line(array $row): array
         'qtyOrdered' => $ordered,
         'qtyReceived' => $received,
         'qtyRemaining' => $remaining,
+        'currentStock' => (float) ($row['current_stock'] ?? $row['currentStock'] ?? 0),
         'receiveStatus' => $receiveStatus,
         'unitCost' => (float) ($row['unit_cost'] ?? $row['unit_price'] ?? 0),
         'imageUrl' => (string) ($row['image_url'] ?? $row['imageUrl'] ?? ''),
     ];
+}
+
+/** On-hand quantity for a product in a warehouse (`stock` table). */
+function sms_on_hand_qty(PDO $pdo, int $productId, int $warehouseId): float
+{
+    if ($productId <= 0 || $warehouseId <= 0 || !tableExists('stock')) {
+        return 0.0;
+    }
+    try {
+        $stmt = $pdo->prepare('SELECT quantity FROM stock WHERE product_id = ? AND warehouse_id = ? LIMIT 1');
+        $stmt->execute([$productId, $warehouseId]);
+        return (float) ($stmt->fetchColumn() ?: 0);
+    } catch (Throwable $e) {
+        return 0.0;
+    }
+}
+
+/**
+ * @param array<int, array<string, mixed>> $lines
+ */
+function sms_enrich_po_lines_current_stock(PDO $pdo, array &$lines, int $warehouseId): void
+{
+    if ($warehouseId <= 0 || $lines === []) {
+        return;
+    }
+    foreach ($lines as &$line) {
+        $productId = (int) ($line['productId'] ?? 0);
+        $sku = (string) ($line['productSku'] ?? '');
+        $resolved = function_exists('sms_resolve_product_id_for_po_item')
+            ? sms_resolve_product_id_for_po_item($pdo, $productId, $sku)
+            : $productId;
+        if ($resolved <= 0) {
+            $resolved = $productId;
+        }
+        $line['currentStock'] = sms_on_hand_qty($pdo, $resolved, $warehouseId);
+    }
+    unset($line);
 }
 
 function sms_product_image_url(PDO $pdo, int $productId): string
@@ -1533,19 +1571,19 @@ function sms_normalize_po_source(string $source): string
 /**
  * Fetch receivable PO detail; if the preferred source misses, try the other.
  */
-function sms_fetch_purchase_order_detail_resolving(PDO $pdo, int $poId, string $source = 'stocks'): ?array
+function sms_fetch_purchase_order_detail_resolving(PDO $pdo, int $poId, string $source = 'stocks', int $warehouseId = 0): ?array
 {
     $preferred = sms_normalize_po_source($source);
-    $detail = sms_fetch_purchase_order_detail($pdo, $poId, $preferred);
+    $detail = sms_fetch_purchase_order_detail($pdo, $poId, $preferred, $warehouseId);
     if ($detail !== null) {
         return $detail;
     }
 
     $fallback = $preferred === 'legacy' ? 'stocks' : 'legacy';
-    return sms_fetch_purchase_order_detail($pdo, $poId, $fallback);
+    return sms_fetch_purchase_order_detail($pdo, $poId, $fallback, $warehouseId);
 }
 
-function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = 'stocks'): ?array
+function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = 'stocks', int $warehouseId = 0): ?array
 {
     if ($poId <= 0) {
         return null;
@@ -1589,6 +1627,8 @@ function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = '
             }
         }
         unset($line);
+
+        sms_enrich_po_lines_current_stock($pdo, $lines, $warehouseId);
 
         $remaining = array_sum(array_map(static fn(array $line) => (float) $line['qtyRemaining'], $lines));
         $ordered = array_sum(array_map(static fn(array $line) => (float) $line['qtyOrdered'], $lines));
@@ -1677,6 +1717,8 @@ function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = '
         }
     }
     unset($line);
+
+    sms_enrich_po_lines_current_stock($pdo, $lines, $warehouseId);
 
     $remaining = array_sum(array_map(static fn(array $line) => (float) $line['qtyRemaining'], $lines));
     $ordered = array_sum(array_map(static fn(array $line) => (float) $line['qtyOrdered'], $lines));
@@ -3283,7 +3325,13 @@ try {
             if ($poId <= 0) {
                 sms_error('po_id is required');
             }
-            $detail = sms_fetch_purchase_order_detail_resolving($pdo, $poId, $source !== '' ? $source : 'stocks');
+            $warehouseId = (int) ($_GET['warehouse_id'] ?? $_POST['warehouse_id'] ?? 0);
+            $detail = sms_fetch_purchase_order_detail_resolving(
+                $pdo,
+                $poId,
+                $source !== '' ? $source : 'stocks',
+                $warehouseId
+            );
             if ($detail === null) {
                 sms_error('Purchase order not found or not available for receiving', 404);
             }

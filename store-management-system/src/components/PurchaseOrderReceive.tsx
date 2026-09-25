@@ -189,7 +189,7 @@ export default function PurchaseOrderReceive({
     setLoadingDetail(true);
     setError(null);
     try {
-      const data = await fetchPurchaseOrder(poId, source);
+      const data = await fetchPurchaseOrder(poId, source, warehouseId);
       setSelectedOrder(data.order);
       setLines(data.lines);
       setPoAttachments(data.attachments);
@@ -219,7 +219,7 @@ export default function PurchaseOrderReceive({
     } finally {
       setLoadingDetail(false);
     }
-  }, []);
+  }, [warehouseId]);
 
   useEffect(() => {
     if (selectedKey) {
@@ -482,6 +482,7 @@ export default function PurchaseOrderReceive({
                             <th className="text-center">Ordered</th>
                             <th className="text-center">Delivered</th>
                             <th className="text-center">Remaining</th>
+                            <th className="text-center">Current stock</th>
                             <th>Status</th>
                             <th className="text-center">Deliver now</th>
                             <th className="text-right sms-col-actions">Actions</th>
@@ -505,6 +506,13 @@ export default function PurchaseOrderReceive({
                                 <td className="text-center font-mono text-slate-500">{line.qtyReceived}</td>
                                 <td className="text-center font-mono font-semibold text-emerald-600">
                                   {line.qtyRemaining}
+                                </td>
+                                <td
+                                  className={`text-center font-mono${
+                                    (line.currentStock ?? 0) <= 0 ? ' text-slate-500' : ' text-slate-800'
+                                  }`}
+                                >
+                                  {line.currentStock ?? 0}
                                 </td>
                                 <td>
                                   <span className={receiveStatusClass(status)}>{status}</span>

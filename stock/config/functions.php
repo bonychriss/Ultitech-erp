@@ -711,6 +711,31 @@ if (!function_exists('storeReceiptVerify')) {
                 }
             }
 
+            $poIdForFinalize = !empty($receipt['po_id']) ? (int) $receipt['po_id'] : 0;
+            if ($poIdForFinalize > 0 && function_exists('storeReceiptFinalizePoIfReady')) {
+                $poSource = 'stocks';
+                try {
+                    if (function_exists('tableExists') && tableExists('purchases')) {
+                        $legacyCheck = $pdo->prepare('SELECT 1 FROM purchases WHERE id = ? LIMIT 1');
+                        $legacyCheck->execute([$poIdForFinalize]);
+                        if ($legacyCheck->fetchColumn()) {
+                            // Prefer stocks if both exist; only mark legacy when stocks PO missing.
+                            $stocksCheck = null;
+                            if (tableExists('stocks_purchase_orders')) {
+                                $stocksCheck = $pdo->prepare('SELECT 1 FROM stocks_purchase_orders WHERE id = ? LIMIT 1');
+                                $stocksCheck->execute([$poIdForFinalize]);
+                            }
+                            if (!$stocksCheck || !$stocksCheck->fetchColumn()) {
+                                $poSource = 'legacy';
+                            }
+                        }
+                    }
+                } catch (Throwable $e) {
+                    $poSource = 'stocks';
+                }
+                storeReceiptFinalizePoIfReady($pdo, $poIdForFinalize, $poSource);
+            }
+
             if ($remainingQty > 0) {
                 return [
                     'ok' => true,
@@ -726,6 +751,368 @@ if (!function_exists('storeReceiptVerify')) {
             }
 
             return ['ok' => true, 'message' => 'Stock verified and added to warehouse.', 'stock' => $qtyVerified];
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+}
+
+if (!function_exists('storeReceiptFinalizePoIfReady')) {
+    /**
+     * When all warehouse pending receipts for a stocks/legacy PO are cleared and
+     * line remaining is 0, mark the PO Received.
+     */
+    function storeReceiptFinalizePoIfReady(PDO $pdo, ?int $poId, string $source = 'stocks'): void
+    {
+        if ($poId === null || $poId <= 0) {
+            return;
+        }
+
+        try {
+            ensureStoreWarehouseReceiptsTable($pdo);
+            $pendingStmt = $pdo->prepare(
+                "SELECT COUNT(*) FROM store_warehouse_receipts WHERE po_id = ? AND status = 'pending'"
+            );
+            $pendingStmt->execute([$poId]);
+            if ((int) $pendingStmt->fetchColumn() > 0) {
+                return;
+            }
+        } catch (Throwable $e) {
+            return;
+        }
+
+        $source = strtolower(trim($source)) === 'legacy' ? 'legacy' : 'stocks';
+
+        try {
+            if ($source === 'legacy') {
+                if (!function_exists('tableExists') || !tableExists('purchases') || !tableExists('purchase_items')) {
+                    return;
+                }
+                $remain = $pdo->prepare(
+                    'SELECT COALESCE(SUM(GREATEST(0, COALESCE(quantity, 0) - COALESCE(qty_received, 0))), 0)
+                     FROM purchase_items WHERE purchase_id = ?'
+                );
+                $remain->execute([$poId]);
+                if ((float) $remain->fetchColumn() > 0.0001) {
+                    return;
+                }
+                $poCols = $pdo->query('SHOW COLUMNS FROM purchases')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                $sets = ["status = 'Received'"];
+                if (in_array('received_date', $poCols, true)) {
+                    $sets[] = 'received_date = NOW()';
+                }
+                if (in_array('updated_at', $poCols, true)) {
+                    $sets[] = 'updated_at = NOW()';
+                }
+                $pdo->exec('UPDATE purchases SET ' . implode(', ', $sets) . ' WHERE id = ' . (int) $poId);
+                return;
+            }
+
+            if (!function_exists('tableExists') || !tableExists('stocks_purchase_orders') || !tableExists('stocks_po_items')) {
+                return;
+            }
+            $remain = $pdo->prepare(
+                'SELECT COALESCE(SUM(GREATEST(COALESCE(qty_ordered, 0) - COALESCE(qty_received, 0), 0)), 0)
+                 FROM stocks_po_items WHERE po_id = ?'
+            );
+            $remain->execute([$poId]);
+            if ((float) $remain->fetchColumn() > 0.0001) {
+                return;
+            }
+            $poCols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if (in_array('updated_at', $poCols, true)) {
+                $pdo->prepare("UPDATE stocks_purchase_orders SET status = 'Received', updated_at = NOW() WHERE id = ?")
+                    ->execute([$poId]);
+            } else {
+                $pdo->prepare("UPDATE stocks_purchase_orders SET status = 'Received' WHERE id = ?")
+                    ->execute([$poId]);
+            }
+        } catch (Throwable $e) {
+            // best effort
+        }
+    }
+}
+
+if (!function_exists('stockPoResolveProductIdForItem')) {
+    function stockPoResolveProductIdForItem(PDO $pdo, int $itemId, string $sku = ''): int
+    {
+        if ($itemId <= 0) {
+            return 0;
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT id FROM products WHERE id = ? LIMIT 1');
+            $stmt->execute([$itemId]);
+            if ($stmt->fetchColumn()) {
+                return $itemId;
+            }
+        } catch (Throwable $e) {
+        }
+        $sku = trim($sku);
+        if ($sku !== '') {
+            try {
+                $stmt = $pdo->prepare('SELECT id FROM products WHERE product_code = ? LIMIT 1');
+                $stmt->execute([$sku]);
+                $altId = $stmt->fetchColumn();
+                if ($altId) {
+                    return (int) $altId;
+                }
+            } catch (Throwable $e) {
+            }
+        }
+
+        return $itemId;
+    }
+}
+
+if (!function_exists('stockPoRecordSupplierDelivery')) {
+    /**
+     * Procurement delivery only: bump PO qty_received and create pending warehouse
+     * receipts. Does NOT increase on-hand stock — store Accept/Verify does that.
+     *
+     * @param array<int|string,float|int|string> $receiveQuantities lineId => qty
+     * @return array{ok:bool,message:string,pending_count?:int,receipt_ids?:int[]}
+     */
+    function stockPoRecordSupplierDelivery(
+        PDO $pdo,
+        int $poId,
+        int $warehouseId,
+        array $receiveQuantities,
+        string $notes = '',
+        ?int $userId = null,
+        string $source = 'stocks'
+    ): array {
+        if ($poId <= 0 || $warehouseId <= 0 || $receiveQuantities === []) {
+            return ['ok' => false, 'message' => 'Invalid delivery submission.'];
+        }
+        if (!function_exists('storeReceiptCreatePending')) {
+            return ['ok' => false, 'message' => 'Store receipt workflow is not available on this server.'];
+        }
+
+        $source = strtolower(trim($source)) === 'legacy' ? 'legacy' : 'stocks';
+        $notes = trim($notes);
+
+        try {
+            if ($source === 'legacy') {
+                if (!function_exists('tableExists') || !tableExists('purchases') || !tableExists('purchase_items')) {
+                    return ['ok' => false, 'message' => 'Legacy purchase tables are not available.'];
+                }
+                if (function_exists('ensureLegacyPurchaseItemsReceivedColumn')) {
+                    ensureLegacyPurchaseItemsReceivedColumn($pdo);
+                }
+
+                $stmtPo = $pdo->prepare('SELECT * FROM purchases WHERE id = ? LIMIT 1');
+                $stmtPo->execute([$poId]);
+                $po = $stmtPo->fetch(PDO::FETCH_ASSOC);
+                if (!$po) {
+                    return ['ok' => false, 'message' => 'Purchase order not found.'];
+                }
+                if (($po['status'] ?? '') === 'Cancelled') {
+                    return ['ok' => false, 'message' => 'Cannot receive a cancelled order.'];
+                }
+
+                $reference = trim((string) ($po['purchase_no'] ?? ''));
+                if ($reference === '') {
+                    $reference = 'PO#' . $poId;
+                }
+
+                $pdo->beginTransaction();
+                $anyReceived = false;
+                $pendingCount = 0;
+                $receiptIds = [];
+
+                foreach ($receiveQuantities as $lineId => $qtyRaw) {
+                    $qty = (float) $qtyRaw;
+                    if ($qty <= 0) {
+                        continue;
+                    }
+                    $lineId = (int) $lineId;
+                    $stmtItem = $pdo->prepare('SELECT * FROM purchase_items WHERE id = ? AND purchase_id = ? LIMIT 1');
+                    $stmtItem->execute([$lineId, $poId]);
+                    $line = $stmtItem->fetch(PDO::FETCH_ASSOC);
+                    if (!$line) {
+                        continue;
+                    }
+                    $remaining = max(0, (float) ($line['quantity'] ?? 0) - (float) ($line['qty_received'] ?? 0));
+                    if ($remaining <= 0) {
+                        continue;
+                    }
+                    if ($qty > $remaining) {
+                        $qty = $remaining;
+                    }
+                    $productId = (int) ($line['product_id'] ?? 0);
+                    if ($productId <= 0) {
+                        continue;
+                    }
+
+                    $pdo->prepare('UPDATE purchase_items SET qty_received = COALESCE(qty_received, 0) + ? WHERE id = ? AND purchase_id = ?')
+                        ->execute([$qty, $lineId, $poId]);
+
+                    $receiptId = storeReceiptCreatePending(
+                        $pdo,
+                        $warehouseId,
+                        $productId,
+                        $qty,
+                        $poId,
+                        $lineId,
+                        $reference,
+                        $notes !== '' ? $notes : null,
+                        $userId
+                    );
+                    if ($receiptId <= 0) {
+                        throw new Exception('Failed to create pending store receipt for line #' . $lineId);
+                    }
+                    $receiptIds[] = $receiptId;
+                    $pendingCount++;
+                    $anyReceived = true;
+                }
+
+                if (!$anyReceived) {
+                    throw new Exception('No valid quantities were processed.');
+                }
+
+                $stmtRemain = $pdo->prepare(
+                    'SELECT COALESCE(SUM(GREATEST(0, COALESCE(quantity, 0) - COALESCE(qty_received, 0))), 0)
+                     FROM purchase_items WHERE purchase_id = ?'
+                );
+                $stmtRemain->execute([$poId]);
+                $remainingTotal = (float) $stmtRemain->fetchColumn();
+                $poCols = $pdo->query('SHOW COLUMNS FROM purchases')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                if ($remainingTotal <= 0.0001) {
+                    $sets = ["status = 'Awaiting Warehouse'"];
+                    if (in_array('updated_at', $poCols, true)) {
+                        $sets[] = 'updated_at = NOW()';
+                    }
+                    $pdo->exec('UPDATE purchases SET ' . implode(', ', $sets) . ' WHERE id = ' . (int) $poId);
+                } elseif (in_array('updated_at', $poCols, true)) {
+                    $pdo->prepare('UPDATE purchases SET updated_at = NOW() WHERE id = ?')->execute([$poId]);
+                }
+
+                $pdo->commit();
+
+                return [
+                    'ok' => true,
+                    'message' => sprintf(
+                        'Delivery recorded for %s (%d line%s). Stock is added when the warehouse accepts the PO.',
+                        $reference,
+                        $pendingCount,
+                        $pendingCount === 1 ? '' : 's'
+                    ),
+                    'pending_count' => $pendingCount,
+                    'receipt_ids' => $receiptIds,
+                ];
+            }
+
+            // stocks_purchase_orders path
+            $stmtPo = $pdo->prepare('SELECT * FROM stocks_purchase_orders WHERE id = ? LIMIT 1');
+            $stmtPo->execute([$poId]);
+            $po = $stmtPo->fetch(PDO::FETCH_ASSOC);
+            if (!$po) {
+                return ['ok' => false, 'message' => 'Purchase order not found.'];
+            }
+            if (($po['status'] ?? '') === 'Cancelled') {
+                return ['ok' => false, 'message' => 'Cannot receive a cancelled order.'];
+            }
+
+            $reference = trim((string) ($po['po_number'] ?? ''));
+            if ($reference === '') {
+                $reference = 'PO#' . $poId;
+            }
+
+            $pdo->beginTransaction();
+            $anyReceived = false;
+            $pendingCount = 0;
+            $receiptIds = [];
+
+            foreach ($receiveQuantities as $lineId => $qtyRaw) {
+                $qty = (float) $qtyRaw;
+                if ($qty <= 0) {
+                    continue;
+                }
+                $lineId = (int) $lineId;
+                $stmtItem = $pdo->prepare('SELECT * FROM stocks_po_items WHERE id = ? AND po_id = ? LIMIT 1');
+                $stmtItem->execute([$lineId, $poId]);
+                $poItem = $stmtItem->fetch(PDO::FETCH_ASSOC);
+                if (!$poItem) {
+                    continue;
+                }
+                $remaining = max(0, (float) ($poItem['qty_ordered'] ?? 0) - (float) ($poItem['qty_received'] ?? 0));
+                if ($remaining <= 0) {
+                    continue;
+                }
+                if ($qty > $remaining) {
+                    $qty = $remaining;
+                }
+
+                $pdo->prepare('UPDATE stocks_po_items SET qty_received = qty_received + ? WHERE id = ?')
+                    ->execute([$qty, $lineId]);
+
+                $sku = '';
+                if (function_exists('tableExists') && tableExists('stocks_items')) {
+                    $skuStmt = $pdo->prepare('SELECT sku FROM stocks_items WHERE id = ? LIMIT 1');
+                    $skuStmt->execute([(int) $poItem['item_id']]);
+                    $sku = trim((string) ($skuStmt->fetchColumn() ?: ''));
+                }
+                $productId = stockPoResolveProductIdForItem($pdo, (int) $poItem['item_id'], $sku);
+                if ($productId <= 0) {
+                    throw new Exception('Could not resolve product for PO line #' . $lineId);
+                }
+
+                $receiptId = storeReceiptCreatePending(
+                    $pdo,
+                    $warehouseId,
+                    $productId,
+                    $qty,
+                    $poId,
+                    $lineId,
+                    $reference,
+                    $notes !== '' ? $notes : null,
+                    $userId
+                );
+                if ($receiptId <= 0) {
+                    throw new Exception('Failed to create pending store receipt for line #' . $lineId);
+                }
+                $receiptIds[] = $receiptId;
+                $pendingCount++;
+                $anyReceived = true;
+            }
+
+            if (!$anyReceived) {
+                throw new Exception('No valid quantities were processed.');
+            }
+
+            $stmtCheck = $pdo->prepare(
+                'SELECT COALESCE(SUM(GREATEST(qty_ordered - qty_received, 0)), 0) FROM stocks_po_items WHERE po_id = ?'
+            );
+            $stmtCheck->execute([$poId]);
+            $remainingTotal = (float) $stmtCheck->fetchColumn();
+            $poCols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if ($remainingTotal <= 0.0001) {
+                if (in_array('updated_at', $poCols, true)) {
+                    $pdo->prepare("UPDATE stocks_purchase_orders SET status = 'Awaiting Warehouse', updated_at = NOW() WHERE id = ?")
+                        ->execute([$poId]);
+                } else {
+                    $pdo->prepare("UPDATE stocks_purchase_orders SET status = 'Awaiting Warehouse' WHERE id = ?")
+                        ->execute([$poId]);
+                }
+            }
+
+            $pdo->commit();
+
+            return [
+                'ok' => true,
+                'message' => sprintf(
+                    'Delivery recorded for %s (%d line%s). Stock is added when the warehouse accepts the PO.',
+                    $reference,
+                    $pendingCount,
+                    $pendingCount === 1 ? '' : 's'
+                ),
+                'pending_count' => $pendingCount,
+                'receipt_ids' => $receiptIds,
+            ];
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();

@@ -1612,139 +1612,23 @@ function stockPurchaseProcessLegacyReceive(
     int $purchaseId,
     array $receiveQuantities,
     string $notes = '',
-    ?int $userId = null
+    ?int $userId = null,
+    int $warehouseId = 1
 ): array {
-    if ($purchaseId <= 0) {
-        return ['ok' => false, 'message' => 'Invalid purchase order.'];
+    if ($warehouseId <= 0) {
+        $warehouseId = 1;
     }
-    if (!function_exists('tableExists') || !tableExists('purchases', $pdo) || !tableExists('purchase_items', $pdo)) {
-        return ['ok' => false, 'message' => 'Legacy purchase tables are not available.'];
+    if (!function_exists('stockPoRecordSupplierDelivery')) {
+        return ['ok' => false, 'message' => 'Delivery workflow is not available on this server yet.'];
     }
 
-    ensureLegacyPurchaseItemsReceivedColumn($pdo);
-
-    try {
-        $stmtPo = $pdo->prepare('SELECT * FROM purchases WHERE id = ? LIMIT 1');
-        $stmtPo->execute([$purchaseId]);
-        $po = $stmtPo->fetch(PDO::FETCH_ASSOC);
-        if (!$po) {
-            return ['ok' => false, 'message' => 'Purchase order not found.'];
-        }
-        if (($po['status'] ?? '') === 'Cancelled') {
-            return ['ok' => false, 'message' => 'Cannot receive a cancelled order.'];
-        }
-        if (($po['status'] ?? '') === 'Received') {
-            return ['ok' => false, 'message' => 'This purchase order is already fully received.'];
-        }
-
-        $purchaseNo = trim((string) ($po['purchase_no'] ?? ''));
-        if ($purchaseNo === '') {
-            $purchaseNo = 'PO#' . $purchaseId;
-        }
-        $notes = trim($notes);
-
-        $pdo->beginTransaction();
-
-        $anyReceived = false;
-        foreach ($receiveQuantities as $lineId => $qtyRaw) {
-            $qty = (float) $qtyRaw;
-            if ($qty <= 0) {
-                continue;
-            }
-
-            $lineId = (int) $lineId;
-            $stmtItem = $pdo->prepare('SELECT * FROM purchase_items WHERE id = ? AND purchase_id = ? LIMIT 1');
-            $stmtItem->execute([$lineId, $purchaseId]);
-            $line = $stmtItem->fetch(PDO::FETCH_ASSOC);
-            if (!$line) {
-                continue;
-            }
-
-            $ordered = (float) ($line['quantity'] ?? 0);
-            $already = (float) ($line['qty_received'] ?? 0);
-            $remaining = max(0, $ordered - $already);
-            if ($remaining <= 0) {
-                continue;
-            }
-            if ($qty > $remaining) {
-                $qty = $remaining;
-            }
-
-            $productId = (int) ($line['product_id'] ?? 0);
-            if ($productId <= 0) {
-                continue;
-            }
-
-            $pdo->prepare('UPDATE purchase_items SET qty_received = COALESCE(qty_received, 0) + ? WHERE id = ? AND purchase_id = ?')
-                ->execute([$qty, $lineId, $purchaseId]);
-
-            if (tableExists('stock', $pdo)) {
-                $stmtStock = $pdo->prepare('SELECT id FROM stock WHERE product_id = ? LIMIT 1');
-                $stmtStock->execute([$productId]);
-                $stockId = (int) ($stmtStock->fetchColumn() ?: 0);
-                if ($stockId > 0) {
-                    $pdo->prepare('UPDATE stock SET quantity = quantity + ?, last_updated = NOW() WHERE id = ?')
-                        ->execute([$qty, $stockId]);
-                } else {
-                    $pdo->prepare("INSERT INTO stock (product_id, quantity, location, last_updated) VALUES (?, ?, 'Warehouse A', NOW())")
-                        ->execute([$productId, $qty]);
-                }
-            }
-
-            if (tableExists('stock_movements', $pdo)) {
-                $movementNote = 'Received PO ' . $purchaseNo;
-                if ($notes !== '') {
-                    $movementNote .= ' — ' . $notes;
-                }
-                try {
-                    $pdo->prepare(
-                        "INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, notes, created_at)
-                         VALUES (?, 'in', ?, 'purchase', ?, ?, NOW())"
-                    )->execute([$productId, $qty, (string) $purchaseId, $movementNote]);
-                } catch (Throwable $e) {
-                    error_log('stockPurchaseProcessLegacyReceive movement: ' . $e->getMessage());
-                }
-            }
-
-            $anyReceived = true;
-        }
-
-        if (!$anyReceived) {
-            $pdo->rollBack();
-            return ['ok' => false, 'message' => 'No valid quantities were processed.'];
-        }
-
-        $stmtRemain = $pdo->prepare(
-            'SELECT COALESCE(SUM(GREATEST(0, COALESCE(quantity, 0) - COALESCE(qty_received, 0))), 0)
-             FROM purchase_items WHERE purchase_id = ?'
-        );
-        $stmtRemain->execute([$purchaseId]);
-        $remainingTotal = (float) $stmtRemain->fetchColumn();
-
-        $poCols = $pdo->query('SHOW COLUMNS FROM purchases')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-        if ($remainingTotal <= 0) {
-            $sets = ["status = 'Received'"];
-            if (in_array('received_date', $poCols, true)) {
-                $sets[] = 'received_date = NOW()';
-            }
-            if (in_array('received_by', $poCols, true) && $userId) {
-                $sets[] = 'received_by = ' . (int) $userId;
-            }
-            if (in_array('updated_at', $poCols, true)) {
-                $sets[] = 'updated_at = NOW()';
-            }
-            $pdo->exec('UPDATE purchases SET ' . implode(', ', $sets) . ' WHERE id = ' . (int) $purchaseId);
-        } elseif (in_array('updated_at', $poCols, true)) {
-            $pdo->prepare('UPDATE purchases SET updated_at = NOW() WHERE id = ?')->execute([$purchaseId]);
-        }
-
-        $pdo->commit();
-
-        return ['ok' => true, 'message' => 'Stock received successfully for Order ' . $purchaseNo];
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        return ['ok' => false, 'message' => 'Error processing receipt: ' . $e->getMessage()];
-    }
+    return stockPoRecordSupplierDelivery(
+        $pdo,
+        $purchaseId,
+        $warehouseId,
+        $receiveQuantities,
+        $notes,
+        $userId,
+        'legacy'
+    );
 }

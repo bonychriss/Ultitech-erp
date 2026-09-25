@@ -527,8 +527,16 @@ function sms_active_company_id(): int
 function sms_po_can_receive(array $po, bool $hasShipment = true): bool
 {
     $status = (string) ($po['status'] ?? '');
-    if (in_array($status, ['Received', 'Cancelled'], true)) {
+    if ($status === 'Cancelled') {
         return false;
+    }
+    // Fully in stock — not receivable unless caller is handling pending receipts separately.
+    if ($status === 'Received') {
+        return false;
+    }
+    // Supplier delivery recorded; warehouse still needs to accept into stock.
+    if ($status === 'Awaiting Warehouse') {
+        return true;
     }
     if (sms_purchase_workflow_loaded() && function_exists('purchaseStatusesBlockingReceive')
         && in_array($status, purchaseStatusesBlockingReceive(), true)) {
@@ -540,6 +548,66 @@ function sms_po_can_receive(array $po, bool $hasShipment = true): bool
     }
 
     return true;
+}
+
+/**
+ * Pending warehouse receipt qty keyed by po_line_id for a PO.
+ *
+ * @return array<int,float>
+ */
+function sms_pending_receipt_qty_by_po_line(PDO $pdo, int $poId, int $warehouseId = 0): array
+{
+    if ($poId <= 0 || !function_exists('ensureStoreWarehouseReceiptsTable')) {
+        return [];
+    }
+    try {
+        ensureStoreWarehouseReceiptsTable($pdo);
+        $sql = "SELECT po_line_id, COALESCE(SUM(qty_expected), 0) AS pending_qty
+                FROM store_warehouse_receipts
+                WHERE po_id = ? AND status = 'pending' AND po_line_id IS NOT NULL AND po_line_id > 0";
+        $params = [$poId];
+        if ($warehouseId > 0) {
+            $sql .= ' AND warehouse_id = ?';
+            $params[] = $warehouseId;
+        }
+        $sql .= ' GROUP BY po_line_id';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $map = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $lineId = (int) ($row['po_line_id'] ?? 0);
+            if ($lineId > 0) {
+                $map[$lineId] = (float) ($row['pending_qty'] ?? 0);
+            }
+        }
+
+        return $map;
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+/**
+ * @return list<array<string,mixed>>
+ */
+function sms_fetch_pending_receipts_for_po(PDO $pdo, int $poId, int $warehouseId): array
+{
+    if ($poId <= 0 || $warehouseId <= 0 || !function_exists('ensureStoreWarehouseReceiptsTable')) {
+        return [];
+    }
+    try {
+        ensureStoreWarehouseReceiptsTable($pdo);
+        $stmt = $pdo->prepare(
+            "SELECT * FROM store_warehouse_receipts
+             WHERE po_id = ? AND warehouse_id = ? AND status = 'pending'
+             ORDER BY id ASC"
+        );
+        $stmt->execute([$poId, $warehouseId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
 }
 
 function sms_po_has_shipment(PDO $pdo, int $poId): bool
@@ -668,7 +736,19 @@ function sms_lookup_supplier_name(PDO $pdo, array $po): string
 function sms_fetch_receivable_purchase_orders(PDO $pdo): array
 {
     $orders = [];
+    $seen = [];
     $companyId = sms_active_company_id();
+
+    $appendOrder = static function (array $row) use (&$orders, &$seen): void {
+        $source = (string) ($row['_source'] ?? 'stocks');
+        $id = (int) ($row['id'] ?? 0);
+        $key = $source . ':' . $id;
+        if ($id <= 0 || isset($seen[$key])) {
+            return;
+        }
+        $seen[$key] = true;
+        $orders[] = sms_map_purchase_order_summary($row);
+    };
 
     if (tableExists('stocks_purchase_orders') && tableExists('stocks_po_items')) {
         $poCols = [];
@@ -698,7 +778,10 @@ function sms_fetch_receivable_purchase_orders(PDO $pdo): array
         if (in_array('company_id', $poCols, true) && $companyId > 0) {
             $sql .= ' AND p.company_id = ' . (int) $companyId;
         }
-        $sql .= ' GROUP BY p.id HAVING remaining_qty > 0 ORDER BY p.created_at DESC LIMIT 200';
+        // Include open remaining lines OR awaiting warehouse acceptance (pending receipts).
+        $sql .= " GROUP BY p.id
+                  HAVING remaining_qty > 0 OR p.status = 'Awaiting Warehouse'
+                  ORDER BY p.created_at DESC LIMIT 200";
 
         try {
             foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -707,7 +790,52 @@ function sms_fetch_receivable_purchase_orders(PDO $pdo): array
                 if (!sms_po_can_receive($row, $hasShipment)) {
                     continue;
                 }
-                $orders[] = sms_map_purchase_order_summary($row);
+                // For awaiting-warehouse with no line remaining, surface pending qty as units pending.
+                if ((float) ($row['remaining_qty'] ?? 0) <= 0.0001 && ($row['status'] ?? '') === 'Awaiting Warehouse') {
+                    $pendingMap = sms_pending_receipt_qty_by_po_line($pdo, (int) $row['id']);
+                    $pendingTotal = array_sum($pendingMap);
+                    if ($pendingTotal > 0) {
+                        $row['remaining_qty'] = $pendingTotal;
+                    }
+                }
+                $appendOrder($row);
+            }
+        } catch (Throwable $e) {
+        }
+
+        // Also pick up any PO that still has pending receipts (edge cases).
+        try {
+            if (function_exists('ensureStoreWarehouseReceiptsTable')) {
+                ensureStoreWarehouseReceiptsTable($pdo);
+                $pendingPoSql = "SELECT DISTINCT r.po_id
+                                 FROM store_warehouse_receipts r
+                                 WHERE r.status = 'pending' AND r.po_id IS NOT NULL AND r.po_id > 0
+                                 LIMIT 200";
+                foreach ($pdo->query($pendingPoSql)->fetchAll(PDO::FETCH_COLUMN) ?: [] as $pendingPoId) {
+                    $pendingPoId = (int) $pendingPoId;
+                    if ($pendingPoId <= 0 || isset($seen['stocks:' . $pendingPoId])) {
+                        continue;
+                    }
+                    $detail = sms_fetch_purchase_order_detail($pdo, $pendingPoId, 'stocks');
+                    if ($detail !== null) {
+                        $summary = $detail['order'];
+                        $summary['_source'] = 'stocks';
+                        // Rebuild minimal row for mapper if needed
+                        $appendOrder([
+                            'id' => $pendingPoId,
+                            'po_number' => $summary['poNumber'] ?? '',
+                            'status' => $summary['status'] ?? 'Awaiting Warehouse',
+                            'purchase_type' => $summary['purchaseType'] ?? 'domestic',
+                            'created_at' => $summary['createdAt'] ?? '',
+                            'supplier_name' => $summary['supplierName'] ?? '',
+                            'ordered_qty' => $summary['orderedQty'] ?? 0,
+                            'received_qty' => $summary['receivedQty'] ?? 0,
+                            'remaining_qty' => $summary['remainingQty'] ?? 0,
+                            'line_count' => $summary['lineCount'] ?? 0,
+                            '_source' => 'stocks',
+                        ]);
+                    }
+                }
             }
         } catch (Throwable $e) {
         }
@@ -735,7 +863,9 @@ function sms_fetch_receivable_purchase_orders(PDO $pdo): array
         if (in_array('company_id', $legacyCols, true) && $companyId > 0) {
             $legacySql .= ' AND p.company_id = ' . (int) $companyId;
         }
-        $legacySql .= ' GROUP BY p.id HAVING remaining_qty > 0 ORDER BY p.created_at DESC LIMIT 200';
+        $legacySql .= " GROUP BY p.id
+                        HAVING remaining_qty > 0 OR p.status = 'Awaiting Warehouse'
+                        ORDER BY p.created_at DESC LIMIT 200";
 
         try {
             foreach ($pdo->query($legacySql)->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -743,7 +873,14 @@ function sms_fetch_receivable_purchase_orders(PDO $pdo): array
                 if (!sms_po_can_receive($row, true)) {
                     continue;
                 }
-                $orders[] = sms_map_purchase_order_summary($row);
+                if ((float) ($row['remaining_qty'] ?? 0) <= 0.0001 && ($row['status'] ?? '') === 'Awaiting Warehouse') {
+                    $pendingMap = sms_pending_receipt_qty_by_po_line($pdo, (int) $row['id']);
+                    $pendingTotal = array_sum($pendingMap);
+                    if ($pendingTotal > 0) {
+                        $row['remaining_qty'] = $pendingTotal;
+                    }
+                }
+                $appendOrder($row);
             }
         } catch (Throwable $e) {
         }
@@ -1435,6 +1572,17 @@ function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = '
             $lines[] = $mapped;
         }
 
+        $pendingByLine = sms_pending_receipt_qty_by_po_line($pdo, $poId);
+        foreach ($lines as &$line) {
+            $lineId = (int) ($line['lineId'] ?? 0);
+            $pendingQty = (float) ($pendingByLine[$lineId] ?? 0);
+            if ($pendingQty > 0 && (float) ($line['qtyRemaining'] ?? 0) <= 0.0001) {
+                $line['qtyRemaining'] = $pendingQty;
+                $line['receiveStatus'] = 'Awaiting warehouse';
+            }
+        }
+        unset($line);
+
         $remaining = array_sum(array_map(static fn(array $line) => (float) $line['qtyRemaining'], $lines));
         $ordered = array_sum(array_map(static fn(array $line) => (float) $line['qtyOrdered'], $lines));
         $received = array_sum(array_map(static fn(array $line) => (float) $line['qtyReceived'], $lines));
@@ -1510,6 +1658,17 @@ function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = '
             ),
         ]);
     }
+
+    $pendingByLine = sms_pending_receipt_qty_by_po_line($pdo, $poId);
+    foreach ($lines as &$line) {
+        $lineId = (int) ($line['lineId'] ?? 0);
+        $pendingQty = (float) ($pendingByLine[$lineId] ?? 0);
+        if ($pendingQty > 0 && (float) ($line['qtyRemaining'] ?? 0) <= 0.0001) {
+            $line['qtyRemaining'] = $pendingQty;
+            $line['receiveStatus'] = 'Awaiting warehouse';
+        }
+    }
+    unset($line);
 
     $remaining = array_sum(array_map(static fn(array $line) => (float) $line['qtyRemaining'], $lines));
     $ordered = array_sum(array_map(static fn(array $line) => (float) $line['qtyOrdered'], $lines));

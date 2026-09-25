@@ -2,9 +2,14 @@ import React, { useMemo, useState } from 'react';
 import {
   HiOutlineArrowLeft,
   HiOutlineArrowPath,
+  HiOutlineBuildingStorefront,
+  HiOutlineCalendarDays,
   HiOutlineCheckCircle,
+  HiOutlineClock,
   HiOutlineEye,
   HiOutlineExclamationTriangle,
+  HiOutlineGlobeAlt,
+  HiOutlineHome,
   HiOutlineInformationCircle,
 } from 'react-icons/hi2';
 import './products-desk.css';
@@ -155,45 +160,69 @@ export default function PurchaseReceive({ data }) {
         </div>
       </header>
 
-      <dl className="pr-meta">
-        <div className="pr-meta-cell">
-          <dt>Type</dt>
-          <dd>{isImport ? 'Abroad' : 'Internal'}</dd>
-        </div>
-        <div className="pr-meta-cell">
-          <dt>Supplier</dt>
-          <dd>{po.supplier_name || '-'}</dd>
-        </div>
-        <div className="pr-meta-cell">
-          <dt>Ordered</dt>
-          <dd>{orderedLabel}</dd>
-        </div>
-        <div className="pr-meta-cell">
-          <dt>Status</dt>
-          <dd>
-            <span className={`pr-status${fullyReceived ? ' is-done' : ''}`}>{po.status || '-'}</span>
-          </dd>
-        </div>
-      </dl>
+      <section className="pr-card pr-card--summary" aria-label="Purchase order summary">
+        <dl className="pr-meta">
+          <div className="pr-meta-cell">
+            <dt>
+              <span className="pr-meta-icon" aria-hidden="true">
+                {isImport ? <HiOutlineGlobeAlt size={14} /> : <HiOutlineHome size={14} />}
+              </span>
+              Type
+            </dt>
+            <dd>{isImport ? 'Abroad' : 'Internal'}</dd>
+          </div>
+          <div className="pr-meta-cell">
+            <dt>
+              <span className="pr-meta-icon" aria-hidden="true">
+                <HiOutlineBuildingStorefront size={14} />
+              </span>
+              Supplier
+            </dt>
+            <dd>{po.supplier_name || '-'}</dd>
+          </div>
+          <div className="pr-meta-cell">
+            <dt>
+              <span className="pr-meta-icon" aria-hidden="true">
+                <HiOutlineCalendarDays size={14} />
+              </span>
+              Ordered
+            </dt>
+            <dd>{orderedLabel}</dd>
+          </div>
+          <div className="pr-meta-cell">
+            <dt>
+              <span className="pr-meta-icon" aria-hidden="true">
+                <HiOutlineClock size={14} />
+              </span>
+              Status
+            </dt>
+            <dd>
+              <span className={`pr-status${fullyReceived ? ' is-done' : ''}`}>{po.status || '-'}</span>
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       {fullyReceived ? (
-        <div className="pr-alert" role="status">
-          <HiOutlineCheckCircle size={18} />
-          <div>
-            <strong>This purchase order is already fully received.</strong> There is nothing left to post.
-            <div className="pr-alert-actions">
-              <a
-                href={`${productsUrl}?search=${encodeURIComponent(firstItemName)}&hl=${encodeURIComponent(firstItemName)}`}
-                className="prod-desk-btn prod-desk-btn-secondary"
-              >
-                Open in inventory
-              </a>
-              <a href={`${auditUrl}?po_id=${po.id || ''}`} className="prod-desk-btn prod-desk-btn-secondary">
-                View receipt audit
-              </a>
-              <a href={indexUrl} className="prod-desk-btn prod-desk-btn-secondary">
-                Back to purchase orders
-              </a>
+        <div className="pr-card pr-card--alert" role="status">
+          <div className="pr-alert">
+            <HiOutlineCheckCircle size={18} />
+            <div>
+              <strong>This purchase order is already fully received.</strong> There is nothing left to post.
+              <div className="pr-alert-actions">
+                <a
+                  href={`${productsUrl}?search=${encodeURIComponent(firstItemName)}&hl=${encodeURIComponent(firstItemName)}`}
+                  className="prod-desk-btn prod-desk-btn-secondary"
+                >
+                  Open in inventory
+                </a>
+                <a href={`${auditUrl}?po_id=${po.id || ''}`} className="prod-desk-btn prod-desk-btn-secondary">
+                  View receipt audit
+                </a>
+                <a href={indexUrl} className="prod-desk-btn prod-desk-btn-secondary">
+                  Back to purchase orders
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -205,7 +234,7 @@ export default function PurchaseReceive({ data }) {
         <input type="hidden" name="warehouse_id" value={warehouses[0]?.id ? String(warehouses[0].id) : '1'} />
         <input type="hidden" name="notes" value="" />
 
-        <section className="pr-section" aria-labelledby="pr-items-heading">
+        <section className="pr-card pr-card--items" aria-labelledby="pr-items-heading">
           <div className="pr-section-head">
             <h2 id="pr-items-heading" className="pr-section-title">
               Itemized receipt
@@ -298,32 +327,32 @@ export default function PurchaseReceive({ data }) {
               </table>
             </div>
           )}
-        </section>
 
-        <div className="pr-footer">
-          <p className="pr-tip">
-            <HiOutlineInformationCircle size={16} aria-hidden="true" />
-            <span>
-              Records supplier delivery only. On-hand stock is added when the warehouse accepts this PO.
-              {isImport ? ' Outdoor POs use Shipments for ETA and freight.' : ''}
-            </span>
-          </p>
-          <button
-            type="submit"
-            className="prod-desk-btn prod-desk-btn-primary pr-submit"
-            disabled={fullyReceived || submitting || initialItems.length === 0}
-          >
-            {submitting ? (
-              <>
-                <HiOutlineArrowPath size={16} className="pr-spin" /> Processing...
-              </>
-            ) : (
-              <>
-                <HiOutlineCheckCircle size={16} /> Record delivery
-              </>
-            )}
-          </button>
-        </div>
+          <div className="pr-footer">
+            <p className="pr-tip">
+              <HiOutlineInformationCircle size={16} aria-hidden="true" />
+              <span>
+                Records supplier delivery only. On-hand stock is added when the warehouse accepts this PO.
+                {isImport ? ' Outdoor POs use Shipments for ETA and freight.' : ''}
+              </span>
+            </p>
+            <button
+              type="submit"
+              className="prod-desk-btn prod-desk-btn-primary pr-submit"
+              disabled={fullyReceived || submitting || initialItems.length === 0}
+            >
+              {submitting ? (
+                <>
+                  <HiOutlineArrowPath size={16} className="pr-spin" /> Processing...
+                </>
+              ) : (
+                <>
+                  <HiOutlineCheckCircle size={16} /> Record delivery
+                </>
+              )}
+            </button>
+          </div>
+        </section>
       </form>
     </div>
   );

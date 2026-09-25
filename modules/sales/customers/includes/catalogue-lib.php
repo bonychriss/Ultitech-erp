@@ -356,15 +356,23 @@ function customersDeskLoadReactAssets(): ?array
 
     $cssPath = $uiDir . '/dist/assets/' . $cssFile;
     $jsPath = $uiDir . '/dist/assets/' . $jsFile;
-    $base = customersDeskWebBase();
+    $apiBase = customersDeskWebBase();
+    // Static dist lives at document-root /modules/... (tenant-prefixed /roadmaster/.../dist 404s).
+    if (function_exists('sales_app_url')) {
+        $assetBase = rtrim(sales_app_url('modules/sales/customers/frontend/dist/assets'), '/') . '/';
+    } elseif (function_exists('app_url')) {
+        $assetBase = rtrim((string) app_url('/modules/sales/customers/frontend/dist/assets'), '/') . '/';
+    } else {
+        $assetBase = $apiBase . '/frontend/dist/assets/';
+    }
     $cssVersion = is_file($cssPath) ? (string) filemtime($cssPath) : (string) time();
     $jsVersion = is_file($jsPath) ? (string) filemtime($jsPath) : (string) time();
     $assetVersion = (string) max((int) $cssVersion, (int) $jsVersion, (int) filemtime($distIndex));
 
     return [
         'distHtml' => $distHtml,
-        'assetBase' => $base . '/frontend/dist/assets/',
-        'apiUrl' => $base . '/api',
+        'assetBase' => $assetBase,
+        'apiUrl' => $apiBase . '/api',
         'cssFile' => $cssFile,
         'jsFile' => $jsFile,
         'cssVersion' => $assetVersion,

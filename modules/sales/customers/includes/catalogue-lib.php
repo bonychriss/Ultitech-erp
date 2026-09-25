@@ -36,11 +36,22 @@ function customerCatalogueWebBase(): string
 
 function customersDeskWebBase(): string
 {
+    $rel = 'modules/sales/customers';
+    $slug = '';
+    if (function_exists('getRequestedCompanySlug')) {
+        $slug = strtolower(trim((string) getRequestedCompanySlug()));
+    }
+    if ($slug === '') {
+        $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+    }
+    if ($slug !== '' && function_exists('company_url')) {
+        return rtrim((string) company_url($rel, $slug), '/');
+    }
     if (function_exists('sales_app_url')) {
-        return rtrim(sales_app_url('modules/sales/customers'), '/');
+        return rtrim(sales_app_url($rel), '/');
     }
     if (function_exists('app_url')) {
-        return rtrim((string) app_url('/modules/sales/customers'), '/');
+        return rtrim((string) app_url('/' . $rel), '/');
     }
 
     $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));

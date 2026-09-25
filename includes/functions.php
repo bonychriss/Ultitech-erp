@@ -5750,7 +5750,10 @@ function redirectBareTenantPathToCompanyUrl(): void
     if ($query !== '') {
         $url .= (str_contains($url, '?') ? '&' : '?') . $query;
     }
-    header('Location: ' . $url, true, 302);
+    // 307 keeps POST/PUT body so tenant API saves are not downgraded to GET (405).
+    $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    $status = in_array($method, ['GET', 'HEAD'], true) ? 302 : 307;
+    header('Location: ' . $url, true, $status);
     exit;
 }
 

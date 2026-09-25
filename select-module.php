@@ -451,5 +451,11 @@ $selectModuleConfig = [
     <noscript><div style="padding:2rem;font-family:sans-serif;">JavaScript is required to select a module.</div></noscript>
     <div id="root"></div>
     <script type="module" crossorigin src="<?= htmlspecialchars($assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'], ENT_QUOTES, 'UTF-8') ?>"></script>
+    <?php
+    $poVerifyReminderPartial = __DIR__ . '/includes/partials/po_verify_reminder_popup.php';
+    if (is_file($poVerifyReminderPartial)) {
+        require $poVerifyReminderPartial;
+    }
+    ?>
 </body>
 </html>

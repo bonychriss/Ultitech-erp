@@ -999,16 +999,23 @@ function sms_notify_procurement_to_issue_po(PDO $pdo, int $poId, string $source)
 
     $poNumber = $meta['poNumber'] !== '' ? $meta['poNumber'] : ('PO #' . $poId);
     $actor = trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Warehouse'));
-    $title = 'Please issue purchase order';
-    $message = $actor . ' asked you to issue ' . $poNumber;
+    $title = 'PO verification reminder';
+    $message = 'You are being reminded to verify the PO of ' . $poNumber . '.';
     if ($meta['supplierName'] !== '') {
-        $message .= ' (' . $meta['supplierName'] . ')';
+        $message .= ' Supplier: ' . $meta['supplierName'] . '.';
     }
-    $message .= '.';
+    if ($actor !== '') {
+        $message .= ' Requested by ' . $actor . '.';
+    }
 
-    $link = function_exists('app_url')
-        ? app_url('/stock/modules/purchases/view_po.php?id=' . $poId)
-        : '/stock/modules/purchases/view_po.php?id=' . $poId;
+    if (function_exists('company_url')) {
+        $link = company_url('stock/modules/purchases/view_po.php?id=' . $poId);
+    } elseif (function_exists('app_url')) {
+        $link = app_url('/stock/modules/purchases/view_po.php?id=' . $poId);
+    } else {
+        $link = '/stock/modules/purchases/view_po.php?id=' . $poId;
+    }
+    $notifType = 'po_verify_reminder';
 
     $recipientIds = sms_find_procurement_user_ids($pdo);
     if ($meta['createdBy'] > 0) {
@@ -1052,7 +1059,7 @@ function sms_notify_procurement_to_issue_po(PDO $pdo, int $poId, string $source)
         } catch (Throwable $e) {
         }
 
-        if (createSystemNotification($userId, $title, $message, $link, 'info')) {
+        if (createSystemNotification($userId, $title, $message, $link, $notifType)) {
             $notified++;
         }
     }
@@ -1061,7 +1068,7 @@ function sms_notify_procurement_to_issue_po(PDO $pdo, int $poId, string $source)
         return [
             'notified' => 0,
             'skipped' => true,
-            'message' => 'Procurement was already notified about ' . $poNumber . ' recently.',
+            'message' => 'Procurement was already reminded about ' . $poNumber . ' recently.',
         ];
     }
 
@@ -1076,7 +1083,7 @@ function sms_notify_procurement_to_issue_po(PDO $pdo, int $poId, string $source)
     return [
         'notified' => $notified,
         'skipped' => false,
-        'message' => 'Procurement notified to issue ' . $poNumber . '.',
+        'message' => 'Procurement reminded to verify ' . $poNumber . '.',
     ];
 }
 

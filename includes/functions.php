@@ -15533,6 +15533,62 @@ function markNotificationRead($id)
     $stmt->execute([(int) $id, (int) $_SESSION['user_id']]);
 }
 
+/**
+ * Unread warehouse→procurement PO verify reminders for popup on select-module / stock.
+ *
+ * @return list<array{id:int,title:string,message:string,link:?string,type:string}>
+ */
+function fetchUnreadPoVerifyReminders(int $userId, int $limit = 8): array
+{
+    global $pdo;
+    if ($userId <= 0 || !($pdo instanceof PDO)) {
+        return [];
+    }
+    ensureNotificationsTable();
+    $limit = max(1, min(20, $limit));
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id, title, message, link, type
+             FROM system_notifications
+             WHERE user_id = ?
+               AND is_read = 0
+               AND (
+                    type = 'po_verify_reminder'
+                    OR title = 'PO verification reminder'
+                    OR title = 'Please issue purchase order'
+               )
+             ORDER BY created_at DESC
+             LIMIT " . (int) $limit
+        );
+        $stmt->execute([$userId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $row) {
+        $link = null;
+        if (function_exists('resolveStoredNotificationLink')) {
+            $link = resolveStoredNotificationLink($row['link'] ?? null);
+        } else {
+            $raw = trim((string) ($row['link'] ?? ''));
+            if ($raw !== '') {
+                $link = $raw;
+            }
+        }
+        $out[] = [
+            'id' => (int) ($row['id'] ?? 0),
+            'title' => (string) ($row['title'] ?? 'PO verification reminder'),
+            'message' => (string) ($row['message'] ?? ''),
+            'link' => $link,
+            'type' => (string) ($row['type'] ?? 'po_verify_reminder'),
+        ];
+    }
+
+    return $out;
+}
+
 // Ensure Delivery Notes Schema
 function ensureDeliveryNotesSchema() {
     global $pdo;

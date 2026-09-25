@@ -62,5 +62,11 @@
             <?php unset($_SESSION['info']); ?>
         <?php endif; ?>
     </script>
+    <?php
+    $poVerifyReminderPartial = dirname(__DIR__, 2) . '/includes/partials/po_verify_reminder_popup.php';
+    if (is_file($poVerifyReminderPartial)) {
+        require $poVerifyReminderPartial;
+    }
+    ?>
 </body>
 </html>

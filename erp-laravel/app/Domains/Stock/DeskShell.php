@@ -263,6 +263,13 @@ final class DeskShell
             . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8')
             . '"></script>';
 
+        $reminderPartial = rtrim((string) config('erp.app_root'), '\\/') . '/includes/partials/po_verify_reminder_popup.php';
+        if (is_file($reminderPartial)) {
+            ob_start();
+            require $reminderPartial;
+            $footerScripts .= (string) ob_get_clean();
+        }
+
         return [
             'pageTitle' => $title,
             'bodyClass' => trim($bodyClass . ' page-erp-laravel'),

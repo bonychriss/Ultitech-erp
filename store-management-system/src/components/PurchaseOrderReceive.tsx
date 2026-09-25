@@ -460,8 +460,8 @@ export default function PurchaseOrderReceive({
                               <button
                                 type="button"
                                 className="sms-po-notify-btn"
-                                title="Notify procurement to issue this PO"
-                                aria-label={`Notify procurement to issue ${order.poNumber || order.id}`}
+                                title="Remind procurement to verify this PO"
+                                aria-label={`Remind procurement to verify ${order.poNumber || order.id}`}
                                 disabled={notifyingKey === key}
                                 onClick={(e) => {
                                   e.stopPropagation();

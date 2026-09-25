@@ -310,6 +310,11 @@
   white-space: pre-wrap;
 }
 
+.ncr-msg-em {
+  font-weight: 600;
+  color: var(--ncr-text);
+}
+
 .ncr-empty {
   text-align: center;
   padding: 3rem 1.5rem;

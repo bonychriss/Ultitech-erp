@@ -49,6 +49,23 @@ function moduleLabel(item) {
   return MODULE_LABELS[item.module] || MODULE_LABELS.general
 }
 
+function formatMessage(text) {
+  const raw = String(text || '')
+  if (!raw.includes('**')) return raw
+  const parts = raw.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) => {
+    const m = part.match(/^\*\*([^*]+)\*\*$/)
+    if (m) {
+      return (
+        <strong key={i} className="ncr-msg-em">
+          {m[1]}
+        </strong>
+      )
+    }
+    return <span key={i}>{part}</span>
+  })
+}
+
 /** Select-module page colors (select-module.php tile `color`) */
 const MODULE_COLORS = {
   voucher: '#0f766e',
@@ -436,7 +453,7 @@ export default function NotificationsPage() {
                                 </div>
                               </div>
                               {item.message ? (
-                                <p className="ncr-row-message">{item.message}</p>
+                                <p className="ncr-row-message">{formatMessage(item.message)}</p>
                               ) : null}
                             </div>
                           </button>

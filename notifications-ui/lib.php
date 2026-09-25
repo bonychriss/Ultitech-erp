@@ -260,6 +260,187 @@ function notificationsUiModuleLabel(string $module): string
 }
 
 /**
+ * Rewrite legacy voucher-action copy into the clearer centre format.
+ *
+ * @param array<string,mixed> $n
+ * @return array{title:string,message:string}
+ */
+function notificationsUiFormatVoucherCopy(array $n): array
+{
+    $title = trim((string) ($n['title'] ?? ''));
+    $message = trim((string) ($n['message'] ?? ''));
+    // Normalize broken encoding (en-dash / replacement char) to plain ASCII hyphen.
+    $title = preg_replace('/[\x{2013}\x{2014}\x{FFFD}]+/u', '-', $title) ?? $title;
+    $title = preg_replace('/\s*-\s*/', ' - ', $title) ?? $title;
+    $title = preg_replace('/\s+/', ' ', trim($title)) ?? $title;
+    $message = preg_replace('/[\x{2013}\x{2014}\x{FFFD}]+/u', '-', $message) ?? $message;
+    $blob = strtolower($title . ' ' . $message);
+
+    $voucherNo = '';
+    if (preg_match('/\b(PV\/[A-Z0-9][A-Z0-9\/\-]+)\b/i', $title . ' ' . $message, $m)) {
+        $voucherNo = strtoupper(trim((string) $m[1]));
+    }
+
+    $role = '';
+    if (preg_match('/\bas\s+(Applicant|Department Manager|Checked By)\b/i', $message, $m)) {
+        $role = trim((string) $m[1]);
+    } elseif (preg_match('/\b(Applicant|Department Manager|Checked By)\b/i', $title . ' ' . $message, $m)) {
+        $role = trim((string) $m[1]);
+    }
+
+    $creator = '';
+    $actorName = '';
+    $vid = (int) ($n['voucher_id'] ?? 0);
+    if ($vid <= 0 && function_exists('nc_guess_voucher_id_from_notification')) {
+        $vid = (int) nc_guess_voucher_id_from_notification($n);
+    }
+    if ($vid > 0) {
+        global $pdo;
+        if ($pdo instanceof PDO) {
+            try {
+                $st = $pdo->prepare(
+                    'SELECT voucher_no, applicant, department_manager, checked_by, prepared_by, created_by,
+                            approved_by, general_manager
+                     FROM payment_vouchers WHERE id = ? LIMIT 1'
+                );
+                $st->execute([$vid]);
+                $v = $st->fetch(PDO::FETCH_ASSOC);
+                if (is_array($v)) {
+                    if ($voucherNo === '' && trim((string) ($v['voucher_no'] ?? '')) !== '') {
+                        $voucherNo = trim((string) $v['voucher_no']);
+                    }
+                    if (function_exists('paymentVoucherNotificationCreatorName')) {
+                        $creator = paymentVoucherNotificationCreatorName($v);
+                    }
+                    if (function_exists('paymentVoucherStatusActorName')) {
+                        $statusHint = '';
+                        if (preg_match('/\bapproved\b/', $blob)) {
+                            $statusHint = 'approved';
+                        } elseif (preg_match('/\brejected\b/', $blob)) {
+                            $statusHint = 'rejected';
+                        } elseif (preg_match('/\bpaid\b/', $blob)) {
+                            $statusHint = 'paid';
+                        } elseif (preg_match('/\bposted\b/', $blob)) {
+                            $statusHint = 'posted';
+                        }
+                        $actorName = paymentVoucherStatusActorName($v, $statusHint);
+                    }
+                }
+            } catch (Throwable $e) {
+                /* ignore */
+            }
+        }
+    }
+    if ($creator === '') {
+        $creator = 'a colleague';
+    }
+    if ($voucherNo === '') {
+        $voucherNo = 'this voucher';
+    }
+
+    // Status updates (approved / rejected / paid / posted)
+    if (preg_match('/\bvoucher\s+approved\b/', $blob) || preg_match('/\bhas been approved\b/', $blob)) {
+        $msg = $actorName !== ''
+            ? sprintf('Your voucher **%s** has been approved by **%s**.', $voucherNo, $actorName)
+            : sprintf('Your voucher **%s** has been approved.', $voucherNo);
+
+        return ['title' => 'Voucher APPROVED', 'message' => $msg];
+    }
+    if (preg_match('/\bvoucher\s+rejected\b/', $blob) || preg_match('/\bhas been rejected\b/', $blob)) {
+        $msg = $actorName !== ''
+            ? sprintf('Your voucher **%s** has been rejected by **%s**.', $voucherNo, $actorName)
+            : sprintf('Your voucher **%s** has been rejected.', $voucherNo);
+
+        return ['title' => 'Voucher REJECTED', 'message' => $msg];
+    }
+    if (preg_match('/\bvoucher\s+paid\b/', $blob) || preg_match('/\bhas been paid\b/', $blob) || preg_match('/\bmarked paid\b/', $blob)) {
+        $msg = $actorName !== ''
+            ? sprintf('Your voucher **%s** has been paid by **%s**.', $voucherNo, $actorName)
+            : sprintf('Your voucher **%s** has been paid.', $voucherNo);
+
+        return ['title' => 'Voucher PAID', 'message' => $msg];
+    }
+    if (preg_match('/\bvoucher\s+posted\b/', $blob) || preg_match('/\bhas been posted\b/', $blob)) {
+        $msg = $actorName !== ''
+            ? sprintf('Your voucher **%s** has been posted (finalized) by **%s**.', $voucherNo, $actorName)
+            : sprintf('Your voucher **%s** has been posted (finalized).', $voucherNo);
+
+        return ['title' => 'Voucher POSTED', 'message' => $msg];
+    }
+
+    // Already in new action format - keep as-is.
+    if (preg_match('/^Payment Voucher\s*[-]/i', $title)) {
+        return ['title' => $title, 'message' => $message];
+    }
+
+    if (preg_match('/\b(sign payment voucher|signature required|sign as applicant)\b/', $blob)
+        || ($role !== '' && strcasecmp($role, 'Applicant') === 0 && preg_match('/\b(sign|open voucher|listed as)\b/', $blob))) {
+        return [
+            'title' => 'Payment Voucher - Signature Required',
+            'message' => sprintf(
+                'Payment voucher **%s** created by **%s** requires your signature as **Applicant**.',
+                $voucherNo,
+                $creator
+            ),
+        ];
+    }
+    if (preg_match('/\b(approve as department|department manager)\b/', $blob)
+        || strcasecmp($role, 'Department Manager') === 0) {
+        return [
+            'title' => 'Payment Voucher - Approval Required',
+            'message' => sprintf(
+                'Payment voucher **%s** created by **%s** requires your approval as **Department Manager**.',
+                $voucherNo,
+                $creator
+            ),
+        ];
+    }
+    if (preg_match('/\b(check payment voucher|checked by|requires checking)\b/', $blob)
+        || strcasecmp($role, 'Checked By') === 0) {
+        return [
+            'title' => 'Payment Voucher - Check Required',
+            'message' => sprintf(
+                'Payment voucher **%s** created by **%s** requires your review as **Checked By**.',
+                $voucherNo,
+                $creator
+            ),
+        ];
+    }
+    if (preg_match('/\bfinal approval\b/', $blob)) {
+        return [
+            'title' => 'Payment Voucher - Final Approval',
+            'message' => sprintf(
+                'Payment voucher **%s** created by **%s** is ready for **final approval**.',
+                $voucherNo,
+                $creator
+            ),
+        ];
+    }
+    if (preg_match('/\bmark.*paid\b/', $blob)) {
+        return [
+            'title' => 'Payment Voucher - Mark as Paid',
+            'message' => sprintf(
+                'Payment voucher **%s** created by **%s** is approved. Mark it as **paid** when payment is complete.',
+                $voucherNo,
+                $creator
+            ),
+        ];
+    }
+    if (preg_match('/\bpost (payment )?voucher\b/', $blob)) {
+        return [
+            'title' => 'Payment Voucher - Post Required',
+            'message' => sprintf(
+                'Payment voucher **%s** created by **%s** is paid. **Post** it to finalize bookkeeping.',
+                $voucherNo,
+                $creator
+            ),
+        ];
+    }
+
+    return ['title' => $title, 'message' => $message];
+}
+
+/**
  * @param array<string,mixed> $n
  * @return array<string,mixed>
  */
@@ -281,12 +462,20 @@ function notificationsUiNormalizeItem(array $n): array
         $href = (string) (resolveStoredNotificationLink($n['link'] ?? $n['link_url'] ?? null) ?? '');
     }
 
+    $title = (string) ($n['title'] ?? '');
+    $message = (string) ($n['message'] ?? '');
+    if ($module === 'voucher') {
+        $formatted = notificationsUiFormatVoucherCopy($n);
+        $title = $formatted['title'];
+        $message = $formatted['message'];
+    }
+
     return [
         'id' => $compositeId,
         'rawId' => $id,
         'source' => $src,
-        'title' => (string) ($n['title'] ?? ''),
-        'message' => (string) ($n['message'] ?? ''),
+        'title' => $title,
+        'message' => $message,
         'href' => $href,
         'isUnread' => empty($n['is_read']) || (int) $n['is_read'] === 0,
         'createdAt' => (string) $created,

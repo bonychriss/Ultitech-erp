@@ -156,11 +156,18 @@ function fmtPvAmount(amount: number): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function VoucherDetailsBody({ voucher }: { voucher: LinkedPaymentVoucher }) {
+function VoucherDetailsBody({
+  voucher,
+  onOpenAttachment,
+}: {
+  voucher: LinkedPaymentVoucher;
+  onOpenAttachment: (file: PurchaseOrderAttachment) => void;
+}) {
   const items: LinkedPaymentVoucherItem[] = voucher.items ?? [];
   const currency = voucher.currency || 'TZS';
   const preparedBy = String(voucher.preparedBy || 'N/A').toUpperCase();
-  const supportingQty = voucher.supportingDocuments ?? voucher.attachments.length;
+  const files = voucher.attachments ?? [];
+  const supportingQty = voucher.supportingDocuments ?? files.length;
 
   return (
     <div className="sms-pv-paper">
@@ -239,6 +246,39 @@ function VoucherDetailsBody({ voucher }: { voucher: LinkedPaymentVoucher }) {
         </tbody>
       </table>
 
+      <div className="sms-pv-paper-attachments">
+        <div className="sms-pv-paper-attachments-label">
+          <Paperclip className="w-3.5 h-3.5" />
+          Attachments
+          <span className="sms-gmail-section-count">
+            · {files.length} file{files.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        {files.length > 0 ? (
+          <div className="sms-gmail-list" role="list">
+            {files.map((file) => {
+              const image = isImageName(file.name, file.url);
+              return (
+                <GmailDocCard
+                  key={file.id}
+                  name={file.name || 'Attachment'}
+                  sub={voucher.voucherNo}
+                  url={file.url}
+                  kindLabel={image ? 'IMG' : file.kind === 'swift' ? 'SWIFT' : 'PDF'}
+                  kindTone={image ? 'image' : 'pdf'}
+                  downloadUrl={file.url}
+                  onOpen={() => onOpenAttachment(file)}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="sms-pv-group-empty" style={{ paddingLeft: 0 }}>
+            No attachments on this voucher
+          </div>
+        )}
+      </div>
+
       {voucher.viewUrl ? (
         <div className="sms-pv-details-foot">
           <a
@@ -259,9 +299,11 @@ function VoucherDetailsBody({ voucher }: { voucher: LinkedPaymentVoucher }) {
 function VoucherPreviewModal({
   voucher,
   onClose,
+  onOpenAttachment,
 }: {
   voucher: LinkedPaymentVoucher;
   onClose: () => void;
+  onOpenAttachment: (file: PurchaseOrderAttachment) => void;
 }) {
   const title = voucher.voucherNo || `PV #${voucher.id}`;
   return (
@@ -285,7 +327,7 @@ function VoucherPreviewModal({
           </button>
         </div>
         <div className="sms-doc-preview-body sms-doc-preview-body--voucher">
-          <VoucherDetailsBody voucher={voucher} />
+          <VoucherDetailsBody voucher={voucher} onOpenAttachment={onOpenAttachment} />
         </div>
       </div>
     </div>
@@ -321,7 +363,6 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
             {linkedVouchers.map((voucher) => {
               const amountLabel = formatAmount(voucher.amount, voucher.currency);
               const meta = [voucher.payeeName, voucher.status, amountLabel].filter(Boolean).join(' · ');
-              const files = voucher.attachments ?? [];
 
               return (
                 <article key={`pv-${voucher.id}`} className="sms-pv-group">
@@ -344,43 +385,6 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
                       </button>
                     </div>
                   </header>
-
-                  {files.length > 0 ? (
-                    <div className="sms-pv-group-files">
-                      <div className="sms-pv-group-files-label">
-                        <Paperclip className="w-3 h-3" />
-                        Attachments
-                        <span className="sms-gmail-section-count">
-                          · {files.length} file{files.length === 1 ? '' : 's'}
-                        </span>
-                      </div>
-                      <div className="sms-gmail-list" role="list">
-                        {files.map((file) => {
-                          const image = isImageName(file.name, file.url);
-                          return (
-                            <GmailDocCard
-                              key={file.id}
-                              name={file.name || 'Attachment'}
-                              sub={voucher.voucherNo}
-                              url={file.url}
-                              kindLabel={image ? 'IMG' : file.kind === 'swift' ? 'SWIFT' : 'PDF'}
-                              kindTone={image ? 'image' : 'pdf'}
-                              downloadUrl={file.url}
-                              onOpen={() =>
-                                setPreview({
-                                  title: file.name || 'Voucher attachment',
-                                  url: file.url,
-                                  isImage: image,
-                                })
-                              }
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="sms-pv-group-empty">No attachments on this voucher</div>
-                  )}
                 </article>
               );
             })}
@@ -433,7 +437,18 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
       )}
 
       {openVoucher && (
-        <VoucherPreviewModal voucher={openVoucher} onClose={() => setOpenVoucher(null)} />
+        <VoucherPreviewModal
+          voucher={openVoucher}
+          onClose={() => setOpenVoucher(null)}
+          onOpenAttachment={(file) => {
+            const image = isImageName(file.name, file.url);
+            setPreview({
+              title: file.name || 'Voucher attachment',
+              url: file.url,
+              isImage: image,
+            });
+          }}
+        />
       )}
     </div>
   );

@@ -2623,6 +2623,88 @@ button.sms-pv-group-open {
   background: #fff;
 }
 
+.sms-doc-preview-body--voucher {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 16px 18px 20px;
+  background: #f3f4f6;
+}
+
+.sms-pv-modal-body {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.sms-pv-paper {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 18px 20px 22px;
+  background: #fff;
+  color: #000;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.sms-pv-paper-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.sms-pv-paper-title {
+  margin: 0;
+  flex: 1;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #000;
+  font-family: "Courier New", Courier, monospace;
+}
+
+.sms-pv-paper-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  border: 1px solid #000;
+  background: #fff;
+  table-layout: fixed;
+}
+
+.sms-pv-paper-table th,
+.sms-pv-paper-table td {
+  border: 1px solid #000;
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+  color: #000;
+  font-weight: 400;
+  background: #fff;
+}
+
+.sms-pv-paper-table thead th {
+  font-weight: 700;
+}
+
+.sms-pv-paper-num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sms-pv-paper .sms-pv-details-foot {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  justify-content: flex-end;
+}
+
 .sms-doc-preview-image {
   display: block;
   max-width: min(100%, 960px);

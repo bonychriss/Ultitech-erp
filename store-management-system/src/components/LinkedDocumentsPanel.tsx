@@ -38,13 +38,6 @@ function formatAmount(amount: number, currency: string): string {
   return formatMoney(amount, currency);
 }
 
-function formatDate(raw: string): string {
-  if (!raw) return '—';
-  const d = new Date(raw.includes('T') ? raw : `${raw}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return raw;
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
 function DocThumb({
   name,
   url,
@@ -151,74 +144,95 @@ function DocPreviewModal({
   );
 }
 
+function fmtPvDate(raw: string): string {
+  if (!raw) return '-';
+  const d = new Date(raw.includes('T') ? raw : `${raw}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return String(raw).slice(0, 10);
+  return d.toISOString().slice(0, 10);
+}
+
+function fmtPvAmount(amount: number): string {
+  const n = Number(amount) || 0;
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function VoucherDetailsBody({ voucher }: { voucher: LinkedPaymentVoucher }) {
   const items: LinkedPaymentVoucherItem[] = voucher.items ?? [];
   const currency = voucher.currency || 'TZS';
+  const preparedBy = String(voucher.preparedBy || 'N/A').toUpperCase();
+  const supportingQty = voucher.supportingDocuments ?? voucher.attachments.length;
 
   return (
-    <div className="sms-pv-modal-body">
-      <table className="sms-pv-detail-table sms-pv-detail-table--meta">
+    <div className="sms-pv-paper">
+      <div className="sms-pv-paper-header">
+        <h1 className="sms-pv-paper-title">PAYMENT VOUCHER</h1>
+      </div>
+
+      <table className="sms-pv-paper-table">
+        <colgroup>
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '32%' }} />
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '32%' }} />
+        </colgroup>
         <tbody>
           <tr>
-            <th scope="row">Voucher No</th>
+            <td>Voucher NO. :</td>
             <td>{voucher.voucherNo || `PV #${voucher.id}`}</td>
-            <th scope="row">Date</th>
-            <td>{formatDate(voucher.dateCreated || '')}</td>
+            <td>Date:</td>
+            <td>{fmtPvDate(voucher.dateCreated || '')}</td>
           </tr>
           <tr>
-            <th scope="row">Payee</th>
-            <td>{voucher.payeeName || '—'}</td>
-            <th scope="row">Prepared by</th>
-            <td>{voucher.preparedBy || '—'}</td>
+            <td>Payee Name:</td>
+            <td>{voucher.payeeName || ''}</td>
+            <td>Prepared By:</td>
+            <td>{preparedBy}</td>
           </tr>
           <tr>
-            <th scope="row">Description</th>
-            <td>{voucher.description || '—'}</td>
-            <th scope="row">Supporting docs</th>
-            <td>{voucher.supportingDocuments ?? voucher.attachments.length}</td>
+            <td>Description:</td>
+            <td>{voucher.description || ''}</td>
+            <td>Supporting Documents (Qty.)</td>
+            <td>{supportingQty || '0'}</td>
           </tr>
           <tr>
-            <th scope="row">Currency</th>
+            <td>Currency:</td>
             <td>{currency}</td>
-            <th scope="row">Amount</th>
-            <td className="sms-pv-detail-amount">{formatMoney(voucher.amount, currency)}</td>
-          </tr>
-          <tr>
-            <th scope="row">Status</th>
-            <td>
-              <span className="sms-po-pill">{voucher.status || '—'}</span>
-            </td>
-            <th scope="row">Purpose</th>
-            <td>{voucher.purpose || '—'}</td>
+            <td>Amount:</td>
+            <td className="sms-pv-paper-num">{fmtPvAmount(voucher.amount)}</td>
           </tr>
         </tbody>
       </table>
 
-      <table className="sms-pv-detail-table sms-pv-detail-table--lines">
+      <table className="sms-pv-paper-table sms-pv-paper-table--lines">
+        <colgroup>
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '14%' }} />
+          <col style={{ width: '30%' }} />
+        </colgroup>
         <thead>
           <tr>
-            <th>Payment type</th>
-            <th>Budget type</th>
+            <th>Payment Type</th>
+            <th>Budget Type</th>
             <th>Name</th>
-            <th className="sms-pv-detail-num">Amount</th>
+            <th className="sms-pv-paper-num">Amount</th>
             <th>Description</th>
           </tr>
         </thead>
         <tbody>
           {items.length === 0 ? (
             <tr>
-              <td colSpan={5} className="sms-pv-detail-empty">
-                No line items on this voucher
-              </td>
+              <td colSpan={5}>&nbsp;</td>
             </tr>
           ) : (
             items.map((item) => (
               <tr key={item.id || `${item.name}-${item.amount}`}>
-                <td>{item.paymentType || '—'}</td>
-                <td>{item.budgetType || '—'}</td>
-                <td>{item.name || '—'}</td>
-                <td className="sms-pv-detail-num">{formatMoney(item.amount, currency)}</td>
-                <td>{item.description || '—'}</td>
+                <td>{item.paymentType || ''}</td>
+                <td>{item.budgetType || ''}</td>
+                <td>{item.name || ''}</td>
+                <td className="sms-pv-paper-num">{fmtPvAmount(item.amount)}</td>
+                <td>{item.description || ''}</td>
               </tr>
             ))
           )}

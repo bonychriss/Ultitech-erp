@@ -670,9 +670,7 @@ export default function PurchaseOrderReceive({
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : confirmToStock ? (
                           <PackagePlus className="w-4 h-4" />
-                        ) : (
-                          <Truck className="w-4 h-4" />
-                        )}
+                        ) : null}
                         {confirmToStock ? 'Accept into Stock' : 'Approve receival'}
                       </button>
                     ) : (

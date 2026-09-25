@@ -333,10 +333,114 @@ if (!empty($_SESSION['company_settings_flash_error'])) {
     unset($_SESSION['company_settings_flash_error']);
 }
 
-$employeeInviteDepartments = ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Management'];
+$employeeInviteDepartmentsDefault = ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Management'];
+
+/**
+ * @param array<string, string> $settings
+ * @param list<string> $defaults
+ * @return list<string>
+ */
+function companySettingsDepartmentsFromMap(array $settings, array $defaults): array
+{
+    $raw = trim((string) ($settings['departments'] ?? ''));
+    if ($raw === '') {
+        return array_values($defaults);
+    }
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        return array_values($defaults);
+    }
+    $out = [];
+    foreach ($decoded as $item) {
+        $name = trim((string) $item);
+        if ($name === '') {
+            continue;
+        }
+        if (mb_strlen($name) > 80) {
+            $name = mb_substr($name, 0, 80);
+        }
+        $key = mb_strtolower($name);
+        if (isset($out[$key])) {
+            continue;
+        }
+        $out[$key] = $name;
+    }
+    $list = array_values($out);
+    return $list !== [] ? $list : array_values($defaults);
+}
+
+/**
+ * @param list<string> $departments
+ */
+function companySettingsSaveDepartments(PDO $pdo, int $companyId, array $departments): void
+{
+    $clean = [];
+    foreach ($departments as $item) {
+        $name = trim((string) $item);
+        if ($name === '') {
+            continue;
+        }
+        if (mb_strlen($name) > 80) {
+            $name = mb_substr($name, 0, 80);
+        }
+        $key = mb_strtolower($name);
+        if (isset($clean[$key])) {
+            continue;
+        }
+        $clean[$key] = $name;
+    }
+    saveCompanySettingValue($pdo, $companyId, 'departments', json_encode(array_values($clean), JSON_UNESCAPED_UNICODE));
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        if (isset($_POST['add_department'])) {
+            $postSlug = trim((string) ($_GET['company_slug'] ?? ''));
+            $postModule = trim((string) ($_GET['module'] ?? ''));
+            $deptName = trim((string) ($_POST['department_name'] ?? ''));
+            if ($deptName === '') {
+                throw new RuntimeException('Enter a department name.');
+            }
+            if (mb_strlen($deptName) > 80) {
+                throw new RuntimeException('Department name is too long (max 80 characters).');
+            }
+            $map = fetchCompanySettingsMap($pdo, $targetCompanyId);
+            $list = companySettingsDepartmentsFromMap($map, $employeeInviteDepartmentsDefault);
+            foreach ($list as $existing) {
+                if (mb_strtolower($existing) === mb_strtolower($deptName)) {
+                    throw new RuntimeException('That department already exists.');
+                }
+            }
+            $list[] = $deptName;
+            companySettingsSaveDepartments($pdo, $targetCompanyId, $list);
+            $_SESSION['company_settings_flash'] = 'Department "' . $deptName . '" added.';
+            redirectCompanySettingsTab('profile', $targetCompanyId, $postSlug, $postModule);
+        }
+
+        if (isset($_POST['remove_department'])) {
+            $postSlug = trim((string) ($_GET['company_slug'] ?? ''));
+            $postModule = trim((string) ($_GET['module'] ?? ''));
+            $deptName = trim((string) ($_POST['department_name'] ?? ''));
+            if ($deptName === '') {
+                throw new RuntimeException('Select a department to remove.');
+            }
+            $map = fetchCompanySettingsMap($pdo, $targetCompanyId);
+            $list = companySettingsDepartmentsFromMap($map, $employeeInviteDepartmentsDefault);
+            $next = array_values(array_filter(
+                $list,
+                static fn(string $d): bool => mb_strtolower($d) !== mb_strtolower($deptName)
+            ));
+            if (count($next) === count($list)) {
+                throw new RuntimeException('Department not found.');
+            }
+            if ($next === []) {
+                throw new RuntimeException('Keep at least one department.');
+            }
+            companySettingsSaveDepartments($pdo, $targetCompanyId, $next);
+            $_SESSION['company_settings_flash'] = 'Department "' . $deptName . '" removed.';
+            redirectCompanySettingsTab('profile', $targetCompanyId, $postSlug, $postModule);
+        }
+
         if (isset($_POST['register_admin_by_email'])) {
             $postSlug = trim((string) ($_GET['company_slug'] ?? ''));
             $postModule = trim((string) ($_GET['module'] ?? ''));
@@ -384,8 +488,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $postSlug = trim((string) ($_GET['company_slug'] ?? ''));
             $postModule = trim((string) ($_GET['module'] ?? ''));
 
+            $deptMap = fetchCompanySettingsMap($pdo, $targetCompanyId);
+            $employeeInviteDepartments = companySettingsDepartmentsFromMap($deptMap, $employeeInviteDepartmentsDefault);
             if (!in_array($empDepartment, $employeeInviteDepartments, true)) {
-                $empDepartment = 'General';
+                $empDepartment = $employeeInviteDepartments[0] ?? 'General';
             }
 
             $created = registerCompanyUserByEmail(
@@ -710,6 +816,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['company_settings_flash_error'] = $e->getMessage();
             redirectCompanySettingsTab(
                 'employees',
+                $targetCompanyId,
+                trim((string) ($_GET['company_slug'] ?? '')),
+                trim((string) ($_GET['module'] ?? ''))
+            );
+        }
+        if (isset($_POST['add_department']) || isset($_POST['remove_department'])) {
+            $_SESSION['company_settings_flash_error'] = $e->getMessage();
+            redirectCompanySettingsTab(
+                'profile',
                 $targetCompanyId,
                 trim((string) ($_GET['company_slug'] ?? '')),
                 trim((string) ($_GET['module'] ?? ''))
@@ -1042,7 +1157,7 @@ $reactCfg = [
     'timezoneOptions' => $timezoneOptions,
     'currencyOptions' => $currencyOptions,
     'employeeModeLabels' => $employeeModeLabels,
-    'departments' => ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Management'],
+    'departments' => companySettingsDepartmentsFromMap($settings, $employeeInviteDepartmentsDefault),
     'legacyVoucherPrefixCount' => (int) $legacyVoucherPrefixCount,
     'currentPvPrefix' => (string) $currentPvPrefix,
 ];

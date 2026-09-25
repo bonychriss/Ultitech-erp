@@ -45,9 +45,9 @@ function Field({ label, children, help }) {
   )
 }
 
-function Card({ title, subtitle, children }) {
+function Card({ title, subtitle, children, className = '' }) {
   return (
-    <section className="cs-card">
+    <section className={`cs-card${className ? ` ${className}` : ''}`}>
       <header className="cs-card-head">
         <h2>{title}</h2>
         {subtitle ? <p>{subtitle}</p> : null}
@@ -167,7 +167,11 @@ export default function CompanySettingsPage() {
 
       {activeTab === 'profile' ? (
         <>
-          <Card title="Profile" subtitle="Update core company details used across your workspace.">
+          <Card
+            className="cs-card--compact"
+            title="Profile"
+            subtitle="Update core company details used across your workspace."
+          >
             <form method="post" action={actionUrl} encType="multipart/form-data">
               <input type="hidden" name="save_profile" value="1" />
               <Field label="Company name">
@@ -228,6 +232,47 @@ export default function CompanySettingsPage() {
           </Card>
           <Card title="Company access link" subtitle="Share this link with your team to access the company portal.">
             <CopyLink value={cfg.companyAccessLink || ''} />
+          </Card>
+          <Card
+            className="cs-card--compact"
+            title="Departments"
+            subtitle="Departments appear when inviting employees and assigning users."
+          >
+            <ul className="cs-dept-list">
+              {(cfg.departments || []).map((d) => (
+                <li key={d} className="cs-dept-item">
+                  <span>{d}</span>
+                  <form method="post" action={actionUrl} className="cs-dept-remove-form">
+                    <input type="hidden" name="remove_department" value="1" />
+                    <input type="hidden" name="department_name" value={d} />
+                    <button type="submit" className="cs-btn-ghost cs-dept-remove" title={`Remove ${d}`}>
+                      Remove
+                    </button>
+                  </form>
+                </li>
+              ))}
+              {(cfg.departments || []).length === 0 ? (
+                <li className="cs-help">No departments yet. Add one below.</li>
+              ) : null}
+            </ul>
+            <form method="post" action={actionUrl} className="cs-dept-add-form">
+              <input type="hidden" name="add_department" value="1" />
+              <Field label="New department" help="Example: Warehouse, Fleet, HR">
+                <div className="cs-dept-add-row">
+                  <input
+                    className="cs-input"
+                    name="department_name"
+                    placeholder="Department name"
+                    required
+                    maxLength={80}
+                    autoComplete="organization-title"
+                  />
+                  <button type="submit" className="cs-btn-primary">
+                    Add department
+                  </button>
+                </div>
+              </Field>
+            </form>
           </Card>
         </>
       ) : null}

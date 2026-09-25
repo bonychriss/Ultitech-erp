@@ -1,0 +1,295 @@
+/* Notifications centre — wide layout (React) */
+
+.nc-page.nc-page--wide {
+  --nc-text: #111827;
+  --nc-muted: #6b7280;
+  --nc-body: #6b7280;
+  --nc-border: #e5e7eb;
+  --nc-surface: #ffffff;
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 28px 20px 40px;
+  background: #f3f4f6;
+  min-height: calc(100vh - var(--header-height, 70px));
+  box-sizing: border-box;
+  font-family: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.nc-panel.nc-panel--wide {
+  background: var(--nc-surface);
+  border-radius: 20px;
+  border: 1px solid var(--nc-border);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.nc-page-header--wide {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.35rem;
+  border-bottom: 1px solid #eceff3;
+}
+
+.nc-page-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--nc-text);
+  letter-spacing: -0.02em;
+}
+
+.nc-page-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nc-mark-all-btn {
+  border: none;
+  background: transparent;
+  color: var(--nc-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.nc-mark-all-btn:hover:not(:disabled):not(.is-disabled) {
+  color: var(--nc-text);
+}
+
+.nc-mark-all-btn.is-disabled,
+.nc-mark-all-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.nc-settings-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #9ca3af;
+  text-decoration: none;
+}
+
+.nc-settings-btn:hover {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.nc-list.nc-list--wide {
+  padding: 0.75rem 1.1rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.nc-section-heading {
+  margin: 0 0 0.55rem;
+  padding: 0 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.nc-section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.nc-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  border: none;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 0.95rem 1rem;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.nc-card:hover {
+  background: #f1f5f9;
+}
+
+.nc-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.nc-card-icon.nc-tone-blue {
+  background: #dbeafe;
+  color: #2563eb;
+}
+.nc-card-icon.nc-tone-green {
+  background: #dcfce7;
+  color: #16a34a;
+}
+.nc-card-icon.nc-tone-teal {
+  background: #ccfbf1;
+  color: #0d9488;
+}
+.nc-card-icon.nc-tone-sky {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+.nc-card-icon.nc-tone-amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+.nc-card-icon.nc-tone-rose {
+  background: #ffe4e6;
+  color: #e11d48;
+}
+.nc-card-icon.nc-tone-slate {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.nc-card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.nc-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.nc-card-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--nc-text);
+  line-height: 1.35;
+}
+
+.nc-card-meta-inline {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+.nc-card-time {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.nc-card-unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b82f6;
+  margin-top: 0.35rem;
+}
+
+.nc-card-message {
+  margin: 0.2rem 0 0;
+  font-size: 0.875rem;
+  color: var(--nc-body);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.nc-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--nc-muted);
+}
+
+.nc-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #94a3b8;
+  margin-bottom: 0.85rem;
+}
+
+.nc-empty-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--nc-text);
+}
+
+.nc-empty-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 767.98px) {
+  .nc-page.nc-page--wide {
+    padding: 12px 10px 24px;
+    max-width: 100%;
+  }
+  .nc-panel.nc-panel--wide {
+    border-radius: 16px;
+  }
+  .nc-page-header--wide {
+    padding: 0.9rem 1rem;
+  }
+}
+
+html[data-theme='dark'] .nc-page.nc-page--wide {
+  background: #0f172a;
+}
+html[data-theme='dark'] .nc-panel.nc-panel--wide {
+  background: #111827;
+  border-color: #1f2937;
+}
+html[data-theme='dark'] .nc-page-header--wide {
+  border-bottom-color: #1f2937;
+}
+html[data-theme='dark'] .nc-page-title {
+  color: #f1f5f9;
+}
+html[data-theme='dark'] .nc-card,
+html[data-theme='dark'] .nc-card.is-unread {
+  background: #1e293b;
+}
+html[data-theme='dark'] .nc-card:hover {
+  background: #243447;
+}
+html[data-theme='dark'] .nc-card-title {
+  color: #e2e8f0;
+}
+html[data-theme='dark'] .nc-card-message {
+  color: #94a3b8;
+}
+html[data-theme='dark'] .nc-settings-btn:hover {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+html[data-theme='dark'] .nc-empty-icon {
+  background: #1e293b;
+}

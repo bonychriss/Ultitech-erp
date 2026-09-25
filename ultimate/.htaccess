@@ -16,6 +16,9 @@ RewriteRule ^payroll/(run-payroll|edit-payslip|payslip|settings|my-payslips)/?$ 
 RewriteRule ^attendance/?$ attendance/index.php?module=attendance [L,QSA,NC]
 RewriteRule ^attendance/index(\.php)?/?$ attendance/index.php?module=attendance [L,QSA,NC]
 
+# Notifications centre → Laravel + React (physical notifications.php stub)
+RewriteRule ^notifications/?$ notifications.php [L,QSA,NC]
+
 # Deliveries → hub (module launcher) + React logistics desk
 RewriteRule ^deliveries/?$ deliveries/hub.php?module=deliveries [L,QSA,NC]
 RewriteRule ^deliveries/hub(\.php)?/?$ deliveries/hub.php?module=deliveries [L,QSA,NC]

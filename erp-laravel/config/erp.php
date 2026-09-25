@@ -94,6 +94,7 @@ return [
         'accounting' => 'modules/accounting/frontend/dist',
         'revenue' => 'modules/revenue/frontend/dist',
         'attendance' => 'attendance/attendance-ui/dist',
+        'notifications' => 'notifications-ui/frontend/dist',
         'deliveries' => 'deliveries/deliveries-ui/frontend/dist',
         'voucher' => 'employee/create-voucher-ui/frontend/dist',
         'view_voucher' => 'view-voucher-ui/frontend/dist',

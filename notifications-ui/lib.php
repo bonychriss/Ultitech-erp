@@ -235,6 +235,31 @@ function notificationsUiVisual(array $n): array
 }
 
 /**
+ * Human label for notification module badge.
+ */
+function notificationsUiModuleLabel(string $module): string
+{
+    $map = [
+        'voucher' => 'Payment voucher',
+        'payroll' => 'Payroll',
+        'sales' => 'Sales',
+        'stock' => 'Stock / Purchases',
+        'deliveries' => 'Deliveries',
+        'driver_kpi' => 'Driver KPI',
+        'attendance' => 'Attendance',
+        'letter' => 'Letter',
+        'finance' => 'Finance',
+        'suggest' => 'Suggestions',
+        'admin' => 'Admin',
+        'tasks' => 'Tasks',
+        'system' => 'System',
+        'general' => 'Notification',
+    ];
+
+    return $map[$module] ?? 'Notification';
+}
+
+/**
  * @param array<string,mixed> $n
  * @return array<string,mixed>
  */
@@ -248,6 +273,7 @@ function notificationsUiNormalizeItem(array $n): array
     $compositeId = ($src === 'system' ? 's' : 'c') . $id;
     $created = $n['created_at'] ?? '';
     $visual = notificationsUiVisual($n);
+    $module = (string) ($visual['module'] ?? 'general');
     $href = '';
     if (function_exists('nc_notification_href')) {
         $href = (string) nc_notification_href($n);
@@ -268,7 +294,8 @@ function notificationsUiNormalizeItem(array $n): array
         'period' => notificationsUiPeriodOf($created),
         'tone' => $visual['tone'],
         'icon' => $visual['icon'],
-        'module' => (string) ($visual['module'] ?? 'general'),
+        'module' => $module,
+        'moduleLabel' => notificationsUiModuleLabel($module),
         'type' => (string) ($n['type'] ?? 'info'),
     ];
 }

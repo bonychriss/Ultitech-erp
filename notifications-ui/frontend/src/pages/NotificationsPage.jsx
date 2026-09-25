@@ -27,34 +27,98 @@ function getCfg() {
   return window.__NOTIFICATIONS_CFG__ || {}
 }
 
-const ICON_COLORS = {
-  voucher: { bg: '#fff7ed', fg: '#ea580c' },
-  payroll: { bg: '#eff6ff', fg: '#3b82f6' },
-  sales: { bg: '#f0fdfa', fg: '#14b8a6' },
-  stock: { bg: '#f0f9ff', fg: '#0ea5e9' },
-  deliveries: { bg: '#eff6ff', fg: '#3b82f6' },
-  driver_kpi: { bg: '#f0fdfa', fg: '#14b8a6' },
-  attendance: { bg: '#f0fdf4', fg: '#22c55e' },
-  letter: { bg: '#f0f9ff', fg: '#38bdf8' },
-  finance: { bg: '#f0fdf4', fg: '#10b981' },
-  suggest: { bg: '#fffbeb', fg: '#f59e0b' },
-  admin: { bg: '#f8fafc', fg: '#64748b' },
-  tasks: { bg: '#eef2ff', fg: '#6366f1' },
-  system: { bg: '#f5f3ff', fg: '#8b5cf6' },
-  general: { bg: '#f8fafc', fg: '#64748b' },
+const MODULE_LABELS = {
+  voucher: 'Payment voucher',
+  payroll: 'Payroll',
+  sales: 'Sales',
+  stock: 'Stock / Purchases',
+  deliveries: 'Deliveries',
+  driver_kpi: 'Driver KPI',
+  attendance: 'Attendance',
+  letter: 'Letter',
+  finance: 'Finance',
+  suggest: 'Suggestions',
+  admin: 'Admin',
+  tasks: 'Tasks',
+  system: 'System',
+  general: 'Notification',
+}
+
+function moduleLabel(item) {
+  if (item.moduleLabel) return item.moduleLabel
+  return MODULE_LABELS[item.module] || MODULE_LABELS.general
+}
+
+/** Select-module page colors (select-module.php tile `color`) */
+const MODULE_COLORS = {
+  voucher: '#0f766e',
+  payroll: '#1d4ed8',
+  sales: '#15803d',
+  stock: '#1e3a8a',
+  deliveries: '#0369a1',
+  driver_kpi: '#0e7490',
+  attendance: '#c2410c',
+  letter: '#E6B800',
+  finance: '#0d9488',
+  suggest: '#ca8a04',
+  admin: '#4b5563',
+  tasks: '#e11d48',
+  system: '#4b5563',
+  general: '#64748b',
+}
+
+function hexToRgb(hex) {
+  const h = String(hex || '').replace('#', '').trim()
+  if (h.length === 3) {
+    return {
+      r: parseInt(h[0] + h[0], 16),
+      g: parseInt(h[1] + h[1], 16),
+      b: parseInt(h[2] + h[2], 16),
+    }
+  }
+  if (h.length !== 6) return { r: 100, g: 116, b: 139 }
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  }
+}
+
+function softModuleBg(hex, alpha = 0.12) {
+  const { r, g, b } = hexToRgb(hex)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function moduleColor(item) {
+  return MODULE_COLORS[item.module] || MODULE_COLORS.general
 }
 
 function iconStyle(item) {
-  if (item.icon === 'check') return { background: '#f0fdf4', color: '#22c55e' }
-  if (item.icon === 'alert') return { background: '#fff1f2', color: '#f43f5e' }
-  const c = ICON_COLORS[item.module] || ICON_COLORS.general
-  return { background: c.bg, color: c.fg }
+  // Keep module brand color even for success/alert status (select-module solid hue).
+  const fg = moduleColor(item)
+  if (item.icon === 'alert') {
+    return { background: 'transparent', color: '#e11d48' }
+  }
+  // Solid icon on clean white ù matches select-module icon treatment (no fogged box).
+  return { background: 'transparent', color: fg }
+}
+
+function badgeStyle(item) {
+  const fg = moduleColor(item)
+  // Badge identity = solid module font color (select-module hue), no fogged fill.
+  return {
+    background: 'transparent',
+    color: fg,
+    border: 'none',
+    paddingLeft: 0,
+    paddingRight: 0,
+  }
 }
 
 function IconFor({ icon, color }) {
   const props = {
-    size: 18,
-    strokeWidth: 1.75,
+    size: 20,
+    strokeWidth: 1.5,
     'aria-hidden': true,
     color: color || 'currentColor',
   }
@@ -352,6 +416,14 @@ export default function NotificationsPage() {
                               <IconFor icon={item.icon} color={colors.color} />
                             </span>
                             <div className="ncr-row-body">
+                              <div className="ncr-row-kicker">
+                                <span
+                                  className="ncr-mod-badge"
+                                  style={badgeStyle(item)}
+                                >
+                                  {moduleLabel(item)}
+                                </span>
+                              </div>
                               <div className="ncr-row-title-row">
                                 <h3 className="ncr-row-title">{item.title}</h3>
                                 <div className="ncr-row-meta">

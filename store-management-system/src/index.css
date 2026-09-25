@@ -1202,18 +1202,17 @@ html[data-theme="dark"] .sms-po-open-list-head {
   width: 2rem;
   height: 2rem;
   padding: 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 9999px;
-  background: #fff;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: #64748b;
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease;
 }
 
 .sms-po-notify-btn:hover:not(:disabled) {
   color: #7c3aed;
-  border-color: #ddd6fe;
-  background: #f5f3ff;
+  background: transparent;
 }
 
 .sms-po-notify-btn:disabled {
@@ -1256,15 +1255,14 @@ html[data-theme="dark"] .sms-po-open-table-po {
 }
 
 html[data-theme="dark"] .sms-po-notify-btn {
-  border-color: #334155;
-  background: #1e293b;
+  border: none;
+  background: transparent;
   color: #94a3b8;
 }
 
 html[data-theme="dark"] .sms-po-notify-btn:hover:not(:disabled) {
   color: #c4b5fd;
-  border-color: #5b21b6;
-  background: #312e81;
+  background: transparent;
 }
 
 .sms-incoming-empty--menu {

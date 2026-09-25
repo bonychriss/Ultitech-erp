@@ -22,6 +22,10 @@ if (!function_exists('isLoggedIn') || !isLoggedIn()) {
 
 requireLogin();
 
+if (function_exists('hydrateSessionAccessRoles') && empty($_SESSION['access_roles'])) {
+    hydrateSessionAccessRoles();
+}
+
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
 
@@ -67,6 +71,60 @@ function sms_can_manage_products(): bool
 }
 
 /**
+ * True when the signed-in user actually has Warehouse/Store as department or extra role
+ * (does not treat every admin as a warehouse keeper).
+ */
+function sms_has_warehouse_keeper_role(): bool
+{
+    $roles = [];
+    if (function_exists('currentUserAccessRoles')) {
+        foreach (currentUserAccessRoles() as $r) {
+            $roles[] = strtolower(trim((string) $r));
+        }
+    } else {
+        $dept = strtolower(trim((string) ($_SESSION['department'] ?? '')));
+        if ($dept !== '') {
+            $roles[] = $dept;
+        }
+        if (!empty($_SESSION['access_roles']) && is_array($_SESSION['access_roles'])) {
+            foreach ($_SESSION['access_roles'] as $r) {
+                $roles[] = strtolower(trim((string) $r));
+            }
+        }
+        if (!empty($_SESSION['extra_roles'])) {
+            $extra = $_SESSION['extra_roles'];
+            if (is_string($extra)) {
+                $decoded = json_decode($extra, true);
+                $extra = is_array($decoded) ? $decoded : [];
+            }
+            if (is_array($extra)) {
+                foreach ($extra as $r) {
+                    $roles[] = strtolower(trim((string) $r));
+                }
+            }
+        }
+    }
+    foreach ($roles as $hay) {
+        if ($hay === '') {
+            continue;
+        }
+        if (preg_match('/\b(warehouse|warehouses|store|stores|inventory|storekeeper|store keeper)\b/', $hay)) {
+            return true;
+        }
+    }
+    $role = strtolower(trim((string) ($_SESSION['role'] ?? '')));
+    return in_array($role, [
+        'warehouse',
+        'warehouses',
+        'store',
+        'storekeeper',
+        'store_keeper',
+        'store-manager',
+        'store_manager',
+    ], true);
+}
+
+/**
  * Admin or Warehouse/Store access role may receive POs into warehouse stock.
  */
 function sms_can_receive_warehouse_stock(): bool
@@ -77,39 +135,35 @@ function sms_can_receive_warehouse_stock(): bool
     if (function_exists('isAdmin') && isAdmin()) {
         return true;
     }
+    if (sms_has_warehouse_keeper_role()) {
+        return true;
+    }
     if (function_exists('userHasAccessRole')) {
+        // userHasAccessRole treats admins as matching any role; still useful for non-admins.
         return userHasAccessRole('Warehouse') || userHasAccessRole('Store');
     }
-    $dept = strtolower(trim((string) ($_SESSION['department'] ?? '')));
-    $roles = [];
-    if (!empty($_SESSION['access_roles']) && is_array($_SESSION['access_roles'])) {
-        foreach ($_SESSION['access_roles'] as $r) {
-            $roles[] = strtolower(trim((string) $r));
-        }
+    return false;
+}
+
+/**
+ * Who adds stock immediately on Approve receival (no Awaiting warehouse).
+ * Admins and warehouse keepers: full stock add.
+ * Procurement-only: record delivery for warehouse to accept later.
+ */
+function sms_should_confirm_po_to_stock(): bool
+{
+    // Admins always add stock fully in one step — never leave Awaiting warehouse.
+    if (sms_is_system_admin() || (function_exists('isAdmin') && isAdmin())) {
+        return true;
     }
-    if ($dept !== '') {
-        $roles[] = $dept;
+    if (sms_has_warehouse_keeper_role()) {
+        return true;
     }
-    foreach ($roles as $hay) {
-        if ($hay === '') {
-            continue;
-        }
-        if (preg_match('/\b(warehouse|warehouses|store|stores|inventory|storekeeper)\b/', $hay)) {
-            return true;
-        }
+    // Procurement / product managers without warehouse role: delivery only.
+    if (sms_can_manage_products()) {
+        return false;
     }
-    $role = strtolower(trim((string) ($_SESSION['role'] ?? '')));
-    return in_array($role, [
-        'admin',
-        'administrator',
-        'warehouse',
-        'warehouses',
-        'store',
-        'storekeeper',
-        'store_keeper',
-        'store-manager',
-        'store_manager',
-    ], true);
+    return sms_can_receive_warehouse_stock();
 }
 
 function sms_is_system_admin(): bool
@@ -2503,7 +2557,8 @@ try {
                         : '',
                     'canManageProducts' => sms_can_manage_products(),
                     'canReceivePurchaseOrders' => sms_can_receive_warehouse_stock(),
-                    'confirmPoToStock' => !sms_can_manage_products(),
+                    'confirmPoToStock' => sms_should_confirm_po_to_stock(),
+                    'isWarehouseKeeper' => sms_has_warehouse_keeper_role(),
                     'isSystemAdmin' => sms_is_system_admin(),
                     'manageProductsUrl' => function_exists('company_url')
                         ? company_url('stock/modules/products/index.php')
@@ -3370,12 +3425,23 @@ try {
             $warehouseId = (int) ($_POST['warehouse_id'] ?? 0);
             $source = sms_normalize_po_source(trim((string) ($_POST['source'] ?? 'stocks')));
             $notes = trim((string) ($_POST['notes'] ?? ''));
-            // Store keepers confirm into stock; procurement records delivery for later verify.
-            $confirmToStock = !sms_can_manage_products();
+            // Warehouse keepers / admins confirm into stock; procurement records delivery for later accept.
+            $confirmToStock = sms_should_confirm_po_to_stock();
             if (array_key_exists('confirm_to_stock', $_POST)) {
                 $rawConfirm = strtolower(trim((string) $_POST['confirm_to_stock']));
-                $confirmToStock = in_array($rawConfirm, ['1', 'true', 'yes', 'on'], true);
+                $postedConfirm = in_array($rawConfirm, ['1', 'true', 'yes', 'on'], true);
+                // Admins and warehouse keepers always add stock; others may only lower to record-delivery.
+                if (
+                    sms_is_system_admin()
+                    || (function_exists('isAdmin') && isAdmin())
+                    || sms_has_warehouse_keeper_role()
+                ) {
+                    $confirmToStock = true;
+                } else {
+                    $confirmToStock = $postedConfirm;
+                }
             }
+
             $receiveQuantities = $_POST['receive_qty'] ?? [];
             if (is_string($receiveQuantities)) {
                 $decoded = json_decode($receiveQuantities, true);
@@ -3387,7 +3453,7 @@ try {
             }
 
             // Prefer posted source; if that PO isn't receivable there, try the other table.
-            $resolved = sms_fetch_purchase_order_detail_resolving($pdo, $poId, $source);
+            $resolved = sms_fetch_purchase_order_detail_resolving($pdo, $poId, $source, $warehouseId);
             if ($resolved !== null) {
                 $source = sms_normalize_po_source((string) ($resolved['order']['source'] ?? $source));
             }
@@ -3421,6 +3487,17 @@ try {
             // Store accept: verify existing pending receipts first (no second qty_received bump).
             // If the user also entered qty beyond pending and open remaining exists, receive that remainder next.
             $existingPending = sms_fetch_pending_receipts_for_po($pdo, $poId, $warehouseId);
+            $poStatus = strtolower(trim((string) ($resolved['order']['status'] ?? '')));
+            if (
+                $existingPending !== []
+                || $poStatus === 'awaiting warehouse'
+                || str_contains($poStatus, 'awaiting warehouse')
+            ) {
+                // Awaiting warehouse always goes through accept-into-stock for permitted receivers.
+                if (sms_can_receive_warehouse_stock()) {
+                    $confirmToStock = true;
+                }
+            }
             $hasOpenRemaining = false;
             try {
                 if ($source === 'legacy') {

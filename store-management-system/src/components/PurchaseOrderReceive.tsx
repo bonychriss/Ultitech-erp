@@ -7,7 +7,6 @@ import {
   Loader2,
   Package,
   PackageCheck,
-  PackagePlus,
   Search,
   Truck,
   X,
@@ -668,10 +667,8 @@ export default function PurchaseOrderReceive({
                       <button type="submit" disabled={saving} className="sms-btn-primary sms-btn-rounded">
                         {saving ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : confirmToStock ? (
-                          <PackagePlus className="w-4 h-4" />
                         ) : null}
-                        {confirmToStock ? 'Accept into Stock' : 'Approve receival'}
+                        Approve receival
                       </button>
                     ) : (
                       <p className="sms-help" style={{ margin: 0, fontSize: '0.8125rem', color: '#64748b' }}>

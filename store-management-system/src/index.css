@@ -1195,13 +1195,6 @@ html[data-theme="dark"] .sms-po-open-list-head {
   text-align: right;
 }
 
-.sms-po-open-table-actions {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.4rem;
-}
-
 .sms-po-notify-btn {
   display: inline-flex;
   align-items: center;
@@ -1226,11 +1219,6 @@ html[data-theme="dark"] .sms-po-open-list-head {
 .sms-po-notify-btn:disabled {
   opacity: 0.65;
   cursor: wait;
-}
-
-.sms-po-open-table-btn {
-  padding: 0.3rem 0.7rem !important;
-  font-size: 0.78rem !important;
 }
 
 html[data-theme="dark"] .sms-po-open-table-wrap {

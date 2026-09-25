@@ -417,7 +417,7 @@ export default function PurchaseOrderReceive({
                         </th>
                         <th scope="col">Created</th>
                         <th scope="col" className="sms-po-open-table-action">
-                          <span className="sr-only">Open</span>
+                          <span className="sr-only">Notify</span>
                         </th>
                       </tr>
                     </thead>
@@ -433,7 +433,15 @@ export default function PurchaseOrderReceive({
                           <tr
                             key={key}
                             className="sms-po-open-table-row"
+                            role="button"
+                            tabIndex={0}
                             onClick={() => setSelectedKey(key)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setSelectedKey(key);
+                              }
+                            }}
                           >
                             <td className="sms-po-open-table-po">
                               {order.poNumber || `PO #${order.id}`}
@@ -449,35 +457,23 @@ export default function PurchaseOrderReceive({
                               {order.createdAt ? formatDate(order.createdAt) : '—'}
                             </td>
                             <td className="sms-po-open-table-action">
-                              <div className="sms-po-open-table-actions">
-                                <button
-                                  type="button"
-                                  className="sms-po-notify-btn"
-                                  title="Notify procurement to issue this PO"
-                                  aria-label={`Notify procurement to issue ${order.poNumber || order.id}`}
-                                  disabled={notifyingKey === key}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    void handleNotifyProcurement(order);
-                                  }}
-                                >
-                                  {notifyingKey === key ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                                  ) : (
-                                    <Bell className="w-4 h-4" aria-hidden="true" />
-                                  )}
-                                </button>
-                                <button
-                                  type="button"
-                                  className="sms-desk-btn sms-desk-btn-secondary sms-btn-rounded sms-po-open-table-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedKey(key);
-                                  }}
-                                >
-                                  Open
-                                </button>
-                              </div>
+                              <button
+                                type="button"
+                                className="sms-po-notify-btn"
+                                title="Notify procurement to issue this PO"
+                                aria-label={`Notify procurement to issue ${order.poNumber || order.id}`}
+                                disabled={notifyingKey === key}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleNotifyProcurement(order);
+                                }}
+                              >
+                                {notifyingKey === key ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                                ) : (
+                                  <Bell className="w-4 h-4" aria-hidden="true" />
+                                )}
+                              </button>
                             </td>
                           </tr>
                         );

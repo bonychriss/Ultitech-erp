@@ -333,7 +333,61 @@ if (!empty($_SESSION['company_settings_flash_error'])) {
     unset($_SESSION['company_settings_flash_error']);
 }
 
-$employeeInviteDepartmentsDefault = ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Management'];
+$employeeInviteDepartmentsDefault = ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Warehouse', 'Management'];
+
+/**
+ * Departments that are always present and cannot be removed.
+ *
+ * @return list<string>
+ */
+function companySettingsLockedDepartments(): array
+{
+    return ['Warehouse'];
+}
+
+/**
+ * @param list<string> $departments
+ * @return list<string>
+ */
+function companySettingsEnsureLockedDepartments(array $departments): array
+{
+    $out = [];
+    foreach ($departments as $item) {
+        $name = trim((string) $item);
+        if ($name === '') {
+            continue;
+        }
+        $key = mb_strtolower($name);
+        if (isset($out[$key])) {
+            continue;
+        }
+        $out[$key] = $name;
+    }
+    foreach (companySettingsLockedDepartments() as $locked) {
+        $key = mb_strtolower($locked);
+        if (!isset($out[$key])) {
+            $out[$key] = $locked;
+        }
+    }
+    return array_values($out);
+}
+
+/**
+ * @param string $name
+ */
+function companySettingsIsLockedDepartment(string $name): bool
+{
+    $needle = mb_strtolower(trim($name));
+    if ($needle === '') {
+        return false;
+    }
+    foreach (companySettingsLockedDepartments() as $locked) {
+        if (mb_strtolower($locked) === $needle) {
+            return true;
+        }
+    }
+    return false;
+}
 
 /**
  * @param array<string, string> $settings
@@ -344,11 +398,11 @@ function companySettingsDepartmentsFromMap(array $settings, array $defaults): ar
 {
     $raw = trim((string) ($settings['departments'] ?? ''));
     if ($raw === '') {
-        return array_values($defaults);
+        return companySettingsEnsureLockedDepartments(array_values($defaults));
     }
     $decoded = json_decode($raw, true);
     if (!is_array($decoded)) {
-        return array_values($defaults);
+        return companySettingsEnsureLockedDepartments(array_values($defaults));
     }
     $out = [];
     foreach ($decoded as $item) {
@@ -366,7 +420,10 @@ function companySettingsDepartmentsFromMap(array $settings, array $defaults): ar
         $out[$key] = $name;
     }
     $list = array_values($out);
-    return $list !== [] ? $list : array_values($defaults);
+    if ($list === []) {
+        $list = array_values($defaults);
+    }
+    return companySettingsEnsureLockedDepartments($list);
 }
 
 /**
@@ -389,6 +446,7 @@ function companySettingsSaveDepartments(PDO $pdo, int $companyId, array $departm
         }
         $clean[$key] = $name;
     }
+    $clean = companySettingsEnsureLockedDepartments(array_values($clean));
     saveCompanySettingValue($pdo, $companyId, 'departments', json_encode(array_values($clean), JSON_UNESCAPED_UNICODE));
 }
 

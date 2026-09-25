@@ -107,9 +107,13 @@ body.page-inv-desk .employee-header--inv-desk .employee-header-page-title {
 }
 body.page-order-view .employee-header--order-view .employee-header-page-title:empty,
 body.page-invoice-view .employee-header--invoice-view .employee-header-page-title:empty,
+body.page-manage-users .employee-header--exp-desk .employee-header-page-title:empty,
 body.page-order-view .employee-header--order-view .employee-header-page-heading:empty,
 body.page-invoice-view .employee-header--invoice-view .employee-header-page-heading:empty {
     display: none !important;
+}
+body.page-manage-users .employee-header--exp-desk .header-content {
+    padding: 0.35rem 0 0 !important;
 }
 main.main-content.exp-desk-react-root,
 main.main-content.inv-desk-react-root {

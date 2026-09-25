@@ -415,6 +415,7 @@ $selectModuleConfig = [
             : 'Payment voucher tasks',
     ],
     'poReminders' => array_values($poReminders),
+    'notificationsUrl' => $companyRoute('notifications.php'),
 ];
 ?>
 <!DOCTYPE html>

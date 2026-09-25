@@ -135,6 +135,8 @@ if (!function_exists('nc_relative_time')) {
         if (!$ts) {
             return '';
         }
+        $startToday = strtotime('today');
+        $startYesterday = strtotime('yesterday');
         $diff = max(0, time() - $ts);
         if ($diff < 60) {
             return 'Just now';
@@ -144,13 +146,13 @@ if (!function_exists('nc_relative_time')) {
 
             return $m . 'm ago';
         }
-        if ($diff < 86400) {
+        if ($ts >= $startToday) {
             $h = (int) floor($diff / 3600);
 
             return $h . 'h ago';
         }
-        if ($diff < 172800) {
-            return 'Yesterday';
+        if ($ts >= $startYesterday) {
+            return date('g:i A', $ts);
         }
         if ($diff < 604800) {
             $d = (int) floor($diff / 86400);
@@ -163,7 +165,7 @@ if (!function_exists('nc_relative_time')) {
 }
 
 if (!function_exists('nc_card_period')) {
-    /** @return 'today'|'week'|'earlier' */
+    /** @return 'today'|'yesterday'|'week'|'earlier' */
     function nc_card_period($createdAt): string
     {
         $ts = is_numeric($createdAt) ? (int) $createdAt : strtotime((string) $createdAt);
@@ -171,12 +173,16 @@ if (!function_exists('nc_card_period')) {
             return 'earlier';
         }
         $startToday = strtotime('today');
+        $startYesterday = strtotime('yesterday');
         $startWeek = strtotime('monday this week');
         if ($startWeek === false || $startWeek > $startToday) {
             $startWeek = strtotime('-6 days', $startToday);
         }
         if ($ts >= $startToday) {
             return 'today';
+        }
+        if ($ts >= $startYesterday) {
+            return 'yesterday';
         }
         if ($ts >= $startWeek) {
             return 'week';
@@ -481,11 +487,11 @@ foreach ($ncItems as $n):
             <div class="nc-card-title-row">
                 <h3 class="nc-card-title"><?= htmlspecialchars((string) ($n['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?></h3>
                 <div class="nc-card-meta-inline">
-                    <?php if ($isUnread): ?>
-                        <span class="nc-card-unread-label">Unread</span>
-                    <?php endif; ?>
                     <?php if ($timeLabel !== ''): ?>
                         <time class="nc-card-time"><?= htmlspecialchars($timeLabel, ENT_QUOTES, 'UTF-8') ?></time>
+                    <?php endif; ?>
+                    <?php if ($isUnread): ?>
+                        <span class="nc-card-unread-dot" aria-label="Unread"></span>
                     <?php endif; ?>
                 </div>
             </div>

@@ -6,7 +6,17 @@ if (!isset($notifApiPath)) {
     $notifApiPath = function_exists('app_url') ? app_url('/api/get_notifications.php') : 'api/get_notifications.php';
 }
 if (!isset($notificationsListUrl)) {
-    $notificationsListUrl = function_exists('app_url') ? app_url('/notifications.php') : '/notifications.php';
+    if (function_exists('company_url')) {
+        $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+        if ($slug === '' && function_exists('getRequestedCompanySlug')) {
+            $slug = strtolower(trim((string) getRequestedCompanySlug()));
+        }
+        $notificationsListUrl = $slug !== ''
+            ? company_url('notifications.php', $slug)
+            : (function_exists('app_url') ? app_url('/notifications.php') : '/notifications.php');
+    } else {
+        $notificationsListUrl = function_exists('app_url') ? app_url('/notifications.php') : '/notifications.php';
+    }
 }
 $unread = isset($unread) ? (int) $unread : 0;
 $headerNotifFeed = isset($headerNotifFeed) && is_array($headerNotifFeed) ? $headerNotifFeed : [];
@@ -275,7 +285,7 @@ function headerNotifItemClick(ev, el) {
     function cardMatches(card, filter) {
         var period = (card.getAttribute('data-nc-period') || 'earlier').toLowerCase();
         if (filter === 'today') return period === 'today';
-        if (filter === 'week') return period === 'today' || period === 'week';
+        if (filter === 'week') return period === 'today' || period === 'yesterday' || period === 'week';
         if (filter === 'earlier') return period === 'earlier';
         return true;
     }

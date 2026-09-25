@@ -1217,3 +1217,155 @@ html[data-theme="dark"] .pv-coach-live-badge {
         top: 10px;
     }
 }
+
+/* Wider full-page notifications list (sidebar drawer stays narrow) */
+.nc-page.nc-page--wide {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 28px 20px 40px;
+    background: #f3f4f6;
+    min-height: calc(100vh - var(--header-height, 70px));
+}
+
+.nc-panel.nc-panel--wide {
+    border-radius: 20px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+}
+
+.nc-page-header--wide {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.15rem 1.35rem;
+    border-bottom: 1px solid #eceff3;
+}
+
+.nc-page-header--wide .nc-page-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.nc-page-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.nc-mark-all-btn {
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+}
+
+.nc-mark-all-btn:hover { color: #111827; }
+.nc-mark-all-btn.is-disabled { opacity: 0.45; cursor: default; }
+
+.nc-settings-btn {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: #9ca3af;
+    text-decoration: none;
+}
+
+.nc-settings-btn:hover {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.nc-list.nc-list--wide {
+    padding: 0.75rem 1.1rem 1.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-height: none;
+    overflow: visible;
+}
+
+.nc-section-heading {
+    margin: 0 0 0.55rem;
+    padding: 0 0.15rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9ca3af;
+}
+
+.nc-section-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.nc-page--wide .nc-section-list .nc-card {
+    border: none;
+    border-bottom: none;
+    border-radius: 14px;
+    background: #f8fafc;
+    padding: 0.95rem 1rem;
+    align-items: center;
+}
+
+.nc-page--wide .nc-section-list .nc-card:hover { background: #f1f5f9; }
+.nc-page--wide .nc-section-list .nc-card.is-unread { background: #f8fafc; }
+.nc-page--wide .nc-card-title { font-weight: 650; font-size: 0.95rem; }
+.nc-page--wide .nc-card-message { margin-top: 0.2rem; color: #6b7280; }
+.nc-page--wide .nc-card-unread-label { display: none; }
+
+.nc-page--wide .nc-card-unread-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3b82f6;
+    flex-shrink: 0;
+    margin-top: 0.35rem;
+}
+
+.nc-page--wide .nc-card-meta-inline {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+}
+
+.nc-page--wide .nc-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+@media (max-width: 767.98px) {
+    .nc-page.nc-page--wide {
+        padding: 12px 10px 24px;
+        max-width: 100%;
+    }
+    .nc-panel.nc-panel--wide { border-radius: 16px; }
+    .nc-page-header--wide { padding: 0.9rem 1rem; }
+    .nc-list.nc-list--wide { padding: 0.65rem 0.75rem 1rem; }
+}
+
+html[data-theme="dark"] .nc-page.nc-page--wide { background: #0f172a; }
+html[data-theme="dark"] .nc-panel.nc-panel--wide {
+    background: #111827;
+    border-color: #1f2937;
+}
+html[data-theme="dark"] .nc-page-header--wide { border-bottom-color: #1f2937; }
+html[data-theme="dark"] .nc-page-header--wide .nc-page-title { color: #f8fafc; }
+html[data-theme="dark"] .nc-mark-all-btn { color: #94a3b8; }
+html[data-theme="dark"] .nc-page--wide .nc-section-list .nc-card,
+html[data-theme="dark"] .nc-page--wide .nc-section-list .nc-card.is-unread { background: #1e293b; }
+html[data-theme="dark"] .nc-page--wide .nc-section-list .nc-card:hover { background: #243447; }

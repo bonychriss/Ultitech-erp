@@ -826,8 +826,13 @@ export default function SelectModulePage() {
                 : 'Notifications'
             }
             onClick={() => {
-              if (typeof window.ultitechShowPoVerifyReminder === 'function') {
+              if (poReminderCount > 0 && typeof window.ultitechShowPoVerifyReminder === 'function') {
                 window.ultitechShowPoVerifyReminder()
+                return
+              }
+              const url = typeof cfg.notificationsUrl === 'string' ? cfg.notificationsUrl : ''
+              if (url) {
+                window.location.href = url
               }
             }}
           >

@@ -845,6 +845,241 @@ function sms_lookup_supplier_name(PDO $pdo, array $po): string
     return trim((string) ($po['supplier_name'] ?? '')) ?: ('Supplier #' . $supplierId);
 }
 
+/**
+ * @return list<string>
+ */
+function sms_procurement_role_needles(): array
+{
+    return ['procurement', 'purchasing', 'purchase'];
+}
+
+function sms_roles_match_procurement(string $department, $extraRolesRaw): bool
+{
+    $roles = function_exists('userAccessRolesFromParts')
+        ? userAccessRolesFromParts($department, $extraRolesRaw)
+        : array_values(array_filter(array_map('trim', array_merge(
+            [$department],
+            function_exists('parseUserExtraRoles') ? parseUserExtraRoles($extraRolesRaw) : []
+        ))));
+    $needles = sms_procurement_role_needles();
+    foreach ($roles as $role) {
+        $hay = strtolower(trim((string) $role));
+        if ($hay === '') {
+            continue;
+        }
+        foreach ($needles as $n) {
+            if ($hay === $n || str_contains($hay, $n)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Active users with Procurement / Purchasing as department or extra role.
+ *
+ * @return list<int>
+ */
+function sms_find_procurement_user_ids(PDO $pdo): array
+{
+    $ids = [];
+    if (!tableExists('users', $pdo)) {
+        return [];
+    }
+
+    $cols = [];
+    try {
+        $cols = $pdo->query('SHOW COLUMNS FROM users')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $select = ['id', 'department'];
+    if (in_array('extra_roles', $cols, true)) {
+        $select[] = 'extra_roles';
+    }
+    $sql = 'SELECT ' . implode(', ', $select) . ' FROM users WHERE 1=1';
+    if (in_array('is_active', $cols, true)) {
+        $sql .= ' AND is_active = 1';
+    }
+    $companyId = function_exists('sms_active_company_id') ? (int) sms_active_company_id() : 0;
+    if ($companyId > 0 && in_array('company_id', $cols, true)) {
+        $sql .= ' AND company_id = ' . $companyId;
+    }
+    $sql .= ' LIMIT 500';
+
+    try {
+        foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            if (!sms_roles_match_procurement(
+                (string) ($row['department'] ?? ''),
+                $row['extra_roles'] ?? null
+            )) {
+                continue;
+            }
+            $id = (int) ($row['id'] ?? 0);
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    return array_values($ids);
+}
+
+/**
+ * @return array{poNumber:string,supplierName:string,createdBy:int}|null
+ */
+function sms_load_po_notify_meta(PDO $pdo, int $poId, string $source): ?array
+{
+    if ($poId <= 0) {
+        return null;
+    }
+    $source = sms_normalize_po_source($source);
+
+    if ($source === 'stocks' && tableExists('stocks_purchase_orders', $pdo)) {
+        try {
+            $cols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            $hasCreatedBy = in_array('created_by', $cols, true);
+            $sql = 'SELECT po_number, supplier_id' . ($hasCreatedBy ? ', created_by' : '') . ' FROM stocks_purchase_orders WHERE id = ? LIMIT 1';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$poId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($row)) {
+                return null;
+            }
+            return [
+                'poNumber' => trim((string) ($row['po_number'] ?? '')),
+                'supplierName' => sms_lookup_supplier_name($pdo, $row),
+                'createdBy' => $hasCreatedBy ? (int) ($row['created_by'] ?? 0) : 0,
+            ];
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
+
+    if ($source === 'legacy' && tableExists('purchases', $pdo)) {
+        try {
+            $cols = $pdo->query('SHOW COLUMNS FROM purchases')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            $hasCreatedBy = in_array('created_by', $cols, true);
+            $numCol = in_array('purchase_no', $cols, true) ? 'purchase_no' : (in_array('po_number', $cols, true) ? 'po_number' : 'id');
+            $sql = 'SELECT `' . $numCol . '` AS po_number' . ($hasCreatedBy ? ', created_by' : '') . ' FROM purchases WHERE id = ? LIMIT 1';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$poId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($row)) {
+                return null;
+            }
+            return [
+                'poNumber' => trim((string) ($row['po_number'] ?? ('#' . $poId))),
+                'supplierName' => '',
+                'createdBy' => $hasCreatedBy ? (int) ($row['created_by'] ?? 0) : 0,
+            ];
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Notify procurement users (and PO creator) to issue a purchase order.
+ *
+ * @return array{notified:int,skipped:bool,message:string}
+ */
+function sms_notify_procurement_to_issue_po(PDO $pdo, int $poId, string $source): array
+{
+    $meta = sms_load_po_notify_meta($pdo, $poId, $source);
+    if ($meta === null) {
+        return ['notified' => 0, 'skipped' => false, 'message' => 'Purchase order not found.'];
+    }
+
+    $poNumber = $meta['poNumber'] !== '' ? $meta['poNumber'] : ('PO #' . $poId);
+    $actor = trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Warehouse'));
+    $title = 'Please issue purchase order';
+    $message = $actor . ' asked you to issue ' . $poNumber;
+    if ($meta['supplierName'] !== '') {
+        $message .= ' (' . $meta['supplierName'] . ')';
+    }
+    $message .= '.';
+
+    $link = function_exists('app_url')
+        ? app_url('/stock/modules/purchases/view_po.php?id=' . $poId)
+        : '/stock/modules/purchases/view_po.php?id=' . $poId;
+
+    $recipientIds = sms_find_procurement_user_ids($pdo);
+    if ($meta['createdBy'] > 0) {
+        $recipientIds[] = $meta['createdBy'];
+    }
+    $recipientIds = array_values(array_unique(array_filter(array_map('intval', $recipientIds))));
+
+    $selfId = (int) ($_SESSION['user_id'] ?? 0);
+    $recipientIds = array_values(array_filter($recipientIds, static fn(int $id): bool => $id > 0 && $id !== $selfId));
+
+    if ($recipientIds === []) {
+        return [
+            'notified' => 0,
+            'skipped' => false,
+            'message' => 'No procurement users found to notify.',
+        ];
+    }
+
+    if (!function_exists('createSystemNotification')) {
+        return ['notified' => 0, 'skipped' => false, 'message' => 'Notification system unavailable.'];
+    }
+
+    $notified = 0;
+    $recentlyNotified = 0;
+    foreach ($recipientIds as $userId) {
+        // Avoid spamming the same recipient for the same PO within 30 minutes.
+        try {
+            if (tableExists('system_notifications', $pdo)) {
+                $chk = $pdo->prepare(
+                    "SELECT id FROM system_notifications
+                     WHERE user_id = ? AND title = ? AND message LIKE ?
+                       AND created_at >= (NOW() - INTERVAL 30 MINUTE)
+                     ORDER BY id DESC LIMIT 1"
+                );
+                $chk->execute([$userId, $title, '%' . $poNumber . '%']);
+                if ($chk->fetchColumn()) {
+                    $recentlyNotified++;
+                    continue;
+                }
+            }
+        } catch (Throwable $e) {
+        }
+
+        if (createSystemNotification($userId, $title, $message, $link, 'info')) {
+            $notified++;
+        }
+    }
+
+    if ($notified === 0 && $recentlyNotified > 0) {
+        return [
+            'notified' => 0,
+            'skipped' => true,
+            'message' => 'Procurement was already notified about ' . $poNumber . ' recently.',
+        ];
+    }
+
+    if ($notified === 0) {
+        return [
+            'notified' => 0,
+            'skipped' => false,
+            'message' => 'Could not send notification.',
+        ];
+    }
+
+    return [
+        'notified' => $notified,
+        'skipped' => false,
+        'message' => 'Procurement notified to issue ' . $poNumber . '.',
+    ];
+}
+
 function sms_fetch_receivable_purchase_orders(PDO $pdo): array
 {
     $orders = [];
@@ -3350,6 +3585,27 @@ try {
             sms_json([
                 'success' => true,
                 'orders' => sms_fetch_receivable_purchase_orders($pdo),
+            ]);
+            break;
+
+        case 'purchase_order_notify_issue':
+            if ($method !== 'POST') {
+                sms_error('POST required', 405);
+            }
+            $poId = (int) ($_POST['po_id'] ?? 0);
+            $source = sms_normalize_po_source(trim((string) ($_POST['source'] ?? 'stocks')));
+            if ($poId <= 0) {
+                sms_error('po_id is required');
+            }
+            $result = sms_notify_procurement_to_issue_po($pdo, $poId, $source);
+            if ($result['notified'] <= 0 && empty($result['skipped'])) {
+                sms_error((string) $result['message'], 400);
+            }
+            sms_json([
+                'success' => true,
+                'message' => (string) $result['message'],
+                'notified' => (int) $result['notified'],
+                'skipped' => !empty($result['skipped']),
             ]);
             break;
 

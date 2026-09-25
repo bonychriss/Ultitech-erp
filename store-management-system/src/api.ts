@@ -315,6 +315,28 @@ export async function fetchPurchaseOrders(): Promise<PurchaseOrderSummary[]> {
   return data.orders;
 }
 
+export async function notifyProcurementToIssuePo(
+  poId: string,
+  source: string
+): Promise<{ message: string; notified: number; skipped: boolean }> {
+  const data = await request<{ message: string; notified?: number; skipped?: boolean }>(
+    'purchase_order_notify_issue',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'purchase_order_notify_issue',
+        po_id: poId,
+        source,
+      }),
+    }
+  );
+  return {
+    message: data.message,
+    notified: Number(data.notified ?? 0),
+    skipped: Boolean(data.skipped),
+  };
+}
+
 export async function fetchProductPoReferences(
   productId: string,
   sku = ''

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   BadgeCheck,
+  Bell,
   CloudUpload,
   FileText,
   Loader2,
@@ -11,7 +12,7 @@ import {
   Truck,
   X,
 } from 'lucide-react';
-import { fetchPurchaseOrder, fetchPurchaseOrders, receivePurchaseOrder } from '../api';
+import { fetchPurchaseOrder, fetchPurchaseOrders, notifyProcurementToIssuePo, receivePurchaseOrder } from '../api';
 import LineRowActions from './LineRowActions';
 import LinkedDocumentsPanel from './LinkedDocumentsPanel';
 import PurchaseOrderDetailsModal from './PurchaseOrderDetailsModal';
@@ -132,12 +133,34 @@ export default function PurchaseOrderReceive({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [notifyingKey, setNotifyingKey] = useState<string | null>(null);
   const [statusPopup, setStatusPopup] = useState<{
     title: string;
     message: string;
     tone: 'success' | 'error' | 'info';
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleNotifyProcurement = useCallback(async (order: PurchaseOrderSummary) => {
+    const key = orderKey(order);
+    setNotifyingKey(key);
+    try {
+      const result = await notifyProcurementToIssuePo(order.id, order.source);
+      setStatusPopup({
+        title: result.skipped ? 'Already notified' : 'Procurement notified',
+        message: result.message,
+        tone: result.skipped ? 'info' : 'success',
+      });
+    } catch (err) {
+      setStatusPopup({
+        title: 'Notify failed',
+        message: err instanceof Error ? err.message : 'Could not notify procurement.',
+        tone: 'error',
+      });
+    } finally {
+      setNotifyingKey(null);
+    }
+  }, []);
 
   const loadOrders = useCallback(async () => {
     setLoadingOrders(true);
@@ -426,16 +449,35 @@ export default function PurchaseOrderReceive({
                               {order.createdAt ? formatDate(order.createdAt) : '—'}
                             </td>
                             <td className="sms-po-open-table-action">
-                              <button
-                                type="button"
-                                className="sms-desk-btn sms-desk-btn-secondary sms-btn-rounded sms-po-open-table-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedKey(key);
-                                }}
-                              >
-                                Open
-                              </button>
+                              <div className="sms-po-open-table-actions">
+                                <button
+                                  type="button"
+                                  className="sms-po-notify-btn"
+                                  title="Notify procurement to issue this PO"
+                                  aria-label={`Notify procurement to issue ${order.poNumber || order.id}`}
+                                  disabled={notifyingKey === key}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handleNotifyProcurement(order);
+                                  }}
+                                >
+                                  {notifyingKey === key ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                                  ) : (
+                                    <Bell className="w-4 h-4" aria-hidden="true" />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="sms-desk-btn sms-desk-btn-secondary sms-btn-rounded sms-po-open-table-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedKey(key);
+                                  }}
+                                >
+                                  Open
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );

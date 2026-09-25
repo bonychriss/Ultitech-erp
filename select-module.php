@@ -373,6 +373,15 @@ if ($showTrialGuide && $companyIdForPlan > 0 && function_exists('getCompanyPlanI
     }
 }
 
+$poReminders = [];
+if (function_exists('fetchUnreadPoVerifyReminders')) {
+    try {
+        $poReminders = fetchUnreadPoVerifyReminders((int) ($_SESSION['user_id'] ?? 0), 8);
+    } catch (Throwable $e) {
+        $poReminders = [];
+    }
+}
+
 $selectModuleConfig = [
     'companyName' => $currentCompanyName,
     'logoUrl' => $modulePageLogoUrl,
@@ -405,6 +414,7 @@ $selectModuleConfig = [
             ? ($pvTaskCount === 1 ? '1 voucher needs your action' : $pvTaskCount . ' vouchers need your action')
             : 'Payment voucher tasks',
     ],
+    'poReminders' => array_values($poReminders),
 ];
 ?>
 <!DOCTYPE html>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Bell,
   Compass,
   Coins,
   FileText,
@@ -688,6 +689,7 @@ export default function SelectModulePage() {
   const pvTasksTitle = typeof pvTasks?.title === 'string' && pvTasks.title
     ? pvTasks.title
     : 'Payment voucher tasks'
+  const initialPoReminders = Array.isArray(cfg.poReminders) ? cfg.poReminders : []
   const enabledPreview = enabledLabels.slice(0, 4).join(', ')
   const enabledMore = enabledLabels.length > 4
 
@@ -698,6 +700,20 @@ export default function SelectModulePage() {
   const [showGuide, setShowGuide] = useState(false)
   const [showRate, setShowRate] = useState(false)
   const [rateDone, setRateDone] = useState(false)
+  const [poReminderCount, setPoReminderCount] = useState(initialPoReminders.length)
+
+  useEffect(() => {
+    window.ultitechPoRemindBadgeRefresh = (count) => {
+      setPoReminderCount(Math.max(0, Number(count) || 0))
+    }
+    return () => {
+      try {
+        delete window.ultitechPoRemindBadgeRefresh
+      } catch {
+        window.ultitechPoRemindBadgeRefresh = undefined
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (showTrialGuide) return
@@ -795,6 +811,35 @@ export default function SelectModulePage() {
             <strong>{companyName}</strong>
             {enabledPreview ? ` ? ${enabledPreview}${enabledMore ? '...' : ''}` : null}
           </span>
+          <button
+            type="button"
+            id="sm-po-notify-bell"
+            className={`sm-po-notify${poReminderCount > 0 ? ' has-unread' : ''}`}
+            title={
+              poReminderCount > 0
+                ? `${poReminderCount} PO verification reminder${poReminderCount === 1 ? '' : 's'}`
+                : 'Notifications'
+            }
+            aria-label={
+              poReminderCount > 0
+                ? `${poReminderCount} PO verification reminder${poReminderCount === 1 ? '' : 's'}`
+                : 'Notifications'
+            }
+            onClick={() => {
+              if (typeof window.ultitechShowPoVerifyReminder === 'function') {
+                window.ultitechShowPoVerifyReminder()
+              }
+            }}
+          >
+            <span className="sm-po-notify-inner" aria-hidden="true">
+              <Bell className="sm-po-notify-bell-icon" size={18} strokeWidth={2} />
+              {poReminderCount > 0 ? (
+                <span className="sm-po-notify-badge">
+                  {poReminderCount > 99 ? '99+' : poReminderCount}
+                </span>
+              ) : null}
+            </span>
+          </button>
           {pvTasksUrl ? (
             <a
               href={pvTasksUrl}

@@ -149,10 +149,11 @@ export default function NotificationsSettingsPage() {
                     type="button"
                     role="switch"
                     aria-checked={on}
+                    aria-label={`${m.label} notifications`}
                     className={`ncr-switch${on ? ' is-on' : ''}`}
                     onClick={() => toggleModule(m.id)}
                   >
-                    <span className="ncr-switch-knob" />
+                    <span className="ncr-switch-knob" aria-hidden />
                   </button>
                 </li>
               )
@@ -174,13 +175,14 @@ export default function NotificationsSettingsPage() {
               type="button"
               role="switch"
               aria-checked={emailAlerts}
+              aria-label="Email alerts"
               className={`ncr-switch${emailAlerts ? ' is-on' : ''}`}
               onClick={() => {
                 setEmailAlerts((v) => !v)
                 setSaved(false)
               }}
             >
-              <span className="ncr-switch-knob" />
+              <span className="ncr-switch-knob" aria-hidden />
             </button>
           </div>
         </section>

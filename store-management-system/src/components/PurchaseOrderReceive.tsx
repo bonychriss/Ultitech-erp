@@ -629,14 +629,17 @@ export default function PurchaseOrderReceive({
                   </section>
 
                   <div className="sms-incoming-footer-actions sms-incoming-footer-actions--outside">
-                    <button
-                      type="button"
+                    <a
+                      href="#back-to-po-list"
                       className="sms-desk-back-link"
-                      onClick={() => setSelectedKey('')}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSelectedKey('');
+                      }}
                     >
                       <ArrowLeft className="w-4 h-4" />
                       Back
-                    </button>
+                    </a>
                     <button type="submit" disabled={saving} className="sms-btn-primary sms-btn-rounded">
                       {saving ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

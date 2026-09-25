@@ -164,13 +164,27 @@ include __DIR__ . '/../stock/includes/header.php';
         background: #0f172a !important;
     }
 
+    body.page-store-management a.sms-desk-back-link,
     body.page-store-management button.sms-desk-back-link,
     body.page-store-management .sms-desk-back-link {
+        all: unset;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.3rem !important;
+        cursor: pointer !important;
+        color: #64748b !important;
+        font-family: inherit !important;
+        font-size: 0.8125rem !important;
+        font-weight: 500 !important;
         background: transparent !important;
         background-color: transparent !important;
-        border: none !important;
+        border: 0 !important;
         box-shadow: none !important;
         padding: 0 !important;
+        margin: 0 !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        text-decoration: none !important;
     }
 </style>
 

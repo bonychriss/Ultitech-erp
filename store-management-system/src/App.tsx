@@ -321,17 +321,18 @@ export default function App() {
       <div className={`sms-desk-page${isExcelReceive ? ' sms-desk-page--excel-receive' : ''}`}>
         {isExcelReceive ? (
           <div className="sms-excel-page-top">
-            <button
-              type="button"
+            <a
+              href="#back"
               className="sms-desk-back-link"
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
                 setSelectedMovement(null);
                 setView('list');
               }}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
-            </button>
+            </a>
             <div className="sms-excel-page-copy">
               <h3 className="sms-excel-page-title">Receive into Stock</h3>
               <p className="sms-excel-page-sub">Add received items to your inventory.</p>
@@ -339,17 +340,18 @@ export default function App() {
           </div>
         ) : (
           <div className="sms-desk-page-header sms-desk-page-header--simple">
-            <button
-              type="button"
+            <a
+              href="#back"
               className="sms-desk-back-link"
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
                 setSelectedMovement(null);
                 setView('list');
               }}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
-            </button>
+            </a>
           </div>
         )}
         {error && (

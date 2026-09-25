@@ -41,6 +41,12 @@ function syncDeskUrl(patch: { view?: DeskView; warehouseId?: number | null }) {
       params.set('view', patch.view);
     } else {
       params.delete('view');
+      // Leaving receive: drop deep-link so a stale PO does not 404 on re-entry.
+      if (patch.view === 'list') {
+        params.delete('po_id');
+        params.delete('po');
+        params.delete('po_source');
+      }
     }
   }
   if (patch.warehouseId !== undefined) {

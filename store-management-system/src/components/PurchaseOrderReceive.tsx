@@ -3,7 +3,6 @@ import {
   BadgeCheck,
   ClipboardList,
   CloudUpload,
-  FileText,
   Loader2,
   Package,
   PackageCheck,
@@ -15,6 +14,7 @@ import {
 } from 'lucide-react';
 import { fetchPurchaseOrder, fetchPurchaseOrders, receivePurchaseOrder } from '../api';
 import LineRowActions from './LineRowActions';
+import LinkedDocumentsPanel from './LinkedDocumentsPanel';
 import PurchaseOrderDetailsModal from './PurchaseOrderDetailsModal';
 import StatusPopup from './StatusPopup';
 import type { LinkedPaymentVoucher, PurchaseOrderAttachment, PurchaseOrderLine, PurchaseOrderSummary } from '../types';
@@ -191,6 +191,8 @@ export default function PurchaseOrderReceive({
       setLines(data.lines);
       setPoAttachments(data.attachments);
       setLinkedVouchers(data.linkedVouchers);
+      // Keep deep-link URL on the resolved source (API may fall back stocks↔legacy).
+      syncSelectedPoUrl(orderKey(data.order));
       const defaults: Record<string, string> = {};
       for (const line of data.lines) {
         if (line.qtyRemaining > 0) {
@@ -199,12 +201,18 @@ export default function PurchaseOrderReceive({
       }
       setReceiveQty(defaults);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load purchase order');
+      // Drop stale deep-link so the waiting list stays usable.
+      setSelectedKey('');
       setSelectedOrder(null);
       setLines([]);
       setPoAttachments([]);
       setLinkedVouchers([]);
       setReceiveQty({});
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load purchase order'
+      );
     } finally {
       setLoadingDetail(false);
     }
@@ -225,16 +233,6 @@ export default function PurchaseOrderReceive({
   useEffect(() => {
     syncSelectedPoUrl(selectedKey);
   }, [selectedKey]);
-
-  const voucherAttachmentChips = useMemo(() => {
-    const chips: Array<PurchaseOrderAttachment & { voucherNo: string }> = [];
-    for (const voucher of linkedVouchers) {
-      for (const file of voucher.attachments) {
-        chips.push({ ...file, voucherNo: voucher.voucherNo });
-      }
-    }
-    return chips;
-  }, [linkedVouchers]);
 
   const handleReceive = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -661,84 +659,7 @@ export default function PurchaseOrderReceive({
                       </div>
                     </div>
 
-                    {(linkedVouchers.length > 0 || poAttachments.length > 0) && (
-                      <div className="sms-incoming-linked-docs">
-                        {linkedVouchers.length > 0 && (
-                          <div className="sms-incoming-linked-bar">
-                            <span className="sms-incoming-linked-label">
-                              <FileText className="w-3.5 h-3.5" />
-                              Linked payment vouchers
-                            </span>
-                            <div className="sms-incoming-linked-chips">
-                              {linkedVouchers.map((voucher) => (
-                                <a
-                                  key={voucher.id}
-                                  href={voucher.viewUrl || '#'}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="sms-incoming-file-chip sms-incoming-file-chip--voucher"
-                                  title={voucher.payeeName || voucher.voucherNo}
-                                >
-                                  {voucher.voucherNo || `PV #${voucher.id}`}
-                                  {voucher.status ? (
-                                    <span className="sms-po-pill">{voucher.status}</span>
-                                  ) : null}
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {voucherAttachmentChips.length > 0 && (
-                          <div className="sms-incoming-linked-bar">
-                            <span className="sms-incoming-linked-label">
-                              <Paperclip className="w-3.5 h-3.5" />
-                              Voucher attachments
-                            </span>
-                            <div className="sms-incoming-linked-chips">
-                              {voucherAttachmentChips.map((file) => (
-                                <a
-                                  key={file.id}
-                                  href={file.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="sms-incoming-file-chip"
-                                  title={`${file.voucherNo}: ${file.name}`}
-                                >
-                                  {file.name || 'Attachment'}
-                                  <span className="sms-po-pill">{file.voucherNo}</span>
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {poAttachments.length > 0 && (
-                          <div className="sms-incoming-linked-bar">
-                            <span className="sms-incoming-linked-label">
-                              <Paperclip className="w-3.5 h-3.5" />
-                              On this PO
-                            </span>
-                            <div className="sms-incoming-linked-chips">
-                              {poAttachments.map((file) => (
-                                <a
-                                  key={file.id}
-                                  href={file.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="sms-incoming-file-chip"
-                                >
-                                  {file.name || 'Attachment'}
-                                  {file.kind === 'invoice' ? (
-                                    <span className="sms-po-pill">Invoice</span>
-                                  ) : null}
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <LinkedDocumentsPanel linkedVouchers={linkedVouchers} poAttachments={poAttachments} />
 
                     <div className="sms-incoming-footer-actions">
                       <p className="sms-incoming-footer-hint">

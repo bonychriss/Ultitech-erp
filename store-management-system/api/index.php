@@ -1108,16 +1108,17 @@ function sms_voucher_view_url(int $voucherId): string
 }
 
 /**
+ * Explicitly linked payment voucher ids from the PO record only
+ * (payment_voucher_id / payment_voucher_ids). Do not include system
+ * auto-links via payment_vouchers.linked_stock_po_id.
+ *
  * @return list<int>
  */
 function sms_po_linked_voucher_ids(array $po, PDO $pdo, int $poId): array
 {
     $ids = [];
-    $single = (int) ($po['payment_voucher_id'] ?? 0);
-    if ($single > 0) {
-        $ids[$single] = $single;
-    }
 
+    // Multi-select list is the source of truth when present.
     $raw = trim((string) ($po['payment_voucher_ids'] ?? ''));
     if ($raw !== '') {
         $decoded = json_decode($raw, true);
@@ -1138,27 +1139,14 @@ function sms_po_linked_voucher_ids(array $po, PDO $pdo, int $poId): array
         }
     }
 
-    if ($poId > 0) {
-        try {
-            if (tableExists('payment_vouchers', $pdo)) {
-                $pvCols = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-                if (in_array('linked_stock_po_id', $pvCols, true)) {
-                    $stmt = $pdo->prepare('SELECT id FROM payment_vouchers WHERE linked_stock_po_id = ? ORDER BY id DESC');
-                    $stmt->execute([$poId]);
-                    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) ?: [] as $vid) {
-                        $vid = (int) $vid;
-                        if ($vid > 0) {
-                            $ids[$vid] = $vid;
-                        }
-                    }
-                }
-            }
-        } catch (Throwable $e) {
-        }
+    // Fallback / supplement: primary payment_voucher_id column.
+    $single = (int) ($po['payment_voucher_id'] ?? 0);
+    if ($single > 0) {
+        $ids[$single] = $single;
     }
 
-    if ($ids === [] && sms_purchase_workflow_loaded() && function_exists('stockPurchaseExpandPoLinkedVoucherIds')) {
-        foreach (stockPurchaseExpandPoLinkedVoucherIds($po, $poId) as $vid) {
+    if ($ids === [] && sms_purchase_workflow_loaded() && function_exists('stockPurchasePoLinkedVoucherIds')) {
+        foreach (stockPurchasePoLinkedVoucherIds($po) as $vid) {
             $vid = (int) $vid;
             if ($vid > 0) {
                 $ids[$vid] = $vid;
@@ -1289,11 +1277,44 @@ function sms_fetch_po_linked_vouchers(PDO $pdo, array $po, int $poId): array
     return $linked;
 }
 
+/**
+ * Normalize PO source labels from URL/clients (stock → stocks).
+ */
+function sms_normalize_po_source(string $source): string
+{
+    $source = strtolower(trim($source));
+    if ($source === '' || $source === 'stock' || $source === 'stocks_purchase_orders') {
+        return 'stocks';
+    }
+    if (in_array($source, ['legacy', 'purchases', 'old'], true)) {
+        return 'legacy';
+    }
+
+    return $source === 'stocks' || $source === 'legacy' ? $source : 'stocks';
+}
+
+/**
+ * Fetch receivable PO detail; if the preferred source misses, try the other.
+ */
+function sms_fetch_purchase_order_detail_resolving(PDO $pdo, int $poId, string $source = 'stocks'): ?array
+{
+    $preferred = sms_normalize_po_source($source);
+    $detail = sms_fetch_purchase_order_detail($pdo, $poId, $preferred);
+    if ($detail !== null) {
+        return $detail;
+    }
+
+    $fallback = $preferred === 'legacy' ? 'stocks' : 'legacy';
+    return sms_fetch_purchase_order_detail($pdo, $poId, $fallback);
+}
+
 function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = 'stocks'): ?array
 {
     if ($poId <= 0) {
         return null;
     }
+
+    $source = sms_normalize_po_source($source);
 
     if ($source === 'legacy' && tableExists('purchases') && tableExists('purchase_items')) {
         if (!sms_purchase_workflow_loaded()) {
@@ -2880,9 +2901,35 @@ try {
             $poId = (int) ($_GET['po_id'] ?? $_POST['po_id'] ?? 0);
             $source = trim((string) ($_GET['source'] ?? $_POST['source'] ?? 'stocks'));
             if ($poId <= 0) {
+                // Allow deep-links that pass PO number instead of numeric id.
+                $rawPo = trim((string) ($_GET['po_id'] ?? $_POST['po_id'] ?? $_GET['po'] ?? $_POST['po'] ?? ''));
+                if ($rawPo !== '' && tableExists('stocks_purchase_orders')) {
+                    try {
+                        $find = $pdo->prepare('SELECT id FROM stocks_purchase_orders WHERE po_number = ? LIMIT 1');
+                        $find->execute([$rawPo]);
+                        $poId = (int) ($find->fetchColumn() ?: 0);
+                        if ($poId > 0) {
+                            $source = 'stocks';
+                        }
+                    } catch (Throwable $e) {
+                    }
+                }
+                if ($poId <= 0 && $rawPo !== '' && tableExists('purchases')) {
+                    try {
+                        $find = $pdo->prepare('SELECT id FROM purchases WHERE purchase_no = ? LIMIT 1');
+                        $find->execute([$rawPo]);
+                        $poId = (int) ($find->fetchColumn() ?: 0);
+                        if ($poId > 0) {
+                            $source = 'legacy';
+                        }
+                    } catch (Throwable $e) {
+                    }
+                }
+            }
+            if ($poId <= 0) {
                 sms_error('po_id is required');
             }
-            $detail = sms_fetch_purchase_order_detail($pdo, $poId, $source !== '' ? $source : 'stocks');
+            $detail = sms_fetch_purchase_order_detail_resolving($pdo, $poId, $source !== '' ? $source : 'stocks');
             if ($detail === null) {
                 sms_error('Purchase order not found or not available for receiving', 404);
             }
@@ -2902,7 +2949,7 @@ try {
 
             $poId = (int) ($_POST['po_id'] ?? 0);
             $warehouseId = (int) ($_POST['warehouse_id'] ?? 0);
-            $source = trim((string) ($_POST['source'] ?? 'stocks'));
+            $source = sms_normalize_po_source(trim((string) ($_POST['source'] ?? 'stocks')));
             $notes = trim((string) ($_POST['notes'] ?? ''));
             // Store keepers confirm into stock; procurement records delivery for later verify.
             $confirmToStock = !sms_can_manage_products();
@@ -2918,6 +2965,12 @@ try {
 
             if ($poId <= 0 || $warehouseId <= 0) {
                 sms_error('po_id and warehouse_id are required');
+            }
+
+            // Prefer posted source; if that PO isn't receivable there, try the other table.
+            $resolved = sms_fetch_purchase_order_detail_resolving($pdo, $poId, $source);
+            if ($resolved !== null) {
+                $source = sms_normalize_po_source((string) ($resolved['order']['source'] ?? $source));
             }
             if (!is_array($receiveQuantities) || $receiveQuantities === []) {
                 sms_error('receive_qty is required');

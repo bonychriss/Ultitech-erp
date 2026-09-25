@@ -245,7 +245,7 @@ export default function PurchaseOrderReceive({
     if (!canSubmit) {
       setStatusPopup({
         title: 'Access restricted',
-        message: 'Only administrators or users with the Warehouse role can record delivery for store.',
+        message: 'Only administrators or users with the Warehouse role can approve receival.',
         tone: 'error',
       });
       return;
@@ -263,7 +263,7 @@ export default function PurchaseOrderReceive({
         title: 'Nothing to accept',
         message: confirmToStock
           ? 'Enter at least one quantity to accept into stock.'
-          : 'Enter at least one quantity to record as delivered.',
+          : 'Enter at least one quantity to approve receival.',
         tone: 'info',
       });
       return;
@@ -289,7 +289,7 @@ export default function PurchaseOrderReceive({
       setAttachments([]);
       setPoSearch('');
       setStatusPopup({
-        title: confirmToStock ? 'Accepted into stock' : 'Delivery recorded',
+        title: confirmToStock ? 'Accepted into stock' : 'Receival approved',
         message: result.message,
         tone: 'success',
       });
@@ -299,7 +299,7 @@ export default function PurchaseOrderReceive({
       }
     } catch (err) {
       setStatusPopup({
-        title: confirmToStock ? 'Could not accept into stock' : 'Could not record delivery',
+        title: confirmToStock ? 'Could not accept into stock' : 'Could not approve receival',
         message: err instanceof Error ? err.message : 'Failed to receive purchase order',
         tone: 'error',
       });
@@ -673,11 +673,11 @@ export default function PurchaseOrderReceive({
                         ) : (
                           <Truck className="w-4 h-4" />
                         )}
-                        {confirmToStock ? 'Accept into Stock' : 'Record delivery for store'}
+                        {confirmToStock ? 'Accept into Stock' : 'Approve receival'}
                       </button>
                     ) : (
                       <p className="sms-help" style={{ margin: 0, fontSize: '0.8125rem', color: '#64748b' }}>
-                        Warehouse role required to record delivery.
+                        Warehouse role required to approve receival.
                       </p>
                     )}
                   </div>

@@ -332,7 +332,10 @@ export default function App() {
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
             </button>
-            <h3 className="sms-excel-page-title">Receive into stock</h3>
+            <div className="sms-excel-page-copy">
+              <h3 className="sms-excel-page-title">Receive into Stock</h3>
+              <p className="sms-excel-page-sub">Add received items to your inventory.</p>
+            </div>
           </div>
         ) : (
           <div className="sms-desk-page-header sms-desk-page-header--simple">

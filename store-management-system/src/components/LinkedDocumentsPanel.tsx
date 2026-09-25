@@ -358,16 +358,18 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
   }
 
   return (
-    <div className="sms-incoming-linked-docs">
+    <section className="sms-receive-card sms-receive-card--linked">
       {linkedVouchers.length > 0 && (
-        <section className="sms-gmail-section">
-          <div className="sms-gmail-section-head">
-            <FileText className="w-3.5 h-3.5" />
-            Linked payment vouchers
-            <span className="sms-gmail-section-count">
-              · {linkedVouchers.length} voucher{linkedVouchers.length === 1 ? '' : 's'}
+        <div className="sms-receive-card-block">
+          <header className="sms-receive-card-head">
+            <span className="sms-receive-card-icon" aria-hidden="true">
+              <FileText className="w-4 h-4" />
             </span>
-          </div>
+            <h3 className="sms-receive-card-title">Linked Payment Vouchers</h3>
+            <span className="sms-receive-card-badge">
+              + {linkedVouchers.length} voucher{linkedVouchers.length === 1 ? '' : 's'}
+            </span>
+          </header>
 
           <div className="sms-pv-groups">
             {linkedVouchers.map((voucher) => {
@@ -391,7 +393,7 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
                         onClick={() => setOpenVoucher(voucher)}
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                        Open voucher
+                        Open Voucher
                       </button>
                     </div>
                   </header>
@@ -399,18 +401,20 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
               );
             })}
           </div>
-        </section>
+        </div>
       )}
 
       {poAttachments.length > 0 && (
-        <section className="sms-gmail-section">
-          <div className="sms-gmail-section-head">
-            <Paperclip className="w-3.5 h-3.5" />
-            On this PO
-            <span className="sms-gmail-section-count">
-              · {poAttachments.length} file{poAttachments.length === 1 ? '' : 's'}
+        <div className="sms-receive-card-block">
+          <header className="sms-receive-card-head">
+            <span className="sms-receive-card-icon" aria-hidden="true">
+              <Paperclip className="w-4 h-4" />
             </span>
-          </div>
+            <h3 className="sms-receive-card-title">On this PO</h3>
+            <span className="sms-receive-card-badge">
+              + {poAttachments.length} file{poAttachments.length === 1 ? '' : 's'}
+            </span>
+          </header>
           <div className="sms-gmail-list" role="list">
             {poAttachments.map((file) => {
               const image = isImageName(file.name, file.url);
@@ -434,7 +438,7 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
               );
             })}
           </div>
-        </section>
+        </div>
       )}
 
       {preview && (
@@ -460,6 +464,6 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
           }}
         />
       )}
-    </div>
+    </section>
   );
 }

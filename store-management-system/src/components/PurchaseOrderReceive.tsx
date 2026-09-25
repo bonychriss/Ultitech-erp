@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   BadgeCheck,
-  ClipboardList,
   CloudUpload,
+  FileText,
   Loader2,
   Package,
   PackageCheck,
-  PackageOpen,
-  Paperclip,
+  PackagePlus,
   Search,
   Truck,
   X,
@@ -326,8 +326,8 @@ export default function PurchaseOrderReceive({
       {error && <div className="sms-alert sms-alert-error">{error}</div>}
 
       <form onSubmit={handleReceive} className="sms-incoming-stack">
-        <section className="sms-incoming-panel sms-incoming-panel--detail sms-incoming-panel--full">
           {!selectedOrder && !loadingDetail ? (
+            <section className="sms-receive-card sms-receive-card--list">
             <div className="sms-po-open-list">
               <div className="sms-po-open-list-head">
                 <div className="sms-po-open-list-title-row">
@@ -430,161 +430,145 @@ export default function PurchaseOrderReceive({
                 </div>
               )}
             </div>
+            </section>
           ) : (
             <>
               {selectedOrder && (
-                <div className="sms-incoming-selected">
-                  <div className="sms-incoming-selected-main">
-                    <div className="sms-po-details-hero-icon sms-po-details-hero-icon--violet">
-                      <ClipboardList className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="sms-po-picker-ref">
-                        {selectedOrder.poNumber || `PO #${selectedOrder.id}`}
-                      </div>
-                      <div className="sms-po-picker-supplier">
-                        <Truck className="w-3.5 h-3.5 inline text-indigo-500 mr-1" />
-                        {selectedOrder.supplierName || 'Unknown supplier'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="sms-incoming-selected-meta">
-                    <div className="sms-incoming-chip">
-                      <span className="sms-po-details-icon sms-po-details-icon--emerald">
-                        <BadgeCheck className="w-3.5 h-3.5" />
-                      </span>
-                      <span
-                        className={receiveStatusClass(
-                          selectedOrder.receiveStatus || 'Pending'
-                        )}
-                      >
-                        {selectedOrder.receiveStatus || 'Pending'}
-                      </span>
-                    </div>
-                    <div className="sms-incoming-chip">
-                      <span className="sms-po-details-icon sms-po-details-icon--sky">
-                        <PackageOpen className="w-3.5 h-3.5" />
-                      </span>
-                      <span className="sms-po-pill">{selectedOrder.purchaseType || 'stock'}</span>
-                    </div>
-                    <div className="sms-incoming-chip sms-incoming-chip--plain">
-                      <span className="sms-po-details-icon sms-po-details-icon--amber">
-                        <PackageCheck className="w-3.5 h-3.5" />
-                      </span>
-                      <span className="text-xs text-slate-600 font-semibold">
-                        {selectedOrder.lineCount} line{selectedOrder.lineCount === 1 ? '' : 's'} ·{' '}
-                        {selectedOrder.remainingQty} remaining
-                      </span>
-                    </div>
-                  </div>
+                <div className="sms-receive-meta-bar" aria-label="Purchase order summary">
+                  <span className="sms-receive-meta-chip sms-receive-meta-chip--ok">
+                    <BadgeCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                    {selectedOrder.receiveStatus || 'Pending'}
+                  </span>
+                  <span className="sms-receive-meta-chip sms-receive-meta-chip--po">
+                    <Truck className="w-3.5 h-3.5" aria-hidden="true" />
+                    PO: {selectedOrder.poNumber || `#${selectedOrder.id}`}
+                  </span>
+                  <span className="sms-receive-meta-chip sms-receive-meta-chip--qty">
+                    <PackageCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                    {selectedOrder.lineCount} item{selectedOrder.lineCount === 1 ? '' : 's'} ·{' '}
+                    {selectedOrder.remainingQty} remaining
+                  </span>
                 </div>
               )}
 
               {loadingDetail ? (
-                <div className="sms-incoming-empty">
-                  <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
-                  Loading PO lines…
-                </div>
+                <section className="sms-receive-card">
+                  <div className="sms-incoming-empty">
+                    <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+                    Loading PO lines…
+                  </div>
+                </section>
               ) : lines.length > 0 ? (
                 <>
-                  <div className="sms-incoming-lines-card">
-                  <div className="sms-po-lines-toolbar">
-                    <span className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                      <span className="sms-po-details-icon sms-po-details-icon--indigo">
-                        <Package className="w-3.5 h-3.5" />
+                  <section className="sms-receive-card">
+                    <header className="sms-receive-card-head">
+                      <span className="sms-receive-card-icon" aria-hidden="true">
+                        <FileText className="w-4 h-4" />
                       </span>
-                      Line items delivered
-                    </span>
-                  </div>
+                      <h3 className="sms-receive-card-title">Receive Information</h3>
+                    </header>
 
-                  <div className="sms-table-wrap sms-incoming-lines">
-                    <table className="sms-table sms-inventory-table">
-                      <thead>
-                        <tr>
-                          <th className="sms-col-image">Image</th>
-                          <th>Product</th>
-                          <th className="text-center">Ordered</th>
-                          <th className="text-center">Delivered</th>
-                          <th className="text-center">Remaining</th>
-                          <th>Status</th>
-                          <th className="text-center">Deliver now</th>
-                          <th className="text-right sms-col-actions">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {lines.map((line) => {
-                          const status = lineReceiveStatus(line);
-                          return (
-                          <tr key={line.lineId}>
-                            <td className="sms-col-image">
-                              <LineProductThumb line={line} />
-                            </td>
-                            <td>
-                              <div className="font-semibold text-slate-900">{line.productName}</div>
-                              <div className="sms-product-meta">
-                                <span className="sms-sku">{line.productSku || '—'}</span>
-                              </div>
-                            </td>
-                            <td className="text-center font-mono">{line.qtyOrdered}</td>
-                            <td className="text-center font-mono text-slate-500">{line.qtyReceived}</td>
-                            <td className="text-center font-mono font-semibold text-emerald-600">
-                              {line.qtyRemaining}
-                            </td>
-                            <td>
-                              <span className={receiveStatusClass(status)}>{status}</span>
-                            </td>
-                            <td className="text-center">
-                              <input
-                                type="number"
-                                min="0"
-                                max={line.qtyRemaining}
-                                value={receiveQty[line.lineId] ?? ''}
-                                disabled={line.qtyRemaining <= 0}
-                                onChange={(e) =>
-                                  setReceiveQty((prev) => ({ ...prev, [line.lineId]: e.target.value }))
-                                }
-                                className="sms-input sms-po-qty-input"
-                              />
-                            </td>
-                            <td className="text-right sms-col-actions">
-                              <LineRowActions onView={() => setDetailsOpen(true)} />
-                            </td>
+                    <div className="sms-table-wrap sms-incoming-lines sms-incoming-lines--flush">
+                      <table className="sms-table sms-inventory-table">
+                        <thead>
+                          <tr>
+                            <th className="sms-col-image">Image</th>
+                            <th>Product</th>
+                            <th className="text-center">Ordered</th>
+                            <th className="text-center">Delivered</th>
+                            <th className="text-center">Remaining</th>
+                            <th>Status</th>
+                            <th className="text-center">Deliver now</th>
+                            <th className="text-right sms-col-actions">Actions</th>
                           </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {lines.map((line) => {
+                            const status = lineReceiveStatus(line);
+                            return (
+                              <tr key={line.lineId}>
+                                <td className="sms-col-image">
+                                  <LineProductThumb line={line} />
+                                </td>
+                                <td>
+                                  <div className="font-semibold text-slate-900">{line.productName}</div>
+                                  <div className="sms-product-meta">
+                                    <span className="sms-sku">{line.productSku || '—'}</span>
+                                  </div>
+                                </td>
+                                <td className="text-center font-mono">{line.qtyOrdered}</td>
+                                <td className="text-center font-mono text-slate-500">{line.qtyReceived}</td>
+                                <td className="text-center font-mono font-semibold text-emerald-600">
+                                  {line.qtyRemaining}
+                                </td>
+                                <td>
+                                  <span className={receiveStatusClass(status)}>{status}</span>
+                                </td>
+                                <td className="text-center">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={line.qtyRemaining}
+                                    value={receiveQty[line.lineId] ?? ''}
+                                    disabled={line.qtyRemaining <= 0}
+                                    onChange={(e) =>
+                                      setReceiveQty((prev) => ({
+                                        ...prev,
+                                        [line.lineId]: e.target.value,
+                                      }))
+                                    }
+                                    className="sms-input sms-po-qty-input"
+                                  />
+                                </td>
+                                <td className="text-right sms-col-actions">
+                                  <LineRowActions onView={() => setDetailsOpen(true)} />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
 
-                  <div className="sms-incoming-footer">
-                    <LinkedDocumentsPanel linkedVouchers={linkedVouchers} poAttachments={poAttachments} />
+                  <LinkedDocumentsPanel
+                    linkedVouchers={linkedVouchers}
+                    poAttachments={poAttachments}
+                  />
+
+                  <section className="sms-receive-card">
+                    <header className="sms-receive-card-head">
+                      <span className="sms-receive-card-icon" aria-hidden="true">
+                        <Package className="w-4 h-4" />
+                      </span>
+                      <h3 className="sms-receive-card-title">Receive Items</h3>
+                    </header>
 
                     <div className="sms-incoming-footer-fields">
                       <div className="sms-incoming-notes">
                         <label className="sms-field-label" htmlFor="sms-receipt-notes">
-                          Receipt notes
+                          Received Notes
                         </label>
-                        <input
+                        <textarea
                           id="sms-receipt-notes"
-                          type="text"
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
-                          className="sms-input"
-                          placeholder="Delivery note, GRN reference, condition…"
+                          className="sms-input sms-incoming-notes-area"
+                          rows={4}
+                          placeholder="e.g. Delivery note, reference, condition…"
                         />
                       </div>
 
                       <div className="sms-incoming-attachments">
-                        <label className="sms-field-label">
-                          <Paperclip className="w-3.5 h-3.5 inline mr-1" />
-                          Delivery attachments
+                        <label className="sms-field-label" htmlFor="sms-delivery-attachments">
+                          Attach File (Optional)
                         </label>
+                        <p className="sms-incoming-attach-hint">PDF, JPG, PNG, or DOC up to 10MB</p>
                         <input
                           ref={fileInputRef}
                           id="sms-delivery-attachments"
                           type="file"
-                          accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
+                          accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,application/pdf,image/*"
                           multiple
                           className="sms-sr-only"
                           onChange={(e) => {
@@ -619,8 +603,9 @@ export default function PurchaseOrderReceive({
                           }}
                         >
                           <CloudUpload className="sms-dropzone-icon" aria-hidden="true" />
-                          <span className="sms-dropzone-title">Upload a file</span>
-                          <span className="sms-dropzone-sub">Click to browse, or drag &amp; drop files here</span>
+                          <span className="sms-dropzone-title">
+                            Click to browse or drag &amp; drop file here
+                          </span>
                         </button>
                         {attachments.length > 0 && (
                           <ul className="sms-dropzone-files">
@@ -643,32 +628,36 @@ export default function PurchaseOrderReceive({
                     </div>
 
                     <div className="sms-incoming-footer-actions">
-                      <p className="sms-incoming-footer-hint">
-                        {confirmToStock
-                          ? 'Accepted quantities are added to warehouse stock immediately. Leave qty at 0 to reject a line.'
-                          : 'Stock stays pending until the store manager confirms.'}
-                      </p>
+                      <button
+                        type="button"
+                        className="sms-desk-btn sms-desk-btn-secondary sms-btn-rounded"
+                        onClick={() => setSelectedKey('')}
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back
+                      </button>
                       <button type="submit" disabled={saving} className="sms-btn-primary sms-btn-rounded">
                         {saving ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : confirmToStock ? (
-                          <PackageCheck className="w-4 h-4" />
+                          <PackagePlus className="w-4 h-4" />
                         ) : (
                           <Truck className="w-4 h-4" />
                         )}
-                        {confirmToStock ? 'Accept into stock' : 'Record delivery for store'}
+                        {confirmToStock ? 'Accept into Stock' : 'Record delivery for store'}
                       </button>
                     </div>
-                  </div>
+                  </section>
                 </>
               ) : (
-                <div className="sms-incoming-empty">
-                  This purchase order has no remaining lines to receive.
-                </div>
+                <section className="sms-receive-card">
+                  <div className="sms-incoming-empty">
+                    This purchase order has no remaining lines to receive.
+                  </div>
+                </section>
               )}
             </>
           )}
-        </section>
       </form>
 
       {detailsOpen && selectedOrder && (

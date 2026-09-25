@@ -340,7 +340,7 @@ export default function PurchaseOrderReceive({
 
       <form onSubmit={handleReceive} className="sms-incoming-stack">
           {!selectedOrder && !loadingDetail ? (
-            <section className="sms-receive-card sms-receive-card--list">
+            <section className="sms-po-picker">
             <div className="sms-po-open-list">
               <div className="sms-po-open-list-head">
                 <div className="sms-po-open-list-title-row">

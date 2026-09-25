@@ -126,12 +126,69 @@ include __DIR__ . '/../stock/includes/header.php';
     main.main-content.store-management-shell {
         flex: 1 1 auto;
         min-height: 0;
-        overflow: auto;
+        overflow: auto !important;
         padding: 0 1.25rem 2rem !important;
         background: #f8fafc;
         width: 100% !important;
         max-width: none !important;
         box-sizing: border-box;
+    }
+
+    /*
+     * Pin the ERP sidebar: sticky+flex stretch lets mt-auto ACCOUNT float mid-panel
+     * when the PO list is tall. Fixed keeps it viewport-height and top-aligned.
+     */
+    @media (min-width: 993px) {
+        body.page-store-management #native-sidebar,
+        body.page-store-management.dashboard #native-sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: auto !important;
+            align-self: auto !important;
+            width: var(--sidebar-width) !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            overscroll-behavior: contain;
+            flex-shrink: 0 !important;
+            z-index: 1040 !important;
+        }
+
+        body.page-store-management.sidebar-collapsed #native-sidebar,
+        body.page-store-management.dashboard.sidebar-collapsed #native-sidebar {
+            width: var(--sidebar-collapsed-width) !important;
+        }
+
+        body.page-store-management .layout-main-wrapper {
+            align-items: stretch !important;
+            min-height: 100vh;
+        }
+
+        body.page-store-management .layout-main-wrapper > .flex-grow-1 {
+            margin-left: var(--sidebar-width) !important;
+            width: calc(100% - var(--sidebar-width)) !important;
+            max-width: calc(100% - var(--sidebar-width)) !important;
+            min-width: 0 !important;
+            flex: 1 1 auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        body.page-store-management.sidebar-collapsed .layout-main-wrapper > .flex-grow-1 {
+            margin-left: var(--sidebar-collapsed-width) !important;
+            width: calc(100% - var(--sidebar-collapsed-width)) !important;
+            max-width: calc(100% - var(--sidebar-collapsed-width)) !important;
+        }
+
+        body.page-store-management .employee-header.employee-header--store-mgmt {
+            flex-shrink: 0 !important;
+        }
+
+        body.page-store-management main.main-content.store-management-shell {
+            overscroll-behavior: contain;
+        }
     }
 
     main.main-content.store-management-shell #root {
@@ -141,7 +198,7 @@ include __DIR__ . '/../stock/includes/header.php';
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
-        min-height: calc(100vh - 4rem);
+        min-height: 0;
     }
 
     @media (max-width: 767.98px) {

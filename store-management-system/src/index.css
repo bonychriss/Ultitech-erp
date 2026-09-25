@@ -2215,6 +2215,17 @@ html[data-theme="dark"] .sms-receive-card .font-semibold {
   padding: 0.85rem 1rem 1rem;
 }
 
+.sms-po-picker {
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+  min-width: 0;
+}
+
 .sms-receive-card--linked {
   display: flex;
   flex-direction: column;

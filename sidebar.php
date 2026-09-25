@@ -1264,9 +1264,12 @@ if (!isset($_GET['print'])) {
     /* The Sidebar Itself */
     #native-sidebar {
         width: var(--sidebar-width);
-        height: 100vh; /* Changed from min-height to height to enforce viewport constraints */
+        height: 100vh !important;
+        max-height: 100vh !important;
+        min-height: 0 !important;
         position: sticky;
         top: 0;
+        align-self: flex-start; /* Never stretch to main content height (breaks mt-auto ACCOUNT) */
         z-index: 1040;
         /* Background and colors controlled by sidebar_themes.css */
         display: flex;
@@ -1275,7 +1278,8 @@ if (!isset($_GET['print'])) {
         transition: width 0.3s ease;
         overflow-y: auto; /* Scroll internally if menu is long */
         overflow-x: hidden;
-        flex-shrink: 0; /* Prevent shrinking in flex container */
+        overscroll-behavior: contain;
+        flex: 0 0 var(--sidebar-width);
         scrollbar-width: none; /* Firefox: hide scrollbar, keep scroll */
         -ms-overflow-style: none; /* IE/legacy Edge */
     }
@@ -1288,6 +1292,7 @@ if (!isset($_GET['print'])) {
     /* Collapsed Sidebar (Driven by Body Class) */
     body.sidebar-collapsed #native-sidebar {
         width: var(--sidebar-collapsed-width);
+        flex-basis: var(--sidebar-collapsed-width);
     }
     
     body.sidebar-collapsed #native-sidebar .sidebar-text,

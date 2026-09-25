@@ -35,7 +35,16 @@ $modulesLink = $rootPath . 'select-module.php';
         /* Layout Adjustment for Integration */
         .stock-container { width: 100%; }
         body.dashboard .layout-main-wrapper { align-items: stretch; }
-        body.dashboard .layout-main-wrapper > .flex-grow-1 { min-height: 0; display: flex; flex-direction: column; }
+        body.dashboard .layout-main-wrapper > #native-sidebar {
+            position: sticky;
+            top: 0;
+            align-self: flex-start;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            min-height: 0 !important;
+            overscroll-behavior: contain;
+        }
+        body.dashboard .layout-main-wrapper > .flex-grow-1 { min-height: 0; min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
         body.dashboard main.main-content { flex: 1 1 auto; min-height: 0; overflow: visible !important; }
         main.main-content .stock-container, main.main-content #root { width: 100%; }
         

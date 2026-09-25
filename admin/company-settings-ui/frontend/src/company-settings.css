@@ -243,6 +243,31 @@
   color: #0f172a;
 }
 
+.cs-dept-item.is-locked {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+}
+
+.cs-dept-locked-tag {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6d28d9;
+  background: #ede9fe;
+  vertical-align: middle;
+}
+
+.cs-dept-locked-note {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
 .cs-card--compact .cs-dept-item {
   padding: 0.35rem 0.55rem;
   border-radius: 8px;

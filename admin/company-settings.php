@@ -482,6 +482,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($deptName === '') {
                 throw new RuntimeException('Select a department to remove.');
             }
+            if (companySettingsIsLockedDepartment($deptName)) {
+                throw new RuntimeException('"' . $deptName . '" is a system department and cannot be removed.');
+            }
             $map = fetchCompanySettingsMap($pdo, $targetCompanyId);
             $list = companySettingsDepartmentsFromMap($map, $employeeInviteDepartmentsDefault);
             $next = array_values(array_filter(
@@ -904,6 +907,38 @@ if ((string) ($company['setup_status'] ?? 'pending_setup') === 'pending_setup' &
 }
 
 $settings = fetchCompanySettingsMap($pdo, $targetCompanyId);
+
+// Ensure locked departments (Warehouse) exist in stored settings for every company.
+try {
+    $ensuredDepartments = companySettingsDepartmentsFromMap($settings, $employeeInviteDepartmentsDefault);
+    $storedRaw = trim((string) ($settings['departments'] ?? ''));
+    $storedList = [];
+    if ($storedRaw !== '') {
+        $decodedStored = json_decode($storedRaw, true);
+        if (is_array($decodedStored)) {
+            foreach ($decodedStored as $item) {
+                $n = trim((string) $item);
+                if ($n !== '') {
+                    $storedList[mb_strtolower($n)] = $n;
+                }
+            }
+        }
+    }
+    $needsPersist = false;
+    foreach (companySettingsLockedDepartments() as $locked) {
+        if (!isset($storedList[mb_strtolower($locked)])) {
+            $needsPersist = true;
+            break;
+        }
+    }
+    if ($needsPersist || $storedRaw === '') {
+        companySettingsSaveDepartments($pdo, $targetCompanyId, $ensuredDepartments);
+        $settings = fetchCompanySettingsMap($pdo, $targetCompanyId);
+    }
+} catch (Throwable $e) {
+    // Non-fatal: UI still injects locked departments via companySettingsDepartmentsFromMap.
+}
+
 $companyLogoRaw = trim((string) ($settings['company_logo'] ?? ''));
 $companyLogoFilePath = '';
 if ($companyLogoRaw !== '') {
@@ -1216,6 +1251,7 @@ $reactCfg = [
     'currencyOptions' => $currencyOptions,
     'employeeModeLabels' => $employeeModeLabels,
     'departments' => companySettingsDepartmentsFromMap($settings, $employeeInviteDepartmentsDefault),
+    'lockedDepartments' => companySettingsLockedDepartments(),
     'legacyVoucherPrefixCount' => (int) $legacyVoucherPrefixCount,
     'currentPvPrefix' => (string) $currentPvPrefix,
 ];

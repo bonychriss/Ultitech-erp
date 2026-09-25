@@ -23,6 +23,8 @@ interface PurchaseOrderReceiveProps {
   warehouseId: number;
   /** When true, accepted quantities go straight into warehouse stock. */
   confirmToStock?: boolean;
+  /** When false, hide the submit / record-delivery action. */
+  canSubmit?: boolean;
   onReceived: () => Promise<void>;
 }
 
@@ -112,6 +114,7 @@ function LineProductThumb({ line }: { line: PurchaseOrderLine }) {
 export default function PurchaseOrderReceive({
   warehouseId,
   confirmToStock = true,
+  canSubmit = true,
   onReceived,
 }: PurchaseOrderReceiveProps) {
   const [orders, setOrders] = useState<PurchaseOrderSummary[]>([]);
@@ -239,6 +242,14 @@ export default function PurchaseOrderReceive({
 
   const handleReceive = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canSubmit) {
+      setStatusPopup({
+        title: 'Access restricted',
+        message: 'Only administrators or users with the Warehouse role can record delivery for store.',
+        tone: 'error',
+      });
+      return;
+    }
     if (!selectedOrder) return;
 
     const payload: Record<string, number> = {};
@@ -653,16 +664,22 @@ export default function PurchaseOrderReceive({
                       <ArrowLeft className="w-4 h-4" />
                       Back
                     </a>
-                    <button type="submit" disabled={saving} className="sms-btn-primary sms-btn-rounded">
-                      {saving ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : confirmToStock ? (
-                        <PackagePlus className="w-4 h-4" />
-                      ) : (
-                        <Truck className="w-4 h-4" />
-                      )}
-                      {confirmToStock ? 'Accept into Stock' : 'Record delivery for store'}
-                    </button>
+                    {canSubmit ? (
+                      <button type="submit" disabled={saving} className="sms-btn-primary sms-btn-rounded">
+                        {saving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : confirmToStock ? (
+                          <PackagePlus className="w-4 h-4" />
+                        ) : (
+                          <Truck className="w-4 h-4" />
+                        )}
+                        {confirmToStock ? 'Accept into Stock' : 'Record delivery for store'}
+                      </button>
+                    ) : (
+                      <p className="sms-help" style={{ margin: 0, fontSize: '0.8125rem', color: '#64748b' }}>
+                        Warehouse role required to record delivery.
+                      </p>
+                    )}
                   </div>
                 </>
               ) : (

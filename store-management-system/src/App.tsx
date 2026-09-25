@@ -364,7 +364,7 @@ export default function App() {
           <StoreReceiveForm
             warehouseId={warehouseId}
             products={products}
-            canReceivePurchaseOrders={config?.canReceivePurchaseOrders !== false}
+            canReceivePurchaseOrders={!!config?.canReceivePurchaseOrders}
             confirmPoToStock={config?.confirmPoToStock !== false && !config?.canManageProducts}
             onReceived={async () => {
               await refreshData();

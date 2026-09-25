@@ -239,18 +239,30 @@ export default function CompanySettingsPage() {
             subtitle="Departments appear when inviting employees and assigning users."
           >
             <ul className="cs-dept-list">
-              {(cfg.departments || []).map((d) => (
-                <li key={d} className="cs-dept-item">
-                  <span>{d}</span>
-                  <form method="post" action={actionUrl} className="cs-dept-remove-form">
-                    <input type="hidden" name="remove_department" value="1" />
-                    <input type="hidden" name="department_name" value={d} />
-                    <button type="submit" className="cs-btn-ghost cs-dept-remove" title={`Remove ${d}`}>
-                      Remove
-                    </button>
-                  </form>
-                </li>
-              ))}
+              {(cfg.departments || []).map((d) => {
+                const locked = (cfg.lockedDepartments || ['Warehouse']).some(
+                  (x) => String(x).toLowerCase() === String(d).toLowerCase()
+                )
+                return (
+                  <li key={d} className={`cs-dept-item${locked ? ' is-locked' : ''}`}>
+                    <span>
+                      {d}
+                      {locked ? <em className="cs-dept-locked-tag">Default</em> : null}
+                    </span>
+                    {locked ? (
+                      <span className="cs-help cs-dept-locked-note" title="System department">Cannot remove</span>
+                    ) : (
+                      <form method="post" action={actionUrl} className="cs-dept-remove-form">
+                        <input type="hidden" name="remove_department" value="1" />
+                        <input type="hidden" name="department_name" value={d} />
+                        <button type="submit" className="cs-btn-ghost cs-dept-remove" title={`Remove ${d}`}>
+                          Remove
+                        </button>
+                      </form>
+                    )}
+                  </li>
+                )
+              })}
               {(cfg.departments || []).length === 0 ? (
                 <li className="cs-help">No departments yet. Add one below.</li>
               ) : null}

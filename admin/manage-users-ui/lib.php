@@ -143,8 +143,8 @@ function manageUsersAccessRoleOptions(array $departments = []): array
 {
     $base = $departments !== []
         ? $departments
-        : ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Management'];
-    $extras = ['Warehouse', 'Store', 'Inventory'];
+        : ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Warehouse', 'Management'];
+    $extras = ['Store', 'Inventory'];
     $out = [];
     foreach (array_merge($base, $extras) as $item) {
         $name = trim((string) $item);
@@ -156,6 +156,9 @@ function manageUsersAccessRoleOptions(array $departments = []): array
             continue;
         }
         $out[$key] = $name;
+    }
+    if (!isset($out['warehouse'])) {
+        $out['warehouse'] = 'Warehouse';
     }
     return array_values($out);
 }

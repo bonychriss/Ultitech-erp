@@ -1,6 +1,5 @@
 import React from 'react';
 import PurchaseOrderReceive from './PurchaseOrderReceive';
-import VerifyReceipts from './VerifyReceipts';
 import type { Product } from '../types';
 
 interface StoreReceiveFormProps {
@@ -16,22 +15,18 @@ interface StoreReceiveFormProps {
  */
 export default function StoreReceiveForm({
   warehouseId,
-  products,
   canReceivePurchaseOrders = true,
   confirmPoToStock = true,
   onReceived,
 }: StoreReceiveFormProps) {
   return (
     <div className="sms-form-shell sms-form-shell--excel">
-      {canReceivePurchaseOrders ? (
-        <PurchaseOrderReceive
-          warehouseId={warehouseId}
-          confirmToStock={confirmPoToStock}
-          onReceived={onReceived}
-        />
-      ) : (
-        <VerifyReceipts warehouseId={warehouseId} products={products} onVerified={onReceived} />
-      )}
+      <PurchaseOrderReceive
+        warehouseId={warehouseId}
+        confirmToStock={confirmPoToStock}
+        canSubmit={canReceivePurchaseOrders}
+        onReceived={onReceived}
+      />
     </div>
   );
 }

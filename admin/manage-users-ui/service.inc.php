@@ -711,30 +711,39 @@ foreach ($users as $u) {
         unset($_SESSION['manage_users_flash_error']);
     }
 
-    $defaultDepartments = ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Management'];
+    $defaultDepartments = ['General', 'Procurement', 'IT', 'Finance', 'Sales', 'Driver', 'Warehouse', 'Management'];
     $departments = $defaultDepartments;
     try {
         if ($company_id > 0 && function_exists('fetchCompanySettingsMap')) {
             $settingsMap = fetchCompanySettingsMap($pdo, $company_id);
-            $raw = trim((string) ($settingsMap['departments'] ?? ''));
-            if ($raw !== '') {
-                $decoded = json_decode($raw, true);
-                if (is_array($decoded) && $decoded !== []) {
-                    $clean = [];
-                    foreach ($decoded as $item) {
-                        $name = trim((string) $item);
-                        if ($name === '') {
-                            continue;
+            if (function_exists('companySettingsDepartmentsFromMap')) {
+                $departments = companySettingsDepartmentsFromMap($settingsMap, $defaultDepartments);
+            } else {
+                $raw = trim((string) ($settingsMap['departments'] ?? ''));
+                if ($raw !== '') {
+                    $decoded = json_decode($raw, true);
+                    if (is_array($decoded) && $decoded !== []) {
+                        $clean = [];
+                        foreach ($decoded as $item) {
+                            $name = trim((string) $item);
+                            if ($name === '') {
+                                continue;
+                            }
+                            $key = mb_strtolower($name);
+                            if (isset($clean[$key])) {
+                                continue;
+                            }
+                            $clean[$key] = $name;
                         }
-                        $key = mb_strtolower($name);
-                        if (isset($clean[$key])) {
-                            continue;
+                        if ($clean !== []) {
+                            $departments = array_values($clean);
                         }
-                        $clean[$key] = $name;
                     }
-                    if ($clean !== []) {
-                        $departments = array_values($clean);
-                    }
+                }
+                if (!in_array('Warehouse', $departments, true)
+                    && !in_array('warehouse', array_map('mb_strtolower', $departments), true)
+                ) {
+                    $departments[] = 'Warehouse';
                 }
             }
         }

@@ -67,28 +67,41 @@ function sms_can_manage_products(): bool
 }
 
 /**
- * Store keepers (and procurement/admin) may list POs and confirm deliveries into warehouse stock.
+ * Admin or Warehouse/Store access role may receive POs into warehouse stock.
  */
 function sms_can_receive_warehouse_stock(): bool
 {
-    if (sms_can_manage_products() || sms_is_system_admin()) {
+    if (sms_is_system_admin()) {
         return true;
     }
-    if (function_exists('userHasAccessRole') && (
-        userHasAccessRole('Warehouse')
-        || userHasAccessRole('Store')
-        || userHasAccessRole('Procurement')
-    )) {
+    if (function_exists('isAdmin') && isAdmin()) {
         return true;
+    }
+    if (function_exists('userHasAccessRole')) {
+        return userHasAccessRole('Warehouse') || userHasAccessRole('Store');
+    }
+    $dept = strtolower(trim((string) ($_SESSION['department'] ?? '')));
+    $roles = [];
+    if (!empty($_SESSION['access_roles']) && is_array($_SESSION['access_roles'])) {
+        foreach ($_SESSION['access_roles'] as $r) {
+            $roles[] = strtolower(trim((string) $r));
+        }
+    }
+    if ($dept !== '') {
+        $roles[] = $dept;
+    }
+    foreach ($roles as $hay) {
+        if ($hay === '') {
+            continue;
+        }
+        if (preg_match('/\b(warehouse|warehouses|store|stores|inventory|storekeeper)\b/', $hay)) {
+            return true;
+        }
     }
     $role = strtolower(trim((string) ($_SESSION['role'] ?? '')));
-    if ($role === '') {
-        return !empty($_SESSION['user_id']);
-    }
     return in_array($role, [
         'admin',
         'administrator',
-        'procurement',
         'warehouse',
         'warehouses',
         'store',
@@ -96,10 +109,7 @@ function sms_can_receive_warehouse_stock(): bool
         'store_keeper',
         'store-manager',
         'store_manager',
-        'employee',
-        'staff',
-        'user',
-    ], true) || !empty($_SESSION['user_id']);
+    ], true);
 }
 
 function sms_is_system_admin(): bool

@@ -1215,37 +1215,103 @@ function sms_fetch_po_linked_vouchers(PDO $pdo, array $po, int $poId): array
         $attachments = [];
         $seenUrls = [];
 
+        // Prefer the same PDO as payment_vouchers (tenant/erp), not only global getVoucherAttachments().
         if ($hasAttachmentsTable) {
             try {
-                if (function_exists('getVoucherAttachments')) {
-                    $attRows = getVoucherAttachments($vid);
-                } else {
-                    $attStmt = $voucherPdo->prepare(
-                        'SELECT id, file_path, original_name FROM voucher_attachments WHERE voucher_id = ? ORDER BY id ASC'
-                    );
-                    $attStmt->execute([$vid]);
-                    $attRows = $attStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                }
-                foreach ($attRows as $att) {
-                    $path = trim((string) ($att['file_path'] ?? ''));
-                    $url = sms_public_asset_url($path);
-                    if ($url === '' || isset($seenUrls[$url])) {
-                        continue;
+                $attStmt = $voucherPdo->prepare(
+                    'SELECT id, file_path, original_name FROM voucher_attachments WHERE voucher_id = ? ORDER BY id ASC'
+                );
+                $attStmt->execute([$vid]);
+                $attRows = $attStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (Throwable $e) {
+                $attRows = [];
+            }
+        } else {
+            $attRows = [];
+        }
+
+        // Merge helper discoveries (disk fallback) when available.
+        if (function_exists('getVoucherAttachments')) {
+            try {
+                $helperRows = getVoucherAttachments($vid);
+                if (is_array($helperRows) && $helperRows !== []) {
+                    $byPath = [];
+                    foreach ($attRows as $att) {
+                        $p = strtolower(trim((string) ($att['file_path'] ?? '')));
+                        if ($p !== '') {
+                            $byPath[$p] = true;
+                        }
                     }
-                    $seenUrls[$url] = true;
-                    $name = trim((string) ($att['original_name'] ?? ''));
-                    if ($name === '') {
-                        $name = basename($path) ?: 'Attachment';
+                    foreach ($helperRows as $att) {
+                        $p = strtolower(trim((string) ($att['file_path'] ?? '')));
+                        if ($p === '' || isset($byPath[$p])) {
+                            continue;
+                        }
+                        $attRows[] = $att;
+                        $byPath[$p] = true;
                     }
-                    $attachments[] = [
-                        'id' => 'pv-file-' . $vid . '-' . (int) ($att['id'] ?? 0),
-                        'name' => $name,
-                        'url' => $url,
-                        'kind' => 'payment_voucher',
-                    ];
                 }
             } catch (Throwable $e) {
             }
+        }
+
+        // Direct disk scan for this voucher folder (covers unrecorded uploads).
+        $diskRoots = [];
+        $diskRoots[] = dirname(__DIR__) . '/assets/uploads/vouchers/' . $vid;
+        if (defined('APP_ROOT')) {
+            $diskRoots[] = rtrim((string) APP_ROOT, '\\/') . '/assets/uploads/vouchers/' . $vid;
+        }
+        $knownNames = [];
+        foreach ($attRows as $att) {
+            $knownNames[strtolower(basename((string) ($att['file_path'] ?? '')))] = true;
+            $knownNames[strtolower((string) ($att['original_name'] ?? ''))] = true;
+        }
+        $syntheticId = -1;
+        foreach (array_unique($diskRoots) as $diskDir) {
+            if (!is_dir($diskDir)) {
+                continue;
+            }
+            foreach (@scandir($diskDir) ?: [] as $fileName) {
+                if ($fileName === '.' || $fileName === '..') {
+                    continue;
+                }
+                $abs = $diskDir . DIRECTORY_SEPARATOR . $fileName;
+                if (!is_file($abs)) {
+                    continue;
+                }
+                if (stripos($fileName, 'swift-proof') === 0 || stripos($fileName, 'swift_proof') === 0) {
+                    continue;
+                }
+                $baseKey = strtolower($fileName);
+                if (isset($knownNames[$baseKey])) {
+                    continue;
+                }
+                $attRows[] = [
+                    'id' => $syntheticId--,
+                    'file_path' => 'assets/uploads/vouchers/' . $vid . '/' . $fileName,
+                    'original_name' => $fileName,
+                ];
+                $knownNames[$baseKey] = true;
+            }
+        }
+
+        foreach ($attRows as $att) {
+            $path = trim((string) ($att['file_path'] ?? ''));
+            $url = sms_public_asset_url($path);
+            if ($url === '' || isset($seenUrls[$url])) {
+                continue;
+            }
+            $seenUrls[$url] = true;
+            $name = trim((string) ($att['original_name'] ?? ''));
+            if ($name === '') {
+                $name = basename($path) ?: 'Attachment';
+            }
+            $attachments[] = [
+                'id' => 'pv-file-' . $vid . '-' . (int) ($att['id'] ?? 0),
+                'name' => $name,
+                'url' => $url,
+                'kind' => 'payment_voucher',
+            ];
         }
 
         $swiftPath = trim((string) ($row['swift_document'] ?? ''));
@@ -1295,7 +1361,7 @@ function sms_fetch_po_linked_vouchers(PDO $pdo, array $po, int $poId): array
             'dateCreated' => (string) ($row['date_created'] ?? ''),
             'purpose' => (string) ($row['purpose'] ?? ''),
             'preparedBy' => (string) ($row['prepared_by'] ?? ''),
-            'supportingDocuments' => (int) ($row['supporting_documents'] ?? count($attachments)),
+            'supportingDocuments' => max((int) ($row['supporting_documents'] ?? 0), count($attachments)),
             'viewUrl' => sms_voucher_view_url($vid),
             'items' => $items,
             'attachments' => $attachments,

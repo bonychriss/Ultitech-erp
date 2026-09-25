@@ -558,6 +558,8 @@ export default function PurchaseOrderReceive({
                   </div>
 
                   <div className="sms-incoming-footer">
+                    <LinkedDocumentsPanel linkedVouchers={linkedVouchers} poAttachments={poAttachments} />
+
                     <div className="sms-incoming-footer-fields">
                       <div className="sms-incoming-notes">
                         <label className="sms-field-label" htmlFor="sms-receipt-notes">
@@ -639,8 +641,6 @@ export default function PurchaseOrderReceive({
                         )}
                       </div>
                     </div>
-
-                    <LinkedDocumentsPanel linkedVouchers={linkedVouchers} poAttachments={poAttachments} />
 
                     <div className="sms-incoming-footer-actions">
                       <p className="sms-incoming-footer-hint">

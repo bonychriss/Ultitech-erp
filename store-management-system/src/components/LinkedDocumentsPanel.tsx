@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, ExternalLink, FileText, Paperclip } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, FileText, Paperclip } from 'lucide-react';
 import type { LinkedPaymentVoucher, LinkedPaymentVoucherItem, PurchaseOrderAttachment } from '../types';
 
 function isImageName(name: string, url = ''): boolean {
@@ -111,11 +111,13 @@ function DocPreviewModal({
   url,
   isImage,
   onClose,
+  closeLabel = 'Close',
 }: {
   title: string;
   url: string;
   isImage: boolean;
   onClose: () => void;
+  closeLabel?: string;
 }) {
   return (
     <div
@@ -127,9 +129,13 @@ function DocPreviewModal({
     >
       <div className="sms-doc-preview-panel" role="dialog" aria-modal="true" aria-label={title}>
         <div className="sms-doc-preview-head">
+          <button type="button" className="sms-doc-preview-back" onClick={onClose}>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back
+          </button>
           <div className="sms-doc-preview-title">{title}</div>
           <button type="button" className="sms-doc-preview-close" onClick={onClose}>
-            Close
+            {closeLabel}
           </button>
         </div>
         <div className="sms-doc-preview-body">
@@ -167,7 +173,7 @@ function VoucherDetailsBody({
   const currency = voucher.currency || 'TZS';
   const preparedBy = String(voucher.preparedBy || 'N/A').toUpperCase();
   const files = voucher.attachments ?? [];
-  const supportingQty = voucher.supportingDocuments ?? files.length;
+  const supportingQty = Math.max(voucher.supportingDocuments ?? 0, files.length);
 
   return (
     <div className="sms-pv-paper">
@@ -321,6 +327,10 @@ function VoucherPreviewModal({
         aria-label={title}
       >
         <div className="sms-doc-preview-head">
+          <button type="button" className="sms-doc-preview-back" onClick={onClose}>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back
+          </button>
           <div className="sms-doc-preview-title">{title}</div>
           <button type="button" className="sms-doc-preview-close" onClick={onClose}>
             Close

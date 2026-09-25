@@ -104,13 +104,13 @@ export default function PurchaseReceive({ data }) {
 
     if (window.Swal) {
       window.Swal.fire({
-        title: 'Confirm receipt?',
-        text: `You are about to post inventory for ${formatQty(totalReceiving)} units. This updates stock levels.`,
+        title: 'Record supplier delivery?',
+        text: `Record delivery for ${formatQty(totalReceiving)} units. Stock is added only when the warehouse accepts this PO.`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#16a34a',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, post it',
+        confirmButtonText: 'Yes, record delivery',
         cancelButtonText: 'Review once more',
       }).then((result) => {
         if (result.isConfirmed) doSubmit();
@@ -118,7 +118,9 @@ export default function PurchaseReceive({ data }) {
       return;
     }
 
-    if (window.confirm(`Post inventory for ${formatQty(totalReceiving)} units?`)) {
+    if (window.confirm(
+      `Record supplier delivery for ${formatQty(totalReceiving)} units?\n\nStock is added only when the warehouse accepts this PO.`
+    )) {
       doSubmit();
     }
   };
@@ -302,7 +304,7 @@ export default function PurchaseReceive({ data }) {
           <p className="pr-tip">
             <HiOutlineInformationCircle size={16} aria-hidden="true" />
             <span>
-              Quantities post to on-hand stock. Invoice details stay on the PO.
+              Records supplier delivery only. On-hand stock is added when the warehouse accepts this PO.
               {isImport ? ' Outdoor POs use Shipments for ETA and freight.' : ''}
             </span>
           </p>
@@ -317,7 +319,7 @@ export default function PurchaseReceive({ data }) {
               </>
             ) : (
               <>
-                <HiOutlineCheckCircle size={16} /> Post goods receipt
+                <HiOutlineCheckCircle size={16} /> Record delivery
               </>
             )}
           </button>

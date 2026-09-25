@@ -468,6 +468,9 @@ function purchaseDisplayStatusLabel(string $status, ?string $workflow): string {
     if ($status === PURCHASE_STATUS_DRAFT) {
         return 'Draft';
     }
+    if ($status === 'Awaiting Warehouse') {
+        return 'Awaiting warehouse';
+    }
     return $status;
 }
 

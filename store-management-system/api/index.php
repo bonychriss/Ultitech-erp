@@ -638,8 +638,11 @@ function sms_map_purchase_order_summary(array $row): array
     $ordered = (float) ($row['ordered_qty'] ?? 0);
     $received = (float) ($row['received_qty'] ?? 0);
     $remaining = (float) ($row['remaining_qty'] ?? max(0, $ordered - $received));
+    $status = (string) ($row['status'] ?? '');
     $receiveStatus = 'Pending';
-    if ($ordered > 0 && $remaining <= 0.0001) {
+    if (strcasecmp($status, 'Awaiting Warehouse') === 0) {
+        $receiveStatus = 'Awaiting warehouse';
+    } elseif ($ordered > 0 && $remaining <= 0.0001) {
         $receiveStatus = 'Received';
     } elseif ($received > 0.0001 && $remaining > 0.0001) {
         $receiveStatus = 'Partially received';
@@ -648,7 +651,7 @@ function sms_map_purchase_order_summary(array $row): array
     return [
         'id' => (string) ($row['id'] ?? ''),
         'poNumber' => (string) ($row['po_number'] ?? $row['purchase_no'] ?? ''),
-        'status' => (string) ($row['status'] ?? ''),
+        'status' => $status,
         'receiveStatus' => $receiveStatus,
         'purchaseType' => (string) ($row['purchase_type'] ?? 'domestic'),
         'supplierName' => (string) ($row['supplier_name'] ?? ''),
@@ -790,12 +793,13 @@ function sms_fetch_receivable_purchase_orders(PDO $pdo): array
                 if (!sms_po_can_receive($row, $hasShipment)) {
                     continue;
                 }
-                // For awaiting-warehouse with no line remaining, surface pending qty as units pending.
-                if ((float) ($row['remaining_qty'] ?? 0) <= 0.0001 && ($row['status'] ?? '') === 'Awaiting Warehouse') {
-                    $pendingMap = sms_pending_receipt_qty_by_po_line($pdo, (int) $row['id']);
-                    $pendingTotal = array_sum($pendingMap);
-                    if ($pendingTotal > 0) {
-                        $row['remaining_qty'] = $pendingTotal;
+                // Prefer pending warehouse qty when deliveries await store accept (incl. partial).
+                $pendingMap = sms_pending_receipt_qty_by_po_line($pdo, (int) $row['id']);
+                $pendingTotal = array_sum($pendingMap);
+                if ($pendingTotal > 0) {
+                    $row['remaining_qty'] = $pendingTotal;
+                    if (($row['status'] ?? '') !== 'Awaiting Warehouse') {
+                        $row['status'] = 'Awaiting Warehouse';
                     }
                 }
                 $appendOrder($row);
@@ -873,11 +877,13 @@ function sms_fetch_receivable_purchase_orders(PDO $pdo): array
                 if (!sms_po_can_receive($row, true)) {
                     continue;
                 }
-                if ((float) ($row['remaining_qty'] ?? 0) <= 0.0001 && ($row['status'] ?? '') === 'Awaiting Warehouse') {
-                    $pendingMap = sms_pending_receipt_qty_by_po_line($pdo, (int) $row['id']);
-                    $pendingTotal = array_sum($pendingMap);
-                    if ($pendingTotal > 0) {
-                        $row['remaining_qty'] = $pendingTotal;
+                // Prefer pending warehouse qty when deliveries await store accept (incl. partial).
+                $pendingMap = sms_pending_receipt_qty_by_po_line($pdo, (int) $row['id']);
+                $pendingTotal = array_sum($pendingMap);
+                if ($pendingTotal > 0) {
+                    $row['remaining_qty'] = $pendingTotal;
+                    if (($row['status'] ?? '') !== 'Awaiting Warehouse') {
+                        $row['status'] = 'Awaiting Warehouse';
                     }
                 }
                 $appendOrder($row);
@@ -1576,7 +1582,8 @@ function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = '
         foreach ($lines as &$line) {
             $lineId = (int) ($line['lineId'] ?? 0);
             $pendingQty = (float) ($pendingByLine[$lineId] ?? 0);
-            if ($pendingQty > 0 && (float) ($line['qtyRemaining'] ?? 0) <= 0.0001) {
+            if ($pendingQty > 0) {
+                // Prefer warehouse-accept of already-delivered qty over undelivered remainder.
                 $line['qtyRemaining'] = $pendingQty;
                 $line['receiveStatus'] = 'Awaiting warehouse';
             }
@@ -1663,7 +1670,8 @@ function sms_fetch_purchase_order_detail(PDO $pdo, int $poId, string $source = '
     foreach ($lines as &$line) {
         $lineId = (int) ($line['lineId'] ?? 0);
         $pendingQty = (float) ($pendingByLine[$lineId] ?? 0);
-        if ($pendingQty > 0 && (float) ($line['qtyRemaining'] ?? 0) <= 0.0001) {
+        if ($pendingQty > 0) {
+            // Prefer warehouse-accept of already-delivered qty over undelivered remainder.
             $line['qtyRemaining'] = $pendingQty;
             $line['receiveStatus'] = 'Awaiting warehouse';
         }
@@ -1829,10 +1837,7 @@ function sms_receive_purchase_order(
 
             $poCols = $pdo->query('SHOW COLUMNS FROM purchases')->fetchAll(PDO::FETCH_COLUMN) ?: [];
             if ($remainingTotal <= 0) {
-                $sets = ["status = 'Received'"];
-                if (in_array('received_date', $poCols, true)) {
-                    $sets[] = 'received_date = NOW()';
-                }
+                $sets = ["status = 'Awaiting Warehouse'"];
                 if (in_array('updated_at', $poCols, true)) {
                     $sets[] = 'updated_at = NOW()';
                 }
@@ -1941,9 +1946,9 @@ function sms_receive_purchase_order(
         if ($remainingTotal <= 0) {
             $poCols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
             if (in_array('updated_at', $poCols, true)) {
-                $pdo->prepare("UPDATE stocks_purchase_orders SET status = 'Received', updated_at = NOW() WHERE id = ?")->execute([$poId]);
+                $pdo->prepare("UPDATE stocks_purchase_orders SET status = 'Awaiting Warehouse', updated_at = NOW() WHERE id = ?")->execute([$poId]);
             } else {
-                $pdo->prepare("UPDATE stocks_purchase_orders SET status = 'Received' WHERE id = ?")->execute([$poId]);
+                $pdo->prepare("UPDATE stocks_purchase_orders SET status = 'Awaiting Warehouse' WHERE id = ?")->execute([$poId]);
             }
         }
 
@@ -1967,6 +1972,102 @@ function sms_receive_purchase_order(
 
         return ['ok' => false, 'message' => $e->getMessage()];
     }
+}
+
+/**
+ * Store accept: verify existing pending receipts for a PO (no second qty_received bump).
+ *
+ * @param array<int|string,float|int|string> $receiveQuantities lineId => qty to accept
+ */
+function sms_accept_pending_po_receipts(
+    PDO $pdo,
+    int $poId,
+    int $warehouseId,
+    array $receiveQuantities,
+    string $notes,
+    ?int $userId = null
+): array {
+    if ($poId <= 0 || $warehouseId <= 0 || $receiveQuantities === [] || !function_exists('storeReceiptVerify')) {
+        return ['ok' => false, 'message' => 'Invalid accept request.', 'receipt_ids' => [], 'verified_count' => 0];
+    }
+
+    $pending = sms_fetch_pending_receipts_for_po($pdo, $poId, $warehouseId);
+    if ($pending === []) {
+        return ['ok' => false, 'message' => 'No pending warehouse receipts for this purchase order.', 'receipt_ids' => [], 'verified_count' => 0];
+    }
+
+    $byLine = [];
+    foreach ($pending as $receipt) {
+        $lineId = (int) ($receipt['po_line_id'] ?? 0);
+        if ($lineId <= 0) {
+            continue;
+        }
+        if (!isset($byLine[$lineId])) {
+            $byLine[$lineId] = [];
+        }
+        $byLine[$lineId][] = $receipt;
+    }
+
+    $verifiedCount = 0;
+    $receiptIds = [];
+    $errors = [];
+
+    foreach ($receiveQuantities as $lineId => $qtyRaw) {
+        $want = (float) $qtyRaw;
+        if ($want <= 0) {
+            continue;
+        }
+        $lineId = (int) $lineId;
+        $queue = $byLine[$lineId] ?? [];
+        foreach ($queue as $receipt) {
+            if ($want <= 0) {
+                break;
+            }
+            $receiptId = (int) ($receipt['id'] ?? 0);
+            $expected = (float) ($receipt['qty_expected'] ?? 0);
+            if ($receiptId <= 0 || $expected <= 0) {
+                continue;
+            }
+            $take = min($want, $expected);
+            $verify = storeReceiptVerify(
+                $pdo,
+                $receiptId,
+                $warehouseId,
+                $take,
+                $notes !== '' ? $notes : null,
+                $userId
+            );
+            if (!empty($verify['ok'])) {
+                $verifiedCount++;
+                $receiptIds[] = $receiptId;
+                $want -= $take;
+            } else {
+                $errors[] = (string) ($verify['message'] ?? ('Receipt #' . $receiptId));
+            }
+        }
+    }
+
+    if ($verifiedCount <= 0) {
+        return [
+            'ok' => false,
+            'message' => $errors !== [] ? implode('; ', array_slice($errors, 0, 3)) : 'Nothing was accepted into stock.',
+            'receipt_ids' => [],
+            'verified_count' => 0,
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'message' => sprintf(
+            'Accepted into stock: %d product line%s from the purchase order.',
+            $verifiedCount,
+            $verifiedCount === 1 ? '' : 's'
+        ),
+        'receipt_ids' => $receiptIds,
+        'verified_count' => $verifiedCount,
+        'pending_count' => 0,
+        'errors' => $errors,
+    ];
 }
 
 
@@ -3250,6 +3351,110 @@ try {
             }
 
             $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+            $priorAcceptedCount = 0;
+
+            // Store accept: verify existing pending receipts first (no second qty_received bump).
+            // If the user also entered qty beyond pending and open remaining exists, receive that remainder next.
+            $existingPending = sms_fetch_pending_receipts_for_po($pdo, $poId, $warehouseId);
+            $hasOpenRemaining = false;
+            try {
+                if ($source === 'legacy') {
+                    $r = $pdo->prepare(
+                        'SELECT COALESCE(SUM(GREATEST(0, COALESCE(quantity,0)-COALESCE(qty_received,0))),0)
+                         FROM purchase_items WHERE purchase_id = ?'
+                    );
+                    $r->execute([$poId]);
+                } else {
+                    $r = $pdo->prepare(
+                        'SELECT COALESCE(SUM(GREATEST(qty_ordered-qty_received,0)),0)
+                         FROM stocks_po_items WHERE po_id = ?'
+                    );
+                    $r->execute([$poId]);
+                }
+                $hasOpenRemaining = ((float) $r->fetchColumn()) > 0.0001;
+            } catch (Throwable $e) {
+                $hasOpenRemaining = true;
+            }
+
+            if ($confirmToStock && $existingPending !== []) {
+                $pendingByLine = [];
+                foreach ($existingPending as $receipt) {
+                    $lineId = (int) ($receipt['po_line_id'] ?? 0);
+                    if ($lineId <= 0) {
+                        continue;
+                    }
+                    $pendingByLine[$lineId] = ($pendingByLine[$lineId] ?? 0.0)
+                        + (float) ($receipt['qty_expected'] ?? 0);
+                }
+
+                $acceptQty = [];
+                $leftoverQty = [];
+                foreach ($receiveQuantities as $lineId => $qtyRaw) {
+                    $want = (float) $qtyRaw;
+                    if ($want <= 0) {
+                        continue;
+                    }
+                    $lineId = (int) $lineId;
+                    $pendingAvail = (float) ($pendingByLine[$lineId] ?? 0);
+                    $fromPending = min($want, $pendingAvail);
+                    if ($fromPending > 0.0001) {
+                        $acceptQty[$lineId] = $fromPending;
+                    }
+                    $rest = $want - $fromPending;
+                    if ($rest > 0.0001 && $hasOpenRemaining) {
+                        $leftoverQty[$lineId] = $rest;
+                    }
+                }
+
+                $acceptVerified = 0;
+                $acceptReceiptIds = [];
+                $acceptMessage = '';
+                if ($acceptQty !== []) {
+                    $accept = sms_accept_pending_po_receipts(
+                        $pdo,
+                        $poId,
+                        $warehouseId,
+                        $acceptQty,
+                        $notes,
+                        $userId
+                    );
+                    if (!($accept['ok'] ?? false)) {
+                        sms_error((string) ($accept['message'] ?? 'Failed to accept into stock'));
+                    }
+                    $acceptVerified = (int) ($accept['verified_count'] ?? 0);
+                    $priorAcceptedCount = $acceptVerified;
+                    $acceptReceiptIds = array_map('intval', $accept['receipt_ids'] ?? []);
+                    $acceptMessage = (string) ($accept['message'] ?? 'Accepted into stock.');
+                    if ($savedAttachments !== [] && $acceptReceiptIds !== [] && function_exists('storeReceiptRecordDocuments')) {
+                        try {
+                            storeReceiptRecordDocuments(
+                                $pdo,
+                                $acceptReceiptIds,
+                                $warehouseId,
+                                $savedAttachments,
+                                $userId
+                            );
+                        } catch (Throwable $e) {
+                            // non-fatal for accept
+                        }
+                    }
+                }
+
+                if ($leftoverQty === []) {
+                    sms_json([
+                        'success' => true,
+                        'message' => $acceptMessage !== '' ? $acceptMessage : 'Accepted into stock.',
+                        'pending_count' => 0,
+                        'verified_count' => $acceptVerified,
+                        'confirm_to_stock' => true,
+                    ]);
+                    break;
+                }
+
+                // Continue below to record remaining undelivered qty as a new delivery (+ verify).
+                $receiveQuantities = $leftoverQty;
+            }
+
             $result = sms_receive_purchase_order($pdo, $poId, $warehouseId, $receiveQuantities, $notes, $source, $userId);
             if (!($result['ok'] ?? false)) {
                 foreach ($savedAttachments as $doc) {
@@ -3307,6 +3512,8 @@ try {
                     }
                 }
             }
+
+            $verifiedCount += $priorAcceptedCount;
 
             if ($confirmToStock) {
                 $message = $verifiedCount > 0

@@ -340,8 +340,8 @@ if (strpos($assetBase, '/stock/') === false) {
     $assetBase = $base;
 }
 
-$page_title = 'Receive stock - ' . ($poPayload['po_number'] !== '' ? $poPayload['po_number'] : '#' . $id);
-$employeeHeaderTitle = 'Receive stock';
+$page_title = 'Record delivery - ' . ($poPayload['po_number'] !== '' ? $poPayload['po_number'] : '#' . $id);
+$employeeHeaderTitle = 'Record delivery';
 $hideHeaderCompanyBranding = true;
 $employeeHeaderExtraClass = 'employee-header--products-desk';
 $bodyExtraClass = 'page-products-desk';

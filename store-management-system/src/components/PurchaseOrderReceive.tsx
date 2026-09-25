@@ -83,6 +83,9 @@ function receiveStatusClass(status: string): string {
   const key = status.toLowerCase();
   if (key === 'received') return 'sms-receive-status sms-receive-status--received';
   if (key.includes('partial')) return 'sms-receive-status sms-receive-status--partial';
+  if (key.includes('awaiting') || key.includes('warehouse')) {
+    return 'sms-receive-status sms-receive-status--partial';
+  }
   return 'sms-receive-status sms-receive-status--pending';
 }
 
@@ -350,8 +353,8 @@ export default function PurchaseOrderReceive({
                 </div>
                 <p className="text-sm text-slate-500 mt-1">
                   {confirmToStock
-                    ? 'Select a PO below to review products and accept or reject quantities into stock.'
-                    : 'Select a PO below to record supplier delivery for the store.'}
+                    ? 'Select a PO awaiting warehouse acceptance — Accept into Stock adds on-hand quantity.'
+                    : 'Select a PO to record supplier delivery. Stock is added when the warehouse accepts.'}
                 </p>
               </div>
               {loadingOrders ? (
@@ -363,7 +366,9 @@ export default function PurchaseOrderReceive({
                   <PackageCheck className="w-10 h-10 text-slate-300 mb-2" />
                   <div className="font-semibold text-slate-700">No open purchase orders</div>
                   <p className="text-sm text-slate-500 mt-1">
-                    When procurement creates receivable purchase orders, they will appear here.
+                    {confirmToStock
+                      ? 'When procurement records a delivery, the PO appears here until you accept it into stock.'
+                      : 'When purchase orders are ready for supplier delivery, they will appear here.'}
                   </p>
                 </div>
               ) : (

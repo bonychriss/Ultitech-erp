@@ -56,7 +56,7 @@
                             <a href="edit.php?id=<?= $poId ?>"><i class="fas fa-edit text-blue-500 w-4"></i> Edit</a>
                         <?php endif; ?>
                         <?php if ($canReceive): ?>
-                            <a href="domestic_receive.php?id=<?= $poId ?>"><i class="fas fa-check-circle text-green-600 w-4"></i> Receive stock</a>
+                            <a href="domestic_receive.php?id=<?= $poId ?>"><i class="fas fa-check-circle text-green-600 w-4"></i> Record delivery</a>
                         <?php endif; ?>
                         <div class="po-menu-divider"></div>
                         <a href="create.php?clone_from_id=<?= $poId ?>"><i class="fas fa-copy text-gray-400 w-4"></i> Clone order</a>

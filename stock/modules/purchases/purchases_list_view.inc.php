@@ -55,6 +55,7 @@ $dashboardUrl = isset($stockBasePath) ? rtrim((string) $stockBasePath, '/') . '/
     .po-status-approved { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
     .po-status-pending { background: #ffedd5; color: #c2410c; border-color: #fed7aa; }
     .po-status-received { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+    .po-status-awaiting { background: #fef3c7; color: #b45309; border-color: #fde68a; }
     .po-status-rejected { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
     .po-status-draft { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
     .po-table thead th { background: #f8fafc; color: #64748b; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
@@ -649,7 +650,7 @@ $dashboardUrl = isset($stockBasePath) ? rtrim((string) $stockBasePath, '/') . '/
                                                 <a href="edit.php?id=<?= $poId ?>"><i class="fas fa-edit text-blue-500 w-4"></i> Edit</a>
                                             <?php endif; ?>
                                             <?php if ($canReceive): ?>
-                                                <a href="domestic_receive.php?id=<?= $poId ?>"><i class="fas fa-check-circle text-green-600 w-4"></i> Receive stock</a>
+                                                <a href="domestic_receive.php?id=<?= $poId ?>"><i class="fas fa-check-circle text-green-600 w-4"></i> Record delivery</a>
                                             <?php endif; ?>
                                             <?php if (!empty($po['invoice_attachment'])): ?>
                                                 <a href="download_invoice.php?id=<?= $poId ?>" target="_blank" rel="noopener"><i class="fas fa-file-invoice text-green-600 w-4"></i> View invoice</a>

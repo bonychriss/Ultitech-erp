@@ -631,7 +631,7 @@ export default function PurchaseOrderReceive({
                   <div className="sms-incoming-footer-actions sms-incoming-footer-actions--outside">
                     <button
                       type="button"
-                      className="sms-desk-btn sms-desk-btn-secondary sms-btn-rounded"
+                      className="sms-desk-back-link"
                       onClick={() => setSelectedKey('')}
                     >
                       <ArrowLeft className="w-4 h-4" />

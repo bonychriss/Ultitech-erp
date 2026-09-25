@@ -375,29 +375,28 @@ export default function LinkedDocumentsPanel({ linkedVouchers, poAttachments }: 
             {linkedVouchers.map((voucher) => {
               const amountLabel = formatAmount(voucher.amount, voucher.currency);
               const meta = [voucher.payeeName, voucher.status, amountLabel].filter(Boolean).join(' · ');
+              const label = voucher.voucherNo || `PV #${voucher.id}`;
 
               return (
-                <article key={`pv-${voucher.id}`} className="sms-pv-group">
-                  <header className="sms-pv-group-head">
-                    <div className="sms-pv-group-title-row">
+                <button
+                  key={`pv-${voucher.id}`}
+                  type="button"
+                  className="sms-pv-group sms-pv-group--clickable"
+                  onClick={() => setOpenVoucher(voucher)}
+                  aria-label={`Open voucher ${label}`}
+                >
+                  <span className="sms-pv-group-head">
+                    <span className="sms-pv-group-title-row">
                       <span className="sms-gmail-type sms-gmail-type--doc" aria-hidden="true">
                         PV
                       </span>
-                      <div className="sms-pv-group-titles">
-                        <div className="sms-pv-group-no">{voucher.voucherNo || `PV #${voucher.id}`}</div>
-                        {meta ? <div className="sms-pv-group-meta">{meta}</div> : null}
-                      </div>
-                      <button
-                        type="button"
-                        className="sms-pv-group-open"
-                        onClick={() => setOpenVoucher(voucher)}
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        Open Voucher
-                      </button>
-                    </div>
-                  </header>
-                </article>
+                      <span className="sms-pv-group-titles">
+                        <span className="sms-pv-group-no">{label}</span>
+                        {meta ? <span className="sms-pv-group-meta">{meta}</span> : null}
+                      </span>
+                    </span>
+                  </span>
+                </button>
               );
             })}
           </div>

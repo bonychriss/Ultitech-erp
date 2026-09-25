@@ -163,6 +163,15 @@ include __DIR__ . '/../stock/includes/header.php';
     html[data-theme="dark"] main.main-content.store-management-shell {
         background: #0f172a !important;
     }
+
+    body.page-store-management button.sms-desk-back-link,
+    body.page-store-management .sms-desk-back-link {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
 </style>
 
 <script>document.body.classList.add('page-store-management');</script>

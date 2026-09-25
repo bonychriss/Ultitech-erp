@@ -107,32 +107,50 @@
   gap: 1rem;
 }
 
-.sms-desk-back-link {
-  display: inline-flex;
+body.page-store-management .sms-desk-back-link,
+.sms-desk-page .sms-desk-back-link,
+button.sms-desk-back-link {
+  display: inline-flex !important;
   align-items: center;
   gap: 0.3rem;
-  padding: 0;
-  border: none;
-  background: none;
-  color: #64748b;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  color: #64748b !important;
   font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
-  text-decoration: none;
+  text-decoration: none !important;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-.sms-desk-back-link:hover {
-  color: #0f172a;
-  text-decoration: underline;
+body.page-store-management .sms-desk-back-link:hover,
+.sms-desk-page .sms-desk-back-link:hover,
+button.sms-desk-back-link:hover {
+  color: #0f172a !important;
+  background: transparent !important;
+  text-decoration: underline !important;
+  box-shadow: none !important;
 }
 
-html[data-theme="dark"] .sms-desk-back-link {
-  color: #94a3b8;
+html[data-theme="dark"] body.page-store-management .sms-desk-back-link,
+html[data-theme="dark"] .sms-desk-page .sms-desk-back-link,
+html[data-theme="dark"] button.sms-desk-back-link {
+  color: #94a3b8 !important;
+  background: transparent !important;
 }
 
-html[data-theme="dark"] .sms-desk-back-link:hover {
-  color: #f1f5f9;
+html[data-theme="dark"] body.page-store-management .sms-desk-back-link:hover,
+html[data-theme="dark"] .sms-desk-page .sms-desk-back-link:hover,
+html[data-theme="dark"] button.sms-desk-back-link:hover {
+  color: #f1f5f9 !important;
+  background: transparent !important;
 }
 
 .sms-desk-page-header-search {
@@ -727,10 +745,9 @@ body.page-store-management .sms-desk-page button.sms-desk-kpi-card {
   align-items: flex-start;
   gap: 0.85rem;
   padding: 0 0 0.35rem;
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: #fff;
+  position: static;
+  z-index: auto;
+  background: transparent;
 }
 
 .sms-excel-page-copy {
@@ -759,7 +776,7 @@ body.page-store-management .sms-desk-page button.sms-desk-kpi-card {
 }
 
 html[data-theme="dark"] .sms-excel-page-top {
-  background: #0f172a;
+  background: transparent;
 }
 
 html[data-theme="dark"] .sms-excel-page-title {
@@ -2270,7 +2287,7 @@ html[data-theme="dark"] .sms-receive-card .font-semibold {
 
 .sms-receive-card .sms-pv-groups {
   padding: 0 0.75rem 0.55rem;
-  gap: 0.3rem;
+  gap: 0.4rem;
 }
 
 .sms-receive-card .sms-gmail-list {
@@ -2282,46 +2299,57 @@ html[data-theme="dark"] .sms-receive-card .font-semibold {
   border-radius: 6px;
 }
 
+.sms-receive-card--linked .sms-pv-group--clickable {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.sms-receive-card--linked .sms-pv-group--clickable:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc !important;
+}
+
+.sms-receive-card--linked .sms-pv-group--clickable:hover .sms-pv-group-head {
+  background: #f8fafc !important;
+}
+
 .sms-receive-card--linked .sms-pv-group-head {
-  padding: 0.25rem 0.5rem;
+  padding: 0.4rem 0.6rem;
   border-bottom: none;
+  display: block;
 }
 
 .sms-receive-card--linked .sms-pv-group-title-row {
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .sms-receive-card--linked .sms-pv-group-no {
-  font-size: 0.72rem;
-  line-height: 1.15;
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.2;
 }
 
 .sms-receive-card--linked .sms-pv-group-meta {
-  margin-top: 0;
-  font-size: 0.625rem;
-  line-height: 1.15;
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.68rem;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.sms-receive-card--linked .sms-pv-group-open {
-  padding: 0.12rem 0.35rem;
-  font-size: 0.625rem;
-  border-radius: 4px;
-  gap: 0.15rem;
-}
-
-.sms-receive-card--linked .sms-pv-group-open .lucide,
-.sms-receive-card--linked .sms-pv-group-open svg {
-  width: 0.85rem;
-  height: 0.85rem;
-}
-
 .sms-receive-card--linked .sms-gmail-type {
-  width: 1.35rem;
+  width: 1.5rem;
   height: 1.35rem;
-  font-size: 0.55rem;
+  font-size: 0.58rem;
   border-radius: 4px;
 }
 

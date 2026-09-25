@@ -554,7 +554,7 @@ export default function PurchaseOrderReceive({
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
                           className="sms-input sms-incoming-notes-area"
-                          rows={4}
+                          rows={2}
                           placeholder="e.g. Delivery note, reference, condition…"
                         />
                       </div>
@@ -626,28 +626,28 @@ export default function PurchaseOrderReceive({
                         )}
                       </div>
                     </div>
-
-                    <div className="sms-incoming-footer-actions">
-                      <button
-                        type="button"
-                        className="sms-desk-btn sms-desk-btn-secondary sms-btn-rounded"
-                        onClick={() => setSelectedKey('')}
-                      >
-                        <ArrowLeft className="w-4 h-4" />
-                        Back
-                      </button>
-                      <button type="submit" disabled={saving} className="sms-btn-primary sms-btn-rounded">
-                        {saving ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : confirmToStock ? (
-                          <PackagePlus className="w-4 h-4" />
-                        ) : (
-                          <Truck className="w-4 h-4" />
-                        )}
-                        {confirmToStock ? 'Accept into Stock' : 'Record delivery for store'}
-                      </button>
-                    </div>
                   </section>
+
+                  <div className="sms-incoming-footer-actions sms-incoming-footer-actions--outside">
+                    <button
+                      type="button"
+                      className="sms-desk-btn sms-desk-btn-secondary sms-btn-rounded"
+                      onClick={() => setSelectedKey('')}
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back
+                    </button>
+                    <button type="submit" disabled={saving} className="sms-btn-primary sms-btn-rounded">
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : confirmToStock ? (
+                        <PackagePlus className="w-4 h-4" />
+                      ) : (
+                        <Truck className="w-4 h-4" />
+                      )}
+                      {confirmToStock ? 'Accept into Stock' : 'Record delivery for store'}
+                    </button>
+                  </div>
                 </>
               ) : (
                 <section className="sms-receive-card">

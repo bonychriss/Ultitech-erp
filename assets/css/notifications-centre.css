@@ -99,12 +99,44 @@
     line-height: 1.2;
 }
 
+.nc-see-all.nc-view-all {
+    color: #0f172a;
+    border-color: #cbd5e1;
+    background: #ffffff;
+}
+
 .nc-see-all:hover,
 .nc-mark-all:hover {
     color: var(--nc-text);
     border-color: #d1d5db;
     background: transparent;
     text-decoration: none;
+}
+
+.nc-see-all.nc-view-all:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.nc-view-all-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.85rem;
+    padding: 0.45rem 1rem;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #ffffff !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    line-height: 1.2;
+}
+
+.nc-view-all-btn:hover {
+    background: #1e293b;
+    color: #ffffff !important;
 }
 
 /* Tabs ? compact segmented track */
@@ -474,6 +506,9 @@
 }
 
 .notif-dropdown--v2 .nc-page-header {
+    position: relative;
+    z-index: 2;
+    overflow: visible;
     padding: 20px 20px 12px;
 }
 
@@ -597,6 +632,27 @@ html[data-theme="dark"] .nc-see-all:hover,
 html[data-theme="dark"] .nc-mark-all:hover {
     color: #e2e8f0;
     border-color: #64748b;
+}
+
+html[data-theme="dark"] .nc-see-all.nc-view-all {
+    color: #e2e8f0;
+    background: #1e293b;
+    border-color: #475569;
+}
+
+html[data-theme="dark"] .nc-see-all.nc-view-all:hover {
+    background: #334155;
+    color: #f8fafc;
+}
+
+html[data-theme="dark"] .nc-view-all-btn {
+    background: #e2e8f0;
+    color: #0f172a !important;
+}
+
+html[data-theme="dark"] .nc-view-all-btn:hover {
+    background: #f8fafc;
+    color: #0f172a !important;
 }
 
 html[data-theme="dark"] .nc-tabs-inner {
@@ -1216,6 +1272,185 @@ html[data-theme="dark"] .pv-coach-live-badge {
         right: 12px;
         top: 10px;
     }
+}
+
+/* Google tip pointing at sidebar "View All" */
+.nc-va-tip-root {
+    position: fixed;
+    inset: 0;
+    z-index: 10180;
+    pointer-events: none;
+}
+
+.nc-va-tip-root--in-drawer {
+    position: absolute;
+    inset: auto;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    height: auto;
+    z-index: 40;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.nc-va-tip-scrim {
+    display: none;
+}
+
+.nc-va-tip-target {
+    position: relative !important;
+    z-index: 41 !important;
+    border-color: #93c5fd !important;
+    background: #f8fbff !important;
+    box-shadow: none !important;
+    animation: none;
+}
+
+html[data-theme="dark"] .nc-va-tip-target {
+    border-color: rgba(138, 180, 248, 0.55) !important;
+    background: rgba(138, 180, 248, 0.1) !important;
+    box-shadow: none !important;
+}
+
+.nc-va-tip-card {
+    position: absolute;
+    z-index: 42;
+    width: min(280px, calc(100% - 24px));
+    pointer-events: auto;
+    background: #fff;
+    color: #202124;
+    border-radius: 16px;
+    box-shadow:
+        0 1px 2px rgba(60, 64, 67, 0.18),
+        0 8px 24px rgba(60, 64, 67, 0.18),
+        0 16px 40px rgba(26, 115, 232, 0.08);
+    padding: 16px 16px 12px;
+    font-family: "Google Sans", "Segoe UI", Roboto, Arial, sans-serif;
+    animation: nc-va-tip-in 0.22s ease-out;
+}
+
+@keyframes nc-va-tip-in {
+    from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.nc-va-tip-beak {
+    position: absolute;
+    top: -7px;
+    right: 28px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    transform: rotate(45deg);
+    border-radius: 2px;
+    box-shadow: -1px -1px 2px rgba(60, 64, 67, 0.06);
+}
+
+.nc-va-tip-kicker {
+    margin: 0 0 4px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #80868b;
+}
+
+.nc-va-tip-title {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #174ea6;
+}
+
+.nc-va-tip-body {
+    margin: 0 0 14px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #5f6368;
+}
+
+.nc-va-tip-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.nc-va-tip-btn,
+button.nc-va-tip-btn {
+    appearance: none;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    border: none !important;
+    outline: none !important;
+    background: #1a73e8 !important;
+    color: #fff !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    min-height: 36px;
+    padding: 8px 22px !important;
+    border-radius: 999px !important;
+    cursor: pointer;
+    line-height: 1.2;
+    box-shadow: none !important;
+}
+
+.nc-va-tip-btn:hover,
+button.nc-va-tip-btn:hover {
+    background: #1765cc !important;
+    color: #fff !important;
+}
+
+.nc-va-tip-btn:focus,
+.nc-va-tip-btn:focus-visible,
+.nc-va-tip-btn:active,
+button.nc-va-tip-btn:focus,
+button.nc-va-tip-btn:focus-visible,
+button.nc-va-tip-btn:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #1557b0 !important;
+}
+
+html[data-theme="dark"] .nc-va-tip-card,
+html[data-theme="dark"] .nc-va-tip-beak {
+    background: #303134;
+    color: #e8eaed;
+}
+
+html[data-theme="dark"] .nc-va-tip-kicker {
+    color: #9aa0a6;
+}
+
+html[data-theme="dark"] .nc-va-tip-title {
+    color: #8ab4f8;
+}
+
+html[data-theme="dark"] .nc-va-tip-body {
+    color: #bdc1c6;
+}
+
+html[data-theme="dark"] .nc-va-tip-btn,
+html[data-theme="dark"] button.nc-va-tip-btn {
+    background: #8ab4f8 !important;
+    color: #202124 !important;
+}
+
+html[data-theme="dark"] .nc-va-tip-btn:hover,
+html[data-theme="dark"] .nc-va-tip-btn:focus,
+html[data-theme="dark"] .nc-va-tip-btn:focus-visible,
+html[data-theme="dark"] .nc-va-tip-btn:active,
+html[data-theme="dark"] button.nc-va-tip-btn:hover,
+html[data-theme="dark"] button.nc-va-tip-btn:focus,
+html[data-theme="dark"] button.nc-va-tip-btn:focus-visible,
+html[data-theme="dark"] button.nc-va-tip-btn:active {
+    background: #aecbfa !important;
+    color: #202124 !important;
 }
 
 /* Wider full-page notifications list (sidebar drawer stays narrow) */

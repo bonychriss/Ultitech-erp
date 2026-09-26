@@ -9326,6 +9326,26 @@ function createNotification($opts)
     // $opts = ['user_id'=>int|null, 'audience'=>'user'|'admin'|'all', 'title'=>string, 'message'=>string, 'type'=>'info'|'success'|'warning'|'danger', 'voucher_id'=>int|null]
     global $pdo;
     ensureNotificationsSchema();
+
+    $audience = strtolower(trim((string) ($opts['audience'] ?? 'user')));
+    $userId = isset($opts['user_id']) && $opts['user_id'] !== null && $opts['user_id'] !== ''
+        ? (int) $opts['user_id']
+        : 0;
+    if ($audience === 'user' && $userId > 0 && function_exists('notificationsUiRequireLib')) {
+        notificationsUiRequireLib();
+        if (function_exists('notificationsUiDetectModule') && function_exists('notificationsUiModuleAllowed')) {
+            $module = notificationsUiDetectModule([
+                'src' => 'core',
+                'title' => (string) ($opts['title'] ?? ''),
+                'message' => (string) ($opts['message'] ?? ''),
+                'voucher_id' => (int) ($opts['voucher_id'] ?? 0),
+            ]);
+            if (!notificationsUiModuleAllowed($userId, $module)) {
+                return;
+            }
+        }
+    }
+
     $stmt = $pdo->prepare("INSERT INTO notifications (user_id, audience, title, message, type, voucher_id) VALUES (?, ?, ?, ?, ?, ?)");
     $stmt->execute([
         $opts['user_id'] ?? null,
@@ -9335,6 +9355,71 @@ function createNotification($opts)
         $opts['type'] ?? 'info',
         $opts['voucher_id'] ?? null,
     ]);
+
+    if ($audience === 'user' && $userId > 0) {
+        maybeEmailUserNotificationAlert($userId, (string) ($opts['title'] ?? ''), (string) ($opts['message'] ?? ''), null);
+    }
+}
+
+/**
+ * Ensure notifications-ui preference helpers are loaded.
+ */
+function notificationsUiRequireLib(): void
+{
+    static $loaded = false;
+    if ($loaded) {
+        return;
+    }
+    $lib = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'notifications-ui' . DIRECTORY_SEPARATOR . 'lib.php';
+    if (is_file($lib)) {
+        require_once $lib;
+        $loaded = true;
+    }
+}
+
+/**
+ * Email a notification when the user enabled email alerts.
+ */
+function maybeEmailUserNotificationAlert(int $userId, string $title, string $message, ?string $link = null): void
+{
+    if ($userId <= 0 || $title === '') {
+        return;
+    }
+    notificationsUiRequireLib();
+    if (!function_exists('notificationsUiEmailAlertsEnabled') || !notificationsUiEmailAlertsEnabled($userId)) {
+        return;
+    }
+    if (!function_exists('sendEmail')) {
+        $mailer = dirname(__DIR__) . '/includes/mailer.php';
+        if (is_file($mailer)) {
+            require_once $mailer;
+        }
+    }
+    if (!function_exists('sendEmail')) {
+        return;
+    }
+    global $pdo;
+    if (!($pdo instanceof PDO)) {
+        return;
+    }
+    try {
+        $st = $pdo->prepare('SELECT email, full_name FROM users WHERE id = ? LIMIT 1');
+        $st->execute([$userId]);
+        $user = $st->fetch(PDO::FETCH_ASSOC);
+        $email = trim((string) ($user['email'] ?? ''));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+        $name = trim((string) ($user['full_name'] ?? ''));
+        $body = '<p>' . htmlspecialchars($message !== '' ? $message : $title, ENT_QUOTES, 'UTF-8') . '</p>';
+        if ($link) {
+            $href = htmlspecialchars($link, ENT_QUOTES, 'UTF-8');
+            $body .= '<p><a href="' . $href . '">Open notification</a></p>';
+        }
+        @sendEmail($email, $title, $body, true);
+    } catch (Throwable $e) {
+        error_log('maybeEmailUserNotificationAlert: ' . $e->getMessage());
+    }
 }
 
 /**
@@ -9348,20 +9433,27 @@ function upsertVoucherNotification(array $opts): void
     global $pdo;
     ensureNotificationsSchema();
 
-    $voucherId = (int) ($opts['voucher_id'] ?? 0);
-    if ($voucherId <= 0) {
-        createNotification($opts);
-
-        return;
-    }
-
     $audience = strtolower(trim((string) ($opts['audience'] ?? 'user')));
     if ($audience === '') {
         $audience = 'user';
     }
     $userId = isset($opts['user_id']) && $opts['user_id'] !== null && $opts['user_id'] !== ''
         ? (int) $opts['user_id']
-        : null;
+        : 0;
+    if ($audience === 'user' && $userId > 0) {
+        notificationsUiRequireLib();
+        if (function_exists('notificationsUiModuleAllowed')
+            && !notificationsUiModuleAllowed($userId, 'voucher')) {
+            return;
+        }
+    }
+
+    $voucherId = (int) ($opts['voucher_id'] ?? 0);
+    if ($voucherId <= 0) {
+        createNotification($opts);
+
+        return;
+    }
 
     try {
         if ($audience === 'admin' || $audience === 'all') {
@@ -9427,19 +9519,34 @@ function getNotificationsForCurrentUser($limit = 10)
 {
     global $pdo;
     ensureNotificationsSchema();
+    $rows = [];
     if (isAdmin()) {
         $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE audience IN ('admin','all') ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?");
         $stmt->bindValue(1, (int) $limit, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll();
+        $rows = $stmt->fetchAll() ?: [];
     } else if (isLoggedIn()) {
         $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE (audience IN ('user','all') AND (user_id = ? OR audience='all')) ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?");
         $stmt->bindValue(1, (int) $_SESSION['user_id'], PDO::PARAM_INT);
         $stmt->bindValue(2, (int) $limit, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll();
+        $rows = $stmt->fetchAll() ?: [];
     }
-    return [];
+    if ($rows === []) {
+        return [];
+    }
+    foreach ($rows as &$row) {
+        if (!isset($row['src'])) {
+            $row['src'] = 'core';
+        }
+    }
+    unset($row);
+    notificationsUiRequireLib();
+    if (function_exists('notificationsUiFilterRowsByPreferences')) {
+        $rows = notificationsUiFilterRowsByPreferences($rows);
+    }
+
+    return $rows;
 }
 
 function getNotificationsForCurrentUserPaged($limit = 20, $offset = 0)
@@ -9619,6 +9726,11 @@ function getNotificationCentreFeedPaged(int $limit = 20, int $offset = 0, bool $
             continue;
         }
         $out[] = $row;
+    }
+
+    notificationsUiRequireLib();
+    if (function_exists('notificationsUiFilterRowsByPreferences')) {
+        $out = notificationsUiFilterRowsByPreferences($out, $uid);
     }
 
     return $out;
@@ -15686,9 +15798,32 @@ function createSystemNotification($userId, $title, $message, $link = null, $type
 {
     global $pdo;
     ensureNotificationsTable();
+    $userId = (int) $userId;
+    if ($userId > 0) {
+        notificationsUiRequireLib();
+        if (function_exists('notificationsUiDetectModule') && function_exists('notificationsUiModuleAllowed')) {
+            $module = notificationsUiDetectModule([
+                'src' => 'system',
+                'title' => (string) $title,
+                'message' => (string) $message,
+                'link' => (string) ($link ?? ''),
+                'link_url' => (string) ($link ?? ''),
+            ]);
+            if (!notificationsUiModuleAllowed($userId, $module)) {
+                return false;
+            }
+        }
+    }
     try {
         $stmt = $pdo->prepare("INSERT INTO system_notifications (user_id, title, message, link, type) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$userId, $title, $message, $link, $type]);
+        if ($userId > 0) {
+            $resolved = null;
+            if ($link !== null && $link !== '' && function_exists('resolveStoredNotificationLink')) {
+                $resolved = resolveStoredNotificationLink($link);
+            }
+            maybeEmailUserNotificationAlert($userId, (string) $title, (string) $message, $resolved);
+        }
         return true;
     } catch (PDOException $e) {
         return false;

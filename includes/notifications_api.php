@@ -3,7 +3,8 @@ require_once __DIR__ . '/functions.php';
 
 if (!isLoggedIn()) {
     http_response_code(401);
-    echo json_encode(['error' => 'unauthorized']);
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => false, 'error' => 'unauthorized']);
     exit;
 }
 
@@ -11,16 +12,37 @@ header('Content-Type: application/json');
 
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'POST') {
-    $action = $_POST['action'] ?? '';
+    // Merge JSON body into $_POST when present (or when form POST is empty).
+    $rawIn = file_get_contents('php://input');
+    if (is_string($rawIn) && $rawIn !== '') {
+        $jsonBody = json_decode($rawIn, true);
+        if (is_array($jsonBody)) {
+            foreach ($jsonBody as $k => $v) {
+                if (!array_key_exists($k, $_POST)) {
+                    $_POST[$k] = $v;
+                }
+            }
+        } elseif (empty($_POST)) {
+            parse_str($rawIn, $parsed);
+            if (is_array($parsed)) {
+                foreach ($parsed as $k => $v) {
+                    $_POST[$k] = $v;
+                }
+            }
+        }
+    }
+
+    $action = trim((string) ($_POST['action'] ?? ''));
     if ($action === 'mark_all_read') {
         markAllNotificationsReadForCurrentUser();
         echo json_encode(['ok' => true]);
         exit;
-    } elseif ($action === 'mark_read') {
+    }
+    if ($action === 'mark_read') {
         $rawId = isset($_POST['id']) ? trim((string) $_POST['id']) : '';
         if ($rawId === '') {
             http_response_code(400);
-            echo json_encode(['error' => 'invalid id']);
+            echo json_encode(['ok' => false, 'error' => 'invalid id']);
             exit;
         }
         if (preg_match('/^s(\d+)$/i', $rawId, $m)) {
@@ -31,42 +53,45 @@ if ($method === 'POST') {
             markNotificationRead((int) $rawId);
         } else {
             http_response_code(400);
-            echo json_encode(['error' => 'invalid id']);
+            echo json_encode(['ok' => false, 'error' => 'invalid id']);
             exit;
         }
         echo json_encode(['ok' => true]);
         exit;
-    } elseif ($action === 'dismiss') {
+    }
+    if ($action === 'dismiss') {
         $rawId = isset($_POST['id']) ? trim((string) $_POST['id']) : '';
         if ($rawId === '' || !dismissNotificationForCurrentUser($rawId)) {
             http_response_code(400);
-            echo json_encode(['error' => 'invalid id']);
+            echo json_encode(['ok' => false, 'error' => 'invalid id']);
             exit;
         }
         echo json_encode(['ok' => true]);
         exit;
-    } elseif ($action === 'clear_read') {
+    }
+    if ($action === 'clear_read') {
         $cleared = clearReadNotificationsForCurrentUser();
         echo json_encode(['ok' => true, 'cleared' => $cleared]);
         exit;
-    } elseif ($action === 'get_prefs' || $action === 'save_prefs') {
-        $lib = dirname(__DIR__) . '/notifications-ui/lib.php';
-        if (is_file($lib)) {
-            require_once $lib;
+    }
+    if ($action === 'get_prefs' || $action === 'save_prefs') {
+        $lib = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'notifications-ui' . DIRECTORY_SEPARATOR . 'lib.php';
+        if (!is_file($lib)) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'Preferences library missing']);
+            exit;
         }
+        require_once $lib;
         if ($action === 'get_prefs') {
             echo json_encode([
                 'ok' => true,
-                'preferences' => function_exists('notificationsUiGetPreferences')
-                    ? notificationsUiGetPreferences()
-                    : ['modules' => [], 'emailAlerts' => false],
-                'moduleOptions' => function_exists('notificationsUiModuleOptions')
-                    ? notificationsUiModuleOptions()
-                    : [],
+                'preferences' => notificationsUiGetPreferences(),
+                'moduleOptions' => notificationsUiModuleOptions(),
             ]);
             exit;
         }
-        $modules = $_POST['modules'] ?? null;
+
+        $modules = $_POST['modules'] ?? [];
         if (is_string($modules)) {
             $decoded = json_decode($modules, true);
             $modules = is_array($decoded) ? $decoded : [];
@@ -74,31 +99,39 @@ if ($method === 'POST') {
         if (!is_array($modules)) {
             $modules = [];
         }
-        $emailAlerts = !empty($_POST['emailAlerts']) && (string) $_POST['emailAlerts'] !== '0';
-        $saved = function_exists('notificationsUiSavePreferences')
-            ? notificationsUiSavePreferences([
-                'modules' => $modules,
-                'emailAlerts' => $emailAlerts,
-            ])
-            : null;
-        if ($saved === null) {
+        $emailRaw = $_POST['emailAlerts'] ?? false;
+        $emailAlerts = is_bool($emailRaw)
+            ? $emailRaw
+            : filter_var($emailRaw, FILTER_VALIDATE_BOOLEAN);
+
+        $result = notificationsUiSavePreferencesResult([
+            'modules' => $modules,
+            'emailAlerts' => $emailAlerts,
+        ]);
+        if (empty($result['ok'])) {
             http_response_code(500);
-            echo json_encode(['ok' => false, 'error' => 'save failed']);
+            echo json_encode([
+                'ok' => false,
+                'error' => (string) ($result['error'] ?? 'save failed'),
+            ]);
             exit;
         }
-        echo json_encode(['ok' => true, 'preferences' => $saved]);
+        echo json_encode([
+            'ok' => true,
+            'preferences' => $result['preferences'] ?? null,
+        ]);
         exit;
     }
+
     http_response_code(400);
-    echo json_encode(['error' => 'unknown action']);
-    exit;
-} else {
-    // GET -> list
-    $limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 10;
-    $data = [
-        'unread' => getUnreadCountForCurrentUser(),
-        'items' => getNotificationsForCurrentUser($limit),
-    ];
-    echo json_encode($data);
+    echo json_encode(['ok' => false, 'error' => 'unknown action', 'action' => $action]);
     exit;
 }
+
+// GET -> list
+$limit = isset($_GET['limit']) ? max(1, (int) $_GET['limit']) : 10;
+$data = [
+    'unread' => getUnreadCountForCurrentUser(),
+    'items' => getNotificationsForCurrentUser($limit),
+];
+echo json_encode($data);

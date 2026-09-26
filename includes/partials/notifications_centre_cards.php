@@ -428,6 +428,9 @@ if (empty($ncItems)): ?>
         <div class="nc-empty-icon" aria-hidden="true"><i class="far fa-bell"></i></div>
         <p class="mb-0 fw-semibold">You&rsquo;re all caught up</p>
         <p class="mb-0 small">No notifications to show right now.</p>
+        <?php if (!empty($notificationsListUrl)): ?>
+        <a class="nc-view-all-btn" href="<?= htmlspecialchars((string) $notificationsListUrl) ?>" data-nc-view-all>View All</a>
+        <?php endif; ?>
     </div>
 <?php
     return;

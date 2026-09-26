@@ -40,7 +40,9 @@ if ($moduleKey === 'sales' || strpos($scriptPath, '/modules/sales/') !== false) 
 $unread = getTotalHeaderUnreadNotificationCount($includeVoucherHeaderNotifs, $onlySystemModuleKey);
 $headerNotifFeed = getHeaderNotificationsMerged(12, $includeVoucherHeaderNotifs, $onlySystemModuleKey);
 $notifApiPath = function_exists('app_url') ? app_url('/api/get_notifications.php') : ($rootPath . 'api/get_notifications.php');
-$notificationsListUrl = company_url('notifications');
+$notificationsListUrl = function_exists('company_url')
+    ? company_url('notifications.php')
+    : (function_exists('app_url') ? app_url('/notifications.php') : '/notifications.php');
 $unreadMsgs = getUnreadMessagesCountForCurrentUser();
 if (!isset($modulesLink)) { $modulesLink = company_url('select-module'); }
 $headerCompany = function_exists('getCurrentCompany') ? (getCurrentCompany() ?: null) : null;
@@ -312,6 +314,16 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     }
 
     function restoreNotifDrawerOpen() {
+        // Never auto-open the peek drawer on the full notifications centre page.
+        if (document.body && (
+            document.body.classList.contains('page-notifications-react')
+            || document.body.classList.contains('page-notifications-settings')
+            || /\/notifications(?:\.php)?(?:\?|$)/i.test(window.location.pathname)
+        )) {
+            try { sessionStorage.setItem('ultitech_notif_drawer_open', '0'); } catch (e) {}
+            setNotifDrawerOpen(false);
+            return;
+        }
         var shouldOpen = false;
         try {
             shouldOpen = sessionStorage.getItem('ultitech_notif_drawer_open') === '1';

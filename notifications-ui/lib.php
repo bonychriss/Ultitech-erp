@@ -564,8 +564,8 @@ function notificationsUiBuildPayload(string $page = 'list'): array
     }
 
     $markAllApi = function_exists('app_url')
-        ? app_url('/includes/notifications_api.php')
-        : '/includes/notifications_api.php';
+        ? app_url('/api/notifications.php')
+        : '/api/notifications.php';
     $markReadApi = function_exists('app_url')
         ? app_url('/api/get_notifications.php')
         : '/api/get_notifications.php';
@@ -597,20 +597,20 @@ function notificationsUiBuildPayload(string $page = 'list'): array
 function notificationsUiModuleOptions(): array
 {
     return [
-        ['id' => 'voucher', 'label' => 'Payment voucher', 'color' => '#0f766e'],
-        ['id' => 'payroll', 'label' => 'Payroll', 'color' => '#1d4ed8'],
-        ['id' => 'sales', 'label' => 'Sales', 'color' => '#15803d'],
-        ['id' => 'stock', 'label' => 'Stock / Purchases', 'color' => '#1e3a8a'],
-        ['id' => 'deliveries', 'label' => 'Deliveries', 'color' => '#0369a1'],
-        ['id' => 'driver_kpi', 'label' => 'Driver KPI', 'color' => '#0e7490'],
-        ['id' => 'attendance', 'label' => 'Attendance', 'color' => '#c2410c'],
-        ['id' => 'letter', 'label' => 'Letter', 'color' => '#E6B800'],
-        ['id' => 'finance', 'label' => 'Finance', 'color' => '#0d9488'],
-        ['id' => 'suggest', 'label' => 'Suggestions', 'color' => '#ca8a04'],
-        ['id' => 'admin', 'label' => 'Admin', 'color' => '#4b5563'],
-        ['id' => 'tasks', 'label' => 'Tasks', 'color' => '#e11d48'],
-        ['id' => 'system', 'label' => 'System', 'color' => '#4b5563'],
-        ['id' => 'general', 'label' => 'General', 'color' => '#64748b'],
+        ['id' => 'voucher', 'label' => 'Payment voucher', 'color' => '#0f766e', 'description' => 'Signatures, approvals, and voucher status updates.'],
+        ['id' => 'payroll', 'label' => 'Payroll', 'color' => '#1d4ed8', 'description' => 'Payslip releases and payroll processing alerts.'],
+        ['id' => 'sales', 'label' => 'Sales', 'color' => '#15803d', 'description' => 'Orders, invoices, and sales follow-up reminders.'],
+        ['id' => 'stock', 'label' => 'Stock / Purchases', 'color' => '#1e3a8a', 'description' => 'PO verification, receiving, and purchase alerts.'],
+        ['id' => 'deliveries', 'label' => 'Deliveries', 'color' => '#0369a1', 'description' => 'Delivery started, completed, and shipment updates.'],
+        ['id' => 'driver_kpi', 'label' => 'Driver KPI', 'color' => '#0e7490', 'description' => 'Driver performance and ride recording alerts.'],
+        ['id' => 'attendance', 'label' => 'Attendance', 'color' => '#c2410c', 'description' => 'Clock-in reminders and attendance exceptions.'],
+        ['id' => 'letter', 'label' => 'Letter', 'color' => '#E6B800', 'description' => 'Letter drafts, reviews, and approval requests.'],
+        ['id' => 'finance', 'label' => 'Finance', 'color' => '#0d9488', 'description' => 'Payments, cashbook, and finance workflow alerts.'],
+        ['id' => 'suggest', 'label' => 'Suggestions', 'color' => '#ca8a04', 'description' => 'New suggestions and feedback responses.'],
+        ['id' => 'admin', 'label' => 'Admin', 'color' => '#4b5563', 'description' => 'Admin actions and company management notices.'],
+        ['id' => 'tasks', 'label' => 'Tasks', 'color' => '#e11d48', 'description' => 'Assigned tasks, deadlines, and completions.'],
+        ['id' => 'system', 'label' => 'System', 'color' => '#4b5563', 'description' => 'System maintenance and account notices.'],
+        ['id' => 'general', 'label' => 'General', 'color' => '#64748b', 'description' => 'Other notifications that are not module-specific.'],
     ];
 }
 
@@ -630,27 +630,32 @@ function notificationsUiDefaultPreferences(): array
     ];
 }
 
-function notificationsUiEnsurePreferencesTable(): void
+function notificationsUiEnsurePreferencesTable(): bool
 {
     global $pdo;
     if (!($pdo instanceof PDO)) {
-        return;
+        return false;
     }
     static $done = false;
     if ($done) {
-        return;
+        return true;
     }
     try {
         $pdo->exec(
             "CREATE TABLE IF NOT EXISTS user_notification_preferences (
-                user_id INT NOT NULL PRIMARY KEY,
+                user_id INT NOT NULL,
                 prefs_json TEXT NOT NULL,
-                updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                updated_at DATETIME NULL,
+                PRIMARY KEY (user_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
         );
         $done = true;
+
+        return true;
     } catch (Throwable $e) {
-        /* ignore */
+        error_log('notificationsUiEnsurePreferencesTable: ' . $e->getMessage());
+
+        return false;
     }
 }
 
@@ -700,31 +705,38 @@ function notificationsUiGetPreferences(?int $userId = null): array
 
 /**
  * @param array<string,mixed> $prefs
- * @return array{modules:array<string,bool>,emailAlerts:bool}|null
+ * @return array{ok:bool,preferences?:array{modules:array<string,bool>,emailAlerts:bool},error?:string}
  */
-function notificationsUiSavePreferences(array $prefs, ?int $userId = null): ?array
+function notificationsUiSavePreferencesResult(array $prefs, ?int $userId = null): array
 {
     $uid = $userId ?? (int) ($_SESSION['user_id'] ?? 0);
     if ($uid <= 0) {
-        return null;
+        return ['ok' => false, 'error' => 'Not signed in'];
     }
     global $pdo;
     if (!($pdo instanceof PDO)) {
-        return null;
+        return ['ok' => false, 'error' => 'Database unavailable'];
     }
-    notificationsUiEnsurePreferencesTable();
+    if (!notificationsUiEnsurePreferencesTable()) {
+        return ['ok' => false, 'error' => 'Could not prepare preferences table'];
+    }
     $normalized = notificationsUiDefaultPreferences();
     if (isset($prefs['modules']) && is_array($prefs['modules'])) {
         foreach ($normalized['modules'] as $key => $_) {
             if (array_key_exists($key, $prefs['modules'])) {
-                $normalized['modules'][$key] = (bool) $prefs['modules'][$key];
+                $raw = $prefs['modules'][$key];
+                if (is_bool($raw)) {
+                    $normalized['modules'][$key] = $raw;
+                } else {
+                    $normalized['modules'][$key] = filter_var($raw, FILTER_VALIDATE_BOOLEAN);
+                }
             }
         }
     }
     $normalized['emailAlerts'] = !empty($prefs['emailAlerts']);
     $json = json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if ($json === false) {
-        return null;
+        return ['ok' => false, 'error' => 'Could not encode preferences'];
     }
     try {
         $st = $pdo->prepare(
@@ -734,8 +746,84 @@ function notificationsUiSavePreferences(array $prefs, ?int $userId = null): ?arr
         );
         $st->execute([$uid, $json]);
 
-        return $normalized;
+        return ['ok' => true, 'preferences' => $normalized];
     } catch (Throwable $e) {
-        return null;
+        error_log('notificationsUiSavePreferences: ' . $e->getMessage());
+
+        return ['ok' => false, 'error' => 'Database save failed'];
     }
+}
+
+/**
+ * @param array<string,mixed> $prefs
+ * @return array{modules:array<string,bool>,emailAlerts:bool}|null
+ */
+function notificationsUiSavePreferences(array $prefs, ?int $userId = null): ?array
+{
+    $result = notificationsUiSavePreferencesResult($prefs, $userId);
+
+    return !empty($result['ok']) ? ($result['preferences'] ?? null) : null;
+}
+
+/**
+ * Whether a user still wants in-app notifications for a module.
+ */
+function notificationsUiModuleAllowed(?int $userId, string $module): bool
+{
+    $uid = (int) ($userId ?? 0);
+    $module = trim($module);
+    if ($module === '') {
+        $module = 'general';
+    }
+    if ($uid <= 0) {
+        return true;
+    }
+    $prefs = notificationsUiGetPreferences($uid);
+    $modules = is_array($prefs['modules'] ?? null) ? $prefs['modules'] : [];
+    if (!array_key_exists($module, $modules)) {
+        return true;
+    }
+
+    return (bool) $modules[$module];
+}
+
+/**
+ * Whether a user opted into email copies of notifications.
+ */
+function notificationsUiEmailAlertsEnabled(?int $userId): bool
+{
+    $uid = (int) ($userId ?? 0);
+    if ($uid <= 0) {
+        return false;
+    }
+    $prefs = notificationsUiGetPreferences($uid);
+
+    return !empty($prefs['emailAlerts']);
+}
+
+/**
+ * Drop rows for modules the current user disabled.
+ *
+ * @param list<array<string,mixed>> $rows
+ * @return list<array<string,mixed>>
+ */
+function notificationsUiFilterRowsByPreferences(array $rows, ?int $userId = null): array
+{
+    $uid = $userId ?? (int) ($_SESSION['user_id'] ?? 0);
+    if ($uid <= 0 || $rows === []) {
+        return $rows;
+    }
+    $out = [];
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $module = notificationsUiDetectModule($row);
+        if (!notificationsUiModuleAllowed($uid, $module)) {
+            continue;
+        }
+        $out[] = $row;
+    }
+
+    return $out;
 }

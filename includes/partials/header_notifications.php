@@ -5,18 +5,23 @@
 if (!isset($notifApiPath)) {
     $notifApiPath = function_exists('app_url') ? app_url('/api/get_notifications.php') : 'api/get_notifications.php';
 }
-if (!isset($notificationsListUrl)) {
-    if (function_exists('company_url')) {
-        $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
-        if ($slug === '' && function_exists('getRequestedCompanySlug')) {
-            $slug = strtolower(trim((string) getRequestedCompanySlug()));
-        }
-        $notificationsListUrl = $slug !== ''
-            ? company_url('notifications.php', $slug)
-            : (function_exists('app_url') ? app_url('/notifications.php') : '/notifications.php');
-    } else {
-        $notificationsListUrl = function_exists('app_url') ? app_url('/notifications.php') : '/notifications.php';
+// Always resolve the full React notifications centre URL (not settings).
+$slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+if ($slug === '' && function_exists('getRequestedCompanySlug')) {
+    $slug = strtolower(trim((string) getRequestedCompanySlug()));
+}
+if ($slug === '' && !empty($_SERVER['REQUEST_URI']) && preg_match('#/(?:public_html/)?([A-Za-z0-9-]+)/#', (string) $_SERVER['REQUEST_URI'], $mSlug)) {
+    $maybe = strtolower(trim((string) $mSlug[1]));
+    if ($maybe !== '' && $maybe !== 'public_html' && !(function_exists('ultitechReservedPathSegments') && in_array($maybe, ultitechReservedPathSegments(), true))) {
+        $slug = $maybe;
     }
+}
+if ($slug !== '' && function_exists('company_url')) {
+    $notificationsListUrl = company_url('notifications.php', $slug);
+} elseif (function_exists('app_url')) {
+    $notificationsListUrl = app_url('/notifications.php');
+} else {
+    $notificationsListUrl = '/notifications.php';
 }
 $unread = isset($unread) ? (int) $unread : 0;
 $headerNotifFeed = isset($headerNotifFeed) && is_array($headerNotifFeed) ? $headerNotifFeed : [];
@@ -52,7 +57,7 @@ foreach ($ncAllItems as $row) {
 }
 $ncItems = $ncAllItems;
 $showNotifDot = ($unread > 0 || $ncCountUnread > 0);
-$markAllApi = function_exists('app_url') ? app_url('/includes/notifications_api.php') : '/includes/notifications_api.php';
+    $markAllApi = function_exists('app_url') ? app_url('/api/notifications.php') : '/api/notifications.php';
 $ncCss = function_exists('app_url') ? app_url('/assets/css/notifications-centre.css') : '/assets/css/notifications-centre.css';
 $ncPanelAlreadyBuilt = !empty($GLOBALS['_ultitech_nc_panel_built']);
 $GLOBALS['_ultitech_nc_panel_built'] = true;
@@ -180,7 +185,7 @@ body.sidebar-collapsed .sidebar-notif-item .sidebar-notif-label {
     <div id="notif-dd" class="notif-dropdown notif-dropdown--v2" onclick="event.stopPropagation();" role="dialog" aria-label="AI Notification Center" aria-hidden="true">
         <header class="nc-page-header">
             <h2 class="nc-page-title">AI Notification Center</h2>
-            <a href="<?= htmlspecialchars($notificationsListUrl) ?>" class="nc-see-all">See All</a>
+            <a href="<?= htmlspecialchars($notificationsListUrl) ?>" class="nc-see-all nc-view-all" data-nc-view-all>View All</a>
         </header>
 
         <nav class="nc-tabs nc-tabs--dropdown" aria-label="Filter notifications" data-nc-tabs>
@@ -197,6 +202,7 @@ body.sidebar-collapsed .sidebar-notif-item .sidebar-notif-label {
     </div>
 </div>
 <script>
+var ncNotificationsListUrl = <?= json_encode($notificationsListUrl, JSON_UNESCAPED_SLASHES) ?>;
 function syncHeaderNotifDot() {
     var inners = document.querySelectorAll('.header-notif-bell-inner');
     var unreadCards = document.querySelectorAll('#notif-dd-list .nc-card.is-unread');
@@ -302,8 +308,20 @@ function headerNotifItemClick(ev, el) {
             if (!empty) {
                 empty = document.createElement('div');
                 empty.className = 'nc-empty nc-empty-filter';
-                empty.innerHTML = '<p class="mb-0 fw-semibold">No notifications here</p><p class="mb-0 small">Try another time range.</p>';
+                empty.innerHTML = '<p class="mb-0 fw-semibold">No notifications here</p><p class="mb-0 small">Try another time range.</p><a class="nc-view-all-btn" data-nc-view-all href="' + String(ncNotificationsListUrl || '').replace(/"/g, '&quot;') + '">View All</a>';
                 list.appendChild(empty);
+                empty.querySelectorAll('[data-nc-view-all]').forEach(function (el) {
+                    el.setAttribute('href', ncNotificationsListUrl);
+                    el.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        try { sessionStorage.setItem('ultitech_notif_drawer_open', '0'); } catch (err) {}
+                        if (typeof window.setNotifDrawerOpen === 'function') {
+                            window.setNotifDrawerOpen(false);
+                        }
+                        window.location.assign(ncNotificationsListUrl);
+                    });
+                });
             }
             empty.style.display = '';
         } else if (empty) {
@@ -321,9 +339,279 @@ function headerNotifItemClick(ev, el) {
 
     applyFilter('today');
 })();
+
+(function () {
+    var url = typeof ncNotificationsListUrl === 'string' ? ncNotificationsListUrl : '';
+    if (!url) return;
+
+    function goToNotificationsCentre(ev) {
+        if (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+        }
+        // Only mark tip seen if it was actually shown.
+        if (document.getElementById('nc-va-tip-root')) {
+            try { localStorage.setItem('ultitech_nc_viewall_tip_v2', '1'); } catch (e) {}
+        }
+        try { sessionStorage.setItem('ultitech_notif_drawer_open', '0'); } catch (e) {}
+        if (typeof window.setNotifDrawerOpen === 'function') {
+            window.setNotifDrawerOpen(false);
+        } else {
+            var dd = document.getElementById('notif-dd');
+            if (dd) {
+                dd.classList.remove('open');
+                dd.setAttribute('aria-hidden', 'true');
+            }
+            document.body.classList.remove('notif-panel-open');
+        }
+        window.location.assign(url);
+    }
+
+    function bindViewAll(root) {
+        (root || document).querySelectorAll('#notif-dd [data-nc-view-all], #notif-dd .nc-view-all-btn, #notif-dd .nc-view-all').forEach(function (el) {
+            if (el.getAttribute('data-nc-view-all-bound') === '1') return;
+            el.setAttribute('data-nc-view-all-bound', '1');
+            el.setAttribute('href', url);
+            el.addEventListener('click', goToNotificationsCentre);
+        });
+    }
+
+    bindViewAll(document);
+    // Re-bind when empty-state markup is injected by filters.
+    var list = document.getElementById('notif-dd-list');
+    if (list && typeof MutationObserver !== 'undefined') {
+        var mo = new MutationObserver(function () { bindViewAll(list); });
+        mo.observe(list, { childList: true, subtree: true });
+    }
+})();
 </script>
 <?php else: ?>
 </div>
+<?php endif; ?>
+<?php if (empty($GLOBALS['_ultitech_nc_viewall_tip_script'])):
+    $GLOBALS['_ultitech_nc_viewall_tip_script'] = true;
+    ?>
+<script>
+(function () {
+    if (window.__ultitechNcViewAllTipBooted) return;
+    window.__ultitechNcViewAllTipBooted = true;
+
+    var SEEN_KEY = 'ultitech_nc_viewall_tip_v2';
+    var showTimer = null;
+    var positioned = false;
+
+    function wasSeen() {
+        try { return localStorage.getItem(SEEN_KEY) === '1'; } catch (e) { return false; }
+    }
+    function markSeen() {
+        try { localStorage.setItem(SEEN_KEY, '1'); } catch (e) {}
+    }
+
+    function findDrawer() {
+        return document.getElementById('notif-dd');
+    }
+
+    function findTarget(dd) {
+        return (dd || findDrawer() || document).querySelector('.nc-page-header [data-nc-view-all], .nc-page-header .nc-view-all');
+    }
+
+    function clearTip() {
+        var root = document.getElementById('nc-va-tip-root');
+        if (root && root.parentNode) root.parentNode.removeChild(root);
+        document.querySelectorAll('.nc-va-tip-target').forEach(function (el) {
+            el.classList.remove('nc-va-tip-target');
+        });
+        window.removeEventListener('resize', positionTip);
+        positioned = false;
+    }
+
+    function positionTip() {
+        var root = document.getElementById('nc-va-tip-root');
+        if (!root) return;
+        var card = root.querySelector('.nc-va-tip-card');
+        var beak = root.querySelector('.nc-va-tip-beak');
+        var dd = findDrawer();
+        var target = findTarget(dd);
+        if (!card || !target || !dd) return;
+
+        var drawerRect = dd.getBoundingClientRect();
+        var rect = target.getBoundingClientRect();
+        var cardW = Math.min(280, Math.max(200, drawerRect.width - 32));
+        var left = rect.right - drawerRect.left - cardW;
+        if (left < 12) left = 12;
+        if (left + cardW > drawerRect.width - 12) {
+            left = Math.max(12, drawerRect.width - cardW - 12);
+        }
+        var top = rect.bottom - drawerRect.top + 12;
+        var cardH = card.offsetHeight || 150;
+        if (top + cardH > drawerRect.height - 12) {
+            top = Math.max(12, rect.top - drawerRect.top - cardH - 12);
+            if (beak) {
+                beak.style.top = 'auto';
+                beak.style.bottom = '-7px';
+            }
+        } else if (beak) {
+            beak.style.top = '-7px';
+            beak.style.bottom = 'auto';
+        }
+
+        card.style.width = cardW + 'px';
+        card.style.left = left + 'px';
+        card.style.top = top + 'px';
+        card.style.right = 'auto';
+        card.style.bottom = 'auto';
+
+        if (beak) {
+            var beakX = (rect.left - drawerRect.left) + rect.width / 2 - left - 7;
+            beakX = Math.max(16, Math.min(cardW - 30, beakX));
+            beak.style.left = beakX + 'px';
+            beak.style.right = 'auto';
+        }
+        positioned = true;
+    }
+
+    function dismissTip() {
+        markSeen();
+        clearTip();
+    }
+
+    function showTip() {
+        if (wasSeen()) return;
+        if (document.getElementById('nc-va-tip-root')) return;
+        var dd = findDrawer();
+        if (!dd || !dd.classList.contains('open')) return;
+        var target = findTarget(dd);
+        if (!target) return;
+
+        target.classList.add('nc-va-tip-target');
+
+        var root = document.createElement('div');
+        root.id = 'nc-va-tip-root';
+        root.className = 'nc-va-tip-root nc-va-tip-root--in-drawer';
+        root.setAttribute('role', 'dialog');
+        root.setAttribute('aria-label', 'Tip');
+        root.innerHTML =
+            '<div class="nc-va-tip-card">' +
+                '<span class="nc-va-tip-beak" aria-hidden="true"></span>' +
+                '<h3 class="nc-va-tip-title">Open the full Notification Center</h3>' +
+                '<p class="nc-va-tip-body">Tap View All to open the full page with every notification, filters, and settings.</p>' +
+                '<div class="nc-va-tip-actions">' +
+                    '<button type="button" class="nc-va-tip-btn" data-nc-va-dismiss="1">Got it</button>' +
+                '</div>' +
+            '</div>';
+
+        root.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            var t = ev.target;
+            if (t && t.getAttribute && t.getAttribute('data-nc-va-dismiss') === '1') {
+                dismissTip();
+            }
+        });
+        function onKey(ev) {
+            if (ev.key === 'Escape') {
+                dismissTip();
+                document.removeEventListener('keydown', onKey);
+            }
+        }
+        document.addEventListener('keydown', onKey);
+
+        // Mount inside the drawer so the tip stays visible with the panel.
+        if (getComputedStyle(dd).position === 'static') {
+            dd.style.position = 'fixed';
+        }
+        dd.appendChild(root);
+        positionTip();
+        window.addEventListener('resize', positionTip);
+        requestAnimationFrame(function () {
+            positionTip();
+            setTimeout(positionTip, 50);
+        });
+    }
+
+    function drawerIsOpen() {
+        var dd = findDrawer();
+        return !!(dd && dd.classList.contains('open')) || document.body.classList.contains('notif-panel-open');
+    }
+
+    function onDrawerChange(isOpen) {
+        if (showTimer) {
+            clearTimeout(showTimer);
+            showTimer = null;
+        }
+        if (!isOpen) {
+            clearTip();
+            return;
+        }
+        // Wait for slide-in animation, then show.
+        showTimer = setTimeout(function () {
+            showTip();
+            // Retry once if target wasn't ready.
+            if (!document.getElementById('nc-va-tip-root') && !wasSeen()) {
+                showTimer = setTimeout(showTip, 300);
+            }
+        }, 480);
+    }
+
+    function boot() {
+        function wrapSetter() {
+            var prev = window.setNotifDrawerOpen;
+            if (typeof prev !== 'function' || prev.__ncVaTipWrapped) return false;
+            var wrapped = function (isOpen) {
+                var ok = prev.apply(this, arguments);
+                onDrawerChange(!!isOpen);
+                return ok;
+            };
+            wrapped.__ncVaTipWrapped = true;
+            window.setNotifDrawerOpen = wrapped;
+            return true;
+        }
+
+        function watchDrawer(dd) {
+            if (!dd || dd.__ncVaTipObserved) return;
+            dd.__ncVaTipObserved = true;
+            if (typeof MutationObserver !== 'undefined') {
+                new MutationObserver(function () {
+                    onDrawerChange(dd.classList.contains('open'));
+                }).observe(dd, { attributes: true, attributeFilter: ['class'] });
+            }
+        }
+
+        function attach() {
+            wrapSetter();
+            watchDrawer(findDrawer());
+            if (drawerIsOpen()) onDrawerChange(true);
+        }
+
+        attach();
+        // Panel may be created/moved after boot.
+        var tries = 0;
+        var wait = setInterval(function () {
+            tries += 1;
+            wrapSetter();
+            watchDrawer(findDrawer());
+            if (tries > 60) clearInterval(wait);
+        }, 100);
+
+        if (typeof MutationObserver !== 'undefined') {
+            new MutationObserver(function () {
+                watchDrawer(findDrawer());
+            }).observe(document.body, { childList: true, subtree: false });
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+    // Also boot after delayed scripts that define setNotifDrawerOpen.
+    window.addEventListener('load', function () {
+        if (drawerIsOpen() && !wasSeen() && !document.getElementById('nc-va-tip-root')) {
+            onDrawerChange(true);
+        }
+    });
+})();
+</script>
 <?php endif; ?>
 <?php if (empty($GLOBALS['_ultitech_nc_coach_script'])):
     $GLOBALS['_ultitech_nc_coach_script'] = true;

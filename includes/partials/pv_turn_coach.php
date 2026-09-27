@@ -29,6 +29,7 @@ $voucherPages = array(
     'create-voucher.php',
     'view-voucher.php',
     'edit-voucher.php',
+    'bulk-upload-vouchers.php',
 );
 $onVoucherPage = false;
 foreach ($voucherPages as $vp) {
@@ -38,10 +39,15 @@ foreach ($voucherPages as $vp) {
         break;
     }
 }
-if (!$onVoucherPage && preg_match('#(create-voucher|view-voucher|edit-voucher|my-vouchers|all-vouchers|pending-voucher|/voucher/create|/voucher/view)#', $pathBlob)) {
+if (!$onVoucherPage && preg_match('#(create-voucher|view-voucher|edit-voucher|my-vouchers|all-vouchers|pending-voucher|bulk-upload-voucher|/voucher/create|/voucher/view|employee/dashboard|admin/dashboard)#', $pathBlob)) {
     $onVoucherPage = true;
 }
 if (!$onVoucherPage && (str_starts_with($erpRoute, '/voucher/') || $activeModule === 'voucher' || $moduleParam === 'voucher')) {
+    $onVoucherPage = true;
+}
+// Employee voucher desk is often /employee/dashboard.php?module=voucher.
+// Treat that the same as the admin voucher dashboard.
+if (!$onVoucherPage && $moduleParam === '' && preg_match('#/employee/dashboard(?:\.php)?(?:\?|$)#', $pathBlob)) {
     $onVoucherPage = true;
 }
 if ($activeModule !== 'voucher' && $moduleParam !== 'voucher' && !$onVoucherPage) {

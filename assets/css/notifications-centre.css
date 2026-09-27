@@ -963,7 +963,7 @@ html.pv-coach-open #root {
 .pv-coach-root {
     position: fixed;
     inset: 0;
-    z-index: 10060;
+    z-index: 21000;
     pointer-events: none;
 }
 

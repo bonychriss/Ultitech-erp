@@ -113,6 +113,73 @@ if ($count === 0) {
     }
 }
 
+// Employees often only have rows in system_notifications (not the admin audience feed).
+if ($count === 0 && function_exists('ensureNotificationsTable')) {
+    try {
+        ensureNotificationsTable();
+        $stSys = $pdo->prepare(
+            "SELECT id, title, message, link
+             FROM system_notifications
+             WHERE is_read = 0
+               AND user_id = ?
+               AND (
+                    LOWER(title) LIKE '%voucher%'
+                 OR LOWER(title) LIKE '%sign%'
+                 OR LOWER(title) LIKE '%approve%'
+                 OR LOWER(message) LIKE '%voucher%'
+                 OR LOWER(COALESCE(link, '')) LIKE '%voucher%'
+               )
+             ORDER BY id DESC
+             LIMIT 8"
+        );
+        $stSys->execute([$userId]);
+        $sysRows = $stSys->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        foreach ($sysRows as $n) {
+            $vid = 0;
+            $link = (string) ($n['link'] ?? '');
+            if (preg_match('/(?:\\?|&|\\/)id=(\\d+)/', $link, $m) || preg_match('/\\/voucher\\/(\\d+)/', $link, $m)) {
+                $vid = (int) $m[1];
+            }
+            $viewUrl = $link;
+            if ($vid > 0) {
+                $viewUrl = function_exists('company_url')
+                    ? company_url('employee/view-voucher.php?id=' . $vid . '&module=voucher')
+                    : (function_exists('app_url') ? app_url('/employee/view-voucher.php?id=' . $vid . '&module=voucher') : '/employee/view-voucher.php?id=' . $vid);
+            } elseif ($viewUrl === '') {
+                $viewUrl = function_exists('company_url')
+                    ? (company_url('employee/pending-voucher-tasks.php') . '?module=voucher')
+                    : '/employee/pending-voucher-tasks.php?module=voucher';
+            }
+            $vno = '';
+            if ($vid > 0) {
+                try {
+                    $vs = $pdo->prepare('SELECT voucher_no FROM payment_vouchers WHERE id = ? LIMIT 1');
+                    $vs->execute([$vid]);
+                    $vno = (string) ($vs->fetchColumn() ?: '');
+                } catch (Throwable $e2) {
+                }
+            }
+            $tasks[] = [
+                'id' => $vid > 0 ? $vid : (int) ($n['id'] ?? 0),
+                'voucher_no' => $vno,
+                'payee_name' => '',
+                'total_amount' => 0,
+                'currency' => 'TZS',
+                'status' => '',
+                'date_created' => '',
+                'prepared_by' => '',
+                'required_action' => (string) ($n['title'] ?? 'Action needed'),
+                'action_key' => 'notify',
+                'action_label' => trim((string) ($n['title'] ?? 'Open payment voucher')),
+                'view_url' => $viewUrl,
+            ];
+        }
+        $count = count($tasks);
+    } catch (Throwable $e) {
+        error_log('api/pv_coach.php system notif fallback: ' . $e->getMessage());
+    }
+}
+
 $preferredKeys = ['sign_applicant', 'sign_dept_manager', 'sign_checked_by', 'final_approve', 'mark_paid', 'post', 'notify'];
 usort($tasks, static function ($a, $b) use ($preferredKeys) {
     $ai = array_search((string) ($a['action_key'] ?? ''), $preferredKeys, true);

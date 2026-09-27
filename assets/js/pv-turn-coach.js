@@ -244,11 +244,17 @@
 
   function findAnchor() {
     var parts = String(anchorSel).split(',');
+    var fallback = null;
     for (var i = 0; i < parts.length; i++) {
       var el = document.querySelector(parts[i].trim());
-      if (el) return el;
+      if (!el) continue;
+      if (!fallback) fallback = el;
+      var rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0 && rect.right > 8 && rect.bottom > 8) {
+        return el;
+      }
     }
-    return null;
+    return fallback;
   }
 
   function scrollSidebarTo(anchor) {
@@ -292,6 +298,7 @@
     var left = rect.right + gap;
     var top = rect.top + rect.height / 2 - 48;
 
+    if (left < 16) left = 16;
     if (left + cardW > window.innerWidth - 16) {
       left = Math.max(16, window.innerWidth - cardW - 16);
     }

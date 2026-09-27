@@ -112,7 +112,8 @@ if (strpos(str_replace('\\', '/', $script_name), '/modules/crm/') !== false) {
 if (strpos(str_replace('\\', '/', $script_name), '/employee/personalization/') !== false) {
     $active_module = 'personalization';
 }
-if ($current_page === 'dashboard.php' && strpos($script_name, '/employee/') !== false && (!isset($_GET['module']))) {
+if ($current_page === 'dashboard.php' && strpos($script_name, '/employee/') !== false
+    && (!isset($_GET['module']) || (string) $_GET['module'] === '' || (string) $_GET['module'] === 'voucher')) {
     $active_module = 'voucher';
 }
 if ($current_page === 'dashboard.php' && strpos(str_replace('\\', '/', $script_name), '/admin/') !== false

@@ -416,6 +416,10 @@ $selectModuleConfig = [
     ],
     'poReminders' => array_values($poReminders),
     'notificationsUrl' => $companyRoute('notifications.php'),
+    'notificationCount' => function_exists('getTotalHeaderUnreadNotificationCount')
+        ? (int) getTotalHeaderUnreadNotificationCount()
+        : 0,
+    'userId' => (int) ($_SESSION['user_id'] ?? 0),
 ];
 ?>
 <!DOCTYPE html>

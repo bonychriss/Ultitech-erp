@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bell,
   Compass,
@@ -61,6 +61,80 @@ function writeFlag(kind, version, userId) {
   } catch {
     /* ignore */
   }
+}
+
+const NOTIF_TIP_KEY = 'ultitech_sm_notif_tip_v1'
+
+function notifTipSeen(userId) {
+  try {
+    return localStorage.getItem(`${NOTIF_TIP_KEY}_${userId || 0}`) === '1'
+  } catch {
+    return false
+  }
+}
+
+function markNotifTipSeen(userId) {
+  try {
+    localStorage.setItem(`${NOTIF_TIP_KEY}_${userId || 0}`, '1')
+  } catch {
+    /* ignore */
+  }
+}
+
+function NotificationTip({ anchorRef, count, onDismiss }) {
+  const [box, setBox] = useState(null)
+
+  useEffect(() => {
+    function place() {
+      const el = anchorRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const width = Math.min(280, window.innerWidth - 24)
+      let left = rect.right - width
+      if (left < 12) left = 12
+      if (left + width > window.innerWidth - 12) left = Math.max(12, window.innerWidth - width - 12)
+      const beak = rect.left + rect.width / 2 - left - 7
+      setBox({
+        top: rect.bottom + 12,
+        left,
+        width,
+        beak: Math.max(16, Math.min(width - 30, beak)),
+      })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [anchorRef])
+
+  if (!box) return null
+
+  const noun = count === 1 ? 'notification' : 'notifications'
+
+  return (
+    <div
+      className="sm-notif-tip"
+      role="dialog"
+      aria-label="Notifications"
+      style={{ top: box.top, left: box.left, width: box.width }}
+    >
+      <span className="sm-notif-tip-beak" style={{ left: box.beak }} aria-hidden="true" />
+      <h3 className="sm-notif-tip-title">Your notifications live here</h3>
+      <p className="sm-notif-tip-body">
+        {count > 0
+          ? `You have ${count} ${noun}. Tap the bell to open the Notification Center.`
+          : 'Tap the bell to open the Notification Center and read everything waiting for you.'}
+      </p>
+      <div className="sm-notif-tip-actions">
+        <button type="button" className="sm-notif-tip-btn" onClick={onDismiss}>
+          Got it
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function PerformanceIcon() {
@@ -683,24 +757,33 @@ export default function SelectModulePage() {
   const trialGuide = cfg.trialGuide && typeof cfg.trialGuide === 'object' ? cfg.trialGuide : null
   const desktopAppDownloadUrl = cfg.desktopAppDownloadUrl || ''
   const showDesktopAppDownload = Boolean(cfg.showDesktopAppDownload && desktopAppDownloadUrl)
-  const pvTasks = cfg.pvTasks && typeof cfg.pvTasks === 'object' ? cfg.pvTasks : null
-  const pvTasksUrl = typeof pvTasks?.url === 'string' ? pvTasks.url : ''
-  const pvTaskCount = Math.max(0, Number(pvTasks?.count) || 0)
-  const pvTasksTitle = typeof pvTasks?.title === 'string' && pvTasks.title
-    ? pvTasks.title
-    : 'Payment voucher tasks'
   const initialPoReminders = Array.isArray(cfg.poReminders) ? cfg.poReminders : []
+  const notificationCount = Math.max(0, Number(cfg.notificationCount) || 0)
+  const notifBellRef = useRef(null)
   const enabledPreview = enabledLabels.slice(0, 4).join(', ')
   const enabledMore = enabledLabels.length > 4
 
   const version = mailUpdate?.version || ''
-  const userId = mailUpdate?.userId || 0
+  const userId = Number(cfg.userId) || mailUpdate?.userId || 0
 
   const [showTrialGuide, setShowTrialGuide] = useState(Boolean(trialGuide?.active))
   const [showGuide, setShowGuide] = useState(false)
   const [showRate, setShowRate] = useState(false)
   const [rateDone, setRateDone] = useState(false)
   const [poReminderCount, setPoReminderCount] = useState(initialPoReminders.length)
+  const [showNotifTip, setShowNotifTip] = useState(false)
+
+  useEffect(() => {
+    if (showTrialGuide || showGuide || showRate) return undefined
+    if (notifTipSeen(userId)) return undefined
+    const t = window.setTimeout(() => setShowNotifTip(true), 400)
+    return () => window.clearTimeout(t)
+  }, [showTrialGuide, showGuide, showRate, userId])
+
+  const dismissNotifTip = () => {
+    markNotifTipSeen(userId)
+    setShowNotifTip(false)
+  }
 
   useEffect(() => {
     window.ultitechPoRemindBadgeRefresh = (count) => {
@@ -814,19 +897,21 @@ export default function SelectModulePage() {
           <button
             type="button"
             id="sm-po-notify-bell"
-            className={`sm-po-notify${poReminderCount > 0 ? ' has-unread' : ''}`}
+            ref={notifBellRef}
+            className={`sm-po-notify${notificationCount > 0 ? ' has-notifs' : ''}${poReminderCount > 0 ? ' has-unread' : ''}`}
             title={
-              poReminderCount > 0
-                ? `${poReminderCount} PO verification reminder${poReminderCount === 1 ? '' : 's'}`
+              notificationCount > 0
+                ? `${notificationCount} notification${notificationCount === 1 ? '' : 's'}`
                 : 'Notifications'
             }
             aria-label={
-              poReminderCount > 0
-                ? `${poReminderCount} PO verification reminder${poReminderCount === 1 ? '' : 's'}`
+              notificationCount > 0
+                ? `${notificationCount} notification${notificationCount === 1 ? '' : 's'}`
                 : 'Notifications'
             }
             onClick={() => {
-              if (poReminderCount > 0 && typeof window.ultitechShowPoVerifyReminder === 'function') {
+              dismissNotifTip()
+              if (poReminderCount > 0 && notificationCount < 1 && typeof window.ultitechShowPoVerifyReminder === 'function') {
                 window.ultitechShowPoVerifyReminder()
                 return
               }
@@ -838,29 +923,22 @@ export default function SelectModulePage() {
           >
             <span className="sm-po-notify-inner" aria-hidden="true">
               <Bell className="sm-po-notify-bell-icon" size={18} strokeWidth={2} />
-              {poReminderCount > 0 ? (
+              {notificationCount > 0 ? (
+                <>
+                  <span className="sm-po-notify-dot" aria-hidden="true" />
+                  <span className="sm-po-notify-count">
+                    {notificationCount > 99 ? '99+' : notificationCount}
+                  </span>
+                </>
+              ) : poReminderCount > 0 ? (
                 <span className="sm-po-notify-badge">
                   {poReminderCount > 99 ? '99+' : poReminderCount}
                 </span>
               ) : null}
             </span>
           </button>
-          {pvTasksUrl ? (
-            <a
-              href={pvTasksUrl}
-              className="sm-pv-notify"
-              title={pvTasksTitle}
-              aria-label={pvTasksTitle}
-            >
-              <span className="sm-pv-notify-inner" aria-hidden="true">
-                <img src={voucherIconSrc} alt="" className="sm-pv-notify-icon" />
-                {pvTaskCount > 0 ? (
-                  <span className="sm-pv-notify-badge">
-                    {pvTaskCount > 99 ? '99+' : pvTaskCount}
-                  </span>
-                ) : null}
-              </span>
-            </a>
+          {showNotifTip ? (
+            <NotificationTip anchorRef={notifBellRef} count={notificationCount} onDismiss={dismissNotifTip} />
           ) : null}
           {showStatus && statusUrl ? (
             <a href={statusUrl} className="sm-status-btn">

@@ -667,7 +667,7 @@ function notificationsUiModuleOptions(): array
     return [
         ['id' => 'voucher', 'label' => 'Payment voucher', 'color' => '#0f766e', 'description' => 'Signatures, approvals, and voucher status updates.'],
         ['id' => 'payroll', 'label' => 'Payroll', 'color' => '#1d4ed8', 'description' => 'Payslip releases and payroll processing alerts.'],
-        ['id' => 'sales', 'label' => 'Sales', 'color' => '#15803d', 'description' => 'Orders, invoices, and sales follow-up reminders.'],
+        ['id' => 'sales', 'label' => 'Sales', 'color' => '#4ade80', 'description' => 'Orders, invoices, and sales follow-up reminders.'],
         ['id' => 'stock', 'label' => 'Stock / Purchases', 'color' => '#1e3a8a', 'description' => 'PO verification, receiving, and purchase alerts.'],
         ['id' => 'deliveries', 'label' => 'Deliveries', 'color' => '#0369a1', 'description' => 'Delivery started, completed, and shipment updates.'],
         ['id' => 'driver_kpi', 'label' => 'Driver KPI', 'color' => '#0e7490', 'description' => 'Driver performance and ride recording alerts.'],

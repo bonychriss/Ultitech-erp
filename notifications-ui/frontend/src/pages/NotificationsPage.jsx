@@ -70,7 +70,7 @@ function formatMessage(text) {
 const MODULE_COLORS = {
   voucher: '#0f766e',
   payroll: '#1d4ed8',
-  sales: '#15803d',
+  sales: '#4ade80',
   stock: '#1e3a8a',
   deliveries: '#0369a1',
   driver_kpi: '#0e7490',

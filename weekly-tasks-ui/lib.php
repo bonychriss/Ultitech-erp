@@ -423,7 +423,7 @@ function weeklyTasksUiDriverEntryScores(PDO $pdo, array $mondays): ?array
  * @param array<int,int> $offsets
  * @return array<int,array{title:string,when:string,status:string}>
  */
-function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string $metric): array
+function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string $metric, string $personName = ''): array
 {
     $columns = [
         'on-time-delivery' => ['column' => 'on_time_pct', 'target' => 95, 'label' => 'On-time delivery'],
@@ -465,8 +465,12 @@ function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string 
                 continue;
             }
             if (!$entries) {
+                $title = $spec['label'];
+                if ($metric === 'delivery-documents' && $personName !== '') {
+                    $title = $personName . "'s documents";
+                }
                 $rows[] = [
-                    'title' => $spec['label'],
+                    'title' => $title,
                     'when' => $when,
                     'status' => 'Not recorded',
                 ];
@@ -478,8 +482,12 @@ function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string 
                     ? (string) (dkpi_services()[$service]['label'] ?? ucfirst($service))
                     : ucfirst($service);
                 $actual = (int) round((float) ($entry[$spec['column']] ?? 0));
+                $title = $serviceLabel . ' · ' . $actual . '%';
+                if ($metric === 'delivery-documents' && $personName !== '') {
+                    $title = $personName . ' · ' . $title;
+                }
                 $rows[] = [
-                    'title' => $serviceLabel . ' · ' . $actual . '%',
+                    'title' => $title,
                     'when' => $when,
                     'status' => $actual >= $spec['target'] ? 'Met' : 'Short',
                 ];
@@ -1001,7 +1009,7 @@ function weeklyTasksUiBuildPayload(): array
                 $rows = weeklyTasksUiAttendanceLines($pdo, $selectedId, $offsets);
                 $empty = 'No attendance recorded in this period.';
             } elseif (in_array($measureKey, ['on-time-delivery', 'vehicle-care', 'delivery-documents'], true)) {
-                $rows = weeklyTasksUiDriverLines($pdo, $selectedId, $offsets, $measureKey);
+                $rows = weeklyTasksUiDriverLines($pdo, $selectedId, $offsets, $measureKey, (string) ($detail['name'] ?? ''));
                 $empty = 'No driver performance recorded in this period.';
             }
             $measureView = [

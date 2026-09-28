@@ -799,23 +799,50 @@ function AboutNote({ about }) {
 function AttendanceBoard({ board }) {
   const chart = Array.isArray(board?.chart) ? board.chart : []
   const stats = Array.isArray(board?.stats) ? board.stats : []
-  const peak = Math.max(1, ...chart.map((bar) => Number(bar.value) || 0))
+  const scale = 5
+  const width = 360
+  const height = 112
+  const left = 26
+  const right = 8
+  const top = 12
+  const bottom = 28
+  const plotW = width - left - right
+  const plotH = height - top - bottom
+  const slot = chart.length ? plotW / chart.length : plotW
+  const barW = Math.min(22, slot * 0.42)
   if (!chart.length && !stats.length) return null
   return (
     <div className="wt-att">
       <section className="wt-att-chart" aria-label="Attendance chart">
         <h2>Attendance</h2>
-        <div className="wt-att-bars">
-          {chart.map((bar) => (
-            <div key={bar.label} className="wt-att-bar">
-              <span className="wt-att-value">{Number(bar.value) || 0}</span>
-              <span className="wt-att-track">
-                <span style={{ height: `${Math.round(((Number(bar.value) || 0) / peak) * 100)}%` }} />
-              </span>
-              <span className="wt-att-label">{bar.label}</span>
-            </div>
-          ))}
-        </div>
+        <svg className="wt-att-svg" viewBox={`0 0 ${width} ${height}`} role="img">
+          {[0, 1, 2, 3, 4, 5].map((tick) => {
+            const y = top + plotH - (tick / scale) * plotH
+            return (
+              <g key={tick}>
+                <line className="wt-att-grid" x1={left} x2={width - right} y1={y} y2={y} />
+                <text className="wt-att-tick" x={left - 6} y={y + 3} textAnchor="end">{tick}</text>
+              </g>
+            )
+          })}
+          {chart.map((bar, index) => {
+            const value = Math.min(scale, Number(bar.value) || 0)
+            const barH = (value / scale) * plotH
+            const x = left + index * slot + (slot - barW) / 2
+            const y = top + plotH - barH
+            return (
+              <g key={bar.label}>
+                {barH > 0 ? <rect className="wt-att-rect" x={x} y={y} width={barW} height={barH} rx="3" /> : null}
+                {value > 0 ? (
+                  <text className="wt-att-value" x={x + barW / 2} y={y - 4} textAnchor="middle">{value}</text>
+                ) : null}
+                <text className="wt-att-label" x={left + index * slot + slot / 2} y={height - 10} textAnchor="middle">
+                  {bar.label}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
       </section>
       <div className="wt-att-stats">
         {stats.map((stat) => (

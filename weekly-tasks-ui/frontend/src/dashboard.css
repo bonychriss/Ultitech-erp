@@ -966,7 +966,7 @@ a.wt-compare-row:hover,
 }
 
 .wt-att-chart {
-  padding: 14px 14px 10px;
+  padding: 12px 14px 6px;
 }
 
 .wt-att-chart h2 {
@@ -976,49 +976,26 @@ a.wt-compare-row:hover,
   color: #111827;
 }
 
-.wt-att-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  min-height: 140px;
-}
-
-.wt-att-bar {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.wt-att-value {
-  font-size: 0.75rem;
-  color: #4b5563;
-}
-
-.wt-att-track {
-  display: flex;
-  align-items: flex-end;
-  width: 100%;
-  height: 96px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.wt-att-track span {
+.wt-att-svg {
   display: block;
   width: 100%;
-  min-height: 0;
-  background: #16a34a;
-  border-radius: 8px 8px 0 0;
+  height: auto;
 }
 
-.wt-att-label {
-  font-size: 0.68rem;
-  color: #6b7280;
-  text-align: center;
+.wt-att-grid {
+  stroke: #e5e7eb;
+  stroke-width: 1;
+}
+
+.wt-att-tick,
+.wt-att-label,
+.wt-att-value {
+  fill: #6b7280;
+  font-size: 10px;
+}
+
+.wt-att-rect {
+  fill: #16a34a;
 }
 
 .wt-att-stats {

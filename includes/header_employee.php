@@ -536,53 +536,6 @@ foreach ($flashTypes as $ftype) {
     }
 }
 ?>
-<script>
-    // Notification Poller
-    (function(){
-        // Only poll if window is active to save resources
-        let pollInterval = setInterval(checkNotifications, 10000); // 10 seconds
-        
-        async function checkNotifications() {
-            if(document.hidden) return;
-            try {
-                // Adjust path based on location (header logic handles logoBase, assume api is at ../api or ./api)
-                // Since this is included, we can try absolute path or relative from root
-                const runPath = '<?= $rootPath ?>api/get_notifications.php?action=poll';
-                const response = await fetch(runPath);
-                const data = await response.json();
-                
-                if(data.success && data.notifications && data.notifications.length > 0) {
-                    data.notifications.forEach(notif => {
-                        // Show Toast
-                        Swal.fire({
-                            icon: notif.type || 'info',
-                            title: notif.title,
-                            text: notif.message,
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 5000,
-                            timerProgressBar: true,
-                            didOpen: (toast) => {
-                                toast.addEventListener('mouseenter', Swal.stopTimer)
-                                toast.addEventListener('mouseleave', Swal.resumeTimer)
-                                if(notif.link) {
-                                    toast.addEventListener('click', () => window.location.href = notif.link);
-                                    toast.style.cursor = 'pointer';
-                                }
-                            }
-                        });
-                        
-                        // Mark as read immediately
-                        fetch('<?= $rootPath ?>api/get_notifications.php?action=read&id=' + encodeURIComponent(notif.id));
-                    });
-                }
-            } catch(e) {
-                console.error('Notification poll error', e);
-            }
-        }
-    })();
-</script>
 <?php
 if (function_exists('erp_get_theme_toggle_script_html')) {
     echo erp_get_theme_toggle_script_html();

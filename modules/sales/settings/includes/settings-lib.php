@@ -822,9 +822,27 @@ function sales_settings_sync_missing_target_notice(PDO $pdo, string $month, arra
 
             return;
         }
-        $existing = $pdo->prepare("SELECT id, is_read FROM notifications WHERE audience = 'admin' AND title = ? ORDER BY id DESC LIMIT 1");
+        $existing = $pdo->prepare("SELECT id, is_read FROM notifications WHERE audience = 'admin' AND title = ? ORDER BY id DESC");
         $existing->execute([$title]);
-        $row = $existing->fetch(PDO::FETCH_ASSOC);
+        $rows = $existing->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $row = $rows[0] ?? null;
+        if (count($rows) > 1) {
+            $dropIds = [];
+            foreach (array_slice($rows, 1) as $extra) {
+                $extraId = (int) ($extra['id'] ?? 0);
+                if ($extraId > 0) {
+                    $dropIds[] = $extraId;
+                }
+            }
+            if ($dropIds !== []) {
+                $placeholders = implode(',', array_fill(0, count($dropIds), '?'));
+                $pdo->prepare("DELETE FROM notifications WHERE id IN ($placeholders)")->execute($dropIds);
+                try {
+                    $pdo->prepare("DELETE FROM user_notification_dismissals WHERE source = 'core' AND notification_id IN ($placeholders)")->execute($dropIds);
+                } catch (Throwable $e) {
+                }
+            }
+        }
         if (is_array($row) && (int) ($row['id'] ?? 0) > 0) {
             $noticeId = (int) $row['id'];
             $dismissed = false;

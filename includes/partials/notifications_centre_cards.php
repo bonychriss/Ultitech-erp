@@ -82,22 +82,16 @@ if (!function_exists('nc_sort_action_notifications_first')) {
         usort($indexed, static function ($a, $b) {
             $na = $a['n'];
             $nb = $b['n'];
-            $ra = nc_voucher_action_rank($na);
-            $rb = nc_voucher_action_rank($nb);
-            if ($ra !== $rb) {
-                return $ra <=> $rb;
-            }
-
-            $ua = (int) ($na['is_read'] ?? 0) === 0 ? 0 : 1;
-            $ub = (int) ($nb['is_read'] ?? 0) === 0 ? 0 : 1;
-            if ($ua !== $ub) {
-                return $ua <=> $ub;
-            }
-
             $ta = strtotime((string) ($na['created_at'] ?? '')) ?: 0;
             $tb = strtotime((string) ($nb['created_at'] ?? '')) ?: 0;
             if ($ta !== $tb) {
-                return $tb <=> $ta; // newest first within same bucket
+                return $tb <=> $ta;
+            }
+
+            $ia = (int) ($na['id'] ?? 0);
+            $ib = (int) ($nb['id'] ?? 0);
+            if ($ia !== $ib) {
+                return $ib <=> $ia;
             }
 
             return $a['i'] <=> $b['i'];

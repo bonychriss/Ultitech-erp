@@ -596,9 +596,17 @@ function notificationsUiBuildPayload(string $page = 'list'): array
         $allItems = function_exists('getNotificationCentreFeedPaged')
             ? getNotificationCentreFeedPaged(120, 0)
             : [];
-        if (function_exists('nc_sort_action_notifications_first')) {
-            $allItems = nc_sort_action_notifications_first($allItems);
-        }
+        usort($allItems, static function ($a, $b) {
+            $ta = strtotime((string) (is_array($a) ? ($a['created_at'] ?? '') : '')) ?: 0;
+            $tb = strtotime((string) (is_array($b) ? ($b['created_at'] ?? '') : '')) ?: 0;
+            if ($ta !== $tb) {
+                return $tb <=> $ta;
+            }
+            $ia = (int) (is_array($a) ? ($a['id'] ?? 0) : 0);
+            $ib = (int) (is_array($b) ? ($b['id'] ?? 0) : 0);
+
+            return $ib <=> $ia;
+        });
 
         foreach ($allItems as $row) {
             if (!is_array($row)) {

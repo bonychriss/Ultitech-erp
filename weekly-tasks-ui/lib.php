@@ -2045,7 +2045,11 @@ function weeklyTasksUiBuildPayload(): array
                     'score' => (string) ($match['score'] ?? ''),
                     'note' => (string) ($match['scoreNote'] ?? ''),
                     'text' => 'Submitted means the quotation was sent and has not become an invoice yet.',
-                ] : null,
+                ] : ($measureKey === 'collections' ? [
+                    'score' => '',
+                    'note' => '',
+                    'text' => 'Money received divided by the invoice totals for this month. Collected means paid in full. Outstanding means a balance is still due.',
+                ] : null),
             ];
         }
     }

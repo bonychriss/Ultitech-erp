@@ -766,7 +766,7 @@ function AboutNote({ about }) {
         type="button"
         className="wt-about-btn"
         aria-expanded={open}
-        aria-label="About submitted quotations"
+        aria-label="About this measure"
         onClick={() => setOpen((value) => !value)}
       >
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">

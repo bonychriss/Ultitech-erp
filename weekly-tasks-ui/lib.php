@@ -896,8 +896,478 @@ function weeklyTasksUiAttendanceLines(PDO $pdo, int $userId, array $offsets): ar
     return array_values($rows);
 }
 
+function weeklyTasksUiMoney(float $amount): string
+{
+    $places = abs($amount - round($amount)) < 0.005 ? 0 : 2;
+
+    return number_format($amount, $places, '.', ',');
+}
+
+/**
+ * @return array<int,array<string,float>>
+ */
+function weeklyTasksUiSalesTargetMap(PDO $pdo): array
+{
+    if (!function_exists('tableExists') || !tableExists('sales_targets', $pdo)) {
+        return [];
+    }
+    try {
+        $rows = $pdo->query('SELECT user_id, period, target_amount FROM sales_targets')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+    $map = [];
+    foreach ($rows as $row) {
+        $id = (int) ($row['user_id'] ?? 0);
+        if ($id < 1) {
+            continue;
+        }
+        $map[$id][(string) ($row['period'] ?? '')] = (float) ($row['target_amount'] ?? 0);
+    }
+
+    return $map;
+}
+
+function weeklyTasksUiSalesMonthTarget(array $map, int $userId, string $monthStart): ?float
+{
+    $periods = $map[$userId] ?? null;
+    if (!$periods) {
+        return null;
+    }
+    $month = substr($monthStart, 0, 7);
+    $year = substr($monthStart, 0, 4);
+    if (isset($periods[$month]) && $periods[$month] > 0) {
+        return (float) $periods[$month];
+    }
+    if (isset($periods[$year]) && $periods[$year] > 0) {
+        return (float) $periods[$year] / 12;
+    }
+
+    return null;
+}
+
+function weeklyTasksUiRatioScore(float $actual, float $target): int
+{
+    if ($target <= 0) {
+        return 0;
+    }
+
+    return (int) min(100, round(($actual / $target) * 100));
+}
+
+/**
+ * Weighted sales KPI for every person who has activity in the selected months.
+ *
+ * @param array<int,int> $offsets
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiSalesScores(PDO $pdo, array $offsets): array
+{
+    $targets = weeklyTasksUiSalesTargetMap($pdo);
+    $blank = static function (): array {
+        return [
+            'revenue' => 0.0,
+            'revenueTarget' => 0.0,
+            'revenueConfigured' => false,
+            'customers' => 0,
+            'quotesSubmitted' => 0,
+            'quotesWon' => 0,
+            'collected' => 0.0,
+            'invoiced' => 0.0,
+            'visits' => 0,
+            'deliveries' => 0,
+            'deliveriesOnTime' => 0,
+        ];
+    };
+    $byUser = [];
+    $touch = static function (array &$byUser, int $id) use ($blank): void {
+        if ($id > 0 && !isset($byUser[$id])) {
+            $byUser[$id] = $blank();
+        }
+    };
+
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        if (function_exists('tableExists') && tableExists('invoices', $pdo)) {
+            try {
+                $st = $pdo->prepare(
+                    "SELECT COALESCE(so.created_by, i.created_by) AS owner,
+                        COALESCE(SUM(i.total_amount), 0) AS revenue,
+                        COALESCE(SUM(i.amount_paid), 0) AS collected,
+                        COALESCE(SUM(i.total_amount), 0) AS invoiced
+                     FROM invoices i
+                     LEFT JOIN sales_orders so ON so.id = i.order_id
+                     WHERE i.invoice_date BETWEEN ? AND ?
+                       AND i.status <> 'cancelled'
+                     GROUP BY owner"
+                );
+                $st->execute([$start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $id = (int) ($row['owner'] ?? 0);
+                    $touch($byUser, $id);
+                    if ($id < 1) {
+                        continue;
+                    }
+                    $byUser[$id]['revenue'] += (float) ($row['revenue'] ?? 0);
+                    $byUser[$id]['collected'] += (float) ($row['collected'] ?? 0);
+                    $byUser[$id]['invoiced'] += (float) ($row['invoiced'] ?? 0);
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        if (function_exists('tableExists') && tableExists('customers', $pdo)) {
+            try {
+                $st = $pdo->prepare(
+                    'SELECT created_by AS owner, COUNT(*) AS n
+                     FROM customers
+                     WHERE created_at BETWEEN ? AND ?
+                     GROUP BY created_by'
+                );
+                $st->execute([$start . ' 00:00:00', $end . ' 23:59:59']);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $id = (int) ($row['owner'] ?? 0);
+                    $touch($byUser, $id);
+                    if ($id > 0) {
+                        $byUser[$id]['customers'] += (int) ($row['n'] ?? 0);
+                    }
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        if (function_exists('tableExists') && tableExists('sales_orders', $pdo)) {
+            try {
+                $st = $pdo->prepare(
+                    "SELECT created_by AS owner,
+                        SUM(CASE WHEN status NOT IN ('draft', 'cancelled', 'canceled') THEN 1 ELSE 0 END) AS submitted,
+                        SUM(CASE WHEN status IN ('confirmed', 'shipped', 'invoiced', 'paid', 'delivered') THEN 1 ELSE 0 END) AS won
+                     FROM sales_orders
+                     WHERE COALESCE(order_date, DATE(created_at)) BETWEEN ? AND ?
+                     GROUP BY created_by"
+                );
+                $st->execute([$start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $id = (int) ($row['owner'] ?? 0);
+                    $touch($byUser, $id);
+                    if ($id < 1) {
+                        continue;
+                    }
+                    $byUser[$id]['quotesSubmitted'] += (int) ($row['submitted'] ?? 0);
+                    $byUser[$id]['quotesWon'] += (int) ($row['won'] ?? 0);
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        if (function_exists('tableExists') && tableExists('delivery_orders', $pdo)) {
+            try {
+                $st = $pdo->prepare(
+                    "SELECT id, created_by, visit_employees
+                     FROM delivery_orders
+                     WHERE request_kind = 'client_visit'
+                       AND created_at BETWEEN ? AND ?"
+                );
+                $st->execute([$start . ' 00:00:00', $end . ' 23:59:59']);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $owners = [(int) ($row['created_by'] ?? 0)];
+                    $people = json_decode((string) ($row['visit_employees'] ?? ''), true);
+                    if (is_array($people)) {
+                        foreach ($people as $person) {
+                            if (is_array($person)) {
+                                $owners[] = (int) ($person['id'] ?? $person['user_id'] ?? 0);
+                            }
+                        }
+                    }
+                    foreach (array_unique($owners) as $id) {
+                        $touch($byUser, (int) $id);
+                        if ((int) $id > 0) {
+                            $byUser[(int) $id]['visits']++;
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        if (function_exists('tableExists') && tableExists('delivery_notes', $pdo) && tableExists('sales_orders', $pdo)) {
+            try {
+                $st = $pdo->prepare(
+                    'SELECT so.created_by AS owner,
+                        DATEDIFF(dn.delivery_date, DATE(COALESCE(so.order_date, so.created_at))) AS days
+                     FROM delivery_notes dn
+                     JOIN sales_orders so ON so.id = dn.order_id
+                     WHERE dn.delivery_date BETWEEN ? AND ?'
+                );
+                $st->execute([$start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $id = (int) ($row['owner'] ?? 0);
+                    $touch($byUser, $id);
+                    if ($id < 1) {
+                        continue;
+                    }
+                    $byUser[$id]['deliveries']++;
+                    $days = $row['days'];
+                    if ($days !== null && (int) $days <= 2) {
+                        $byUser[$id]['deliveriesOnTime']++;
+                    }
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        foreach ($targets as $id => $periods) {
+            $touch($byUser, (int) $id);
+            $monthTarget = weeklyTasksUiSalesMonthTarget($targets, (int) $id, $start);
+            if ($monthTarget !== null) {
+                $byUser[(int) $id]['revenueTarget'] += $monthTarget;
+                $byUser[(int) $id]['revenueConfigured'] = true;
+            }
+        }
+    }
+
+    $monthCount = max(1, count($offsets));
+    $out = [];
+    foreach ($byUser as $id => $row) {
+        $customerTarget = 10 * $monthCount;
+        $visitTarget = 20 * $monthCount;
+        $customerScore = weeklyTasksUiRatioScore((float) $row['customers'], (float) $customerTarget);
+        $submitted = (int) $row['quotesSubmitted'];
+        $won = (int) $row['quotesWon'];
+        $conversionPct = $submitted > 0 ? ($won / $submitted) * 100 : 0.0;
+        $conversionScore = weeklyTasksUiRatioScore($conversionPct, 30);
+        $invoiced = (float) $row['invoiced'];
+        $collectionPct = $invoiced > 0 ? ((float) $row['collected'] / $invoiced) * 100 : 0.0;
+        $collectionScore = weeklyTasksUiRatioScore($collectionPct, 95);
+        $visitScore = weeklyTasksUiRatioScore((float) $row['visits'], (float) $visitTarget);
+        $deliveries = (int) $row['deliveries'];
+        $deliveryPct = $deliveries > 0 ? ((int) $row['deliveriesOnTime'] / $deliveries) * 100 : 0.0;
+        $revenueScore = 0;
+        if (!empty($row['revenueConfigured']) && (float) $row['revenueTarget'] > 0) {
+            $revenueScore = weeklyTasksUiRatioScore((float) $row['revenue'], (float) $row['revenueTarget']);
+        }
+        $weighted = [
+            ['weight' => 40, 'score' => $revenueScore, 'on' => !empty($row['revenueConfigured'])],
+            ['weight' => 15, 'score' => $customerScore, 'on' => true],
+            ['weight' => 15, 'score' => $conversionScore, 'on' => $submitted > 0],
+            ['weight' => 10, 'score' => $collectionScore, 'on' => $invoiced > 0],
+            ['weight' => 15, 'score' => $visitScore, 'on' => true],
+            ['weight' => 5, 'score' => (int) round($deliveryPct), 'on' => $deliveries > 0],
+        ];
+        $weightSum = 0;
+        $acc = 0.0;
+        foreach ($weighted as $part) {
+            if (!$part['on']) {
+                continue;
+            }
+            $weightSum += (int) $part['weight'];
+            $acc += (int) $part['score'] * (int) $part['weight'];
+        }
+        $out[(int) $id] = [
+            'score' => $weightSum > 0 ? (int) round($acc / $weightSum) : 0,
+            'recorded' => true,
+            'revenue' => (float) $row['revenue'],
+            'revenueTarget' => (float) $row['revenueTarget'],
+            'revenueConfigured' => !empty($row['revenueConfigured']),
+            'revenueScore' => $revenueScore,
+            'customers' => (int) $row['customers'],
+            'customerTarget' => $customerTarget,
+            'customerScore' => $customerScore,
+            'quotesSubmitted' => $submitted,
+            'quotesWon' => $won,
+            'conversionPct' => (int) round($conversionPct),
+            'conversionScore' => $conversionScore,
+            'collectionPct' => (int) round($collectionPct),
+            'collectionScore' => $collectionScore,
+            'visits' => (int) $row['visits'],
+            'visitTarget' => $visitTarget,
+            'visitScore' => $visitScore,
+            'deliveries' => $deliveries,
+            'deliveriesOnTime' => (int) $row['deliveriesOnTime'],
+            'deliveryPct' => (int) round($deliveryPct),
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * @param array<int,int> $offsets
+ * @return array<int,array{title:string,date:string,when:string,status:string}>
+ */
+function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $metric): array
+{
+    $rows = [];
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        if ($metric === 'monthly-sales-revenue' || $metric === 'collections') {
+            if (!function_exists('tableExists') || !tableExists('invoices', $pdo)) {
+                continue;
+            }
+            try {
+                $st = $pdo->prepare(
+                    "SELECT i.invoice_number, i.invoice_date, i.total_amount, i.amount_paid, i.balance_due, c.company_name
+                     FROM invoices i
+                     LEFT JOIN sales_orders so ON so.id = i.order_id
+                     LEFT JOIN customers c ON c.id = i.customer_id
+                     WHERE COALESCE(so.created_by, i.created_by) = ?
+                       AND i.invoice_date BETWEEN ? AND ?
+                       AND i.status <> 'cancelled'
+                     ORDER BY i.invoice_date, i.id"
+                );
+                $st->execute([$userId, $start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $customer = trim((string) ($row['company_name'] ?? ''));
+                    $number = trim((string) ($row['invoice_number'] ?? ''));
+                    $title = $number !== '' ? $number : 'Invoice';
+                    if ($customer !== '') {
+                        $title .= ' · ' . $customer;
+                    }
+                    $paid = (float) ($row['balance_due'] ?? 0) <= 0.009;
+                    $amount = weeklyTasksUiMoney((float) ($row['total_amount'] ?? 0));
+                    $rows[] = [
+                        'title' => $title,
+                        'date' => (string) ($row['invoice_date'] ?? ''),
+                        'when' => !empty($row['invoice_date']) ? date('j M Y', strtotime((string) $row['invoice_date'])) : '',
+                        'status' => $metric === 'collections'
+                            ? ($paid ? 'Collected · ' . $amount : 'Outstanding · ' . $amount)
+                            : $amount,
+                    ];
+                }
+            } catch (Throwable $e) {
+            }
+            continue;
+        }
+        if ($metric === 'new-customers' && function_exists('tableExists') && tableExists('customers', $pdo)) {
+            try {
+                $st = $pdo->prepare(
+                    'SELECT company_name, contact_person, created_at
+                     FROM customers
+                     WHERE created_by = ? AND created_at BETWEEN ? AND ?
+                     ORDER BY created_at, id'
+                );
+                $st->execute([$userId, $start . ' 00:00:00', $end . ' 23:59:59']);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $name = trim((string) ($row['company_name'] ?? ''));
+                    if ($name === '') {
+                        $name = trim((string) ($row['contact_person'] ?? 'Customer'));
+                    }
+                    $created = (string) ($row['created_at'] ?? '');
+                    $rows[] = [
+                        'title' => $name,
+                        'date' => substr($created, 0, 10),
+                        'when' => $created !== '' ? date('j M Y', strtotime($created)) : '',
+                        'status' => 'New',
+                    ];
+                }
+            } catch (Throwable $e) {
+            }
+            continue;
+        }
+        if ($metric === 'quotation-conversion' && function_exists('tableExists') && tableExists('sales_orders', $pdo)) {
+            try {
+                $st = $pdo->prepare(
+                    "SELECT so.order_number, so.formatted_number, so.status, COALESCE(so.order_date, DATE(so.created_at)) AS day, c.company_name
+                     FROM sales_orders so
+                     LEFT JOIN customers c ON c.id = so.customer_id
+                     WHERE so.created_by = ?
+                       AND COALESCE(so.order_date, DATE(so.created_at)) BETWEEN ? AND ?
+                       AND so.status NOT IN ('draft', 'cancelled', 'canceled')
+                     ORDER BY day, so.id"
+                );
+                $st->execute([$userId, $start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $number = trim((string) ($row['order_number'] ?? ''));
+                    if ($number === '') {
+                        $number = trim((string) ($row['formatted_number'] ?? 'Quotation'));
+                    }
+                    $customer = trim((string) ($row['company_name'] ?? ''));
+                    $won = in_array((string) ($row['status'] ?? ''), ['confirmed', 'shipped', 'invoiced', 'paid', 'delivered'], true);
+                    $rows[] = [
+                        'title' => $customer !== '' ? $number . ' · ' . $customer : $number,
+                        'date' => (string) ($row['day'] ?? ''),
+                        'when' => !empty($row['day']) ? date('j M Y', strtotime((string) $row['day'])) : '',
+                        'status' => $won ? 'Won' : 'Submitted',
+                    ];
+                }
+            } catch (Throwable $e) {
+            }
+            continue;
+        }
+        if ($metric === 'customer-visits' && function_exists('tableExists') && tableExists('delivery_orders', $pdo)) {
+            try {
+                $st = $pdo->prepare(
+                    "SELECT client_name, created_by, visit_employees, created_at
+                     FROM delivery_orders
+                     WHERE request_kind = 'client_visit'
+                       AND created_at BETWEEN ? AND ?
+                     ORDER BY created_at, id"
+                );
+                $st->execute([$start . ' 00:00:00', $end . ' 23:59:59']);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $owners = [(int) ($row['created_by'] ?? 0)];
+                    $people = json_decode((string) ($row['visit_employees'] ?? ''), true);
+                    if (is_array($people)) {
+                        foreach ($people as $person) {
+                            if (is_array($person)) {
+                                $owners[] = (int) ($person['id'] ?? $person['user_id'] ?? 0);
+                            }
+                        }
+                    }
+                    if (!in_array($userId, $owners, true)) {
+                        continue;
+                    }
+                    $created = (string) ($row['created_at'] ?? '');
+                    $rows[] = [
+                        'title' => trim((string) ($row['client_name'] ?? '')) !== '' ? (string) $row['client_name'] : 'Customer visit',
+                        'date' => substr($created, 0, 10),
+                        'when' => $created !== '' ? date('j M Y', strtotime($created)) : '',
+                        'status' => 'Visit',
+                    ];
+                }
+            } catch (Throwable $e) {
+            }
+            continue;
+        }
+        if ($metric === 'goods-delivery' && function_exists('tableExists') && tableExists('delivery_notes', $pdo)) {
+            try {
+                $st = $pdo->prepare(
+                    'SELECT dn.customer_name, dn.note_number, dn.delivery_date,
+                        DATEDIFF(dn.delivery_date, DATE(COALESCE(so.order_date, so.created_at))) AS days
+                     FROM delivery_notes dn
+                     JOIN sales_orders so ON so.id = dn.order_id
+                     WHERE so.created_by = ?
+                       AND dn.delivery_date BETWEEN ? AND ?
+                     ORDER BY dn.delivery_date, dn.id'
+                );
+                $st->execute([$userId, $start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $customer = trim((string) ($row['customer_name'] ?? ''));
+                    $number = trim((string) ($row['note_number'] ?? ''));
+                    $title = $customer !== '' ? $customer : 'Delivery';
+                    if ($number !== '') {
+                        $title = $number . ' · ' . $title;
+                    }
+                    $days = $row['days'];
+                    if ($days === null) {
+                        $status = 'Not recorded';
+                    } else {
+                        $n = (int) $days;
+                        $status = $n <= 2 ? ($n < 0 ? 'Early' : $n . ' days') : 'Late · ' . $n . ' days';
+                    }
+                    $rows[] = [
+                        'title' => $title,
+                        'date' => (string) ($row['delivery_date'] ?? ''),
+                        'when' => !empty($row['delivery_date']) ? date('j M Y', strtotime((string) $row['delivery_date'])) : '',
+                        'status' => $status,
+                    ];
+                }
+            } catch (Throwable $e) {
+            }
+        }
+    }
+
+    return $rows;
+}
+
 /**
  * @param array{score:int,onTime:int,vehicle:int,documents:int}|null $driver
+ * @param array<string,mixed>|null $sales
  * @return array<string,mixed>
  */
 function weeklyTasksUiPersonDetail(
@@ -919,7 +1389,8 @@ function weeklyTasksUiPersonDetail(
     ?array $driver,
     int $monthOffset,
     string $photo = '',
-    string $role = ''
+    string $role = '',
+    ?array $sales = null
 ): array {
     $items = [
         [
@@ -971,6 +1442,81 @@ function weeklyTasksUiPersonDetail(
                 'spoken' => strtolower($line['name']) . ' is ' . $actualPct . ' of ' . $target . '%',
             ];
         }
+    } elseif ($department === 'Sales') {
+        $sales = $sales ?: [];
+        $revenueConfigured = !empty($sales['revenueConfigured']);
+        $revenueScore = (int) ($sales['revenueScore'] ?? 0);
+        $items[] = [
+            'name' => 'Monthly Sales Revenue',
+            'expected' => '100% of target',
+            'actual' => $revenueConfigured
+                ? ($revenueScore . '% · ' . weeklyTasksUiMoney((float) ($sales['revenue'] ?? 0)))
+                : 'Target not set',
+            'configured' => $revenueConfigured,
+            'met' => $revenueConfigured && $revenueScore >= 100,
+            'note' => $revenueConfigured ? 'Monthly sales revenue: ' . $revenueScore . ' of 100%' : 'Sales: Target not set',
+            'spoken' => $revenueConfigured ? 'monthly sales revenue is ' . $revenueScore . ' of 100%' : '',
+            'unsetLabel' => $revenueConfigured ? '' : 'Sales',
+        ];
+        $customerTarget = (int) ($sales['customerTarget'] ?? 10);
+        $customers = (int) ($sales['customers'] ?? 0);
+        $items[] = [
+            'name' => 'New Customers',
+            'expected' => $customerTarget . ' per period',
+            'actual' => $customers . ' new',
+            'configured' => true,
+            'met' => $customers >= $customerTarget,
+            'note' => 'New customers: ' . $customers . ' of ' . $customerTarget,
+            'spoken' => 'new customers are ' . $customers . ' of ' . $customerTarget,
+        ];
+        $conversion = (int) ($sales['conversionPct'] ?? 0);
+        $submitted = (int) ($sales['quotesSubmitted'] ?? 0);
+        $items[] = [
+            'name' => 'Quotation Conversion',
+            'expected' => '30% or better',
+            'actual' => $submitted > 0
+                ? ($conversion . '% · ' . (int) ($sales['quotesWon'] ?? 0) . ' won, ' . $submitted . ' submitted')
+                : 'Not recorded',
+            'configured' => true,
+            'met' => $submitted > 0 && $conversion >= 30,
+            'note' => $submitted > 0 ? 'Quotation conversion: ' . $conversion . ' of 30%' : 'Quotation conversion: Not recorded',
+            'spoken' => $submitted > 0 ? 'quotation conversion is ' . $conversion . ' of 30%' : '',
+        ];
+        $collection = (int) ($sales['collectionPct'] ?? 0);
+        $hasInvoices = (float) ($sales['revenue'] ?? 0) > 0 || (int) round((float) ($sales['invoiced'] ?? 0)) > 0;
+        $items[] = [
+            'name' => 'Collections',
+            'expected' => '95% or better',
+            'actual' => $hasInvoices ? ($collection . '%') : 'Not recorded',
+            'configured' => true,
+            'met' => $hasInvoices && $collection >= 95,
+            'note' => $hasInvoices ? 'Collections: ' . $collection . ' of 95%' : 'Collections: Not recorded',
+            'spoken' => $hasInvoices ? 'collections are ' . $collection . ' of 95%' : '',
+        ];
+        $visitTarget = (int) ($sales['visitTarget'] ?? 20);
+        $visits = (int) ($sales['visits'] ?? 0);
+        $items[] = [
+            'name' => 'Customer Visits',
+            'expected' => $visitTarget . ' per period',
+            'actual' => $visits . ' visits',
+            'configured' => true,
+            'met' => $visits >= $visitTarget,
+            'note' => 'Customer visits: ' . $visits . ' of ' . $visitTarget,
+            'spoken' => 'customer visits are ' . $visits . ' of ' . $visitTarget,
+        ];
+        $deliveryPct = (int) ($sales['deliveryPct'] ?? 0);
+        $deliveries = (int) ($sales['deliveries'] ?? 0);
+        $items[] = [
+            'name' => 'Goods delivery',
+            'expected' => 'Within 2 days',
+            'actual' => $deliveries > 0
+                ? ($deliveryPct . '% · ' . (int) ($sales['deliveriesOnTime'] ?? 0) . ' of ' . $deliveries)
+                : 'Not recorded',
+            'configured' => true,
+            'met' => $deliveries > 0 && $deliveryPct >= 100,
+            'note' => $deliveries > 0 ? 'Goods delivery: ' . $deliveryPct . '% within 2 days' : 'Goods delivery: Not recorded',
+            'spoken' => $deliveries > 0 ? 'goods delivery is ' . $deliveryPct . '% within 2 days' : '',
+        ];
     } else {
         $label = $department === 'Other' ? 'Role' : $department;
         $items[] = [
@@ -1051,6 +1597,7 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
         $todos = weeklyTasksUiMonthTodos($pdo, $start, $end);
         $attendance = weeklyTasksUiMonthAttendance($pdo, $start, $end);
         $drivers = weeklyTasksUiMonthDriverScores($pdo, $mondays);
+        $salesScores = weeklyTasksUiSalesScores($pdo, [$offset]);
         $taskTarget = max(1, 7 * $weekCount);
         $todoTarget = max(1, 5 * $weekCount);
         $weekdays = max(1, $weekdays);
@@ -1067,7 +1614,10 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
             $days = (int) ($attendance[$id] ?? 0);
             $attendanceScore = (int) min(100, round(($days / $weekdays) * 100));
             $driver = $drivers[$id] ?? null;
-            if (($department === 'Drivers' || $driver !== null) && $driver && !empty($driver['recorded'])) {
+            $sales = $salesScores[$id] ?? null;
+            if ($department === 'Sales') {
+                $activity = (int) ($sales['score'] ?? 0);
+            } elseif (($department === 'Drivers' || $driver !== null) && $driver && !empty($driver['recorded'])) {
                 $activity = (int) $driver['score'];
             } else {
                 $todoScore = (int) min(100, round(($todoDone / $todoTarget) * 100));
@@ -1165,6 +1715,7 @@ function weeklyTasksUiBuildPayload(): array
 
     $users = [];
     $driverScores = [];
+    $salesScores = [];
     if ($pdo instanceof PDO) {
         try {
             $st = $pdo->query('SELECT id, full_name, department, role, profile_photo FROM users WHERE is_active = 1 ORDER BY full_name ASC');
@@ -1173,6 +1724,7 @@ function weeklyTasksUiBuildPayload(): array
             $users = [];
         }
         $driverScores = weeklyTasksUiMonthDriverScores($pdo, $mondays);
+        $salesScores = weeklyTasksUiSalesScores($pdo, $offsets);
     }
 
     $taskTarget = 7 * $weekCount;
@@ -1200,8 +1752,11 @@ function weeklyTasksUiBuildPayload(): array
         $days = (int) ($attendance[$id] ?? 0);
         $attendanceScore = (int) min(100, round(($days / $weekdays) * 100));
         $driver = $driverScores[$id] ?? null;
+        $sales = $salesScores[$id] ?? null;
         $isDriver = $department === 'Drivers' || $driver !== null;
-        if ($isDriver && $driver && !empty($driver['recorded'])) {
+        if ($department === 'Sales') {
+            $activity = (int) ($sales['score'] ?? 0);
+        } elseif ($isDriver && $driver && !empty($driver['recorded'])) {
             $activity = (int) $driver['score'];
         } else {
             $todoScore = (int) min(100, round(($todoDone / $todoTarget) * 100));
@@ -1233,7 +1788,21 @@ function weeklyTasksUiBuildPayload(): array
                 function_exists('perf_user_avatar_url')
                     ? perf_user_avatar_url((string) ($user['profile_photo'] ?? ''), $personName)
                     : '',
-                (string) ($user['role'] ?? '')
+                (string) ($user['role'] ?? ''),
+                $department === 'Sales' ? ($sales ?: [
+                    'revenueConfigured' => false,
+                    'customers' => 0,
+                    'customerTarget' => 10 * max(1, count($offsets)),
+                    'quotesWon' => 0,
+                    'quotesSubmitted' => 0,
+                    'conversionPct' => 0,
+                    'collectionPct' => 0,
+                    'visits' => 0,
+                    'visitTarget' => 20 * max(1, count($offsets)),
+                    'deliveries' => 0,
+                    'deliveriesOnTime' => 0,
+                    'deliveryPct' => 0,
+                ]) : null
             );
         }
         $groups[$department][] = [
@@ -1287,6 +1856,16 @@ function weeklyTasksUiBuildPayload(): array
             } elseif ($measureKey === 'attendance') {
                 $rows = weeklyTasksUiAttendanceLines($pdo, $selectedId, $offsets);
                 $empty = 'No attendance recorded in this period.';
+            } elseif (in_array($measureKey, ['monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'], true)) {
+                $rows = weeklyTasksUiSalesLines($pdo, $selectedId, $offsets, $measureKey);
+                $empty = [
+                    'monthly-sales-revenue' => 'No sales invoices in this period.',
+                    'new-customers' => 'No new customers in this period.',
+                    'quotation-conversion' => 'No quotations submitted in this period.',
+                    'collections' => 'No invoices to collect in this period.',
+                    'customer-visits' => 'No customer visits recorded in this period.',
+                    'goods-delivery' => 'No deliveries in this period.',
+                ][$measureKey];
             } elseif (in_array($measureKey, ['on-time-delivery', 'vehicle-care', 'delivery-documents'], true)) {
                 $rows = weeklyTasksUiDriverLines($pdo, $selectedId, $offsets, $measureKey);
                 $empty = $measureKey === 'delivery-documents'

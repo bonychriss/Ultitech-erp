@@ -596,6 +596,14 @@ function todoSections(rows) {
 }
 
 function RecordIcon({ kind }) {
+  if (kind === 'sales') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M4 19V5M4 19h16" />
+        <path d="m7 14 4-4 3 3 5-6" />
+      </svg>
+    )
+  }
   if (kind === 'attendance') {
     return (
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -676,11 +684,19 @@ function MeasurePage({ month, measure }) {
         <p className="wt-empty wt-empty--card">Target not set.</p>
       ) : rows.length === 0 ? (
         <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
-      ) : measure.key === 'todo' || measure.key === 'attendance' ? (
+      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'].includes(measure.key) ? (
         <RecordCards
           rows={rows}
-          label={measure.key === 'attendance' ? 'Attendance' : 'To-do'}
-          kind={measure.key}
+          label={{
+            attendance: 'Attendance',
+            'monthly-sales-revenue': 'Sales',
+            'new-customers': 'Customer',
+            'quotation-conversion': 'Quotation',
+            collections: 'Collection',
+            'customer-visits': 'Visit',
+            'goods-delivery': 'Delivery',
+          }[measure.key] || 'To-do'}
+          kind={measure.key === 'attendance' ? 'attendance' : measure.key === 'todo' ? 'todo' : 'sales'}
         />
       ) : (
         <div className="wt-compare">

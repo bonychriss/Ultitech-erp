@@ -29,6 +29,7 @@ use App\Http\Controllers\RevenueDeskPageController;
 use App\Http\Controllers\RevenuePageController;
 use App\Http\Controllers\AttendancePageController;
 use App\Http\Controllers\NotificationsPageController;
+use App\Http\Controllers\WeeklyTasksPageController;
 use App\Http\Controllers\DeliveriesPageController;
 use App\Http\Controllers\DriverKpiPageController;
 use App\Http\Controllers\CreateVoucherPageController;
@@ -121,6 +122,9 @@ Route::middleware([AttachErpContext::class])->group(function () {
     Route::get('/attendance', [AttendancePageController::class, 'show'])->name('attendance.page');
     Route::get('/attendance/analytics', [AttendancePageController::class, 'analytics'])->name('attendance.page.analytics');
     Route::get('/attendance/overtime', [AttendancePageController::class, 'overtime'])->name('attendance.page.overtime');
+
+    // Weekly tasks dashboard (React; plans and reports stay on weekly_tasks/*.php)
+    Route::get('/weekly-tasks/dashboard', [WeeklyTasksPageController::class, 'show'])->name('weekly-tasks.page.dashboard');
 
     // Notifications centre (React; mark-read APIs stay on PHP includes/api)
     Route::get('/notifications', [NotificationsPageController::class, 'show'])->name('notifications.page');

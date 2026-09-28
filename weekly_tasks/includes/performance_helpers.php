@@ -356,8 +356,8 @@ function perf_build_insights(array $teamStats, array $summary, ?array $topPerfor
         }
     } else {
         $suggestions[] = $fromMissions
-            ? 'Team mission completion is below 70% � review weekly missions in To-Do.'
-            : 'Team completion is below 70% � review weekly plans.';
+            ? 'Team mission completion is below 70%. Review weekly missions in To-Do.'
+            : 'Team completion is below 70%. Review weekly plans.';
     }
 
     if ($summary['plans_submitted'] > 0) {

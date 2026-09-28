@@ -81,7 +81,7 @@ function Resolve-DeployUpload {
         }
 
         # Keep shared PHP/config/media on the parent app root, not under /ultimate/.
-        if ($rel -match '^(includes|erp-laravel|modules|assets|vendor|letterhead|home-ui)/' -or $rel -match '^env(\.|$)') {
+        if ($rel -match '^(includes|erp-laravel|modules|assets|vendor|letterhead|home-ui|weekly-tasks-ui|weekly_tasks|select-module-ui)/' -or $rel -match '^env(\.|$)') {
             return @(
                 @{ Local = $rel; RemoteBase = $parentBase; Remote = $rel }
             )

@@ -683,6 +683,32 @@
   }
 }
 
+/* Phone PDF export: capture the quote at A4 width so product rows stay readable. */
+html.ov-pdf-desktop-capture .ov-document-wrap .sheet-container,
+html.ov-pdf-desktop-capture .ov-document-wrap .spare-sheet,
+html.ov-pdf-desktop-capture .ov-document-wrap .truck-sheet,
+html.ov-pdf-desktop-capture .ov-document-wrap .truck-sheet-second,
+html.ov-pdf-desktop-capture .ov-catalog-pane,
+html.ov-pdf-desktop-capture .ov-catalog-pane .sheet-container,
+html.ov-pdf-desktop-capture #catalog-content {
+  width: 210mm !important;
+  max-width: 210mm !important;
+  min-width: 210mm !important;
+}
+
+html.ov-pdf-desktop-capture .ov-document-wrap .form-grid {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 40px !important;
+}
+
+html.ov-pdf-desktop-capture .ov-document-wrap .spare-table tbody tr,
+html.ov-pdf-desktop-capture .ov-document-wrap .truck-table tbody tr,
+html.ov-pdf-desktop-capture .ov-document-wrap .o-table tbody tr,
+html.ov-pdf-desktop-capture .ov-catalog-table tbody tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 /* Download modal */
 .ov-dl-modal {
   position: fixed;

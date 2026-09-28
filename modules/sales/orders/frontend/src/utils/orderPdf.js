@@ -98,6 +98,140 @@ function trimCanvasBottomWhitespace(canvas) {
   return trimmed;
 }
 
+const ORDER_PDF_BLOCK_SELECTOR = [
+  '.spare-table thead tr',
+  '.spare-table tbody tr',
+  '.truck-table thead tr',
+  '.truck-table tbody tr',
+  '.o-table thead tr',
+  '.o-table tbody tr',
+  '.ov-catalog-table thead tr',
+  '.ov-catalog-table tbody tr',
+  '.spare-totals-table tr',
+  '.truck-totals-table tr',
+  '.o-totals-table tr',
+  '.spare-footer-area',
+  '.spare-bottom-info',
+  '.totals-area',
+  '.quot-bank-details',
+  '.avoid-break',
+].join(', ');
+
+const ORDER_PDF_TABLE_SELECTOR = '.spare-table, .truck-table, .o-table, .ov-catalog-table';
+
+export function orderPdfNeedsDesktopCapture() {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(max-width: 900px)').matches;
+}
+
+function orderPdfNextFrame() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(resolve);
+    });
+  });
+}
+
+function orderPdfRelativeBox(node, rootTop) {
+  const rect = node.getBoundingClientRect();
+  const top = rect.top - rootTop;
+  const bottom = rect.bottom - rootTop;
+  if (bottom - top < 2) return null;
+  return { top, bottom };
+}
+
+export function orderPdfMeasureLayout(el) {
+  const rootTop = el.getBoundingClientRect().top;
+  const cssHeight = Math.max(el.getBoundingClientRect().height, el.scrollHeight, el.offsetHeight, 1);
+  const bands = [];
+
+  el.querySelectorAll(ORDER_PDF_BLOCK_SELECTOR).forEach((node) => {
+    const box = orderPdfRelativeBox(node, rootTop);
+    if (box) bands.push(box);
+  });
+
+  bands.sort((a, b) => a.top - b.top || a.bottom - b.bottom);
+
+  const tables = [];
+  el.querySelectorAll(ORDER_PDF_TABLE_SELECTOR).forEach((table) => {
+    const thead = table.tHead || table.querySelector('thead');
+    const tbody = (table.tBodies && table.tBodies[0]) || table.querySelector('tbody');
+    if (!thead || !tbody) return;
+    const header = orderPdfRelativeBox(thead, rootTop);
+    const body = orderPdfRelativeBox(tbody, rootTop);
+    if (!header || !body) return;
+    tables.push({
+      headerTop: header.top,
+      headerBottom: header.bottom,
+      bodyTop: body.top,
+      bodyBottom: body.bottom,
+    });
+  });
+
+  return { cssHeight, bands, tables };
+}
+
+export function choosePdfSliceHeight(sourceY, maxSlice, totalHeight, bands) {
+  const hardEnd = Math.min(sourceY + maxSlice, totalHeight);
+  if (hardEnd >= totalHeight - 0.5) {
+    return Math.max(1, totalHeight - sourceY);
+  }
+
+  let end = hardEnd;
+  const minAdvance = Math.max(24, maxSlice * 0.28);
+
+  for (let i = 0; i < bands.length; i += 1) {
+    const band = bands[i];
+    if (band.bottom <= sourceY + 1) continue;
+    if (band.top >= hardEnd - 2) break;
+    const cutsBand = band.top < hardEnd - 2 && band.bottom > hardEnd + 2;
+    if (!cutsBand) continue;
+    if (band.top - sourceY >= minAdvance) {
+      end = Math.min(end, band.top);
+    }
+  }
+
+  const height = end - sourceY;
+  if (height < 1) return Math.max(1, hardEnd - sourceY);
+  return height;
+}
+
+function orderPdfScaleBands(bands, pixelScale) {
+  return bands
+    .map((band) => ({
+      top: band.top * pixelScale,
+      bottom: band.bottom * pixelScale,
+    }))
+    .filter((band) => band.bottom > band.top + 0.5)
+    .sort((a, b) => a.top - b.top);
+}
+
+function orderPdfContinuationHeader(sourceY, pixelScale, tables) {
+  const yCss = sourceY / pixelScale;
+  for (let i = 0; i < tables.length; i += 1) {
+    const table = tables[i];
+    if (yCss >= table.bodyTop - 0.5 && yCss < table.bodyBottom - 1) {
+      const sh = (table.headerBottom - table.headerTop) * pixelScale;
+      if (sh < 4) return null;
+      return {
+        sy: table.headerTop * pixelScale,
+        sh,
+      };
+    }
+  }
+  return null;
+}
+
+function orderPdfCaptureScale(el) {
+  const cssHeight = Math.max(el.scrollHeight, el.getBoundingClientRect().height, 1);
+  const cssWidth = Math.max(el.scrollWidth, el.getBoundingClientRect().width, 1);
+  let scale = 2;
+  const maxDim = orderPdfNeedsDesktopCapture() ? 4096 : 16384;
+  if (cssWidth * scale > maxDim) scale = maxDim / cssWidth;
+  if (cssHeight * scale > maxDim) scale = Math.min(scale, maxDim / cssHeight);
+  return Math.max(0.85, Math.min(2, scale));
+}
+
 function canvasSliceIsMostlyBlank(tempCanvas) {
   const ctx = tempCanvas.getContext('2d');
   if (!ctx) return true;
@@ -158,16 +292,25 @@ async function orderPdfElementToCanvas(el, options = {}) {
 
   await orderPdfWaitForAssets();
 
+  const desktopCapture = document.documentElement.classList.contains('ov-pdf-desktop-capture');
   const html2canvasOpts = {
-    scale: options.scale || 2,
+    scale: options.scale || orderPdfCaptureScale(el),
     logging: false,
     backgroundColor: '#ffffff',
     scrollX: 0,
     scrollY: -window.scrollY,
-    windowWidth: el.scrollWidth,
-    windowHeight: el.scrollHeight,
+    windowWidth: desktopCapture ? Math.max(el.scrollWidth, 1100) : el.scrollWidth,
+    windowHeight: desktopCapture ? Math.max(el.scrollHeight, el.offsetHeight, 1400) : el.scrollHeight,
     onclone: (clonedDoc) => {
       orderPdfPrepareCloneForCapture(clonedDoc);
+      if (desktopCapture) {
+        clonedDoc.documentElement.classList.add('ov-pdf-desktop-capture');
+        clonedDoc.querySelectorAll('.sheet-container, .spare-sheet, .truck-sheet, .truck-sheet-second').forEach((node) => {
+          node.style.width = '210mm';
+          node.style.maxWidth = '210mm';
+          node.style.minWidth = '210mm';
+        });
+      }
       if (stripImages) {
         clonedDoc.querySelectorAll('img').forEach((img) => img.remove());
       }
@@ -184,11 +327,14 @@ async function orderPdfElementToCanvas(el, options = {}) {
 }
 
 async function orderPdfElementToCanvasWithFallback(el) {
+  const layout = orderPdfMeasureLayout(el);
   try {
-    return await orderPdfElementToCanvas(el);
+    const canvas = await orderPdfElementToCanvas(el);
+    return { canvas, layout };
   } catch (firstErr) {
     try {
-      return await orderPdfElementToCanvas(el, { stripImages: true, scale: 2 });
+      const canvas = await orderPdfElementToCanvas(el, { stripImages: true, scale: 2 });
+      return { canvas, layout };
     } catch (secondErr) {
       throw secondErr || firstErr;
     }
@@ -204,6 +350,8 @@ function canvasSliceToDataUrl(tempCanvas, jpegQuality) {
 }
 
 function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, options = {}) {
+  const layout = options.layout || { cssHeight: canvas.height, bands: [], tables: [] };
+  const pixelScale = layout.cssHeight > 0 ? canvas.height / layout.cssHeight : 1;
   const trimmedCanvas = trimCanvasBottomWhitespace(canvas);
   if (!trimmedCanvas.width || !trimmedCanvas.height) {
     throw new Error('Document rendered empty. Refresh the page and try again.');
@@ -217,27 +365,50 @@ function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, opti
 
   const sliceHeightInPixels = (trimmedCanvas.width * innerHmm) / innerWmm;
   const totalHeightInPixels = trimmedCanvas.height;
+  const bandsPx = orderPdfScaleBands(layout.bands || [], pixelScale);
+  const tables = layout.tables || [];
   const totalSlices = Math.max(1, Math.ceil(totalHeightInPixels / sliceHeightInPixels));
 
   let sourceY = 0;
   let pageNum = 0;
+  let guard = 0;
 
-  while (sourceY < totalHeightInPixels) {
-    const currentSliceHeight = Math.min(sliceHeightInPixels, totalHeightInPixels - sourceY);
+  while (sourceY < totalHeightInPixels - 0.5 && guard < 80) {
+    guard += 1;
+    const header = orderPdfContinuationHeader(sourceY, pixelScale, tables);
+    let headerReserve = header ? header.sh : 0;
+    if (headerReserve > sliceHeightInPixels * 0.45) {
+      headerReserve = 0;
+    }
+    const maxBody = Math.max(1, sliceHeightInPixels - headerReserve);
+    let bodyHeight = choosePdfSliceHeight(sourceY, maxBody, totalHeightInPixels, bandsPx);
+    if (bodyHeight < 1) bodyHeight = Math.min(maxBody, totalHeightInPixels - sourceY);
+
+    const useHeader = headerReserve > 0 ? header : null;
+    const headerH = useHeader ? Math.max(1, Math.round(useHeader.sh)) : 0;
+    const bodyH = Math.max(1, Math.round(bodyHeight));
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = trimmedCanvas.width;
-    tempCanvas.height = currentSliceHeight;
+    tempCanvas.height = headerH + bodyH;
 
     const tempCtx = tempCanvas.getContext('2d');
     tempCtx.fillStyle = '#ffffff';
     tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    if (useHeader) {
+      tempCtx.drawImage(
+        trimmedCanvas,
+        0, useHeader.sy, trimmedCanvas.width, useHeader.sh,
+        0, 0, trimmedCanvas.width, headerH,
+      );
+    }
     tempCtx.drawImage(
       trimmedCanvas,
-      0, sourceY, trimmedCanvas.width, currentSliceHeight,
-      0, 0, trimmedCanvas.width, currentSliceHeight,
+      0, sourceY, trimmedCanvas.width, bodyHeight,
+      0, headerH, trimmedCanvas.width, bodyH,
     );
 
-    sourceY += currentSliceHeight;
+    const nextY = sourceY + bodyHeight;
+    sourceY = nextY <= sourceY ? Math.min(totalHeightInPixels, sourceY + maxBody) : nextY;
 
     if (canvasSliceIsMostlyBlank(tempCanvas)) {
       continue;
@@ -250,7 +421,7 @@ function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, opti
     }
 
     const sliceDataUrl = canvasSliceToDataUrl(tempCanvas, jpegQuality);
-    const destHeightMm = (currentSliceHeight * innerWmm) / trimmedCanvas.width;
+    const destHeightMm = (tempCanvas.height * innerWmm) / trimmedCanvas.width;
     doc.addImage(sliceDataUrl, 'JPEG', marginMm, marginMm, innerWmm, destHeightMm);
 
     pageNum += 1;
@@ -276,17 +447,17 @@ async function appendOrderElementsToPdf(doc, elements, jpegQuality, onProgress, 
       onProgress(blockStart, `Capturing page ${index + 1} of ${total}...`);
     }
 
-    const canvas = await orderPdfElementToCanvasWithFallback(el);
+    const captured = await orderPdfElementToCanvasWithFallback(el);
 
     if (onProgress) {
       onProgress(captureDone, `Building PDF page ${index + 1} of ${total}...`);
     }
 
-    appendRasterCanvasToPdf(doc, canvas, jpegQuality, (sliceRatio) => {
+    appendRasterCanvasToPdf(doc, captured.canvas, jpegQuality, (sliceRatio) => {
       if (!onProgress) return;
       const slicePct = captureDone + ((blockEnd - captureDone) * sliceRatio);
       onProgress(slicePct, `Assembling page ${index + 1} of ${total}...`);
-    }, { startOnNewPage: index > 0 });
+    }, { startOnNewPage: index > 0, layout: captured.layout });
 
     if (onProgress) {
       onProgress(blockEnd, `Page ${index + 1} of ${total} ready`);
@@ -309,24 +480,36 @@ export async function generateOrderPdf(displayOrderNumber, onProgress) {
   report(8, 'Document assets loaded');
 
   const doc = new JsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-  const elements = orderPdfCaptureElements();
-  if (!elements.length) {
-    throw new Error('Nothing to capture for PDF.');
+  const mobileLayout = orderPdfNeedsDesktopCapture();
+  if (mobileLayout) {
+    document.documentElement.classList.add('ov-pdf-desktop-capture');
+    await orderPdfNextFrame();
   }
 
-  const catalogElement = document.getElementById('catalog-content');
-  const bodyEnd = catalogElement ? 72 : 88;
+  try {
+    const elements = orderPdfCaptureElements();
+    if (!elements.length) {
+      throw new Error('Nothing to capture for PDF.');
+    }
 
-  await appendOrderElementsToPdf(doc, elements, 0.93, report, 10, bodyEnd);
+    const catalogElement = document.getElementById('catalog-content');
+    const bodyEnd = catalogElement ? 72 : 88;
 
-  if (catalogElement && catalogElement.offsetHeight > 0) {
-    report(74, 'Capturing product catalog...');
-    const catalogCanvas = await orderPdfElementToCanvasWithFallback(catalogElement);
-    report(82, 'Building catalog pages...');
-    appendRasterCanvasToPdf(doc, catalogCanvas, 0.93, (sliceRatio) => {
-      report(82 + (10 * sliceRatio), 'Assembling catalog pages...');
-    }, { startOnNewPage: true });
-    report(92, 'Catalog added');
+    await appendOrderElementsToPdf(doc, elements, 0.93, report, 10, bodyEnd);
+
+    if (catalogElement && catalogElement.offsetHeight > 0) {
+      report(74, 'Capturing product catalog...');
+      const catalogCaptured = await orderPdfElementToCanvasWithFallback(catalogElement);
+      report(82, 'Building catalog pages...');
+      appendRasterCanvasToPdf(doc, catalogCaptured.canvas, 0.93, (sliceRatio) => {
+        report(82 + (10 * sliceRatio), 'Assembling catalog pages...');
+      }, { startOnNewPage: true, layout: catalogCaptured.layout });
+      report(92, 'Catalog added');
+    }
+  } finally {
+    if (mobileLayout) {
+      document.documentElement.classList.remove('ov-pdf-desktop-capture');
+    }
   }
 
   report(94, 'Finalizing PDF file...');

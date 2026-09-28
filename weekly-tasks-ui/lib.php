@@ -1400,11 +1400,23 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
         }
         if ($metric === 'new-customers' && function_exists('tableExists') && tableExists('customers', $pdo)) {
             try {
+                $phoneExpr = 'NULL AS phone';
+                $cols = $pdo->query('SHOW COLUMNS FROM customers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                foreach (['phone', 'mobile', 'telephone', 'contact_phone'] as $phoneCol) {
+                    if (in_array($phoneCol, $cols, true)) {
+                        $phoneExpr = 'c.' . $phoneCol . ' AS phone';
+                        break;
+                    }
+                }
+                $quoteExpr = '0 AS quote_count';
+                if (tableExists('sales_orders', $pdo)) {
+                    $quoteExpr = "(SELECT COUNT(*) FROM sales_orders so WHERE so.customer_id = c.id AND so.status NOT IN ('draft', 'cancelled', 'canceled')) AS quote_count";
+                }
                 $st = $pdo->prepare(
-                    'SELECT company_name, contact_person, created_at
-                     FROM customers
-                     WHERE created_by = ? AND created_at BETWEEN ? AND ?
-                     ORDER BY created_at, id'
+                    "SELECT c.company_name, c.contact_person, c.created_at, {$phoneExpr}, {$quoteExpr}
+                     FROM customers c
+                     WHERE c.created_by = ? AND c.created_at BETWEEN ? AND ?
+                     ORDER BY c.created_at, c.id"
                 );
                 $st->execute([$userId, $start . ' 00:00:00', $end . ' 23:59:59']);
                 foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -1413,11 +1425,16 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
                         $name = trim((string) ($row['contact_person'] ?? 'Customer'));
                     }
                     $created = (string) ($row['created_at'] ?? '');
+                    $phone = trim((string) ($row['phone'] ?? ''));
+                    $quotes = (int) ($row['quote_count'] ?? 0);
+                    $quoteLabel = $quotes === 1 ? '1 quotation' : ($quotes . ' quotations');
                     $rows[] = [
                         'title' => $name,
                         'date' => substr($created, 0, 10),
                         'when' => $created !== '' ? date('j M Y', strtotime($created)) : '',
-                        'status' => 'New',
+                        'phone' => $phone !== '' ? $phone : 'No phone',
+                        'quotes' => $quoteLabel,
+                        'status' => ($phone !== '' ? $phone : 'No phone') . ' · ' . $quoteLabel,
                     ];
                 }
             } catch (Throwable $e) {

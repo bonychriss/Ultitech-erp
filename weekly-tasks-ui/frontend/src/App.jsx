@@ -721,7 +721,14 @@ function RecordCards({ rows, label, kind, onOpen }) {
                       <h3 className="wt-nc-title">{row.title}</h3>
                       {row.when ? <time className="wt-nc-time">{row.when}</time> : null}
                     </div>
-                    <p className="wt-nc-message">{row.status}</p>
+                    {row.phone || row.quotes ? (
+                      <p className="wt-nc-meta">
+                        <span>{row.phone || ''}</span>
+                        <span>{row.quotes || ''}</span>
+                      </p>
+                    ) : (
+                      <p className="wt-nc-message">{row.status}</p>
+                    )}
                   </div>
                 </article>
               )

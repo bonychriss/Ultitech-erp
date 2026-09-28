@@ -696,6 +696,21 @@ a.wt-row:hover {
   color: #64748b;
 }
 
+.wt-nc-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  color: #64748b;
+}
+
+.wt-nc-meta span {
+  white-space: nowrap;
+}
+
 a.wt-kpi-card {
   text-decoration: none;
   color: inherit;

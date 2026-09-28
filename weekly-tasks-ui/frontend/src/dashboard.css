@@ -637,7 +637,18 @@ a.wt-row:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #0f766e;
+  color: #16a34a;
+}
+
+.wt-nc-icon--pair {
+  width: auto;
+  height: auto;
+}
+
+.wt-nc-icon-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .wt-nc-body {

@@ -632,7 +632,38 @@ function todoSections(rows) {
   return ['today', 'yesterday', 'earlier'].filter((key) => groups.has(key)).map((key) => groups.get(key))
 }
 
+function QuoteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M7 3.5h7.5L19 8v12.5H7z" />
+      <path d="M14.5 3.5V8H19" />
+      <path d="M9.5 12h5M9.5 15.5h5" />
+    </svg>
+  )
+}
+
+function InvoiceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M7 3.5h10v17l-2-1.2-2 1.2-2-1.2-2 1.2-2-1.2z" />
+      <path d="M9.5 8h5M9.5 11.5h5M9.5 15h3" />
+    </svg>
+  )
+}
+
 function RecordIcon({ kind }) {
+  if (kind === 'quote') return <QuoteIcon />
+  if (kind === 'converted') {
+    return (
+      <span className="wt-nc-icon-pair">
+        <QuoteIcon />
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <path d="M5 12h12M13 7l5 5-5 5" />
+        </svg>
+        <InvoiceIcon />
+      </span>
+    )
+  }
   if (kind === 'sales') {
     return (
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -681,11 +712,11 @@ function RecordCards({ rows, label, kind, onOpen }) {
                     }
                   } : undefined}
                 >
-                  <span className="wt-nc-icon" aria-hidden="true">
-                    <RecordIcon kind={kind} />
+                  <span className={`wt-nc-icon${row.mark === 'converted' ? ' wt-nc-icon--pair' : ''}`} aria-hidden="true">
+                    <RecordIcon kind={row.mark || kind} />
                   </span>
                   <div className="wt-nc-body">
-                    <p className="wt-nc-kicker">{label}</p>
+                    <p className="wt-nc-kicker">{row.kicker || label}</p>
                     <div className="wt-nc-title-row">
                       <h3 className="wt-nc-title">{row.title}</h3>
                       {row.when ? <time className="wt-nc-time">{row.when}</time> : null}

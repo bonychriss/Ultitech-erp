@@ -1295,7 +1295,7 @@ function weeklyTasksUiSalesItems(?array $sales): array
             'name' => 'Quotation Conversion',
             'expected' => '30% or better',
             'actual' => $submitted > 0
-                ? ($conversion . '% · ' . (int) ($sales['quotesWon'] ?? 0) . ' won, ' . $submitted . ' submitted')
+                ? ($conversion . '% · ' . (int) ($sales['quotesWon'] ?? 0) . ' converted to invoices, ' . $submitted . ' submitted')
                 : 'Not recorded',
             'configured' => true,
             'met' => $submitted > 0 && $conversion >= 30,
@@ -1431,7 +1431,9 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
                         'title' => $customer !== '' ? $number . ' · ' . $customer : $number,
                         'date' => (string) ($row['day'] ?? ''),
                         'when' => !empty($row['day']) ? date('j M Y', strtotime((string) $row['day'])) : '',
-                        'status' => ($won ? 'Won' : 'Submitted') . ' · TZS ' . $amount,
+                        'kicker' => $won ? 'Quotation converted to invoice' : 'Quotation',
+                        'status' => ($won ? 'TZS ' . $amount : 'Submitted · TZS ' . $amount),
+                        'mark' => $won ? 'converted' : 'quote',
                         'documentUrl' => weeklyTasksUiQuoteUrl((int) ($row['id'] ?? 0)),
                     ];
                 }
@@ -1992,7 +1994,9 @@ function weeklyTasksUiBuildPayload(): array
             $salesMeasure = in_array($measureKey, ['monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'], true);
             $measureView = [
                 'key' => $measureKey,
-                'title' => (string) $match['name'],
+                'title' => $measureKey === 'quotation-conversion'
+                    ? 'Quotation converted to invoices'
+                    : (string) $match['name'],
                 'summary' => !empty($match['configured']) ? ((string) $match['expected'] . ' · ' . (string) $match['actual']) : 'Target not set',
                 'configured' => (bool) ($match['configured'] ?? false),
                 'rows' => !empty($match['configured']) ? $rows : [],

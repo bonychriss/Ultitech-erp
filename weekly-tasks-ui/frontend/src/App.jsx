@@ -595,7 +595,24 @@ function todoSections(rows) {
   return ['today', 'yesterday', 'earlier'].filter((key) => groups.has(key)).map((key) => groups.get(key))
 }
 
-function TodoCards({ rows }) {
+function RecordIcon({ kind }) {
+  if (kind === 'attendance') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="4" y="5" width="16" height="15" rx="2" />
+        <path d="M8 3v4M16 3v4M4 10h16" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 6h6M9 10h6M9 14h4" />
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+    </svg>
+  )
+}
+
+function RecordCards({ rows, label, kind }) {
   const sections = todoSections(rows)
   return (
     <div className="wt-nc-list">
@@ -606,13 +623,10 @@ function TodoCards({ rows }) {
             {section.items.map(({ row, index }) => (
               <article key={`${row.date}-${row.title}-${index}`} className="wt-nc-card">
                 <span className="wt-nc-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M9 6h6M9 10h6M9 14h4" />
-                    <rect x="5" y="3" width="14" height="18" rx="2" />
-                  </svg>
+                  <RecordIcon kind={kind} />
                 </span>
                 <div className="wt-nc-body">
-                  <p className="wt-nc-kicker">To-do</p>
+                  <p className="wt-nc-kicker">{label}</p>
                   <div className="wt-nc-title-row">
                     <h3 className="wt-nc-title">{row.title}</h3>
                     {row.when ? <time className="wt-nc-time">{row.when}</time> : null}
@@ -662,8 +676,12 @@ function MeasurePage({ month, measure }) {
         <p className="wt-empty wt-empty--card">Target not set.</p>
       ) : rows.length === 0 ? (
         <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
-      ) : measure.key === 'todo' ? (
-        <TodoCards rows={rows} />
+      ) : measure.key === 'todo' || measure.key === 'attendance' ? (
+        <RecordCards
+          rows={rows}
+          label={measure.key === 'attendance' ? 'Attendance' : 'To-do'}
+          kind={measure.key}
+        />
       ) : (
         <div className="wt-compare">
           <div className="wt-compare-row wt-compare-row--head">

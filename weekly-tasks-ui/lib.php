@@ -885,6 +885,7 @@ function weeklyTasksUiAttendanceLines(PDO $pdo, int $userId, array $offsets): ar
             }
             $rows[(string) $day] = [
                 'title' => date('l', strtotime((string) $day)),
+                'date' => (string) $day,
                 'when' => date('j M Y', strtotime((string) $day)),
                 'status' => 'Present',
             ];

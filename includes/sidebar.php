@@ -270,7 +270,7 @@ switch ($active_module) {
         addItem($menuItems, 'record-payment', 'Record Payment', 'currency', $prefix . 'revenue_entries.php?module=revenue');
         addItem($menuItems, 'settings', 'Settings', 'cog', $prefix . 'sales/settings?module=sales');
         if ($is_admin) {
-             addItem($menuItems, 'targets', 'Set Targets', 'presentation', $prefix . 'modules/sales/admin/targets.php?module=sales');
+             addItem($menuItems, 'targets', 'Set Targets', 'presentation', $prefix . 'sales/settings?module=sales&tab=targets');
         }
         break;
 

@@ -2465,7 +2465,7 @@ function sales_module_url(string $relativePath, array $query = []): string
         'settings/' => 'sales/settings',
         'settings' => 'sales/settings',
         'payments/create.php' => 'sales/payment-create',
-        'admin/targets.php' => 'sales/admin-targets',
+        'admin/targets.php' => 'sales/settings',
         'admin/reassign-sales.php' => 'sales/admin-reassign',
         'products_view.php' => 'sales/products-view',
         'send_doc.php' => 'sales/send-doc',
@@ -2523,6 +2523,15 @@ function sales_module_url(string $relativePath, array $query = []): string
             $url = company_url($path);
         } else {
             $url = sales_app_url($path);
+        }
+    }
+
+    if ($relativePath === 'admin/targets.php') {
+        if (!isset($query['tab']) || (string) $query['tab'] === '') {
+            $query['tab'] = 'targets';
+        }
+        if (!isset($query['module']) || (string) $query['module'] === '') {
+            $query['module'] = 'sales';
         }
     }
 

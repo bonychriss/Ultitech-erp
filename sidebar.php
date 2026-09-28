@@ -531,7 +531,7 @@ switch ($active_module) {
         addItem($menuItems, 'sales-settings', 'Sales Settings', 'gear', $prefix . 'sales/settings?module=sales');
         // Record Payment hidden
         if ($is_admin) {
-             addItem($menuItems, 'targets', 'Set Targets', 'bullseye', $prefix . 'modules/sales/admin/targets.php?module=sales');
+             addItem($menuItems, 'targets', 'Set Targets', 'bullseye', $prefix . 'sales/settings?module=sales&tab=targets');
              addItem($menuItems, 'reassign-sales', 'Reassign Sales', 'shuffle', $prefix . 'modules/sales/admin/reassign-sales.php?module=sales');
         }
         break;

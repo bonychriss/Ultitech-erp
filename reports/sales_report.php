@@ -1400,7 +1400,7 @@ if (count($sales_by_rep) > 0) {
                         </div>
                         <div class="small text-muted mt-2 text-end"><?= number_format($yearlyPct, 1) ?>% of target</div>
                         <?php if ($yearlyTarget <= 0): ?>
-                        <p class="text-muted small mt-2 mb-0">Set company yearly target in <a href="../modules/sales/admin/targets.php">Sales â†’ Admin â†’ Targets</a>.</p>
+                        <p class="text-muted small mt-2 mb-0">Set the company target in <a href="<?= htmlspecialchars(company_url('sales/settings') . '?module=sales&tab=targets', ENT_QUOTES, 'UTF-8') ?>">Sales settings</a>.</p>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -1445,7 +1445,7 @@ if (count($sales_by_rep) > 0) {
                         </div>
                         <div class="small text-muted mt-2 text-end"><?= number_format($monthlyPct, 1) ?>% of target</div>
                         <?php if ($monthlyTarget <= 0): ?>
-                        <p class="text-muted small mt-2 mb-0">Set rep monthly targets in <a href="../modules/sales/admin/targets.php">Sales â†’ Admin â†’ Targets</a>.</p>
+                        <p class="text-muted small mt-2 mb-0">Set salesperson targets in <a href="<?= htmlspecialchars(company_url('sales/settings') . '?module=sales&tab=targets', ENT_QUOTES, 'UTF-8') ?>">Sales settings</a>.</p>
                         <?php endif; ?>
                     </div>
                 </div>

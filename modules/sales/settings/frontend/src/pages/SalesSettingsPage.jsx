@@ -8,6 +8,12 @@ const ROADMASTER_TABS = [
   { key: 'spare', label: 'Spare Layout' },
 ];
 
+function tabFromLocation() {
+  if (typeof window === 'undefined') return 'financials';
+  const tab = new URLSearchParams(window.location.search).get('tab');
+  return tab === 'targets' ? 'targets' : 'financials';
+}
+
 function getSettingsTabs(init) {
   const targets = { key: 'targets', label: 'Sales target' };
   if (init?.is_ultimate) {
@@ -264,7 +270,7 @@ export default function SalesSettingsPage() {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('financials');
+  const [activeTab, setActiveTab] = useState(tabFromLocation);
   const [saving, setSaving] = useState(false);
   const [layoutTeaser, setLayoutTeaser] = useState(null);
   const [targetMonth, setTargetMonth] = useState('');
@@ -469,6 +475,10 @@ export default function SalesSettingsPage() {
                 onClick={() => {
                   setActiveTab(tab.key);
                   setLayoutTeaser(null);
+                  const url = new URL(window.location.href);
+                  if (tab.key === 'targets') url.searchParams.set('tab', 'targets');
+                  else url.searchParams.delete('tab');
+                  window.history.replaceState({}, '', url);
                 }}
               >
                 {tab.label}

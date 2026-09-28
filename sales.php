@@ -214,6 +214,13 @@ if ($desk !== '' && in_array($desk, $laravelListDesks, true)) {
     }
 }
 
+if ($desk === 'admin-targets') {
+    $target = company_url('sales/settings', $slug);
+    $target .= (str_contains($target, '?') ? '&' : '?') . 'module=sales&tab=targets';
+    header('Location: ' . $target, true, 302);
+    exit;
+}
+
 if ($desk !== '' && isset($salesDeskEntries[$desk])) {
     if ($desk === 'quote-create') {
         $_GET['mode'] = 'new';

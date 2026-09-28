@@ -114,6 +114,10 @@ function notificationsUiDetectModule(array $n): string
     $message = strtolower(trim((string) ($n['message'] ?? '')));
     $blob = $title . ' ' . $message . ' ' . $link;
 
+    if (preg_match('/\bsales target\b/', $blob)) {
+        return 'sales';
+    }
+
     if ($src === 'core' || (int) ($n['voucher_id'] ?? 0) > 0) {
         return 'voucher';
     }

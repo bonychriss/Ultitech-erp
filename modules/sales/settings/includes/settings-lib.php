@@ -786,7 +786,7 @@ function sales_settings_sync_missing_target_notice(PDO $pdo, string $month, arra
         $title = 'Set the sales target';
         $missing = sales_settings_sales_target_missing($month, $amounts, $people);
         if ($missing === []) {
-            $clear = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE audience = 'admin' AND title = ? AND is_read = 0");
+            $clear = $pdo->prepare("DELETE FROM notifications WHERE audience = 'admin' AND title = ?");
             $clear->execute([$title]);
 
             return;

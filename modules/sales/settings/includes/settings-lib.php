@@ -739,6 +739,60 @@ function sales_settings_parse_amount(string $raw): float
     return is_numeric($clean) ? (float) $clean : 0.0;
 }
 
+/**
+ * @param array<int,array<string,mixed>> $rows
+ */
+function sales_settings_notify_targets(PDO $pdo, string $month, string $mode, string $scope, float $sharedAmount, float $sharedYearly, array $rows): void
+{
+    if (!function_exists('createNotification')) {
+        return;
+    }
+    $hasPersonal = false;
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        if (sales_settings_parse_amount((string) ($row['amount'] ?? '')) > 0
+            || sales_settings_parse_amount((string) ($row['yearly_amount'] ?? '')) > 0) {
+            $hasPersonal = true;
+            break;
+        }
+    }
+    if ($sharedAmount <= 0 && $sharedYearly <= 0 && !$hasPersonal) {
+        return;
+    }
+    $money = static function (float $amount): string {
+        return 'TZS ' . number_format($amount, 0, '.', ',');
+    };
+    if ($scope === 'ongoing') {
+        $when = 'every month until it is changed';
+    } else {
+        $stamp = strtotime($month . '-01');
+        $when = $stamp ? date('F Y', $stamp) : $month;
+    }
+    $title = 'Sales target updated';
+    if ($mode !== 'each' && $sharedAmount > 0) {
+        $message = 'The monthly sales target is ' . $money($sharedAmount) . ' for every salesperson, for ' . $when . '.';
+        if ($sharedYearly > 0) {
+            $message .= ' The yearly amount is ' . $money($sharedYearly) . '.';
+        }
+    } elseif ($sharedYearly > 0 && $sharedAmount <= 0) {
+        $message = 'The yearly sales target is ' . $money($sharedYearly) . ' for every salesperson.';
+    } else {
+        $message = 'Sales targets were updated for ' . $when . '.';
+    }
+    try {
+        createNotification([
+            'user_id' => null,
+            'audience' => 'all',
+            'title' => $title,
+            'message' => $message,
+            'type' => 'info',
+        ]);
+    } catch (Throwable $e) {
+    }
+}
+
 function sales_settings_save_monthly_targets(PDO $pdo, string $month, array $rows, string $mode = 'all', string $sharedRaw = '', string $scope = 'month', string $sharedYearlyRaw = ''): array
 {
     if (!sales_settings_valid_month($month)) {
@@ -770,14 +824,13 @@ function sales_settings_save_monthly_targets(PDO $pdo, string $month, array $row
     }
     if ($sharedYearly > 0) {
         $upsert->execute([0, $year, $sharedYearly, $sharedYearly]);
-    } elseif ($mode === 'all') {
-        $delete->execute([0, $year]);
     }
     if ($mode === 'all') {
         foreach (array_keys($allowed) as $userId) {
             $delete->execute([(int) $userId, $period]);
-            $delete->execute([(int) $userId, $year]);
         }
+
+        sales_settings_notify_targets($pdo, $month, $mode, $scope, $sharedAmount, $sharedYearly, $rows);
 
         return sales_settings_monthly_targets($pdo, $month);
     }
@@ -798,10 +851,10 @@ function sales_settings_save_monthly_targets(PDO $pdo, string $month, array $row
         $yearly = sales_settings_parse_amount((string) ($row['yearly_amount'] ?? ''));
         if ($yearly > 0) {
             $upsert->execute([$userId, $year, $yearly, $yearly]);
-        } else {
-            $delete->execute([$userId, $year]);
         }
     }
+
+    sales_settings_notify_targets($pdo, $month, $mode, $scope, $sharedAmount, $sharedYearly, $rows);
 
     return sales_settings_monthly_targets($pdo, $month);
 }

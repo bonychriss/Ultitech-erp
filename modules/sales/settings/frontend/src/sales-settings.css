@@ -244,6 +244,10 @@ body.page-sales-settings .exp-create-section-header p {
   border-color: #6d28d9;
 }
 
+.ss-btn--round {
+  border-radius: var(--ss-radius-pill) !important;
+}
+
 .ss-tax-options {
   display: flex;
   flex-direction: column;

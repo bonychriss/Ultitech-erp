@@ -21,22 +21,22 @@ function getSettingsTabs(init) {
   return [...ROADMASTER_TABS, targets];
 }
 
-function withYearlyDefaults(data) {
-  const people = Array.isArray(data?.people) ? data.people : [];
-  return {
-    sharedYearly: data?.shared_yearly || yearlyFromMonthly(data?.shared_amount || ''),
-    people: people.map((person) => ({
-      ...person,
-      yearly_amount: person.yearly_amount || yearlyFromMonthly(person.amount || person.ongoing_amount || ''),
-    })),
-  };
-}
-
 function yearlyFromMonthly(amount) {
   const value = Number(String(amount ?? '').replace(/,/g, '').trim());
   if (!Number.isFinite(value) || value <= 0) return '';
   const yearly = Math.round(value * 12 * 100) / 100;
   return String(yearly).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+}
+
+function withYearlyDefaults(data) {
+  const people = Array.isArray(data?.people) ? data.people : [];
+  return {
+    sharedYearly: '',
+    people: people.map((person) => ({
+      ...person,
+      yearly_amount: '',
+    })),
+  };
 }
 
 function formatTargetMoney(amount, currency) {
@@ -382,7 +382,7 @@ export default function SalesSettingsPage() {
     const activePeople = targetPeople.map((person) => ({
       id: person.id,
       amount: scopePersonAmount(person),
-      yearly_amount: person.yearly_amount || yearlyFromMonthly(scopePersonAmount(person)),
+      yearly_amount: person.yearly_amount || '',
     }));
     setTargetsSaving(true);
     try {
@@ -390,9 +390,10 @@ export default function SalesSettingsPage() {
       setTargetMonth(data.month || targetMonth);
       setSharedAmount(data.shared_amount || '');
       setOngoingShared(data.ongoing_shared || '');
-      const seeded = withYearlyDefaults(data);
-      setYearlyShared(seeded.sharedYearly);
-      setTargetPeople(seeded.people);
+      setTargetPeople((current) => withYearlyDefaults(data).people.map((person) => {
+        const previous = current.find((item) => item.id === person.id);
+        return { ...person, yearly_amount: previous?.yearly_amount || '' };
+      }));
       showToast('Sales target saved');
     } catch (err) {
       showToast(err.message || 'Could not save targets', 'error');
@@ -618,15 +619,6 @@ export default function SalesSettingsPage() {
 
               <div className="ss-form-block">
                 <div className="ss-target-modes" role="radiogroup" aria-label="Which months this amount covers">
-                  <label className={targetScope === 'month' ? 'is-selected' : ''}>
-                    <input
-                      type="radio"
-                      name="sales-target-scope"
-                      checked={targetScope === 'month'}
-                      onChange={() => setTargetScope('month')}
-                    />
-                    Specific month
-                  </label>
                   <label className={targetScope === 'ongoing' ? 'is-selected' : ''}>
                     <input
                       type="radio"
@@ -635,6 +627,15 @@ export default function SalesSettingsPage() {
                       onChange={() => setTargetScope('ongoing')}
                     />
                     All months until changed
+                  </label>
+                  <label className={targetScope === 'month' ? 'is-selected' : ''}>
+                    <input
+                      type="radio"
+                      name="sales-target-scope"
+                      checked={targetScope === 'month'}
+                      onChange={() => setTargetScope('month')}
+                    />
+                    Specific month
                   </label>
                 </div>
 
@@ -707,7 +708,6 @@ export default function SalesSettingsPage() {
                         inputMode="decimal"
                         value={yearlyShared}
                         onChange={(event) => setYearlyShared(event.target.value)}
-                        placeholder={settings.default_currency || 'TZS'}
                         autoComplete="off"
                       />
                       <p className="ss-field-help">Filled from the monthly amount times 12. You can change it.</p>
@@ -751,7 +751,6 @@ export default function SalesSettingsPage() {
                               inputMode="decimal"
                               value={person.yearly_amount || ''}
                               onChange={(event) => changePersonYearly(person.id, event.target.value)}
-                              placeholder={settings.default_currency || 'TZS'}
                               autoComplete="off"
                             />
                           </div>
@@ -765,7 +764,7 @@ export default function SalesSettingsPage() {
               <div className="ss-form-actions">
                 <button
                   type="button"
-                  className="ss-btn ss-btn--primary"
+                  className="ss-btn ss-btn--primary ss-btn--round"
                   disabled={targetsSaving || targetsLoading}
                   onClick={saveTargets}
                 >

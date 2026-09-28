@@ -1462,7 +1462,7 @@ function weeklyTasksUiPersonDetail(
         $customers = (int) ($sales['customers'] ?? 0);
         $items[] = [
             'name' => 'New Customers',
-            'expected' => $customerTarget . ' per period',
+            'expected' => $customerTarget === 10 ? '10 this month' : ($customerTarget . ' across selected months'),
             'actual' => $customers . ' new',
             'configured' => true,
             'met' => $customers >= $customerTarget,
@@ -1497,7 +1497,7 @@ function weeklyTasksUiPersonDetail(
         $visits = (int) ($sales['visits'] ?? 0);
         $items[] = [
             'name' => 'Customer Visits',
-            'expected' => $visitTarget . ' per period',
+            'expected' => $visitTarget === 20 ? '20 this month' : ($visitTarget . ' across selected months'),
             'actual' => $visits . ' visits',
             'configured' => true,
             'met' => $visits >= $visitTarget,

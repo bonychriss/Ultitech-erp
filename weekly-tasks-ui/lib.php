@@ -1394,7 +1394,7 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
         if ($metric === 'quotation-conversion' && function_exists('tableExists') && tableExists('sales_orders', $pdo)) {
             try {
                 $st = $pdo->prepare(
-                    "SELECT so.order_number, so.formatted_number, so.status, COALESCE(so.order_date, DATE(so.created_at)) AS day, c.company_name
+                    "SELECT so.order_number, so.formatted_number, so.status, so.total_amount, COALESCE(so.order_date, DATE(so.created_at)) AS day, c.company_name
                      FROM sales_orders so
                      LEFT JOIN customers c ON c.id = so.customer_id
                      WHERE so.created_by = ?
@@ -1410,11 +1410,12 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
                     }
                     $customer = trim((string) ($row['company_name'] ?? ''));
                     $won = in_array((string) ($row['status'] ?? ''), ['confirmed', 'shipped', 'invoiced', 'paid', 'delivered'], true);
+                    $amount = weeklyTasksUiMoney((float) ($row['total_amount'] ?? 0));
                     $rows[] = [
                         'title' => $customer !== '' ? $number . ' · ' . $customer : $number,
                         'date' => (string) ($row['day'] ?? ''),
                         'when' => !empty($row['day']) ? date('j M Y', strtotime((string) $row['day'])) : '',
-                        'status' => $won ? 'Won' : 'Submitted',
+                        'status' => ($won ? 'Won' : 'Submitted') . ' · TZS ' . $amount,
                     ];
                 }
             } catch (Throwable $e) {

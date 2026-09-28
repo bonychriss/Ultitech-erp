@@ -1515,7 +1515,7 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
         if ($metric === 'goods-delivery' && function_exists('tableExists') && tableExists('delivery_notes', $pdo)) {
             try {
                 $st = $pdo->prepare(
-                    'SELECT dn.customer_name, dn.note_number, dn.delivery_date,
+                    'SELECT dn.id, dn.customer_name, dn.note_number, dn.delivery_date,
                         DATEDIFF(dn.delivery_date, DATE(COALESCE(so.order_date, so.created_at))) AS days
                      FROM delivery_notes dn
                      JOIN sales_orders so ON so.id = dn.order_id
@@ -1543,6 +1543,7 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
                         'date' => (string) ($row['delivery_date'] ?? ''),
                         'when' => !empty($row['delivery_date']) ? date('j M Y', strtotime((string) $row['delivery_date'])) : '',
                         'status' => $status,
+                        'documentUrl' => weeklyTasksUiDeliveryNoteUrl((int) ($row['id'] ?? 0)),
                     ];
                 }
             } catch (Throwable $e) {
@@ -2049,7 +2050,11 @@ function weeklyTasksUiBuildPayload(): array
                     'score' => '',
                     'note' => '',
                     'text' => 'Money received divided by the invoice totals for this month. Collected means paid in full. Outstanding means a balance is still due.',
-                ] : null),
+                ] : ($measureKey === 'goods-delivery' ? [
+                    'score' => '',
+                    'note' => '',
+                    'text' => 'Days from the order date to the delivery date. On time means within 2 days. Late means it took longer.',
+                ] : null)),
             ];
         }
     }

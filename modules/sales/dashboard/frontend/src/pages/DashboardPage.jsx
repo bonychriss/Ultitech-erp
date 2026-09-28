@@ -114,17 +114,22 @@ function RecentActivity({ activities }) {
   );
 }
 
-function Leaderboard({ rows, target }) {
+function leaderboardTargetLabel(amount) {
+  const target = Number(amount || 0);
+  if (target >= 1_000_000) return `${Math.round(target / 1_000_000)}M`;
+  return formatNumber(target);
+}
+
+function Leaderboard({ rows }) {
   if (!rows?.length) {
     return <div className="text-center text-muted small py-3">No data yet</div>;
   }
 
-  const targetLabel = target >= 1_000_000 ? `${Math.round(target / 1_000_000)}M` : formatNumber(target);
-
   return (
     <>
       {rows.map((rep, index) => {
-        const hitTarget = target > 0 && rep.total_sold >= target;
+        const rowTarget = Number(rep.target || 0);
+        const hitTarget = rowTarget > 0 && rep.total_sold >= rowTarget;
         return (
           <div
             className={`leaderboard-item${hitTarget ? ' leaderboard-item--target-hit' : ''}`}
@@ -157,12 +162,18 @@ function Leaderboard({ rows, target }) {
                   />
                 </div>
                 <div className="leaderboard-progress-text">
-                  <span className="text-muted small">{formatPercent(rep.progress_percent)}%</span>
-                  <span className="text-muted small ms-2">
-                    of
-                    {' '}
-                    {targetLabel}
-                  </span>
+                  {rowTarget > 0 ? (
+                    <>
+                      <span className="text-muted small">{formatPercent(rep.progress_percent)}%</span>
+                      <span className="text-muted small ms-2">
+                        of
+                        {' '}
+                        {leaderboardTargetLabel(rowTarget)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted small">Target not set</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -409,7 +420,7 @@ export default function DashboardPage() {
                 <h3 className="dash-card-title">Leaderboard</h3>
                 <span className="leaderboard-subtitle">Total Sales</span>
               </div>
-              <Leaderboard rows={data.leaderboard} target={data.leaderboard_target} />
+              <Leaderboard rows={data.leaderboard} />
             </div>
             <YearlyTarget yearly={data.yearly || {}} />
           </div>

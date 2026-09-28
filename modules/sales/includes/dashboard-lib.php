@@ -220,10 +220,66 @@ function dashboardDeskMergeOutgoingProducts(array $trucks, array $spares, int $l
 }
 
 /**
+ * Yearly amount a person should reach, from Sales settings.
+ * A personal amount wins. Otherwise the shared monthly amount times 12, then the shared yearly amount.
+ *
+ * @param array<int,array<string,float>> $map
+ */
+function dashboardDeskPersonYearlyTarget(array $map, int $userId, string $year, string $month): float
+{
+    $own = $map[$userId] ?? [];
+    $shared = $map[0] ?? [];
+    if ((float) ($own[$year] ?? 0) > 0) {
+        return (float) $own[$year];
+    }
+    if ((float) ($own['monthly'] ?? 0) > 0) {
+        return (float) $own['monthly'] * 12;
+    }
+    if ((float) ($shared['monthly'] ?? 0) > 0) {
+        return (float) $shared['monthly'] * 12;
+    }
+    if ((float) ($own[$month] ?? 0) > 0) {
+        return (float) $own[$month] * 12;
+    }
+    if ((float) ($shared[$month] ?? 0) > 0) {
+        return (float) $shared[$month] * 12;
+    }
+    if ((float) ($shared[$year] ?? 0) > 0) {
+        return (float) $shared[$year];
+    }
+
+    return 0.0;
+}
+
+/**
+ * @return array<int,array<string,float>>
+ */
+function dashboardDeskSalesTargetMap(string $year, string $month): array
+{
+    $map = [];
+    try {
+        if (function_exists('ensureSalesTargetsSchema')) {
+            ensureSalesTargetsSchema();
+        }
+        $pdo = sales_pdo();
+        $stmt = $pdo->prepare("SELECT user_id, period, target_amount FROM sales_targets WHERE period IN (?, ?, 'monthly')");
+        $stmt->execute([$year, $month]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $map[(int) ($row['user_id'] ?? 0)][(string) ($row['period'] ?? '')] = (float) ($row['target_amount'] ?? 0);
+        }
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    return $map;
+}
+
+/**
  * @param list<array<string, mixed>> $rows
+ * @param array<int,array<string,float>> $targetMap
  * @return list<array<string, mixed>>
  */
-function dashboardDeskNormalizeLeaderboard(array $rows, float $targetAmount = 300000000): array
+function dashboardDeskNormalizeLeaderboard(array $rows, array $targetMap, string $year, string $month): array
 {
     $out = [];
     foreach ($rows as $rep) {
@@ -237,13 +293,16 @@ function dashboardDeskNormalizeLeaderboard(array $rows, float $targetAmount = 30
         if ($profilePhoto !== '' && function_exists('app_url')) {
             $avatarUrl = app_url('/' . ltrim(str_replace('\\', '/', $profilePhoto), '/'));
         }
+        $targetAmount = dashboardDeskPersonYearlyTarget($targetMap, (int) ($rep['id'] ?? 0), $year, $month);
+        $progress = $targetAmount > 0 ? min(100.0, ($currentSales / $targetAmount) * 100) : 0.0;
 
         $out[] = [
             'username' => $username,
             'total_sold' => $currentSales,
             'initial' => strtoupper(substr($username !== '' ? $username : '?', 0, 1)),
             'avatar_url' => $avatarUrl,
-            'progress_percent' => min(100.0, ($currentSales / max(1.0, $targetAmount)) * 100),
+            'target' => $targetAmount,
+            'progress_percent' => $progress,
         ];
     }
 
@@ -612,7 +671,7 @@ function dashboardInitData(): array
 
     $pendingNewToday = dashboardDeskPendingNewToday();
 
-    $leaderboardTarget = 300000000.0;
+    $leaderboardTargets = dashboardDeskSalesTargetMap($year, $month);
     $companyRemaining = max(0.0, $companyYearlyTarget - $companyYearlySales);
     $targetPct = $companyYearlyTarget > 0
         ? min(100.0, ($companyYearlySales / $companyYearlyTarget) * 100)
@@ -662,8 +721,7 @@ function dashboardInitData(): array
         'revenue_growth' => $revenueGrowth,
         'quote_growth' => $quoteGrowth,
         'recent_activities' => dashboardDeskNormalizeActivities(array_slice($recentActivities, 0, 6), $module),
-        'leaderboard' => dashboardDeskNormalizeLeaderboard(array_slice($salesLeaderboard, 0, 8), $leaderboardTarget),
-        'leaderboard_target' => $leaderboardTarget,
+        'leaderboard' => dashboardDeskNormalizeLeaderboard(array_slice($salesLeaderboard, 0, 8), $leaderboardTargets, $year, $month),
         'yearly' => [
             'target' => $companyYearlyTarget,
             'sales' => $companyYearlySales,

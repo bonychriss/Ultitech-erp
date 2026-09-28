@@ -483,6 +483,16 @@ function Detail({ month, detail, missing }) {
         <MonthSelect month={month} />
       </div>
 
+      <section className="wt-total" aria-label="Total performance">
+        <span className="wt-total-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <path d="M5 19V10M12 19V5M19 19v-7" />
+          </svg>
+        </span>
+        <span>Total performance</span>
+        <strong>{Number(detail.score) || 0}%</strong>
+      </section>
+
       <section className="wt-dept">
         <h2 className="wt-dept-title">This month</h2>
         <CompareTable items={items} />
@@ -816,7 +826,9 @@ function MeasurePage({ month, measure }) {
             <h1 className="wt-title">{measure.title}</h1>
             <AboutNote about={measure.about} />
           </div>
-          <p className="wt-sub">{measure.summary}</p>
+          {measure.empty === 'Coming soon' ? null : (
+            <p className="wt-sub">{measure.summary}</p>
+          )}
         </div>
         <MonthSelect month={month} />
       </header>
@@ -825,7 +837,16 @@ function MeasurePage({ month, measure }) {
       ) : breakdown.length ? (
         <SalesMeasureCards items={breakdown} />
       ) : rows.length === 0 ? (
-        measure.empty === 'Coming soon' ? null : (
+        measure.empty === 'Coming soon' ? (
+          <div className="wt-soon" role="status">
+            <span className="wt-soon-dots" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+            <p>Coming soon</p>
+          </div>
+        ) : (
           <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
         )
       ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'].includes(measure.key) ? (

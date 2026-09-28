@@ -684,6 +684,7 @@ function sales_settings_monthly_targets(PDO $pdo, string $month): array
     $sharedAmount = 0.0;
     $ongoingShared = 0.0;
     $sharedYearly = 0.0;
+    $loaded = false;
     try {
             $year = substr($month, 0, 4);
             $ids = array_column($people, 'id');
@@ -697,6 +698,7 @@ function sales_settings_monthly_targets(PDO $pdo, string $month): array
             $sharedAmount = (float) ($amounts[0][$month] ?? 0);
             $ongoingShared = (float) ($amounts[0]['monthly'] ?? 0);
             $sharedYearly = (float) ($amounts[0][$year] ?? 0);
+            $loaded = true;
     } catch (Throwable $e) {
         $amounts = [];
         $ongoingShared = 0.0;
@@ -719,6 +721,10 @@ function sales_settings_monthly_targets(PDO $pdo, string $month): array
         ];
     }
 
+    if ($loaded) {
+        sales_settings_sync_missing_target_notice($pdo, $month, $amounts, $people);
+    }
+
     return [
         'month' => $month,
         'mode' => 'all',
@@ -727,6 +733,82 @@ function sales_settings_monthly_targets(PDO $pdo, string $month): array
         'shared_yearly' => sales_settings_amount_input($sharedYearly),
         'people' => $out,
     ];
+}
+
+/**
+ * Salespeople who have no monthly, standing, or yearly amount for this month.
+ *
+ * @param array<int,array<string,float>> $amounts
+ * @param array<int,array{id:int,name:string}> $people
+ * @return array<int,string>
+ */
+function sales_settings_sales_target_missing(string $month, array $amounts, array $people): array
+{
+    $year = substr($month, 0, 4);
+    $sharedMonth = (float) ($amounts[0][$month] ?? 0);
+    $sharedOngoing = (float) ($amounts[0]['monthly'] ?? 0);
+    $sharedYear = (float) ($amounts[0][$year] ?? 0);
+    $missing = [];
+    foreach ($people as $person) {
+        $id = (int) ($person['id'] ?? 0);
+        if ($id < 1) {
+            continue;
+        }
+        $own = $amounts[$id] ?? [];
+        $set = $sharedMonth > 0
+            || $sharedOngoing > 0
+            || $sharedYear > 0
+            || (float) ($own[$month] ?? 0) > 0
+            || (float) ($own['monthly'] ?? 0) > 0
+            || (float) ($own[$year] ?? 0) > 0;
+        if (!$set) {
+            $missing[] = (string) ($person['name'] ?? ('User ' . $id));
+        }
+    }
+
+    return $missing;
+}
+
+/**
+ * @param array<int,array<string,float>> $amounts
+ * @param array<int,array{id:int,name:string}> $people
+ */
+function sales_settings_sync_missing_target_notice(PDO $pdo, string $month, array $amounts, array $people): void
+{
+    if (!function_exists('createNotification') || !function_exists('ensureNotificationsSchema')) {
+        return;
+    }
+    if ($people === []) {
+        return;
+    }
+    try {
+        ensureNotificationsSchema();
+        $title = 'Set the sales target';
+        $missing = sales_settings_sales_target_missing($month, $amounts, $people);
+        if ($missing === []) {
+            $clear = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE audience = 'admin' AND title = ? AND is_read = 0");
+            $clear->execute([$title]);
+
+            return;
+        }
+        $existing = $pdo->prepare("SELECT id FROM notifications WHERE audience = 'admin' AND title = ? AND is_read = 0 LIMIT 1");
+        $existing->execute([$title]);
+        if ((int) $existing->fetchColumn() > 0) {
+            return;
+        }
+        $shown = array_slice($missing, 0, 5);
+        $who = count($missing) === count($people)
+            ? 'each salesperson'
+            : implode(', ', $shown) . (count($missing) > 5 ? ', and others' : '');
+        createNotification([
+            'user_id' => null,
+            'audience' => 'admin',
+            'title' => $title,
+            'message' => 'The sales target is not set for ' . $who . '. Enter the amount in Sales target.',
+            'type' => 'warning',
+        ]);
+    } catch (Throwable $e) {
+    }
 }
 
 /**

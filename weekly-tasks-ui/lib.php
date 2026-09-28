@@ -1796,6 +1796,13 @@ function weeklyTasksUiBuildPayload(): array
         }
         $driverScores = weeklyTasksUiMonthDriverScores($pdo, $mondays);
         $salesScores = weeklyTasksUiSalesScores($pdo, $offsets);
+        $settingsLib = dirname(__DIR__) . '/modules/sales/settings/includes/settings-lib.php';
+        if (is_file($settingsLib)) {
+            require_once $settingsLib;
+            if (function_exists('sales_settings_monthly_targets')) {
+                sales_settings_monthly_targets($pdo, date('Y-m'));
+            }
+        }
     }
 
     $taskTarget = 7 * $weekCount;

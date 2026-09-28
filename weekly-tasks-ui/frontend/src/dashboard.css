@@ -691,9 +691,16 @@ a.wt-compare-row:hover,
   background: #f3f4f6;
 }
 
-.wt-doc-missing {
+.wt-doc-missing,
+.wt-doc-note {
   margin: 0;
   padding: 28px 18px;
+  color: #111827;
+  white-space: pre-wrap;
+  overflow: auto;
+}
+
+.wt-doc-missing {
   color: #6b7280;
 }
 

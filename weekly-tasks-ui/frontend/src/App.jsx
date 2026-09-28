@@ -576,11 +576,12 @@ function MeasurePage({ month, measure }) {
   const [docReady, setDocReady] = useState(false)
   const frameRef = useRef(null)
   const openDocument = (row) => {
-    if (measure.key !== 'delivery-documents') return
+    if (measure.key !== 'delivery-documents' && !row.documentUrl && !row.documentText) return
     setDocReady(false)
     setDoc({
-      title: row.title || 'Delivery document',
+      title: row.title || 'Document',
       url: row.documentUrl || '',
+      text: row.documentText || '',
     })
   }
   const downloadDocument = () => {
@@ -611,8 +612,8 @@ function MeasurePage({ month, measure }) {
             <span>Status</span>
           </div>
           {rows.map((row, index) => {
-            const met = /complete|present|^met$/i.test(String(row.status || ''))
-            const canOpen = measure.key === 'delivery-documents'
+            const met = /complete|present|^met$|^recorded$/i.test(String(row.status || ''))
+            const canOpen = measure.key === 'delivery-documents' || Boolean(row.documentUrl || row.documentText)
             return (
               <div
                 key={`${row.when}-${row.title}-${index}`}
@@ -652,6 +653,8 @@ function MeasurePage({ month, measure }) {
             </header>
             {doc.url ? (
               <iframe ref={frameRef} className="wt-doc-frame" title={doc.title} src={doc.url} onLoad={() => setDocReady(true)} />
+            ) : doc.text ? (
+              <div className="wt-doc-note">{doc.text}</div>
             ) : (
               <p className="wt-doc-missing">No document recorded for {doc.title}.</p>
             )}

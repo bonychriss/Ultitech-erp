@@ -443,7 +443,7 @@ function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string 
             [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
             try {
                 $st = $pdo->prepare(
-                    'SELECT week_start, service_type, on_time_pct, vehicle_care_pct, documentation_pct, work_log_json
+                    'SELECT week_start, service_type, on_time_pct, vehicle_care_pct, documentation_pct, notes, work_log_json
                      FROM driver_kpi_entries
                      WHERE user_id = ? AND week_start BETWEEN ? AND ?
                      ORDER BY week_start, service_type'
@@ -583,49 +583,145 @@ function weeklyTasksUiDeliveryRecipientRows(PDO $pdo, int $userId, array $offset
  * @param array<int,array<string,mixed>> $entries
  * @return array<int,array{title:string,when:string,status:string}>
  */
+function weeklyTasksUiAttachmentUrl(?array $attachment): string
+{
+    if ($attachment === null) {
+        return '';
+    }
+    $url = trim((string) ($attachment['url'] ?? ''));
+    $path = trim((string) ($attachment['path'] ?? ''));
+    $target = $url !== '' ? $url : $path;
+    if ($target === '' || str_contains($target, '..') || str_starts_with(strtolower($target), 'javascript:')) {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $target)) {
+        return $target;
+    }
+    $target = '/' . ltrim($target, '/');
+    if (function_exists('app_url')) {
+        return app_url($target);
+    }
+
+    return $target;
+}
+
+/**
+ * @param array<string,mixed> $item
+ */
+function weeklyTasksUiWorkLogFile(array $item): string
+{
+    foreach (['document', 'letter', 'voucher'] as $key) {
+        $attachment = function_exists('dkpi_normalize_attachment')
+            ? dkpi_normalize_attachment($item[$key] ?? null)
+            : (is_array($item[$key] ?? null) ? $item[$key] : null);
+        $url = weeklyTasksUiAttachmentUrl(is_array($attachment) ? $attachment : null);
+        if ($url !== '') {
+            return $url;
+        }
+    }
+    $vouchers = $item['vouchers'] ?? null;
+    if (is_array($vouchers)) {
+        foreach ($vouchers as $voucher) {
+            $attachment = function_exists('dkpi_normalize_attachment')
+                ? dkpi_normalize_attachment($voucher)
+                : (is_array($voucher) ? $voucher : null);
+            $url = weeklyTasksUiAttachmentUrl(is_array($attachment) ? $attachment : null);
+            if ($url !== '') {
+                return $url;
+            }
+        }
+    }
+
+    return '';
+}
+
+/**
+ * @param array<string,mixed> $entry
+ * @return array<int,array{title:string,when:string,status:string,documentUrl:string,documentText:string}>
+ */
+function weeklyTasksUiVehicleCareLogRows(array $entry, string $weekWhen): array
+{
+    $decoded = [];
+    if (!empty($entry['work_log_json'])) {
+        $parsed = json_decode((string) $entry['work_log_json'], true);
+        if (is_array($parsed)) {
+            $decoded = isset($parsed['work_log']) && is_array($parsed['work_log']) ? $parsed['work_log'] : $parsed;
+        }
+    }
+    $care = [];
+    $other = [];
+    foreach ($decoded as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $type = function_exists('dkpi_normalize_work_log_type')
+            ? dkpi_normalize_work_log_type((string) ($item['type'] ?? 'vehicle_care'))
+            : 'vehicle_care';
+        $text = trim((string) ($item['task_description'] ?? $item['text'] ?? $item['description'] ?? ''));
+        $file = weeklyTasksUiWorkLogFile($item);
+        if ($text === '' && $file === '') {
+            continue;
+        }
+        $at = trim((string) ($item['at'] ?? ''));
+        $when = preg_match('/^\d{4}-\d{2}-\d{2}$/', $at) ? date('j M Y', strtotime($at)) : $weekWhen;
+        $labels = function_exists('dkpi_work_log_types') ? dkpi_work_log_types() : [];
+        $label = (string) ($labels[$type] ?? 'Vehicle care');
+        $row = [
+            'title' => $text !== '' ? $text : $label,
+            'when' => $when,
+            'status' => 'Recorded',
+            'documentUrl' => $file,
+            'documentText' => $text !== '' ? $text : $label,
+        ];
+        if (in_array($type, ['vehicle_care', 'maintenance', 'inspection'], true)) {
+            $care[] = $row;
+        } else {
+            $other[] = $row;
+        }
+    }
+    if ($care) {
+        return $care;
+    }
+    if ($other && (float) ($entry['vehicle_care_pct'] ?? 0) > 0) {
+        return $other;
+    }
+    $notes = trim((string) ($entry['notes'] ?? ''));
+    if ($notes !== '') {
+        return [[
+            'title' => $notes,
+            'when' => $weekWhen,
+            'status' => 'Recorded',
+            'documentUrl' => '',
+            'documentText' => $notes,
+        ]];
+    }
+
+    return [];
+}
+
+/**
+ * @param array<int,array<string,mixed>> $entries
+ * @return array<int,array{title:string,when:string,status:string}>
+ */
 function weeklyTasksUiVehicleCareWeekRows(array $entries, string $when): array
 {
     if (!$entries) {
         return [
-            ['title' => 'Scheduled maintenance', 'when' => $when, 'status' => 'Not recorded'],
-            ['title' => 'Daily inspection', 'when' => $when, 'status' => 'Not recorded'],
+            ['title' => 'Vehicle care', 'when' => $when, 'status' => 'Not recorded'],
         ];
     }
 
     $rows = [];
     foreach ($entries as $entry) {
-        $service = (string) ($entry['service_type'] ?? 'delivery');
-        $serviceLabel = function_exists('dkpi_services')
-            ? (string) (dkpi_services()[$service]['label'] ?? ucfirst($service))
-            : ucfirst($service);
-        $log = [];
-        if (!empty($entry['work_log_json'])) {
-            $decoded = json_decode((string) $entry['work_log_json'], true);
-            if (is_array($decoded) && function_exists('dkpi_normalize_work_log')) {
-                $log = dkpi_normalize_work_log($decoded);
-            }
-        }
-        if ($log && function_exists('dkpi_infer_vehicle_care_progress')) {
-            $progress = dkpi_infer_vehicle_care_progress($log);
-            $maintenance = (int) round((float) ($progress['maintenance_pct'] ?? 0));
-            $inspection = (int) round((float) ($progress['inspection_pct'] ?? 0));
-            $rows[] = [
-                'title' => $serviceLabel . ' · Scheduled maintenance ' . $maintenance . '%',
-                'when' => $when,
-                'status' => $maintenance >= 100 ? 'Met' : 'Short',
-            ];
-            $rows[] = [
-                'title' => $serviceLabel . ' · Daily inspection ' . $inspection . '%',
-                'when' => $when,
-                'status' => $inspection >= 100 ? 'Met' : 'Short',
-            ];
+        $logged = weeklyTasksUiVehicleCareLogRows($entry, $when);
+        if ($logged) {
+            $rows = array_merge($rows, $logged);
             continue;
         }
-        $actual = (int) round((float) ($entry['vehicle_care_pct'] ?? 0));
         $rows[] = [
-            'title' => $serviceLabel . ' · Vehicle care ' . $actual . '%',
+            'title' => 'Vehicle care',
             'when' => $when,
-            'status' => $actual >= 100 ? 'Met' : 'Short',
+            'status' => 'Not recorded',
         ];
     }
 

@@ -83,6 +83,26 @@ if (function_exists('countPendingPaymentVoucherTasks')) {
 
 $pvTasksListUrl = $companyRoute('employee/pending-voucher-tasks.php') . '?module=voucher';
 
+$salesTargetNeedsEntry = false;
+if ($isAdmin || $isRootAdminUsername) {
+    $salesSettingsLib = __DIR__ . '/modules/sales/settings/includes/settings-lib.php';
+    $salesFunctions = __DIR__ . '/modules/sales/functions.php';
+    if (is_file($salesFunctions)) {
+        require_once $salesFunctions;
+    }
+    if (is_file($salesSettingsLib)) {
+        require_once $salesSettingsLib;
+        if (function_exists('sales_settings_sales_target_needs_entry') && isset($pdo) && $pdo instanceof PDO) {
+            try {
+                $salesTargetNeedsEntry = sales_settings_sales_target_needs_entry($pdo);
+            } catch (Throwable $e) {
+                $salesTargetNeedsEntry = false;
+            }
+        }
+    }
+}
+$salesTargetUrl = $companyRoute('sales/settings') . '?module=sales&tab=targets';
+
 $deliveriesHubUrl = $companyRoute('deliveries/hub') . '?module=deliveries';
 if ($currentCompanySlug !== '') {
     $deliveriesHubUrl .= '&company_slug=' . rawurlencode($currentCompanySlug);
@@ -203,6 +223,10 @@ $push([
     'href' => $companyRoute('sales'),
     'icon' => 'sales',
     'color' => '#15803d',
+    'badge' => $salesTargetNeedsEntry ? '1' : null,
+    'badgeKind' => $salesTargetNeedsEntry ? 'count' : null,
+    'badgeTitle' => 'Set the sales target',
+    'badgeHref' => $salesTargetNeedsEntry ? $salesTargetUrl : null,
 ]);
 $push([
     'id' => 'crm',

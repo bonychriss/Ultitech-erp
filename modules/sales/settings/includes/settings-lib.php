@@ -744,10 +744,8 @@ function sales_settings_monthly_targets(PDO $pdo, string $month): array
  */
 function sales_settings_sales_target_missing(string $month, array $amounts, array $people): array
 {
-    $year = substr($month, 0, 4);
     $sharedMonth = (float) ($amounts[0][$month] ?? 0);
     $sharedOngoing = (float) ($amounts[0]['monthly'] ?? 0);
-    $sharedYear = (float) ($amounts[0][$year] ?? 0);
     $missing = [];
     foreach ($people as $person) {
         $id = (int) ($person['id'] ?? 0);
@@ -757,16 +755,49 @@ function sales_settings_sales_target_missing(string $month, array $amounts, arra
         $own = $amounts[$id] ?? [];
         $set = $sharedMonth > 0
             || $sharedOngoing > 0
-            || $sharedYear > 0
             || (float) ($own[$month] ?? 0) > 0
-            || (float) ($own['monthly'] ?? 0) > 0
-            || (float) ($own[$year] ?? 0) > 0;
+            || (float) ($own['monthly'] ?? 0) > 0;
         if (!$set) {
             $missing[] = (string) ($person['name'] ?? ('User ' . $id));
         }
     }
 
     return $missing;
+}
+
+/**
+ * True when an admin still needs to enter a monthly sales target.
+ */
+function sales_settings_sales_target_needs_entry(PDO $pdo): bool
+{
+    $isAdminUser = (function_exists('isAdmin') && isAdmin())
+        || (($_SESSION['username'] ?? '') === 'admin');
+    if (!$isAdminUser) {
+        return false;
+    }
+    try {
+        $state = sales_settings_monthly_targets($pdo, date('Y-m'));
+    } catch (Throwable $e) {
+        return false;
+    }
+    $people = is_array($state['people'] ?? null) ? $state['people'] : [];
+    if ($people === []) {
+        return false;
+    }
+    if ((float) ($state['shared_amount'] ?? 0) > 0 || (float) ($state['ongoing_shared'] ?? 0) > 0) {
+        return false;
+    }
+    foreach ($people as $person) {
+        if (!is_array($person)) {
+            continue;
+        }
+        if ((float) ($person['amount'] ?? 0) > 0 || (float) ($person['ongoing_amount'] ?? 0) > 0) {
+            continue;
+        }
+        return true;
+    }
+
+    return false;
 }
 
 /**

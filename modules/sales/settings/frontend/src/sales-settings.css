@@ -352,9 +352,44 @@ body.page-sales-settings .exp-create-section-header p {
   margin-top: 6px;
 }
 
-.ss-target-month {
-  max-width: 220px;
+.ss-target-month,
+.ss-target-shared {
+  max-width: 280px;
   margin-bottom: 0.85rem;
+}
+
+.ss-target-scope-note {
+  margin: 0 0 0.85rem;
+}
+
+.ss-target-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.ss-target-modes label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #334155;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.ss-target-modes label.is-selected {
+  color: var(--ss-accent, #7c3aed);
+  background: transparent;
+}
+
+.ss-target-modes input {
+  margin: 0;
 }
 
 .ss-target-list {
@@ -415,6 +450,16 @@ html[data-theme="dark"] body.page-sales-settings .ss-btn--ghost {
 
 html[data-theme="dark"] body.page-sales-settings .ss-form-block {
   border-top-color: #334155;
+}
+
+html[data-theme="dark"] body.page-sales-settings .ss-target-modes label {
+  background: transparent;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] body.page-sales-settings .ss-target-modes label.is-selected {
+  background: transparent;
+  color: #e9d5ff;
 }
 
 html[data-theme="dark"] body.page-sales-settings .ss-tax-option,

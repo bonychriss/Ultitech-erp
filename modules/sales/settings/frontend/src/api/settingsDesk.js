@@ -63,7 +63,7 @@ export async function fetchMonthlyTargets(month) {
   return data;
 }
 
-export async function saveMonthlyTargets(month, people) {
+export async function saveMonthlyTargets(month, people, mode, sharedAmount, scope) {
   const params = new URLSearchParams(window.location.search);
   const res = await fetch(`${getApiBase()}/targets.php?${params.toString()}`, {
     method: 'POST',
@@ -71,6 +71,9 @@ export async function saveMonthlyTargets(month, people) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       month,
+      mode,
+      scope,
+      shared_amount: sharedAmount,
       targets: people.map((person) => ({
         user_id: person.id,
         amount: person.amount,

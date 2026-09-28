@@ -23,7 +23,13 @@ try {
         }
         $month = (string) ($payload['month'] ?? '');
         $rows = is_array($payload['targets'] ?? null) ? $payload['targets'] : [];
-        $saved = sales_settings_save_monthly_targets($pdo, $month, $rows);
+        $mode = (string) ($payload['mode'] ?? 'all') === 'each' ? 'each' : 'all';
+        $scope = (string) ($payload['scope'] ?? 'month');
+        if (!in_array($scope, ['month', 'ongoing', 'year'], true)) {
+            $scope = 'month';
+        }
+        $shared = (string) ($payload['shared_amount'] ?? '');
+        $saved = sales_settings_save_monthly_targets($pdo, $month, $rows, $mode, $shared, $scope);
         echo json_encode(['success' => true] + $saved, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }

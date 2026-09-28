@@ -919,7 +919,7 @@ function weeklyTasksUiSalesTargetMap(PDO $pdo): array
     $map = [];
     foreach ($rows as $row) {
         $id = (int) ($row['user_id'] ?? 0);
-        if ($id < 1) {
+        if ($id < 0) {
             continue;
         }
         $map[$id][(string) ($row['period'] ?? '')] = (float) ($row['target_amount'] ?? 0);
@@ -928,19 +928,53 @@ function weeklyTasksUiSalesTargetMap(PDO $pdo): array
     return $map;
 }
 
+function weeklyTasksUiSalesPeopleIds(PDO $pdo): array
+{
+    try {
+        $rows = $pdo->query('SELECT id, department, role FROM users WHERE is_active = 1')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+    $ids = [];
+    foreach ($rows as $row) {
+        $blob = strtolower(trim((string) ($row['department'] ?? '') . ' ' . (string) ($row['role'] ?? '')));
+        if (!str_contains($blob, 'sales')) {
+            continue;
+        }
+        $id = (int) ($row['id'] ?? 0);
+        if ($id > 0) {
+            $ids[] = $id;
+        }
+    }
+
+    return $ids;
+}
+
 function weeklyTasksUiSalesMonthTarget(array $map, int $userId, string $monthStart): ?float
 {
-    $periods = $map[$userId] ?? null;
-    if (!$periods) {
-        return null;
-    }
+    $periods = $map[$userId] ?? [];
     $month = substr($monthStart, 0, 7);
     $year = substr($monthStart, 0, 4);
     if (isset($periods[$month]) && $periods[$month] > 0) {
         return (float) $periods[$month];
     }
+    $sharedMonth = (float) ($map[0][$month] ?? 0);
+    if ($userId > 0 && $sharedMonth > 0) {
+        return $sharedMonth;
+    }
+    if (isset($periods['monthly']) && $periods['monthly'] > 0) {
+        return (float) $periods['monthly'];
+    }
+    $sharedOngoing = (float) ($map[0]['monthly'] ?? 0);
+    if ($userId > 0 && $sharedOngoing > 0) {
+        return $sharedOngoing;
+    }
     if (isset($periods[$year]) && $periods[$year] > 0) {
         return (float) $periods[$year] / 12;
+    }
+    $sharedYear = (float) ($map[0][$year] ?? 0);
+    if ($userId > 0 && $sharedYear > 0) {
+        return $sharedYear / 12;
     }
 
     return null;
@@ -964,6 +998,7 @@ function weeklyTasksUiRatioScore(float $actual, float $target): int
 function weeklyTasksUiSalesScores(PDO $pdo, array $offsets): array
 {
     $targets = weeklyTasksUiSalesTargetMap($pdo);
+    $salesPeople = weeklyTasksUiSalesPeopleIds($pdo);
     $blank = static function (): array {
         return [
             'revenue' => 0.0,
@@ -1111,7 +1146,17 @@ function weeklyTasksUiSalesScores(PDO $pdo, array $offsets): array
             } catch (Throwable $e) {
             }
         }
+        $targetIds = [];
         foreach ($targets as $id => $periods) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $targetIds[$id] = true;
+            }
+        }
+        foreach ($salesPeople as $id) {
+            $targetIds[(int) $id] = true;
+        }
+        foreach (array_keys($targetIds) as $id) {
             $touch($byUser, (int) $id);
             $monthTarget = weeklyTasksUiSalesMonthTarget($targets, (int) $id, $start);
             if ($monthTarget !== null) {

@@ -570,6 +570,64 @@ function TeamTrend({ trend }) {
   )
 }
 
+function todoSections(rows) {
+  const today = new Date()
+  const start = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  const todayStart = start(today)
+  const groups = new Map()
+  rows.forEach((row, index) => {
+    const parsed = row.date ? new Date(`${String(row.date).slice(0, 10)}T00:00:00`) : null
+    let key = 'earlier'
+    let label = 'Earlier'
+    if (parsed && !Number.isNaN(parsed.getTime())) {
+      const diff = todayStart - start(parsed)
+      if (diff === 0) {
+        key = 'today'
+        label = 'Today'
+      } else if (diff === 86400000) {
+        key = 'yesterday'
+        label = 'Yesterday'
+      }
+    }
+    if (!groups.has(key)) groups.set(key, { key, label, items: [] })
+    groups.get(key).items.push({ row, index })
+  })
+  return ['today', 'yesterday', 'earlier'].filter((key) => groups.has(key)).map((key) => groups.get(key))
+}
+
+function TodoCards({ rows }) {
+  const sections = todoSections(rows)
+  return (
+    <div className="wt-nc-list">
+      {sections.map((section) => (
+        <section key={section.key} className="wt-nc-section" aria-label={section.label}>
+          <h2 className="wt-nc-heading">{section.label}</h2>
+          <div className="wt-nc-section-list">
+            {section.items.map(({ row, index }) => (
+              <article key={`${row.date}-${row.title}-${index}`} className="wt-nc-card">
+                <span className="wt-nc-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M9 6h6M9 10h6M9 14h4" />
+                    <rect x="5" y="3" width="14" height="18" rx="2" />
+                  </svg>
+                </span>
+                <div className="wt-nc-body">
+                  <p className="wt-nc-kicker">To-do</p>
+                  <div className="wt-nc-title-row">
+                    <h3 className="wt-nc-title">{row.title}</h3>
+                    {row.when ? <time className="wt-nc-time">{row.when}</time> : null}
+                  </div>
+                  <p className="wt-nc-message">{row.status}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  )
+}
+
 function MeasurePage({ month, measure }) {
   const rows = Array.isArray(measure.rows) ? measure.rows : []
   const [doc, setDoc] = useState(null)
@@ -604,6 +662,8 @@ function MeasurePage({ month, measure }) {
         <p className="wt-empty wt-empty--card">Target not set.</p>
       ) : rows.length === 0 ? (
         <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
+      ) : measure.key === 'todo' ? (
+        <TodoCards rows={rows} />
       ) : (
         <div className="wt-compare">
           <div className="wt-compare-row wt-compare-row--head">

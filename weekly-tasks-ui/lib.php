@@ -834,9 +834,11 @@ function weeklyTasksUiTodoLines(PDO $pdo, int $userId, array $offsets): array
             $st = $pdo->prepare('SELECT task_description, is_completed, task_date FROM user_tasks WHERE user_id = ? AND task_date BETWEEN ? AND ? ORDER BY task_date, id');
             $st->execute([$userId, $start, $end]);
             foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $taskDate = (string) ($row['task_date'] ?? '');
                 $rows[] = [
                     'title' => (string) ($row['task_description'] ?? 'To-do'),
-                    'when' => date('j M Y', strtotime((string) $row['task_date'])),
+                    'date' => $taskDate,
+                    'when' => $taskDate !== '' ? date('j M Y', strtotime($taskDate)) : '',
                     'status' => !empty($row['is_completed']) ? 'Completed' : 'Pending',
                 ];
             }

@@ -530,7 +530,7 @@ function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string 
                 $rows[] = [
                     'title' => $serviceLabel . ' · ' . $actual . '%',
                     'when' => $when,
-                    'status' => $actual >= $spec['target'] ? 'Met' : 'Short',
+                    'status' => $actual >= $spec['target'] ? 'Met' : 'Missed',
                 ];
             }
         }

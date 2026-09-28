@@ -296,7 +296,38 @@ function MonthSelect({ month }) {
 function itemStatus(item) {
   if (!item.configured) return { key: 'none', label: 'Not configured' }
   if (item.met) return { key: 'met', label: 'Met' }
-  return { key: 'short', label: 'Short' }
+  return { key: 'short', label: 'Missed' }
+}
+
+function SalesMeasureCards({ items }) {
+  return (
+    <div className="wt-nc-section-list">
+      {items.map((item) => {
+        const status = itemStatus(item)
+        const expected = item.configured ? item.expected : 'Not configured'
+        const actual = item.configured ? item.actual : 'Not configured'
+        const Row = item.href ? 'a' : 'article'
+        return (
+          <Row key={item.name} className="wt-nc-card wt-kpi-card" href={item.href || undefined}>
+            <span className="wt-nc-icon" aria-hidden="true">
+              <RecordIcon kind="sales" />
+            </span>
+            <div className="wt-nc-body">
+              <p className="wt-nc-kicker">Sales</p>
+              <div className="wt-nc-title-row">
+                <h3 className="wt-nc-title">{item.name}</h3>
+                <em className={`wt-status wt-status--${status.key}`}>{status.label}</em>
+              </div>
+              <p className="wt-kpi-details">
+                <span>{expected}</span>
+                <span>{actual}</span>
+              </p>
+            </div>
+          </Row>
+        )
+      })}
+    </div>
+  )
 }
 
 function CompareTable({ items }) {
@@ -690,7 +721,7 @@ function MeasurePage({ month, measure }) {
       {!measure.configured ? (
         <p className="wt-empty wt-empty--card">Target not set.</p>
       ) : breakdown.length ? (
-        <CompareTable items={breakdown} />
+        <SalesMeasureCards items={breakdown} />
       ) : rows.length === 0 ? (
         <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
       ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'].includes(measure.key) ? (

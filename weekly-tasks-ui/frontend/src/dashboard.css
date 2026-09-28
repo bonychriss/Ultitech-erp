@@ -681,6 +681,26 @@ a.wt-row:hover {
   color: #64748b;
 }
 
+a.wt-kpi-card {
+  text-decoration: none;
+  color: inherit;
+  align-items: center;
+}
+
+.wt-kpi-details {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  color: #64748b;
+}
+
+.wt-kpi-details span {
+  white-space: nowrap;
+}
+
 .wt-compare {
   background: #fff;
   border: 1px solid #e5e7eb;

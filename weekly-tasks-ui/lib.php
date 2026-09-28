@@ -928,6 +928,199 @@ function weeklyTasksUiAttendanceLines(PDO $pdo, int $userId, array $offsets): ar
     return array_values($rows);
 }
 
+/**
+ * Chart plus early, late, missed sign-out, and pending-task detail for one person.
+ *
+ * @param array<int,int> $offsets
+ * @return array{chart:array<int,array{label:string,value:int}>,stats:array<int,array{key:string,label:string,count:int,items:array<int,array{title:string,when:string}>}>}
+ */
+function weeklyTasksUiAttendanceBoard(PDO $pdo, int $userId, array $offsets): array
+{
+    $present = [];
+    $early = [];
+    $late = [];
+    $forgot = [];
+    $pending = [];
+    $startTime = '09:00:00';
+    $grace = 15;
+    $today = date('Y-m-d');
+    if (function_exists('tableExists') && tableExists('attendance_settings', $pdo)) {
+        try {
+            $settings = $pdo->query('SELECT start_time, grace_period_minutes FROM attendance_settings WHERE id = 1 LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+            if (is_array($settings)) {
+                if (!empty($settings['start_time'])) {
+                    $startTime = (string) $settings['start_time'];
+                }
+                $grace = (int) ($settings['grace_period_minutes'] ?? 15);
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    $startStamp = strtotime($startTime) ?: strtotime('09:00:00');
+    $graceStamp = $startStamp + ($grace * 60);
+    $earlyCutoff = $startStamp - (30 * 60);
+
+    $pushDay = static function (array &$bucket, string $day, string $title) use (&$present): void {
+        $day = substr($day, 0, 10);
+        if ($day === '') {
+            return;
+        }
+        $present[$day] = true;
+        $bucket[$day] = [
+            'title' => $title,
+            'when' => date('j M Y', strtotime($day)),
+            'date' => $day,
+        ];
+    };
+
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        $covered = [];
+        if (function_exists('tableExists') && tableExists('attendance_records', $pdo)) {
+            try {
+                $st = $pdo->prepare('SELECT `date` AS day, time_in, time_out, status FROM attendance_records WHERE user_id = ? AND `date` BETWEEN ? AND ?');
+                $st->execute([$userId, $start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $day = substr((string) ($row['day'] ?? ''), 0, 10);
+                    if ($day === '') {
+                        continue;
+                    }
+                    $covered[$day] = true;
+                    $present[$day] = true;
+                    $status = strtolower(trim((string) ($row['status'] ?? '')));
+                    $timeIn = strtotime((string) ($row['time_in'] ?? ''));
+                    if ($status === '' && $timeIn) {
+                        if ($timeIn > $graceStamp) {
+                            $status = 'late';
+                        } elseif ($timeIn < $earlyCutoff) {
+                            $status = 'early';
+                        }
+                    }
+                    if (str_contains($status, 'early')) {
+                        $pushDay($early, $day, 'Came early');
+                    } elseif (str_contains($status, 'late')) {
+                        $pushDay($late, $day, 'Came late');
+                    }
+                    $signedOut = trim((string) ($row['time_out'] ?? '')) !== '';
+                    if (!$signedOut && $day < $today) {
+                        $pushDay($forgot, $day, 'Forgot to sign out');
+                    }
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        if (function_exists('tableExists') && tableExists('attendance', $pdo)) {
+            try {
+                $st = $pdo->prepare('SELECT sign_type, signed_at FROM attendance WHERE user_id = ? AND signed_at IS NOT NULL AND DATE(signed_at) BETWEEN ? AND ? ORDER BY signed_at');
+                $st->execute([$userId, $start, $end]);
+                $byDay = [];
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $signedAt = (string) ($row['signed_at'] ?? '');
+                    $day = substr($signedAt, 0, 10);
+                    if ($day === '' || isset($covered[$day])) {
+                        continue;
+                    }
+                    $byDay[$day][] = $row;
+                }
+                foreach ($byDay as $day => $events) {
+                    $present[$day] = true;
+                    $signIn = '';
+                    $signedOut = false;
+                    foreach ($events as $event) {
+                        $type = strtolower((string) ($event['sign_type'] ?? 'sign_in'));
+                        if ($type === 'sign_out') {
+                            $signedOut = true;
+                        } elseif ($signIn === '') {
+                            $signIn = (string) ($event['signed_at'] ?? '');
+                        }
+                    }
+                    $timeIn = $signIn !== '' ? strtotime(substr($signIn, 11, 8)) : false;
+                    if ($timeIn && $timeIn < $earlyCutoff) {
+                        $pushDay($early, $day, 'Came early');
+                    } elseif ($timeIn && $timeIn > $graceStamp) {
+                        $pushDay($late, $day, 'Came late');
+                    }
+                    if (!$signedOut && $day < $today) {
+                        $pushDay($forgot, $day, 'Forgot to sign out');
+                    }
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        if (function_exists('tableExists') && tableExists('user_tasks', $pdo)) {
+            try {
+                $st = $pdo->prepare('SELECT task_description, task_date FROM user_tasks WHERE user_id = ? AND is_completed = 0 AND task_date BETWEEN ? AND ? ORDER BY task_date, id');
+                $st->execute([$userId, $start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $day = substr((string) ($row['task_date'] ?? ''), 0, 10);
+                    $title = trim((string) ($row['task_description'] ?? ''));
+                    if ($title === '') {
+                        $title = 'Pending task';
+                    }
+                    $pending[] = [
+                        'title' => $title,
+                        'when' => $day !== '' ? date('j M Y', strtotime($day)) : '',
+                        'date' => $day,
+                    ];
+                }
+            } catch (Throwable $e) {
+            }
+        }
+    }
+
+    $chart = [];
+    $rangeStart = null;
+    $rangeEnd = null;
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        $rangeStart = $rangeStart === null || $start < $rangeStart ? $start : $rangeStart;
+        $rangeEnd = $rangeEnd === null || $end > $rangeEnd ? $end : $rangeEnd;
+    }
+    if ($rangeStart && $rangeEnd) {
+        try {
+            $cursor = new DateTime($rangeStart);
+            $last = new DateTime($rangeEnd);
+            while ($cursor <= $last) {
+                $weekStart = clone $cursor;
+                $weekEnd = (clone $cursor)->modify('sunday this week');
+                if ($weekEnd > $last) {
+                    $weekEnd = clone $last;
+                }
+                $count = 0;
+                $day = clone $weekStart;
+                while ($day <= $weekEnd) {
+                    if (isset($present[$day->format('Y-m-d')])) {
+                        $count++;
+                    }
+                    $day->modify('+1 day');
+                }
+                $chart[] = [
+                    'label' => $weekStart->format('j') . '–' . $weekEnd->format('j M'),
+                    'value' => $count,
+                ];
+                $cursor = (clone $weekEnd)->modify('+1 day');
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    $pack = static function (array $bucket): array {
+        ksort($bucket);
+
+        return array_values($bucket);
+    };
+
+    return [
+        'chart' => $chart,
+        'stats' => [
+            ['key' => 'early', 'label' => 'Came early', 'count' => count($early), 'items' => $pack($early)],
+            ['key' => 'late', 'label' => 'Came late', 'count' => count($late), 'items' => $pack($late)],
+            ['key' => 'signout', 'label' => 'Forgot to sign out', 'count' => count($forgot), 'items' => $pack($forgot)],
+            ['key' => 'pending', 'label' => 'Pending task', 'count' => count($pending), 'items' => $pending],
+        ],
+    ];
+}
+
 function weeklyTasksUiMoney(float $amount): string
 {
     $places = abs($amount - round($amount)) < 0.005 ? 0 : 2;
@@ -2000,6 +2193,7 @@ function weeklyTasksUiBuildPayload(): array
             $rows = [];
             $empty = 'Nothing recorded in this period.';
             $breakdown = [];
+            $attendanceBoard = null;
             if ($measureKey === 'sales-performance') {
                 $breakdown = $salesLines;
                 $empty = 'No sales performance recorded in this period.';
@@ -2011,6 +2205,7 @@ function weeklyTasksUiBuildPayload(): array
                 $empty = 'No to-do items recorded in this period.';
             } elseif ($measureKey === 'attendance') {
                 $rows = weeklyTasksUiAttendanceLines($pdo, $selectedId, $offsets);
+                $attendanceBoard = weeklyTasksUiAttendanceBoard($pdo, $selectedId, $offsets);
                 $empty = 'No attendance recorded in this period.';
             } elseif (in_array($measureKey, ['monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'], true)) {
                 $rows = weeklyTasksUiSalesLines($pdo, $selectedId, $offsets, $measureKey);
@@ -2040,6 +2235,7 @@ function weeklyTasksUiBuildPayload(): array
                 'configured' => (bool) ($match['configured'] ?? false),
                 'rows' => $measureKey === 'customer-visits' ? [] : (!empty($match['configured']) ? $rows : []),
                 'items' => $breakdown,
+                'board' => $attendanceBoard,
                 'empty' => $measureKey === 'customer-visits' ? 'Coming soon' : $empty,
                 'backUrl' => $salesMeasure
                     ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'sales-performance')

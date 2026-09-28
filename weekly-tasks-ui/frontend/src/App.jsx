@@ -796,6 +796,53 @@ function AboutNote({ about }) {
   )
 }
 
+function AttendanceBoard({ board }) {
+  const chart = Array.isArray(board?.chart) ? board.chart : []
+  const stats = Array.isArray(board?.stats) ? board.stats : []
+  const peak = Math.max(1, ...chart.map((bar) => Number(bar.value) || 0))
+  if (!chart.length && !stats.length) return null
+  return (
+    <div className="wt-att">
+      <section className="wt-att-chart" aria-label="Attendance chart">
+        <h2>Attendance</h2>
+        <div className="wt-att-bars">
+          {chart.map((bar) => (
+            <div key={bar.label} className="wt-att-bar">
+              <span className="wt-att-value">{Number(bar.value) || 0}</span>
+              <span className="wt-att-track">
+                <span style={{ height: `${Math.round(((Number(bar.value) || 0) / peak) * 100)}%` }} />
+              </span>
+              <span className="wt-att-label">{bar.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+      <div className="wt-att-stats">
+        {stats.map((stat) => (
+          <section key={stat.key} className="wt-att-stat">
+            <header>
+              <span>{stat.label}</span>
+              <strong>{Number(stat.count) || 0}</strong>
+            </header>
+            {(stat.items || []).length ? (
+              <ul>
+                {(stat.items || []).map((item, index) => (
+                  <li key={`${stat.key}-${item.when}-${index}`}>
+                    <span>{item.title}</span>
+                    {item.when ? <time>{item.when}</time> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>None</p>
+            )}
+          </section>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function MeasurePage({ month, measure }) {
   const rows = Array.isArray(measure.rows) ? measure.rows : []
   const breakdown = Array.isArray(measure.items) ? measure.items : []
@@ -836,6 +883,18 @@ function MeasurePage({ month, measure }) {
         <p className="wt-empty wt-empty--card">Target not set.</p>
       ) : breakdown.length ? (
         <SalesMeasureCards items={breakdown} />
+      ) : measure.key === 'attendance' && measure.board ? (
+        <>
+          <AttendanceBoard board={measure.board} />
+          {rows.length ? (
+            <RecordCards
+              rows={rows}
+              onOpen={openDocument}
+              label="Attendance"
+              kind="attendance"
+            />
+          ) : null}
+        </>
       ) : rows.length === 0 ? (
         measure.empty === 'Coming soon' ? (
           <div className="wt-soon" role="status">

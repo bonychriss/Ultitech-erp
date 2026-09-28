@@ -628,7 +628,7 @@ function MeasurePage({ month, measure }) {
           })}
         </div>
       )}
-      {doc ? (
+      {doc ? createPortal(
         <div className="wt-doc" role="dialog" aria-modal="true" aria-label={doc.title}>
           <button type="button" className="wt-doc-backdrop" aria-label="Close document" onClick={() => setDoc(null)} />
           <div className="wt-doc-panel">
@@ -642,7 +642,8 @@ function MeasurePage({ month, measure }) {
               <p className="wt-doc-missing">No document recorded for {doc.title}.</p>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </div>
   )

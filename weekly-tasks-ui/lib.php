@@ -423,7 +423,7 @@ function weeklyTasksUiDriverEntryScores(PDO $pdo, array $mondays): ?array
  * @param array<int,int> $offsets
  * @return array<int,array{title:string,when:string,status:string}>
  */
-function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string $metric, string $personName = ''): array
+function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string $metric): array
 {
     $columns = [
         'on-time-delivery' => ['column' => 'on_time_pct', 'target' => 95, 'label' => 'On-time delivery'],
@@ -432,6 +432,9 @@ function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string 
     ];
     if (!isset($columns[$metric])) {
         return [];
+    }
+    if ($metric === 'delivery-documents') {
+        return weeklyTasksUiDeliveryRecipientRows($pdo, $userId, $offsets);
     }
     $spec = $columns[$metric];
     $byWeek = [];
@@ -465,12 +468,8 @@ function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string 
                 continue;
             }
             if (!$entries) {
-                $title = $spec['label'];
-                if ($metric === 'delivery-documents' && $personName !== '') {
-                    $title = $personName . "'s documents";
-                }
                 $rows[] = [
-                    'title' => $title,
+                    'title' => $spec['label'],
                     'when' => $when,
                     'status' => 'Not recorded',
                 ];
@@ -482,16 +481,83 @@ function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string 
                     ? (string) (dkpi_services()[$service]['label'] ?? ucfirst($service))
                     : ucfirst($service);
                 $actual = (int) round((float) ($entry[$spec['column']] ?? 0));
-                $title = $serviceLabel . ' · ' . $actual . '%';
-                if ($metric === 'delivery-documents' && $personName !== '') {
-                    $title = $personName . ' · ' . $title;
-                }
                 $rows[] = [
-                    'title' => $title,
+                    'title' => $serviceLabel . ' · ' . $actual . '%',
                     'when' => $when,
                     'status' => $actual >= $spec['target'] ? 'Met' : 'Short',
                 ];
             }
+        }
+    }
+
+    return $rows;
+}
+
+/**
+ * One row per customer who received a delivery. Documents are recorded when the delivery is signed.
+ *
+ * @param array<int,int> $offsets
+ * @return array<int,array{title:string,when:string,status:string}>
+ */
+function weeklyTasksUiDeliveryRecipientRows(PDO $pdo, int $userId, array $offsets): array
+{
+    if (!function_exists('tableExists') || !tableExists('delivery_orders', $pdo)) {
+        return [];
+    }
+    $hasNotes = tableExists('delivery_notes', $pdo);
+    $hasTrips = tableExists('delivery_trips', $pdo);
+    $rows = [];
+    $seen = [];
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        $sql = 'SELECT o.id, o.client_name, o.completion_time, o.created_at, o.signature_path';
+        if ($hasNotes) {
+            $sql .= ', dn.customer_name, dn.receiver_signature_path';
+        }
+        $sql .= ' FROM delivery_orders o';
+        if ($hasTrips) {
+            $sql .= ' LEFT JOIN delivery_trips t ON o.trip_id = t.id';
+        }
+        if ($hasNotes) {
+            $sql .= ' LEFT JOIN delivery_notes dn ON o.delivery_note_id = dn.id';
+        }
+        $driverSql = $hasTrips
+            ? '(o.requested_driver_id = ? OR t.driver_id = ?)'
+            : 'o.requested_driver_id = ?';
+        $sql .= " WHERE {$driverSql} AND COALESCE(o.completion_time, o.created_at) BETWEEN ? AND ? ORDER BY COALESCE(o.completion_time, o.created_at)";
+        try {
+            $st = $pdo->prepare($sql);
+            $params = $hasTrips
+                ? [$userId, $userId, $start . ' 00:00:00', $end . ' 23:59:59']
+                : [$userId, $start . ' 00:00:00', $end . ' 23:59:59'];
+            $st->execute($params);
+            $found = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            $found = [];
+        }
+        foreach ($found as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id < 1 || isset($seen[$id])) {
+                continue;
+            }
+            $seen[$id] = true;
+            $who = trim((string) ($row['client_name'] ?? ''));
+            if ($who === '' && $hasNotes) {
+                $who = trim((string) ($row['customer_name'] ?? ''));
+            }
+            if ($who === '') {
+                $who = 'Customer';
+            }
+            $signed = trim((string) ($row['signature_path'] ?? '')) !== '';
+            if ($hasNotes) {
+                $signed = $signed || trim((string) ($row['receiver_signature_path'] ?? '')) !== '';
+            }
+            $whenRaw = trim((string) (($row['completion_time'] ?? '') !== '' ? $row['completion_time'] : ($row['created_at'] ?? '')));
+            $rows[] = [
+                'title' => $who,
+                'when' => $whenRaw !== '' ? date('j M Y', strtotime($whenRaw)) : '',
+                'status' => $signed ? 'Met' : 'Not recorded',
+            ];
         }
     }
 
@@ -1009,8 +1075,10 @@ function weeklyTasksUiBuildPayload(): array
                 $rows = weeklyTasksUiAttendanceLines($pdo, $selectedId, $offsets);
                 $empty = 'No attendance recorded in this period.';
             } elseif (in_array($measureKey, ['on-time-delivery', 'vehicle-care', 'delivery-documents'], true)) {
-                $rows = weeklyTasksUiDriverLines($pdo, $selectedId, $offsets, $measureKey, (string) ($detail['name'] ?? ''));
-                $empty = 'No driver performance recorded in this period.';
+                $rows = weeklyTasksUiDriverLines($pdo, $selectedId, $offsets, $measureKey);
+                $empty = $measureKey === 'delivery-documents'
+                    ? 'No deliveries in this period.'
+                    : 'No driver performance recorded in this period.';
             }
             $measureView = [
                 'key' => $measureKey,

@@ -732,7 +732,14 @@ function sales_settings_monthly_targets(PDO $pdo, string $month): array
 /**
  * @param array<int,array<string,mixed>> $rows
  */
-function sales_settings_save_monthly_targets(PDO $pdo, string $month, array $rows, string $mode = 'all', string $sharedRaw = '', string $scope = 'month'): array
+function sales_settings_parse_amount(string $raw): float
+{
+    $clean = str_replace([',', ' '], '', trim($raw));
+
+    return is_numeric($clean) ? (float) $clean : 0.0;
+}
+
+function sales_settings_save_monthly_targets(PDO $pdo, string $month, array $rows, string $mode = 'all', string $sharedRaw = '', string $scope = 'month', string $sharedYearlyRaw = ''): array
 {
     if (!sales_settings_valid_month($month)) {
         throw new InvalidArgumentException('Choose a valid month.');
@@ -744,6 +751,7 @@ function sales_settings_save_monthly_targets(PDO $pdo, string $month, array $row
     } else {
         $period = $month;
     }
+    $year = substr($month, 0, 4);
     if (function_exists('ensureSalesTargetsSchema')) {
         ensureSalesTargetsSchema();
     }
@@ -753,16 +761,22 @@ function sales_settings_save_monthly_targets(PDO $pdo, string $month, array $row
     }
     $upsert = $pdo->prepare('INSERT INTO sales_targets (user_id, period, target_amount) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE target_amount = ?');
     $delete = $pdo->prepare('DELETE FROM sales_targets WHERE user_id = ? AND period = ?');
-    $sharedClean = str_replace([',', ' '], '', trim($sharedRaw));
-    $sharedAmount = is_numeric($sharedClean) ? (float) $sharedClean : 0.0;
+    $sharedAmount = sales_settings_parse_amount($sharedRaw);
+    $sharedYearly = sales_settings_parse_amount($sharedYearlyRaw);
     if ($sharedAmount > 0) {
         $upsert->execute([0, $period, $sharedAmount, $sharedAmount]);
     } elseif ($mode === 'all') {
         $delete->execute([0, $period]);
     }
+    if ($sharedYearly > 0) {
+        $upsert->execute([0, $year, $sharedYearly, $sharedYearly]);
+    } elseif ($mode === 'all') {
+        $delete->execute([0, $year]);
+    }
     if ($mode === 'all') {
         foreach (array_keys($allowed) as $userId) {
             $delete->execute([(int) $userId, $period]);
+            $delete->execute([(int) $userId, $year]);
         }
 
         return sales_settings_monthly_targets($pdo, $month);
@@ -775,12 +789,17 @@ function sales_settings_save_monthly_targets(PDO $pdo, string $month, array $row
         if ($userId < 1 || empty($allowed[$userId])) {
             continue;
         }
-        $raw = str_replace([',', ' '], '', trim((string) ($row['amount'] ?? '')));
-        $amount = is_numeric($raw) ? (float) $raw : 0.0;
+        $amount = sales_settings_parse_amount((string) ($row['amount'] ?? ''));
         if ($amount > 0) {
             $upsert->execute([$userId, $period, $amount, $amount]);
         } else {
             $delete->execute([$userId, $period]);
+        }
+        $yearly = sales_settings_parse_amount((string) ($row['yearly_amount'] ?? ''));
+        if ($yearly > 0) {
+            $upsert->execute([$userId, $year, $yearly, $yearly]);
+        } else {
+            $delete->execute([$userId, $year]);
         }
     }
 

@@ -21,6 +21,24 @@ function getSettingsTabs(init) {
   return [...ROADMASTER_TABS, targets];
 }
 
+function withYearlyDefaults(data) {
+  const people = Array.isArray(data?.people) ? data.people : [];
+  return {
+    sharedYearly: data?.shared_yearly || yearlyFromMonthly(data?.shared_amount || ''),
+    people: people.map((person) => ({
+      ...person,
+      yearly_amount: person.yearly_amount || yearlyFromMonthly(person.amount || person.ongoing_amount || ''),
+    })),
+  };
+}
+
+function yearlyFromMonthly(amount) {
+  const value = Number(String(amount ?? '').replace(/,/g, '').trim());
+  if (!Number.isFinite(value) || value <= 0) return '';
+  const yearly = Math.round(value * 12 * 100) / 100;
+  return String(yearly).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+}
+
 function formatTargetMoney(amount, currency) {
   const value = Number(amount);
   if (!Number.isFinite(value) || value <= 0) return '';
@@ -250,7 +268,7 @@ export default function SalesSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [layoutTeaser, setLayoutTeaser] = useState(null);
   const [targetMonth, setTargetMonth] = useState('');
-  const [targetScope, setTargetScope] = useState('month');
+  const [targetScope, setTargetScope] = useState('ongoing');
   const [targetMode, setTargetMode] = useState('all');
   const [sharedAmount, setSharedAmount] = useState('');
   const [ongoingShared, setOngoingShared] = useState('');
@@ -272,10 +290,11 @@ export default function SalesSettingsPage() {
         setTargetMonth(data.monthlyTargets?.month || '');
         setSharedAmount(data.monthlyTargets?.shared_amount || '');
         setOngoingShared(data.monthlyTargets?.ongoing_shared || '');
-        setYearlyShared(data.monthlyTargets?.shared_yearly || '');
+        const seeded = withYearlyDefaults(data.monthlyTargets);
+        setYearlyShared(seeded.sharedYearly);
         setTargetMode('all');
-        setTargetScope('month');
-        setTargetPeople(Array.isArray(data.monthlyTargets?.people) ? data.monthlyTargets.people : []);
+        setTargetScope('ongoing');
+        setTargetPeople(seeded.people);
         setLoading(false);
       })
       .catch((err) => {
@@ -326,8 +345,9 @@ export default function SalesSettingsPage() {
       setTargetMonth(data.month || month);
       setSharedAmount(data.shared_amount || '');
       setOngoingShared(data.ongoing_shared || '');
-      setYearlyShared(data.shared_yearly || '');
-      setTargetPeople(Array.isArray(data.people) ? data.people : []);
+      const seeded = withYearlyDefaults(data);
+      setYearlyShared(seeded.sharedYearly);
+      setTargetPeople(seeded.people);
     } catch (err) {
       showToast(err.message || 'Could not load targets', 'error');
     } finally {
@@ -342,9 +362,17 @@ export default function SalesSettingsPage() {
   }
 
   function changeTargetAmount(userId, amount) {
-    const field = targetScope === 'ongoing' ? 'ongoing_amount' : (targetScope === 'year' ? 'yearly_amount' : 'amount');
+    const field = targetScope === 'ongoing' ? 'ongoing_amount' : 'amount';
     setTargetPeople((prev) => prev.map((person) => (
-      person.id === userId ? { ...person, [field]: amount } : person
+      person.id === userId
+        ? { ...person, [field]: amount, yearly_amount: yearlyFromMonthly(amount) }
+        : person
+    )));
+  }
+
+  function changePersonYearly(userId, amount) {
+    setTargetPeople((prev) => prev.map((person) => (
+      person.id === userId ? { ...person, yearly_amount: amount } : person
     )));
   }
 
@@ -354,15 +382,17 @@ export default function SalesSettingsPage() {
     const activePeople = targetPeople.map((person) => ({
       id: person.id,
       amount: scopePersonAmount(person),
+      yearly_amount: person.yearly_amount || yearlyFromMonthly(scopePersonAmount(person)),
     }));
     setTargetsSaving(true);
     try {
-      const data = await saveMonthlyTargets(targetMonth, activePeople, targetMode, activeShared, targetScope);
+      const data = await saveMonthlyTargets(targetMonth, activePeople, targetMode, activeShared, targetScope, yearlyShared);
       setTargetMonth(data.month || targetMonth);
       setSharedAmount(data.shared_amount || '');
       setOngoingShared(data.ongoing_shared || '');
-      setYearlyShared(data.shared_yearly || '');
-      setTargetPeople(Array.isArray(data.people) ? data.people : []);
+      const seeded = withYearlyDefaults(data);
+      setYearlyShared(seeded.sharedYearly);
+      setTargetPeople(seeded.people);
       showToast('Sales target saved');
     } catch (err) {
       showToast(err.message || 'Could not save targets', 'error');
@@ -606,15 +636,6 @@ export default function SalesSettingsPage() {
                     />
                     All months until changed
                   </label>
-                  <label className={targetScope === 'year' ? 'is-selected' : ''}>
-                    <input
-                      type="radio"
-                      name="sales-target-scope"
-                      checked={targetScope === 'year'}
-                      onChange={() => setTargetScope('year')}
-                    />
-                    Yearly
-                  </label>
                 </div>
 
                 {targetScope === 'month' ? (
@@ -628,23 +649,6 @@ export default function SalesSettingsPage() {
                       onChange={(event) => changeTargetMonth(event.target.value)}
                     />
                     <p className="ss-field-help">Choose this month or any other month. This amount is used only for that month.</p>
-                  </div>
-                ) : targetScope === 'year' ? (
-                  <div className="ss-field ss-target-month">
-                    <label className="ss-field-label" htmlFor="sales-target-year">Year</label>
-                    <input
-                      id="sales-target-year"
-                      className="ss-field-input"
-                      inputMode="numeric"
-                      value={(targetMonth || '').slice(0, 4)}
-                      onChange={(event) => {
-                        const year = event.target.value.replace(/\D/g, '').slice(0, 4);
-                        const monthPart = (targetMonth || '').slice(5, 7) || '01';
-                        setTargetMonth(year.length === 4 ? `${year}-${monthPart}` : `${year}`);
-                        if (year.length === 4) changeTargetMonth(`${year}-${monthPart}`);
-                      }}
-                    />
-                    <p className="ss-field-help">The full-year amount. Each month uses one twelfth unless that month has its own target.</p>
                   </div>
                 ) : (
                   <p className="ss-field-help ss-target-scope-note">Used every month until you save a new amount. A specific month still overrides it.</p>
@@ -672,28 +676,42 @@ export default function SalesSettingsPage() {
                 </div>
 
                 {targetMode === 'all' ? (
-                  <div className="ss-field ss-target-shared">
-                    <label className="ss-field-label" htmlFor="sales-target-shared">{targetScope === 'year' ? 'Yearly amount' : 'Monthly amount'}</label>
-                    <input
-                      id="sales-target-shared"
-                      className="ss-field-input"
-                      inputMode="decimal"
-                      value={targetScope === 'ongoing' ? ongoingShared : (targetScope === 'year' ? yearlyShared : sharedAmount)}
-                      onChange={(event) => {
-                        if (targetScope === 'ongoing') setOngoingShared(event.target.value);
-                        else if (targetScope === 'year') setYearlyShared(event.target.value);
-                        else setSharedAmount(event.target.value);
-                      }}
-                      placeholder={settings.default_currency || 'TZS'}
-                      autoComplete="off"
-                    />
-                    <p className="ss-field-help">
-                      {targetScope === 'ongoing'
-                        ? 'Every salesperson meets this amount each month until you change it.'
-                        : targetScope === 'year'
-                          ? 'Every salesperson meets this amount for the year. Each month counts as one twelfth.'
+                  <div className="ss-target-pair">
+                    <div className="ss-field ss-target-shared">
+                      <label className="ss-field-label" htmlFor="sales-target-shared">Monthly amount</label>
+                      <input
+                        id="sales-target-shared"
+                        className="ss-field-input"
+                        inputMode="decimal"
+                        value={targetScope === 'ongoing' ? ongoingShared : sharedAmount}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          if (targetScope === 'ongoing') setOngoingShared(value);
+                          else setSharedAmount(value);
+                          setYearlyShared(yearlyFromMonthly(value));
+                        }}
+                        placeholder={settings.default_currency || 'TZS'}
+                        autoComplete="off"
+                      />
+                      <p className="ss-field-help">
+                        {targetScope === 'ongoing'
+                          ? 'Every salesperson meets this amount each month until you change it.'
                           : 'Every salesperson meets this amount for the selected month.'}
-                    </p>
+                      </p>
+                    </div>
+                    <div className="ss-field ss-target-shared">
+                      <label className="ss-field-label" htmlFor="sales-target-yearly">Yearly amount</label>
+                      <input
+                        id="sales-target-yearly"
+                        className="ss-field-input"
+                        inputMode="decimal"
+                        value={yearlyShared}
+                        onChange={(event) => setYearlyShared(event.target.value)}
+                        placeholder={settings.default_currency || 'TZS'}
+                        autoComplete="off"
+                      />
+                      <p className="ss-field-help">Filled from the monthly amount times 12. You can change it.</p>
+                    </div>
                   </div>
                 ) : targetsLoading ? (
                   <p className="ss-field-help">Loading targets…</p>
@@ -703,9 +721,7 @@ export default function SalesSettingsPage() {
                   <div className="ss-target-list">
                     {targetPeople.map((person) => {
                       const personAmount = scopePersonAmount(person);
-                      const fallback = targetScope === 'ongoing'
-                        ? ongoingShared
-                        : (targetScope === 'year' ? yearlyShared : (sharedAmount || ongoingShared));
+                      const fallback = targetScope === 'ongoing' ? ongoingShared : (sharedAmount || ongoingShared);
                       const hint = !personAmount && fallback
                         ? `Uses ${formatTargetMoney(fallback, settings.default_currency)} until you set a different amount.`
                         : (!personAmount && targetScope === 'month' && person.yearly_monthly
@@ -715,6 +731,7 @@ export default function SalesSettingsPage() {
                         <div className="ss-target-row" key={person.id}>
                           <label className="ss-field-label" htmlFor={`sales-target-${person.id}`}>{person.name}</label>
                           <div className="ss-field">
+                            <span className="ss-field-label">Monthly</span>
                             <input
                               id={`sales-target-${person.id}`}
                               className="ss-field-input"
@@ -725,6 +742,18 @@ export default function SalesSettingsPage() {
                               autoComplete="off"
                             />
                             {hint ? <p className="ss-field-help">{hint}</p> : null}
+                          </div>
+                          <div className="ss-field">
+                            <label className="ss-field-label" htmlFor={`sales-target-year-${person.id}`}>Yearly</label>
+                            <input
+                              id={`sales-target-year-${person.id}`}
+                              className="ss-field-input"
+                              inputMode="decimal"
+                              value={person.yearly_amount || ''}
+                              onChange={(event) => changePersonYearly(person.id, event.target.value)}
+                              placeholder={settings.default_currency || 'TZS'}
+                              autoComplete="off"
+                            />
                           </div>
                         </div>
                       );

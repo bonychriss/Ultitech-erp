@@ -63,7 +63,7 @@ export async function fetchMonthlyTargets(month) {
   return data;
 }
 
-export async function saveMonthlyTargets(month, people, mode, sharedAmount, scope) {
+export async function saveMonthlyTargets(month, people, mode, sharedAmount, scope, sharedYearly) {
   const params = new URLSearchParams(window.location.search);
   const res = await fetch(`${getApiBase()}/targets.php?${params.toString()}`, {
     method: 'POST',
@@ -74,9 +74,11 @@ export async function saveMonthlyTargets(month, people, mode, sharedAmount, scop
       mode,
       scope,
       shared_amount: sharedAmount,
+      shared_yearly: sharedYearly,
       targets: people.map((person) => ({
         user_id: person.id,
         amount: person.amount,
+        yearly_amount: person.yearly_amount,
       })),
     }),
   });

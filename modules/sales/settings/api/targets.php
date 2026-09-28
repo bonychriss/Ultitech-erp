@@ -29,7 +29,8 @@ try {
             $scope = 'month';
         }
         $shared = (string) ($payload['shared_amount'] ?? '');
-        $saved = sales_settings_save_monthly_targets($pdo, $month, $rows, $mode, $shared, $scope);
+        $sharedYearly = (string) ($payload['shared_yearly'] ?? '');
+        $saved = sales_settings_save_monthly_targets($pdo, $month, $rows, $mode, $shared, $scope, $sharedYearly);
         echo json_encode(['success' => true] + $saved, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }

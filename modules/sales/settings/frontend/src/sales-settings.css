@@ -398,9 +398,16 @@ body.page-sales-settings .exp-create-section-header p {
   gap: 0.75rem;
 }
 
+.ss-target-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 280px) minmax(0, 280px);
+  gap: 0.85rem 1rem;
+  align-items: start;
+}
+
 .ss-target-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  grid-template-columns: minmax(0, 1.1fr) minmax(140px, 1fr) minmax(140px, 1fr);
   gap: 0.75rem 1rem;
   align-items: start;
 }
@@ -414,6 +421,7 @@ body.page-sales-settings .exp-create-section-header p {
     grid-template-columns: 1fr;
   }
 
+  .ss-target-pair,
   .ss-target-row {
     grid-template-columns: 1fr;
     gap: 0.3rem;

@@ -63,19 +63,21 @@ function writeFlag(kind, version, userId) {
   }
 }
 
-const NOTIF_TIP_KEY = 'ultitech_sm_notif_tip_v1'
+const NOTIF_TIP_COUNT_KEY = 'ultitech_sm_notif_tip_count'
 
-function notifTipSeen(userId) {
+function dismissedNotifCount(userId) {
   try {
-    return localStorage.getItem(`${NOTIF_TIP_KEY}_${userId || 0}`) === '1'
+    const raw = localStorage.getItem(`${NOTIF_TIP_COUNT_KEY}_${userId || 0}`)
+    const count = Number(raw)
+    return Number.isFinite(count) ? count : 0
   } catch {
-    return false
+    return 0
   }
 }
 
-function markNotifTipSeen(userId) {
+function markNotifTipSeen(userId, count) {
   try {
-    localStorage.setItem(`${NOTIF_TIP_KEY}_${userId || 0}`, '1')
+    localStorage.setItem(`${NOTIF_TIP_COUNT_KEY}_${userId || 0}`, String(Math.max(0, Number(count) || 0)))
   } catch {
     /* ignore */
   }
@@ -112,8 +114,6 @@ function NotificationTip({ anchorRef, count, onDismiss }) {
 
   if (!box) return null
 
-  const noun = count === 1 ? 'notification' : 'notifications'
-
   return (
     <div
       className="sm-notif-tip"
@@ -122,11 +122,13 @@ function NotificationTip({ anchorRef, count, onDismiss }) {
       style={{ top: box.top, left: box.left, width: box.width }}
     >
       <span className="sm-notif-tip-beak" style={{ left: box.beak }} aria-hidden="true" />
-      <h3 className="sm-notif-tip-title">Your notifications live here</h3>
+      <h3 className="sm-notif-tip-title">
+        {count === 1 ? 'You have a new notification' : `You have ${count} new notifications`}
+      </h3>
       <p className="sm-notif-tip-body">
-        {count > 0
-          ? `You have ${count} ${noun}. Tap the bell to open the Notification Center.`
-          : 'Tap the bell to open the Notification Center and read everything waiting for you.'}
+        {count === 1
+          ? 'A new message is waiting. Tap the bell to open it.'
+          : 'New messages are waiting. Tap the bell to open them.'}
       </p>
       <div className="sm-notif-tip-actions">
         <button type="button" className="sm-notif-tip-btn" onClick={onDismiss}>
@@ -775,13 +777,14 @@ export default function SelectModulePage() {
 
   useEffect(() => {
     if (showTrialGuide || showGuide || showRate) return undefined
-    if (notifTipSeen(userId)) return undefined
+    if (notificationCount < 1) return undefined
+    if (dismissedNotifCount(userId) >= notificationCount) return undefined
     const t = window.setTimeout(() => setShowNotifTip(true), 400)
     return () => window.clearTimeout(t)
-  }, [showTrialGuide, showGuide, showRate, userId])
+  }, [showTrialGuide, showGuide, showRate, userId, notificationCount])
 
   const dismissNotifTip = () => {
-    markNotifTipSeen(userId)
+    markNotifTipSeen(userId, notificationCount)
     setShowNotifTip(false)
   }
 

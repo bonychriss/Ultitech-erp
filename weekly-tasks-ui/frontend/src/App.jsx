@@ -300,6 +300,32 @@ function itemStatus(item) {
   return { key: 'short', label: 'Short' }
 }
 
+function CompareTable({ items }) {
+  return (
+    <div className="wt-compare">
+      <div className="wt-compare-row wt-compare-row--head">
+        <span>Measure</span>
+        <span>Expected</span>
+        <span>Done</span>
+      </div>
+      {items.map((item) => {
+        const status = itemStatus(item)
+        const Row = item.href ? 'a' : 'div'
+        return (
+          <Row key={item.name} className={`wt-compare-row wt-compare-row--${status.key}`} href={item.href || undefined}>
+            <span className="wt-compare-name">{item.name}</span>
+            <span>{item.configured ? item.expected : 'Not configured'}</span>
+            <span className="wt-compare-done">
+              {item.configured ? item.actual : 'Not configured'}
+              <em className={`wt-status wt-status--${status.key}`}>{status.label}</em>
+            </span>
+          </Row>
+        )
+      })}
+    </div>
+  )
+}
+
 function Detail({ month, detail, missing }) {
   const tone = usePhotoTone(detail && detail.photo)
   const cardRef = useRef(null)
@@ -429,27 +455,7 @@ function Detail({ month, detail, missing }) {
 
       <section className="wt-dept">
         <h2 className="wt-dept-title">This month</h2>
-        <div className="wt-compare">
-          <div className="wt-compare-row wt-compare-row--head">
-            <span>Measure</span>
-            <span>Expected</span>
-            <span>Done</span>
-          </div>
-          {items.map((item) => {
-            const status = itemStatus(item)
-            const Row = item.href ? 'a' : 'div'
-            return (
-              <Row key={item.name} className={`wt-compare-row wt-compare-row--${status.key}`} href={item.href || undefined}>
-                <span className="wt-compare-name">{item.name}</span>
-                <span>{item.configured ? item.expected : 'Not configured'}</span>
-                <span className="wt-compare-done">
-                  {item.configured ? item.actual : 'Not configured'}
-                  <em className={`wt-status wt-status--${status.key}`}>{status.label}</em>
-                </span>
-              </Row>
-            )
-          })}
-        </div>
+        <CompareTable items={items} />
       </section>
 
       <section className="wt-dept">
@@ -653,6 +659,7 @@ function RecordCards({ rows, label, kind }) {
 
 function MeasurePage({ month, measure }) {
   const rows = Array.isArray(measure.rows) ? measure.rows : []
+  const breakdown = Array.isArray(measure.items) ? measure.items : []
   const [doc, setDoc] = useState(null)
   const [docReady, setDocReady] = useState(false)
   const frameRef = useRef(null)
@@ -683,6 +690,8 @@ function MeasurePage({ month, measure }) {
       </header>
       {!measure.configured ? (
         <p className="wt-empty wt-empty--card">Target not set.</p>
+      ) : breakdown.length ? (
+        <CompareTable items={breakdown} />
       ) : rows.length === 0 ? (
         <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
       ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'].includes(measure.key) ? (

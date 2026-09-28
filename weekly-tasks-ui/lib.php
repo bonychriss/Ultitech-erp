@@ -1187,6 +1187,93 @@ function weeklyTasksUiSalesScores(PDO $pdo, array $offsets): array
 }
 
 /**
+ * The six sales measures shown together on the sales performance page.
+ *
+ * @param array<string,mixed>|null $sales
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiSalesItems(?array $sales): array
+{
+    $sales = $sales ?: [];
+    $revenueConfigured = !empty($sales['revenueConfigured']);
+    $revenueScore = (int) ($sales['revenueScore'] ?? 0);
+    $customerTarget = (int) ($sales['customerTarget'] ?? 10);
+    $customers = (int) ($sales['customers'] ?? 0);
+    $conversion = (int) ($sales['conversionPct'] ?? 0);
+    $submitted = (int) ($sales['quotesSubmitted'] ?? 0);
+    $collection = (int) ($sales['collectionPct'] ?? 0);
+    $hasInvoices = (float) ($sales['revenue'] ?? 0) > 0 || (float) ($sales['invoiced'] ?? 0) > 0;
+    $visitTarget = (int) ($sales['visitTarget'] ?? 20);
+    $visits = (int) ($sales['visits'] ?? 0);
+    $deliveryPct = (int) ($sales['deliveryPct'] ?? 0);
+    $deliveries = (int) ($sales['deliveries'] ?? 0);
+
+    return [
+        [
+            'name' => 'Monthly Sales Revenue',
+            'expected' => '100% of target',
+            'actual' => $revenueConfigured
+                ? ($revenueScore . '% · ' . weeklyTasksUiMoney((float) ($sales['revenue'] ?? 0)))
+                : 'Target not set',
+            'configured' => $revenueConfigured,
+            'met' => $revenueConfigured && $revenueScore >= 100,
+            'note' => $revenueConfigured ? 'Monthly sales revenue: ' . $revenueScore . ' of 100%' : 'Sales: Target not set',
+            'spoken' => $revenueConfigured ? 'monthly sales revenue is ' . $revenueScore . ' of 100%' : '',
+            'unsetLabel' => $revenueConfigured ? '' : 'Sales',
+        ],
+        [
+            'name' => 'New Customers',
+            'expected' => $customerTarget === 10 ? '10 this month' : ($customerTarget . ' across selected months'),
+            'actual' => $customers . ' new',
+            'configured' => true,
+            'met' => $customers >= $customerTarget,
+            'note' => 'New customers: ' . $customers . ' of ' . $customerTarget,
+            'spoken' => 'new customers are ' . $customers . ' of ' . $customerTarget,
+        ],
+        [
+            'name' => 'Quotation Conversion',
+            'expected' => '30% or better',
+            'actual' => $submitted > 0
+                ? ($conversion . '% · ' . (int) ($sales['quotesWon'] ?? 0) . ' won, ' . $submitted . ' submitted')
+                : 'Not recorded',
+            'configured' => true,
+            'met' => $submitted > 0 && $conversion >= 30,
+            'note' => $submitted > 0 ? 'Quotation conversion: ' . $conversion . ' of 30%' : 'Quotation conversion: Not recorded',
+            'spoken' => $submitted > 0 ? 'quotation conversion is ' . $conversion . ' of 30%' : '',
+        ],
+        [
+            'name' => 'Collections',
+            'expected' => '95% or better',
+            'actual' => $hasInvoices ? ($collection . '%') : 'Not recorded',
+            'configured' => true,
+            'met' => $hasInvoices && $collection >= 95,
+            'note' => $hasInvoices ? 'Collections: ' . $collection . ' of 95%' : 'Collections: Not recorded',
+            'spoken' => $hasInvoices ? 'collections are ' . $collection . ' of 95%' : '',
+        ],
+        [
+            'name' => 'Customer Visits',
+            'expected' => $visitTarget === 20 ? '20 this month' : ($visitTarget . ' across selected months'),
+            'actual' => $visits . ' visits',
+            'configured' => true,
+            'met' => $visits >= $visitTarget,
+            'note' => 'Customer visits: ' . $visits . ' of ' . $visitTarget,
+            'spoken' => 'customer visits are ' . $visits . ' of ' . $visitTarget,
+        ],
+        [
+            'name' => 'Goods delivery',
+            'expected' => 'Within 2 days',
+            'actual' => $deliveries > 0
+                ? ($deliveryPct . '% · ' . (int) ($sales['deliveriesOnTime'] ?? 0) . ' of ' . $deliveries)
+                : 'Not recorded',
+            'configured' => true,
+            'met' => $deliveries > 0 && $deliveryPct >= 100,
+            'note' => $deliveries > 0 ? 'Goods delivery: ' . $deliveryPct . '% within 2 days' : 'Goods delivery: Not recorded',
+            'spoken' => $deliveries > 0 ? 'goods delivery is ' . $deliveryPct . '% within 2 days' : '',
+        ],
+    ];
+}
+
+/**
  * @param array<int,int> $offsets
  * @return array<int,array{title:string,date:string,when:string,status:string}>
  */
@@ -1427,6 +1514,7 @@ function weeklyTasksUiPersonDetail(
         ['key' => 'vehicle', 'name' => 'Vehicle care', 'expected' => '100%'],
         ['key' => 'documents', 'name' => 'Delivery documents', 'expected' => '100%'],
     ];
+    $salesLines = [];
     if ($department === 'Drivers') {
         $driver = $driver ?: ['onTime' => 0, 'vehicle' => 0, 'documents' => 0];
         foreach ($driverLines as $line) {
@@ -1443,79 +1531,16 @@ function weeklyTasksUiPersonDetail(
             ];
         }
     } elseif ($department === 'Sales') {
-        $sales = $sales ?: [];
-        $revenueConfigured = !empty($sales['revenueConfigured']);
-        $revenueScore = (int) ($sales['revenueScore'] ?? 0);
+        $salesLines = weeklyTasksUiSalesItems($sales);
+        $salesScore = (int) ($sales['score'] ?? 0);
         $items[] = [
-            'name' => 'Monthly Sales Revenue',
-            'expected' => '100% of target',
-            'actual' => $revenueConfigured
-                ? ($revenueScore . '% · ' . weeklyTasksUiMoney((float) ($sales['revenue'] ?? 0)))
-                : 'Target not set',
-            'configured' => $revenueConfigured,
-            'met' => $revenueConfigured && $revenueScore >= 100,
-            'note' => $revenueConfigured ? 'Monthly sales revenue: ' . $revenueScore . ' of 100%' : 'Sales: Target not set',
-            'spoken' => $revenueConfigured ? 'monthly sales revenue is ' . $revenueScore . ' of 100%' : '',
-            'unsetLabel' => $revenueConfigured ? '' : 'Sales',
-        ];
-        $customerTarget = (int) ($sales['customerTarget'] ?? 10);
-        $customers = (int) ($sales['customers'] ?? 0);
-        $items[] = [
-            'name' => 'New Customers',
-            'expected' => $customerTarget === 10 ? '10 this month' : ($customerTarget . ' across selected months'),
-            'actual' => $customers . ' new',
+            'name' => 'Sales performance',
+            'expected' => '100%',
+            'actual' => $salesScore . '%',
             'configured' => true,
-            'met' => $customers >= $customerTarget,
-            'note' => 'New customers: ' . $customers . ' of ' . $customerTarget,
-            'spoken' => 'new customers are ' . $customers . ' of ' . $customerTarget,
-        ];
-        $conversion = (int) ($sales['conversionPct'] ?? 0);
-        $submitted = (int) ($sales['quotesSubmitted'] ?? 0);
-        $items[] = [
-            'name' => 'Quotation Conversion',
-            'expected' => '30% or better',
-            'actual' => $submitted > 0
-                ? ($conversion . '% · ' . (int) ($sales['quotesWon'] ?? 0) . ' won, ' . $submitted . ' submitted')
-                : 'Not recorded',
-            'configured' => true,
-            'met' => $submitted > 0 && $conversion >= 30,
-            'note' => $submitted > 0 ? 'Quotation conversion: ' . $conversion . ' of 30%' : 'Quotation conversion: Not recorded',
-            'spoken' => $submitted > 0 ? 'quotation conversion is ' . $conversion . ' of 30%' : '',
-        ];
-        $collection = (int) ($sales['collectionPct'] ?? 0);
-        $hasInvoices = (float) ($sales['revenue'] ?? 0) > 0 || (int) round((float) ($sales['invoiced'] ?? 0)) > 0;
-        $items[] = [
-            'name' => 'Collections',
-            'expected' => '95% or better',
-            'actual' => $hasInvoices ? ($collection . '%') : 'Not recorded',
-            'configured' => true,
-            'met' => $hasInvoices && $collection >= 95,
-            'note' => $hasInvoices ? 'Collections: ' . $collection . ' of 95%' : 'Collections: Not recorded',
-            'spoken' => $hasInvoices ? 'collections are ' . $collection . ' of 95%' : '',
-        ];
-        $visitTarget = (int) ($sales['visitTarget'] ?? 20);
-        $visits = (int) ($sales['visits'] ?? 0);
-        $items[] = [
-            'name' => 'Customer Visits',
-            'expected' => $visitTarget === 20 ? '20 this month' : ($visitTarget . ' across selected months'),
-            'actual' => $visits . ' visits',
-            'configured' => true,
-            'met' => $visits >= $visitTarget,
-            'note' => 'Customer visits: ' . $visits . ' of ' . $visitTarget,
-            'spoken' => 'customer visits are ' . $visits . ' of ' . $visitTarget,
-        ];
-        $deliveryPct = (int) ($sales['deliveryPct'] ?? 0);
-        $deliveries = (int) ($sales['deliveries'] ?? 0);
-        $items[] = [
-            'name' => 'Goods delivery',
-            'expected' => 'Within 2 days',
-            'actual' => $deliveries > 0
-                ? ($deliveryPct . '% · ' . (int) ($sales['deliveriesOnTime'] ?? 0) . ' of ' . $deliveries)
-                : 'Not recorded',
-            'configured' => true,
-            'met' => $deliveries > 0 && $deliveryPct >= 100,
-            'note' => $deliveries > 0 ? 'Goods delivery: ' . $deliveryPct . '% within 2 days' : 'Goods delivery: Not recorded',
-            'spoken' => $deliveries > 0 ? 'goods delivery is ' . $deliveryPct . '% within 2 days' : '',
+            'met' => $salesScore >= 100,
+            'note' => '',
+            'spoken' => '',
         ];
     } else {
         $label = $department === 'Other' ? 'Role' : $department;
@@ -1533,7 +1558,7 @@ function weeklyTasksUiPersonDetail(
     $improvements = [];
     $behind = [];
     $unset = [];
-    foreach ($items as $item) {
+    foreach (array_merge($items, $salesLines) as $item) {
         if ($item['configured'] && $item['met']) {
             continue;
         }
@@ -1578,6 +1603,7 @@ function weeklyTasksUiPersonDetail(
         'thisUrl' => weeklyTasksUiMonthUrl(0, $userId),
         'nextUrl' => $monthOffset < 0 ? weeklyTasksUiMonthUrl($monthOffset + 1, $userId) : '',
         'items' => $items,
+        'salesLines' => $salesLines,
         'improvements' => $improvements,
         'insight' => $insight,
     ];
@@ -1819,6 +1845,7 @@ function weeklyTasksUiBuildPayload(): array
         ];
     }
 
+    $salesLines = [];
     if (is_array($detail)) {
         $detail['backUrl'] = weeklyTasksUiMonthUrl($offsets);
         $measureNames = [
@@ -1832,6 +1859,14 @@ function weeklyTasksUiBuildPayload(): array
             $detail['items'][$index]['key'] = $key;
             $detail['items'][$index]['href'] = weeklyTasksUiMonthUrl($offsets, $selectedId, $key);
         }
+        $salesLines = is_array($detail['salesLines'] ?? null) ? $detail['salesLines'] : [];
+        unset($detail['salesLines']);
+        foreach ($salesLines as $index => $item) {
+            $name = (string) ($item['name'] ?? '');
+            $key = trim(strtolower((string) preg_replace('/[^a-z0-9]+/i', '-', $name)), '-');
+            $salesLines[$index]['key'] = $key;
+            $salesLines[$index]['href'] = weeklyTasksUiMonthUrl($offsets, $selectedId, $key);
+        }
     }
 
     $measureView = null;
@@ -1844,10 +1879,22 @@ function weeklyTasksUiBuildPayload(): array
                 break;
             }
         }
+        if ($match === null) {
+            foreach ($salesLines as $item) {
+                if (($item['key'] ?? '') === $measureKey) {
+                    $match = $item;
+                    break;
+                }
+            }
+        }
         if ($match) {
             $rows = [];
             $empty = 'Nothing recorded in this period.';
-            if ($measureKey === 'tasks') {
+            $breakdown = [];
+            if ($measureKey === 'sales-performance') {
+                $breakdown = $salesLines;
+                $empty = 'No sales performance recorded in this period.';
+            } elseif ($measureKey === 'tasks') {
                 $rows = weeklyTasksUiTaskLines($pdo, $selectedId, $offsets);
                 $empty = 'No tasks recorded in this period.';
             } elseif ($measureKey === 'todo') {
@@ -1872,14 +1919,18 @@ function weeklyTasksUiBuildPayload(): array
                     ? 'No deliveries in this period.'
                     : 'No driver performance recorded in this period.';
             }
+            $salesMeasure = in_array($measureKey, ['monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'], true);
             $measureView = [
                 'key' => $measureKey,
                 'title' => (string) $match['name'],
                 'summary' => !empty($match['configured']) ? ((string) $match['expected'] . ' · ' . (string) $match['actual']) : 'Target not set',
                 'configured' => (bool) ($match['configured'] ?? false),
                 'rows' => !empty($match['configured']) ? $rows : [],
+                'items' => $breakdown,
                 'empty' => $empty,
-                'backUrl' => weeklyTasksUiMonthUrl($offsets, $selectedId),
+                'backUrl' => $salesMeasure
+                    ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'sales-performance')
+                    : weeklyTasksUiMonthUrl($offsets, $selectedId),
             ];
         }
     }

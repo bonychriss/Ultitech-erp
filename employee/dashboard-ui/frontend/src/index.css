@@ -784,7 +784,7 @@ html[data-theme="dark"] .ed-modal-label input[type="file"] {
     grid-column: span 2;
   }
 
-  /* Table: drop secondary columns, keep key fields readable */
+  /* Phone: each voucher is a card so number, payee, amount, date, and status stay readable */
   .ed-page {
     overflow-x: visible;
   }
@@ -792,119 +792,123 @@ html[data-theme="dark"] .ed-modal-label input[type="file"] {
     display: none !important;
   }
   .ed-table-wrap {
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    border-radius: 10px;
-    margin: 0;
+    overflow: visible;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    border-radius: 0;
   }
   .ed-table.ed-table--full {
-    table-layout: fixed;
+    display: block;
     width: 100%;
     min-width: 0 !important;
   }
-  .ed-table--full th,
-  .ed-table--full td {
-    overflow: visible;
+  .ed-table.ed-table--full colgroup,
+  .ed-table.ed-table--full thead {
+    display: none;
+  }
+  .ed-table.ed-table--full tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ed-table.ed-table--full tbody tr.ed-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "vno status"
+      "payee payee"
+      "amt date"
+      "actions actions";
+    gap: 6px 12px;
+    align-items: center;
+    padding: 12px 12px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+  .ed-table.ed-table--full tbody tr.ed-row:nth-child(even) {
+    background: #f8fafc;
+  }
+  .ed-table.ed-table--full tbody tr:hover td,
+  .ed-table.ed-table--full tbody tr:nth-child(odd) td,
+  .ed-table.ed-table--full tbody tr:nth-child(even) td,
+  .ed-table.ed-table--full tbody tr.is-selected td {
+    background: transparent !important;
+    border: 0;
+  }
+  .ed-table.ed-table--full tbody td {
+    display: block;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
     text-overflow: clip;
     white-space: normal;
+    font-size: 13px;
+    line-height: 1.35;
+    vertical-align: middle;
   }
-  .ed-table--full th:first-child,
-  .ed-table--full td:first-child,
-  .ed-table--full th:nth-child(2),
-  .ed-table--full td:nth-child(2),
-  .ed-table--full th:nth-child(3),
-  .ed-table--full td:nth-child(3),
-  .ed-table--full th:nth-child(6),
-  .ed-table--full td:nth-child(6),
-  .ed-table--full th:nth-child(7),
-  .ed-table--full td:nth-child(7),
-  .ed-table--full th:nth-child(8),
-  .ed-table--full td:nth-child(8),
-  .ed-table--full td.ed-row-actions {
-    width: auto;
+  .ed-table.ed-table--full td.ed-sn {
+    display: none !important;
   }
-  .ed-table thead th {
-    font-size: 10px;
-    padding: 10px 8px;
-    white-space: nowrap;
+  .ed-table.ed-table--full td.ed-vno {
+    grid-area: vno;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: normal;
+    overflow: visible !important;
   }
-  .ed-table tbody td {
-    font-size: 12px;
-    padding: 10px 8px;
-    vertical-align: top;
-  }
-  .ed-col-sn,
-  .ed-sn {
-    width: 2.25rem;
-    text-align: center;
-    white-space: nowrap;
-  }
-  .ed-vno,
-  .ed-col-vno {
-    white-space: nowrap;
+  .ed-table.ed-table--full td.ed-payee-cell {
+    grid-area: payee;
     font-weight: 600;
-    font-size: 0.72rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
+    color: #0f172a;
+    white-space: normal;
+    overflow: visible !important;
+    max-width: none !important;
   }
-  .ed-payee-cell,
-  .ed-col-payee {
-    min-width: 0;
+  .ed-table.ed-table--full td.ed-col-amt {
+    grid-area: amt;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .ed-table.ed-table--full td.ed-date-cell {
+    grid-area: date;
+    text-align: right;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .ed-table.ed-table--full td.ed-status-cell {
+    grid-area: status;
+    justify-self: end;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .ed-table.ed-table--full td.ed-row-actions {
+    grid-area: actions;
+    justify-self: end;
+    width: auto !important;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .ed-table.ed-table--full td.ed-restricted,
+  .ed-table.ed-table--full td.ed-restricted-span {
+    grid-column: 1 / -1;
     max-width: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .ed-amt,
-  .ed-col-amt {
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-    overflow: hidden;
-    text-overflow: clip;
-    min-width: 0;
-  }
-  .ed-date-cell,
-  .ed-col-date {
-    white-space: nowrap;
-    font-size: 11px;
-    overflow: hidden;
-    text-overflow: clip;
-    min-width: 0;
-  }
-  .ed-status-cell,
-  .ed-col-status {
-    white-space: nowrap;
   }
   .ed-table .ed-vbadge {
-    font-size: 10px;
-    padding: 2px 7px;
-  }
-  .ed-col-actions,
-  .ed-row-actions {
-    width: 2.75rem;
-    text-align: center;
+    min-width: 0;
+    font-size: 11px;
+    line-height: 1.3;
+    padding: 3px 8px;
     white-space: nowrap;
-  }
-  .ed-restricted-span {
-    max-width: none;
   }
 }
 @media (max-width: 640px) {
   .ed-header-actions { width: 100%; }
   .ed-header-actions .ed-btn { flex: 1; justify-content: center; }
-
-  .ed-col-sn,
-  .ed-sn {
-    display: none !important;
-  }
-  .ed-table tbody td {
-    font-size: 12.5px;
-    line-height: 1.35;
-  }
-  .ed-payee-cell {
-    max-width: 6.5rem;
-  }
 }
 
 /* ---- Dark theme ---- */
@@ -941,8 +945,13 @@ html[data-theme="dark"] .ed-card-link {
   color: #94a3b8 !important;
 }
 
-html[data-theme="dark"] .ed-card-link:hover {
-  color: #c4b5fd !important;
+html[data-theme="dark"] .ed-table.ed-table--full tbody tr.ed-row,
+html[data-theme="dark"] .ed-table.ed-table--full tbody tr.ed-row:nth-child(even) {
+  background: #1e293b;
+  border-color: #334155;
+}
+html[data-theme="dark"] .ed-table.ed-table--full td.ed-payee-cell {
+  color: #f8fafc;
 }
 
 html[data-theme="dark"] .ed-btn--ghost {

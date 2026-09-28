@@ -226,8 +226,7 @@ function weeklyTasksUiMonthWindow(int $offset): array
  */
 function weeklyTasksUiMonthTasks(PDO $pdo, string $start, string $end): array
 {
-    $best = [];
-    $bestTotal = -1;
+    $sources = [];
     $queries = [];
     if (function_exists('tableExists') && tableExists('weekly_missions', $pdo)) {
         $queries[] = "SELECT user_id,
@@ -247,8 +246,6 @@ function weeklyTasksUiMonthTasks(PDO $pdo, string $start, string $end): array
             GROUP BY p.user_id';
     }
     foreach ($queries as $sql) {
-        $bucket = [];
-        $total = 0;
         try {
             $st = $pdo->prepare($sql);
             $st->execute([$start, $end]);
@@ -257,20 +254,60 @@ function weeklyTasksUiMonthTasks(PDO $pdo, string $start, string $end): array
                 if ($id < 1) {
                     continue;
                 }
-                $assigned = (int) ($row['assigned'] ?? 0);
-                $bucket[$id] = ['done' => (int) ($row['done'] ?? 0), 'assigned' => $assigned];
-                $total += $assigned;
+                $sources[$id][] = [
+                    'done' => (int) ($row['done'] ?? 0),
+                    'assigned' => (int) ($row['assigned'] ?? 0),
+                ];
             }
         } catch (Throwable $e) {
-            continue;
-        }
-        if ($total > $bestTotal) {
-            $best = $bucket;
-            $bestTotal = $total;
         }
     }
+    $out = [];
+    foreach ($sources as $id => $options) {
+        $best = ['done' => 0, 'assigned' => 0];
+        foreach ($options as $option) {
+            if ($option['assigned'] > $best['assigned'] || ($option['assigned'] === $best['assigned'] && $option['done'] > $best['done'])) {
+                $best = $option;
+            }
+        }
+        $out[$id] = $best;
+    }
 
-    return $best;
+    return $out;
+}
+
+/**
+ * @return array<int,array{done:int,assigned:int}>
+ */
+function weeklyTasksUiMonthTodos(PDO $pdo, string $start, string $end): array
+{
+    if (!function_exists('tableExists') || !tableExists('user_tasks', $pdo)) {
+        return [];
+    }
+    try {
+        $st = $pdo->prepare(
+            'SELECT user_id, COUNT(*) AS assigned, SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) AS done
+             FROM user_tasks
+             WHERE task_date BETWEEN ? AND ?
+             GROUP BY user_id'
+        );
+        $st->execute([$start, $end]);
+        $out = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $id = (int) ($row['user_id'] ?? 0);
+            if ($id < 1) {
+                continue;
+            }
+            $out[$id] = [
+                'done' => (int) ($row['done'] ?? 0),
+                'assigned' => (int) ($row['assigned'] ?? 0),
+            ];
+        }
+
+        return $out;
+    } catch (Throwable $e) {
+        return [];
+    }
 }
 
 /**
@@ -278,27 +315,36 @@ function weeklyTasksUiMonthTasks(PDO $pdo, string $start, string $end): array
  */
 function weeklyTasksUiMonthAttendance(PDO $pdo, string $start, string $end): array
 {
-    $table = '';
+    $days = [];
+    $queries = [];
     if (function_exists('tableExists') && tableExists('attendance', $pdo)) {
-        $table = 'attendance';
-    } elseif (function_exists('tableExists') && tableExists('attendance_records', $pdo)) {
-        $table = 'attendance_records';
+        $queries[] = 'SELECT user_id, `date` AS day FROM attendance WHERE `date` BETWEEN ? AND ?';
+        $queries[] = 'SELECT user_id, DATE(signed_at) AS day FROM attendance WHERE signed_at IS NOT NULL AND DATE(signed_at) BETWEEN ? AND ?';
     }
-    if ($table === '') {
-        return [];
+    if (function_exists('tableExists') && tableExists('attendance_records', $pdo)) {
+        $queries[] = 'SELECT user_id, `date` AS day FROM attendance_records WHERE `date` BETWEEN ? AND ?';
     }
-    try {
-        $st = $pdo->prepare("SELECT user_id, COUNT(DISTINCT `date`) AS days FROM {$table} WHERE `date` BETWEEN ? AND ? GROUP BY user_id");
-        $st->execute([$start, $end]);
-        $out = [];
-        foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
-            $out[(int) $row['user_id']] = (int) $row['days'];
+    foreach ($queries as $sql) {
+        try {
+            $st = $pdo->prepare($sql);
+            $st->execute([$start, $end]);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $id = (int) ($row['user_id'] ?? 0);
+                $day = (string) ($row['day'] ?? '');
+                if ($id < 1 || $day === '' || $day === '0000-00-00') {
+                    continue;
+                }
+                $days[$id][$day] = true;
+            }
+        } catch (Throwable $e) {
         }
-
-        return $out;
-    } catch (Throwable $e) {
-        return [];
     }
+    $out = [];
+    foreach ($days as $id => $set) {
+        $out[$id] = count($set);
+    }
+
+    return $out;
 }
 
 /**
@@ -776,25 +822,59 @@ function weeklyTasksUiTaskLines(PDO $pdo, int $userId, array $offsets): array
  * @param array<int,int> $offsets
  * @return array<int,array{title:string,when:string,status:string}>
  */
+function weeklyTasksUiTodoLines(PDO $pdo, int $userId, array $offsets): array
+{
+    if (!function_exists('tableExists') || !tableExists('user_tasks', $pdo)) {
+        return [];
+    }
+    $rows = [];
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        try {
+            $st = $pdo->prepare('SELECT task_description, is_completed, task_date FROM user_tasks WHERE user_id = ? AND task_date BETWEEN ? AND ? ORDER BY task_date, id');
+            $st->execute([$userId, $start, $end]);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $rows[] = [
+                    'title' => (string) ($row['task_description'] ?? 'To-do'),
+                    'when' => date('j M Y', strtotime((string) $row['task_date'])),
+                    'status' => !empty($row['is_completed']) ? 'Completed' : 'Pending',
+                ];
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    return $rows;
+}
+
+/**
+ * @param array<int,int> $offsets
+ * @return array<int,array{title:string,when:string,status:string}>
+ */
 function weeklyTasksUiAttendanceLines(PDO $pdo, int $userId, array $offsets): array
 {
     $rows = [];
     foreach ($offsets as $offset) {
         [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
         $dates = [];
+        $queries = [];
         if (function_exists('tableExists') && tableExists('attendance', $pdo)) {
+            $queries[] = 'SELECT DISTINCT `date` AS day FROM attendance WHERE user_id = ? AND `date` BETWEEN ? AND ?';
+            $queries[] = 'SELECT DISTINCT DATE(signed_at) AS day FROM attendance WHERE user_id = ? AND signed_at IS NOT NULL AND DATE(signed_at) BETWEEN ? AND ?';
+        }
+        if (function_exists('tableExists') && tableExists('attendance_records', $pdo)) {
+            $queries[] = 'SELECT DISTINCT `date` AS day FROM attendance_records WHERE user_id = ? AND `date` BETWEEN ? AND ?';
+        }
+        foreach ($queries as $sql) {
             try {
-                $st = $pdo->prepare('SELECT DISTINCT `date` AS day FROM attendance WHERE user_id = ? AND `date` BETWEEN ? AND ? ORDER BY `date`');
+                $st = $pdo->prepare($sql);
                 $st->execute([$userId, $start, $end]);
-                $dates = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
-            } catch (Throwable $e) {
-                try {
-                    $st = $pdo->prepare('SELECT DISTINCT DATE(signed_at) AS day FROM attendance WHERE user_id = ? AND DATE(signed_at) BETWEEN ? AND ? ORDER BY day');
-                    $st->execute([$userId, $start, $end]);
-                    $dates = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
-                } catch (Throwable $e2) {
-                    $dates = [];
+                foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $day) {
+                    if ($day) {
+                        $dates[] = $day;
+                    }
                 }
+            } catch (Throwable $e) {
             }
         }
         foreach ($dates as $day) {
@@ -825,6 +905,8 @@ function weeklyTasksUiPersonDetail(
     array $band,
     int $done,
     int $assigned,
+    int $todoDone,
+    int $todoAssigned,
     int $taskScore,
     int $activity,
     int $days,
@@ -849,11 +931,11 @@ function weeklyTasksUiPersonDetail(
         [
             'name' => 'To-do list',
             'expected' => 'At least ' . $todoTarget . ' achieved',
-            'actual' => $done . ' achieved',
+            'actual' => $todoDone . ' achieved, ' . $todoAssigned . ' assigned',
             'configured' => true,
-            'met' => $done >= $todoTarget,
-            'note' => 'To-Do List: ' . $done . ' of ' . $todoTarget . ' completed',
-            'spoken' => 'the to-do list is ' . $done . ' of ' . $todoTarget . ' completed',
+            'met' => $todoDone >= $todoTarget,
+            'note' => 'To-Do List: ' . $todoDone . ' of ' . $todoTarget . ' completed',
+            'spoken' => 'the to-do list is ' . $todoDone . ' of ' . $todoTarget . ' completed',
         ],
         [
             'name' => 'Attendance',
@@ -963,6 +1045,7 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
     for ($offset = -5; $offset <= 0; $offset++) {
         [$start, $end, $label, , $weekCount, $weekdays, $mondays] = weeklyTasksUiMonthWindow($offset);
         $tasks = weeklyTasksUiMonthTasks($pdo, $start, $end);
+        $todos = weeklyTasksUiMonthTodos($pdo, $start, $end);
         $attendance = weeklyTasksUiMonthAttendance($pdo, $start, $end);
         $drivers = weeklyTasksUiMonthDriverScores($pdo, $mondays);
         $taskTarget = max(1, 7 * $weekCount);
@@ -976,6 +1059,7 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
             }
             $department = weeklyTasksUiDepartmentName((string) ($user['department'] ?? ''), (string) ($user['role'] ?? ''));
             $done = (int) ($tasks[$id]['done'] ?? 0);
+            $todoDone = (int) ($todos[$id]['done'] ?? 0);
             $taskScore = (int) min(100, round(($done / $taskTarget) * 100));
             $days = (int) ($attendance[$id] ?? 0);
             $attendanceScore = (int) min(100, round(($days / $weekdays) * 100));
@@ -983,7 +1067,7 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
             if (($department === 'Drivers' || $driver !== null) && $driver && !empty($driver['recorded'])) {
                 $activity = (int) $driver['score'];
             } else {
-                $todoScore = (int) min(100, round(($done / $todoTarget) * 100));
+                $todoScore = (int) min(100, round(($todoDone / $todoTarget) * 100));
                 $activity = (int) round(($attendanceScore + $todoScore) / 2);
             }
             $scores[$id] = (int) round(($taskScore + $activity) / 2);
@@ -1044,6 +1128,7 @@ function weeklyTasksUiBuildPayload(): array
     $mondays = [];
     $labels = [];
     $tasks = [];
+    $todos = [];
     $attendance = [];
     foreach ($offsets as $offset) {
         [$monthStart, $monthEnd, $label, , $weeks, $days, $monthMondays] = weeklyTasksUiMonthWindow($offset);
@@ -1060,6 +1145,13 @@ function weeklyTasksUiBuildPayload(): array
             }
             $tasks[$id]['done'] += (int) $row['done'];
             $tasks[$id]['assigned'] += (int) $row['assigned'];
+        }
+        foreach (weeklyTasksUiMonthTodos($pdo, $monthStart, $monthEnd) as $id => $row) {
+            if (!isset($todos[$id])) {
+                $todos[$id] = ['done' => 0, 'assigned' => 0];
+            }
+            $todos[$id]['done'] += (int) $row['done'];
+            $todos[$id]['assigned'] += (int) $row['assigned'];
         }
         foreach (weeklyTasksUiMonthAttendance($pdo, $monthStart, $monthEnd) as $id => $daysPresent) {
             $attendance[$id] = (int) ($attendance[$id] ?? 0) + (int) $daysPresent;
@@ -1099,6 +1191,8 @@ function weeklyTasksUiBuildPayload(): array
         $department = weeklyTasksUiDepartmentName((string) ($user['department'] ?? ''), (string) ($user['role'] ?? ''));
         $done = (int) ($tasks[$id]['done'] ?? 0);
         $assigned = (int) ($tasks[$id]['assigned'] ?? 0);
+        $todoDone = (int) ($todos[$id]['done'] ?? 0);
+        $todoAssigned = (int) ($todos[$id]['assigned'] ?? 0);
         $taskScore = (int) min(100, round(($done / $taskTarget) * 100));
         $days = (int) ($attendance[$id] ?? 0);
         $attendanceScore = (int) min(100, round(($days / $weekdays) * 100));
@@ -1107,7 +1201,7 @@ function weeklyTasksUiBuildPayload(): array
         if ($isDriver && $driver && !empty($driver['recorded'])) {
             $activity = (int) $driver['score'];
         } else {
-            $todoScore = (int) min(100, round(($done / $todoTarget) * 100));
+            $todoScore = (int) min(100, round(($todoDone / $todoTarget) * 100));
             $activity = (int) round(($attendanceScore + $todoScore) / 2);
         }
         $score = (int) round(($taskScore + $activity) / 2);
@@ -1123,6 +1217,8 @@ function weeklyTasksUiBuildPayload(): array
                 $band,
                 $done,
                 $assigned,
+                $todoDone,
+                $todoAssigned,
                 $taskScore,
                 $activity,
                 $days,
@@ -1179,9 +1275,12 @@ function weeklyTasksUiBuildPayload(): array
         if ($match) {
             $rows = [];
             $empty = 'Nothing recorded in this period.';
-            if ($measureKey === 'tasks' || $measureKey === 'todo') {
+            if ($measureKey === 'tasks') {
                 $rows = weeklyTasksUiTaskLines($pdo, $selectedId, $offsets);
                 $empty = 'No tasks recorded in this period.';
+            } elseif ($measureKey === 'todo') {
+                $rows = weeklyTasksUiTodoLines($pdo, $selectedId, $offsets);
+                $empty = 'No to-do items recorded in this period.';
             } elseif ($measureKey === 'attendance') {
                 $rows = weeklyTasksUiAttendanceLines($pdo, $selectedId, $offsets);
                 $empty = 'No attendance recorded in this period.';

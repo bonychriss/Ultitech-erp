@@ -748,6 +748,44 @@ function RecordCards({ rows, label, kind, onOpen }) {
   )
 }
 
+function AboutNote({ about }) {
+  const [open, setOpen] = useState(false)
+  const boxRef = useRef(null)
+  useEffect(() => {
+    if (!open) return undefined
+    const close = (event) => {
+      if (boxRef.current && !boxRef.current.contains(event.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+  if (!about || !about.text) return null
+  return (
+    <span className="wt-about" ref={boxRef}>
+      <button
+        type="button"
+        className="wt-about-btn"
+        aria-expanded={open}
+        aria-label="About submitted quotations"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 11v5" />
+          <path d="M12 8h.01" />
+        </svg>
+      </button>
+      {open ? (
+        <span className="wt-about-pop" role="note">
+          {about.score ? <strong>Score {about.score}</strong> : null}
+          {about.note ? <span>{about.note}</span> : null}
+          <span>{about.text}</span>
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
 function MeasurePage({ month, measure }) {
   const rows = Array.isArray(measure.rows) ? measure.rows : []
   const breakdown = Array.isArray(measure.items) ? measure.items : []
@@ -774,7 +812,10 @@ function MeasurePage({ month, measure }) {
       <a className="wt-back" href={measure.backUrl || '#'}>Back</a>
       <header className="wt-head">
         <div>
-          <h1 className="wt-title">{measure.title}</h1>
+          <div className="wt-title-row">
+            <h1 className="wt-title">{measure.title}</h1>
+            <AboutNote about={measure.about} />
+          </div>
           <p className="wt-sub">{measure.summary}</p>
         </div>
         <MonthSelect month={month} />

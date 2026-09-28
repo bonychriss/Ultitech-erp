@@ -2041,6 +2041,11 @@ function weeklyTasksUiBuildPayload(): array
                 'backUrl' => $salesMeasure
                     ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'sales-performance')
                     : weeklyTasksUiMonthUrl($offsets, $selectedId),
+                'about' => $measureKey === 'quotation-conversion' ? [
+                    'score' => (string) ($match['score'] ?? ''),
+                    'note' => (string) ($match['scoreNote'] ?? ''),
+                    'text' => 'Submitted means the quotation was sent and has not become an invoice yet.',
+                ] : null,
             ];
         }
     }

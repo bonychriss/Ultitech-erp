@@ -422,6 +422,50 @@ function deliveryNoteViewRenderReactShell(int $noteId): void
     exit;
 }
 
+function deliveryNoteViewRenderEmbedPage(): void
+{
+    global $pdo;
+
+    deliveryNoteViewRequireAccess();
+    $id = deliveryNoteViewParseId($_GET);
+    if ($id <= 0) {
+        http_response_code(400);
+        header('Content-Type: text/html; charset=utf-8');
+        echo 'Document missing';
+        exit;
+    }
+
+    try {
+        $ctx = deliveryNoteViewLoadNote($pdo, $id);
+    } catch (Throwable $e) {
+        http_response_code(404);
+        header('Content-Type: text/html; charset=utf-8');
+        echo htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+        exit;
+    }
+
+    $note = $ctx['note'];
+    $salesSettings = $ctx['sales_settings'];
+    $documentHtml = deliveryNoteViewRenderDocumentHtml($ctx);
+    $docFontStack = function_exists('sales_document_font_family_css')
+        ? sales_document_font_family_css($salesSettings)
+        : "'Inter', sans-serif";
+    $title = 'Delivery note ' . (string) ($note['note_number'] ?? '');
+
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">';
+    echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
+    echo '<title>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</title>';
+    if (function_exists('sales_document_font_stylesheet_links')) {
+        echo sales_document_font_stylesheet_links($salesSettings);
+    }
+    echo '<style>html,body{margin:0;background:#f3f4f6;font-family:' . $docFontStack . ';}#delivery-note-content .page-container{box-shadow:none;}</style>';
+    echo '</head><body>';
+    echo $documentHtml;
+    echo '</body></html>';
+    exit;
+}
+
 function deliveryNoteViewRenderPublicPage(): void
 {
     global $pdo;

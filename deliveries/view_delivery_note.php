@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/deliveries-ui/includes/delivery-note-view-lib.php';
 
+if (isset($_GET['embed']) && (string) $_GET['embed'] === '1') {
+    deliveryNoteViewRenderEmbedPage();
+}
+
 if (isset($_GET['hash'])) {
     deliveryNoteViewRenderPublicPage();
 }

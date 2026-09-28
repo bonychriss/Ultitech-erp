@@ -572,6 +572,14 @@ function TeamTrend({ trend }) {
 
 function MeasurePage({ month, measure }) {
   const rows = Array.isArray(measure.rows) ? measure.rows : []
+  const [doc, setDoc] = useState(null)
+  const openDocument = (row) => {
+    if (measure.key !== 'delivery-documents') return
+    setDoc({
+      title: row.title || 'Delivery document',
+      url: row.documentUrl || '',
+    })
+  }
   return (
     <div className="wt-dash">
       <a className="wt-back" href={measure.backUrl || '#'}>Back</a>
@@ -595,8 +603,21 @@ function MeasurePage({ month, measure }) {
           </div>
           {rows.map((row, index) => {
             const met = /complete|present|^met$/i.test(String(row.status || ''))
+            const canOpen = measure.key === 'delivery-documents'
             return (
-              <div key={`${row.when}-${row.title}-${index}`} className="wt-compare-row">
+              <div
+                key={`${row.when}-${row.title}-${index}`}
+                className={`wt-compare-row${canOpen ? ' wt-compare-row--link' : ''}`}
+                role={canOpen ? 'button' : undefined}
+                tabIndex={canOpen ? 0 : undefined}
+                onClick={canOpen ? () => openDocument(row) : undefined}
+                onKeyDown={canOpen ? (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    openDocument(row)
+                  }
+                } : undefined}
+              >
                 <span className="wt-compare-name">{row.title}</span>
                 <span>{row.when}</span>
                 <span className="wt-compare-done">
@@ -607,6 +628,22 @@ function MeasurePage({ month, measure }) {
           })}
         </div>
       )}
+      {doc ? (
+        <div className="wt-doc" role="dialog" aria-modal="true" aria-label={doc.title}>
+          <button type="button" className="wt-doc-backdrop" aria-label="Close document" onClick={() => setDoc(null)} />
+          <div className="wt-doc-panel">
+            <header className="wt-doc-head">
+              <strong>{doc.title}</strong>
+              <button type="button" className="wt-doc-close" onClick={() => setDoc(null)}>Close</button>
+            </header>
+            {doc.url ? (
+              <iframe className="wt-doc-frame" title={doc.title} src={doc.url} />
+            ) : (
+              <p className="wt-doc-missing">No document recorded for {doc.title}.</p>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

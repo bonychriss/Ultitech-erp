@@ -493,6 +493,19 @@ function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string 
     return $rows;
 }
 
+function weeklyTasksUiDeliveryNoteUrl(int $noteId): string
+{
+    $path = 'deliveries/view_delivery_note.php?id=' . $noteId . '&embed=1';
+    if (function_exists('company_url')) {
+        return company_url($path);
+    }
+    if (function_exists('app_url')) {
+        return app_url('/' . $path);
+    }
+
+    return '/' . $path;
+}
+
 /**
  * One row per customer who received a delivery. Documents are recorded when the delivery is signed.
  *
@@ -510,7 +523,7 @@ function weeklyTasksUiDeliveryRecipientRows(PDO $pdo, int $userId, array $offset
     $seen = [];
     foreach ($offsets as $offset) {
         [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
-        $sql = 'SELECT o.id, o.client_name, o.completion_time, o.created_at, o.signature_path';
+        $sql = 'SELECT o.id, o.client_name, o.delivery_note_id, o.completion_time, o.created_at, o.signature_path';
         if ($hasNotes) {
             $sql .= ', dn.customer_name, dn.receiver_signature_path';
         }
@@ -553,10 +566,12 @@ function weeklyTasksUiDeliveryRecipientRows(PDO $pdo, int $userId, array $offset
                 $signed = $signed || trim((string) ($row['receiver_signature_path'] ?? '')) !== '';
             }
             $whenRaw = trim((string) (($row['completion_time'] ?? '') !== '' ? $row['completion_time'] : ($row['created_at'] ?? '')));
+            $noteId = (int) ($row['delivery_note_id'] ?? 0);
             $rows[] = [
                 'title' => $who,
                 'when' => $whenRaw !== '' ? date('j M Y', strtotime($whenRaw)) : '',
                 'status' => $signed ? 'Met' : 'Not recorded',
+                'documentUrl' => $noteId > 0 ? weeklyTasksUiDeliveryNoteUrl($noteId) : '',
             ];
         }
     }

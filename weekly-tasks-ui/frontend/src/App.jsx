@@ -664,6 +664,14 @@ function RecordIcon({ kind }) {
       </span>
     )
   }
+  if (kind === 'customer') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="12" cy="8" r="3" />
+        <path d="M6 19.5c.6-3 2.8-4.5 6-4.5s5.4 1.5 6 4.5" />
+      </svg>
+    )
+  }
   if (kind === 'sales') {
     return (
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -790,7 +798,12 @@ function MeasurePage({ month, measure }) {
             'customer-visits': 'Visit',
             'goods-delivery': 'Delivery',
           }[measure.key] || 'To-do'}
-          kind={measure.key === 'attendance' ? 'attendance' : measure.key === 'todo' ? 'todo' : 'sales'}
+          kind={
+            measure.key === 'attendance' ? 'attendance'
+              : measure.key === 'todo' ? 'todo'
+                : measure.key === 'new-customers' ? 'customer'
+                  : 'sales'
+          }
         />
       ) : (
         <div className="wt-compare">

@@ -825,7 +825,9 @@ function MeasurePage({ month, measure }) {
       ) : breakdown.length ? (
         <SalesMeasureCards items={breakdown} />
       ) : rows.length === 0 ? (
-        <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
+        measure.empty === 'Coming soon' ? null : (
+          <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
+        )
       ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'].includes(measure.key) ? (
         <RecordCards
           rows={rows}

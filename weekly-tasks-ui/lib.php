@@ -2034,11 +2034,13 @@ function weeklyTasksUiBuildPayload(): array
                 'title' => $measureKey === 'quotation-conversion'
                     ? 'Quotation converted to invoices'
                     : (string) $match['name'],
-                'summary' => !empty($match['configured']) ? ((string) $match['expected'] . ' · ' . (string) $match['actual']) : 'Target not set',
+                'summary' => $measureKey === 'customer-visits'
+                    ? 'Coming soon'
+                    : (!empty($match['configured']) ? ((string) $match['expected'] . ' · ' . (string) $match['actual']) : 'Target not set'),
                 'configured' => (bool) ($match['configured'] ?? false),
-                'rows' => !empty($match['configured']) ? $rows : [],
+                'rows' => $measureKey === 'customer-visits' ? [] : (!empty($match['configured']) ? $rows : []),
                 'items' => $breakdown,
-                'empty' => $empty,
+                'empty' => $measureKey === 'customer-visits' ? 'Coming soon' : $empty,
                 'backUrl' => $salesMeasure
                     ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'sales-performance')
                     : weeklyTasksUiMonthUrl($offsets, $selectedId),

@@ -606,7 +606,7 @@ function TodoCards({ rows }) {
             {section.items.map(({ row, index }) => (
               <article key={`${row.date}-${row.title}-${index}`} className="wt-nc-card">
                 <span className="wt-nc-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M9 6h6M9 10h6M9 14h4" />
                     <rect x="5" y="3" width="14" height="18" rx="2" />
                   </svg>

@@ -1293,14 +1293,14 @@ function weeklyTasksUiSalesItems(?array $sales): array
         ],
         [
             'name' => 'Quotation Conversion',
-            'expected' => '30% or better',
+            'expected' => 'Target 30%',
             'actual' => $submitted > 0
-                ? ($conversion . '% · ' . (int) ($sales['quotesWon'] ?? 0) . ' converted to invoices, ' . $submitted . ' submitted')
+                ? ((int) ($sales['quotesWon'] ?? 0) . ' of ' . $submitted . ' became invoices')
                 : 'Not recorded',
             'configured' => true,
             'met' => $submitted > 0 && $conversion >= 30,
-            'note' => $submitted > 0 ? 'Quotation conversion: ' . $conversion . ' of 30%' : 'Quotation conversion: Not recorded',
-            'spoken' => $submitted > 0 ? 'quotation conversion is ' . $conversion . ' of 30%' : '',
+            'note' => $submitted > 0 ? ((int) ($sales['quotesWon'] ?? 0) . ' of ' . $submitted . ' quotes became invoices') : 'No quotations submitted',
+            'spoken' => $submitted > 0 ? ((int) ($sales['quotesWon'] ?? 0) . ' of ' . $submitted . ' quotes became invoices') : '',
         ],
         [
             'name' => 'Collections',

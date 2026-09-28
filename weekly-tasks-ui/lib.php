@@ -1391,6 +1391,7 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
                         'status' => $metric === 'collections'
                             ? ($paid ? 'Collected · ' . $amount : 'Outstanding · ' . $amount)
                             : $amount,
+                        'documentUrl' => weeklyTasksUiInvoiceUrl((int) ($row['id'] ?? 0)),
                     ];
                 }
             } catch (Throwable $e) {

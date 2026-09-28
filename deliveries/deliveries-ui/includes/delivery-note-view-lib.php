@@ -459,9 +459,16 @@ function deliveryNoteViewRenderEmbedPage(): void
     if (function_exists('sales_document_font_stylesheet_links')) {
         echo sales_document_font_stylesheet_links($salesSettings);
     }
+    $filename = preg_replace('/[^A-Za-z0-9._-]+/', '-', (string) ($note['note_number'] ?? 'delivery-note'));
+    $filename = trim((string) $filename, '-');
+    if ($filename === '') {
+        $filename = 'delivery-note';
+    }
     echo '<style>html,body{margin:0;background:#f3f4f6;font-family:' . $docFontStack . ';}#delivery-note-content .page-container{box-shadow:none;}</style>';
+    echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>';
     echo '</head><body>';
     echo $documentHtml;
+    echo '<script>window.downloadDeliveryNote=function(){if(typeof html2pdf==="undefined")return;var element=document.querySelector("#delivery-note-content .page-container");if(!element)return;html2pdf().set({margin:0,filename:' . json_encode($filename . '.pdf') . ',image:{type:"jpeg",quality:0.98},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"}}).from(element).save();};</script>';
     echo '</body></html>';
     exit;
 }

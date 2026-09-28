@@ -573,12 +573,21 @@ function TeamTrend({ trend }) {
 function MeasurePage({ month, measure }) {
   const rows = Array.isArray(measure.rows) ? measure.rows : []
   const [doc, setDoc] = useState(null)
+  const [docReady, setDocReady] = useState(false)
+  const frameRef = useRef(null)
   const openDocument = (row) => {
     if (measure.key !== 'delivery-documents') return
+    setDocReady(false)
     setDoc({
       title: row.title || 'Delivery document',
       url: row.documentUrl || '',
     })
+  }
+  const downloadDocument = () => {
+    const win = frameRef.current && frameRef.current.contentWindow
+    if (win && typeof win.downloadDeliveryNote === 'function') {
+      win.downloadDeliveryNote()
+    }
   }
   return (
     <div className="wt-dash">
@@ -634,10 +643,15 @@ function MeasurePage({ month, measure }) {
           <div className="wt-doc-panel">
             <header className="wt-doc-head">
               <strong>{doc.title}</strong>
-              <button type="button" className="wt-doc-close" onClick={() => setDoc(null)}>Close</button>
+              <span className="wt-doc-actions">
+                {doc.url ? (
+                  <button type="button" className="wt-doc-download" disabled={!docReady} onClick={downloadDocument}>Download</button>
+                ) : null}
+                <button type="button" className="wt-doc-close" onClick={() => setDoc(null)}>Close</button>
+              </span>
             </header>
             {doc.url ? (
-              <iframe className="wt-doc-frame" title={doc.title} src={doc.url} />
+              <iframe ref={frameRef} className="wt-doc-frame" title={doc.title} src={doc.url} onLoad={() => setDocReady(true)} />
             ) : (
               <p className="wt-doc-missing">No document recorded for {doc.title}.</p>
             )}

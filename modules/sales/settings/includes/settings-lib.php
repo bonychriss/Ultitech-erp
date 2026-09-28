@@ -822,9 +822,31 @@ function sales_settings_sync_missing_target_notice(PDO $pdo, string $month, arra
 
             return;
         }
-        $existing = $pdo->prepare("SELECT id FROM notifications WHERE audience = 'admin' AND title = ? AND is_read = 0 LIMIT 1");
+        $existing = $pdo->prepare("SELECT id, is_read FROM notifications WHERE audience = 'admin' AND title = ? ORDER BY id DESC LIMIT 1");
         $existing->execute([$title]);
-        if ((int) $existing->fetchColumn() > 0) {
+        $row = $existing->fetch(PDO::FETCH_ASSOC);
+        if (is_array($row) && (int) ($row['id'] ?? 0) > 0) {
+            $noticeId = (int) $row['id'];
+            $dismissed = false;
+            try {
+                $gone = $pdo->prepare("SELECT 1 FROM user_notification_dismissals WHERE source = 'core' AND notification_id = ? LIMIT 1");
+                $gone->execute([$noticeId]);
+                $dismissed = (bool) $gone->fetchColumn();
+            } catch (Throwable $e) {
+                $dismissed = false;
+            }
+            if ((int) ($row['is_read'] ?? 0) === 1 || $dismissed) {
+                $pdo->prepare('UPDATE notifications SET is_read = 0, created_at = NOW() WHERE id = ?')->execute([$noticeId]);
+                try {
+                    $pdo->prepare('UPDATE notifications SET updated_at = NOW() WHERE id = ?')->execute([$noticeId]);
+                } catch (Throwable $e) {
+                }
+                try {
+                    $pdo->prepare("DELETE FROM user_notification_dismissals WHERE source = 'core' AND notification_id = ?")->execute([$noticeId]);
+                } catch (Throwable $e) {
+                }
+            }
+
             return;
         }
         $shown = array_slice($missing, 0, 5);

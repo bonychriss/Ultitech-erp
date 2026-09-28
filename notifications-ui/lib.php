@@ -114,7 +114,7 @@ function notificationsUiDetectModule(array $n): string
     $message = strtolower(trim((string) ($n['message'] ?? '')));
     $blob = $title . ' ' . $message . ' ' . $link;
 
-    if (preg_match('/\bsales target\b/', $blob)) {
+    if (notificationsUiIsSalesTargetNotice($n)) {
         return 'sales';
     }
 
@@ -168,6 +168,58 @@ function notificationsUiDetectModule(array $n): string
     }
 
     return $src === 'system' ? 'system' : 'general';
+}
+
+function notificationsUiIsSalesTargetNotice(array $n): bool
+{
+    $blob = strtolower(trim(
+        (string) ($n['title'] ?? '') . ' ' . (string) ($n['message'] ?? '') . ' ' . (string) ($n['link_url'] ?? $n['link'] ?? '')
+    ));
+
+    return $blob !== '' && (bool) preg_match('/\bsales target\b/', $blob);
+}
+
+function notificationsUiSalesTargetHref(): string
+{
+    $path = 'sales/settings?module=sales&tab=targets';
+    if (function_exists('company_url')) {
+        return company_url($path);
+    }
+    if (function_exists('app_url')) {
+        return app_url('/' . $path);
+    }
+
+    return '/' . $path;
+}
+
+/**
+ * Create or revive the admin "Set the sales target" card before the list is built.
+ */
+function notificationsUiEnsureSalesTargetNotice(): void
+{
+    $isAdminUser = (function_exists('isAdmin') && isAdmin())
+        || (($_SESSION['username'] ?? '') === 'admin');
+    if (!$isAdminUser) {
+        return;
+    }
+    $root = dirname(__DIR__);
+    $functions = $root . '/modules/sales/functions.php';
+    $settings = $root . '/modules/sales/settings/includes/settings-lib.php';
+    if (is_file($functions)) {
+        require_once $functions;
+    }
+    if (!is_file($settings)) {
+        return;
+    }
+    require_once $settings;
+    global $pdo;
+    if (!function_exists('sales_settings_sales_target_needs_entry') || !($pdo instanceof PDO)) {
+        return;
+    }
+    try {
+        sales_settings_sales_target_needs_entry($pdo);
+    } catch (Throwable $e) {
+    }
 }
 
 /**
@@ -465,6 +517,9 @@ function notificationsUiNormalizeItem(array $n): array
     } elseif (function_exists('resolveStoredNotificationLink')) {
         $href = (string) (resolveStoredNotificationLink($n['link'] ?? $n['link_url'] ?? null) ?? '');
     }
+    if ($href === '' && notificationsUiIsSalesTargetNotice($n)) {
+        $href = notificationsUiSalesTargetHref();
+    }
 
     $title = (string) ($n['title'] ?? '');
     $message = (string) ($n['message'] ?? '');
@@ -537,6 +592,7 @@ function notificationsUiBuildPayload(string $page = 'list'): array
     $countUnread = 0;
 
     if ($page === 'list') {
+        notificationsUiEnsureSalesTargetNotice();
         $allItems = function_exists('getNotificationCentreFeedPaged')
             ? getNotificationCentreFeedPaged(120, 0)
             : [];
@@ -550,7 +606,7 @@ function notificationsUiBuildPayload(string $page = 'list'): array
             }
             $item = notificationsUiNormalizeItem($row);
             $mod = (string) ($item['module'] ?? 'general');
-            if (isset($enabledModules[$mod]) && !$enabledModules[$mod]) {
+            if (!notificationsUiIsSalesTargetNotice($item) && isset($enabledModules[$mod]) && !$enabledModules[$mod]) {
                 continue;
             }
             $period = $item['period'];
@@ -820,6 +876,10 @@ function notificationsUiFilterRowsByPreferences(array $rows, ?int $userId = null
     $out = [];
     foreach ($rows as $row) {
         if (!is_array($row)) {
+            continue;
+        }
+        if (notificationsUiIsSalesTargetNotice($row)) {
+            $out[] = $row;
             continue;
         }
         $module = notificationsUiDetectModule($row);

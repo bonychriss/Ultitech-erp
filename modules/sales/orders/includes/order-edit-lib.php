@@ -402,6 +402,9 @@ function sales_invoice_edit_require_admin(): void
  */
 function sales_invoice_edit_init_data(int $invoiceId): array
 {
+    if (function_exists('invoicesDeskBootstrap')) {
+        invoicesDeskBootstrap();
+    }
     sales_invoice_edit_require_admin();
 
     $viewLib = dirname(__DIR__, 2) . '/invoices/includes/invoices-view-lib.php';
@@ -475,6 +478,9 @@ function sales_invoice_edit_init_data(int $invoiceId): array
  */
 function sales_process_invoice_update(array $input, int $invoiceId): array
 {
+    if (function_exists('invoicesDeskBootstrap')) {
+        invoicesDeskBootstrap();
+    }
     sales_invoice_edit_require_admin();
 
     $viewLib = dirname(__DIR__, 2) . '/invoices/includes/invoices-view-lib.php';

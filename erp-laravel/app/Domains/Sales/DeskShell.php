@@ -758,6 +758,9 @@ main.main-content.sales-catalogue-shell #root { width: 100%; min-height: 40vh; }
             return null;
         }
         require_once $lib;
+        if (function_exists('invoicesDeskBootstrap')) {
+            invoicesDeskBootstrap();
+        }
 
         $invoiceId = $this->parseId();
         if ($invoiceId <= 0 && function_exists('invoicesViewParseId')) {

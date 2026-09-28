@@ -352,9 +352,40 @@ body.page-sales-settings .exp-create-section-header p {
   margin-top: 6px;
 }
 
+.ss-target-month {
+  max-width: 220px;
+  margin-bottom: 0.85rem;
+}
+
+.ss-target-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ss-target-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  gap: 0.75rem 1rem;
+  align-items: start;
+}
+
+.ss-target-row > .ss-field-label {
+  padding-top: 0.55rem;
+}
+
 @media (max-width: 720px) {
   .ss-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ss-target-row {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+
+  .ss-target-row > .ss-field-label {
+    padding-top: 0;
   }
 }
 

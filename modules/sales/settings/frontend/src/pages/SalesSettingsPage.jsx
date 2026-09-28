@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { fetchSettingsInit, saveSettings, saveSettingsFields } from '../api/settingsDesk';
+import { fetchMonthlyTargets, fetchSettingsInit, saveMonthlyTargets, saveSettings, saveSettingsFields } from '../api/settingsDesk';
 
 const ROADMASTER_TABS = [
   { key: 'financials', label: 'Tax & Finance' },
@@ -9,14 +9,23 @@ const ROADMASTER_TABS = [
 ];
 
 function getSettingsTabs(init) {
+  const targets = { key: 'targets', label: 'Monthly targets' };
   if (init?.is_ultimate) {
     return [
       { key: 'financials', label: 'Tax & Finance' },
+      targets,
       { key: 'settings', label: 'Document layout' },
     ];
   }
 
-  return ROADMASTER_TABS;
+  return [...ROADMASTER_TABS, targets];
+}
+
+function formatTargetMoney(amount, currency) {
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value <= 0) return '';
+  const formatted = new Intl.NumberFormat('en-TZ', { maximumFractionDigits: 0 }).format(value);
+  return `${formatted} ${currency || 'TZS'}`;
 }
 
 function getLayoutTabConfig(activeTab) {
@@ -240,6 +249,10 @@ export default function SalesSettingsPage() {
   const [activeTab, setActiveTab] = useState('financials');
   const [saving, setSaving] = useState(false);
   const [layoutTeaser, setLayoutTeaser] = useState(null);
+  const [targetMonth, setTargetMonth] = useState('');
+  const [targetPeople, setTargetPeople] = useState([]);
+  const [targetsLoading, setTargetsLoading] = useState(false);
+  const [targetsSaving, setTargetsSaving] = useState(false);
 
   useDocumentFontPreview(init, settings?.sales_document_font || 'arima');
 
@@ -251,6 +264,8 @@ export default function SalesSettingsPage() {
         if (cancelled) return;
         setInit(data);
         setSettings(data.settings || {});
+        setTargetMonth(data.monthlyTargets?.month || '');
+        setTargetPeople(Array.isArray(data.monthlyTargets?.people) ? data.monthlyTargets.people : []);
         setLoading(false);
       })
       .catch((err) => {
@@ -291,6 +306,41 @@ export default function SalesSettingsPage() {
 
     setLayoutTeaser(null);
     handleLayoutChange(type, option.id);
+  }
+
+  async function changeTargetMonth(month) {
+    setTargetMonth(month);
+    setTargetsLoading(true);
+    try {
+      const data = await fetchMonthlyTargets(month);
+      setTargetMonth(data.month || month);
+      setTargetPeople(Array.isArray(data.people) ? data.people : []);
+    } catch (err) {
+      showToast(err.message || 'Could not load targets', 'error');
+    } finally {
+      setTargetsLoading(false);
+    }
+  }
+
+  function changeTargetAmount(userId, amount) {
+    setTargetPeople((prev) => prev.map((person) => (
+      person.id === userId ? { ...person, amount } : person
+    )));
+  }
+
+  async function saveTargets() {
+    if (!targetMonth) return;
+    setTargetsSaving(true);
+    try {
+      const data = await saveMonthlyTargets(targetMonth, targetPeople);
+      setTargetMonth(data.month || targetMonth);
+      setTargetPeople(Array.isArray(data.people) ? data.people : []);
+      showToast('Monthly targets saved');
+    } catch (err) {
+      showToast(err.message || 'Could not save targets', 'error');
+    } finally {
+      setTargetsSaving(false);
+    }
   }
 
   async function saveAll(event) {
@@ -497,6 +547,71 @@ export default function SalesSettingsPage() {
                     <p className="ss-field-help">Printed at the bottom of quotations and invoices.</p>
                   </div>
                 </div>
+              </div>
+            </section>
+          )}
+
+          {activeTab === 'targets' && (
+            <section className="exp-create-section ss-form-section" id="settings-targets">
+              <div className="exp-create-section-header">
+                <h2>Monthly sales targets</h2>
+                <p>The revenue each salesperson should reach. Performance uses this amount for the selected month.</p>
+              </div>
+
+              <div className="ss-form-block">
+                <div className="ss-field ss-target-month">
+                  <label className="ss-field-label" htmlFor="sales-target-month">Month</label>
+                  <input
+                    id="sales-target-month"
+                    className="ss-field-input"
+                    type="month"
+                    value={targetMonth}
+                    onChange={(event) => changeTargetMonth(event.target.value)}
+                  />
+                </div>
+
+                {targetsLoading ? (
+                  <p className="ss-field-help">Loading targets…</p>
+                ) : targetPeople.length === 0 ? (
+                  <p className="ss-field-help">No salespeople are on the active list.</p>
+                ) : (
+                  <div className="ss-target-list">
+                    {targetPeople.map((person) => {
+                      const hint = !person.amount && person.yearly_monthly
+                        ? `Yearly target works out to ${formatTargetMoney(person.yearly_monthly, settings.default_currency)} a month until you set this month.`
+                        : '';
+                      return (
+                        <div className="ss-target-row" key={person.id}>
+                          <label className="ss-field-label" htmlFor={`sales-target-${person.id}`}>{person.name}</label>
+                          <div className="ss-field">
+                            <input
+                              id={`sales-target-${person.id}`}
+                              className="ss-field-input"
+                              inputMode="decimal"
+                              value={person.amount || ''}
+                              onChange={(event) => changeTargetAmount(person.id, event.target.value)}
+                              placeholder={settings.default_currency || 'TZS'}
+                              autoComplete="off"
+                            />
+                            {hint ? <p className="ss-field-help">{hint}</p> : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="ss-form-actions">
+                <button
+                  type="button"
+                  className="ss-btn ss-btn--primary"
+                  disabled={targetsSaving || targetsLoading}
+                  onClick={saveTargets}
+                >
+                  {targetsSaving && <Loader2 size={18} className="exp-create-spinner" aria-hidden="true" />}
+                  {targetsSaving ? 'Saving…' : 'Save targets'}
+                </button>
               </div>
             </section>
           )}
@@ -721,6 +836,7 @@ export default function SalesSettingsPage() {
             </section>
           )}
 
+          {activeTab !== 'targets' && (
           <div className="ss-form-actions">
             <button
               type="button"
@@ -734,6 +850,7 @@ export default function SalesSettingsPage() {
               {saving ? 'Saving…' : 'Save changes'}
             </button>
           </div>
+          )}
         </div>
       </form>
     </div>

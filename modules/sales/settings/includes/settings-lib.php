@@ -600,6 +600,7 @@ function sales_settings_init_data(): array
 
     return [
         'settings' => $settings,
+        'monthlyTargets' => sales_settings_monthly_targets($pdo, date('Y-m')),
         'module' => $module,
         'company_name' => $companyName,
         'is_roadmaster' => function_exists('isRoadmaster') && isRoadmaster(),
@@ -620,6 +621,132 @@ function sales_settings_init_data(): array
                     : '/modules/sales/settings/assets/doc-preview-sample.png'),
         ],
     ];
+}
+
+function sales_settings_amount_input(float $amount): string
+{
+    if ($amount <= 0) {
+        return '';
+    }
+    $text = number_format($amount, 2, '.', '');
+
+    return rtrim(rtrim($text, '0'), '.');
+}
+
+/**
+ * @return array<int,int>
+ */
+function sales_settings_sales_people(PDO $pdo): array
+{
+    try {
+        $rows = $pdo->query('SELECT id, full_name, username, department, role FROM users WHERE is_active = 1 ORDER BY full_name ASC, username ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+    $people = [];
+    foreach ($rows as $row) {
+        $blob = strtolower(trim((string) ($row['department'] ?? '') . ' ' . (string) ($row['role'] ?? '')));
+        if (!str_contains($blob, 'sales')) {
+            continue;
+        }
+        $id = (int) ($row['id'] ?? 0);
+        if ($id < 1) {
+            continue;
+        }
+        $name = trim((string) ($row['full_name'] ?? ''));
+        if ($name === '') {
+            $name = trim((string) ($row['username'] ?? ''));
+        }
+        $people[] = ['id' => $id, 'name' => $name !== '' ? $name : ('User ' . $id)];
+    }
+
+    return $people;
+}
+
+function sales_settings_valid_month(string $month): bool
+{
+    return (bool) preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month);
+}
+
+/**
+ * @return array{month:string,people:array<int,array<string,mixed>>}
+ */
+function sales_settings_monthly_targets(PDO $pdo, string $month): array
+{
+    if (!sales_settings_valid_month($month)) {
+        $month = date('Y-m');
+    }
+    $people = sales_settings_sales_people($pdo);
+    $amounts = [];
+    if (function_exists('ensureSalesTargetsSchema')) {
+        ensureSalesTargetsSchema();
+    }
+    if ($people) {
+        try {
+            $year = substr($month, 0, 4);
+            $ids = array_column($people, 'id');
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $stmt = $pdo->prepare("SELECT user_id, period, target_amount FROM sales_targets WHERE user_id IN ($placeholders) AND period IN (?, ?)");
+            $stmt->execute(array_merge($ids, [$month, $year]));
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $amounts[(int) $row['user_id']][(string) $row['period']] = (float) $row['target_amount'];
+            }
+        } catch (Throwable $e) {
+            $amounts = [];
+        }
+    }
+    $year = substr($month, 0, 4);
+    $out = [];
+    foreach ($people as $person) {
+        $id = (int) $person['id'];
+        $monthly = (float) ($amounts[$id][$month] ?? 0);
+        $yearly = (float) ($amounts[$id][$year] ?? 0);
+        $out[] = [
+            'id' => $id,
+            'name' => $person['name'],
+            'amount' => sales_settings_amount_input($monthly),
+            'yearly_monthly' => $yearly > 0 ? round($yearly / 12, 2) : null,
+        ];
+    }
+
+    return ['month' => $month, 'people' => $out];
+}
+
+/**
+ * @param array<int,array<string,mixed>> $rows
+ */
+function sales_settings_save_monthly_targets(PDO $pdo, string $month, array $rows): array
+{
+    if (!sales_settings_valid_month($month)) {
+        throw new InvalidArgumentException('Choose a valid month.');
+    }
+    if (function_exists('ensureSalesTargetsSchema')) {
+        ensureSalesTargetsSchema();
+    }
+    $allowed = [];
+    foreach (sales_settings_sales_people($pdo) as $person) {
+        $allowed[(int) $person['id']] = true;
+    }
+    $upsert = $pdo->prepare('INSERT INTO sales_targets (user_id, period, target_amount) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE target_amount = ?');
+    $delete = $pdo->prepare('DELETE FROM sales_targets WHERE user_id = ? AND period = ?');
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $userId = (int) ($row['user_id'] ?? $row['id'] ?? 0);
+        if ($userId < 1 || empty($allowed[$userId])) {
+            continue;
+        }
+        $raw = str_replace([',', ' '], '', trim((string) ($row['amount'] ?? '')));
+        $amount = is_numeric($raw) ? (float) $raw : 0.0;
+        if ($amount > 0) {
+            $upsert->execute([$userId, $month, $amount, $amount]);
+        } else {
+            $delete->execute([$userId, $month]);
+        }
+    }
+
+    return sales_settings_monthly_targets($pdo, $month);
 }
 
 function salesSettingsRenderReactShell(): void

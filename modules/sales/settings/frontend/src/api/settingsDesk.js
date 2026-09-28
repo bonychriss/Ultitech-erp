@@ -52,6 +52,38 @@ export async function saveSettings(saveUrl, formData) {
   return data;
 }
 
+export async function fetchMonthlyTargets(month) {
+  const params = new URLSearchParams(window.location.search);
+  params.set('month', month);
+  const res = await fetch(`${getApiBase()}/targets.php?${params.toString()}`, { credentials: 'same-origin' });
+  const data = await parseJson(res);
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+export async function saveMonthlyTargets(month, people) {
+  const params = new URLSearchParams(window.location.search);
+  const res = await fetch(`${getApiBase()}/targets.php?${params.toString()}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      month,
+      targets: people.map((person) => ({
+        user_id: person.id,
+        amount: person.amount,
+      })),
+    }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok || data.success === false || data.error) {
+    throw new Error(data.error || data.message || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 export async function saveSettingsFields(saveUrl, fields) {
   const formData = new FormData();
   Object.entries(fields).forEach(([key, value]) => {

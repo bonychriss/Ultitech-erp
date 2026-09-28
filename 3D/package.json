@@ -18,7 +18,8 @@
     "android:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
     "android:build": "node scripts/run-android-build.cjs",
-    "android:build:debug": "node scripts/run-android-build.cjs --debug"
+    "android:build:debug": "node scripts/run-android-build.cjs --debug",
+    "logo:ultimate": "node scripts/process-ultimate-logo.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",

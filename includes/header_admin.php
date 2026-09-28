@@ -357,7 +357,10 @@ $chatbotUiVer = max(
 window.__CHATBOT__ = {
   apiUrl: <?= json_encode(app_url('/chatbot_api.php'), JSON_UNESCAPED_SLASHES) ?>,
   appBase: <?= json_encode(app_url('/'), JSON_UNESCAPED_SLASHES) ?>,
-  cssUrl: <?= json_encode(app_url('/assets/chatbot-ui/dist/assets/chatbot-ui.css') . '?v=' . (int) $chatbotUiVer, JSON_UNESCAPED_SLASHES) ?>
+  cssUrl: <?= json_encode(app_url('/assets/chatbot-ui/dist/assets/chatbot-ui.css') . '?v=' . (int) $chatbotUiVer, JSON_UNESCAPED_SLASHES) ?>,
+  callPhone: <?= json_encode(defined('SUPPORT_PHONE') ? (string) SUPPORT_PHONE : '', JSON_UNESCAPED_SLASHES) ?>,
+  callUsersUrl: <?= json_encode(app_url('/chatbot_call_users.php'), JSON_UNESCAPED_SLASHES) ?>,
+  webrtcCallUrl: <?= json_encode(app_url('/webrtc_call.php'), JSON_UNESCAPED_SLASHES) ?>
 };
 </script>
 <?php if (is_file($chatbotUiCss)): ?>

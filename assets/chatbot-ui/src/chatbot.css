@@ -22,44 +22,140 @@
 
 .erp-chatbot-fab,
 button.erp-chatbot-fab,
-.erp-chatbot-panel {
+.erp-chatbot-panel,
+.erp-chatbot-call-overlay,
+.erp-call-dash,
+.erp-call-phone,
+.erp-chatbot-toast {
   pointer-events: auto;
+}
+
+.erp-chatbot-dock {
+  position: fixed !important;
+  z-index: 10260 !important;
+  width: 3rem;
+  height: 3rem;
+  pointer-events: auto;
+}
+
+.erp-chatbot-speed {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.45rem);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px) scale(0.92);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+  z-index: 2;
+}
+
+.erp-chatbot-dock.is-menu-open .erp-chatbot-speed {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.erp-chatbot-speed-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.7rem 0.35rem 0.45rem !important;
+  border: none !important;
+  border-radius: 9999px !important;
+  background: linear-gradient(145deg, #bfdbfe 0%, #60a5fa 45%, #3b82f6 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.28) !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  font: inherit;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em;
+  line-height: 1 !important;
+  white-space: nowrap;
+  filter: brightness(1.08);
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.erp-chatbot-speed-btn:hover {
+  transform: translateY(-1px) scale(1.03);
+  filter: brightness(1.16);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.36) !important;
+  color: #fff !important;
+  text-decoration: none !important;
+}
+
+.erp-chatbot-speed-btn--call {
+  background: linear-gradient(145deg, #86efac 0%, #22c55e 48%, #16a34a 100%) !important;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.28) !important;
+}
+
+.erp-chatbot-speed-btn--call:hover {
+  box-shadow: 0 10px 22px rgba(22, 163, 74, 0.36) !important;
+}
+
+.erp-chatbot-speed-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+.erp-chatbot-speed-label {
+  padding-right: 0.15rem;
 }
 
 .erp-chatbot-fab,
 div.erp-chatbot-fab,
 button.erp-chatbot-fab {
-  position: fixed !important;
-  z-index: 10260 !important;
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  z-index: 1 !important;
   box-sizing: border-box !important;
-  width: 3.5rem !important;
-  height: 3.5rem !important;
-  min-width: 3.5rem !important;
-  min-height: 3.5rem !important;
-  max-width: 3.5rem !important;
-  max-height: 3.5rem !important;
+  width: 3rem !important;
+  height: 3rem !important;
+  min-width: 3rem !important;
+  min-height: 3rem !important;
+  max-width: 3rem !important;
+  max-height: 3rem !important;
   margin: 0 !important;
   padding: 0 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   aspect-ratio: 1 / 1 !important;
-  border: 2px solid #ffffff !important;
+  border: none !important;
   border-radius: 50% !important;
-  background-color: #7c3aed !important;
-  background-image: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
   color: #ffffff !important;
-  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.35) !important;
+  box-shadow: none !important;
   cursor: grab !important;
   overflow: visible !important;
   outline: none !important;
   line-height: 1 !important;
   font-size: 16px !important;
+  opacity: 0.78 !important;
+  filter: none !important;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.18s ease, opacity 0.18s ease;
   animation: erpChatbotFabIn 0.35s ease both;
   appearance: none !important;
   -webkit-appearance: none !important;
@@ -69,11 +165,13 @@ button.erp-chatbot-fab {
 .erp-chatbot-fab:hover:not(.is-dragging),
 div.erp-chatbot-fab:hover:not(.is-dragging),
 button.erp-chatbot-fab:hover:not(.is-dragging) {
-  background-color: #8b5cf6 !important;
-  background-image: linear-gradient(135deg, #818cf8 0%, #c084fc 100%) !important;
+  background: transparent !important;
+  background-image: none !important;
   color: #ffffff !important;
   transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(124, 58, 237, 0.4) !important;
+  opacity: 0.98 !important;
+  filter: none !important;
+  box-shadow: none !important;
 }
 
 .erp-chatbot-fab.is-dragging,
@@ -81,7 +179,9 @@ div.erp-chatbot-fab.is-dragging,
 button.erp-chatbot-fab.is-dragging {
   cursor: grabbing !important;
   transform: scale(1.05);
-  box-shadow: 0 16px 32px rgba(124, 58, 237, 0.4) !important;
+  opacity: 0.9 !important;
+  filter: none !important;
+  box-shadow: none !important;
   transition: none !important;
   border-radius: 50% !important;
 }
@@ -89,19 +189,19 @@ button.erp-chatbot-fab.is-dragging {
 .erp-chatbot-fab:focus-visible,
 div.erp-chatbot-fab:focus-visible,
 button.erp-chatbot-fab:focus-visible {
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.45), 0 10px 24px rgba(124, 58, 237, 0.28) !important;
+  opacity: 0.9 !important;
+  filter: none !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.28) !important;
   border-radius: 50% !important;
 }
 
 .erp-chatbot-fab-icon,
 .erp-chatbot-fab .erp-chatbot-fab-icon {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 1.4rem !important;
-  height: 1.15rem !important;
-  min-width: 1.4rem !important;
-  min-height: 1.15rem !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
   line-height: 0 !important;
@@ -110,51 +210,135 @@ button.erp-chatbot-fab:focus-visible {
   opacity: 1 !important;
   overflow: visible !important;
   position: relative !important;
+  border-radius: 0 !important;
 }
 
-/* Outlined bubble made of borders (same technique as the visible white FAB ring) */
+.erp-chatbot-liquid {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.erp-chatbot-liquid-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.erp-chatbot-liquid-blobs {
+  position: absolute;
+  inset: -18%;
+  display: block;
+}
+
+.erp-chatbot-liquid-blob {
+  position: absolute;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #bfdbfe 0%, #60a5fa 45%, #3b82f6 100%);
+  filter: brightness(1.22);
+  will-change: transform;
+}
+
+.erp-chatbot-liquid-blob--main {
+  width: 72%;
+  height: 72%;
+  left: 14%;
+  top: 14%;
+  animation: erpChatbotLiquidMain 4.8s ease-in-out infinite;
+}
+
+.erp-chatbot-liquid-blob--a {
+  width: 42%;
+  height: 42%;
+  left: 4%;
+  top: 18%;
+  animation: erpChatbotLiquidA 3.6s ease-in-out infinite;
+}
+
+.erp-chatbot-liquid-blob--b {
+  width: 38%;
+  height: 38%;
+  right: 6%;
+  bottom: 10%;
+  left: auto;
+  animation: erpChatbotLiquidB 4.2s ease-in-out infinite;
+}
+
+.erp-chatbot-liquid-glyph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.95);
+  z-index: 2;
+  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.25));
+}
+
+.erp-chatbot-liquid-glyph svg {
+  display: block;
+}
+
+@keyframes erpChatbotLiquidMain {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  40% {
+    transform: translate(4%, -3%) scale(1.04);
+  }
+  70% {
+    transform: translate(-3%, 4%) scale(0.97);
+  }
+}
+
+@keyframes erpChatbotLiquidA {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(55%, 20%) scale(1.08);
+  }
+}
+
+@keyframes erpChatbotLiquidB {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -35%) scale(1.1);
+  }
+}
+
+.erp-chatbot-fab:hover:not(.is-dragging) .erp-chatbot-liquid-blob--a {
+  animation-duration: 2.2s;
+}
+
+.erp-chatbot-fab:hover:not(.is-dragging) .erp-chatbot-liquid-blob--b {
+  animation-duration: 2.6s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-chatbot-liquid-blob--main,
+  .erp-chatbot-liquid-blob--a,
+  .erp-chatbot-liquid-blob--b {
+    animation: none !important;
+  }
+}
+
+.erp-chatbot-fab-img {
+  display: none !important;
+}
+
 #erp-chatbot-root .erp-chatbot-fab-bubble,
-.erp-chatbot-fab-bubble {
-  display: block !important;
-  position: relative !important;
-  box-sizing: border-box !important;
-  width: 1.05rem !important;
-  height: 0.8rem !important;
-  margin: 0 0 0.12rem !important;
-  padding: 0 !important;
-  border: 2.25px solid #ffffff !important;
-  border-radius: 0.28rem !important;
-  background: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
+.erp-chatbot-fab-bubble,
 #erp-chatbot-root .erp-chatbot-fab-bubble-tail,
 .erp-chatbot-fab-bubble-tail {
-  display: block !important;
-  position: absolute !important;
-  left: 0.08rem !important;
-  bottom: -0.38rem !important;
-  box-sizing: border-box !important;
-  width: 0.42rem !important;
-  height: 0.42rem !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border-left: 2.25px solid #ffffff !important;
-  border-bottom: 2.25px solid #ffffff !important;
-  border-top: 0 !important;
-  border-right: 0 !important;
-  background-color: #7c3aed !important;
-  background-image: none !important;
-  transform: rotate(-45deg) !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-.erp-chatbot-fab:hover:not(.is-dragging) .erp-chatbot-fab-bubble-tail {
-  background-color: #8b5cf6 !important;
+  display: none !important;
 }
 
 .erp-chatbot-fab::before,
@@ -173,31 +357,20 @@ div.erp-chatbot-fab::after {
 }
 
 @media (max-width: 767.98px) {
+  .erp-chatbot-dock {
+    width: 2.85rem;
+    height: 2.85rem;
+  }
+
   .erp-chatbot-fab,
   div.erp-chatbot-fab,
   button.erp-chatbot-fab {
-    width: 3.25rem !important;
-    height: 3.25rem !important;
-    min-width: 3.25rem !important;
-    min-height: 3.25rem !important;
-    max-width: 3.25rem !important;
-    max-height: 3.25rem !important;
-  }
-
-  #erp-chatbot-root .erp-chatbot-fab-bubble,
-  .erp-chatbot-fab-bubble {
-    width: 1rem !important;
-    height: 0.75rem !important;
-    border-width: 2px !important;
-  }
-
-  #erp-chatbot-root .erp-chatbot-fab-bubble-tail,
-  .erp-chatbot-fab-bubble-tail {
-    width: 0.38rem !important;
-    height: 0.38rem !important;
-    border-left-width: 2px !important;
-    border-bottom-width: 2px !important;
-    bottom: -0.34rem !important;
+    width: 2.85rem !important;
+    height: 2.85rem !important;
+    min-width: 2.85rem !important;
+    min-height: 2.85rem !important;
+    max-width: 2.85rem !important;
+    max-height: 2.85rem !important;
   }
 }
 
@@ -221,12 +394,12 @@ div.erp-chatbot-fab::after {
 @media (max-width: 767.98px) {
   .erp-chatbot-fab,
   button.erp-chatbot-fab {
-    width: 3.25rem !important;
-    height: 3.25rem !important;
-    min-width: 3.25rem !important;
-    min-height: 3.25rem !important;
-    max-width: 3.25rem !important;
-    max-height: 3.25rem !important;
+    width: 2.85rem !important;
+    height: 2.85rem !important;
+    min-width: 2.85rem !important;
+    min-height: 2.85rem !important;
+    max-width: 2.85rem !important;
+    max-height: 2.85rem !important;
   }
 
   .erp-chatbot-panel {
@@ -434,20 +607,25 @@ div.erp-chatbot-fab::after {
 }
 
 html[data-theme='dark'] .erp-chatbot-fab {
-  background-color: #5b21b6 !important;
-  background-image: linear-gradient(135deg, #4f46e5 0%, #7e22ce 100%) !important;
-  color: #f5f3ff !important;
-  border-color: rgba(196, 181, 253, 0.45) !important;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35) !important;
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  opacity: 0.72 !important;
+  filter: none !important;
+  box-shadow: none !important;
 }
 
 html[data-theme='dark'] .erp-chatbot-fab:hover:not(.is-dragging) {
-  background-image: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
-  color: #ffffff !important;
+  background: transparent !important;
+  background-image: none !important;
+  opacity: 0.95 !important;
+  filter: none !important;
+  box-shadow: none !important;
 }
 
-html[data-theme='dark'] .erp-chatbot-fab-bubble-tail {
-  background-color: #5b21b6 !important;
+html[data-theme='dark'] .erp-chatbot-liquid-blob {
+  background: linear-gradient(145deg, #c7d2fe 0%, #818cf8 45%, #6366f1 100%);
+  filter: brightness(1.1);
 }
 
 html[data-theme='dark'] .erp-chatbot-panel {
@@ -487,4 +665,705 @@ html[data-theme='dark'] .erp-chatbot-suggestions button:hover {
   border-color: #c4b5fd;
   color: #ddd6fe;
   background: rgba(124, 58, 237, 0.2);
+}
+
+.erp-chatbot-header--call {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.erp-chatbot-call-search {
+  padding: 10px 12px 0;
+  background: #f8fafc;
+}
+
+.erp-chatbot-call-search input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 2.15rem;
+  padding: 0 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  background: #fff;
+}
+
+.erp-chatbot-call-search input:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+}
+
+.erp-chatbot-call-list {
+  gap: 6px !important;
+  padding-top: 10px !important;
+}
+
+.erp-chatbot-call-empty {
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+  padding: 1.25rem 0.5rem;
+}
+
+.erp-chatbot-call-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  text-decoration: none !important;
+  color: #0f172a !important;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+a.erp-chatbot-call-item:hover {
+  background: #f0fdf4;
+  border-color: #86efac;
+  transform: translateY(-1px);
+  color: #0f172a !important;
+  text-decoration: none !important;
+}
+
+.erp-chatbot-call-item.is-disabled {
+  opacity: 0.72;
+  cursor: default;
+}
+
+.erp-chatbot-call-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: linear-gradient(145deg, #86efac, #16a34a);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.erp-chatbot-call-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.erp-chatbot-call-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.erp-chatbot-call-dept {
+  font-size: 0.7rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-chatbot-call-action {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #15803d;
+  background: #dcfce7;
+  border-radius: 9999px;
+  padding: 0.25rem 0.55rem;
+  flex-shrink: 0;
+}
+
+button.erp-chatbot-call-item {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.erp-chatbot-call-item:hover:not(:disabled) {
+  background: #f0fdf4;
+  border-color: #86efac;
+  text-decoration: none;
+}
+
+button.erp-chatbot-call-item:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.erp-chatbot-call-item.is-offline .erp-chatbot-call-action {
+  color: #64748b;
+  background: #e2e8f0;
+}
+
+.erp-chatbot-call-avatar {
+  position: relative;
+}
+
+.erp-chatbot-call-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #94a3b8;
+  border: 2px solid #fff;
+}
+
+.erp-chatbot-call-dot.is-online {
+  background: #22c55e;
+}
+
+.erp-chatbot-call-notice {
+  margin: 0 0 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.5rem;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+/* —— Floating phone Call Dashboard —— */
+.erp-call-phone {
+  position: fixed;
+  z-index: 10350;
+  pointer-events: none;
+  width: min(300px, calc(100vw - 1.5rem));
+}
+
+.erp-call-phone--max {
+  inset: 12px;
+  width: auto;
+  max-width: 420px;
+  margin: auto;
+  height: min(720px, calc(100vh - 24px));
+}
+
+.erp-call-phone--mini {
+  width: min(280px, calc(100vw - 1.5rem));
+}
+
+.erp-call-phone-shell {
+  position: relative;
+  pointer-events: auto;
+  border-radius: 1.35rem;
+  overflow: hidden;
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-height: 520px;
+  max-height: min(640px, calc(100vh - 2rem));
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.erp-call-phone--max .erp-call-phone-shell {
+  min-height: 100%;
+  max-height: none;
+  height: 100%;
+  border-radius: 1.1rem;
+}
+
+.erp-call-win-bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.85rem;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  background: rgba(0, 0, 0, 0.28);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.erp-call-win-bar:active {
+  cursor: grabbing;
+}
+
+.erp-call-win-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.erp-call-win-controls {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+.erp-call-win-btn {
+  width: 2.15rem;
+  height: 1.85rem;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.erp-call-win-btn svg {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+.erp-call-win-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.erp-call-win-btn--close:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+.erp-call-phone-mini {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 0.85rem;
+  background:
+    linear-gradient(165deg, #1a1210 0%, #241828 42%, #141a2e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  padding: 0.2rem 0.25rem 0.2rem 0.75rem;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.erp-call-phone-mini-main {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  padding: 0.35rem 0.25rem;
+}
+
+.erp-call-phone-mini-name {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-call-phone-mini-status {
+  display: block;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.erp-call-phone-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 50% 18%, rgba(180, 92, 55, 0.55) 0%, transparent 55%),
+    radial-gradient(90% 70% at 18% 82%, rgba(76, 45, 120, 0.55) 0%, transparent 50%),
+    radial-gradient(80% 60% at 88% 72%, rgba(35, 55, 110, 0.65) 0%, transparent 45%),
+    linear-gradient(165deg, #1a1210 0%, #241828 42%, #141a2e 100%);
+}
+
+.erp-call-phone-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(16px);
+  background: rgba(10, 12, 20, 0.2);
+}
+
+.erp-call-phone-inner {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.85rem 1.05rem 1.15rem;
+  color: #fff;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.erp-call-dash-hero {
+  text-align: center;
+  padding-top: 0.85rem;
+}
+
+.erp-call-dash-name {
+  margin: 0;
+  font-size: clamp(1.35rem, 4.5vw, 1.7rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.erp-call-dash-status {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.erp-call-phone-video-wrap {
+  margin: 0.75rem 0 0.35rem;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.35);
+  aspect-ratio: 16 / 10;
+  max-height: 150px;
+}
+
+.erp-call-phone-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #000;
+}
+
+.erp-call-dash-incoming {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.erp-call-dash-slider {
+  position: relative;
+  height: 3.1rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.erp-call-dash-slider-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.72);
+  pointer-events: none;
+  padding: 0 3.2rem;
+  text-align: center;
+}
+
+.erp-call-dash-slider-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 2.65rem;
+  height: 2.65rem;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  color: #16a34a;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  z-index: 2;
+  touch-action: none;
+}
+
+.erp-call-dash-slider--reject .erp-call-dash-slider-knob {
+  left: auto;
+  right: 3px;
+  color: #dc2626;
+}
+
+.erp-call-dash-slider-knob svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.erp-call-dash-incoming-tap {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.erp-call-dash-tap {
+  border: none;
+  border-radius: 9999px;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+}
+
+.erp-call-dash-tap--accept {
+  background: rgba(22, 163, 74, 0.92);
+}
+
+.erp-call-dash-tap--reject {
+  background: rgba(220, 38, 38, 0.92);
+}
+
+.erp-call-dash-active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.erp-call-dash-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem 0.45rem;
+  justify-items: center;
+}
+
+.erp-call-dash-ctrl {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  padding: 0;
+  min-width: 4rem;
+}
+
+.erp-call-dash-ctrl-icon {
+  width: 3.55rem;
+  height: 3.55rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.erp-call-dash-ctrl-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.erp-call-dash-ctrl.is-active .erp-call-dash-ctrl-icon {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+}
+
+.erp-call-dash-ctrl.is-disabled,
+.erp-call-dash-ctrl:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.erp-call-dash-ctrl-label {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.erp-call-dash-hold-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.02em;
+}
+
+.erp-call-dash-hangup,
+button.erp-call-dash-hangup {
+  width: 4.25rem !important;
+  height: 4.25rem !important;
+  min-width: 4.25rem !important;
+  min-height: 4.25rem !important;
+  max-width: 4.25rem !important;
+  max-height: 4.25rem !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  background: #ef4444 !important;
+  color: #fff !important;
+  display: grid !important;
+  place-items: center !important;
+  cursor: pointer;
+  aspect-ratio: 1 / 1;
+  box-shadow: 0 10px 28px rgba(239, 68, 68, 0.45);
+}
+
+.erp-call-dash-hangup:hover,
+.erp-call-dash-hangup:active,
+button.erp-call-dash-hangup:hover,
+button.erp-call-dash-hangup:active {
+  filter: brightness(1.06);
+  transform: scale(0.97);
+}
+
+.erp-call-dash-hangup svg,
+button.erp-call-dash-hangup svg {
+  width: 1.65rem !important;
+  height: 1.65rem !important;
+}
+
+.erp-call-phone-add {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-height: 0;
+  flex: 1;
+}
+
+.erp-call-phone-add-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.erp-call-phone-add-head p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.erp-call-phone-add-head button {
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.erp-call-phone-add-list {
+  overflow: auto;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.erp-call-phone-add-empty {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  padding: 1rem 0.5rem;
+}
+
+.erp-call-phone-add-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.erp-call-phone-add-item strong {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.erp-call-phone-add-item small {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.7rem;
+}
+
+.erp-call-phone-add-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+@media (max-width: 420px) {
+  .erp-call-phone:not(.erp-call-phone--max):not(.erp-call-phone--mini) {
+    width: min(300px, calc(100vw - 1rem));
+  }
+
+  .erp-call-phone-shell {
+    min-height: 480px;
+  }
+}
+
+/* Remove old full-screen overlay rules if present */
+.erp-call-dash {
+  display: none;
+}
+
+.erp-chatbot-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 5.5rem;
+  transform: translateX(-50%);
+  z-index: 10340;
+  max-width: min(90vw, 320px);
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.65rem;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 0.8rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.35);
+  pointer-events: auto;
+}
+
+html[data-theme='dark'] .erp-chatbot-call-search {
+  background: #0f172a;
+}
+
+html[data-theme='dark'] .erp-chatbot-call-search input {
+  background: #111827;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .erp-chatbot-call-item {
+  background: #111827;
+  border-color: #334155;
+  color: #e2e8f0 !important;
+}
+
+html[data-theme='dark'] a.erp-chatbot-call-item:hover,
+html[data-theme='dark'] button.erp-chatbot-call-item:hover:not(:disabled) {
+  background: #14532d55;
+  border-color: #22c55e;
+}
+
+html[data-theme='dark'] .erp-chatbot-call-dept {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .erp-chatbot-call-dot {
+  border-color: #111827;
 }

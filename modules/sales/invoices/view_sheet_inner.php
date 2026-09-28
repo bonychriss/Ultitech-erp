@@ -91,9 +91,7 @@ $sheetH = static function ($value): string {
                             <span>TIN: <?php echo $sheetH($custTin); ?></span><br>
                         <?php endif; ?>
                         <?php if (!empty($custVrn)): ?>
-                            <span>VRN: <?php echo $sheetH($custVrn); ?> Tax ID: <?php echo $sheetH($custTaxId); ?></span><br>
-                        <?php elseif (!empty($custTaxId) && strpos((string) $custTaxId, '/') === false): ?>
-                            <span>TIN: <?php echo $sheetH($custTaxId); ?></span><br>
+                            <span>VRN: <?php echo $sheetH($custVrn); ?></span><br>
                         <?php endif; ?>
                     </div>
                 </div>

@@ -4,32 +4,29 @@ import Chatbot from './Chatbot';
 import './chatbot.css';
 
 const ICON_CSS = `
+#erp-chatbot-root .erp-chatbot-dock{
+  position:fixed!important;z-index:10260!important;width:3rem;height:3rem;pointer-events:auto;
+}
 #erp-chatbot-root .erp-chatbot-fab{
   display:inline-flex!important;align-items:center!important;justify-content:center!important;
-  width:3.5rem!important;height:3.5rem!important;border-radius:50%!important;
-  background-color:#7c3aed!important;background-image:linear-gradient(135deg,#6366f1 0%,#a855f7 100%)!important;border:2px solid #fff!important;overflow:visible!important;
+  position:relative!important;left:auto!important;top:auto!important;
+  width:3rem!important;height:3rem!important;border-radius:50%!important;
+  background:transparent!important;background-image:none!important;border:none!important;overflow:visible!important;
+  opacity:.78!important;filter:none!important;box-shadow:none!important;
+}
+#erp-chatbot-root .erp-chatbot-fab:hover:not(.is-dragging){
+  opacity:.98!important;filter:none!important;box-shadow:none!important;
 }
 #erp-chatbot-root .erp-chatbot-fab-icon{
-  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  display:block!important;width:100%!important;height:100%!important;
   visibility:visible!important;opacity:1!important;overflow:visible!important;
 }
-#erp-chatbot-root .erp-chatbot-fab-bubble{
-  display:block!important;position:relative!important;box-sizing:border-box!important;
-  width:1.05rem!important;height:0.8rem!important;margin:0 0 0.12rem!important;
-  border:2.25px solid #ffffff!important;border-radius:0.28rem!important;
-  background:transparent!important;visibility:visible!important;opacity:1!important;
-}
-#erp-chatbot-root .erp-chatbot-fab-bubble-tail{
-  display:block!important;position:absolute!important;left:0.08rem!important;bottom:-0.38rem!important;
-  width:0.42rem!important;height:0.42rem!important;box-sizing:border-box!important;
-  border-left:2.25px solid #ffffff!important;border-bottom:2.25px solid #ffffff!important;
-  border-top:0!important;border-right:0!important;background-color:#7c3aed!important;
-  transform:rotate(-45deg)!important;visibility:visible!important;opacity:1!important;
-}
+#erp-chatbot-root .erp-chatbot-fab-img,
+#erp-chatbot-root .erp-chatbot-fab-bubble,
+#erp-chatbot-root .erp-chatbot-fab-bubble-tail{display:none!important}
 @media (max-width:767.98px){
-  #erp-chatbot-root .erp-chatbot-fab{width:3.25rem!important;height:3.25rem!important}
-  #erp-chatbot-root .erp-chatbot-fab-bubble{width:1rem!important;height:0.75rem!important;border-width:2px!important}
-  #erp-chatbot-root .erp-chatbot-fab-bubble-tail{width:0.38rem!important;height:0.38rem!important;border-left-width:2px!important;border-bottom-width:2px!important}
+  #erp-chatbot-root .erp-chatbot-dock{width:2.85rem;height:2.85rem}
+  #erp-chatbot-root .erp-chatbot-fab{width:2.85rem!important;height:2.85rem!important}
 }
 `;
 

@@ -231,9 +231,7 @@ $companyLocation = getCompanySetting('company_location') ?: '';
                                 <span>TIN: <?= htmlspecialchars($custTin) ?></span><br>
                             <?php endif; ?>
                             <?php if(!empty($custVrn)): ?>
-                                <span>VRN: <?= htmlspecialchars($custVrn) ?> Tax ID: <?= htmlspecialchars($custTaxId) ?></span><br>
-                            <?php elseif(!empty($custTaxId) && strpos($custTaxId, '/') === false): ?>
-                                <span>TIN: <?= htmlspecialchars($custTaxId) ?></span><br>
+                                <span>VRN: <?= htmlspecialchars($custVrn) ?></span><br>
                             <?php endif; ?>
                         </div>
                     </div>

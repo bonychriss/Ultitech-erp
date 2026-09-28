@@ -174,9 +174,6 @@ $items = $stmt->fetchAll();
                             <?php if(!empty($invoice['customer_email'])): ?>
                                 <span style="color: #666;"><?= htmlspecialchars($invoice['customer_email']) ?></span><br>
                             <?php endif; ?>
-                            <?php if(!empty($invoice['customer_tax_id'])): ?>
-                                <span style="color: #666;">Tax ID: <?= htmlspecialchars($invoice['customer_tax_id']) ?></span>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

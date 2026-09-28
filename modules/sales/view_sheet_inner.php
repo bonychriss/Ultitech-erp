@@ -87,9 +87,7 @@ $docFontStack = function_exists('sales_document_font_family_css')
                             <span>TIN: <?php echo htmlspecialchars($custTin); ?></span><br>
                         <?php endif; ?>
                         <?php if (!empty($custVrn)): ?>
-                            <span>VRN: <?php echo htmlspecialchars($custVrn); ?> Tax ID: <?php echo htmlspecialchars($custTaxId); ?></span><br>
-                        <?php elseif (!empty($custTaxId) && strpos($custTaxId, '/') === false): ?>
-                            <span>TIN: <?php echo htmlspecialchars($custTaxId); ?></span><br>
+                            <span>VRN: <?php echo htmlspecialchars($custVrn); ?></span><br>
                         <?php endif; ?>
                     </div>
                 </div>

@@ -5,6 +5,10 @@ RewriteEngine On
 
 # Root API scripts (coach, notifications, etc.) — no physical ultimate/api/
 RewriteRule ^api/([^/]+\.php)$ ../api/$1?company_slug=ultimate [L,QSA,NC]
+# Shared root scripts used by chatbot / call (must not 404 under /ultimate/)
+RewriteRule ^webrtc_call\.php$ ../webrtc_call.php [L,QSA]
+RewriteRule ^chatbot_call_users\.php$ ../chatbot_call_users.php [L,QSA]
+RewriteRule ^chatbot_api\.php$ ../chatbot_api.php [L,QSA]
 
 RewriteRule ^login/?$ login.php [L,QSA,NC]
 RewriteRule ^register/?$ register.php [L,QSA,NC]

@@ -1010,7 +1010,7 @@ a.wt-compare-row:hover,
 .wt-att-track span {
   display: block;
   width: 100%;
-  min-height: 4px;
+  min-height: 0;
   background: #16a34a;
   border-radius: 8px 8px 0 0;
 }

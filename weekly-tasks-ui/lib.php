@@ -988,7 +988,9 @@ function weeklyTasksUiAttendanceBoard(PDO $pdo, int $userId, array $offsets): ar
                     $covered[$day] = true;
                     $present[$day] = true;
                     $status = strtolower(trim((string) ($row['status'] ?? '')));
-                    $timeIn = strtotime((string) ($row['time_in'] ?? ''));
+                    $timeInRaw = trim((string) ($row['time_in'] ?? ''));
+                    $clock = strpos($timeInRaw, ' ') !== false ? substr($timeInRaw, 11, 8) : substr($timeInRaw, 0, 8);
+                    $timeIn = $clock !== '' ? strtotime($clock) : false;
                     if ($status === '' && $timeIn) {
                         if ($timeIn > $graceStamp) {
                             $status = 'late';

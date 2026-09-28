@@ -1532,7 +1532,7 @@ function weeklyTasksUiPersonDetail(
         }
     } elseif ($department === 'Sales') {
         $salesLines = weeklyTasksUiSalesItems($sales);
-        $salesScore = (int) ($sales['score'] ?? 0);
+        $salesScore = (int) (is_array($sales) ? ($sales['score'] ?? 0) : 0);
         $items[] = [
             'name' => 'Sales performance',
             'expected' => '100%',

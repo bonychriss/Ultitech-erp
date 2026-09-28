@@ -295,7 +295,6 @@ function MonthSelect({ month }) {
 
 function itemStatus(item) {
   if (!item.configured) return { key: 'none', label: 'Not configured' }
-  if (item.actual === 'Not recorded') return { key: 'none', label: 'Not recorded' }
   if (item.met) return { key: 'met', label: 'Met' }
   return { key: 'short', label: 'Short' }
 }

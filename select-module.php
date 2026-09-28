@@ -238,8 +238,8 @@ $push([
 ]);
 $push([
     'id' => 'performance',
-    'label' => 'Performance',
-    'desc' => 'Weekly Plans, Scoring & Leaderboard',
+    'label' => 'Smart KPI',
+    'desc' => '',
     'href' => $companyRoute('weekly_tasks/index.php') . '?module=tasks',
     'icon' => 'performance',
     'color' => '#e11d48',

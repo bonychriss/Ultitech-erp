@@ -539,6 +539,22 @@ function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string 
     return $rows;
 }
 
+function weeklyTasksUiInvoiceUrl(int $invoiceId): string
+{
+    if ($invoiceId < 1) {
+        return '';
+    }
+    $path = 'sales/print/invoice/' . $invoiceId . '?embed=1';
+    if (function_exists('company_url')) {
+        return company_url($path);
+    }
+    if (function_exists('app_url')) {
+        return app_url('/' . $path);
+    }
+
+    return '/' . $path;
+}
+
 function weeklyTasksUiQuoteUrl(int $orderId): string
 {
     if ($orderId < 1) {
@@ -1349,7 +1365,7 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
             }
             try {
                 $st = $pdo->prepare(
-                    "SELECT i.invoice_number, i.invoice_date, i.total_amount, i.amount_paid, i.balance_due, c.company_name
+                    "SELECT i.id, i.invoice_number, i.invoice_date, i.total_amount, i.amount_paid, i.balance_due, c.company_name
                      FROM invoices i
                      LEFT JOIN sales_orders so ON so.id = i.order_id
                      LEFT JOIN customers c ON c.id = i.customer_id

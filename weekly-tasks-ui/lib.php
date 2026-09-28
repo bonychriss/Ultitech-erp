@@ -1310,6 +1310,8 @@ function weeklyTasksUiSalesItems(?array $sales): array
         [
             'name' => 'Quotation Conversion',
             'expected' => 'Target 30%',
+            'score' => $submitted > 0 ? ((int) ($sales['conversionScore'] ?? 0) . '%') : '0%',
+            'scoreNote' => $submitted > 0 ? ((int) ($sales['conversionPct'] ?? 0) . '% of quotes became invoices.') : 'No quotations yet.',
             'actual' => $submitted > 0
                 ? ((int) ($sales['quotesWon'] ?? 0) . ' of ' . $submitted . ' became invoices')
                 : 'Not recorded',

@@ -40,81 +40,98 @@ button.erp-chatbot-fab,
 
 .erp-chatbot-speed {
   position: absolute;
-  right: 0;
-  bottom: calc(100% + 0.45rem);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.45rem;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(8px) scale(0.92);
-  pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+  inset: 0;
   z-index: 2;
-}
-
-.erp-chatbot-dock.is-menu-open .erp-chatbot-speed {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0) scale(1);
-  pointer-events: auto;
+  pointer-events: none;
+  overflow: visible;
 }
 
 .erp-chatbot-speed-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 0.35rem;
-  min-height: 2.35rem;
-  padding: 0.35rem 0.7rem 0.35rem 0.45rem !important;
+  width: 3.15rem !important;
+  height: 3.15rem !important;
+  min-width: 3.15rem !important;
+  min-height: 3.15rem !important;
+  max-width: 3.15rem !important;
+  max-height: 3.15rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
   border: none !important;
-  border-radius: 9999px !important;
-  background: linear-gradient(145deg, #bfdbfe 0%, #60a5fa 45%, #3b82f6 100%) !important;
+  border-radius: 50% !important;
+  background: #6366f1 !important;
   color: #fff !important;
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.28) !important;
+  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.28) !important;
   cursor: pointer !important;
-  text-decoration: none !important;
-  font: inherit;
-  font-size: 0.72rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.01em;
   line-height: 1 !important;
-  white-space: nowrap;
-  filter: brightness(1.08);
-  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.35);
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.18s ease, background 0.15s ease;
 }
 
-.erp-chatbot-speed-btn:hover {
-  transform: translateY(-1px) scale(1.03);
-  filter: brightness(1.16);
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.36) !important;
-  color: #fff !important;
-  text-decoration: none !important;
+.erp-chatbot-dock.is-menu-open .erp-chatbot-speed-btn {
+  opacity: 1;
+  pointer-events: auto;
 }
 
+.erp-chatbot-speed-btn--help {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.34) !important;
+}
 .erp-chatbot-speed-btn--call {
-  background: linear-gradient(145deg, #86efac 0%, #22c55e 48%, #16a34a 100%) !important;
-  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.28) !important;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.34) !important;
 }
 
+.erp-chatbot-speed-btn svg {
+  width: 23px !important;
+  height: 23px !important;
+  display: block !important;
+}
+
+.erp-chatbot-dock.is-dock-left.is-menu-open .erp-chatbot-speed-btn--help {
+  transform: translate(-50%, -50%) translate(84px, -22px) scale(1);
+  transition-delay: 0.02s;
+}
+.erp-chatbot-dock.is-dock-left.is-menu-open .erp-chatbot-speed-btn--call {
+  transform: translate(-50%, -50%) translate(26px, -86px) scale(1);
+  transition-delay: 0.06s;
+}
+
+.erp-chatbot-dock:not(.is-dock-left).is-menu-open .erp-chatbot-speed-btn--help {
+  transform: translate(-50%, -50%) translate(-84px, -22px) scale(1);
+}
+.erp-chatbot-dock:not(.is-dock-left).is-menu-open .erp-chatbot-speed-btn--call {
+  transform: translate(-50%, -50%) translate(-26px, -86px) scale(1);
+}
+
+.erp-chatbot-speed-btn--help:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%) !important;
+  color: #fff !important;
+  filter: none;
+}
 .erp-chatbot-speed-btn--call:hover {
-  box-shadow: 0 10px 22px rgba(22, 163, 74, 0.36) !important;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
+  color: #fff !important;
+  filter: none;
 }
 
-.erp-chatbot-speed-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.55rem;
-  height: 1.55rem;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
-  flex-shrink: 0;
+.erp-chatbot-dock.is-dock-left.is-menu-open .erp-chatbot-speed-btn--help:hover {
+  transform: translate(-50%, -50%) translate(84px, -22px) scale(1.06);
 }
-
-.erp-chatbot-speed-label {
-  padding-right: 0.15rem;
+.erp-chatbot-dock.is-dock-left.is-menu-open .erp-chatbot-speed-btn--call:hover {
+  transform: translate(-50%, -50%) translate(26px, -86px) scale(1.06);
+}
+.erp-chatbot-dock:not(.is-dock-left).is-menu-open .erp-chatbot-speed-btn--help:hover {
+  transform: translate(-50%, -50%) translate(-84px, -22px) scale(1.06);
+}
+.erp-chatbot-dock:not(.is-dock-left).is-menu-open .erp-chatbot-speed-btn--call:hover {
+  transform: translate(-50%, -50%) translate(-26px, -86px) scale(1.06);
 }
 
 .erp-chatbot-fab,
@@ -139,17 +156,17 @@ button.erp-chatbot-fab {
   aspect-ratio: 1 / 1 !important;
   border: none !important;
   border-radius: 50% !important;
-  background: transparent !important;
-  background-color: transparent !important;
+  background: #7c3aed !important;
+  background-color: #7c3aed !important;
   background-image: none !important;
   color: #ffffff !important;
-  box-shadow: none !important;
+  box-shadow: 0 10px 22px rgba(124, 58, 237, 0.34) !important;
   cursor: grab !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   outline: none !important;
   line-height: 1 !important;
   font-size: 16px !important;
-  opacity: 0.78 !important;
+  opacity: 1 !important;
   filter: none !important;
   touch-action: none;
   user-select: none;
@@ -165,13 +182,13 @@ button.erp-chatbot-fab {
 .erp-chatbot-fab:hover:not(.is-dragging),
 div.erp-chatbot-fab:hover:not(.is-dragging),
 button.erp-chatbot-fab:hover:not(.is-dragging) {
-  background: transparent !important;
+  background: #6d28d9 !important;
   background-image: none !important;
   color: #ffffff !important;
   transform: translateY(-2px);
-  opacity: 0.98 !important;
+  opacity: 1 !important;
   filter: none !important;
-  box-shadow: none !important;
+  box-shadow: 0 12px 24px rgba(109, 40, 217, 0.4) !important;
 }
 
 .erp-chatbot-fab.is-dragging,
@@ -197,20 +214,30 @@ button.erp-chatbot-fab:focus-visible {
 
 .erp-chatbot-fab-icon,
 .erp-chatbot-fab .erp-chatbot-fab-icon {
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 100% !important;
-  min-height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
   line-height: 0 !important;
   pointer-events: none !important;
   visibility: visible !important;
   opacity: 1 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   position: relative !important;
   border-radius: 0 !important;
+}
+
+.erp-chatbot-fab-icon svg,
+.erp-chatbot-fab .erp-chatbot-fab-icon svg {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 auto !important;
 }
 
 .erp-chatbot-liquid {
@@ -607,20 +634,20 @@ div.erp-chatbot-fab::after {
 }
 
 html[data-theme='dark'] .erp-chatbot-fab {
-  background: transparent !important;
+  background: #7c3aed !important;
   background-image: none !important;
   border: none !important;
-  opacity: 0.72 !important;
+  opacity: 1 !important;
   filter: none !important;
-  box-shadow: none !important;
+  box-shadow: 0 10px 22px rgba(124, 58, 237, 0.4) !important;
 }
 
 html[data-theme='dark'] .erp-chatbot-fab:hover:not(.is-dragging) {
-  background: transparent !important;
+  background: #6d28d9 !important;
   background-image: none !important;
-  opacity: 0.95 !important;
+  opacity: 1 !important;
   filter: none !important;
-  box-shadow: none !important;
+  box-shadow: 0 12px 24px rgba(109, 40, 217, 0.45) !important;
 }
 
 html[data-theme='dark'] .erp-chatbot-liquid-blob {

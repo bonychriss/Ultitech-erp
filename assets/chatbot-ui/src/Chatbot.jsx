@@ -3,8 +3,8 @@ import { localSearch } from './guides';
 import { createCallController } from './callRtc';
 import CallDashboard from './CallDashboard';
 
-const STORAGE_KEY_DESKTOP = 'chatbot_pos';
-const STORAGE_KEY_MOBILE = 'chatbot_pos_mobile';
+const STORAGE_KEY_DESKTOP = 'chatbot_pos_v3';
+const STORAGE_KEY_MOBILE = 'chatbot_pos_mobile_v3';
 const DRAG_THRESHOLD = 6;
 const FAB_SIZE = 48;
 
@@ -46,30 +46,56 @@ function secureUltimateLoginUrl() {
   return `https://${host}/Ultitech-erp/ultimate/login.php`;
 }
 
+function sidebarBox() {
+  if (typeof document === 'undefined') return null;
+  const el = document.querySelector('.sidebar-container');
+  if (!el) return null;
+  const box = el.getBoundingClientRect();
+  if (box.width < 64 || box.width > 420) return null;
+  return box;
+}
+
+function defaultPos() {
+  const box = sidebarBox();
+  if (box && !isMobileViewport()) {
+    return clampPos(box.right + 16, window.innerHeight - FAB_SIZE - 20);
+  }
+  return clampPos(16, window.innerHeight - FAB_SIZE - mobileBottomClearance());
+}
+
+function coversSidebarLabels(x) {
+  const box = sidebarBox();
+  if (!box || isMobileViewport()) return x < 96;
+  return x < box.right + 8;
+}
+
+function isLegacyBottomRight(x, y) {
+  const legacy = clampPos(
+    window.innerWidth - FAB_SIZE - 16,
+    window.innerHeight - FAB_SIZE - mobileBottomClearance()
+  );
+  return Math.abs(x - legacy.x) <= 28 && Math.abs(y - legacy.y) <= 28;
+}
+
 function readSavedPos() {
   try {
-    const raw = localStorage.getItem(storageKey()) || localStorage.getItem(STORAGE_KEY_DESKTOP);
+    const raw = localStorage.getItem(storageKey());
     if (!raw) return null;
     const pos = JSON.parse(raw);
     const x = parseFloat(pos?.left);
     const y = parseFloat(pos?.top);
     if (Number.isNaN(x) || Number.isNaN(y)) return null;
     const next = clampPos(x, y);
-    // Desktop coords on a phone are usually off-screen ? fall back to default
+    // Desktop coords on a phone are usually off-screen — fall back to default
     if (isMobileViewport() && (x > window.innerWidth || y > window.innerHeight)) {
       return null;
     }
+    // Old spots sat on the menu labels or the sidebar edge. Park it in the page gutter.
+    if (isLegacyBottomRight(next.x, next.y) || coversSidebarLabels(next.x)) return null;
     return next;
   } catch {
     return null;
   }
-}
-
-function defaultPos() {
-  return clampPos(
-    window.innerWidth - FAB_SIZE - 16,
-    window.innerHeight - FAB_SIZE - mobileBottomClearance()
-  );
 }
 
 function persistPos(point) {
@@ -106,54 +132,8 @@ function resolveCallUsersUrl() {
   return api.replace(/chatbot_api\.php(?:\?.*)?$/i, 'chatbot_call_users.php');
 }
 
-function ChatIcon({ filterId }) {
-  return (
-    <span className="erp-chatbot-liquid" aria-hidden="true">
-      <svg className="erp-chatbot-liquid-defs" width="0" height="0" aria-hidden="true" focusable="false">
-        <defs>
-          <filter id={filterId}>
-            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
-            <feColorMatrix
-              in="blur"
-              mode="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
-              result="goo"
-            />
-            <feBlend in="SourceGraphic" in2="goo" />
-          </filter>
-        </defs>
-      </svg>
-      <span className="erp-chatbot-liquid-blobs" style={{ filter: `url(#${filterId})` }}>
-        <span className="erp-chatbot-liquid-blob erp-chatbot-liquid-blob--main" />
-        <span className="erp-chatbot-liquid-blob erp-chatbot-liquid-blob--a" />
-        <span className="erp-chatbot-liquid-blob erp-chatbot-liquid-blob--b" />
-      </span>
-      <span className="erp-chatbot-liquid-glyph">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
-          <path
-            d="M4.5 10.5v2a1.5 1.5 0 0 0 1.5 1.5h.75V10.5A5.25 5.25 0 0 1 12 5.25 5.25 5.25 0 0 1 17.25 10.5v3.75H18a1.5 1.5 0 0 0 1.5-1.5v-2"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M17.25 14.25v1.5A3.75 3.75 0 0 1 13.5 19.5h-1.1"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle cx="11.25" cy="19.5" r="1.1" fill="currentColor" />
-        </svg>
-      </span>
-    </span>
-  );
-}
-
 export default function Chatbot() {
   const panelId = useId();
-  const gooFilterId = `erp-chatbot-goo-${useId().replace(/:/g, '')}`;
   const bodyRef = useRef(null);
   const inputRef = useRef(null);
   const dockRef = useRef(null);
@@ -215,6 +195,7 @@ export default function Chatbot() {
   useEffect(() => {
     const sync = () => {
       setPos((prev) => {
+        if (coversSidebarLabels(prev.x)) return defaultPos();
         const next = clampPos(prev.x, prev.y);
         if (next.x === prev.x && next.y === prev.y) return prev;
         return next;
@@ -723,7 +704,7 @@ export default function Chatbot() {
     >
       <div
         ref={dockRef}
-        className={`erp-chatbot-dock${menuOpen ? ' is-menu-open' : ''}${dragging ? ' is-dragging' : ''}`}
+        className={`erp-chatbot-dock${menuOpen ? ' is-menu-open' : ''}${dragging ? ' is-dragging' : ''}${pos.x < window.innerWidth / 2 ? ' is-dock-left' : ''}`}
         style={{ left: pos.x, top: pos.y }}
       >
         <div className="erp-chatbot-speed" role="menu" aria-label="Support options">
@@ -731,60 +712,41 @@ export default function Chatbot() {
             type="button"
             role="menuitem"
             className="erp-chatbot-speed-btn erp-chatbot-speed-btn--help"
-            title="Help Assistant"
-            aria-label="Help Assistant"
+            title="Help"
+            aria-label="Help"
             onClick={(e) => {
               e.stopPropagation();
               openHelp();
             }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <span className="erp-chatbot-speed-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
-                <path
-                  d="M4.5 10.5v2a1.5 1.5 0 0 0 1.5 1.5h.75V10.5A5.25 5.25 0 0 1 12 5.25 5.25 5.25 0 0 1 17.25 10.5v3.75H18a1.5 1.5 0 0 0 1.5-1.5v-2"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M17.25 14.25v1.5A3.75 3.75 0 0 1 13.5 19.5h-1.1"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle cx="11.25" cy="19.5" r="1.1" fill="currentColor" />
-              </svg>
-            </span>
-            <span className="erp-chatbot-speed-label">Help</span>
+            <svg viewBox="5.8 3.6 12.4 13.2" width="23" height="23" fill="none" aria-hidden="true">
+              <path d="M7 10.5h10M8 10.5V9a4 4 0 0 1 8 0v1.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              <path d="M7 10.5v3.2A1.8 1.8 0 0 0 8.8 15.5H10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              <path d="M14.2 15.2h.2A2.6 2.6 0 0 0 17 12.6v-2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            </svg>
           </button>
-
           <button
             type="button"
             role="menuitem"
             className="erp-chatbot-speed-btn erp-chatbot-speed-btn--call"
-            title="Call a teammate"
-            aria-label="Call a teammate"
+            title="Call"
+            aria-label="Call"
             onClick={(e) => {
               e.stopPropagation();
               openCallDirectory();
             }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <span className="erp-chatbot-speed-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
-                <path
-                  d="M8.2 4.8c.4-.4 1-.5 1.5-.3l2.1.8c.6.2 1 .8.9 1.4l-.3 2.1c-.1.5.1 1 .5 1.3l1.4 1.4c.3.4.8.6 1.3.5l2.1-.3c.6-.1 1.2.3 1.4.9l.8 2.1c.2.5.1 1.1-.3 1.5l-1.1 1.1c-.5.5-1.2.7-1.9.6-1.8-.3-3.9-1.5-5.9-3.5S7.8 11.3 7.5 9.5c-.1-.7.1-1.4.6-1.9l1.1-1.1z"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            <span className="erp-chatbot-speed-label">Call</span>
+            <svg viewBox="6.4 3.4 14.6 16" width="23" height="23" fill="none" aria-hidden="true">
+              <path
+                d="M8.2 4.8c.4-.4 1-.5 1.5-.3l2.1.8c.6.2 1 .8.9 1.4l-.3 2.1c-.1.5.1 1 .5 1.3l1.4 1.4c.3.4.8.6 1.3.5l2.1-.3c.6-.1 1.2.3 1.4.9l.8 2.1c.2.5.1 1.1-.3 1.5l-1.1 1.1c-.5.5-1.2.7-1.9.6-1.8-.3-3.9-1.5-5.9-3.5S7.8 11.3 7.5 9.5c-.1-.7.1-1.4.6-1.9l1.1-1.1z"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         </div>
 
@@ -810,8 +772,10 @@ export default function Chatbot() {
             }
           }}
         >
-          <span className="erp-chatbot-fab-icon">
-            <ChatIcon filterId={gooFilterId} />
+          <span className="erp-chatbot-fab-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path fill="currentColor" d="M12 3.4 3.6 10.4V20a1.2 1.2 0 0 0 1.2 1.2h4.6v-5.5h5.2v5.5h4.6a1.2 1.2 0 0 0 1.2-1.2v-9.6L12 3.4z" />
+            </svg>
           </span>
         </div>
       </div>

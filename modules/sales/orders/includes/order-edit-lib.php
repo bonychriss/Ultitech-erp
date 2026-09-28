@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../invoices/includes/invoices-lib.php';
 /**
  * @return array{order:array<string,mixed>,items:list<array<string,mixed>>}
  */
-function sales_order_edit_load(int $orderId): array
+function sales_order_edit_load(int $orderId, bool $allowAnyStatus = false): array
 {
     invoicesDeskBootstrap();
 
@@ -27,7 +27,7 @@ function sales_order_edit_load(int $orderId): array
         throw new RuntimeException('Order not found.');
     }
 
-    if (!in_array((string) ($order['status'] ?? ''), ['draft', 'quotation'], true)) {
+    if (!$allowAnyStatus && !in_array((string) ($order['status'] ?? ''), ['draft', 'quotation'], true)) {
         throw new RuntimeException('This order cannot be edited as it is already ' . ($order['status'] ?? 'processed') . '.');
     }
 
@@ -79,9 +79,9 @@ function sales_order_edit_load(int $orderId): array
 /**
  * @return array<string, mixed>
  */
-function sales_quote_edit_init_data(int $orderId): array
+function sales_quote_edit_init_data(int $orderId, bool $allowAnyStatus = false): array
 {
-    $loaded = sales_order_edit_load($orderId);
+    $loaded = sales_order_edit_load($orderId, $allowAnyStatus);
     $order = $loaded['order'];
     $items = $loaded['items'];
 

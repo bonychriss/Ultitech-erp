@@ -596,7 +596,7 @@ function salesInvoiceViewLoadContext(int $id): array
         'pipeline' => salesInvoiceViewBuildPipeline($status),
         'share' => $share,
         'flags' => [
-            'can_edit' => $status === 'draft',
+            'can_edit' => $status !== 'cancelled' && function_exists('isAdmin') && isAdmin(),
             'can_ship' => $invoiceShowShip,
             'can_register_payment' => !in_array($status, ['paid', 'draft'], true) && $revEntryId > 0,
             'has_order' => $orderId > 0,

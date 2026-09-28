@@ -2438,6 +2438,7 @@ function sales_module_url(string $relativePath, array $query = []): string
         'invoices' => 'sales/invoices',
         'invoices/create.php' => 'sales/invoice-create',
         'invoices/view.php' => 'sales/invoice-view',
+        'invoices/edit.php' => 'sales/invoice-edit',
         'invoices/print.php' => 'sales/print/invoice',
         'orders/index.php' => 'sales/orders',
         'orders/' => 'sales/orders',

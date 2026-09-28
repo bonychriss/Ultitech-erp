@@ -26,6 +26,7 @@ final class DeskShell
             'invoice-create',
             'order-view',
             'invoice-view',
+            'invoice-edit',
             'quote-edit',
         ];
     }
@@ -72,6 +73,7 @@ final class DeskShell
             'invoice-create' => $this->invoiceCreate(),
             'order-view' => $this->orderView(),
             'invoice-view' => $this->invoiceView(),
+            'invoice-edit' => $this->invoiceEdit(),
             'quote-edit' => $this->quoteEdit(),
             default => null,
         };
@@ -732,6 +734,70 @@ main.main-content.sales-catalogue-shell #root { width: 100%; min-height: 40vh; }
             ) . ';'
                 . 'window.__INVOICES_QUOTE_EDIT_SAVE_URL__ = ' . json_encode(
                     sales_laravel_api_url('quote-edit-save', ['id' => $orderId, 'module' => 'sales']),
+                    JSON_UNESCAPED_SLASHES
+                ) . ';';
+        }
+
+        return $this->pack(
+            $title,
+            'page-inv-desk inv-dashboard-page',
+            $assets,
+            $script,
+            [
+                'sweetAlert' => true,
+                'mainRootClass' => 'inv-desk-react-root',
+                'employeeHeaderExtraClass' => 'employee-header--inv-desk',
+            ]
+        );
+    }
+
+    private function invoiceEdit(): ?array
+    {
+        $lib = $this->root() . '/modules/sales/orders/includes/order-edit-lib.php';
+        if (!is_file($lib)) {
+            return null;
+        }
+        require_once $lib;
+
+        $invoiceId = $this->parseId();
+        if ($invoiceId <= 0 && function_exists('invoicesViewParseId')) {
+            $invoiceId = invoicesViewParseId($_GET);
+        }
+        if ($invoiceId <= 0) {
+            throw new \RuntimeException('Invoice id is required.');
+        }
+
+        try {
+            $init = sales_invoice_edit_init_data($invoiceId);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException($e->getMessage() !== '' ? $e->getMessage() : 'Invoice edit failed.', 0, $e);
+        }
+
+        $invLib = $this->root() . '/modules/sales/invoices/includes/invoices-lib.php';
+        require_once $invLib;
+        if (!function_exists('invoicesDeskModuleAssetUrls')) {
+            return null;
+        }
+        $assets = invoicesDeskModuleAssetUrls();
+        if ($assets === null) {
+            return null;
+        }
+
+        $orderId = (int) ($init['order_id'] ?? 0);
+        $title = (string) ($init['page_title'] ?? 'Edit Invoice');
+        $script = 'window.__INVOICES_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__INVOICES_PAGE__ = ' . json_encode('invoice_edit', JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__INVOICES_DOCUMENT_TYPE__ = ' . json_encode('invoice', JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__INVOICES_INVOICE_ID__ = ' . (int) $invoiceId . ';'
+            . 'window.__INVOICES_ORDER_ID__ = ' . $orderId . ';'
+            . 'window.__SALES_DESK_ENGINE__ = ' . json_encode('erp-laravel Domains/Sales', JSON_UNESCAPED_SLASHES) . ';';
+        if (function_exists('sales_laravel_api_url')) {
+            $script .= 'window.__INVOICES_INVOICE_EDIT_INIT_URL__ = ' . json_encode(
+                sales_laravel_api_url('invoice-edit-init', ['id' => $invoiceId, 'module' => 'sales']),
+                JSON_UNESCAPED_SLASHES
+            ) . ';'
+                . 'window.__INVOICES_INVOICE_EDIT_SAVE_URL__ = ' . json_encode(
+                    sales_laravel_api_url('invoice-edit-save', ['id' => $invoiceId, 'module' => 'sales']),
                     JSON_UNESCAPED_SLASHES
                 ) . ';';
         }

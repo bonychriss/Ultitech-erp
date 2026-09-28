@@ -146,3 +146,54 @@ export async function submitQuoteEdit(formData) {
   }
   return data;
 }
+
+function invoiceIdFromWindow() {
+  const fromWindow = typeof window !== 'undefined' ? Number(window.__INVOICES_INVOICE_ID__ || 0) : 0;
+  if (fromWindow > 0) return String(fromWindow);
+  const params = new URLSearchParams(window.location.search);
+  return params.get('id') || '';
+}
+
+export async function fetchInvoiceEditInit() {
+  const params = new URLSearchParams(window.location.search);
+  const invoiceId = params.get('id') || invoiceIdFromWindow();
+  if (invoiceId && !params.has('id')) {
+    params.set('id', invoiceId);
+  }
+  if (!params.has('module')) {
+    params.set('module', 'sales');
+  }
+
+  const url = typeof window !== 'undefined' && window.__INVOICES_INVOICE_EDIT_INIT_URL__
+    ? withQuery(window.__INVOICES_INVOICE_EDIT_INIT_URL__, params)
+    : `${getApiBase()}/invoice-edit-init.php${params.toString() ? `?${params.toString()}` : ''}`;
+
+  const res = await fetch(url, { credentials: 'same-origin' });
+  const data = await parseJson(res);
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+export async function submitInvoiceEdit(formData) {
+  formData.append('_api', '1');
+  if (!formData.get('invoice_id')) {
+    const invoiceId = invoiceIdFromWindow();
+    if (invoiceId) formData.append('invoice_id', invoiceId);
+  }
+  const url = typeof window !== 'undefined' && window.__INVOICES_INVOICE_EDIT_SAVE_URL__
+    ? String(window.__INVOICES_INVOICE_EDIT_SAVE_URL__)
+    : `${getApiBase()}/invoice-edit-save.php`;
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData,
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+  const saved = await parseJson(res);
+  if (!res.ok || saved.error || saved.ok === false) {
+    throw new Error(saved.error || `Request failed (${res.status})`);
+  }
+  return saved;
+}

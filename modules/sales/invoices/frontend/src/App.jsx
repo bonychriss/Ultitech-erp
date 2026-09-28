@@ -22,7 +22,7 @@ export default function App() {
 
   }
 
-  if (page === 'quote_edit') {
+  if (page === 'quote_edit' || page === 'invoice_edit') {
 
     return <InvoiceCreatePage mode="edit" />;
 

@@ -66,6 +66,7 @@ $salesDeskEntries = [
     'invoice-create' => __DIR__ . '/modules/sales/invoices/create.php',
     'order-view' => __DIR__ . '/modules/sales/orders/view.php',
     'invoice-view' => __DIR__ . '/modules/sales/invoices/view.php',
+    'invoice-edit' => __DIR__ . '/modules/sales/invoices/edit.php',
     'quote-edit' => __DIR__ . '/modules/sales/orders/edit.php',
     'payment-create' => __DIR__ . '/modules/sales/payments/create.php',
     'print-order' => __DIR__ . '/modules/sales/orders/print.php',
@@ -98,6 +99,8 @@ $salesDeskApiFiles = [
     'invoice-view-init' => __DIR__ . '/modules/sales/invoices/api/view-init.php',
     'quote-edit-init' => __DIR__ . '/modules/sales/invoices/api/quote-edit-init.php',
     'quote-edit-save' => __DIR__ . '/modules/sales/invoices/api/quote-edit-save.php',
+    'invoice-edit-init' => __DIR__ . '/modules/sales/invoices/api/invoice-edit-init.php',
+    'invoice-edit-save' => __DIR__ . '/modules/sales/invoices/api/invoice-edit-save.php',
     'convert-invoice' => __DIR__ . '/modules/sales/orders/api/convert-invoice.php',
     'exchange-rate' => __DIR__ . '/modules/sales/payments/exchange_rate.php',
 ];
@@ -139,6 +142,8 @@ if ($api !== '') {
         'invoice-view-init' => '/api/desk/invoice-view-init',
         'quote-edit-init' => '/api/desk/quote-edit-init',
         'quote-edit-save' => '/api/desk/quote-edit-save',
+        'invoice-edit-init' => '/api/desk/invoice-edit-init',
+        'invoice-edit-save' => '/api/desk/invoice-edit-save',
         'convert-invoice' => '/api/desk/convert-invoice',
         'exchange-rate' => '/api/desk/exchange-rate',
     ];
@@ -189,6 +194,7 @@ $laravelListDesks = [
     'invoice-create',
     'order-view',
     'invoice-view',
+    'invoice-edit',
     'quote-edit',
 ];
 if ($desk !== '' && in_array($desk, $laravelListDesks, true)) {

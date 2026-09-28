@@ -31,6 +31,8 @@ final class LegacyApiBridge
         'invoice-view-init' => 'modules/sales/invoices/api/view-init.php',
         'quote-edit-init' => 'modules/sales/invoices/api/quote-edit-init.php',
         'quote-edit-save' => 'modules/sales/invoices/api/quote-edit-save.php',
+        'invoice-edit-init' => 'modules/sales/invoices/api/invoice-edit-init.php',
+        'invoice-edit-save' => 'modules/sales/invoices/api/invoice-edit-save.php',
         'convert-invoice' => 'modules/sales/orders/api/convert-invoice.php',
         'exchange-rate' => 'modules/sales/payments/exchange_rate.php',
     ];

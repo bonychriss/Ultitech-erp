@@ -113,6 +113,7 @@ return [
         'invoice-create',
         'order-view',
         'invoice-view',
+        'invoice-edit',
         'quote-edit',
     ],
 ];

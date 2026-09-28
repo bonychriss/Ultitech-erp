@@ -196,13 +196,13 @@ function sales_quote_edit_init_data(int $orderId, bool $allowAnyStatus = false):
  * @param array<string, mixed> $input
  * @return array{order_id:int,redirect:string}
  */
-function sales_process_quote_update(array $input, int $orderId): array
+function sales_process_quote_update(array $input, int $orderId, bool $allowAnyStatus = false): array
 {
     global $pdo;
     $salesDb = function_exists('sales_pdo') ? sales_pdo() : $pdo;
     $company_id = (int) (currentCompanyId() ?? 0);
 
-    $loaded = sales_order_edit_load($orderId);
+    $loaded = sales_order_edit_load($orderId, $allowAnyStatus);
     $existingOrder = $loaded['order'];
 
     ensureCustomerColumnsExist();
@@ -388,6 +388,232 @@ function sales_process_quote_update(array $input, int $orderId): array
         }
         throw $e;
     }
+}
+
+function sales_invoice_edit_require_admin(): void
+{
+    if (!function_exists('isAdmin') || !isAdmin()) {
+        throw new RuntimeException('Only an admin can edit this invoice.');
+    }
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function sales_invoice_edit_init_data(int $invoiceId): array
+{
+    sales_invoice_edit_require_admin();
+
+    $viewLib = dirname(__DIR__, 2) . '/invoices/includes/invoices-view-lib.php';
+    if (is_file($viewLib)) {
+        require_once $viewLib;
+    }
+
+    global $pdo;
+    $salesDb = function_exists('sales_pdo') ? sales_pdo() : $pdo;
+    if (!$salesDb instanceof PDO || !function_exists('salesInvoiceViewLoadInvoice')) {
+        throw new RuntimeException('Invoice editor is unavailable.');
+    }
+
+    $loadedInvoice = salesInvoiceViewLoadInvoice($salesDb, $invoiceId);
+    if ($loadedInvoice === null) {
+        throw new RuntimeException('Invoice not found.');
+    }
+    $invoice = $loadedInvoice['invoice'];
+    $status = strtolower(trim((string) ($invoice['status'] ?? '')));
+    if ($status === 'cancelled') {
+        throw new RuntimeException('A cancelled invoice cannot be edited.');
+    }
+
+    $orderId = (int) ($invoice['order_id'] ?? 0);
+    if ($orderId <= 0) {
+        throw new RuntimeException('This invoice has no linked order to edit.');
+    }
+
+    $base = sales_quote_edit_init_data($orderId, true);
+    $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+    $invoiceDate = !empty($invoice['invoice_date'])
+        ? date('Y-m-d', strtotime((string) $invoice['invoice_date']))
+        : (string) ($base['order']['quote_date'] ?? date('Y-m-d'));
+    $dueDate = !empty($invoice['due_date'])
+        ? date('Y-m-d', strtotime((string) $invoice['due_date']))
+        : '';
+
+    $subtotal = (float) ($invoice['subtotal'] ?? ($base['order']['subtotal'] ?? 0));
+    $discountAmount = (float) ($invoice['discount_amount'] ?? ($base['order']['discount_amount'] ?? 0));
+    $taxAmount = (float) ($invoice['tax_amount'] ?? ($base['order']['tax_amount'] ?? 0));
+    $taxBase = max(0.0, $subtotal - $discountAmount);
+    $taxPercentage = $taxBase > 0 ? round(($taxAmount / $taxBase) * 100, 2) : (float) ($base['order']['tax_percentage'] ?? 18);
+
+    $number = (string) ($loadedInvoice['display_invoice_number'] ?? ($invoice['invoice_number'] ?? ''));
+    $base['document_type'] = 'invoice';
+    $base['mode'] = 'edit';
+    $base['invoice_id'] = $invoiceId;
+    $base['order_id'] = $orderId;
+    $base['next_invoice_number'] = $number;
+    $base['page_title'] = 'Edit Invoice: ' . ($number !== '' ? $number : ('#' . $invoiceId));
+    $base['submit_label'] = 'Save invoice';
+    $base['view_url'] = sales_module_url('invoices/view.php', ['id' => $invoiceId, 'module' => $module]);
+    $base['index_url'] = $base['view_url'];
+    $base['order']['customer_id'] = (int) ($invoice['customer_id'] ?? ($base['order']['customer_id'] ?? 0));
+    $base['order']['quote_date'] = $invoiceDate;
+    $base['order']['due_date'] = $dueDate;
+    $base['order']['subtotal'] = $subtotal;
+    $base['order']['discount_amount'] = $discountAmount;
+    $base['order']['tax_amount'] = $taxAmount;
+    $base['order']['tax_percentage'] = $taxPercentage;
+    $base['order']['shipping_charges'] = (float) ($invoice['shipping_charges'] ?? ($base['order']['shipping_charges'] ?? 0));
+    $base['order']['total_amount'] = (float) ($invoice['total_amount'] ?? ($base['order']['total_amount'] ?? 0));
+    $base['order']['status'] = (string) ($base['order']['status'] ?? '');
+
+    return $base;
+}
+
+/**
+ * @param array<string, mixed> $input
+ * @return array{invoice_id:int,redirect:string}
+ */
+function sales_process_invoice_update(array $input, int $invoiceId): array
+{
+    sales_invoice_edit_require_admin();
+
+    $viewLib = dirname(__DIR__, 2) . '/invoices/includes/invoices-view-lib.php';
+    if (is_file($viewLib)) {
+        require_once $viewLib;
+    }
+
+    global $pdo;
+    $salesDb = function_exists('sales_pdo') ? sales_pdo() : $pdo;
+    if (!$salesDb instanceof PDO || !function_exists('salesInvoiceViewLoadInvoice')) {
+        throw new RuntimeException('Invoice editor is unavailable.');
+    }
+
+    $loadedInvoice = salesInvoiceViewLoadInvoice($salesDb, $invoiceId);
+    if ($loadedInvoice === null) {
+        throw new RuntimeException('Invoice not found.');
+    }
+    $invoice = $loadedInvoice['invoice'];
+    if (strtolower(trim((string) ($invoice['status'] ?? ''))) === 'cancelled') {
+        throw new RuntimeException('A cancelled invoice cannot be edited.');
+    }
+    $orderId = (int) ($invoice['order_id'] ?? 0);
+    if ($orderId <= 0) {
+        throw new RuntimeException('This invoice has no linked order to edit.');
+    }
+
+    $loadedOrder = sales_order_edit_load($orderId, true);
+    $existingOrder = $loadedOrder['order'];
+    $input['status'] = (string) ($existingOrder['status'] ?? 'confirmed');
+    $input['quote_date'] = (string) ($existingOrder['quote_date'] ?? date('Y-m-d'));
+    $input['valid_until'] = (string) ($existingOrder['valid_until'] ?? '');
+
+    $result = sales_process_quote_update($input, $orderId, true);
+
+    $invCols = [];
+    try {
+        $invCols = $salesDb->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        $invCols = [];
+    }
+    $colNames = [];
+    $generated = [];
+    foreach ($invCols as $col) {
+        $name = (string) ($col['Field'] ?? '');
+        if ($name === '') {
+            continue;
+        }
+        $colNames[] = $name;
+        $extra = strtoupper((string) ($col['Extra'] ?? ''));
+        if (str_contains($extra, 'GENERATED') || str_contains($extra, 'VIRTUAL') || str_contains($extra, 'STORED')) {
+            $generated[$name] = true;
+        }
+    }
+
+    $invoiceDate = trim((string) ($input['invoice_date'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $invoiceDate)) {
+        $invoiceDate = !empty($invoice['invoice_date'])
+            ? date('Y-m-d', strtotime((string) $invoice['invoice_date']))
+            : date('Y-m-d');
+    }
+    $dueDate = trim((string) ($input['due_date'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dueDate)) {
+        $dueDate = !empty($invoice['due_date']) ? date('Y-m-d', strtotime((string) $invoice['due_date'])) : $invoiceDate;
+    }
+
+    $totalAmount = (float) ($input['total_amount'] ?? 0);
+    $paid = (float) ($invoice['amount_paid'] ?? 0);
+    $sets = [
+        'customer_id' => !empty($input['customer_id']) ? (int) $input['customer_id'] : (int) ($invoice['customer_id'] ?? 0),
+        'invoice_date' => $invoiceDate,
+        'due_date' => $dueDate,
+        'subtotal' => (float) ($input['subtotal'] ?? 0),
+        'discount_amount' => (float) ($input['discount_amount'] ?? 0),
+        'tax_amount' => (float) ($input['tax_amount'] ?? 0),
+        'shipping_charges' => (float) ($input['shipping_charges'] ?? 0),
+        'total_amount' => $totalAmount,
+    ];
+    if (!isset($generated['balance_due'])) {
+        $sets['balance_due'] = max(0, round($totalAmount - $paid, 2));
+    }
+    $orderType = strtolower(trim((string) ($input['order_type'] ?? '')));
+    if (in_array($orderType, ['truck', 'spare'], true)) {
+        $sets['order_type'] = $orderType;
+    }
+
+    $setParts = [];
+    $values = [];
+    foreach ($sets as $column => $value) {
+        if (!in_array($column, $colNames, true) || isset($generated[$column])) {
+            continue;
+        }
+        $setParts[] = $column . ' = ?';
+        $values[] = $value;
+    }
+    if ($setParts !== []) {
+        $updateSql = 'UPDATE invoices SET ' . implode(', ', $setParts) . ' WHERE id = ?';
+        $values[] = $invoiceId;
+        $scope = function_exists('salesCompanyScopeSql') ? salesCompanyScopeSql('invoices') : ['', []];
+        if (!empty($scope[0])) {
+            $updateSql .= $scope[0];
+            $values = array_merge($values, $scope[1]);
+        }
+        $salesDb->prepare($updateSql)->execute($values);
+    }
+
+    if (function_exists('syncInvoiceToRevenue') || is_file(dirname(__DIR__, 4) . '/includes/revenue_sync.php')) {
+        $syncFile = dirname(__DIR__, 4) . '/includes/revenue_sync.php';
+        if (!function_exists('syncInvoiceToRevenue') && is_file($syncFile)) {
+            require_once $syncFile;
+        }
+        if (function_exists('syncInvoiceToRevenue')) {
+            try {
+                syncInvoiceToRevenue($salesDb, $invoiceId);
+            } catch (Throwable $e) {
+            }
+        }
+    }
+
+    $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+
+    return [
+        'invoice_id' => $invoiceId,
+        'order_id' => (int) ($result['order_id'] ?? $orderId),
+        'redirect' => sales_module_url('invoices/view.php', ['id' => $invoiceId, 'module' => $module]),
+    ];
+}
+
+function salesInvoiceEditRenderReactShell(int $invoiceId): void
+{
+    try {
+        $init = sales_invoice_edit_init_data($invoiceId);
+    } catch (Throwable $e) {
+        http_response_code(400);
+        echo htmlspecialchars($e->getMessage());
+        exit;
+    }
+
+    $pageTitle = (string) ($init['page_title'] ?? 'Edit Invoice');
+    salesDocumentCreateRenderReactShell($pageTitle, 'invoice_edit', 'invoice', (int) ($init['order_id'] ?? 0));
 }
 
 function salesOrderEditRenderReactShell(int $orderId): void

@@ -139,6 +139,9 @@ function salesDocumentCreateRenderReactShell(string $pageTitle, string $page = '
     if ($page === 'quote_edit') {
         $documentType = 'quote';
     }
+    if ($page === 'invoice_edit') {
+        $documentType = 'invoice';
+    }
     $page_title = $pageTitle;
     $employeeHeaderTitle = $pageTitle;
     $hideHeaderCompanyBranding = true;
@@ -159,6 +162,18 @@ function salesDocumentCreateRenderReactShell(string $pageTitle, string $page = '
         ) . ';'
             . 'window.__INVOICES_QUOTE_EDIT_SAVE_URL__ = ' . json_encode(
                 sales_laravel_api_url('quote-edit-save', ['id' => $orderId, 'module' => 'sales']),
+                JSON_UNESCAPED_SLASHES
+            ) . ';';
+    }
+    if ($page === 'invoice_edit' && function_exists('sales_laravel_api_url')) {
+        $invoiceId = (int) ($_GET['id'] ?? 0);
+        $script .= 'window.__INVOICES_INVOICE_ID__ = ' . $invoiceId . ';'
+            . 'window.__INVOICES_INVOICE_EDIT_INIT_URL__ = ' . json_encode(
+                sales_laravel_api_url('invoice-edit-init', ['id' => $invoiceId, 'module' => 'sales']),
+                JSON_UNESCAPED_SLASHES
+            ) . ';'
+            . 'window.__INVOICES_INVOICE_EDIT_SAVE_URL__ = ' . json_encode(
+                sales_laravel_api_url('invoice-edit-save', ['id' => $invoiceId, 'module' => 'sales']),
                 JSON_UNESCAPED_SLASHES
             ) . ';';
     }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ImageOff, Loader2, Trash2, X } from 'lucide-react';
-import { fetchCreateInit, fetchExchangeRate, fetchQuoteEditInit, submitCreateInvoice, submitCreateQuote, submitQuoteEdit } from '../api/invoicesDesk';
+import { fetchCreateInit, fetchExchangeRate, fetchQuoteEditInit, fetchInvoiceEditInit, submitCreateInvoice, submitCreateQuote, submitQuoteEdit, submitInvoiceEdit } from '../api/invoicesDesk';
 
 const FLAG_BASE = 'https://flagcdn.com/w40/';
 
@@ -279,6 +279,7 @@ function MoneySavingOverlay({ src, label = 'Creating invoice...' }) {
 
 export default function InvoiceCreatePage({ mode = 'create' }) {
   const isEditMode = mode === 'edit';
+  const isInvoiceEdit = isEditMode && typeof window !== 'undefined' && window.__INVOICES_PAGE__ === 'invoice_edit';
   const [init, setInit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -340,7 +341,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
   const loadInit = useCallback(async () => {
     setLoading(true);
     try {
-      const data = isEditMode ? await fetchQuoteEditInit() : await fetchCreateInit();
+      const data = isInvoiceEdit ? await fetchInvoiceEditInit() : (isEditMode ? await fetchQuoteEditInit() : await fetchCreateInit());
       setInit(data);
       const supportsTruck = !!data.supports_truck_invoices;
 
@@ -350,6 +351,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
         setExchangeRates({ TZS: '1.0000', ...(order.currency_rates || data.initial_exchange_rates || {}) });
         setCustomerId(order.customer_id ? String(order.customer_id) : '');
         setInvoiceDate(order.quote_date || todayIso());
+        setDueDate(order.due_date || dueDateIso());
         setValidUntil(order.valid_until || validUntilIso());
         setLeadTime(order.lead_time || '');
         setDiscountAmount(Number(order.discount_amount) || 0);
@@ -494,7 +496,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
     } finally {
       setLoading(false);
     }
-  }, [isEditMode]);
+  }, [isEditMode, isInvoiceEdit]);
 
   useEffect(() => { loadInit(); }, [loadInit]);
 
@@ -821,7 +823,11 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
     const formData = new FormData();
     if (isEditMode) {
       formData.append('order_id', String(init?.order_id || init?.order?.id || ''));
-      formData.append('status', String(init?.order?.status || 'quotation'));
+      if (isInvoiceEdit) {
+        formData.append('invoice_id', String(init?.invoice_id || ''));
+      } else {
+        formData.append('status', String(init?.order?.status || 'quotation'));
+      }
     }
     formData.append('customer_id', customerId);
     if (isQuote) {
@@ -871,11 +877,13 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
     setSaving(true);
     setErrors([]);
     try {
-      const result = isEditMode
-        ? await submitQuoteEdit(buildFormData())
-        : (isQuote
-          ? await submitCreateQuote(buildFormData())
-          : await submitCreateInvoice(buildFormData()));
+      const result = isInvoiceEdit
+        ? await submitInvoiceEdit(buildFormData())
+        : (isEditMode
+          ? await submitQuoteEdit(buildFormData())
+          : (isQuote
+            ? await submitCreateQuote(buildFormData())
+            : await submitCreateInvoice(buildFormData())));
       clearCatalogueSelectionDraft();
       clearFormDraft(isQuote);
       window.location.href = result.redirect || indexUrl;
@@ -908,7 +916,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
   return (
     <div className="exp-create-shell inv-create--enerpize">
       {showMoneySavingOverlay ? (
-        <MoneySavingOverlay src={moneyAnimSrc} label="Creating invoice..." />
+        <MoneySavingOverlay src={moneyAnimSrc} label={isEditMode ? 'Saving invoice...' : 'Creating invoice...'} />
       ) : null}
       {errors.length > 0 && (
         <div className="exp-create-alert exp-create-alert--error" role="alert">

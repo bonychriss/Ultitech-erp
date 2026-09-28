@@ -657,7 +657,7 @@ function RecordIcon({ kind }) {
   )
 }
 
-function RecordCards({ rows, label, kind }) {
+function RecordCards({ rows, label, kind, onOpen }) {
   const sections = todoSections(rows)
   return (
     <div className="wt-nc-list">
@@ -665,21 +665,36 @@ function RecordCards({ rows, label, kind }) {
         <section key={section.key} className="wt-nc-section" aria-label={section.label}>
           <h2 className="wt-nc-heading">{section.label}</h2>
           <div className="wt-nc-section-list">
-            {section.items.map(({ row, index }) => (
-              <article key={`${row.date}-${row.title}-${index}`} className="wt-nc-card">
-                <span className="wt-nc-icon" aria-hidden="true">
-                  <RecordIcon kind={kind} />
-                </span>
-                <div className="wt-nc-body">
-                  <p className="wt-nc-kicker">{label}</p>
-                  <div className="wt-nc-title-row">
-                    <h3 className="wt-nc-title">{row.title}</h3>
-                    {row.when ? <time className="wt-nc-time">{row.when}</time> : null}
+            {section.items.map(({ row, index }) => {
+              const canOpen = typeof onOpen === 'function' && Boolean(row.documentUrl || row.documentText)
+              return (
+                <article
+                  key={`${row.date}-${row.title}-${index}`}
+                  className={`wt-nc-card${canOpen ? ' wt-nc-card--link' : ''}`}
+                  role={canOpen ? 'button' : undefined}
+                  tabIndex={canOpen ? 0 : undefined}
+                  onClick={canOpen ? () => onOpen(row) : undefined}
+                  onKeyDown={canOpen ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onOpen(row)
+                    }
+                  } : undefined}
+                >
+                  <span className="wt-nc-icon" aria-hidden="true">
+                    <RecordIcon kind={kind} />
+                  </span>
+                  <div className="wt-nc-body">
+                    <p className="wt-nc-kicker">{label}</p>
+                    <div className="wt-nc-title-row">
+                      <h3 className="wt-nc-title">{row.title}</h3>
+                      {row.when ? <time className="wt-nc-time">{row.when}</time> : null}
+                    </div>
+                    <p className="wt-nc-message">{row.status}</p>
                   </div>
-                  <p className="wt-nc-message">{row.status}</p>
-                </div>
-              </article>
-            ))}
+                </article>
+              )
+            })}
           </div>
         </section>
       ))}
@@ -727,6 +742,7 @@ function MeasurePage({ month, measure }) {
       ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'].includes(measure.key) ? (
         <RecordCards
           rows={rows}
+          onOpen={openDocument}
           label={{
             attendance: 'Attendance',
             'monthly-sales-revenue': 'Sales',
@@ -779,7 +795,7 @@ function MeasurePage({ month, measure }) {
             <header className="wt-doc-head">
               <strong>{doc.title}</strong>
               <span className="wt-doc-actions">
-                {doc.url ? (
+                {measure.key === 'delivery-documents' && doc.url ? (
                   <button type="button" className="wt-doc-download" disabled={!docReady} onClick={downloadDocument}>Download</button>
                 ) : null}
                 <button type="button" className="wt-doc-close" onClick={() => setDoc(null)}>Close</button>

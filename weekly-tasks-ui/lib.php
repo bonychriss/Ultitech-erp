@@ -539,6 +539,22 @@ function weeklyTasksUiDriverLines(PDO $pdo, int $userId, array $offsets, string 
     return $rows;
 }
 
+function weeklyTasksUiQuoteUrl(int $orderId): string
+{
+    if ($orderId < 1) {
+        return '';
+    }
+    $path = 'sales/print/order/' . $orderId . '?embed=1';
+    if (function_exists('company_url')) {
+        return company_url($path);
+    }
+    if (function_exists('app_url')) {
+        return app_url('/' . $path);
+    }
+
+    return '/' . $path;
+}
+
 function weeklyTasksUiDeliveryNoteUrl(int $noteId): string
 {
     $path = 'deliveries/view_delivery_note.php?id=' . $noteId . '&embed=1';
@@ -1394,7 +1410,7 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
         if ($metric === 'quotation-conversion' && function_exists('tableExists') && tableExists('sales_orders', $pdo)) {
             try {
                 $st = $pdo->prepare(
-                    "SELECT so.order_number, so.formatted_number, so.status, so.total_amount, COALESCE(so.order_date, DATE(so.created_at)) AS day, c.company_name
+                    "SELECT so.id, so.order_number, so.formatted_number, so.status, so.total_amount, COALESCE(so.order_date, DATE(so.created_at)) AS day, c.company_name
                      FROM sales_orders so
                      LEFT JOIN customers c ON c.id = so.customer_id
                      WHERE so.created_by = ?
@@ -1416,6 +1432,7 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
                         'date' => (string) ($row['day'] ?? ''),
                         'when' => !empty($row['day']) ? date('j M Y', strtotime((string) $row['day'])) : '',
                         'status' => ($won ? 'Won' : 'Submitted') . ' · TZS ' . $amount,
+                        'documentUrl' => weeklyTasksUiQuoteUrl((int) ($row['id'] ?? 0)),
                     ];
                 }
             } catch (Throwable $e) {

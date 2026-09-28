@@ -141,8 +141,9 @@ function orderPdfRelativeBox(node, rootTop) {
 }
 
 export function orderPdfMeasureLayout(el) {
-  const rootTop = el.getBoundingClientRect().top;
-  const cssHeight = Math.max(el.getBoundingClientRect().height, el.scrollHeight, el.offsetHeight, 1);
+  const rootRect = el.getBoundingClientRect();
+  const rootTop = rootRect.top;
+  const cssHeight = Math.max(rootRect.height, 1);
   const bands = [];
 
   el.querySelectorAll(ORDER_PDF_BLOCK_SELECTOR).forEach((node) => {
@@ -373,7 +374,7 @@ function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, opti
   let pageNum = 0;
   let guard = 0;
 
-  while (sourceY < totalHeightInPixels - 0.5 && guard < 80) {
+  while (sourceY < totalHeightInPixels - 0.5 && guard < 200) {
     guard += 1;
     const header = orderPdfContinuationHeader(sourceY, pixelScale, tables);
     let headerReserve = header ? header.sh : 0;

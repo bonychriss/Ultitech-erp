@@ -345,21 +345,214 @@ function replenishment_fetch_product_demand_sources(int $productId): array
     return $merged;
 }
 
-$replenishmentApiUrl = strtok((string) ($_SERVER['REQUEST_URI'] ?? 'replenishment.php'), '?') . '?action=invoices';
-
-if (isset($_GET['action']) && $_GET['action'] === 'invoices') {
-    header('Content-Type: application/json; charset=utf-8');
-
-    $productId = (int) ($_GET['product_id'] ?? 0);
+/**
+ * Payment voucher attached to our sales invoice for this product.
+ * The supplier invoice stays on the voucher; this only links the voucher.
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function replenishment_fetch_supplier_invoices(int $productId): array
+{
     if ($productId <= 0) {
-        echo json_encode(['ok' => false, 'error' => 'Invalid product id.', 'items' => []]);
-        exit;
+        return [];
     }
 
-    $rows = replenishment_fetch_product_demand_sources($productId);
+    $salesRows = replenishment_fetch_product_demand_sources($productId);
+    $needleMeta = [];
+    foreach ($salesRows as $row) {
+        $pairs = [
+            [trim((string) ($row['invoice_number'] ?? '')), 'invoice'],
+            [trim((string) ($row['order_number'] ?? '')), 'order'],
+        ];
+        foreach ($pairs as [$raw, $kind]) {
+            if (strlen($raw) < 6 || !preg_match('/[A-Za-z]/', $raw)) {
+                continue;
+            }
+            $canonicalInvoice = $kind === 'invoice' ? $raw : '';
+            $canonicalOrder = $kind === 'order' ? $raw : '';
+            foreach ([$raw, str_replace('-', '/', $raw)] as $form) {
+                if (!isset($needleMeta[$form])) {
+                    $needleMeta[$form] = ['invoice' => '', 'order' => ''];
+                }
+                if ($canonicalInvoice !== '' && $needleMeta[$form]['invoice'] === '') {
+                    $needleMeta[$form]['invoice'] = $canonicalInvoice;
+                }
+                if ($canonicalOrder !== '' && $needleMeta[$form]['order'] === '') {
+                    $needleMeta[$form]['order'] = $canonicalOrder;
+                }
+            }
+        }
+    }
+    if (!$needleMeta) {
+        return [];
+    }
+
+    $db = null;
+    if (function_exists('voucher_operational_pdo')) {
+        try {
+            $candidate = voucher_operational_pdo();
+            if ($candidate instanceof PDO) {
+                $db = $candidate;
+            }
+        } catch (Throwable $e) {
+            $db = null;
+        }
+    }
+    if (!$db instanceof PDO) {
+        global $pdo;
+        $db = $pdo instanceof PDO ? $pdo : null;
+    }
+    if (!$db instanceof PDO) {
+        return [];
+    }
+
+    try {
+        $hasVouchers = (bool) $db->query("SHOW TABLES LIKE 'payment_vouchers'")->fetchColumn();
+    } catch (Throwable $e) {
+        return [];
+    }
+    if (!$hasVouchers) {
+        return [];
+    }
+
+    $pvCols = [];
+    try {
+        $pvCols = $db->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $select = ['pv.id'];
+    foreach (['voucher_no', 'payee_name', 'status', 'date_created', 'created_at', 'is_reference'] as $col) {
+        if (in_array($col, $pvCols, true)) {
+            $select[] = 'pv.' . $col;
+        }
+    }
+
+    $hasAttachments = false;
+    try {
+        $hasAttachments = (bool) $db->query("SHOW TABLES LIKE 'voucher_attachments'")->fetchColumn();
+    } catch (Throwable $e) {
+        $hasAttachments = false;
+    }
+
+    $needles = array_keys($needleMeta);
+    $matched = [];
+    foreach (array_chunk($needles, 12) as $chunk) {
+        $params = [];
+        foreach ($chunk as $needle) {
+            $params[] = '%' . $needle . '%';
+        }
+
+        $queries = [];
+        if ($hasAttachments) {
+            $queries[] = [
+                'sql' => 'SELECT ' . implode(', ', $select) . ', va.original_name AS hit_text
+                    FROM voucher_attachments va
+                    INNER JOIN payment_vouchers pv ON pv.id = va.voucher_id
+                    WHERE ' . implode(' OR ', array_fill(0, count($chunk), 'va.original_name LIKE ?')),
+                'params' => $params,
+            ];
+        }
+        if (in_array('description', $pvCols, true)) {
+            $queries[] = [
+                'sql' => 'SELECT ' . implode(', ', $select) . ', pv.description AS hit_text
+                    FROM payment_vouchers pv
+                    WHERE ' . implode(' OR ', array_fill(0, count($chunk), 'pv.description LIKE ?')),
+                'params' => $params,
+            ];
+        }
+
+        foreach ($queries as $query) {
+            try {
+                $stmt = $db->prepare($query['sql']);
+                $stmt->execute($query['params']);
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $voucherId = (int) ($row['id'] ?? 0);
+                    $text = (string) ($row['hit_text'] ?? '');
+                    if ($voucherId <= 0 || $text === '') {
+                        continue;
+                    }
+                    foreach ($chunk as $needle) {
+                        if (!preg_match('/(?<![A-Za-z0-9])' . preg_quote($needle, '/') . '(?![0-9])/i', $text)) {
+                            continue;
+                        }
+                        if (!isset($matched[$voucherId])) {
+                            $matched[$voucherId] = $row;
+                            $matched[$voucherId]['invoices'] = [];
+                            $matched[$voucherId]['orders'] = [];
+                        }
+                        $meta = $needleMeta[$needle] ?? ['invoice' => '', 'order' => ''];
+                        if ($meta['invoice'] !== '') {
+                            $matched[$voucherId]['invoices'][$meta['invoice']] = $meta['invoice'];
+                        }
+                        if ($meta['order'] !== '') {
+                            $matched[$voucherId]['orders'][$meta['order']] = $meta['order'];
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log('replenishment_fetch_supplier_invoices: ' . $e->getMessage());
+            }
+        }
+    }
+
+    $voucherUrl = function_exists('app_url')
+        ? app_url('view-voucher.php?id=')
+        : '/view-voucher.php?id=';
+
+    $out = [];
+    foreach ($matched as $voucherId => $voucher) {
+        $voucherNo = trim((string) ($voucher['voucher_no'] ?? ''));
+        if ($voucherNo === '') {
+            $voucherNo = 'PV-' . $voucherId;
+        }
+        $ourDocs = array_values($voucher['invoices'] ?? []);
+        if (!$ourDocs) {
+            $ourDocs = array_values($voucher['orders'] ?? []);
+        }
+        $placeUrl = $voucherUrl . $voucherId;
+
+        $out[] = [
+            'order_id' => $voucherId,
+            'order_number' => implode(', ', $ourDocs),
+            'order_status' => (string) ($voucher['status'] ?? ''),
+            'order_date' => (string) ($voucher['date_created'] ?? $voucher['created_at'] ?? ''),
+            'line_qty' => '',
+            'customer_name' => trim((string) ($voucher['payee_name'] ?? '')),
+            'invoice_id' => $voucherId,
+            'invoice_number' => $voucherNo,
+            'invoice_date' => (string) ($voucher['date_created'] ?? $voucher['created_at'] ?? ''),
+            'invoice_status' => (string) ($voucher['status'] ?? ''),
+            'invoice_url' => $placeUrl,
+            'invoice_print_url' => '',
+            'order_url' => '',
+            'our_invoice' => implode(', ', $ourDocs),
+            'is_supplier_invoice' => true,
+            'is_payment_voucher' => true,
+            'is_reference' => (int) ($voucher['is_reference'] ?? 0) === 1,
+        ];
+    }
+
+    usort($out, static function ($a, $b) {
+        return strcmp((string) ($b['invoice_date'] ?? ''), (string) ($a['invoice_date'] ?? ''));
+    });
+
+    return $out;
+}
+
+/**
+ * @param array<int, array<string, mixed>> $rows
+ * @return array<int, array<string, mixed>>
+ */
+function replenishment_map_sales_invoice_rows(array $rows): array
+{
     $invoiceViewBase = function_exists('app_url')
         ? app_url('modules/sales/invoices/view.php?id=')
         : '/modules/sales/invoices/view.php?id=';
+    $invoicePrintBase = function_exists('app_url')
+        ? app_url('modules/sales/invoices/print.php?id=')
+        : '/modules/sales/invoices/print.php?id=';
     $orderViewBase = function_exists('app_url')
         ? app_url('modules/sales/orders/view.php?id=')
         : '/modules/sales/orders/view.php?id=';
@@ -380,15 +573,34 @@ if (isset($_GET['action']) && $_GET['action'] === 'invoices') {
             'invoice_date' => (string) ($row['invoice_date'] ?? ''),
             'invoice_status' => (string) ($row['invoice_status'] ?? ''),
             'invoice_url' => $invoiceId > 0 ? $invoiceViewBase . $invoiceId : '',
+            'invoice_print_url' => $invoiceId > 0 ? $invoicePrintBase . $invoiceId : '',
             'order_url' => $orderId > 0 ? $orderViewBase . $orderId : '',
         ];
     }
 
+    return $out;
+}
+
+$replenishmentApiUrl = strtok((string) ($_SERVER['REQUEST_URI'] ?? 'replenishment.php'), '?') . '?action=invoices';
+
+if (isset($_GET['action']) && $_GET['action'] === 'invoices') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $productId = (int) ($_GET['product_id'] ?? 0);
+    if ($productId <= 0) {
+        echo json_encode(['ok' => false, 'error' => 'Invalid product id.', 'items' => []]);
+        exit;
+    }
+
+    $sales = replenishment_map_sales_invoice_rows(replenishment_fetch_product_demand_sources($productId));
+    $supplier = replenishment_fetch_supplier_invoices($productId);
+
     echo json_encode([
         'ok' => true,
         'product_id' => $productId,
-        'count' => count($out),
-        'items' => $out,
+        'count' => count($sales),
+        'items' => $sales,
+        'supplier_items' => $supplier,
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -485,16 +697,6 @@ $stockReportHref = 'stock.php';
 
 require_once __DIR__ . '/../../config/paths.php';
 
-$invoiceViewBase = function_exists('app_url')
-    ? app_url('modules/sales/invoices/view.php?id=')
-    : '/modules/sales/invoices/view.php?id=';
-$invoicePrintBase = function_exists('app_url')
-    ? app_url('modules/sales/invoices/print.php?id=')
-    : '/modules/sales/invoices/print.php?id=';
-$orderViewBase = function_exists('app_url')
-    ? app_url('modules/sales/orders/view.php?id=')
-    : '/modules/sales/orders/view.php?id=';
-
 $itemsPayload = [];
 foreach ($items as $item) {
     $productId = (int) ($item['id'] ?? 0);
@@ -503,30 +705,16 @@ foreach ($items as $item) {
         ? stock_product_list_image_url($productId, $filename, 'medium', (string) ($stockBasePath ?? ''))
         : '';
 
-    $sourceRows = $productId > 0 ? replenishment_fetch_product_demand_sources($productId) : [];
-    $demandSources = [];
+    $demandSources = $productId > 0
+        ? replenishment_map_sales_invoice_rows(replenishment_fetch_product_demand_sources($productId))
+        : [];
+    $supplierInvoices = $productId > 0 ? replenishment_fetch_supplier_invoices($productId) : [];
     $references = [];
     $seenRefs = [];
 
-    foreach ($sourceRows as $row) {
+    foreach ($demandSources as $row) {
         $invoiceId = (int) ($row['invoice_id'] ?? 0);
         $orderId = (int) ($row['order_id'] ?? 0);
-        $demandSources[] = [
-            'order_id' => $orderId,
-            'order_number' => (string) ($row['order_number'] ?? ($orderId > 0 ? 'SO-' . $orderId : '')),
-            'order_status' => (string) ($row['order_status'] ?? ''),
-            'order_date' => (string) ($row['order_date'] ?? ''),
-            'line_qty' => (float) ($row['line_qty'] ?? 0),
-            'customer_name' => (string) ($row['customer_name'] ?? ''),
-            'invoice_id' => $invoiceId,
-            'invoice_number' => $invoiceId > 0 ? (string) ($row['invoice_number'] ?? ('INV-' . $invoiceId)) : '',
-            'invoice_date' => (string) ($row['invoice_date'] ?? ''),
-            'invoice_status' => (string) ($row['invoice_status'] ?? ''),
-            'invoice_url' => $invoiceId > 0 ? $invoiceViewBase . $invoiceId : '',
-            'invoice_print_url' => $invoiceId > 0 ? $invoicePrintBase . $invoiceId : '',
-            'order_url' => $orderId > 0 ? $orderViewBase . $orderId : '',
-        ];
-
         if ($invoiceId > 0) {
             $refKey = 'inv:' . $invoiceId;
             if (!isset($seenRefs[$refKey])) {
@@ -535,8 +723,8 @@ foreach ($items as $item) {
                     'type' => 'invoice',
                     'id' => $invoiceId,
                     'label' => (string) ($row['invoice_number'] ?? ('INV-' . $invoiceId)),
-                    'url' => $invoiceViewBase . $invoiceId,
-                    'print_url' => $invoicePrintBase . $invoiceId,
+                    'url' => (string) ($row['invoice_url'] ?? ''),
+                    'print_url' => (string) ($row['invoice_print_url'] ?? ''),
                 ];
             }
         } elseif ($orderId > 0) {
@@ -547,7 +735,7 @@ foreach ($items as $item) {
                     'type' => 'order',
                     'id' => $orderId,
                     'label' => (string) ($row['order_number'] ?? ('SO-' . $orderId)),
-                    'url' => $orderViewBase . $orderId,
+                    'url' => (string) ($row['order_url'] ?? ''),
                 ];
             }
         }
@@ -563,6 +751,7 @@ foreach ($items as $item) {
         'pending_demand' => (int) ($item['pending_demand'] ?? 0),
         'references' => $references,
         'demand_sources' => $demandSources,
+        'supplier_invoices' => $supplierInvoices,
     ];
 }
 
@@ -707,6 +896,9 @@ html[data-theme="dark"] body.page-products-desk .employee-header--products-desk 
                     'purchases' => $purchasesHref,
                     'createDomestic' => '../purchases/domestic_create.php',
                     'createImport' => '../purchases/domestic_create.php?purchase_type=import',
+                    'referenceToggle' => function_exists('paymentVoucherReferenceToggleUrl')
+                        ? paymentVoucherReferenceToggleUrl()
+                        : (function_exists('app_url') ? app_url('/toggle-voucher-reference.php') : '/toggle-voucher-reference.php'),
                 ],
             ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)) ?: '{"page":"reports-replenishment","data":{}}' ?>;

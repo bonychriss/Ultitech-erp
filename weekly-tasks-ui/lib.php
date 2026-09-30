@@ -1887,24 +1887,33 @@ function weeklyTasksUiItLoad(PDO $pdo, array $offsets): array
     }
     if (function_exists('tableExists') && tableExists('developer_suggestions', $pdo)) {
         weeklyTasksUiEnsureSuggestionResolvedAt($pdo);
-        try {
-            $st = $pdo->prepare(
-                'SELECT s.suggestion, s.status, s.created_at, s.resolved_at, u.full_name
-                 FROM developer_suggestions s
-                 LEFT JOIN users u ON u.id = s.user_id
-                 WHERE s.created_at BETWEEN ? AND ?'
-            );
-            $st->execute([$start, $end]);
-            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
-                $suggestions[] = [
-                    'text' => trim((string) ($row['suggestion'] ?? '')),
-                    'status' => (string) ($row['status'] ?? ''),
-                    'createdAt' => (string) ($row['created_at'] ?? ''),
-                    'resolvedAt' => (string) ($row['resolved_at'] ?? ''),
-                    'author' => trim((string) ($row['full_name'] ?? '')),
-                ];
+        $suggestionSql = [
+            'SELECT s.suggestion, s.status, s.created_at, s.resolved_at, u.full_name
+             FROM developer_suggestions s
+             LEFT JOIN users u ON u.id = s.user_id
+             WHERE s.created_at BETWEEN ? AND ?',
+            'SELECT s.suggestion, s.status, s.created_at, u.full_name
+             FROM developer_suggestions s
+             LEFT JOIN users u ON u.id = s.user_id
+             WHERE s.created_at BETWEEN ? AND ?',
+        ];
+        foreach ($suggestionSql as $sql) {
+            try {
+                $st = $pdo->prepare($sql);
+                $st->execute([$start, $end]);
+                $suggestions = [];
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $suggestions[] = [
+                        'text' => trim((string) ($row['suggestion'] ?? '')),
+                        'status' => (string) ($row['status'] ?? ''),
+                        'createdAt' => (string) ($row['created_at'] ?? ''),
+                        'resolvedAt' => (string) ($row['resolved_at'] ?? ''),
+                        'author' => trim((string) ($row['full_name'] ?? '')),
+                    ];
+                }
+                break;
+            } catch (Throwable $e) {
             }
-        } catch (Throwable $e) {
         }
     }
 

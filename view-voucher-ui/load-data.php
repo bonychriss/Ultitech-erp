@@ -3,6 +3,186 @@
 declare(strict_types=1);
 
 /**
+ * Linked purchase orders for the supporting-documents row.
+ * Uses the same connection that loaded the voucher. The shared helper reads the
+ * global connection, which can be a different database and then returns nothing.
+ *
+ * @return list<array{id:int,poNumber:string,supplierName:string,status:string,viewLink:string}>
+ */
+function vv_purchase_order_docs(PDO $pdo, array $voucher, int $voucherId): array
+{
+    $ids = [];
+    $remember = static function (int $id) use (&$ids): void {
+        if ($id > 0) {
+            $ids[$id] = $id;
+        }
+    };
+
+    if (function_exists('parseLinkedStockPoIdsFromVoucher')) {
+        foreach (parseLinkedStockPoIdsFromVoucher($voucher) as $id) {
+            $remember((int) $id);
+        }
+    } else {
+        $idsRaw = trim((string) ($voucher['linked_stock_po_ids'] ?? ''));
+        if ($idsRaw !== '') {
+            $decoded = json_decode($idsRaw, true);
+            $parts = is_array($decoded) ? $decoded : preg_split('/\s*,\s*/', $idsRaw);
+            foreach ($parts ?: [] as $id) {
+                $remember((int) $id);
+            }
+        }
+        if ($ids === [] && !empty($voucher['linked_stock_po_id'])) {
+            $remember((int) $voucher['linked_stock_po_id']);
+        }
+    }
+
+    if (function_exists('columnExists') && columnExists('stocks_purchase_orders', 'payment_voucher_id', $pdo)) {
+        try {
+            $st = $pdo->prepare('SELECT id FROM stocks_purchase_orders WHERE payment_voucher_id = ?');
+            $st->execute([$voucherId]);
+            foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $pid) {
+                $remember((int) $pid);
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    $poDocBase = function_exists('company_url')
+        ? company_url('employee/create-voucher-ui/po-document.php')
+        : (function_exists('app_url')
+            ? app_url('/employee/create-voucher-ui/po-document.php')
+            : '/employee/create-voucher-ui/po-document.php');
+
+    $docs = [];
+    foreach ($ids as $poId) {
+        $row = null;
+        if (function_exists('fetchStockPurchaseOrderById')) {
+            $row = fetchStockPurchaseOrderById($pdo, $poId, true);
+        }
+        if (!$row) {
+            try {
+                $st = $pdo->prepare('SELECT id, po_number, status FROM stocks_purchase_orders WHERE id = ? LIMIT 1');
+                $st->execute([$poId]);
+                $row = $st->fetch(PDO::FETCH_ASSOC) ?: null;
+            } catch (Throwable $e) {
+                $row = null;
+            }
+        }
+        if (!$row) {
+            continue;
+        }
+        $poNo = trim((string) ($row['po_number'] ?? $row['purchase_no'] ?? ''));
+        if ($poNo === '') {
+            $poNo = 'PO-' . $poId;
+        }
+        $docs[] = [
+            'id' => $poId,
+            'poNumber' => $poNo,
+            'supplierName' => (string) ($row['supplier_name'] ?? ''),
+            'status' => (string) ($row['status'] ?? ''),
+            'viewLink' => $poDocBase . (str_contains($poDocBase, '?') ? '&' : '?') . 'id=' . $poId,
+        ];
+    }
+
+    return $docs;
+}
+
+/**
+ * Linked sales orders for the supporting-documents row, after purchase orders
+ * and uploaded supporting files. Looks up orders on the sales database when
+ * that table is not on the voucher connection.
+ *
+ * @return list<array{id:int,orderNumber:string,customerName:string,pdfLink:string}>
+ */
+function vv_sales_order_docs(PDO $pdo, array $voucher): array
+{
+    $ids = [];
+    $remember = static function (int $id) use (&$ids): void {
+        if ($id > 0) {
+            $ids[$id] = $id;
+        }
+    };
+
+    if (function_exists('parseLinkedSalesOrderIdsFromVoucher')) {
+        foreach (parseLinkedSalesOrderIdsFromVoucher($voucher) as $id) {
+            $remember((int) $id);
+        }
+    } else {
+        $idsRaw = trim((string) ($voucher['linked_sales_order_ids'] ?? ''));
+        if ($idsRaw !== '') {
+            $decoded = json_decode($idsRaw, true);
+            $parts = is_array($decoded) ? $decoded : preg_split('/\s*,\s*/', $idsRaw);
+            foreach ($parts ?: [] as $id) {
+                $remember((int) $id);
+            }
+        }
+        if ($ids === [] && !empty($voucher['linked_sales_order_id'])) {
+            $remember((int) $voucher['linked_sales_order_id']);
+        }
+    }
+    if ($ids === []) {
+        return [];
+    }
+
+    $salesPdo = $pdo;
+    if (!function_exists('tableExists') || !tableExists('sales_orders', $salesPdo)) {
+        $dbNames = [];
+        if (defined('SALES_DB_NAME') && trim((string) SALES_DB_NAME) !== '') {
+            $dbNames[] = trim((string) SALES_DB_NAME);
+        }
+        if (defined('DATA_DB_NAME') && trim((string) DATA_DB_NAME) !== '') {
+            $dbNames[] = trim((string) DATA_DB_NAME);
+        }
+        foreach (array_values(array_unique($dbNames)) as $dbName) {
+            if (!function_exists('connectToTenantDatabase')) {
+                break;
+            }
+            $try = connectToTenantDatabase($dbName);
+            if ($try instanceof PDO && tableExists('sales_orders', $try)) {
+                $salesPdo = $try;
+                break;
+            }
+        }
+    }
+    if (!function_exists('tableExists') || !tableExists('sales_orders', $salesPdo)) {
+        return [];
+    }
+
+    $docs = [];
+    try {
+        $stmt = $salesPdo->prepare(
+            'SELECT so.id, so.order_number, '
+            . "COALESCE(c.company_name, c.contact_person, '') AS customer_name "
+            . 'FROM sales_orders so '
+            . 'LEFT JOIN customers c ON c.id = so.customer_id '
+            . 'WHERE so.id = ? LIMIT 1'
+        );
+        foreach ($ids as $sid) {
+            $stmt->execute([$sid]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                continue;
+            }
+            $soNo = trim((string) ($row['order_number'] ?? ''));
+            if ($soNo === '') {
+                $soNo = 'SO-' . $sid;
+            }
+            $pdf = function_exists('salesOrderPrintPdfUrl') ? salesOrderPrintPdfUrl($sid) : '';
+            $docs[] = [
+                'id' => $sid,
+                'orderNumber' => $soNo,
+                'customerName' => (string) ($row['customer_name'] ?? ''),
+                'pdfLink' => $pdf,
+            ];
+        }
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    return $docs;
+}
+
+/**
  * Load structured voucher view payload for the React UI and JSON API.
  *
  * @return array{ok:bool,error?:string,code?:int,payload?:array}
@@ -37,12 +217,8 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
     $attachments = function_exists('getVoucherAttachments') ? getVoucherAttachments($voucherId) : [];
-    $linkedSalesOrders = function_exists('fetchLinkedSalesOrdersForVoucher')
-        ? fetchLinkedSalesOrdersForVoucher($voucher)
-        : [];
-    $linkedPurchaseOrders = function_exists('fetchLinkedStockPurchaseOrdersForVoucher')
-        ? fetchLinkedStockPurchaseOrdersForVoucher($voucher)
-        : [];
+    $purchaseOrderDocs = vv_purchase_order_docs($pdo, $voucher, $voucherId);
+    $salesOrderDocs = vv_sales_order_docs($pdo, $voucher);
 
     $isPaid = isset($voucher['is_paid']) && (int) $voucher['is_paid'] === 1;
     $isPosted = isset($voucher['is_posted']) && (int) $voucher['is_posted'] === 1;
@@ -329,33 +505,6 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         ];
     }
 
-    $salesOrderDocs = [];
-    foreach ($linkedSalesOrders as $linkedSalesOrder) {
-        $soId = (int) ($linkedSalesOrder['id'] ?? 0);
-        $soNo = (string) ($linkedSalesOrder['order_number'] ?? ('SO-' . $soId));
-        $soPdfLink = function_exists('salesOrderPrintPdfUrl') ? salesOrderPrintPdfUrl($soId) : '#';
-        $salesOrderDocs[] = ['id' => $soId, 'orderNumber' => $soNo, 'pdfLink' => $soPdfLink];
-    }
-
-    $purchaseOrderDocs = [];
-    $poDocBase = function_exists('app_url')
-        ? app_url('/employee/create-voucher-ui/po-document.php')
-        : '/employee/create-voucher-ui/po-document.php';
-    foreach ($linkedPurchaseOrders as $linkedPo) {
-        $poId = (int) ($linkedPo['id'] ?? 0);
-        if ($poId <= 0) {
-            continue;
-        }
-        $poNo = (string) ($linkedPo['po_number'] ?? ('PO-' . $poId));
-        $purchaseOrderDocs[] = [
-            'id' => $poId,
-            'poNumber' => $poNo,
-            'supplierName' => (string) ($linkedPo['supplier_name'] ?? ''),
-            'status' => (string) ($linkedPo['status'] ?? ''),
-            'viewLink' => $poDocBase . (str_contains($poDocBase, '?') ? '&' : '?') . 'id=' . $poId,
-        ];
-    }
-
     // Comments
     $comments = [];
     try {
@@ -486,7 +635,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
 
     $declaredCount = isset($voucher['supporting_documents']) ? (int) $voucher['supporting_documents'] : 0;
     $uploadedFileCount = count($attachmentRows);
-    $visibleAttachmentCount = $uploadedFileCount + count($salesOrderDocs) + count($purchaseOrderDocs) + ($swiftProxy ? 1 : 0);
+    $visibleAttachmentCount = $uploadedFileCount + count($purchaseOrderDocs) + count($salesOrderDocs) + ($swiftProxy ? 1 : 0);
     // Heal ghost qty: form posted a file count but nothing was stored on disk/DB.
     if ($declaredCount !== $uploadedFileCount) {
         try {
@@ -563,7 +712,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 'headerCount' => $headerCount,
                 'declaredCount' => $declaredCount,
                 'mismatch' => $mismatch,
-                'hasSupporting' => !empty($attachmentRows) || !empty($salesOrderDocs) || !empty($purchaseOrderDocs) || !empty($swiftProxy) || $declaredCount > 0,
+                'hasSupporting' => !empty($attachmentRows) || !empty($purchaseOrderDocs) || !empty($salesOrderDocs) || !empty($swiftProxy) || $declaredCount > 0,
             ],
             'comments' => array_map(static function ($vc) {
                 return [

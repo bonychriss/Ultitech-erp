@@ -7849,7 +7849,7 @@ function validateLinkedSalesOrderIdsForVoucher(PDO $pdo, array $linkedOrderIds, 
  * @param int[] $linkedOrderIds
  * @return array{ok: bool, message: string}
  */
-function saveApprovedVoucherLimitedClassification(PDO $pdo, int $voucherId, int $userId, string $voucherPurpose, array $linkedOrderIds): array
+function saveApprovedVoucherLimitedClassification(PDO $pdo, int $voucherId, int $userId, string $voucherPurpose, array $linkedOrderIds, ?string $description = null): array
 {
     $companyId = (int) (currentCompanyId() ?? 0);
     $params = array_merge([$voucherId], getCompanyParam($companyId));
@@ -7896,6 +7896,17 @@ function saveApprovedVoucherLimitedClassification(PDO $pdo, int $voucherId, int 
             $sets[] = 'linked_sales_order_ids = ?';
             $vals[] = !empty($linkedOrderIds) ? json_encode(array_values($linkedOrderIds)) : null;
         }
+        $descriptionText = null;
+        if ($description !== null) {
+            $descriptionText = trim($description);
+            if ($descriptionText === '') {
+                return ['ok' => false, 'message' => 'Please enter a description.'];
+            }
+            if (in_array('description', $pvCols, true)) {
+                $sets[] = 'description = ?';
+                $vals[] = $descriptionText;
+            }
+        }
         if ($sets === []) {
             return ['ok' => false, 'message' => 'Voucher classification columns are not available.'];
         }
@@ -7903,12 +7914,15 @@ function saveApprovedVoucherLimitedClassification(PDO $pdo, int $voucherId, int 
         $pdo->prepare('UPDATE payment_vouchers SET ' . implode(', ', $sets) . ' WHERE id = ?')->execute($vals);
 
         $comment = sprintf(
-            'Limited classification update: purpose %s â†’ %s; linked sales orders [%s] â†’ [%s]',
+            'Limited classification update: purpose %s → %s; linked sales orders [%s] → [%s]',
             $oldPurpose,
             $purpose,
             implode(',', $oldLinked),
             implode(',', $linkedOrderIds)
         );
+        if ($descriptionText !== null && trim((string) ($row['description'] ?? '')) !== $descriptionText) {
+            $comment .= '; description updated';
+        }
         logVoucherAction($voucherId, $userId, 'limited_classification_update', $comment);
 
         $newUploads = processVoucherSupportingFileUploads($voucherId, $userId);
@@ -13086,10 +13100,10 @@ function fetchLinkedSalesOrdersForVoucher(array $voucher, $companyId = null): ar
             . "COALESCE(c.company_name, c.contact_person, 'Unknown Customer') AS customer_name "
             . "FROM sales_orders so "
             . "LEFT JOIN customers c ON c.id = so.customer_id "
-            . "WHERE so.id = ?" . getCompanySql('so')
+            . "WHERE so.id = ? LIMIT 1"
         );
         foreach ($linkedIds as $sid) {
-            $stmtSo->execute(array_merge([(int) $sid], getCompanyParam($cid)));
+            $stmtSo->execute([(int) $sid]);
             $row = $stmtSo->fetch(PDO::FETCH_ASSOC);
             if ($row) {
                 $orders[] = $row;

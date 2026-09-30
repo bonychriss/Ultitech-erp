@@ -239,6 +239,7 @@ export default function InvoicesListPage() {
   const filterBtnRef = useRef(null);
   const filterPanelRef = useRef(null);
   const searchExpandRef = useRef(null);
+  const selectionAnchorRef = useRef(null);
   const searchInputRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
 
@@ -397,8 +398,8 @@ export default function InvoicesListPage() {
     return chips;
   }, [statusFilter, myInvoicesOnly]);
 
-  function toggleSelection(id, e) {
-    e.stopPropagation();
+  function toggleSelection(id) {
+    selectionAnchorRef.current = id;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -407,12 +408,37 @@ export default function InvoicesListPage() {
     });
   }
 
-  function handleSelectAll(e) {
-    if (e.target.checked) {
-      setSelectedIds(new Set(filteredInvoices.map((inv) => inv.id)));
-    } else {
-      setSelectedIds(new Set());
+  function selectRange(id) {
+    const ids = filteredInvoices.map((inv) => inv.id);
+    const end = ids.indexOf(id);
+    const anchor = selectionAnchorRef.current;
+    const start = anchor == null ? end : ids.indexOf(anchor);
+    if (start < 0 || end < 0) {
+      toggleSelection(id);
+      return;
     }
+    const from = Math.min(start, end);
+    const to = Math.max(start, end);
+    selectionAnchorRef.current = id;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (let i = from; i <= to; i += 1) next.add(ids[i]);
+      return next;
+    });
+  }
+
+  function handleRowClick(event, invoice) {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      toggleSelection(invoice.id);
+      return;
+    }
+    if (event.shiftKey) {
+      event.preventDefault();
+      selectRange(invoice.id);
+      return;
+    }
+    goView(invoice.id);
   }
 
   async function handleBulkDelete() {
@@ -910,13 +936,8 @@ export default function InvoicesListPage() {
               </colgroup>
               <thead>
                 <tr>
-                  <th className="qt-col-check inv-col-check">
-                    <input
-                      type="checkbox"
-                      className="qt-checkbox"
-                      onChange={handleSelectAll}
-                      checked={filteredInvoices.length > 0 && filteredInvoices.every((inv) => selectedIds.has(inv.id))}
-                    />
+                  <th className="qt-col-check qt-col-serial inv-col-check" title="Invoices in this list">
+                    {filteredInvoices.length}
                   </th>
                   <th className="inv-col-number">Number</th>
                   <th className="inv-col-customer">Customer</th>
@@ -929,12 +950,12 @@ export default function InvoicesListPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredInvoices.map((inv) => (
+                {filteredInvoices.map((inv, index) => (
                   <tr
                     key={inv.id}
-                    className="exp-desk-row-clickable"
+                    className={`exp-desk-row-clickable${selectedIds.has(inv.id) ? ' qt-row-selected' : ''}`}
                     tabIndex={0}
-                    onClick={() => goView(inv.id)}
+                    onClick={(event) => handleRowClick(event, inv)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
@@ -942,14 +963,7 @@ export default function InvoicesListPage() {
                       }
                     }}
                   >
-                    <td className="qt-col-check inv-col-check" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        className="qt-checkbox"
-                        checked={selectedIds.has(inv.id)}
-                        onChange={(e) => toggleSelection(inv.id, e)}
-                      />
-                    </td>
+                    <td className="qt-col-check qt-col-serial inv-col-check">{index + 1}</td>
                     <td className="inv-col-number">
                       <span className="inv-number-cell">
                         <span className="exp-desk-ref">{inv.invoice_number}</span>

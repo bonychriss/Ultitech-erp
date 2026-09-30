@@ -343,6 +343,7 @@ if (function_exists('erp_get_theme_toggle_script_html')) {
 <?php require __DIR__ . '/text-selection-copy-assets.php'; ?>
 <?php require_once __DIR__ . '/mobile_footer.php'; ?>
 
+<?php require __DIR__ . '/partials/ai_agent_alert.php'; ?>
 <!-- Floating Chatbot (React) -->
 <?php
 $chatbotUiCss = __DIR__ . '/../assets/chatbot-ui/dist/assets/chatbot-ui.css';

@@ -1042,6 +1042,10 @@ switch ($active_module) {
 }
 
 // Global Links — individual profile settings (not company billing my-account.php)
+$aiAgentHref = function_exists('company_url')
+    ? company_url('modules/ai-agent/index.php')
+    : ($prefix . 'modules/ai-agent/index.php');
+addItem($menuItems, 'ai-agent', 'AI Agent', 'robot', $aiAgentHref);
 $accountUrl = function_exists('user_profile_settings_url') ? user_profile_settings_url($prefix, $active_module ?? null) : ($prefix . 'employee/account.php');
 $personalizationIndexUrl = $prefix . 'employee/personalization/index.php?module=personalization';
 if ($active_module !== 'todo' && $active_module !== 'analytics') {

@@ -15,8 +15,11 @@ from agents.tool import FunctionToolResult
 from app.errors import AceError, Conflict, MissingConfig, NotFound
 from app.preferences import load_preferences, ollama_is_running
 from app.memory import MemoryStore, clear_conversation, turn_actions, use_conversation
+from app.erp import current_erp
+from app.quick import QUICK_HELP, TOOL_LOG_NAMES, route_ultitech
 from tools.registry import get_tools, is_consequential
 from tools.test_erp import money
+from tools.ultitech import ultitech_tools
 
 set_tracing_disabled(True)
 
@@ -29,6 +32,16 @@ Never invent shell commands or SQL. Never ask the user for an API key.
 Amounts are Tanzanian shillings. Record the number the user gave.
 Use search_web to search. Use open_application with only the application name.
 Call the needed tools immediately. Reply in one or two short sentences.
+""".strip()
+
+ERP_INSTRUCTIONS = """
+You are ACE inside Ultitech ERP. You can only see the signed-in company.
+Call a Ultitech tool before every answer.
+When asked how much customers owe, call ultitech_receivables_summary and stop. Do not add customer balances into a new total.
+When asked for a briefing, call ultitech_daily_briefing and stop.
+Do not change any amount the tool returns.
+Do not create, edit, delete, pay, or post invoices, vouchers, or accounting records.
+ultitech_prepare_follow_up only drafts a message. It is not sent.
 """.strip()
 
 APPROVE = {
@@ -77,13 +90,17 @@ def _tool_message(output) -> str:
 
 def build_agent() -> Agent:
     prefs = load_preferences()
+    erp = current_erp()
     settings = {
         "name": "ACE",
-        "instructions": INSTRUCTIONS,
+        "instructions": ERP_INSTRUCTIONS if erp is not None else INSTRUCTIONS,
         "model": prefs.model,
-        "tools": get_tools(),
+        "tools": ultitech_tools() if erp is not None else get_tools(),
     }
-    if prefs.provider == "local":
+    if erp is not None:
+        settings["model_settings"] = ModelSettings(temperature=0)
+        settings["tool_use_behavior"] = finish_after_tools
+    elif prefs.provider == "local":
         settings["model_settings"] = ModelSettings(temperature=0, max_tokens=120)
         settings["tool_use_behavior"] = finish_after_tools
     return Agent(**settings)
@@ -198,7 +215,10 @@ async def handle_chat(store: MemoryStore, message: str, conversation_id: str | N
 
     pending = store.get_open_pending(conversation_id) if conversation_id else None
     decision = classify_reply(text) if pending else None
-    ensure_model_ready()
+    route = route_ultitech(text) if current_erp() is not None else None
+    confirming = pending is not None and decision is not None and route is None
+    if current_erp() is None or confirming:
+        ensure_model_ready()
     if conversation_id is None:
         conversation_id = store.create_conversation()
 
@@ -207,7 +227,7 @@ async def handle_chat(store: MemoryStore, message: str, conversation_id: str | N
     if first_message:
         store.set_title(conversation_id, text)
 
-    if pending and decision is not None:
+    if confirming:
         return await apply_confirmation(store, conversation_id, pending["id"], pending["tool_name"], decision)
 
     if pending and decision is None:
@@ -220,7 +240,32 @@ async def handle_chat(store: MemoryStore, message: str, conversation_id: str | N
             "rejected",
         )
 
+    if route is not None:
+        return await run_quick_turn(store, conversation_id, route[0], route[1])
+    if current_erp() is not None:
+        store.add_message(conversation_id, "assistant", QUICK_HELP)
+        return _payload(conversation_id, QUICK_HELP, None, [])
+
     return await run_turn(store, conversation_id)
+
+
+async def run_quick_turn(store: MemoryStore, conversation_id: str, action: str, arguments: dict) -> dict:
+    from tools.registry import guarded
+    from tools.ultitech import call_ultitech
+
+    tokens = use_conversation(store, conversation_id)
+    try:
+        result = await guarded(
+            TOOL_LOG_NAMES[action],
+            arguments,
+            lambda: call_ultitech(action, **arguments),
+        )
+        message = _tool_message(result)
+        actions = turn_actions()
+    finally:
+        clear_conversation(tokens)
+    store.add_message(conversation_id, "assistant", message)
+    return _payload(conversation_id, message, None, actions)
 
 
 async def run_turn(store: MemoryStore, conversation_id: str) -> dict:

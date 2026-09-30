@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.agent import apply_confirmation, handle_chat
 from app.config import ROOT, get_settings
+from app.erp import ErpContextError, bind_erp, reset_erp
 from app.errors import AceError, Conflict, NotFound
 from app.memory import MemoryStore
 from app.models import (
@@ -64,7 +65,15 @@ def _with_elapsed(store: MemoryStore, payload: dict, started: float) -> dict:
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(body: ChatRequest):
     started = time.perf_counter()
-    payload = await handle_chat(app.state.store, body.message, body.conversation_id)
+    erp_token = None
+    try:
+        erp_token = bind_erp(body.erp_api_url, body.erp_token)
+    except ErpContextError as exc:
+        raise AceError(str(exc), 400) from exc
+    try:
+        payload = await handle_chat(app.state.store, body.message, body.conversation_id)
+    finally:
+        reset_erp(erp_token)
     return _with_elapsed(app.state.store, payload, started)
 
 

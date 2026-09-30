@@ -233,7 +233,7 @@ C:\xampp\mysql\bin\mysql.exe -u root -e "SELECT company_slug, db_name, db_host F
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
+| Symptom | Likely cause | Fix  |
 |---------|----------------|-----|
 | “Service unavailable” / DB connection error | Wrong `DB_NAME` or MySQL not running | Check XAMPP MySQL; confirm names in `env.local.php` |
 | Roadmaster tenant **FAIL** `Access denied for user 'roadmaster86'` | Production creds in `companies` table | Ensure `APP_ENV=development` and `DB_HOST=localhost` in `env.local.php` |

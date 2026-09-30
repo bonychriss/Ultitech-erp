@@ -56,9 +56,15 @@ if (!function_exists('tableExists')) {
         global $pdo, $control_pdo;
         $usePdo = $explicitPdo ?? ($pdo ?? $control_pdo);
         try {
+            $cacheKey = spl_object_id($usePdo) . "\0" . $tableName;
+            static $cache = [];
+            if (array_key_exists($cacheKey, $cache)) {
+                return $cache[$cacheKey];
+            }
             $stmt = $usePdo->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?");
             $stmt->execute([$tableName]);
-            return ((int) $stmt->fetchColumn()) > 0;
+            $cache[$cacheKey] = ((int) $stmt->fetchColumn()) > 0;
+            return $cache[$cacheKey];
         } catch (Throwable $e) {
             return false;
         }
@@ -71,9 +77,15 @@ if (!function_exists('columnExists')) {
         global $pdo, $control_pdo;
         $usePdo = $explicitPdo ?? ($pdo ?? $control_pdo);
         try {
+            $cacheKey = spl_object_id($usePdo) . "\0" . $tableName . "\0" . $columnName;
+            static $cache = [];
+            if (array_key_exists($cacheKey, $cache)) {
+                return $cache[$cacheKey];
+            }
             $stmt = $usePdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
             $stmt->execute([$tableName, $columnName]);
-            return ((int) $stmt->fetchColumn()) > 0;
+            $cache[$cacheKey] = ((int) $stmt->fetchColumn()) > 0;
+            return $cache[$cacheKey];
         } catch (Throwable $e) {
             return false;
         }
@@ -4314,6 +4326,12 @@ function ensureMultiCompanyControlSchema()
     static $ranThisRequest = false;
     if ($ranThisRequest && tableExists('companies', $usePdo) && tableExists('users', $usePdo)) {
         return true;
+    }
+
+    try {
+        $usePdo->exec('SET SESSION lock_wait_timeout = 3');
+        $usePdo->exec('SET SESSION innodb_lock_wait_timeout = 3');
+    } catch (Throwable $e) {
     }
 
     $ok = true;
@@ -16913,6 +16931,12 @@ function paginationUrlForPage(int $page): string
     return $qs !== '' ? '?' . $qs : '?page=' . $page;
 }
 
+function ultitechCoreSchemaFlagPath(): string
+{
+    $db = defined('DB_NAME') ? (string) DB_NAME : 'default';
+    return rtrim(sys_get_temp_dir(), '\\/') . DIRECTORY_SEPARATOR . 'ultitech-core-schema-' . md5($db) . '.flag';
+}
+
 function ensureCoreErpSchema()
 {
     global $control_pdo, $pdo;
@@ -16924,8 +16948,20 @@ function ensureCoreErpSchema()
     if (!($usePdo instanceof PDO)) {
         return;
     }
+    $stamp = (string) @filemtime(__FILE__);
+    $flag = ultitechCoreSchemaFlagPath();
+    if ($stamp !== '' && is_file($flag) && trim((string) @file_get_contents($flag)) === $stamp) {
+        $booted = true;
+        return;
+    }
+    try {
+        $usePdo->exec('SET SESSION lock_wait_timeout = 3');
+        $usePdo->exec('SET SESSION innodb_lock_wait_timeout = 3');
+    } catch (Throwable $e) {
+    }
+    $schemaOk = true;
     if (function_exists('ensureMultiCompanyControlSchema')) {
-        ensureMultiCompanyControlSchema();
+        $schemaOk = ensureMultiCompanyControlSchema() !== false;
     }
     if (function_exists('ensurePaymentVouchersCoreSchema')) {
         ensurePaymentVouchersCoreSchema($usePdo);
@@ -16937,6 +16973,9 @@ function ensureCoreErpSchema()
         ensureAttendanceClockModuleSchema();
     }
     $booted = true;
+    if ($schemaOk && $stamp !== '') {
+        @file_put_contents($flag, $stamp, LOCK_EX);
+    }
 }
 
 // Bootstrap critical tables once per request (login, headers, module pages).

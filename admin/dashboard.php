@@ -904,6 +904,7 @@ html[data-theme="dark"] body.dashboard .ed-sticky-top::before {
         <noscript>
             <div class="alert alert-warning">JavaScript is required to use the Admin Dashboard.</div>
         </noscript>
+        <?php require __DIR__ . '/../includes/partials/ai_agent_dashboard_card.php'; ?>
         <div id="root"></div>
     </main>
 

@@ -165,6 +165,7 @@ $GLOBALS['_erp_header_style_linked'] = false;
         <noscript>
             <div class="alert alert-warning">JavaScript is required to use the Dashboard.</div>
         </noscript>
+        <?php require __DIR__ . '/../includes/partials/ai_agent_dashboard_card.php'; ?>
         <div id="root"></div>
     </main>
 

@@ -1243,7 +1243,7 @@ a.wt-compare-row:hover,
 .wt-up-top li {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-height: 72px;
   padding: 10px 12px;
   border: 1px solid #e8edf3;
@@ -1251,15 +1251,46 @@ a.wt-compare-row:hover,
   background: #f8fafc;
 }
 
-.wt-up-top li span {
+.wt-up-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wt-up-rank {
   font-size: 0.72rem;
   font-weight: 700;
   color: #4c6ef5;
 }
 
+.wt-up-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: #e7eeff;
+  color: #3b5bdb;
+  object-fit: cover;
+}
+
 .wt-up-top li strong {
+  min-width: 0;
+  overflow: hidden;
   font-size: 0.92rem;
   color: #111827;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wt-up-top li em,
+.wt-up-top li small {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .wt-up-top li em {
@@ -1269,8 +1300,16 @@ a.wt-compare-row:hover,
   color: #1e293b;
 }
 
+.wt-up-top li em svg {
+  color: #4c6ef5;
+}
+
 .wt-up-top li small {
   font-size: 0.72rem;
+  color: #64748b;
+}
+
+.wt-up-top li small svg {
   color: #64748b;
 }
 

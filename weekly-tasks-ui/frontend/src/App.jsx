@@ -1121,10 +1121,34 @@ function UptimeBoard({ board, rows }) {
           <ol>
             {top.map((person, index) => (
               <li key={`${person.name}-${index}`}>
-                <span>{index + 1}</span>
-                <strong>{person.name}</strong>
-                <em>{person.hoursLabel}</em>
-                <small>{Number(person.days) || 0} {Number(person.days) === 1 ? 'day' : 'days'}</small>
+                <div className="wt-up-who">
+                  <span className="wt-up-rank">{index + 1}</span>
+                  {person.photo ? (
+                    <img className="wt-up-face" src={person.photo} alt="" />
+                  ) : (
+                    <span className="wt-up-face" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
+                        <circle cx="12" cy="8" r="3" />
+                        <path d="M6 19.5c.6-3 2.8-4.5 6-4.5s5.4 1.5 6 4.5" />
+                      </svg>
+                    </span>
+                  )}
+                  <strong>{person.name}</strong>
+                </div>
+                <em>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8" />
+                    <path d="M12 8v5l3 2" />
+                  </svg>
+                  {person.hoursLabel}
+                </em>
+                <small>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+                    <rect x="4" y="5" width="16" height="15" rx="2" />
+                    <path d="M8 3v4M16 3v4M4 10h16" />
+                  </svg>
+                  {Number(person.days) || 0} {Number(person.days) === 1 ? 'day' : 'days'}
+                </small>
               </li>
             ))}
           </ol>

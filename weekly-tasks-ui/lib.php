@@ -1886,9 +1886,13 @@ function weeklyTasksUiItLoad(PDO $pdo, array $offsets): array
         }
     }
     if (function_exists('tableExists') && tableExists('developer_suggestions', $pdo)) {
+        weeklyTasksUiEnsureSuggestionResolvedAt($pdo);
         try {
             $st = $pdo->prepare(
-                'SELECT suggestion, status, created_at FROM developer_suggestions WHERE created_at BETWEEN ? AND ?'
+                'SELECT s.suggestion, s.status, s.created_at, s.resolved_at, u.full_name
+                 FROM developer_suggestions s
+                 LEFT JOIN users u ON u.id = s.user_id
+                 WHERE s.created_at BETWEEN ? AND ?'
             );
             $st->execute([$start, $end]);
             foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -1896,6 +1900,8 @@ function weeklyTasksUiItLoad(PDO $pdo, array $offsets): array
                     'text' => trim((string) ($row['suggestion'] ?? '')),
                     'status' => (string) ($row['status'] ?? ''),
                     'createdAt' => (string) ($row['created_at'] ?? ''),
+                    'resolvedAt' => (string) ($row['resolved_at'] ?? ''),
+                    'author' => trim((string) ($row['full_name'] ?? '')),
                 ];
             }
         } catch (Throwable $e) {
@@ -2166,16 +2172,24 @@ function weeklyTasksUiUptimeBoard(PDO $pdo, array $offsets): array
     }
 
     $names = [];
+    $photos = [];
     try {
-        $nameRows = $pdo->query('SELECT id, full_name FROM users')->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        foreach ($nameRows as $row) {
-            $id = (int) ($row['id'] ?? 0);
-            $name = trim((string) ($row['full_name'] ?? ''));
-            if ($id > 0 && $name !== '') {
-                $names[$id] = $name;
-            }
-        }
+        $nameRows = $pdo->query('SELECT id, full_name, profile_photo FROM users')->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (Throwable $e) {
+        try {
+            $nameRows = $pdo->query('SELECT id, full_name FROM users')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e2) {
+            $nameRows = [];
+        }
+    }
+    foreach ($nameRows as $row) {
+        $id = (int) ($row['id'] ?? 0);
+        $name = trim((string) ($row['full_name'] ?? ''));
+        if ($id < 1 || $name === '') {
+            continue;
+        }
+        $names[$id] = $name;
+        $photos[$id] = trim((string) ($row['profile_photo'] ?? ''));
     }
 
     $ranked = [];
@@ -2187,8 +2201,14 @@ function weeklyTasksUiUptimeBoard(PDO $pdo, array $offsets): array
             $userMinutes += $got;
             $dayMinutes[$day] = (int) ($dayMinutes[$day] ?? 0) + $got;
         }
+        $personName = $names[(int) $userId] ?? 'User';
+        $photo = '';
+        if (!empty($photos[(int) $userId]) && function_exists('perf_user_avatar_url')) {
+            $photo = perf_user_avatar_url($photos[(int) $userId], $personName);
+        }
         $ranked[] = [
-            'name' => $names[(int) $userId] ?? 'User',
+            'name' => $personName,
+            'photo' => $photo,
             'minutes' => $userMinutes,
             'days' => count($days),
         ];
@@ -2204,6 +2224,7 @@ function weeklyTasksUiUptimeBoard(PDO $pdo, array $offsets): array
     foreach (array_slice($ranked, 0, 3) as $person) {
         $top[] = [
             'name' => $person['name'],
+            'photo' => (string) ($person['photo'] ?? ''),
             'minutes' => (int) $person['minutes'],
             'hoursLabel' => weeklyTasksUiHourLabel((int) $person['minutes']),
             'days' => (int) $person['days'],
@@ -2313,47 +2334,70 @@ function weeklyTasksUiUptimeBoard(PDO $pdo, array $offsets): array
  * @param array<string,mixed> $bundle
  * @return array{total:int,onTime:int,rows:array<int,array<string,mixed>>}
  */
+function weeklyTasksUiEnsureSuggestionResolvedAt(PDO $pdo): void
+{
+    if (!function_exists('tableExists') || !tableExists('developer_suggestions', $pdo)) {
+        return;
+    }
+    if (function_exists('columnExists') && columnExists('developer_suggestions', 'resolved_at', $pdo)) {
+        return;
+    }
+    try {
+        $pdo->exec('ALTER TABLE developer_suggestions ADD COLUMN resolved_at DATETIME NULL AFTER status');
+    } catch (Throwable $e) {
+    }
+}
+
 function weeklyTasksUiItSupportForUser(array $bundle, int $userId): array
 {
     $total = 0;
     $onTime = 0;
     $rows = [];
-    foreach ($bundle['tasks'] ?? [] as $task) {
-        if ((int) ($task['userId'] ?? 0) !== $userId) {
+    foreach ($bundle['suggestions'] ?? [] as $row) {
+        $text = trim((string) preg_replace('/\s+/', ' ', (string) ($row['text'] ?? '')));
+        if ($text === '') {
             continue;
         }
-        $text = (string) ($task['text'] ?? '');
-        if ($text === '' || !weeklyTasksUiItIsSupport($text)) {
-            continue;
-        }
-        $createdAt = (string) ($task['createdAt'] ?? '');
+        $status = strtolower(trim((string) ($row['status'] ?? 'pending')));
+        $createdAt = (string) ($row['createdAt'] ?? '');
         $created = $createdAt !== '' ? strtotime($createdAt) : false;
-        $completedAt = (string) ($task['completedAt'] ?? '');
-        $completed = $completedAt !== '' ? strtotime($completedAt) : false;
-        $done = !empty($task['done']);
-        if (!$done) {
-            if ($created && (time() - $created) < 86400) {
-                continue;
-            }
-            $within = false;
+        $resolvedAt = (string) ($row['resolvedAt'] ?? '');
+        $resolved = $resolvedAt !== '' ? strtotime($resolvedAt) : false;
+        $author = trim((string) ($row['author'] ?? ''));
+        $within = false;
+        $counts = false;
+        if ($status === 'accomplished' && $created && $resolved) {
+            $counts = true;
+            $within = ($resolved - $created) <= 86400;
+            $label = $within ? 'Within 24 hrs' : 'Late';
+        } elseif ($status === 'accomplished') {
+            $label = 'Done';
+        } elseif ($status === 'impossible') {
+            $counts = true;
+            $label = 'Not feasible';
+        } elseif ($created && (time() - $created) >= 86400) {
+            $counts = true;
+            $label = 'Still open';
         } else {
-            $within = $created && $completed && ($completed - $created) <= 86400;
+            $label = 'Pending';
         }
-        $total++;
-        if ($within) {
-            $onTime++;
+        if ($counts) {
+            $total++;
+            if ($within) {
+                $onTime++;
+            }
         }
         $day = $created ? date('Y-m-d', $created) : substr($createdAt, 0, 10);
         $rows[] = [
             'title' => $text,
             'date' => $day,
             'when' => $day !== '' ? date('j M Y', strtotime($day)) : '',
-            'status' => $within ? 'Within 24 hrs' : ($done ? 'Late' : 'Still open'),
-            'kicker' => 'IT issue',
+            'status' => $label,
+            'kicker' => $author !== '' ? $author : 'Suggest',
         ];
     }
 
-    return ['total' => $total, 'onTime' => $onTime, 'rows' => $rows];
+    return ['total' => $total, 'onTime' => $onTime, 'listed' => count($rows), 'rows' => $rows];
 }
 
 /**
@@ -2399,6 +2443,7 @@ function weeklyTasksUiItScores(PDO $pdo, array $offsets): array
             'supportPct' => $supportPct,
             'supportTotal' => (int) $support['total'],
             'supportOnTime' => (int) $support['onTime'],
+            'supportListed' => (int) ($support['listed'] ?? 0),
             'backupPct' => (int) $shared['backupPct'],
             'backupTotal' => (int) $shared['backupTotal'],
             'backupOk' => (int) $shared['backupOk'],
@@ -2422,6 +2467,7 @@ function weeklyTasksUiItItems(?array $it): array
     $down = (int) ($it['downDays'] ?? 0);
     $elapsed = (int) ($it['elapsed'] ?? 0);
     $supportTotal = (int) ($it['supportTotal'] ?? 0);
+    $supportListed = (int) ($it['supportListed'] ?? $supportTotal);
     $supportPct = (int) ($it['supportPct'] ?? 0);
     $backupTotal = (int) ($it['backupTotal'] ?? 0);
     $backupPct = (int) ($it['backupPct'] ?? 0);
@@ -2446,10 +2492,12 @@ function weeklyTasksUiItItems(?array $it): array
             'expected' => '95% within 24 hrs',
             'actual' => $supportTotal > 0
                 ? ($supportPct . '% · ' . (int) ($it['supportOnTime'] ?? 0) . ' of ' . $supportTotal)
-                : 'Not recorded',
+                : ($supportListed > 0
+                    ? ($supportListed === 1 ? '1 suggestion' : ($supportListed . ' suggestions'))
+                    : 'Not recorded'),
             'configured' => true,
             'met' => $supportTotal > 0 && $supportPct >= 95,
-            'note' => $supportTotal > 0 ? 'IT support: ' . $supportPct . ' of 95%' : 'IT support: Not recorded',
+            'note' => $supportTotal > 0 ? 'IT support: ' . $supportPct . ' of 95%' : ($supportListed > 0 ? 'IT support: ' . $supportListed . ' suggestions' : 'IT support: Not recorded'),
             'spoken' => $supportTotal > 0 ? 'IT support is ' . $supportPct . ' of 95%' : '',
         ],
         [
@@ -2964,6 +3012,7 @@ function weeklyTasksUiBuildPayload(): array
                     'supportPct' => 0,
                     'supportTotal' => 0,
                     'supportOnTime' => 0,
+                    'supportListed' => 0,
                     'backupPct' => 0,
                     'backupTotal' => 0,
                     'backupOk' => 0,
@@ -3099,7 +3148,7 @@ function weeklyTasksUiBuildPayload(): array
             $itMeasure = in_array($measureKey, ['system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy'], true);
             $itAbout = [
                 'system-uptime' => 'A day counts as down when a task or report says the system was down. Usage is the time people were signed in. The top three are the people with the most signed-in time.',
-                'it-support-response-resolution' => 'An IT issue is a support task on this person. Within 24 hrs means it was finished within a day of being logged. Issues still inside that day are left out.',
+                'it-support-response-resolution' => 'These are the requests sent from Suggest. Within 24 hrs means the request was marked done within a day of being sent. Requests still inside that day are listed, and left out of the percentage.',
                 'data-backup' => 'Each backup file saved this period. Successful means the file is not empty. The target is every backup successful, and at least one backup.',
                 'system-accuracy' => 'A system problem counts once. Recurred means the same problem was logged again. The target is 95% of problems happening only once.',
             ];

@@ -29,8 +29,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     // Suggestion Actions
     if ($_POST['action'] === 'update_suggestion' && isset($_POST['sug_id'])) {
         $sugId = intval($_POST['sug_id']);
-        $newStatus = $_POST['status']; // pending, accomplished, impossible
-        $stmt = $pdo->prepare("UPDATE developer_suggestions SET status = ? WHERE id = ?");
+        $newStatus = (string) ($_POST['status'] ?? '');
+        if (!in_array($newStatus, ['pending', 'accomplished', 'impossible'], true)) {
+            header("Location: system-status.php");
+            exit();
+        }
+        try {
+            if (!function_exists('columnExists') || !columnExists('developer_suggestions', 'resolved_at', $pdo)) {
+                $pdo->exec('ALTER TABLE developer_suggestions ADD COLUMN resolved_at DATETIME NULL AFTER status');
+            }
+        } catch (Throwable $e) {
+        }
+        if ($newStatus === 'pending') {
+            $stmt = $pdo->prepare('UPDATE developer_suggestions SET status = ?, resolved_at = NULL WHERE id = ?');
+        } else {
+            $stmt = $pdo->prepare('UPDATE developer_suggestions SET status = ?, resolved_at = IF(resolved_at IS NULL, NOW(), resolved_at) WHERE id = ?');
+        }
         $stmt->execute([$newStatus, $sugId]);
         header("Location: system-status.php");
         exit();

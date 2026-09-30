@@ -1646,6 +1646,23 @@
   max-width: 44rem;
 }
 
+.crm-market-form + .crm-market-form {
+  margin-top: 1.5rem;
+}
+
+.crm-market-form--card {
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+}
+
+.crm-market-status--card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+}
+
 .crm-market-settings-actions {
   display: flex;
   flex-wrap: wrap;

@@ -675,7 +675,7 @@ export default function CrmMarketPage() {
       await saveZenserpKey(zenserpKey);
       setZenserpKey('');
       setZenserpReady(true);
-      setMessage('Zenserp API key saved. Search again for companies on Google.');
+      setMessage('Zenserp API key saved.');
     } catch (err) {
       setError(err.message || 'Could not save the Zenserp API key.');
     } finally {
@@ -718,7 +718,9 @@ export default function CrmMarketPage() {
       });
     fetchMarketStatus()
       .then((data) => {
-        if (!cancelled) setStatus(data || {});
+        if (cancelled) return;
+        setStatus(data || {});
+        setZenserpReady(Boolean(data?.zenserp));
       })
       .catch(() => {});
     return () => {
@@ -1494,11 +1496,11 @@ export default function CrmMarketPage() {
             <p className="crm-market-eyebrow">CRM Market</p>
             <h1 className="crm-market-title">Settings</h1>
             <p className="crm-market-lead">
-              Choose Instagram Scraper or Local Business Search, then paste your RapidAPI key (or curl snippet).
+              Save the Zenserp key for Google company search, and the RapidAPI token for the other providers.
             </p>
           </div>
         </header>
-        <section className="crm-market-status" aria-live="polite">
+        <section className="crm-market-status crm-market-status--card" aria-live="polite">
           <div className={`crm-market-pill ${status.connected ? 'is-ok' : 'is-warn'}`}>
             {status.connected ? 'Database connected' : 'Setup needed'}
           </div>
@@ -1513,7 +1515,7 @@ export default function CrmMarketPage() {
             {error || message}
           </div>
         )}
-        <form className="crm-market-form" onSubmit={(e) => void onSaveSettings(e)}>
+        <form className="crm-market-form crm-market-form--card" onSubmit={(e) => void onSaveSettings(e)}>
           <label className="crm-market-field">
             <span>Search provider</span>
             <select
@@ -1583,6 +1585,27 @@ export default function CrmMarketPage() {
               disabled={setBusy || testBusy || (tokenStatus !== 'ok' && tokenStatus !== 'quota') || !setKey.trim()}
             >
               {setBusy ? 'Saving...' : 'Save token'}
+            </button>
+          </div>
+        </form>
+        <form className="crm-market-form crm-market-form--card" onSubmit={(event) => void saveZenserpFromSearch(event)}>
+          <label className="crm-market-field">
+            <span>Zenserp API key {zenserpReady ? '(saved)' : '(not set)'}</span>
+            <input
+              type="password"
+              className="crm-market-token-input"
+              value={zenserpKey}
+              onChange={(event) => setZenserpKey(event.target.value)}
+              placeholder={zenserpReady ? 'Paste a new key to replace the saved one' : 'Paste Zenserp API key'}
+              autoComplete="off"
+            />
+            <small className="crm-market-token-hint">
+              Used on Search. A word like mining returns companies from Google and their websites.
+            </small>
+          </label>
+          <div className="crm-market-settings-actions">
+            <button type="submit" className="crm-desk-btn crm-desk-btn-primary" disabled={zenserpSaving || !zenserpKey.trim()}>
+              {zenserpSaving ? 'Saving...' : 'Save Zenserp key'}
             </button>
           </div>
         </form>
@@ -1661,22 +1684,6 @@ export default function CrmMarketPage() {
             />
           </div>
         </form>
-
-        {zenserpReady === false ? (
-          <form className="crm-google-key crm-market-zenserp" onSubmit={(event) => void saveZenserpFromSearch(event)}>
-            <p>Paste a Zenserp API key once. Then a word like mining returns companies from Google and their websites.</p>
-            <input
-              type="password"
-              value={zenserpKey}
-              autoComplete="off"
-              placeholder="Zenserp API key"
-              onChange={(event) => setZenserpKey(event.target.value)}
-            />
-            <button type="submit" className="crm-desk-btn crm-desk-btn-primary" disabled={zenserpSaving || !zenserpKey.trim()}>
-              {zenserpSaving ? 'Saving…' : 'Save key'}
-            </button>
-          </form>
-        ) : null}
 
         {(message || (error && !quotaError)) && (
           <div className={`crm-market-flash ${error ? 'is-error' : 'is-ok'}`} role="status">

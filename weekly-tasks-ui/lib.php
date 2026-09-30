@@ -74,6 +74,9 @@ function weeklyTasksUiMonthUrl($monthOffset = 0, int $userId = 0, string $measur
     if ($measure !== '') {
         $query['measure'] = $measure;
     }
+    if ($userId < 1 && $measure === '' && (string) ($_GET['kpi'] ?? '') === 'hr') {
+        $query['kpi'] = 'hr';
+    }
 
     return $base . '?' . http_build_query($query);
 }
@@ -2859,6 +2862,120 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
     ];
 }
 
+function weeklyTasksUiKpiUrl(string $kpi = ''): string
+{
+    $base = function_exists('company_url')
+        ? company_url('weekly_tasks/ai_assistant.php')
+        : (function_exists('app_url') ? app_url('/weekly_tasks/ai_assistant.php') : '/weekly_tasks/ai_assistant.php');
+    $query = ['module' => 'tasks'];
+    if ($kpi !== '') {
+        $query['kpi'] = $kpi;
+    }
+
+    return $base . '?' . http_build_query($query);
+}
+
+/**
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiKpiCatalog(): array
+{
+    $card = static function (string $id, string $label, string $desc, array $lines): array {
+        return [
+            'id' => $id,
+            'label' => $label,
+            'desc' => $desc,
+            'href' => weeklyTasksUiKpiUrl($id),
+            'lines' => $lines,
+        ];
+    };
+    $line = static function (string $name, string $measure, string $target, string $weight): array {
+        return ['name' => $name, 'measure' => $measure, 'target' => $target, 'weight' => $weight];
+    };
+
+    return [
+        $card('hr', 'HR performance', 'Team scores for the month', []),
+        $card('sales', 'Sales KPIs', 'Revenue, customers, quotations, collections, visits and delivery', [
+            $line('Monthly Sales Revenue', 'Monthly sales achieved vs target', '100% of target', '40%'),
+            $line('New Customers', 'Number of new customers', '10 a month', '15%'),
+            $line('Quotation Conversion', 'Won quotations divided by submitted', '30% or better', '15%'),
+            $line('Collections', 'Outstanding invoices collected', '95% or better', '10%'),
+            $line('Customer Visits', 'Physical or online visits', '20 a month', '15%'),
+            $line('Goods delivery', 'Deliver goods earlier', 'Within 2 days', '5%'),
+        ]),
+        $card('inventory', 'Inventory KPIs', 'Stock accuracy, picking, counts and availability', [
+            $line('Stock Accuracy', 'Physical stock vs system records', '98%', '30%'),
+            $line('Picking Accuracy', 'Orders picked without the wrong item, colour, quantity or size', '99%', '25%'),
+            $line('Inventory Count', 'Monthly and weekly stock counts completed accurately', '100%', '25%'),
+            $line('Stock Availability', 'Customer orders fulfilled without a stock-out', '98%', '20%'),
+        ]),
+        $card('procurement', 'Procurement KPIs', 'Lead time, suppliers, savings and purchase orders', [
+            $line('Lead Time', 'Average purchase lead time', '3 days or less', '20%'),
+            $line('Supplier Performance', 'On-time supplier delivery', '95% or better', '15%'),
+            $line('Cost Saving', 'Savings from negotiation', '90% or better', '40%'),
+            $line('Stock Availability', 'No stock-outs', '90%', '20%'),
+            $line('Purchase Order Accuracy', 'Pricing, specification and document errors', '100%', '5%'),
+        ]),
+        $card('finance', 'Finance KPIs', 'Invoice accuracy, reports and receivables', [
+            $line('Invoice Accuracy', 'Error-free invoices', '100%', '30%'),
+            $line('Timely Reports', 'Monthly reports and returns', 'By the 5th', '30%'),
+            $line('Receivables', 'Collection performance', '95%', '40%'),
+        ]),
+        $card('it', 'IT KPIs', 'Uptime, support, backup and system accuracy', [
+            $line('System Uptime', 'Availability', '99%', '30%'),
+            $line('IT Support Response & Resolution', 'Issues resolved within 24 hours', '95%', '20%'),
+            $line('Data Backup', 'Successful backups', '100%', '20%'),
+            $line('System Accuracy', 'Problems that do not happen again', '95%', '30%'),
+        ]),
+        $card('drivers', 'Driver KPIs', 'On-time delivery, vehicle care and documents', [
+            $line('On-time Delivery', 'Deliveries completed on or before the agreed time', '95%', '40%'),
+            $line('Vehicle Care', 'Scheduled maintenance and daily inspections', '100%', '30%'),
+            $line('Documentation', 'Delivery documents completed and returned on time', '100%', '30%'),
+        ]),
+    ];
+}
+
+/**
+ * @return array<string,mixed>
+ */
+function weeklyTasksUiKpiScreen(string $kpi): array
+{
+    $catalog = weeklyTasksUiKpiCatalog();
+    if ($kpi === '') {
+        $cards = [];
+        foreach ($catalog as $item) {
+            $cards[] = [
+                'id' => $item['id'],
+                'label' => $item['label'],
+                'desc' => $item['desc'],
+                'href' => $item['href'],
+            ];
+        }
+
+        return [
+            'hub' => $cards,
+            'detail' => null,
+            'measure' => null,
+            'detailMissing' => false,
+        ];
+    }
+    foreach ($catalog as $item) {
+        if ($item['id'] !== $kpi || $kpi === 'hr') {
+            continue;
+        }
+
+        return [
+            'catalog' => $item,
+            'hubUrl' => weeklyTasksUiKpiUrl(),
+            'detail' => null,
+            'measure' => null,
+            'detailMissing' => false,
+        ];
+    }
+
+    return weeklyTasksUiKpiScreen('');
+}
+
 /**
  * @return array<string,mixed>
  */
@@ -2872,6 +2989,11 @@ function weeklyTasksUiBuildPayload(): array
     global $pdo;
     $viewerId = isset($viewerId) ? (int) $viewerId : (int) ($_SESSION['user_id'] ?? 0);
     $selectedId = isset($_GET['user']) ? (int) $_GET['user'] : 0;
+    $kpi = isset($_GET['kpi']) ? (string) preg_replace('/[^a-z]/', '', strtolower((string) $_GET['kpi'])) : '';
+    $measureAsked = isset($_GET['measure']) ? (string) preg_replace('/[^a-z0-9\-]/', '', strtolower((string) $_GET['measure'])) : '';
+    if ($selectedId < 1 && $measureAsked === '' && $kpi !== 'hr') {
+        return weeklyTasksUiKpiScreen($kpi);
+    }
     $offsets = weeklyTasksUiSelectedOffsets();
     $monthOffset = $offsets[0];
     $weekCount = 0;
@@ -3252,5 +3374,6 @@ function weeklyTasksUiBuildPayload(): array
         'detail' => $detail,
         'detailMissing' => $selectedId > 0 && $detail === null,
         'measure' => $measureView,
+        'hubUrl' => weeklyTasksUiKpiUrl(),
     ];
 }

@@ -2695,6 +2695,7 @@ function weeklyTasksUiBuildPayload(): array
     }
 
     $salesLines = [];
+    $itLines = [];
     if (is_array($detail)) {
         $detail['backUrl'] = weeklyTasksUiMonthUrl($offsets);
         $measureNames = [
@@ -2839,7 +2840,7 @@ function weeklyTasksUiBuildPayload(): array
                     'score' => '',
                     'note' => '',
                     'text' => 'Days from the order date to the delivery date. On time means within 2 days. Late means it took longer.',
-                ] : null)),
+                ] : null))),
             ];
         }
     }

@@ -329,7 +329,7 @@ function SalesMeasureCards({ items }) {
               <RecordIcon kind="sales" />
             </span>
             <div className="wt-nc-body">
-              <p className="wt-nc-kicker">Sales</p>
+              <p className="wt-nc-kicker">{item.group || 'Sales'}</p>
               <div className="wt-nc-title-row">
                 <h3 className="wt-nc-title">{item.name}</h3>
                 <em className={`wt-status wt-status--${status.key}`}>{status.label}</em>
@@ -1077,7 +1077,7 @@ function MeasurePage({ month, measure }) {
         ) : (
           <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
         )
-      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'].includes(measure.key) ? (
+      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy'].includes(measure.key) ? (
         <RecordCards
           rows={rows}
           onOpen={openDocument}
@@ -1089,6 +1089,10 @@ function MeasurePage({ month, measure }) {
             collections: 'Collection',
             'customer-visits': 'Visit',
             'goods-delivery': 'Delivery',
+            'system-uptime': 'Uptime',
+            'it-support-response-resolution': 'Support',
+            'data-backup': 'Backup',
+            'system-accuracy': 'Accuracy',
           }[measure.key] || 'To-do'}
           kind={
             measure.key === 'attendance' ? 'attendance'

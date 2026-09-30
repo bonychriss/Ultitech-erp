@@ -126,8 +126,13 @@ function crmZenserpRequest(PDO $pdo, array $query): array
     if ($key === '') {
         return ['ok' => false, 'payload' => null, 'error' => 'Add a Zenserp API key to search Google for customers.'];
     }
-    $query['engine'] = 'google';
-    unset($query['search_engine']);
+    unset($query['engine']);
+    $query['search_engine'] = 'google.com';
+    $q = trim((string) ($query['q'] ?? ''));
+    if ($q === '') {
+        return ['ok' => false, 'payload' => null, 'error' => 'Enter a search term.'];
+    }
+    $query['q'] = $q;
     $url = 'https://app.zenserp.com/api/v2/search?' . http_build_query($query);
     $ch = curl_init($url);
     if ($ch === false) {
@@ -234,13 +239,18 @@ function crmZenserpMarketSearch(PDO $pdo, string $keyword, string $location): ar
         'gl' => $place['gl'],
         'hl' => 'en',
         'num' => 20,
-        'tbm' => 'map',
+        'tbm' => 'lcl',
     ];
     if ($place['location'] !== '') {
         $params['location'] = $place['location'];
     }
     $found = crmZenserpRequest($pdo, $params);
     $collected = ($found['ok'] && is_array($found['payload'])) ? crmZenserpLocalRows($found['payload']) : [];
+    if ($collected === [] && preg_match('/no query|tbm|search engine/i', (string) $found['error'])) {
+        unset($params['tbm']);
+        $found = crmZenserpRequest($pdo, $params);
+        $collected = ($found['ok'] && is_array($found['payload'])) ? crmZenserpLocalRows($found['payload']) : [];
+    }
     if ($collected === [] && $place['location'] !== '') {
         unset($params['location']);
         $found = crmZenserpRequest($pdo, $params);

@@ -170,6 +170,9 @@ try {
         case 'market_suggest':
             $q = trim((string) ($_GET['q'] ?? ($jsonBody['q'] ?? '')));
             $location = trim((string) ($_GET['location'] ?? ($jsonBody['location'] ?? 'Tanzania')));
+            if (crmMarketActiveSearch($pdo) !== 'rapid') {
+                crmDeskJsonResponse(true, ['suggestions' => []]);
+            }
             $data = crmMarketRapidAutocomplete($q, $location);
             if (!$data['ok']) {
                 crmDeskJsonResponse(false, ['suggestions' => []], $data['error'] !== '' ? $data['error'] : 'Autocomplete failed.', 400);

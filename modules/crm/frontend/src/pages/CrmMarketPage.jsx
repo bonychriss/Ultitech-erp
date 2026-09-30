@@ -381,12 +381,13 @@ const COUNTRIES = [
 function extractZenserpKeyFromPaste(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
-  const header = raw.match(/apikey\s*[:=]\s*['"]?([A-Za-z0-9._\-]+)/i);
-  if (header?.[1]) return header[1].trim();
+  const header = raw.match(/apikey\s*[:=]\s*['"]?(\S+)/i);
+  if (header?.[1]) return header[1].replace(/["',;]+$/g, '');
   const uuid = raw.match(/\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i);
   if (uuid?.[1]) return uuid[1];
-  const token = raw.match(/\b([A-Za-z0-9_\-]{16,})\b/);
-  if (token?.[1]) return token[1];
+  if (!/\s/.test(raw)) return raw.replace(/^['"]|['"]$/g, '');
+  const tokens = raw.match(/[A-Za-z0-9_-]{20,}/g) || [];
+  if (tokens.length) return tokens.sort((a, b) => b.length - a.length)[0];
   return raw.replace(/\s+/g, '');
 }
 
@@ -887,11 +888,18 @@ export default function CrmMarketPage() {
     setMessage('');
     try {
       const data = await runMarketSearch(searchQ, searchLocation);
-      setSearchRows(Array.isArray(data.results) ? data.results : []);
+      const source = String(data?.searchSource || '');
+      const rows = (Array.isArray(data.results) ? data.results : []).filter((row) => {
+        if (source === 'rapid') return true;
+        const type = String(row?.type || '');
+        const site = String(row?.website || '');
+        return !/^instagram/i.test(type) && !/instagram\.com/i.test(site);
+      });
+      setSearchRows(rows);
       const sales = Number(data.sales_count || 0);
       const imported = Number(data.imported || 0);
       setMessage(
-        `Found ${Array.isArray(data.results) ? data.results.length : 0} companies, saved to the database` +
+        `Found ${rows.length} companies, saved to the database` +
           (sales ? `, split across ${sales} sales ${sales === 1 ? 'person' : 'people'}` : '') +
           (imported
             ? `, sent ${imported} to Prospects for each assignee`
@@ -904,9 +912,7 @@ export default function CrmMarketPage() {
     } catch (err) {
       const text = err.message || 'Search failed.';
       setError(text);
-      if (isSearchQuotaError(text)) {
-        setSearchRows([]);
-      }
+      setSearchRows([]);
     } finally {
       setSearchBusy(false);
     }

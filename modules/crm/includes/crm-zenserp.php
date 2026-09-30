@@ -53,14 +53,20 @@ function crmZenserpNormalizeApiKey(string $raw): string
     if ($raw === '') {
         return '';
     }
-    if (preg_match('/apikey\s*[:=]\s*["\']?([A-Za-z0-9._\-]+)/i', $raw, $match)) {
-        return $match[1];
+    if (preg_match('/apikey\s*[:=]\s*["\']?([^\s"\']+)/i', $raw, $match)) {
+        return trim($match[1], "\"'` ,;");
     }
     if (preg_match('/\b([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\b/', $raw, $match)) {
         return $match[1];
     }
-    if (preg_match('/\b([A-Za-z0-9_\-]{16,})\b/', $raw, $match)) {
-        return $match[1];
+    if (!preg_match('/\s/', $raw)) {
+        return trim($raw, "\"'`");
+    }
+    if (preg_match_all('/[A-Za-z0-9_\-]{20,}/', $raw, $all) && $all[0] !== []) {
+        usort($all[0], static function (string $a, string $b): int {
+            return strlen($b) <=> strlen($a);
+        });
+        return $all[0][0];
     }
     $compact = preg_replace('/\s+/', '', $raw);
     return is_string($compact) ? $compact : '';
@@ -112,8 +118,7 @@ function crmZenserpRequest(PDO $pdo, array $query): array
         return ['ok' => false, 'payload' => null, 'error' => 'Google search returned an unexpected response.'];
     }
     if ($code === 401 || $code === 403) {
-        $message = trim((string) ($payload['error'] ?? $payload['message'] ?? ''));
-        return ['ok' => false, 'payload' => null, 'error' => $message !== '' ? $message : 'Zenserp rejected the API key.'];
+        return ['ok' => false, 'payload' => null, 'error' => 'Zenserp rejected the API key. In Settings, paste the key from the Zenserp dashboard and save it again.'];
     }
     if ($code < 200 || $code >= 300) {
         $message = trim((string) ($payload['error'] ?? $payload['message'] ?? ''));

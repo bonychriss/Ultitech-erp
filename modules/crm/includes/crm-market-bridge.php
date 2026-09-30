@@ -1866,6 +1866,19 @@ function crmMarketRunSearch(string $q, string $location, ?PDO $erpPdo = null, in
     if (!$found['ok']) {
         throw new InvalidArgumentException($found['error'] !== '' ? $found['error'] : 'Search failed.');
     }
+    if ($source !== 'rapid') {
+        $found['rows'] = array_values(array_filter(
+            $found['rows'],
+            static function (array $row): bool {
+                $type = strtolower((string) ($row['type'] ?? ''));
+                $site = strtolower((string) ($row['website'] ?? ''));
+                if (str_starts_with($type, 'instagram')) {
+                    return false;
+                }
+                return !str_contains($site, 'instagram.com');
+            }
+        ));
+    }
     $inserted = 0;
     $skipped = 0;
     $importedCreated = 0;
@@ -1915,6 +1928,7 @@ function crmMarketRunSearch(string $q, string $location, ?PDO $erpPdo = null, in
         'sales_count' => count($salesUsers),
         'imported' => $importedCreated,
         'import_skipped' => $importedSkipped,
+        'searchSource' => $source,
     ];
 }
 

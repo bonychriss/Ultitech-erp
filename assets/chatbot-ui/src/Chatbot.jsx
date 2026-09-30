@@ -3,7 +3,7 @@ import { localSearch } from './guides';
 import { createCallController } from './callRtc';
 import CallDashboard from './CallDashboard';
 
-const STORAGE_KEY_DESKTOP = 'chatbot_pos_v3';
+const STORAGE_KEY_DESKTOP = 'chatbot_pos_v5';
 const STORAGE_KEY_MOBILE = 'chatbot_pos_mobile_v3';
 const DRAG_THRESHOLD = 6;
 const FAB_SIZE = 48;
@@ -28,10 +28,11 @@ function mobileBottomClearance() {
 
 function clampPos(x, y) {
   const maxX = Math.max(0, window.innerWidth - FAB_SIZE);
-  const maxY = Math.max(0, window.innerHeight - FAB_SIZE - (isMobileViewport() ? mobileBottomClearance() - 20 : 0));
+  const bottomGap = isMobileViewport() ? mobileBottomClearance() - 20 : 8;
+  const maxY = Math.max(0, window.innerHeight - bottomGap - 28);
   return {
     x: clamp(x, 0, maxX),
-    y: clamp(y, 0, Math.max(0, maxY)),
+    y: clamp(y, 0, maxY),
   };
 }
 
@@ -48,17 +49,31 @@ function secureUltimateLoginUrl() {
 
 function sidebarBox() {
   if (typeof document === 'undefined') return null;
-  const el = document.querySelector('.sidebar-container');
+  const el = document.querySelector('#native-sidebar, .sidebar-container');
   if (!el) return null;
   const box = el.getBoundingClientRect();
   if (box.width < 64 || box.width > 420) return null;
   return box;
 }
 
+function logoutAnchor() {
+  if (typeof document === 'undefined') return null;
+  const el = document.querySelector('.sidebar-logout-footer a');
+  if (!el) return null;
+  const box = el.getBoundingClientRect();
+  if (box.height < 8 || box.width < 8) return null;
+  return box;
+}
+
 function defaultPos() {
   const box = sidebarBox();
   if (box && !isMobileViewport()) {
-    return clampPos(box.right + 16, window.innerHeight - FAB_SIZE - 20);
+    const logout = logoutAnchor();
+    const bottom = Math.min(box.bottom, window.innerHeight);
+    // Under the Logout label, on the bottom edge of the sidebar.
+    let y = bottom - 36;
+    if (logout) y = Math.max(y, logout.bottom + 2);
+    return clampPos(box.right - FAB_SIZE / 2, y);
   }
   return clampPos(16, window.innerHeight - FAB_SIZE - mobileBottomClearance());
 }
@@ -66,7 +81,8 @@ function defaultPos() {
 function coversSidebarLabels(x) {
   const box = sidebarBox();
   if (!box || isMobileViewport()) return x < 96;
-  return x < box.right + 8;
+  // Resting on the sidebar edge is the start spot. Only move it when it covers the menu text.
+  return x < box.right - FAB_SIZE;
 }
 
 function isLegacyBottomRight(x, y) {
@@ -90,7 +106,6 @@ function readSavedPos() {
     if (isMobileViewport() && (x > window.innerWidth || y > window.innerHeight)) {
       return null;
     }
-    // Old spots sat on the menu labels or the sidebar edge. Park it in the page gutter.
     if (isLegacyBottomRight(next.x, next.y) || coversSidebarLabels(next.x)) return null;
     return next;
   } catch {

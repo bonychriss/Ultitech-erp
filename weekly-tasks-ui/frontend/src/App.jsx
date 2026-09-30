@@ -947,9 +947,9 @@ function AttendanceCards({ board }) {
               <span className="wt-att-kpi-head">
                 <span className="wt-att-ico"><AttIcon name={card.icon} /></span>
                 <strong>{card.label}</strong>
+                <b>{Number(byKey[card.key]?.count) || 0}</b>
               </span>
               <span className="wt-att-kpi-hint">{card.hint}</span>
-              <b>{Number(byKey[card.key]?.count) || 0}</b>
             </button>
           )
         })}

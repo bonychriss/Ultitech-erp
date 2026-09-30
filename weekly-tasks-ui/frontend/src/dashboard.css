@@ -1116,7 +1116,7 @@ a.wt-compare-row:hover,
 
 .wt-att-kpi-card {
   margin-top: 12px;
-  padding: 10px;
+  padding: 8px;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
@@ -1132,11 +1132,11 @@ a.wt-compare-row:hover,
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 2px;
   width: 100%;
   min-height: 0;
   margin: 0;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid transparent;
   border-radius: 12px !important;
   background: transparent;
@@ -1153,31 +1153,43 @@ a.wt-compare-row:hover,
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
   min-width: 0;
 }
 
+.wt-att-kpi-head b {
+  margin-left: auto;
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1;
+  color: #111827;
+}
+
 .wt-att-kpi-btn .wt-att-ico {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
+}
+
+.wt-att-kpi-btn .wt-att-ico svg {
+  width: 14px;
+  height: 14px;
 }
 
 .wt-att-kpi-head strong {
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 650;
+  line-height: 1.1;
   color: #111827;
 }
 
 .wt-att-kpi-hint {
-  font-size: 0.72rem;
-  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.68rem;
+  line-height: 1.15;
   color: #64748b;
-}
-
-.wt-att-kpi-btn > b {
-  font-size: 1.2rem;
-  font-weight: 650;
-  line-height: 1;
-  color: #111827;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .wt-att-kpi-details {

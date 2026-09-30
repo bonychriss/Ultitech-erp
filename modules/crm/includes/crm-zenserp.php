@@ -213,9 +213,6 @@ function crmZenserpMarketSearch(PDO $pdo, string $keyword, string $location): ar
         return ['ok' => false, 'rows' => [], 'error' => 'Enter a search term.'];
     }
     $q = $keyword;
-    if (!preg_match('/\bcompan/i', $q)) {
-        $q .= ' companies';
-    }
     if (stripos($q, $location) === false) {
         $q .= ' in ' . $location;
     }
@@ -236,36 +233,27 @@ function crmZenserpMarketSearch(PDO $pdo, string $keyword, string $location): ar
         'q' => $q,
         'gl' => $place['gl'],
         'hl' => 'en',
-        'num' => 10,
+        'num' => 20,
+        'tbm' => 'map',
     ];
     if ($place['location'] !== '') {
         $params['location'] = $place['location'];
     }
-    $localParams = $params;
-    $localParams['tbm'] = 'lcl';
-    $local = crmZenserpRequest($pdo, $localParams);
-    if (!$local['ok'] && $place['location'] !== '') {
-        unset($localParams['location']);
-        $local = crmZenserpRequest($pdo, $localParams);
-    }
     $found = crmZenserpRequest($pdo, $params);
-    if (!$found['ok'] && $place['location'] !== '') {
+    $collected = ($found['ok'] && is_array($found['payload'])) ? crmZenserpLocalRows($found['payload']) : [];
+    if ($collected === [] && $place['location'] !== '') {
         unset($params['location']);
         $found = crmZenserpRequest($pdo, $params);
+        $collected = ($found['ok'] && is_array($found['payload'])) ? crmZenserpLocalRows($found['payload']) : [];
     }
-    if ((!$local['ok'] || !is_array($local['payload'])) && (!$found['ok'] || !is_array($found['payload']))) {
-        $error = $found['error'] !== '' ? $found['error'] : $local['error'];
-        return ['ok' => false, 'rows' => [], 'error' => $error !== '' ? $error : 'Google search failed.'];
+    if (!$found['ok'] || !is_array($found['payload'])) {
+        return ['ok' => false, 'rows' => [], 'error' => $found['error'] !== '' ? $found['error'] : 'Google search failed.'];
+    }
+    if ($collected === []) {
+        return ['ok' => false, 'rows' => [], 'error' => 'No businesses with a website or phone were found.'];
     }
 
     $label = ucfirst($keyword);
-    $collected = [];
-    if ($local['ok'] && is_array($local['payload'])) {
-        $collected = crmZenserpLocalRows($local['payload']);
-    }
-    if ($found['ok'] && is_array($found['payload']) && count($collected) < 8) {
-        $collected = array_merge($collected, crmZenserpOrganicRows($found['payload'], $label));
-    }
 
     $rows = [];
     $seen = [];
@@ -302,7 +290,7 @@ function crmZenserpMarketSearch(PDO $pdo, string $keyword, string $location): ar
 function crmZenserpLocalRows(array $payload): array
 {
     $lists = [];
-    foreach (['local_results', 'local_pack', 'places', 'maps_results', 'maps'] as $key) {
+    foreach (['map_results', 'local_results', 'local_pack', 'places', 'maps_results', 'maps'] as $key) {
         if (!isset($payload[$key]) || !is_array($payload[$key])) {
             continue;
         }
@@ -324,15 +312,22 @@ function crmZenserpLocalRows(array $payload): array
             if ($name === '') {
                 continue;
             }
-            $url = trim((string) ($item['url'] ?? $item['website'] ?? $item['link'] ?? ''));
+            $url = trim((string) ($item['website'] ?? $item['url'] ?? $item['link'] ?? ''));
+            if (is_array($item['links'] ?? null)) {
+                $url = trim((string) ($item['links']['website'] ?? $url));
+            }
             if ($url !== '' && crmZenserpSkipUrl($url)) {
-                continue;
+                $url = '';
             }
             $address = trim((string) ($item['address'] ?? $item['snippet'] ?? ''));
+            $phone = trim((string) ($item['phone'] ?? $item['phone_number'] ?? $item['phoneNumber'] ?? ''));
+            if ($phone === '' && $url === '') {
+                continue;
+            }
             $out[] = [
-                'id' => 'zs-' . substr(sha1($url !== '' ? $url : $name), 0, 16),
+                'id' => 'zs-' . substr(sha1($url !== '' ? $url : ($name . '|' . $phone)), 0, 16),
                 'name' => $name,
-                'phone' => trim((string) ($item['phone'] ?? $item['phone_number'] ?? $item['phoneNumber'] ?? '')),
+                'phone' => $phone,
                 'address' => $address,
                 'website' => $url,
                 'email' => trim((string) ($item['email'] ?? '')),
@@ -365,7 +360,7 @@ function crmZenserpOrganicRows(array $payload, string $label = ''): array
         if ($url === '' || $title === '' || crmZenserpSkipUrl($url) || crmZenserpSkipTitle($title)) {
             continue;
         }
-        $name = trim((string) preg_replace('/\s+[\|\-–—:].*$/u', '', $title));
+        $name = trim((string) preg_replace('/\s+[\|\-??:].*$/u', '', $title));
         if ($name === '') {
             $name = $title;
         }

@@ -223,7 +223,7 @@ function StarRow({ score }) {
   )
 }
 
-function MonthSelect({ month }) {
+function MonthSelect({ month, boxed = false }) {
   const options = Array.isArray(month.options) ? month.options : []
   const selected = Array.isArray(month.selected) && month.selected.length
     ? month.selected.map(String)
@@ -269,10 +269,26 @@ function MonthSelect({ month }) {
   }
 
   return (
-    <div className="wt-month" ref={boxRef}>
-      <span>Month</span>
+    <div className={boxed ? 'wt-month wt-month--boxed' : 'wt-month'} ref={boxRef}>
+      {boxed ? null : <span>Month</span>}
       <button type="button" className="wt-month-btn" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        {summary}
+        {boxed ? (
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+            <rect x="4" y="5" width="16" height="15" rx="2" />
+            <path d="M8 3v4M16 3v4M4 10h16" />
+          </svg>
+        ) : null}
+        {boxed ? (
+          <span className="wt-month-copy">
+            <small>Month</small>
+            <strong>{summary}</strong>
+          </span>
+        ) : summary}
+        {boxed ? (
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        ) : null}
       </button>
       {open ? (
         <div className="wt-month-panel">
@@ -796,25 +812,127 @@ function AboutNote({ about }) {
   )
 }
 
+function AttIcon({ name }) {
+  const common = { viewBox: '0 0 24 24', width: 18, height: 18, fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, 'aria-hidden': true }
+  if (name === 'early') {
+    return (
+      <svg {...common}>
+        <rect x="4" y="5" width="16" height="15" rx="2" />
+        <path d="M8 3v4M16 3v4M4 10h16M9 15l2 2 4-4" />
+      </svg>
+    )
+  }
+  if (name === 'late') {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v5l3 2" />
+      </svg>
+    )
+  }
+  if (name === 'pending') {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8" />
+        <path d="M9 9l6 6M15 9l-6 6" />
+      </svg>
+    )
+  }
+  if (name === 'clock') {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v5l3 2" />
+      </svg>
+    )
+  }
+  return (
+    <svg {...common}>
+      <path d="M10 7H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8" />
+      <path d="M10 17h8a2 2 0 0 0 2-2V7" />
+      <path d="M15 12H8m0 0 2.5-2.5M8 12l2.5 2.5" />
+    </svg>
+  )
+}
+
 function AttendanceBoard({ board }) {
   const chart = Array.isArray(board?.chart) ? board.chart : []
   const stats = Array.isArray(board?.stats) ? board.stats : []
+  const byKey = Object.fromEntries(stats.map((stat) => [stat.key, stat]))
+  const cards = [
+    { key: 'early', label: 'Came early', hint: 'Arrived before start time', icon: 'early' },
+    { key: 'late', label: 'Came late', hint: 'Arrived after start time', icon: 'late' },
+    { key: 'pending', label: 'Pending task', hint: 'Tasks not yet completed', icon: 'pending' },
+  ]
+  const details = []
+  ;(byKey.signout?.items || []).forEach((item, index) => {
+    details.push({
+      key: `signout-${index}`,
+      tone: 'signout',
+      icon: 'signout',
+      label: 'Forgot to sign out',
+      hint: 'Did not sign out at the end of the day',
+      when: item.when || '',
+    })
+  })
+  ;(byKey.pending?.items || []).forEach((item, index) => {
+    details.push({
+      key: `pending-${index}`,
+      tone: 'pending',
+      icon: 'clock',
+      label: 'Pending task',
+      hint: item.title || 'Tasks not yet completed',
+      when: item.when || '',
+    })
+  })
+  ;(byKey.early?.items || []).forEach((item, index) => {
+    details.push({
+      key: `early-${index}`,
+      tone: 'early',
+      icon: 'early',
+      label: 'Came early',
+      hint: 'Arrived before start time',
+      when: item.when || '',
+    })
+  })
+  ;(byKey.late?.items || []).forEach((item, index) => {
+    details.push({
+      key: `late-${index}`,
+      tone: 'late',
+      icon: 'late',
+      label: 'Came late',
+      hint: 'Arrived after start time',
+      when: item.when || '',
+    })
+  })
   const scale = 5
   const width = 360
-  const height = 112
+  const height = 150
   const left = 26
   const right = 8
-  const top = 12
+  const top = 16
   const bottom = 28
   const plotW = width - left - right
   const plotH = height - top - bottom
   const slot = chart.length ? plotW / chart.length : plotW
-  const barW = Math.min(22, slot * 0.42)
+  const barW = Math.min(36, slot * 0.5)
   if (!chart.length && !stats.length) return null
   return (
     <div className="wt-att">
       <section className="wt-att-chart" aria-label="Attendance chart">
-        <h2>Attendance</h2>
+        <div className="wt-att-chart-head">
+          <span className="wt-att-chart-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <rect x="3" y="12" width="4" height="8" rx="1" />
+              <rect x="10" y="7" width="4" height="13" rx="1" />
+              <rect x="17" y="4" width="4" height="16" rx="1" />
+            </svg>
+          </span>
+          <div>
+            <h2>Attendance Overview</h2>
+            <p>Daily attendance for the selected month</p>
+          </div>
+        </div>
         <svg className="wt-att-svg" viewBox={`0 0 ${width} ${height}`} role="img">
           {[0, 1, 2, 3, 4, 5].map((tick) => {
             const y = top + plotH - (tick / scale) * plotH
@@ -832,11 +950,11 @@ function AttendanceBoard({ board }) {
             const y = top + plotH - barH
             return (
               <g key={bar.label}>
-                {barH > 0 ? <rect className="wt-att-rect" x={x} y={y} width={barW} height={barH} rx="3" /> : null}
+                {barH > 0 ? <rect className="wt-att-rect" x={x} y={y} width={barW} height={barH} rx="4" /> : null}
                 {value > 0 ? (
-                  <text className="wt-att-value" x={x + barW / 2} y={y - 4} textAnchor="middle">{value}</text>
+                  <text className="wt-att-value" x={x + barW / 2} y={y - 5} textAnchor="middle">{value}</text>
                 ) : null}
-                <text className="wt-att-label" x={left + index * slot + slot / 2} y={height - 10} textAnchor="middle">
+                <text className="wt-att-label" x={left + index * slot + slot / 2} y={height - 8} textAnchor="middle">
                   {bar.label}
                 </text>
               </g>
@@ -845,27 +963,38 @@ function AttendanceBoard({ board }) {
         </svg>
       </section>
       <div className="wt-att-stats">
-        {stats.map((stat) => (
-          <section key={stat.key} className="wt-att-stat">
-            <header>
-              <span>{stat.label}</span>
-              <strong>{Number(stat.count) || 0}</strong>
-            </header>
-            {(stat.items || []).length ? (
-              <ul>
-                {(stat.items || []).map((item, index) => (
-                  <li key={`${stat.key}-${item.when}-${index}`}>
-                    <span>{item.title}</span>
-                    {item.when ? <time>{item.when}</time> : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>None</p>
-            )}
+        {cards.map((card) => (
+          <section key={card.key} className={`wt-att-stat wt-att-stat--${card.key}`}>
+            <span className="wt-att-ico"><AttIcon name={card.icon} /></span>
+            <div>
+              <strong>{card.label}</strong>
+              <span>{card.hint}</span>
+            </div>
+            <b>{Number(byKey[card.key]?.count) || 0}</b>
           </section>
         ))}
       </div>
+      {details.length ? (
+        <div className="wt-att-details">
+          {details.map((item) => (
+            <article key={item.key} className={`wt-att-detail wt-att-detail--${item.tone}`}>
+              <span className="wt-att-ico"><AttIcon name={item.icon} /></span>
+              <div>
+                <strong>{item.label}</strong>
+                <span>{item.hint}</span>
+              </div>
+              {item.when ? (
+                <time>
+                  {item.when}
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </time>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -894,6 +1023,26 @@ function MeasurePage({ month, measure }) {
   return (
     <div className="wt-dash">
       <a className="wt-back" href={measure.backUrl || '#'}>Back</a>
+      {measure.key === 'attendance' && measure.configured && measure.board ? (
+        <section className="wt-att-page">
+          <header className="wt-att-top">
+            <span className="wt-att-top-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <rect x="4" y="5" width="16" height="15" rx="2" />
+                <path d="M8 3v4M16 3v4M4 10h16" />
+              </svg>
+            </span>
+            <div>
+              <h1>Attendance</h1>
+              <p>{measure.summary}</p>
+            </div>
+            <MonthSelect month={month} boxed />
+          </header>
+          <AttendanceBoard board={measure.board} />
+        </section>
+      ) : null}
+      {measure.key === 'attendance' && measure.configured && measure.board ? null : (
+      <>
       <header className="wt-head">
         <div>
           <div className="wt-title-row">
@@ -910,18 +1059,6 @@ function MeasurePage({ month, measure }) {
         <p className="wt-empty wt-empty--card">Target not set.</p>
       ) : breakdown.length ? (
         <SalesMeasureCards items={breakdown} />
-      ) : measure.key === 'attendance' && measure.board ? (
-        <>
-          <AttendanceBoard board={measure.board} />
-          {rows.length ? (
-            <RecordCards
-              rows={rows}
-              onOpen={openDocument}
-              label="Attendance"
-              kind="attendance"
-            />
-          ) : null}
-        </>
       ) : rows.length === 0 ? (
         measure.empty === 'Coming soon' ? (
           <div className="wt-soon" role="status">
@@ -1013,6 +1150,8 @@ function MeasurePage({ month, measure }) {
         </div>,
         document.body
       ) : null}
+      </>
+      )}
     </div>
   )
 }

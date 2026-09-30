@@ -216,6 +216,86 @@
   background: #f8fafc;
 }
 
+.crm-desk-col-google {
+  width: 92px;
+}
+
+.crm-desk-google-btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+}
+
+.crm-google {
+  margin-top: 12px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.crm-google-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.crm-google-head strong {
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.crm-google-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.crm-google-key p,
+.crm-google-empty {
+  margin: 0;
+  flex: 1 1 220px;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.crm-google-key input {
+  min-width: 220px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.crm-google-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.crm-google-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+.crm-google-list a {
+  color: #1d4ed8;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.crm-google-list span {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
 .crm-desk-filter-btn {
   width: 2.35rem;
   height: 2.35rem;

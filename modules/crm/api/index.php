@@ -7,6 +7,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/crm-lib.php';
 require_once __DIR__ . '/../includes/crm-sales-bridge.php';
 require_once __DIR__ . '/../includes/crm-market-bridge.php';
+require_once __DIR__ . '/../includes/crm-zenserp.php';
 
 $rawBody = file_get_contents('php://input') ?: '';
 $jsonBody = json_decode($rawBody, true);
@@ -350,6 +351,40 @@ try {
                 crmDeskJsonResponse(false, $result, $result['message'], 400);
             }
             crmDeskJsonResponse(true, $result, $result['message']);
+            break;
+
+        case 'customer_google_check':
+            $id = (int) ($_GET['id'] ?? ($jsonBody['id'] ?? 0));
+            $contact = crmEngineGetContact($pdo, $companyId, $id);
+            if ($contact === null) {
+                crmDeskJsonResponse(false, null, 'Customer not found.', 404);
+            }
+            $name = trim((string) ($contact['organization'] ?? ''));
+            if ($name === '') {
+                $name = trim((string) ($contact['name'] ?? ''));
+            }
+            $found = crmZenserpSearch($pdo, $name);
+            if (!$found['ok']) {
+                crmDeskJsonResponse(false, [
+                    'customer' => $name,
+                    'needsKey' => crmZenserpApiKey($pdo) === '',
+                    'results' => [],
+                ], $found['error'], 400);
+            }
+            crmDeskJsonResponse(true, [
+                'customer' => $name,
+                'query' => $found['query'],
+                'needsKey' => false,
+                'results' => $found['results'],
+            ]);
+            break;
+
+        case 'zenserp_key_save':
+            if (!function_exists('isAdmin') || !isAdmin()) {
+                crmDeskJsonResponse(false, null, 'An admin needs to save the Zenserp API key.', 403);
+            }
+            crmZenserpSaveApiKey($pdo, (string) ($jsonBody['key'] ?? ''));
+            crmDeskJsonResponse(true, ['configured' => true], 'Zenserp API key saved.');
             break;
 
         case 'market_attribution':

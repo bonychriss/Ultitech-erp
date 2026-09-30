@@ -194,6 +194,18 @@ export async function saveMarketSettings(payload) {
   });
 }
 
+export async function checkCustomerGoogle(id) {
+  const params = new URLSearchParams({ action: 'customer_google_check', id: String(id) });
+  return request(`${apiBase()}?${params.toString()}`);
+}
+
+export async function saveZenserpKey(key) {
+  return request(`${apiBase()}?action=zenserp_key_save`, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'zenserp_key_save', key: String(key || '') }),
+  });
+}
+
 export async function testMarketSettings(key = '', provider = '') {
   return request(`${apiBase()}?action=market_settings_test`, {
     method: 'POST',

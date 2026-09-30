@@ -4,9 +4,11 @@ import '../components/customer-form.css';
 import { useBottomSheet } from '../hooks/useBottomSheet.js';
 import {
   buildContactViewUrl,
+  checkCustomerGoogle,
   createContact,
   fetchContacts,
   getBootData,
+  saveZenserpKey,
 } from '../api';
 
 function emptyFormFromBoot(boot) {
@@ -364,6 +366,10 @@ export default function CrmDeskPage() {
   const [modalError, setModalError] = useState('');
   const [pageError, setPageError] = useState('');
   const [success, setSuccess] = useState('');
+  const [google, setGoogle] = useState(null);
+  const [googleBusyId, setGoogleBusyId] = useState(0);
+  const [googleKey, setGoogleKey] = useState('');
+  const [googleKeySaving, setGoogleKeySaving] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -390,6 +396,48 @@ export default function CrmDeskPage() {
       document.removeEventListener('keydown', onKey);
     };
   }, [filtersOpen]);
+
+  const checkGoogle = useCallback(async (contact) => {
+    setGoogleBusyId(contact.id);
+    setPageError('');
+    try {
+      const data = await checkCustomerGoogle(contact.id);
+      setGoogle({
+        id: contact.id,
+        customer: data.customer || contact.organization || contact.name || 'Customer',
+        results: Array.isArray(data.results) ? data.results : [],
+        needsKey: false,
+        error: '',
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Google check failed.';
+      setGoogle({
+        id: contact.id,
+        customer: contact.organization || contact.name || 'Customer',
+        results: [],
+        needsKey: /api key/i.test(message),
+        error: message,
+      });
+    } finally {
+      setGoogleBusyId(0);
+    }
+  }, []);
+
+  const saveGoogleKey = useCallback(async (event) => {
+    event.preventDefault();
+    setGoogleKeySaving(true);
+    setPageError('');
+    try {
+      await saveZenserpKey(googleKey);
+      setGoogleKey('');
+      setSuccess('Zenserp API key saved.');
+      setGoogle((current) => (current ? { ...current, needsKey: false, error: 'Key saved. Click Google on the customer again.' } : current));
+    } catch (err) {
+      setPageError(err instanceof Error ? err.message : 'Could not save the Zenserp API key.');
+    } finally {
+      setGoogleKeySaving(false);
+    }
+  }, [googleKey]);
 
   const loadContacts = useCallback(async (nextSearch = search, nextStatus = statusFilter) => {
     setLoading(true);
@@ -732,6 +780,7 @@ export default function CrmDeskPage() {
                 <col className="crm-desk-col-phone" />
                 <col className="crm-desk-col-source" />
                 <col className="crm-desk-col-amount" />
+                <col className="crm-desk-col-google" />
               </colgroup>
               <thead>
                 <tr>
@@ -741,6 +790,7 @@ export default function CrmDeskPage() {
                   <th className="crm-desk-col-phone">Phone</th>
                   <th className="crm-desk-col-source">Src</th>
                   <th className="crm-desk-col-amount">Amount</th>
+                  <th className="crm-desk-col-google">Google</th>
                 </tr>
               </thead>
               <tbody>
@@ -787,12 +837,61 @@ export default function CrmDeskPage() {
                         <span className="crm-desk-badge crm-desk-badge-new">New</span>
                       )}
                     </td>
+                    <td className="crm-desk-col-google">
+                      <button
+                        type="button"
+                        className="crm-desk-btn crm-desk-btn-secondary crm-desk-google-btn"
+                        disabled={googleBusyId === contact.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          checkGoogle(contact);
+                        }}
+                      >
+                        {googleBusyId === contact.id ? 'Checking…' : 'Check'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+        {google ? (
+          <div className="crm-google" role="region" aria-label="Google check">
+            <div className="crm-google-head">
+              <strong>Google check · {google.customer}</strong>
+              <button type="button" className="crm-desk-btn crm-desk-btn-secondary" onClick={() => setGoogle(null)}>Close</button>
+            </div>
+            {google.needsKey ? (
+              <form className="crm-google-key" onSubmit={saveGoogleKey}>
+                <p>Paste a Zenserp API key to search Google for this customer. An admin saves it once for the company.</p>
+                <input
+                  type="password"
+                  value={googleKey}
+                  autoComplete="off"
+                  placeholder="Zenserp API key"
+                  onChange={(event) => setGoogleKey(event.target.value)}
+                />
+                <button type="submit" className="crm-desk-btn crm-desk-btn-primary" disabled={googleKeySaving || !googleKey.trim()}>
+                  {googleKeySaving ? 'Saving…' : 'Save key'}
+                </button>
+              </form>
+            ) : google.error ? (
+              <p className="crm-google-empty">{google.error}</p>
+            ) : google.results.length === 0 ? (
+              <p className="crm-google-empty">No Google results for this customer.</p>
+            ) : (
+              <ul className="crm-google-list">
+                {google.results.map((item) => (
+                  <li key={item.url}>
+                    <a href={item.url} target="_blank" rel="noreferrer">{item.title}</a>
+                    {item.snippet ? <span>{item.snippet}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
       </section>
 
       <ContactModal

@@ -241,25 +241,52 @@ function crmZenserpMarketSearch(PDO $pdo, string $keyword, string $location): ar
     if ($place['location'] !== '') {
         $params['location'] = $place['location'];
     }
+    $localParams = $params;
+    $localParams['tbm'] = 'lcl';
+    $local = crmZenserpRequest($pdo, $localParams);
+    if (!$local['ok'] && $place['location'] !== '') {
+        unset($localParams['location']);
+        $local = crmZenserpRequest($pdo, $localParams);
+    }
     $found = crmZenserpRequest($pdo, $params);
     if (!$found['ok'] && $place['location'] !== '') {
         unset($params['location']);
         $found = crmZenserpRequest($pdo, $params);
     }
-    if (!$found['ok'] || !is_array($found['payload'])) {
-        return ['ok' => false, 'rows' => [], 'error' => $found['error']];
+    if ((!$local['ok'] || !is_array($local['payload'])) && (!$found['ok'] || !is_array($found['payload']))) {
+        $error = $found['error'] !== '' ? $found['error'] : $local['error'];
+        return ['ok' => false, 'rows' => [], 'error' => $error !== '' ? $error : 'Google search failed.'];
+    }
+
+    $label = ucfirst($keyword);
+    $collected = [];
+    if ($local['ok'] && is_array($local['payload'])) {
+        $collected = crmZenserpLocalRows($local['payload']);
+    }
+    if ($found['ok'] && is_array($found['payload']) && count($collected) < 8) {
+        $collected = array_merge($collected, crmZenserpOrganicRows($found['payload'], $label));
     }
 
     $rows = [];
     $seen = [];
-    foreach (array_merge(crmZenserpLocalRows($found['payload']), crmZenserpOrganicRows($found['payload'])) as $row) {
+    foreach ($collected as $row) {
         $key = strtolower($row['website'] !== '' ? $row['website'] : $row['name']);
         if ($key === '' || isset($seen[$key])) {
             continue;
         }
         $seen[$key] = true;
-        $row['type'] = $row['type'] !== '' ? $row['type'] : ucfirst($keyword);
-        $row['city'] = $row['city'] !== '' ? $row['city'] : $location;
+        if ($row['type'] === '' || strcasecmp($row['type'], 'Website') === 0 || strcasecmp($row['type'], 'Google') === 0) {
+            $row['type'] = $label;
+        }
+        if ($row['city'] === '') {
+            $row['city'] = crmZenserpPickCity((string) $row['address'], $location);
+        }
+        if ($row['phone'] === '') {
+            $row['phone'] = crmZenserpPickPhone((string) $row['address']);
+        }
+        if ($row['email'] === '') {
+            $row['email'] = crmZenserpPickEmail((string) $row['address']);
+        }
         $rows[] = $row;
         if (count($rows) >= 20) {
             break;
@@ -298,15 +325,19 @@ function crmZenserpLocalRows(array $payload): array
                 continue;
             }
             $url = trim((string) ($item['url'] ?? $item['website'] ?? $item['link'] ?? ''));
+            if ($url !== '' && crmZenserpSkipUrl($url)) {
+                continue;
+            }
+            $address = trim((string) ($item['address'] ?? $item['snippet'] ?? ''));
             $out[] = [
                 'id' => 'zs-' . substr(sha1($url !== '' ? $url : $name), 0, 16),
                 'name' => $name,
-                'phone' => trim((string) ($item['phone'] ?? $item['phone_number'] ?? '')),
-                'address' => trim((string) ($item['address'] ?? '')),
+                'phone' => trim((string) ($item['phone'] ?? $item['phone_number'] ?? $item['phoneNumber'] ?? '')),
+                'address' => $address,
                 'website' => $url,
-                'email' => '',
+                'email' => trim((string) ($item['email'] ?? '')),
                 'rating' => isset($item['rating']) ? (float) $item['rating'] : null,
-                'type' => trim((string) ($item['type'] ?? $item['category'] ?? 'Google')),
+                'type' => trim((string) ($item['type'] ?? $item['category'] ?? '')),
                 'city' => trim((string) ($item['city'] ?? '')),
             ];
         }
@@ -318,13 +349,12 @@ function crmZenserpLocalRows(array $payload): array
 /**
  * @return list<array<string,mixed>>
  */
-function crmZenserpOrganicRows(array $payload): array
+function crmZenserpOrganicRows(array $payload, string $label = ''): array
 {
     $rows = $payload['organic'] ?? $payload['organic_results'] ?? [];
     if (!is_array($rows)) {
         return [];
     }
-    $skip = ['wikipedia.org', 'youtube.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com', 'google.com', 'google.co.tz'];
     $out = [];
     foreach ($rows as $item) {
         if (!is_array($item)) {
@@ -332,37 +362,99 @@ function crmZenserpOrganicRows(array $payload): array
         }
         $url = trim((string) ($item['url'] ?? $item['link'] ?? ''));
         $title = trim((string) ($item['title'] ?? ''));
-        if ($url === '' || $title === '') {
+        if ($url === '' || $title === '' || crmZenserpSkipUrl($url) || crmZenserpSkipTitle($title)) {
             continue;
         }
-        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
-        $host = preg_replace('/^www\./', '', $host) ?? $host;
-        $blocked = false;
-        foreach ($skip as $domain) {
-            if ($host === $domain || str_ends_with($host, '.' . $domain)) {
-                $blocked = true;
-                break;
-            }
-        }
-        if ($blocked) {
-            continue;
-        }
-        $name = trim((string) preg_replace('/\s+[\|\-??:].*$/u', '', $title));
+        $name = trim((string) preg_replace('/\s+[\|\-–—:].*$/u', '', $title));
         if ($name === '') {
             $name = $title;
         }
+        $snippet = trim((string) ($item['description'] ?? $item['snippet'] ?? ''));
         $out[] = [
             'id' => 'zs-' . substr(sha1($url), 0, 16),
             'name' => $name,
-            'phone' => '',
-            'address' => trim((string) ($item['description'] ?? $item['snippet'] ?? '')),
+            'phone' => crmZenserpPickPhone($snippet),
+            'address' => $snippet,
             'website' => $url,
-            'email' => '',
+            'email' => crmZenserpPickEmail($snippet),
             'rating' => null,
-            'type' => 'Website',
-            'city' => '',
+            'type' => $label,
+            'city' => crmZenserpPickCity($snippet, ''),
         ];
     }
 
     return $out;
+}
+
+function crmZenserpSkipUrl(string $url): bool
+{
+    $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+    $host = preg_replace('/^www\./', '', $host) ?? $host;
+    $path = strtolower((string) parse_url($url, PHP_URL_PATH));
+    $skip = [
+        'wikipedia.org', 'youtube.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com',
+        'google.com', 'google.co.tz', 'scribd.com', 'glassdoor.com', 'dnb.com', 'zoomtanzania.net',
+        'tanzapages.com', 'slideshare.net', 'academia.edu', 'researchgate.net',
+    ];
+    foreach ($skip as $domain) {
+        if ($host === $domain || str_ends_with($host, '.' . $domain)) {
+            return true;
+        }
+    }
+    if (preg_match('/\.pdf$/', $path)) {
+        return true;
+    }
+    return (bool) preg_match('#/(document|directory|category|uploads)/#', $path);
+}
+
+function crmZenserpSkipTitle(string $title): bool
+{
+    return (bool) preg_match('/\b(list of|top \d+|companies in|directory)\b/i', $title);
+}
+
+function crmZenserpPickCity(string $text, string $country): string
+{
+    $cities = [
+        'Dar es Salaam', 'Arusha', 'Mwanza', 'Dodoma', 'Mbeya', 'Morogoro', 'Tanga', 'Zanzibar',
+        'Moshi', 'Iringa', 'Tabora', 'Kigoma', 'Mtwara', 'Songea', 'Shinyanga', 'Nairobi',
+        'Mombasa', 'Kampala', 'Kigali', 'Johannesburg', 'Cape Town', 'Dubai', 'Mumbai', 'London',
+        'New York', 'Shanghai',
+    ];
+    foreach ($cities as $city) {
+        if (stripos($text, $city) !== false) {
+            return $city;
+        }
+    }
+    $text = trim($text);
+    if ($text === '' || strlen($text) > 80 || substr_count($text, ' ') > 6) {
+        return '';
+    }
+    $parts = array_values(array_filter(array_map('trim', explode(',', $text)), static function (string $part) use ($country): bool {
+        return $part !== '' && strcasecmp($part, $country) !== 0;
+    }));
+    if ($parts === []) {
+        return '';
+    }
+    $city = $parts[count($parts) - 1];
+    return strlen($city) <= 40 ? $city : '';
+}
+
+function crmZenserpPickPhone(string $text): string
+{
+    if (preg_match('/(?:\+\d{1,3}[\s-]?)?(?:\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{3,4}/', $text, $match)) {
+        $phone = trim($match[0]);
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+        if (strlen($digits) >= 8 && strlen($digits) <= 15) {
+            return $phone;
+        }
+    }
+    return '';
+}
+
+function crmZenserpPickEmail(string $text): string
+{
+    if (preg_match('/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', $text, $match)) {
+        return $match[0];
+    }
+    return '';
 }

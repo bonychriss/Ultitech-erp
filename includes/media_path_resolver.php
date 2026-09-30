@@ -20,7 +20,7 @@ if (!function_exists('mediaPathCompanyIdsToTry')) {
             return [$companyId];
         }
 
-        return [1, 2];
+        return [];
     }
 }
 
@@ -70,18 +70,10 @@ if (!function_exists('resolveStoredMediaFilePath')) {
                 if ($voucherFolder !== '') {
                     $push($voucherRoot . '/' . $voucherFolder . '/' . $baseName);
                 }
-                $globPattern = $root . '/' . $voucherRoot . '/*/' . $baseName;
-                foreach (glob($globPattern) ?: [] as $match) {
-                    $candidates[] = $match;
-                }
             }
         } elseif ($baseName !== '' && $baseName !== $file) {
             foreach (['assets/uploads/vouchers', 'uploads/vouchers'] as $voucherRoot) {
                 $push($voucherRoot . '/' . $baseName);
-                $globPattern = $root . '/' . $voucherRoot . '/*/' . $baseName;
-                foreach (glob($globPattern) ?: [] as $match) {
-                    $candidates[] = $match;
-                }
             }
         }
 

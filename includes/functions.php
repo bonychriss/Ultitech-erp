@@ -12930,15 +12930,20 @@ function getVoucherAttachments($voucherId)
     // Normalize stored paths to include assets/ prefix when missing.
     foreach ($rows as &$row) {
         $fp = (string) ($row['file_path'] ?? '');
-        if ($fp !== '' && strpos($fp, 'assets/') === false && !preg_match('#^https?://#i', $fp)) {
+        if ($fp !== '' && strpos($fp, 'assets/') === false && strpos($fp, 'storage/') !== 0 && !preg_match('#^https?://#i', $fp)) {
             $row['file_path'] = 'assets/' . ltrim($fp, '/');
         }
     }
     unset($row);
 
-    // Fallback: discover files on disk that were never recorded in voucher_attachments.
-    $diskDir = dirname(__DIR__) . '/assets/uploads/vouchers/' . $voucherId;
-    if (is_dir($diskDir)) {
+    // Recover files stored under this company only.
+    // assets/uploads/vouchers/{id} is shared by every company, and voucher ids
+    // collide across tenant databases, so scanning it shows another company's files.
+    $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+    $diskDir = $companyId > 0
+        ? dirname(__DIR__) . '/storage/tenant_' . $companyId . '/vouchers/' . $voucherId
+        : '';
+    if ($diskDir !== '' && is_dir($diskDir)) {
         $known = [];
         foreach ($rows as $row) {
             $known[strtolower(basename((string) ($row['file_path'] ?? '')))] = true;
@@ -12962,7 +12967,7 @@ function getVoucherAttachments($voucherId)
             if (isset($known[$baseKey])) {
                 continue;
             }
-            $rel = 'assets/uploads/vouchers/' . $voucherId . '/' . $fileName;
+            $rel = 'storage/tenant_' . $companyId . '/vouchers/' . $voucherId . '/' . $fileName;
             $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             $mime = 'application/octet-stream';
             if (in_array($ext, ['jpg', 'jpeg'], true)) {

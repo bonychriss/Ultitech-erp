@@ -1749,11 +1749,15 @@ function sms_fetch_po_linked_vouchers(PDO $pdo, array $po, int $poId): array
             }
         }
 
-        // Direct disk scan for this voucher folder (covers unrecorded uploads).
+        // Tenant folder only. The shared assets/uploads/vouchers/{id} directory
+        // mixes Ultimate and Roadmaster files that share the same voucher id.
         $diskRoots = [];
-        $diskRoots[] = dirname(__DIR__) . '/assets/uploads/vouchers/' . $vid;
-        if (defined('APP_ROOT')) {
-            $diskRoots[] = rtrim((string) APP_ROOT, '\\/') . '/assets/uploads/vouchers/' . $vid;
+        $smsCompanyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+        if ($smsCompanyId > 0) {
+            $diskRoots[] = dirname(__DIR__, 2) . '/storage/tenant_' . $smsCompanyId . '/vouchers/' . $vid;
+            if (defined('APP_ROOT')) {
+                $diskRoots[] = rtrim((string) APP_ROOT, '\\/') . '/storage/tenant_' . $smsCompanyId . '/vouchers/' . $vid;
+            }
         }
         $knownNames = [];
         foreach ($attRows as $att) {
@@ -1782,7 +1786,7 @@ function sms_fetch_po_linked_vouchers(PDO $pdo, array $po, int $poId): array
                 }
                 $attRows[] = [
                     'id' => $syntheticId--,
-                    'file_path' => 'assets/uploads/vouchers/' . $vid . '/' . $fileName,
+                    'file_path' => 'storage/tenant_' . $smsCompanyId . '/vouchers/' . $vid . '/' . $fileName,
                     'original_name' => $fileName,
                 ];
                 $knownNames[$baseKey] = true;

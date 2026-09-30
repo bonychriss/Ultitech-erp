@@ -282,6 +282,10 @@ export default function App() {
           : (result.reply && (result.reply.text || result.reply.facts) ? result.reply : { text: 'I could not read ERP data for this company.' })
         setThread((prev) => prev.map((item) => (item.id === pendingId ? { ...item, reply } : item)))
         speakReply(reply.text)
+        const nextUrl = String(reply.navigate || '')
+        if (nextUrl.startsWith('/') && !nextUrl.startsWith('//')) {
+          window.location.assign(nextUrl)
+        }
       })
       .catch(() => {
         const text = 'I could not read ERP data for this company.'

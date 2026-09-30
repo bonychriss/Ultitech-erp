@@ -952,7 +952,7 @@ function aiAgentHandleInvoiceCommand(string $message): ?array
             'follow_up' => null,
         ];
     }
-    $isCreate = (bool) preg_match('/create (?:an |a )?invoice/', $q);
+    $isCreate = (bool) preg_match('/\b(?:create|make|raise|issue|generate|write|add)\b.{0,80}\binvoices?\b/', $q);
     $hasDetails = (bool) preg_match('/customer(?:\s+name)?\s+is\s+|amount\s+is\s+|description\b|leave it blank/i', $message);
     if (!$isCreate && !($draft !== [] && $hasDetails)) {
         return null;
@@ -1040,6 +1040,84 @@ function aiAgentCompanyBriefingText(): string
     return implode(' ', $parts);
 }
 
+function aiAgentModuleUrl(string $path, array $query = []): string
+{
+    $url = function_exists('company_url') ? company_url(ltrim($path, '/')) : ('/' . ltrim($path, '/'));
+    if ($query === []) {
+        return $url;
+    }
+    return $url . (str_contains($url, '?') ? '&' : '?') . http_build_query($query);
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function aiAgentHandleOpenModule(string $message): ?array
+{
+    $q = strtolower(trim($message));
+    $q = preg_replace('/\s+/', ' ', $q) ?? '';
+    $asksToOpen = (bool) preg_match('/\b(?:open|go to|goto|take me to|launch|switch to|show me)\b/', $q);
+    if (!$asksToOpen) {
+        return null;
+    }
+    if (preg_match('/\b(?:overdue|owe|latest invoice|created recently|how much|which customers|who owes)\b/', $q) && !preg_match('/\bmodule\b/', $q)) {
+        return null;
+    }
+
+    $voucherPath = (function_exists('isAdmin') && isAdmin()) ? 'admin/dashboard.php' : 'employee/dashboard.php';
+    $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+    $mailPath = in_array($slug, ['ultimate', 'roadmaster'], true)
+        ? 'mail-sso-launch.php'
+        : 'modules/email/index.php';
+    $mailQuery = in_array($slug, ['ultimate', 'roadmaster'], true)
+        ? ['company' => $slug]
+        : ['module' => 'email'];
+
+    $modules = [
+        ['label' => 'Payment Voucher', 'match' => '/payment\s+vouchers?|\bvouchers?\b|\bpv\b/', 'path' => $voucherPath, 'query' => ['module' => 'voucher']],
+        ['label' => 'Attendance', 'match' => '/\battendance\b/', 'path' => 'attendance', 'query' => ['module' => 'attendance']],
+        ['label' => 'Delivery Logistics', 'match' => '/\b(?:deliveries|delivery|logistics)\b/', 'path' => 'deliveries/hub', 'query' => ['module' => 'deliveries']],
+        ['label' => 'Outstanding Invoices', 'match' => '/outstanding\s+invoices?/', 'path' => 'erp/outstanding-invoices/index.php', 'query' => ['module' => 'outstanding']],
+        ['label' => 'Mail', 'match' => '/\b(?:mail|email|inbox)\b/', 'path' => $mailPath, 'query' => $mailQuery],
+        ['label' => 'Cash Book', 'match' => '/cash\s*book|petty\s*cash/', 'path' => 'modules/petty-cash/index.php', 'query' => ['module' => 'petty_cash']],
+        ['label' => 'Payroll', 'match' => '/\bpayroll\b/', 'path' => 'modules/payroll/index.php', 'query' => ['module' => 'payroll']],
+        ['label' => 'Accounting', 'match' => '/\baccounting\b/', 'path' => 'accounting', 'query' => ['module' => 'accounting']],
+        ['label' => 'Stock', 'match' => '/\b(?:stock|inventory)\b/', 'path' => 'stock', 'query' => ['module' => 'stocks']],
+        ['label' => 'Sales', 'match' => '/\bsales\b/', 'path' => 'sales', 'query' => ['module' => 'sales']],
+        ['label' => 'CRM', 'match' => '/\bcrm\b|\bcustomers?\s+module\b/', 'path' => 'modules/crm/my-clients/index.php', 'query' => ['module' => 'crm']],
+        ['label' => 'Letter', 'match' => '/\bletters?\b/', 'path' => 'modules/letter/index.php', 'query' => ['module' => 'letter']],
+    ];
+
+    foreach ($modules as $module) {
+        if (!preg_match($module['match'], $q)) {
+            continue;
+        }
+        $url = aiAgentModuleUrl($module['path'], $module['query']);
+        return [
+            'text' => 'Opening ' . $module['label'] . '.',
+            'facts' => '',
+            'analysis' => '',
+            'invoices' => [],
+            'actions' => [['label' => 'Open ' . $module['label'], 'url' => $url]],
+            'follow_up' => null,
+            'navigate' => $url,
+        ];
+    }
+
+    if (preg_match('/\b(?:open|go to|goto|take me to|launch|switch to)\b/', $q)) {
+        return [
+            'text' => 'Tell me which module to open. I can open Payment Voucher, Sales, Stock, Attendance, Payroll, Accounting, Mail, and Letter.',
+            'facts' => '',
+            'analysis' => '',
+            'invoices' => [],
+            'actions' => [],
+            'follow_up' => null,
+        ];
+    }
+
+    return null;
+}
+
 function aiAgentAnswer(string $message): array
 {
     $ctx = aiAgentContext();
@@ -1052,6 +1130,10 @@ function aiAgentAnswer(string $message): array
     $invoiceReply = aiAgentHandleInvoiceCommand($message);
     if ($invoiceReply !== null) {
         return $invoiceReply;
+    }
+    $openReply = aiAgentHandleOpenModule($message);
+    if ($openReply !== null) {
+        return $openReply;
     }
     if (preg_match('/follow[- ]?up/', $q)) {
         $invoice = null;

@@ -2790,6 +2790,7 @@ function userIsVoucherApprovalRoleAssignee(array $voucher, $roleKey, $userName, 
         'applicant' => 'applicant',
         'department manager' => 'department_manager',
         'checked by' => 'checked_by',
+        'general manager' => 'general_manager',
     );
     if (!isset($roleFieldMap[$roleKey])) {
         return false;
@@ -3829,15 +3830,13 @@ function userHasPaymentVoucherTurn(PDO $pdo, array $voucher, int $userId, string
     }
 
     $action = (string) ($turn['action'] ?? '');
+    // Paying and posting are a shared finance step, not one person's assigned turn.
     if ($action === 'mark_paid' || $action === 'post') {
-        $isAdminUser = function_exists('isAdmin') && isAdmin();
-        $isFinanceUser = function_exists('isFinance') && isFinance();
-        return $isAdminUser || $isFinanceUser;
+        return false;
     }
 
     if ($action === 'final_approve') {
-        return function_exists('userCanVoucherGeneralManagerApprove')
-            && userCanVoucherGeneralManagerApprove($pdo, $voucher, $userId);
+        return userIsVoucherApprovalRoleAssignee($voucher, 'general manager', $userName, $userId, $pdo);
     }
 
     $roleKey = (string) ($turn['role_key'] ?? '');
@@ -3917,9 +3916,7 @@ function getPendingPaymentVoucherTasks(PDO $pdo, ?int $userId = null, ?string $u
         return array();
     }
 
-    $limit = max(1, min(200, (int) $limit));
-    $isAdminUser = function_exists('isAdmin') && isAdmin();
-    $isFinanceUser = function_exists('isFinance') && isFinance();
+    $limit = max(1, min(500, (int) $limit));
 
     $select = 'id, voucher_no, payee_name, total_amount, currency, status, date_created, created_at,
                applicant, department_manager, checked_by, prepared_by, general_manager, created_by,
@@ -3927,9 +3924,7 @@ function getPendingPaymentVoucherTasks(PDO $pdo, ?int $userId = null, ?string $u
     $where = array();
     $params = array();
 
-    // Always include vouchers where this user is a named assignee or pending approver.
-    // Admins/finance also see paid/post queue, but personal sign turns must not be drowned
-    // out by a blind "recent vouchers" scan.
+    // Only vouchers that name this person, or have a pending approval row for them.
     $nameCandidates = array();
     if ($userName !== '') {
         $nameCandidates[] = $userName;
@@ -3946,7 +3941,7 @@ function getPendingPaymentVoucherTasks(PDO $pdo, ?int $userId = null, ?string $u
 
     $personalParts = array();
     foreach ($nameCandidates as $cand) {
-        foreach (array('applicant', 'department_manager', 'checked_by') as $col) {
+        foreach (array('applicant', 'department_manager', 'checked_by', 'general_manager') as $col) {
             $personalParts[] = "LOWER(TRIM($col)) = LOWER(?)";
             $params[] = $cand;
         }
@@ -3960,22 +3955,8 @@ function getPendingPaymentVoucherTasks(PDO $pdo, ?int $userId = null, ?string $u
     }
 
     $personalSql = $personalParts ? ('(' . implode(' OR ', $personalParts) . ')') : '0=1';
-
-    if ($isAdminUser || $isFinanceUser) {
-        $where[] = "(
-            (
-                status IN ('confirming', 'pending')
-                AND {$personalSql}
-            )
-            OR (status = 'approved' AND (IFNULL(is_paid,0) = 0 OR IFNULL(is_posted,0) = 0))
-            OR (
-                status IN ('confirming', 'pending')
-            )
-        )";
-    } else {
-        $where[] = "status IN ('confirming', 'pending')";
-        $where[] = $personalSql;
-    }
+    $where[] = "status IN ('confirming', 'pending')";
+    $where[] = $personalSql;
 
     if (function_exists('companyScopeSql')) {
         try {
@@ -4066,7 +4047,7 @@ function countPendingPaymentVoucherTasks(?PDO $explicitPdo = null, ?int $userId 
         return 0;
     }
 
-    return count(getPendingPaymentVoucherTasks($usePdo, $userId, $userName, 100));
+    return count(getPendingPaymentVoucherTasks($usePdo, $userId, $userName, 500));
 }
 
 /**

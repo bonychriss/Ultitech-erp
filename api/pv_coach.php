@@ -38,7 +38,7 @@ if (function_exists('reconcileStalePaymentVoucherActionNotificationsForUser')) {
 $tasks = [];
 try {
     if (function_exists('getPendingPaymentVoucherTasks')) {
-        $tasks = getPendingPaymentVoucherTasks($pdo, $userId, $userName, 8);
+        $tasks = getPendingPaymentVoucherTasks($pdo, $userId, $userName, 500);
     }
 } catch (Throwable $e) {
     error_log('api/pv_coach.php: ' . $e->getMessage());
@@ -50,135 +50,6 @@ if (!is_array($tasks)) {
 }
 
 $count = count($tasks);
-
-// Fallback: if turn detection returns nothing, still tip from unread action notifications.
-if ($count === 0) {
-    try {
-        if (function_exists('ensureNotificationsSchema')) {
-            ensureNotificationsSchema();
-        }
-        $st = $pdo->prepare(
-            "SELECT id, title, message, voucher_id
-             FROM notifications
-             WHERE is_read = 0
-               AND user_id = ?
-               AND voucher_id IS NOT NULL AND voucher_id > 0
-               AND (
-                    LOWER(title) LIKE '%sign%'
-                 OR LOWER(title) LIKE '%approve%'
-                 OR LOWER(title) LIKE '%check%'
-                 OR LOWER(title) LIKE '%paid%'
-                 OR LOWER(title) LIKE '%post%'
-                 OR LOWER(message) LIKE '%sign%'
-                 OR LOWER(message) LIKE '%waiting%'
-               )
-             ORDER BY id DESC
-             LIMIT 5"
-        );
-        $st->execute([$userId]);
-        $notifs = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        foreach ($notifs as $n) {
-            $vid = (int) ($n['voucher_id'] ?? 0);
-            if ($vid <= 0) {
-                continue;
-            }
-            $viewUrl = function_exists('company_url')
-                ? company_url('employee/view-voucher.php?id=' . $vid . '&module=voucher')
-                : (function_exists('app_url') ? app_url('/employee/view-voucher.php?id=' . $vid . '&module=voucher') : '/employee/view-voucher.php?id=' . $vid);
-            $vno = '';
-            try {
-                $vs = $pdo->prepare('SELECT voucher_no FROM payment_vouchers WHERE id = ? LIMIT 1');
-                $vs->execute([$vid]);
-                $vno = (string) ($vs->fetchColumn() ?: '');
-            } catch (Throwable $e2) {
-            }
-            $tasks[] = [
-                'id' => $vid,
-                'voucher_no' => $vno,
-                'payee_name' => '',
-                'total_amount' => 0,
-                'currency' => 'TZS',
-                'status' => '',
-                'date_created' => '',
-                'prepared_by' => '',
-                'required_action' => (string) ($n['title'] ?? 'Action needed'),
-                'action_key' => 'notify',
-                'action_label' => trim((string) ($n['title'] ?? 'Open payment voucher')),
-                'view_url' => $viewUrl,
-            ];
-        }
-        $count = count($tasks);
-    } catch (Throwable $e) {
-        error_log('api/pv_coach.php notif fallback: ' . $e->getMessage());
-    }
-}
-
-// Employees often only have rows in system_notifications (not the admin audience feed).
-if ($count === 0 && function_exists('ensureNotificationsTable')) {
-    try {
-        ensureNotificationsTable();
-        $stSys = $pdo->prepare(
-            "SELECT id, title, message, link
-             FROM system_notifications
-             WHERE is_read = 0
-               AND user_id = ?
-               AND (
-                    LOWER(title) LIKE '%voucher%'
-                 OR LOWER(title) LIKE '%sign%'
-                 OR LOWER(title) LIKE '%approve%'
-                 OR LOWER(message) LIKE '%voucher%'
-                 OR LOWER(COALESCE(link, '')) LIKE '%voucher%'
-               )
-             ORDER BY id DESC
-             LIMIT 8"
-        );
-        $stSys->execute([$userId]);
-        $sysRows = $stSys->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        foreach ($sysRows as $n) {
-            $vid = 0;
-            $link = (string) ($n['link'] ?? '');
-            if (preg_match('/(?:\\?|&|\\/)id=(\\d+)/', $link, $m) || preg_match('/\\/voucher\\/(\\d+)/', $link, $m)) {
-                $vid = (int) $m[1];
-            }
-            $viewUrl = $link;
-            if ($vid > 0) {
-                $viewUrl = function_exists('company_url')
-                    ? company_url('employee/view-voucher.php?id=' . $vid . '&module=voucher')
-                    : (function_exists('app_url') ? app_url('/employee/view-voucher.php?id=' . $vid . '&module=voucher') : '/employee/view-voucher.php?id=' . $vid);
-            } elseif ($viewUrl === '') {
-                $viewUrl = function_exists('company_url')
-                    ? (company_url('employee/pending-voucher-tasks.php') . '?module=voucher')
-                    : '/employee/pending-voucher-tasks.php?module=voucher';
-            }
-            $vno = '';
-            if ($vid > 0) {
-                try {
-                    $vs = $pdo->prepare('SELECT voucher_no FROM payment_vouchers WHERE id = ? LIMIT 1');
-                    $vs->execute([$vid]);
-                    $vno = (string) ($vs->fetchColumn() ?: '');
-                } catch (Throwable $e2) {
-                }
-            }
-            $tasks[] = [
-                'id' => $vid > 0 ? $vid : (int) ($n['id'] ?? 0),
-                'voucher_no' => $vno,
-                'payee_name' => '',
-                'total_amount' => 0,
-                'currency' => 'TZS',
-                'status' => '',
-                'date_created' => '',
-                'prepared_by' => '',
-                'required_action' => (string) ($n['title'] ?? 'Action needed'),
-                'action_key' => 'notify',
-                'action_label' => trim((string) ($n['title'] ?? 'Open payment voucher')),
-                'view_url' => $viewUrl,
-            ];
-        }
-        $count = count($tasks);
-    } catch (Throwable $e) {
-        error_log('api/pv_coach.php system notif fallback: ' . $e->getMessage());
-    }
-}
 
 $preferredKeys = ['sign_applicant', 'sign_dept_manager', 'sign_checked_by', 'final_approve', 'mark_paid', 'post', 'notify'];
 usort($tasks, static function ($a, $b) use ($preferredKeys) {
@@ -231,26 +102,26 @@ $buildCoachBody = static function (array $keys, int $count, string $voucherNo, s
     if ($count === 1) {
         switch ($primaryKey) {
             case 'sign_applicant':
-                return '1 voucher remaining — ' . $vLabelCap . ' still needs your signature as Applicant.';
+                return '1 voucher remaining Â— ' . $vLabelCap . ' still needs your signature as Applicant.';
             case 'sign_dept_manager':
-                return '1 voucher remaining — ' . $vLabelCap . ' still needs your Department Manager approval.';
+                return '1 voucher remaining Â— ' . $vLabelCap . ' still needs your Department Manager approval.';
             case 'sign_checked_by':
-                return '1 voucher remaining — ' . $vLabelCap . ' still needs you to check and sign.';
+                return '1 voucher remaining Â— ' . $vLabelCap . ' still needs you to check and sign.';
             case 'final_approve':
-                return '1 voucher remaining — ' . $vLabelCap . ' is ready for your final approval.';
+                return '1 voucher remaining Â— ' . $vLabelCap . ' is ready for your final approval.';
             case 'mark_paid':
-                return '1 voucher remaining — ' . $vLabelCap . ' is approved and ready to mark as paid.';
+                return '1 voucher remaining Â— ' . $vLabelCap . ' is approved and ready to mark as paid.';
             case 'post':
-                return '1 voucher remaining — ' . $vLabelCap . ' is paid and ready for you to post.';
+                return '1 voucher remaining Â— ' . $vLabelCap . ' is paid and ready for you to post.';
             default:
                 if ($actionLabel !== '') {
-                    return '1 voucher remaining — ' . $vLabelCap . ' still needs: ' . $actionLabel . '.';
+                    return '1 voucher remaining Â— ' . $vLabelCap . ' still needs: ' . $actionLabel . '.';
                 }
-                return '1 voucher remaining — open ' . $vLabel . ' to finish.';
+                return '1 voucher remaining Â— open ' . $vLabel . ' to finish.';
         }
     }
 
-    // Multiple tasks — lead with remaining count so progress is clear after each sign.
+    // Multiple tasks Â— lead with remaining count so progress is clear after each sign.
     $parts = [];
     if ($hasSign) {
         $parts[] = 'sign';

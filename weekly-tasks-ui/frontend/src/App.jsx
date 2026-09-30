@@ -71,43 +71,6 @@ function cfg() {
   return raw && typeof raw === 'object' ? raw : {}
 }
 
-function BandIcon({ name }) {
-  const common = {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.8,
-    strokeLinecap: 'round',
-    strokeLinejoin: 'round',
-  }
-  let drawing = null
-  if (name === 'outstanding') {
-    drawing = <path d="m12 3 2.2 4.6 5 .7-3.6 3.5.9 5.1L12 14.8 7.5 17l.9-5.1L4.8 8.3l5-.7L12 3z" />
-  } else if (name === 'exceeds') {
-    drawing = <path d="M4 16.5 9.2 11l3.3 3.2L20 6.5 M14.5 6.5H20V12" />
-  } else if (name === 'meets') {
-    drawing = (
-      <>
-        <circle cx="12" cy="12" r="8" />
-        <path d="m8.5 12.2 2.3 2.3 4.7-5" />
-      </>
-    )
-  } else {
-    drawing = (
-      <>
-        <circle cx="12" cy="12" r="8" />
-        <path d="M12 8.5v4.2" />
-        <path d="M12 16.2h.01" />
-      </>
-    )
-  }
-  return (
-    <span className={`wt-band-icon wt-band-icon--${name}`} aria-hidden="true">
-      <svg {...common}>{drawing}</svg>
-    </span>
-  )
-}
-
 function initials(name) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean)
   return parts.slice(0, 2).map((part) => part[0] || '').join('').toUpperCase() || '?'
@@ -1515,6 +1478,53 @@ function DepartmentTable({ dept }) {
   )
 }
 
+function DeptMark({ slug }) {
+  const kind = slug || 'other'
+  const icon = kind === 'drivers' ? (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path d="M3 7h11v8H3zM14 10h4l3 3v2h-7" />
+      <circle cx="7" cy="17" r="1.6" />
+      <circle cx="17" cy="17" r="1.6" />
+    </svg>
+  ) : kind === 'finance' ? (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <ellipse cx="12" cy="7" rx="7" ry="3" />
+      <path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7" />
+      <path d="M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5" />
+    </svg>
+  ) : kind === 'other' ? (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <circle cx="9" cy="9" r="2.2" />
+      <circle cx="16" cy="10" r="1.8" />
+      <path d="M4.5 18c.6-2.4 2.4-3.6 4.5-3.6s3.9 1.2 4.5 3.6" />
+      <path d="M14 14.6c1.3-.4 2.6-.2 3.8.8.6.5 1.1 1.2 1.5 2.1" />
+    </svg>
+  ) : kind === 'procurement' ? (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <circle cx="9" cy="19" r="1.3" />
+      <circle cx="17" cy="19" r="1.3" />
+      <path d="M3 5h2l2.2 9h10.3l2-6H7" />
+    </svg>
+  ) : kind === 'sales' ? (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path d="M4 19V5M4 19h16" />
+      <path d="m7 14 4-4 3 3 5-6" />
+    </svg>
+  ) : kind === 'store' ? (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path d="M4 10h16v9H4z" />
+      <path d="M3 10 6 5h12l3 5" />
+      <path d="M10 19v-5h4v5" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M8 20h8M12 16v4" />
+    </svg>
+  )
+  return <span className={`wt-dept-mark wt-dept-mark--${kind}`}>{icon}</span>
+}
+
 function DepartmentCards({ departments }) {
   const cards = [...departments].sort((a, b) => {
     const score = (Number(b.score) || 0) - (Number(a.score) || 0)
@@ -1524,19 +1534,36 @@ function DepartmentCards({ departments }) {
   return (
     <section className="wt-dept" aria-label="Departments">
       <h2 className="wt-dept-title">Departments</h2>
-      <div className="wt-insight-list">
-        {cards.map((dept, index) => {
+      <div className="wt-dept-cards">
+        {cards.map((dept) => {
           const gap = Number(dept.gap) || 0
+          const score = Math.max(0, Math.min(100, Number(dept.score) || 0))
           return (
-            <article key={dept.slug || dept.name} className="wt-insight">
-              <span className="wt-insight-rank">{index + 1}</span>
-              <strong className="wt-insight-name">{dept.name}</strong>
-              <strong className="wt-insight-score">{Number(dept.score) || 0}%</strong>
-              <span className={`wt-pill wt-pill--${dept.bandKey}`}>{dept.band}</span>
-              <span className="wt-insight-people">{peopleLabel(dept.peopleCount)}</span>
-              <span className="wt-insight-top">Top {dept.topName} {Number(dept.topScore) || 0}%</span>
-              <span className={gap > 0 ? 'wt-gap is-up' : gap < 0 ? 'wt-gap is-down' : 'wt-gap'}>{dept.gapLabel}</span>
-              <a className="wt-insight-link" href={dept.href || '#'}>View department</a>
+            <article key={dept.slug || dept.name} className="wt-dept-card">
+              <DeptMark slug={dept.slug} />
+              <div className="wt-dept-card-body">
+                <div className="wt-dept-card-top">
+                  <strong className="wt-dept-card-name">{dept.name}</strong>
+                  <span className="wt-dept-flag">{dept.band}</span>
+                </div>
+                <div className="wt-dept-card-scoreline">
+                  <strong>{score}%</strong>
+                  <span className="wt-dept-bar" aria-hidden="true">
+                    <span style={{ width: `${score}%` }} />
+                  </span>
+                </div>
+                <p className="wt-dept-card-meta">
+                  <span>{peopleLabel(dept.peopleCount)}</span>
+                  <span>Top {dept.topName} {Number(dept.topScore) || 0}%</span>
+                  <span className={gap > 0 ? 'wt-gap is-up' : gap < 0 ? 'wt-gap is-down' : 'wt-gap'}>{dept.gapLabel}</span>
+                </p>
+              </div>
+              <a className="wt-dept-card-link" href={dept.href || '#'}>
+                View department
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6" />
+                </svg>
+              </a>
             </article>
           )
         })}
@@ -1548,7 +1575,6 @@ function DepartmentCards({ departments }) {
 export default function App() {
   const data = cfg()
   const month = data.month || {}
-  const bands = Array.isArray(data.bands) ? data.bands : []
   const departments = Array.isArray(data.departments) ? data.departments : []
 
   if (Array.isArray(data.hub)) {
@@ -1614,18 +1640,6 @@ export default function App() {
       </header>
 
       <TeamTrend trend={data.trend} />
-
-      <section className="wt-bands" aria-label="Score bands">
-        {bands.map((band) => (
-          <article key={band.key} className={`wt-band wt-band--${band.key}`}>
-            <BandIcon name={band.key} />
-            <span className="wt-band-copy">
-              <span className="wt-band-count">{Number(band.count) || 0}</span>
-              <span className="wt-band-label">{band.label}</span>
-            </span>
-          </article>
-        ))}
-      </section>
 
       {departments.length === 0 ? (
         <p className="wt-empty">No active people for this month.</p>

@@ -1,0 +1,9 @@
+.venv/
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+data/*.db
+data/settings.json
+data/workspace/*
+!data/workspace/.gitkeep

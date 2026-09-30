@@ -1542,15 +1542,13 @@ function DepartmentCards({ departments }) {
             <article key={dept.slug || dept.name} className="wt-dept-card">
               <DeptMark slug={dept.slug} />
               <div className="wt-dept-card-body">
-                <div className="wt-dept-card-top">
+                <div className="wt-dept-card-line">
                   <strong className="wt-dept-card-name">{dept.name}</strong>
-                  <span className="wt-dept-flag">{dept.band}</span>
-                </div>
-                <div className="wt-dept-card-scoreline">
-                  <strong>{score}%</strong>
+                  <strong className="wt-dept-card-pct">{score}%</strong>
                   <span className="wt-dept-bar" aria-hidden="true">
                     <span style={{ width: `${score}%` }} />
                   </span>
+                  <span className="wt-dept-flag">{dept.band}</span>
                 </div>
                 <p className="wt-dept-card-meta">
                   <span>{peopleLabel(dept.peopleCount)}</span>

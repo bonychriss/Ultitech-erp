@@ -3407,8 +3407,8 @@ function weeklyTasksUiBuildPayload(): array
         $gap = (int) $dept['score'] - $companyScore;
         $departments[$index]['gap'] = $gap;
         $departments[$index]['gapLabel'] = $gap > 0
-            ? ($gap . ' above company')
-            : ($gap < 0 ? (abs($gap) . ' below company') : 'Same as company');
+            ? ($gap . ' above target')
+            : ($gap < 0 ? (abs($gap) . ' below target') : 'Same as company');
     }
     $focusDepartment = isset($_GET['dept'])
         ? trim(strtolower((string) preg_replace('/[^a-z0-9\-]/', '', (string) $_GET['dept'])), '-')

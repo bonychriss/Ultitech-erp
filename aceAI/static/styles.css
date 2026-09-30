@@ -1,0 +1,166 @@
+:root {
+  color-scheme: light;
+  --ink: #1c2430;
+  --muted: #5c6775;
+  --line: #e4ddd2;
+  --paper: #f6f3ee;
+  --panel: #ffffff;
+  --side: #1c2430;
+  --side-text: #f6f3ee;
+  --accent: #b85a2a;
+  --accent-dark: #8d421c;
+  --ok: #1f6b4a;
+  --wait: #8a5a12;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+
+aside {
+  background: var(--side);
+  color: var(--side-text);
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.brand { display: flex; gap: 12px; align-items: center; }
+.brand p, header p { margin: 2px 0 0; color: #c8c1b6; font-size: 13px; }
+.brand strong { font-size: 16px; }
+
+.mark {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #c8c1b6;
+  border-radius: 8px;
+  letter-spacing: 0.04em;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#new-chat, #composer button, .confirm button {
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+}
+
+#new-chat, #settings-toggle, #settings button {
+  background: transparent;
+  color: var(--side-text);
+  border: 1px solid #4a5564;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+#settings:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#settings label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #c8c1b6; }
+#settings input, #settings select {
+  border: 1px solid #4a5564;
+  border-radius: 8px;
+  background: #2a3442;
+  color: var(--side-text);
+  padding: 8px 10px;
+  font: inherit;
+}
+#settings button { text-align: center; cursor: pointer; }
+#settings .hint { margin: 0; color: #c8c1b6; font-size: 12px; line-height: 1.4; }
+#settings .hint span { font-family: Consolas, monospace; }
+
+#history { list-style: none; margin: 0; padding: 0; overflow: auto; }
+#history button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: #e7e1d8;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 8px;
+  font: inherit;
+  cursor: pointer;
+}
+#history button.active, #history button:hover { background: #2a3442; }
+
+.chat { display: flex; flex-direction: column; min-width: 0; }
+header { padding: 22px 28px 8px; }
+header h1 { margin: 0; font-size: 22px; font-weight: 650; }
+header p { color: var(--muted); }
+#mode { font-size: 13px; }
+
+.messages {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 28px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+article {
+  max-width: 720px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+article.user { align-self: flex-end; background: #efe7dc; }
+article span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+article p { margin: 0; white-space: pre-wrap; line-height: 1.45; }
+article .elapsed { margin-top: 8px; font-size: 12px; color: var(--muted); }
+
+.confirm {
+  margin: 0 28px 12px;
+  padding: 14px;
+  background: #fff8ef;
+  border: 1px solid #efd3b8;
+  border-radius: 12px;
+}
+.confirm p { margin: 0 0 12px; }
+.confirm .actions { display: flex; gap: 8px; }
+.confirm button { padding: 8px 14px; }
+.confirm .yes { background: var(--accent); color: white; }
+.confirm .no { background: transparent; border: 1px solid var(--line); }
+
+#composer {
+  display: flex;
+  gap: 8px;
+  padding: 0 28px 22px;
+}
+#composer input {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+  background: white;
+}
+#composer button { background: var(--ink); color: white; padding: 0 18px; }
+#composer button:disabled, #composer input:disabled { opacity: 0.6; cursor: default; }
+
+.empty { color: var(--muted); padding: 12px 0; }
+
+@media (max-width: 800px) {
+  .layout { grid-template-columns: 1fr; }
+  aside { min-height: auto; }
+  #history { max-height: 140px; }
+}

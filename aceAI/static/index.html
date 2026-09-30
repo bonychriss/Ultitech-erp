@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ACE AI</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <span class="mark">ACE</span>
+        <div>
+          <strong>ACE AI</strong>
+          <p>Digital operator</p>
+        </div>
+      </div>
+      <button id="new-chat" type="button">New conversation</button>
+      <button id="settings-toggle" type="button">Settings</button>
+      <form id="settings" hidden>
+        <label>Provider
+          <select id="provider">
+            <option value="local">Local (Ollama)</option>
+            <option value="openai">OpenAI</option>
+          </select>
+        </label>
+        <div id="local-fields">
+          <label>Local model
+            <input id="local-model" type="text" maxlength="80" spellcheck="false">
+          </label>
+          <label>Ollama address
+            <input id="ollama-url" type="text" maxlength="200" spellcheck="false">
+          </label>
+          <p class="hint">Install Ollama, then run <span>ollama pull qwen2.5:3b</span>. The 3B model is the faster choice on this PC.</p>
+        </div>
+        <div id="openai-fields">
+          <label>OpenAI model
+            <input id="openai-model" type="text" maxlength="80" spellcheck="false">
+          </label>
+          <label>OpenAI API key
+            <input id="openai-key" type="password" maxlength="300" autocomplete="off" placeholder="Leave blank to keep the saved key">
+          </label>
+        </div>
+        <button type="submit">Save settings</button>
+        <p id="settings-note" class="hint"></p>
+      </form>
+      <ul id="history"></ul>
+    </aside>
+    <section class="chat">
+      <header>
+        <div>
+          <h1>ACE</h1>
+          <p id="mode">Checking provider</p>
+          <p id="status">Ready</p>
+        </div>
+      </header>
+      <div id="messages" class="messages"></div>
+      <div id="confirm" class="confirm" hidden></div>
+      <form id="composer">
+        <input id="input" type="text" maxlength="4000" autocomplete="off" placeholder="Ask ACE to open an app, search the web, or prepare a test invoice">
+        <button type="submit">Send</button>
+      </form>
+    </section>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

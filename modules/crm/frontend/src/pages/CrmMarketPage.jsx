@@ -378,6 +378,18 @@ const COUNTRIES = [
   { code: 'cn', name: 'China' },
 ];
 
+function extractZenserpKeyFromPaste(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const header = raw.match(/apikey\s*[:=]\s*['"]?([A-Za-z0-9._\-]+)/i);
+  if (header?.[1]) return header[1].trim();
+  const uuid = raw.match(/\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i);
+  if (uuid?.[1]) return uuid[1];
+  const token = raw.match(/\b([A-Za-z0-9_\-]{16,})\b/);
+  if (token?.[1]) return token[1];
+  return raw.replace(/\s+/g, '');
+}
+
 function extractRapidApiKeyFromPaste(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -530,6 +542,7 @@ export default function CrmMarketPage() {
   const [searchBusy, setSearchBusy] = useState(false);
   const [zenserpReady, setZenserpReady] = useState(null);
   const [zenserpKey, setZenserpKey] = useState('');
+  const zenserpKeyRef = useRef(null);
   const [zenserpSaving, setZenserpSaving] = useState(false);
   const [searchSource, setSearchSource] = useState('');
   const [sourceSaving, setSourceSaving] = useState('');
@@ -692,11 +705,18 @@ export default function CrmMarketPage() {
 
   const saveZenserpFromSearch = async (event) => {
     event.preventDefault();
+    const typed = extractZenserpKeyFromPaste(zenserpKeyRef.current?.value || zenserpKey);
+    if (!typed) {
+      setMessage('');
+      setError('Paste the API key from the Zenserp dashboard.');
+      return;
+    }
     setZenserpSaving(true);
     setError('');
     try {
-      await saveZenserpKey(zenserpKey);
+      await saveZenserpKey(typed);
       setZenserpKey('');
+      if (zenserpKeyRef.current) zenserpKeyRef.current.value = '';
       setZenserpReady(true);
       setMessage('Zenserp API key saved.');
     } catch (err) {
@@ -1650,11 +1670,17 @@ export default function CrmMarketPage() {
           <label className="crm-market-field">
             <span>Zenserp API key {zenserpReady ? '(saved)' : '(not set)'}</span>
             <input
+              ref={zenserpKeyRef}
               type="password"
+              name="zenserp_api_key"
               className="crm-market-token-input"
-              value={zenserpKey}
-              onChange={(event) => setZenserpKey(event.target.value)}
-              placeholder={zenserpReady ? 'Paste a new key to replace the saved one' : 'Paste Zenserp API key'}
+              defaultValue=""
+              onChange={(event) => {
+                const next = extractZenserpKeyFromPaste(event.target.value);
+                if (next !== event.target.value) event.target.value = next;
+                setZenserpKey(next);
+              }}
+              placeholder={zenserpReady ? 'Paste a new key to replace the saved one' : 'Paste the key from the Zenserp dashboard'}
               autoComplete="off"
             />
             <small className="crm-market-token-hint">
@@ -1662,7 +1688,7 @@ export default function CrmMarketPage() {
             </small>
           </label>
           <div className="crm-market-settings-actions">
-            <button type="submit" className="crm-desk-btn crm-desk-btn-primary" disabled={zenserpSaving || !zenserpKey.trim()}>
+            <button type="submit" className="crm-desk-btn crm-desk-btn-primary" disabled={zenserpSaving}>
               {zenserpSaving ? 'Saving...' : 'Save Zenserp key'}
             </button>
           </div>

@@ -47,11 +47,30 @@ function crmMarketSaveActiveSearch(PDO $pdo, string $source): string
     return $source === 'off' ? '' : $source;
 }
 
+function crmZenserpNormalizeApiKey(string $raw): string
+{
+    $raw = trim($raw);
+    if ($raw === '') {
+        return '';
+    }
+    if (preg_match('/apikey\s*[:=]\s*["\']?([A-Za-z0-9._\-]+)/i', $raw, $match)) {
+        return $match[1];
+    }
+    if (preg_match('/\b([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\b/', $raw, $match)) {
+        return $match[1];
+    }
+    if (preg_match('/\b([A-Za-z0-9_\-]{16,})\b/', $raw, $match)) {
+        return $match[1];
+    }
+    $compact = preg_replace('/\s+/', '', $raw);
+    return is_string($compact) ? $compact : '';
+}
+
 function crmZenserpSaveApiKey(PDO $pdo, string $key): void
 {
-    $key = trim($key);
-    if ($key === '' || strlen($key) > 200) {
-        throw new InvalidArgumentException('Enter a Zenserp API key.');
+    $key = crmZenserpNormalizeApiKey($key);
+    if ($key === '' || strlen($key) > 500) {
+        throw new InvalidArgumentException('Paste the API key from the Zenserp dashboard.');
     }
     $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('crm_zenserp_api_key', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
     $stmt->execute([$key, $key]);

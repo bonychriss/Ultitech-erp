@@ -1389,29 +1389,61 @@ function MeasurePage({ month, measure }) {
   )
 }
 
-function KpiHub({ items }) {
-  const cards = Array.isArray(items) ? items : []
+function KpiHub({ items, summary, monthLabel }) {
+  const company = summary && summary.company ? summary.company : null
+  const departments = summary && Array.isArray(summary.departments) ? summary.departments : []
+  const hr = (Array.isArray(items) ? items : []).find((item) => item.id === 'hr')
   return (
     <div className="wt-dash">
       <header className="wt-head">
         <div>
           <h1 className="wt-title">Smart KPI</h1>
-          <p className="wt-sub">Choose a KPI</p>
+          <p className="wt-sub">{monthLabel || 'This month'}</p>
         </div>
       </header>
-      <div className="wt-nc-section-list">
-        {cards.map((item) => (
-          <a key={item.id} className="wt-nc-card wt-kpi-card" href={item.href || '#'}>
-            <span className="wt-nc-icon" aria-hidden="true">
-              <RecordIcon kind={item.id === 'hr' ? 'attendance' : item.id === 'sales' ? 'sales' : item.id === 'inventory' ? 'backup' : item.id === 'finance' ? 'accuracy' : item.id === 'it' ? 'uptime' : item.id === 'drivers' ? 'customer' : 'quote'} />
-            </span>
-            <div className="wt-nc-body">
-              <h3 className="wt-nc-title">{item.label}</h3>
-              <p className="wt-kpi-details"><span>{item.desc}</span></p>
-            </div>
-          </a>
-        ))}
-      </div>
+      {company ? (
+        <a className="wt-sum-company" href={company.href || '#'}>
+          <span>
+            <span className="wt-sum-kicker">Company performance</span>
+            <strong>{Number(company.score) || 0}%</strong>
+          </span>
+          <span className={`wt-pill wt-pill--${company.bandKey}`}>{company.band}</span>
+          <span className="wt-sum-people">{Number(company.people) || 0} people</span>
+        </a>
+      ) : null}
+      <section className="wt-dept" aria-label="Department performance">
+        <h2 className="wt-dept-title">Departments</h2>
+        <div className="wt-table">
+          <div className="wt-row wt-sum-row wt-row--head">
+            <span>Department</span>
+            <span>Score</span>
+            <span>People</span>
+          </div>
+          {departments.length === 0 ? (
+            <p className="wt-empty">No active people for this month.</p>
+          ) : departments.map((dept) => (
+            <a key={dept.name} className="wt-row wt-sum-row" href={dept.href || '#'}>
+              <span>{dept.name}</span>
+              <span className="wt-score-cell">
+                <strong>{Number(dept.score) || 0}%</strong>
+                <span className={`wt-pill wt-pill--${dept.bandKey}`}>{dept.band}</span>
+              </span>
+              <span>{Number(dept.people) === 1 ? '1 person' : `${Number(dept.people) || 0} people`}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+      {hr ? (
+        <a className="wt-nc-card wt-kpi-card" href={hr.href || '#'}>
+          <span className="wt-nc-icon" aria-hidden="true">
+            <RecordIcon kind="attendance" />
+          </span>
+          <div className="wt-nc-body">
+            <h3 className="wt-nc-title">{hr.label}</h3>
+            <p className="wt-kpi-details"><span>{hr.desc}</span></p>
+          </div>
+        </a>
+      ) : null}
     </div>
   )
 }
@@ -1455,7 +1487,7 @@ export default function App() {
   const departments = Array.isArray(data.departments) ? data.departments : []
 
   if (Array.isArray(data.hub)) {
-    return <KpiHub items={data.hub} />
+    return <KpiHub items={data.hub} summary={data.summary} monthLabel={data.monthLabel} />
   }
 
   if (data.catalog) {
@@ -1500,7 +1532,7 @@ export default function App() {
       {departments.length === 0 ? (
         <p className="wt-empty">No active people for this month.</p>
       ) : departments.map((dept) => (
-        <section key={dept.name} className="wt-dept">
+        <section key={dept.name} id={`dept-${String(dept.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`} className="wt-dept">
           <h2 className="wt-dept-title">{dept.name}</h2>
           <div className="wt-table">
             <div className="wt-row wt-row--head">

@@ -2936,6 +2936,52 @@ function weeklyTasksUiKpiCatalog(): array
 }
 
 /**
+ * @param array<int,array<string,mixed>> $departments
+ * @return array{company:array<string,mixed>,departments:array<int,array<string,mixed>>}
+ */
+function weeklyTasksUiPerformanceSummary(array $departments, string $boardUrl): array
+{
+    $all = [];
+    $rows = [];
+    foreach ($departments as $dept) {
+        $scores = [];
+        foreach ($dept['people'] ?? [] as $person) {
+            $scores[] = (int) ($person['score'] ?? 0);
+        }
+        if (!$scores) {
+            continue;
+        }
+        $all = array_merge($all, $scores);
+        $score = (int) round(array_sum($scores) / count($scores));
+        $band = weeklyTasksUiBand($score);
+        $name = (string) ($dept['name'] ?? '');
+        $slug = trim(strtolower((string) preg_replace('/[^a-z0-9]+/i', '-', $name)), '-');
+        $rows[] = [
+            'name' => $name,
+            'score' => $score,
+            'people' => count($scores),
+            'band' => $band['label'],
+            'bandKey' => $band['key'],
+            'href' => $boardUrl . '#dept-' . $slug,
+        ];
+    }
+    $companyScore = $all ? (int) round(array_sum($all) / count($all)) : 0;
+    $companyBand = weeklyTasksUiBand($companyScore);
+
+    return [
+        'company' => [
+            'label' => 'Company performance',
+            'score' => $companyScore,
+            'people' => count($all),
+            'band' => $companyBand['label'],
+            'bandKey' => $companyBand['key'],
+            'href' => $boardUrl,
+        ],
+        'departments' => $rows,
+    ];
+}
+
+/**
  * @return array<string,mixed>
  */
 function weeklyTasksUiKpiScreen(string $kpi): array
@@ -2980,9 +3026,7 @@ function weeklyTasksUiBuildPayload(): array
     $selectedId = isset($_GET['user']) ? (int) $_GET['user'] : 0;
     $kpi = isset($_GET['kpi']) ? (string) preg_replace('/[^a-z]/', '', strtolower((string) $_GET['kpi'])) : '';
     $measureAsked = isset($_GET['measure']) ? (string) preg_replace('/[^a-z0-9\-]/', '', strtolower((string) $_GET['measure'])) : '';
-    if ($selectedId < 1 && $measureAsked === '' && $kpi !== 'hr') {
-        return weeklyTasksUiKpiScreen($kpi);
-    }
+    $hubOnly = $selectedId < 1 && $measureAsked === '' && $kpi !== 'hr';
     $offsets = weeklyTasksUiSelectedOffsets();
     $monthOffset = $offsets[0];
     $weekCount = 0;
@@ -3326,6 +3370,14 @@ function weeklyTasksUiBuildPayload(): array
             return $b['score'] <=> $a['score'];
         });
         $departments[] = ['name' => $name, 'people' => $people];
+    }
+
+    if ($hubOnly) {
+        $screen = weeklyTasksUiKpiScreen('');
+        $screen['monthLabel'] = $monthLabel;
+        $screen['summary'] = weeklyTasksUiPerformanceSummary($departments, weeklyTasksUiKpiUrl('hr'));
+
+        return $screen;
     }
 
     $monthOptions = [];

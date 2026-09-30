@@ -33,6 +33,13 @@ $notifIsSidebar = ($notifDisplayMode === 'sidebar');
 
 $ncAllItems = [];
 try {
+    $aiAgentLib = dirname(__DIR__, 2) . '/modules/ai-agent/includes/agent-lib.php';
+    if (is_file($aiAgentLib)) {
+        require_once $aiAgentLib;
+        if (function_exists('aiAgentSurfaceNewOverdueAlert')) {
+            aiAgentSurfaceNewOverdueAlert();
+        }
+    }
     if (function_exists('reconcileStalePaymentVoucherActionNotificationsForUser')) {
         reconcileStalePaymentVoucherActionNotificationsForUser();
     }

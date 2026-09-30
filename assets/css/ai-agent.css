@@ -1,3 +1,23 @@
+main.ai-agent-react-root {
+    padding: 0 0 2rem;
+    background: #f8fafc;
+}
+html[data-theme="dark"] main.ai-agent-react-root {
+    background: #0f172a;
+}
+#ai-receivables {
+    scroll-margin-top: 88px;
+}
+.ai-agent-page .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
 .ai-agent-page {
     font-family: Inter, system-ui, sans-serif;
     padding: 1.25rem 1.5rem 3rem;
@@ -66,7 +86,8 @@
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
 }
 .ai-metric {
-    padding: 14px 16px;
+    padding: 8px 12px;
+    border-radius: 12px;
 }
 .ai-metric span,
 .ai-kicker {
@@ -77,13 +98,34 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
+.ai-metric .ai-metric-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ai-metric .ai-metric-icon {
+    display: inline-flex;
+    color: #4338ca;
+    flex: 0 0 auto;
+}
+.ai-metric-urgent .ai-metric-icon { color: #b91c1c; }
+.ai-metric-soon .ai-metric-icon { color: #b45309; }
+.ai-metric .ai-metric-icon + span,
+.ai-metric-label {
+    text-transform: uppercase;
+}
 .ai-metric strong {
     display: block;
-    margin-top: 6px;
-    font-size: 1.15rem;
+    margin-top: 2px;
+    font-size: 1rem;
+    line-height: 1.2;
 }
 .ai-metric small {
+    display: block;
+    margin-top: 1px;
     color: #64748b;
+    font-size: 0.72rem;
+    line-height: 1.2;
 }
 .ai-metric-urgent strong { color: #b91c1c; }
 .ai-metric-soon strong { color: #b45309; }
@@ -98,6 +140,21 @@
 }
 .ai-card h3,
 .ai-brief-item h3 { margin: 0 0 8px; font-size: 1rem; }
+.ai-summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 8px 0 0;
+    color: #334155;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+.ai-summary-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    margin-top: 3px;
+    color: #4338ca;
+}
 .ai-analysis { color: #1d4ed8; margin: 8px 0 0; }
 .ai-note,
 .ai-empty,
@@ -133,6 +190,7 @@
     white-space: nowrap;
 }
 .ai-btn-ghost { background: #eef2ff; color: #3730a3; }
+.ai-btn.is-listening { background: #fee2e2; color: #b91c1c; }
 .ai-briefing { display: grid; gap: 10px; }
 .ai-brief-item { padding: 14px 16px; box-shadow: none; }
 .ai-tone-urgent { border-left: 4px solid #dc2626; }
@@ -209,6 +267,8 @@ html[data-theme="dark"] .ai-ask input {
     color: #e2e8f0;
     border-color: #334155;
 }
+html[data-theme="dark"] .ai-summary { color: #e2e8f0; }
+html[data-theme="dark"] .ai-summary-icon { color: #a5b4fc; }
 html[data-theme="dark"] .ai-metric span,
 html[data-theme="dark"] .ai-kicker,
 html[data-theme="dark"] .ai-note,

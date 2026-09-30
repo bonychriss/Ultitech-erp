@@ -28,6 +28,7 @@ use App\Http\Controllers\AccountingPageController;
 use App\Http\Controllers\RevenueDeskPageController;
 use App\Http\Controllers\RevenuePageController;
 use App\Http\Controllers\AttendancePageController;
+use App\Http\Controllers\AiAgentPageController;
 use App\Http\Controllers\NotificationsPageController;
 use App\Http\Controllers\WeeklyTasksPageController;
 use App\Http\Controllers\DeliveriesPageController;
@@ -125,6 +126,9 @@ Route::middleware([AttachErpContext::class])->group(function () {
 
     // Weekly tasks dashboard (React; plans and reports stay on weekly_tasks/*.php)
     Route::get('/weekly-tasks/dashboard', [WeeklyTasksPageController::class, 'show'])->name('weekly-tasks.page.dashboard');
+
+    // AI Agent (React receivables + briefing; chat API stays on modules/ai-agent/api.php)
+    Route::get('/ai-agent', [AiAgentPageController::class, 'show'])->name('ai-agent.page');
 
     // Notifications centre (React; mark-read APIs stay on PHP includes/api)
     Route::get('/notifications', [NotificationsPageController::class, 'show'])->name('notifications.page');

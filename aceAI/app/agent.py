@@ -16,7 +16,7 @@ from app.errors import AceError, Conflict, MissingConfig, NotFound
 from app.preferences import load_preferences, ollama_is_running
 from app.memory import MemoryStore, clear_conversation, turn_actions, use_conversation
 from app.erp import current_erp
-from app.quick import QUICK_HELP, TOOL_LOG_NAMES, route_ultitech
+from app.quick import TOOL_LOG_NAMES, route_ultitech
 from tools.registry import get_tools, is_consequential
 from tools.test_erp import money
 from tools.ultitech import ultitech_tools
@@ -35,12 +35,11 @@ Call the needed tools immediately. Reply in one or two short sentences.
 """.strip()
 
 ERP_INSTRUCTIONS = """
-You are ACE inside Ultitech ERP. You can only see the signed-in company.
-Call a Ultitech tool before every answer.
-When asked how much customers owe, call ultitech_receivables_summary and stop. Do not add customer balances into a new total.
-When asked for a briefing, call ultitech_daily_briefing and stop.
-Do not change any amount the tool returns.
-Do not create, edit, delete, pay, or post invoices, vouchers, or accounting records.
+You are ACE inside Ultitech ERP. Answer every question the user asks.
+If the question is about this company's invoices, customer balances, stock, payment vouchers, purchase requests, or today's briefing, call the matching Ultitech read tool and use only the figures that tool returns. Do not add customer balances into a new total. Do not change any amount.
+For every other question, answer it directly. Do not call a tool, and do not say the question is outside receivables.
+When the user asks to create an invoice, do not refuse. If the customer or amount is missing, ask for it. Description is optional; pass an empty description when the user leaves it blank. When the customer and amount are known, call ultitech_create_invoice. Do not say the invoice was created until the tool result says so.
+Do not edit, delete, pay, or post existing invoices, vouchers, or accounting records.
 ultitech_prepare_follow_up only drafts a message. It is not sent.
 """.strip()
 
@@ -149,7 +148,12 @@ def _shown_amount(value) -> str:
 
 
 def describe_pending(tool_name: str, arguments: dict) -> str:
-    if tool_name == "create_test_invoice":
+    if tool_name == "ultitech_create_invoice":
+        sentence = (
+            f"I've prepared an invoice for {arguments.get('customer_name')} "
+            f"for {_shown_amount(arguments.get('amount', 0))}."
+        )
+    elif tool_name == "create_test_invoice":
         sentence = (
             f"I've prepared a test invoice for {arguments.get('customer_name')} "
             f"for {_shown_amount(arguments.get('amount', 0))}."
@@ -242,10 +246,7 @@ async def handle_chat(store: MemoryStore, message: str, conversation_id: str | N
 
     if route is not None:
         return await run_quick_turn(store, conversation_id, route[0], route[1])
-    if current_erp() is not None:
-        store.add_message(conversation_id, "assistant", QUICK_HELP)
-        return _payload(conversation_id, QUICK_HELP, None, [])
-
+    ensure_model_ready()
     return await run_turn(store, conversation_id)
 
 
@@ -337,6 +338,8 @@ async def apply_confirmation(
     if not is_consequential(tool_name):
         store.set_pending_status(pending_id, "error")
         raise Conflict("That tool cannot be confirmed.")
+    if approved and tool_name == "ultitech_create_invoice":
+        return _confirm_create_invoice(store, conversation_id, pending_id, pending)
 
     agent = build_agent()
     tokens = use_conversation(store, conversation_id)
@@ -374,6 +377,33 @@ async def apply_confirmation(
         clear_conversation(tokens)
     store.add_message(conversation_id, "assistant", message)
     return _payload(conversation_id, message, None, actions)
+
+
+def _confirm_create_invoice(store: MemoryStore, conversation_id: str, pending_id: str, pending: dict) -> dict:
+    from tools.ultitech import call_ultitech
+
+    args = pending.get("arguments") or {}
+    try:
+        amount = float(args.get("amount") or 0)
+    except (TypeError, ValueError):
+        amount = 0.0
+    raw = call_ultitech(
+        "create_invoice",
+        customer_name=str(args.get("customer_name") or ""),
+        amount=amount,
+        description=str(args.get("description") or ""),
+    )
+    message = _tool_message(raw)
+    status = "executed"
+    try:
+        if not json.loads(raw).get("ok"):
+            status = "error"
+    except (TypeError, json.JSONDecodeError):
+        status = "error"
+    store.set_pending_status(pending_id, "confirmed")
+    action = store.add_action(conversation_id, "ultitech_create_invoice", args, raw, status)
+    store.add_message(conversation_id, "assistant", message)
+    return _payload(conversation_id, message, None, [action])
 
 
 def _matching_interruption(interruptions, pending: dict):

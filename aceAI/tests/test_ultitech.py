@@ -36,6 +36,9 @@ def test_quick_route_picks_the_read_tool():
         "customer_receivables",
         {"name": "hesu investment"},
     )
+    assert route_ultitech("What invoice was created recently?") == ("recent_invoice", {})
+    assert route_ultitech("Which invoice is the oldest overdue?") == ("oldest_overdue", {})
+    assert route_ultitech("What is the oldest building?") is None
     assert route_ultitech("What is the weather?") is None
 
 
@@ -60,7 +63,16 @@ def test_erp_chat_answers_without_the_model(client, monkeypatch):
     assert body["actions"][0]["tool_name"] == "ultitech_receivables_summary"
 
 
-def test_erp_chat_answers_an_unknown_question_without_the_model(client):
+def test_erp_chat_asks_the_model_when_the_command_is_not_recognized(client, monkeypatch):
+    class FakeResult:
+        interruptions = []
+        final_output = "Checked the records."
+
+    async def fake_run(*args, **kwargs):
+        return FakeResult()
+
+    monkeypatch.setattr("app.agent.ensure_model_ready", lambda: None)
+    monkeypatch.setattr("app.agent.Runner.run", fake_run)
     response = client.post(
         "/api/chat",
         json={
@@ -70,4 +82,4 @@ def test_erp_chat_answers_an_unknown_question_without_the_model(client):
         },
     )
     assert response.status_code == 200
-    assert "briefing" in response.json()["message"].lower()
+    assert response.json()["message"] == "Checked the records."

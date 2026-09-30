@@ -63,6 +63,12 @@ async def ultitech_due_soon_invoices() -> str:
 
 
 @function_tool
+async def ultitech_recent_invoice() -> str:
+    """Read the most recently created customer invoice for this company. This does not create or change an invoice."""
+    return await guarded("ultitech_recent_invoice", {}, lambda: call_ultitech("recent_invoice"))
+
+
+@function_tool
 async def ultitech_oldest_overdue_invoice() -> str:
     """Find the oldest overdue customer invoice."""
     return await guarded("ultitech_oldest_overdue_invoice", {}, lambda: call_ultitech("oldest_overdue"))
@@ -102,6 +108,31 @@ async def ultitech_stalled_procurement() -> str:
     return await guarded("ultitech_stalled_procurement", {}, lambda: call_ultitech("stalled_procurement"))
 
 
+async def _invoice_needs_approval(_ctx, params: dict, _call_id: str) -> bool:
+    name = str(params.get("customer_name") or "").strip()
+    description = str(params.get("description") or "").strip()
+    try:
+        amount = float(params.get("amount"))
+    except (TypeError, ValueError):
+        return False
+    return bool(name) and amount > 0
+
+
+@function_tool(needs_approval=_invoice_needs_approval)
+async def ultitech_create_invoice(customer_name: str, amount: float, description: str = "") -> str:
+    """Create one customer invoice in Ultitech after the user confirms. Customer and amount are required. Description may be empty."""
+    return await guarded(
+        "ultitech_create_invoice",
+        {"customer_name": customer_name, "amount": amount, "description": description},
+        lambda: call_ultitech(
+            "create_invoice",
+            customer_name=customer_name,
+            amount=amount,
+            description=description,
+        ),
+    )
+
+
 @function_tool
 async def ultitech_prepare_follow_up(invoice_id: int) -> str:
     """Prepare a customer follow-up draft for one invoice. This does not send email or WhatsApp and does not change the invoice."""
@@ -118,11 +149,13 @@ def ultitech_tools() -> list:
         ultitech_receivables_summary,
         ultitech_overdue_invoices,
         ultitech_due_soon_invoices,
+        ultitech_recent_invoice,
         ultitech_oldest_overdue_invoice,
         ultitech_customer_receivables,
         ultitech_month_receivables,
         ultitech_stock_alerts,
         ultitech_pending_approvals,
         ultitech_stalled_procurement,
+        ultitech_create_invoice,
         ultitech_prepare_follow_up,
     ]

@@ -3,7 +3,8 @@
 import re
 
 QUICK_HELP = (
-    "I can answer today's briefing, what customers owe, overdue invoices, "
+    "I can listen to a command and read this company's records. I can answer "
+    "today's briefing, what customers owe, overdue invoices, the latest invoice, "
     "invoices due soon, the oldest overdue invoice, this month's receivables, "
     "which customers are overdue, stock alerts, pending vouchers, and stalled purchase requests."
 )
@@ -14,6 +15,7 @@ TOOL_LOG_NAMES = {
     "overdue_invoices": "ultitech_overdue_invoices",
     "due_soon_invoices": "ultitech_due_soon_invoices",
     "oldest_overdue": "ultitech_oldest_overdue_invoice",
+    "recent_invoice": "ultitech_recent_invoice",
     "customer_receivables": "ultitech_customer_receivables",
     "month_receivables": "ultitech_month_receivables",
     "stock_alerts": "ultitech_stock_alerts",
@@ -39,6 +41,7 @@ def route_ultitech(message: str) -> tuple[str, dict] | None:
         ("ultitech_overdue_invoices", "overdue_invoices", {}),
         ("ultitech_due_soon_invoices", "due_soon_invoices", {}),
         ("ultitech_oldest_overdue_invoice", "oldest_overdue", {}),
+        ("ultitech_recent_invoice", "recent_invoice", {}),
         ("ultitech_month_receivables", "month_receivables", {}),
         ("ultitech_stock_alerts", "stock_alerts", {}),
         ("ultitech_pending_approvals", "pending_approvals", {}),
@@ -51,15 +54,20 @@ def route_ultitech(message: str) -> tuple[str, dict] | None:
 
     if re.search(r"daily briefing|today'?s briefing|attention today|needs my attention|\bbriefing\b", text):
         return ("daily_briefing", {})
-    if re.search(r"\boldest\b", text):
+    if re.search(r"\binvoices?\b", text) and re.search(
+        r"recent|latest|newest|\blast\b|created|just made|we made|did we create",
+        text,
+    ):
+        return ("recent_invoice", {})
+    if re.search(r"\boldest\b", text) and re.search(r"invoice|overdue", text):
         return ("oldest_overdue", {})
     if re.search(r"due soon|due within", text):
         return ("due_soon_invoices", {})
-    if re.search(r"this month|receivables for", text):
+    if re.search(r"receivables for|invoices? (?:for|this) month|this month'?s receivables", text):
         return ("month_receivables", {})
-    if re.search(r"\bstock\b|reorder|low stock", text):
+    if re.search(r"low stock|reorder|stock alert|below the minimum", text):
         return ("stock_alerts", {})
-    if re.search(r"approval|voucher", text):
+    if re.search(r"voucher|pending approval|waiting for approval", text):
         return ("pending_approvals", {})
     if re.search(r"procurement|purchase request|purchase order", text):
         return ("stalled_procurement", {})

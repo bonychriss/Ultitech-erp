@@ -349,6 +349,9 @@ function aiAgentInvoiceRows(array $ctx, string $which, int $limit = AI_AGENT_LIS
             AND i.invoice_date >= ?
             AND i.invoice_date < ?";
         $order = 'i.invoice_date DESC, i.id DESC';
+    } elseif ($which === 'recent') {
+        $where = "i.status <> 'cancelled'";
+        $order = columnExists('invoices', 'created_at', $db) ? 'i.created_at DESC, i.id DESC' : 'i.id DESC';
     } else {
         $where = "i.status NOT IN ('cancelled','draft','paid')
             AND i.balance_due > 0.009
@@ -359,7 +362,8 @@ function aiAgentInvoiceRows(array $ctx, string $which, int $limit = AI_AGENT_LIS
     $paidSelect = columnExists('invoices', 'amount_paid', $db) ? 'i.amount_paid' : '0 AS amount_paid';
     $emailSelect = tableExists('customers', $db) && columnExists('customers', 'email', $db) ? 'c.email AS customer_email' : "'' AS customer_email";
     $dateSelect = columnExists('invoices', 'invoice_date', $db) ? 'i.invoice_date' : 'NULL AS invoice_date';
-    $sql = "SELECT i.id, i.invoice_number, {$dateSelect}, i.due_date, i.total_amount, {$paidSelect}, i.balance_due, i.status,
+    $createdSelect = columnExists('invoices', 'created_at', $db) ? 'i.created_at' : 'NULL AS created_at';
+    $sql = "SELECT i.id, i.invoice_number, {$dateSelect}, {$createdSelect}, i.due_date, i.total_amount, {$paidSelect}, i.balance_due, i.status,
             c.company_name AS customer_name, {$emailSelect},
             DATEDIFF(CURDATE(), i.due_date) AS days_overdue
         FROM invoices i
@@ -403,6 +407,7 @@ function aiAgentMapInvoice(array $row, string $currency): array
         'customer_name' => trim((string) ($row['customer_name'] ?? '')) !== '' ? (string) $row['customer_name'] : 'Customer',
         'customer_email' => trim((string) ($row['customer_email'] ?? '')),
         'invoice_date' => (string) ($row['invoice_date'] ?? ''),
+        'created_at' => (string) ($row['created_at'] ?? ''),
         'due_date' => (string) ($row['due_date'] ?? ''),
         'total_amount' => (float) ($row['total_amount'] ?? 0),
         'amount_paid' => (float) ($row['amount_paid'] ?? 0),
@@ -797,6 +802,44 @@ function aiAgentFollowUpDraft(array $invoice, string $companyName): array
 /**
  * @return array<string,mixed>
  */
+/**
+ * @param array<string,mixed> $ctx
+ * @return array<string,mixed>
+ */
+function aiAgentRecentInvoiceReply(array $ctx): array
+{
+    $invoice = aiAgentInvoiceRows($ctx, 'recent', 1)[0] ?? null;
+    if ($invoice === null) {
+        return [
+            'text' => 'No customer invoice has been created for this company.',
+            'facts' => '',
+            'analysis' => '',
+            'invoices' => [],
+            'actions' => [['label' => 'Open invoices', 'url' => aiAgentInvoicesUrl()]],
+            'follow_up' => null,
+        ];
+    }
+    $when = trim((string) ($invoice['created_at'] ?? ''));
+    if ($when === '') {
+        $when = trim((string) ($invoice['invoice_date'] ?? ''));
+    }
+    $stamp = $when !== '' ? strtotime($when) : false;
+    $whenLabel = $stamp ? date('j M Y', $stamp) : $when;
+    $text = (string) $invoice['invoice_number'] . ' for ' . $invoice['customer_name'] . ' is the most recent invoice';
+    if ($whenLabel !== '') {
+        $text .= ', dated ' . $whenLabel;
+    }
+    $text .= ', status ' . (string) $invoice['status'] . ', balance ' . aiAgentFormatMoney((float) $invoice['balance_due'], (string) $ctx['currency']) . '.';
+    return [
+        'text' => $text,
+        'facts' => 'This is the latest customer invoice on the company records. Nothing was changed.',
+        'analysis' => '',
+        'invoices' => [$invoice],
+        'actions' => [['label' => 'View invoice', 'url' => (string) $invoice['view_url']]],
+        'follow_up' => null,
+    ];
+}
+
 function aiAgentAnswer(string $message): array
 {
     $ctx = aiAgentContext();
@@ -838,6 +881,9 @@ function aiAgentAnswer(string $message): array
             'actions' => [['label' => 'View invoice', 'url' => (string) $invoice['view_url']]],
             'follow_up' => aiAgentFollowUpDraft($invoice, (string) $ctx['company_name']),
         ];
+    }
+    if (preg_match('/created recently|recently created|most recent|latest invoice|newest invoice|last invoice|just created/', $q)) {
+        return aiAgentRecentInvoiceReply($ctx);
     }
     if (preg_match('/oldest/', $q)) {
         $invoice = aiAgentInvoiceRows($ctx, 'overdue', 1)[0] ?? null;
@@ -977,8 +1023,8 @@ function aiAgentAnswer(string $message): array
 function aiAgentReplyUnknown(): array
 {
     return [
-        'text' => 'I don\'t have enough ERP data to answer that yet.',
-        'facts' => 'I can answer overdue invoices, what customers owe, which customers are overdue, the oldest overdue invoice, invoices due soon, this month\'s receivables, and today\'s briefing.',
+        'text' => 'I could not match that to a company record. Try the latest invoice, overdue invoices, what customers owe, or today\'s briefing.',
+        'facts' => '',
         'analysis' => '',
         'invoices' => [],
         'actions' => [],
@@ -1037,6 +1083,282 @@ function aiAgentCustomersMatching(array $ctx, string $name, int $limit = 8): arr
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $ctx
+ * @return list<array{id:int,name:string}>
+ */
+function aiAgentFindNamedRows(PDO $db, string $table, string $nameColumn, string $name, array $scope): array
+{
+    $name = trim($name);
+    if ($name === '' || !tableExists($table, $db) || !columnExists($table, $nameColumn, $db)) {
+        return [];
+    }
+    $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $name) . '%';
+    $sql = "SELECT id, {$nameColumn} AS name FROM {$table} WHERE {$nameColumn} LIKE ? ESCAPE '\\\\'" . $scope[0] . " ORDER BY {$nameColumn} LIMIT 8";
+    $stmt = $db->prepare($sql);
+    $stmt->execute(array_merge([$like], $scope[1]));
+    $rows = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+        $rows[] = ['id' => (int) ($row['id'] ?? 0), 'name' => (string) ($row['name'] ?? '')];
+    }
+    return $rows;
+}
+
+/**
+ * @param list<array{id:int,name:string}> $rows
+ * @return array{id:int,name:string}|null
+ */
+function aiAgentPickNamedRow(array $rows, string $name): ?array
+{
+    $wanted = strtolower(trim($name));
+    foreach ($rows as $row) {
+        if (strtolower($row['name']) === $wanted) {
+            return $row;
+        }
+    }
+    return count($rows) === 1 ? $rows[0] : null;
+}
+
+/**
+ * Create one customer invoice through the sales invoice flow.
+ *
+ * @param array<string,mixed> $ctx
+ * @return array{ok:bool,message:string,invoices?:list<array<string,mixed>>}
+ */
+function aiAgentCreateCustomerInvoice(array $ctx, string $customerName, float $amount, string $description): array
+{
+    $customerName = trim($customerName);
+    $description = trim($description);
+    if ($customerName === '' || $amount <= 0) {
+        return ['ok' => false, 'message' => 'I need the customer and the amount before I can create an invoice.'];
+    }
+    $db = $ctx['db'];
+    $customerScope = aiAgentScopeSql($db, 'customers', 'customers', (int) $ctx['company_id'], (bool) $ctx['shared']);
+    $customers = aiAgentFindNamedRows($db, 'customers', 'company_name', $customerName, $customerScope);
+    $customer = aiAgentPickNamedRow($customers, $customerName);
+    if ($customer === null) {
+        if ($customers === []) {
+            return ['ok' => false, 'message' => 'No customer in this company matches that name.'];
+        }
+        $names = implode(', ', array_map(static fn (array $row): string => $row['name'], $customers));
+        return ['ok' => false, 'message' => 'More than one customer matches. Which one should I use: ' . $names . '?'];
+    }
+    $items = [];
+    $productName = '';
+    if ($description !== '') {
+        $productScope = aiAgentScopeSql($db, 'products', 'products', (int) $ctx['company_id'], (bool) $ctx['shared']);
+        $products = aiAgentFindNamedRows($db, 'products', 'name', $description, $productScope);
+        $product = aiAgentPickNamedRow($products, $description);
+        if ($product === null && count($products) > 1) {
+            $names = implode(', ', array_map(static fn (array $row): string => $row['name'], $products));
+            return ['ok' => false, 'message' => 'More than one product matches. Which one should I use: ' . $names . '?'];
+        }
+        if ($product !== null) {
+            $productName = $product['name'];
+            $items[] = [
+                'product_id' => $product['id'],
+                'quantity' => 1,
+                'unit_price' => $amount,
+                'discount' => 0,
+                'description' => $description,
+            ];
+        }
+    }
+
+    require_once dirname(__DIR__, 2) . '/sales/includes/invoice-direct-create.php';
+    $today = date('Y-m-d');
+    $input = [
+        'customer_id' => $customer['id'],
+        'invoice_date' => $today,
+        'due_date' => date('Y-m-d', strtotime('+30 days')),
+        'order_type' => 'spare',
+        'currency' => (string) $ctx['currency'],
+        'subtotal' => $amount,
+        'discount_amount' => 0,
+        'tax_amount' => 0,
+        'shipping_charges' => 0,
+        'total_amount' => $amount,
+        'items' => $items,
+    ];
+    try {
+        $created = sales_process_direct_invoice_create($input);
+    } catch (Throwable $e) {
+        global $pdo;
+        if ($pdo instanceof PDO && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('ai-agent create invoice: ' . $e->getMessage());
+        $message = $e instanceof RuntimeException && $e->getMessage() !== ''
+            ? $e->getMessage()
+            : 'I could not create that invoice.';
+        return ['ok' => false, 'message' => $message];
+    }
+    $invoiceId = (int) ($created['invoice_id'] ?? 0);
+    $number = '';
+    if ($invoiceId > 0) {
+        $stmt = $db->prepare('SELECT invoice_number FROM invoices WHERE id = ?');
+        $stmt->execute([$invoiceId]);
+        $number = (string) $stmt->fetchColumn();
+    }
+    $label = $number !== '' ? $number : ('invoice ' . $invoiceId);
+    $money = aiAgentFormatMoney($amount, (string) $ctx['currency']);
+    $message = 'Created ' . $label . ' for ' . $customer['name'] . ' for ' . $money . '.';
+    if ($productName !== '') {
+        $message = 'Created ' . $label . ' for ' . $customer['name'] . ' for ' . $money . ', product ' . $productName . '.';
+    }
+    return [
+        'ok' => true,
+        'message' => $message,
+        'invoices' => [[
+            'id' => $invoiceId,
+            'invoice_number' => $label,
+            'customer_name' => $customer['name'],
+            'balance_due' => $amount,
+            'currency' => (string) $ctx['currency'],
+            'view_url' => aiAgentInvoiceViewUrl($invoiceId),
+        ]],
+    ];
+}
+
+/**
+ * Invoice ids that are overdue for this company, using the same rules as the receivables list.
+ *
+ * @param array<string,mixed> $ctx
+ * @return list<int>
+ */
+function aiAgentOverdueInvoiceIds(array $ctx): array
+{
+    $readable = aiAgentInvoicesReadable($ctx['db'], (bool) $ctx['shared']);
+    if (!$readable['ok']) {
+        return [];
+    }
+    $db = $ctx['db'];
+    $scope = aiAgentScopeSql($db, 'invoices', 'i', (int) $ctx['company_id'], (bool) $ctx['shared']);
+    $sql = "SELECT i.id
+        FROM invoices i
+        WHERE i.status NOT IN ('cancelled','draft','paid')
+            AND i.balance_due > 0.009
+            AND ((i.due_date IS NOT NULL AND i.due_date < CURDATE()) OR i.status = 'overdue')"
+        . $scope[0] . ' ORDER BY i.id';
+    $stmt = $db->prepare($sql);
+    $stmt->execute($scope[1]);
+    $ids = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) ?: [] as $id) {
+        $id = (int) $id;
+        if ($id > 0) {
+            $ids[] = $id;
+        }
+    }
+    return $ids;
+}
+
+/**
+ * @return list<int>
+ */
+function aiAgentBellRecipientIds(PDO $db): array
+{
+    if (!function_exists('tableExists') || !tableExists('users', $db) || !function_exists('columnExists') || !columnExists('users', 'role', $db)) {
+        return [];
+    }
+    $roles = ['admin', 'finance', 'manager', 'department_manager', 'owner'];
+    $placeholders = implode(',', array_fill(0, count($roles), '?'));
+    $sql = "SELECT id FROM users WHERE LOWER(role) IN ($placeholders)";
+    if (columnExists('users', 'is_active', $db)) {
+        $sql .= ' AND is_active = 1';
+    }
+    try {
+        $stmt = $db->prepare($sql);
+        $stmt->execute($roles);
+        $ids = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) ?: [] as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+        return $ids;
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+function aiAgentWriteOverdueNotice(int $userId, int $count, string $link): void
+{
+    global $pdo;
+    if ($userId <= 0 || $count <= 0 || !($pdo instanceof PDO)) {
+        return;
+    }
+    if (function_exists('ensureNotificationsTable')) {
+        ensureNotificationsTable();
+    }
+    $title = $count === 1 ? '1 invoice is overdue' : $count . ' invoices are overdue';
+    $message = 'Open receivables to review the overdue customer invoices.';
+    $existing = $pdo->prepare(
+        "SELECT id FROM system_notifications WHERE user_id = ? AND is_read = 0 AND link LIKE ? ORDER BY id DESC LIMIT 1"
+    );
+    $existing->execute([$userId, '%#ai-receivables%']);
+    $existingId = (int) $existing->fetchColumn();
+    if ($existingId > 0) {
+        $update = $pdo->prepare(
+            'UPDATE system_notifications SET title = ?, message = ?, link = ?, type = ?, created_at = NOW() WHERE id = ? AND user_id = ?'
+        );
+        $update->execute([$title, $message, $link, 'warning', $existingId, $userId]);
+        return;
+    }
+    $insert = $pdo->prepare(
+        'INSERT INTO system_notifications (user_id, title, message, link, type) VALUES (?, ?, ?, ?, ?)'
+    );
+    $insert->execute([$userId, $title, $message, $link, 'warning']);
+}
+
+/**
+ * Once a day, put one overdue card on the notifications list when this company has overdue invoices.
+ */
+function aiAgentSurfaceNewOverdueAlert(): void
+{
+    if (!function_exists('isLoggedIn') || !isLoggedIn() || !function_exists('currentCompanyId')) {
+        return;
+    }
+    $companyId = (int) (currentCompanyId() ?? 0);
+    if ($companyId <= 0 || !function_exists('getCompanySetting') || !function_exists('setCompanySetting')) {
+        return;
+    }
+    $flag = rtrim(sys_get_temp_dir(), '\\/') . DIRECTORY_SEPARATOR . 'ultitech-overdue-notice-' . $companyId . '-' . date('Y-m-d') . '.flag';
+    $handle = @fopen($flag, 'x');
+    if ($handle === false) {
+        return;
+    }
+    fclose($handle);
+
+    try {
+        $ctx = aiAgentContext();
+        $ids = aiAgentOverdueInvoiceIds($ctx);
+        $count = count($ids);
+        if ($count > 0) {
+            $link = aiAgentPageUrl() . '#ai-receivables';
+            $me = (int) $ctx['user_id'];
+            $recipients = array_values(array_unique(array_filter(array_merge(
+                $me > 0 ? [$me] : [],
+                aiAgentBellRecipientIds($ctx['db'])
+            ))));
+            foreach ($recipients as $userId) {
+                try {
+                    aiAgentWriteOverdueNotice((int) $userId, $count, $link);
+                } catch (Throwable $e) {
+                    error_log('ai-agent overdue notice for user ' . (int) $userId . ': ' . $e->getMessage());
+                }
+            }
+        }
+        $saved = setCompanySetting('ai_agent_known_overdue_ids', json_encode(array_values($ids)));
+        if ($saved !== true) {
+            @unlink($flag);
+        }
+    } catch (Throwable $e) {
+        @unlink($flag);
+        error_log('ai-agent overdue bell: ' . $e->getMessage());
+    }
+}
+
 function aiAgentAlertPayload(): array
 {
     $ctx = aiAgentContext();
@@ -1052,6 +1374,146 @@ function aiAgentAlertPayload(): array
         'amount_label' => !empty($summary['available'])
             ? aiAgentFormatMoney((float) $summary['overdue_amount'], (string) $ctx['currency'])
             : '',
-        'review_url' => aiAgentPageUrl(),
+        'review_url' => aiAgentPageUrl() . '#ai-receivables',
     ];
+}
+
+/**
+ * Data for the Laravel + React AI Agent page.
+ *
+ * @return array<string,mixed>
+ */
+function aiAgentPagePayload(string $csrf): array
+{
+    $empty = [
+        'ok' => false,
+        'loadError' => 'I could not read ERP data for this company.',
+        'greeting' => function_exists('aiAgentGreeting') ? aiAgentGreeting() : 'AI Agent',
+        'attentionLabel' => '',
+        'currency' => 'TZS',
+        'summary' => [],
+        'metrics' => [],
+        'facts' => '',
+        'analysis' => '',
+        'overdue' => [],
+        'dueSoon' => [],
+        'withinDays' => 7,
+        'dateLabel' => date('j F Y'),
+        'blocks' => [],
+        'anomaly' => null,
+        'urls' => [],
+        'apiUrl' => function_exists('aiAgentApiUrl') ? aiAgentApiUrl() : '',
+        'csrf' => $csrf,
+    ];
+    try {
+        $ctx = aiAgentContext();
+        $briefing = aiAgentGenerateDailyBriefing($ctx);
+        $currency = (string) ($briefing['currency'] ?? 'TZS');
+        $summary = is_array($briefing['receivables'] ?? null) ? $briefing['receivables'] : [];
+        $attention = (int) ($briefing['total_attention_items'] ?? 0);
+        $available = !empty($summary['available']);
+        $metric = static function (string $key) use ($summary, $currency, $available): string {
+            if (!$available || !isset($summary[$key]) || $summary[$key] === null) {
+                return 'Unavailable';
+            }
+            return aiAgentFormatMoney((float) $summary[$key], $currency);
+        };
+        $overdueCount = (int) ($summary['overdue_count'] ?? 0);
+        $blocks = [
+            [
+                'tone' => 'urgent',
+                'title' => 'Receivables',
+                'show' => $available,
+                'lines' => $available
+                    ? [
+                        $overdueCount . ' customer ' . ($overdueCount === 1 ? 'invoice is' : 'invoices are') . ' overdue',
+                        aiAgentFormatMoney((float) ($summary['overdue_amount'] ?? 0), $currency, true) . ' overdue',
+                    ]
+                    : [(string) ($summary['reason'] ?? '')],
+                'url' => (string) ($briefing['urls']['invoices'] ?? '#'),
+                'label' => 'Review receivables',
+            ],
+            [
+                'tone' => 'attention',
+                'title' => 'Approvals',
+                'show' => !empty($briefing['approvals']['available']),
+                'lines' => !empty($briefing['approvals']['available'])
+                    ? [((int) $briefing['approvals']['pending_count']) . ' payment ' . ((int) $briefing['approvals']['pending_count'] === 1 ? 'voucher is' : 'vouchers are') . ' waiting for approval']
+                    : [(string) ($briefing['approvals']['reason'] ?? 'Unavailable')],
+                'url' => (string) ($briefing['approvals']['url'] ?? '#'),
+                'label' => 'Review approvals',
+            ],
+            [
+                'tone' => 'warn',
+                'title' => 'Stock',
+                'show' => !empty($briefing['stock']['available']),
+                'lines' => !empty($briefing['stock']['available'])
+                    ? [((int) $briefing['stock']['low_stock_count']) . ((int) $briefing['stock']['low_stock_count'] === 1 ? ' product is' : ' products are') . ' below the minimum level']
+                    : [(string) ($briefing['stock']['reason'] ?? 'Unavailable')],
+                'url' => (string) ($briefing['stock']['url'] ?? '#'),
+                'label' => 'View stock',
+            ],
+            [
+                'tone' => 'info',
+                'title' => 'Procurement',
+                'show' => !empty($briefing['procurement']['available']),
+                'lines' => !empty($briefing['procurement']['available'])
+                    ? [((int) $briefing['procurement']['stalled_count']) . ((int) $briefing['procurement']['stalled_count'] === 1 ? ' request has' : ' requests have') . ' been waiting'
+                        . ((int) ($briefing['procurement']['oldest_wait_days'] ?? 0) > 0
+                            ? ', the oldest for ' . (int) $briefing['procurement']['oldest_wait_days'] . ' days'
+                            : '')]
+                    : [(string) ($briefing['procurement']['reason'] ?? 'Unavailable')],
+                'url' => (string) ($briefing['procurement']['url'] ?? '#'),
+                'label' => 'Review procurement',
+            ],
+        ];
+        $anomaly = null;
+        if (!empty($briefing['anomalies']['available']) && (int) ($briefing['anomalies']['count'] ?? 0) > 0) {
+            $anomaly = [
+                'count' => (int) $briefing['anomalies']['count'],
+                'url' => (string) ($briefing['anomalies']['url'] ?? '#'),
+            ];
+        }
+        $mapInvoice = static function (array $invoice) use ($currency): array {
+            return [
+                'id' => (int) ($invoice['id'] ?? 0),
+                'customer_name' => (string) ($invoice['customer_name'] ?? ''),
+                'invoice_number' => (string) ($invoice['invoice_number'] ?? ''),
+                'amount' => aiAgentFormatMoney((float) ($invoice['balance_due'] ?? 0), $currency),
+                'days_overdue' => (int) ($invoice['days_overdue'] ?? 0),
+                'due_date' => (string) ($invoice['due_date'] ?? ''),
+                'view_url' => (string) ($invoice['view_url'] ?? '#'),
+            ];
+        };
+
+        return [
+            'ok' => true,
+            'loadError' => '',
+            'greeting' => (string) ($briefing['greeting'] ?? aiAgentGreeting()),
+            'attentionLabel' => $attention === 1 ? '1 item needs attention today.' : $attention . ' items need attention today.',
+            'currency' => $currency,
+            'summaryAvailable' => $available,
+            'summaryReason' => (string) ($summary['reason'] ?? ''),
+            'metrics' => [
+                ['key' => 'outstanding', 'label' => 'Outstanding', 'value' => $metric('outstanding_amount'), 'tone' => ''],
+                ['key' => 'overdue', 'label' => 'Overdue', 'value' => $metric('overdue_amount'), 'tone' => 'urgent'],
+                ['key' => 'due_soon', 'label' => 'Due soon', 'value' => $metric('due_soon_amount'), 'tone' => 'soon', 'hint' => 'Next ' . (int) ($summary['within_days'] ?? 7) . ' days'],
+                ['key' => 'count', 'label' => 'Overdue invoices', 'value' => $available ? (string) $overdueCount : 'Unavailable', 'tone' => ''],
+            ],
+            'facts' => (string) ($briefing['narrative']['facts'] ?? ''),
+            'analysis' => (string) ($briefing['narrative']['analysis'] ?? ''),
+            'overdue' => array_map($mapInvoice, aiAgentInvoiceRows($ctx, 'overdue', 8)),
+            'dueSoon' => array_map($mapInvoice, aiAgentInvoiceRows($ctx, 'due_soon', 5)),
+            'withinDays' => (int) ($summary['within_days'] ?? 7),
+            'dateLabel' => (string) ($briefing['date_label'] ?? date('j F Y')),
+            'blocks' => $blocks,
+            'anomaly' => $anomaly,
+            'urls' => is_array($briefing['urls'] ?? null) ? $briefing['urls'] : [],
+            'apiUrl' => aiAgentApiUrl(),
+            'csrf' => $csrf,
+        ];
+    } catch (Throwable $e) {
+        error_log('ai-agent page payload: ' . $e->getMessage());
+        return $empty;
+    }
 }

@@ -14,6 +14,7 @@ RISK = {
     "generate_test_report": "safe",
     "create_file": "consequential",
     "create_test_invoice": "consequential",
+    "ultitech_create_invoice": "consequential",
     "create_test_payment_voucher": "consequential",
 }
 

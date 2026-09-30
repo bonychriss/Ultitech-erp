@@ -170,6 +170,15 @@ function notificationsUiDetectModule(array $n): string
     return $src === 'system' ? 'system' : 'general';
 }
 
+function notificationsUiIsOverdueReceivableNotice(array $n): bool
+{
+    $blob = strtolower(trim(
+        (string) ($n['title'] ?? '') . ' ' . (string) ($n['message'] ?? '') . ' ' . (string) ($n['link_url'] ?? $n['link'] ?? '')
+    ));
+
+    return $blob !== '' && (bool) preg_match('/ai-receivables|invoices are overdue|invoice is overdue/', $blob);
+}
+
 function notificationsUiIsSalesTargetNotice(array $n): bool
 {
     $blob = strtolower(trim(
@@ -228,6 +237,14 @@ function notificationsUiEnsureSalesTargetNotice(): void
  */
 function notificationsUiVisual(array $n): array
 {
+    if (notificationsUiIsOverdueReceivableNotice($n)) {
+        return [
+            'icon' => 'alert',
+            'tone' => 'rose',
+            'module' => 'sales',
+        ];
+    }
+
     $module = notificationsUiDetectModule($n);
     $type = strtolower(trim((string) ($n['type'] ?? 'info')));
     $title = strtolower(trim((string) ($n['title'] ?? '')));
@@ -520,6 +537,9 @@ function notificationsUiNormalizeItem(array $n): array
     if ($href === '' && notificationsUiIsSalesTargetNotice($n)) {
         $href = notificationsUiSalesTargetHref();
     }
+    if ($href === '' && notificationsUiIsOverdueReceivableNotice($n) && function_exists('company_url')) {
+        $href = company_url('modules/ai-agent/index.php') . '#ai-receivables';
+    }
 
     $title = (string) ($n['title'] ?? '');
     $message = (string) ($n['message'] ?? '');
@@ -592,6 +612,13 @@ function notificationsUiBuildPayload(string $page = 'list'): array
     $countUnread = 0;
 
     if ($page === 'list') {
+        $aiAgentLib = dirname(__DIR__) . '/modules/ai-agent/includes/agent-lib.php';
+        if (is_file($aiAgentLib)) {
+            require_once $aiAgentLib;
+            if (function_exists('aiAgentSurfaceNewOverdueAlert')) {
+                aiAgentSurfaceNewOverdueAlert();
+            }
+        }
         notificationsUiEnsureSalesTargetNotice();
         $allItems = function_exists('getNotificationCentreFeedPaged')
             ? getNotificationCentreFeedPaged(120, 0)
@@ -614,7 +641,7 @@ function notificationsUiBuildPayload(string $page = 'list'): array
             }
             $item = notificationsUiNormalizeItem($row);
             $mod = (string) ($item['module'] ?? 'general');
-            if (!notificationsUiIsSalesTargetNotice($item) && isset($enabledModules[$mod]) && !$enabledModules[$mod]) {
+            if (!notificationsUiIsSalesTargetNotice($item) && !notificationsUiIsOverdueReceivableNotice($item) && isset($enabledModules[$mod]) && !$enabledModules[$mod]) {
                 continue;
             }
             $period = $item['period'];
@@ -886,7 +913,7 @@ function notificationsUiFilterRowsByPreferences(array $rows, ?int $userId = null
         if (!is_array($row)) {
             continue;
         }
-        if (notificationsUiIsSalesTargetNotice($row)) {
+        if (notificationsUiIsSalesTargetNotice($row) || notificationsUiIsOverdueReceivableNotice($row)) {
             $out[] = $row;
             continue;
         }

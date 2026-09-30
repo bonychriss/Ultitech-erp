@@ -134,6 +134,17 @@ try {
         exit;
     }
 
+    if ($action === 'recent_invoice') {
+        $reply = aiAgentRecentInvoiceReply($ctx);
+        echo json_encode([
+            'ok' => true,
+            'message' => (string) $reply['text'],
+            'invoices' => $reply['invoices'],
+            'links' => $reply['actions'],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     if ($action === 'overdue_invoices' || $action === 'due_soon_invoices' || $action === 'oldest_overdue') {
         $which = $action === 'due_soon_invoices' ? 'due_soon' : 'overdue';
         $limit = $action === 'oldest_overdue' ? 1 : 8;
@@ -222,6 +233,24 @@ try {
             'message' => $message,
             'procurement' => $procurement,
             'links' => empty($procurement['available']) ? [] : [['label' => 'Review procurement', 'url' => (string) $procurement['url']]],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    if ($action === 'create_invoice') {
+        $created = aiAgentCreateCustomerInvoice(
+            $ctx,
+            (string) ($body['customer_name'] ?? ''),
+            (float) ($body['amount'] ?? 0),
+            (string) ($body['description'] ?? '')
+        );
+        echo json_encode([
+            'ok' => !empty($created['ok']),
+            'message' => (string) ($created['message'] ?? ''),
+            'invoices' => $created['invoices'] ?? [],
+            'links' => !empty($created['invoices'][0]['view_url'])
+                ? [['label' => 'View invoice', 'url' => (string) $created['invoices'][0]['view_url']]]
+                : [],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }

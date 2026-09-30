@@ -238,7 +238,6 @@ export default function App() {
   const [facts, setFacts] = useState(data.facts || '')
   const [analysis, setAnalysis] = useState(data.analysis || '')
   const [briefingLead, setBriefingLead] = useState(`${data.greeting || ''}. ${data.attentionLabel || ''}`.trim())
-  const [briefingSource, setBriefingSource] = useState('')
 
   useEffect(() => {
     if (window.location.hash !== '#ai-receivables') {
@@ -257,11 +256,8 @@ export default function App() {
         if (cancelled || !result || !result.ok || !result.text) {
           return
         }
-        if (result.source === 'ace') {
-          setFacts(result.text)
-          setAnalysis('')
-          setBriefingSource('from ACE')
-        }
+        setFacts(result.text)
+        setAnalysis('')
       })
       .catch(() => {})
     return () => {
@@ -430,7 +426,7 @@ export default function App() {
           ) : null}
 
           <section className="ai-card" id="ai-briefing">
-            <p className="ai-kicker">Daily briefing {briefingSource ? <span>{briefingSource}</span> : null}</p>
+            <p className="ai-kicker">Daily briefing</p>
             <p className="ai-date">{data.dateLabel}</p>
             <p className="ai-lead">{briefingLead}</p>
             <div className="ai-briefing">

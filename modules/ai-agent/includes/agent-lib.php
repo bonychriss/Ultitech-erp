@@ -840,6 +840,206 @@ function aiAgentRecentInvoiceReply(array $ctx): array
     ];
 }
 
+/**
+ * @return array<string,mixed>
+ */
+function aiAgentInvoiceDraft(): array
+{
+    $draft = $_SESSION['ai_agent_invoice_draft'] ?? null;
+    return is_array($draft) ? $draft : [];
+}
+
+function aiAgentStoreInvoiceDraft(array $draft): void
+{
+    $_SESSION['ai_agent_invoice_draft'] = $draft;
+}
+
+function aiAgentClearInvoiceDraft(): void
+{
+    unset($_SESSION['ai_agent_invoice_draft']);
+}
+
+/**
+ * @param array<string,mixed> $draft
+ * @return array<string,mixed>
+ */
+function aiAgentTakeInvoiceDetails(string $message, array $draft): array
+{
+    if (preg_match('/customer(?:\s+name)?\s+is\s+([a-z0-9][a-z0-9 .&\'-]{1,80}?)(?=\s+amount\b|\s+description\b|$)/i', $message, $match)) {
+        $draft['customer_name'] = trim($match[1]);
+    } elseif (preg_match('/\bfor\s+([a-z][a-z0-9 .&\'-]{1,60}?)\s+for\s+[0-9]/i', $message, $match)) {
+        $draft['customer_name'] = trim($match[1]);
+    }
+    if (preg_match('/amount\s+is\s+([0-9][0-9,]*(?:\.\d+)?)/i', $message, $match)
+        || preg_match('/(?:tsh|tzs)\s*([0-9][0-9,]*(?:\.\d+)?)/i', $message, $match)) {
+        $draft['amount'] = (float) str_replace(',', '', $match[1]);
+    } elseif (!empty($draft['customer_name']) && preg_match('/\bfor\s+([0-9][0-9,]*(?:\.\d+)?)\b/i', $message, $match)) {
+        $draft['amount'] = (float) str_replace(',', '', $match[1]);
+    }
+    if (preg_match('/leave it blank|no description|description blank|without (?:a )?description/i', $message)) {
+        $draft['description'] = '';
+        $draft['description_set'] = true;
+    } elseif (preg_match('/description(?:\s+is)?\s+(.+)$/i', $message, $match)) {
+        $draft['description'] = trim($match[1]);
+        $draft['description_set'] = true;
+    }
+    return $draft;
+}
+
+/**
+ * @param array<string,mixed> $draft
+ * @return array<string,mixed>
+ */
+function aiAgentInvoicePrompt(array $draft): array
+{
+    $missing = [];
+    if (trim((string) ($draft['customer_name'] ?? '')) === '') {
+        $missing[] = 'the customer name';
+    }
+    if ((float) ($draft['amount'] ?? 0) <= 0) {
+        $missing[] = 'the amount';
+    }
+    $text = $missing === []
+        ? 'I can create that invoice.'
+        : 'I can create an invoice. I still need ' . implode(' and ', $missing) . '. The description can be left blank.';
+    return [
+        'text' => $text,
+        'facts' => '',
+        'analysis' => '',
+        'invoices' => [],
+        'actions' => [],
+        'follow_up' => null,
+    ];
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function aiAgentHandleInvoiceCommand(string $message): ?array
+{
+    $q = strtolower(trim($message));
+    $q = preg_replace('/\s+/', ' ', $q) ?? '';
+    $draft = aiAgentInvoiceDraft();
+    $confirm = (bool) preg_match('/^(yes|y|confirm|confirmed|go ahead|do it|proceed|ok|okay)$/', $q);
+    $cancel = (bool) preg_match('/^(no|cancel|stop)$/', $q);
+    if ($draft !== [] && $confirm) {
+        $customer = trim((string) ($draft['customer_name'] ?? ''));
+        $amount = (float) ($draft['amount'] ?? 0);
+        if ($customer === '' || $amount <= 0) {
+            return aiAgentInvoicePrompt($draft);
+        }
+        $created = aiAgentCreateCustomerInvoice(aiAgentContext(), $customer, $amount, (string) ($draft['description'] ?? ''));
+        aiAgentClearInvoiceDraft();
+        return [
+            'text' => (string) ($created['message'] ?? 'I could not create that invoice.'),
+            'facts' => '',
+            'analysis' => '',
+            'invoices' => $created['invoices'] ?? [],
+            'actions' => !empty($created['invoices'][0]['view_url'])
+                ? [['label' => 'View invoice', 'url' => (string) $created['invoices'][0]['view_url']]]
+                : [],
+            'follow_up' => null,
+        ];
+    }
+    if ($draft !== [] && $cancel) {
+        aiAgentClearInvoiceDraft();
+        return [
+            'text' => 'Cancelled. I did not create an invoice.',
+            'facts' => '',
+            'analysis' => '',
+            'invoices' => [],
+            'actions' => [],
+            'follow_up' => null,
+        ];
+    }
+    $isCreate = (bool) preg_match('/create (?:an |a )?invoice/', $q);
+    $hasDetails = (bool) preg_match('/customer(?:\s+name)?\s+is\s+|amount\s+is\s+|description\b|leave it blank/i', $message);
+    if (!$isCreate && !($draft !== [] && $hasDetails)) {
+        return null;
+    }
+    $draft = aiAgentTakeInvoiceDetails($message, $draft);
+    $customer = trim((string) ($draft['customer_name'] ?? ''));
+    $amount = (float) ($draft['amount'] ?? 0);
+    if ($customer === '' || $amount <= 0) {
+        $draft['ready'] = false;
+        aiAgentStoreInvoiceDraft($draft);
+        return aiAgentInvoicePrompt($draft);
+    }
+    $draft['ready'] = true;
+    $draft['description'] = (string) ($draft['description'] ?? '');
+    aiAgentStoreInvoiceDraft($draft);
+    $ctx = aiAgentContext();
+    return [
+        'text' => 'I have prepared an invoice for ' . $customer . ' for ' . aiAgentFormatMoney($amount, (string) $ctx['currency']) . '. Do you want me to create it?',
+        'facts' => '',
+        'analysis' => '',
+        'invoices' => [],
+        'actions' => [],
+        'follow_up' => null,
+    ];
+}
+
+/**
+ * @return array<string,mixed>
+ */
+function aiAgentGeneralReply(string $message): array
+{
+    if (!function_exists('ai_openai_request')) {
+        return aiAgentReplyUnknown();
+    }
+    try {
+        $result = ai_openai_request([
+            [
+                'role' => 'system',
+                'content' => 'You are the Ultitech assistant inside the signed-in company. Answer the question. Do not invent invoice numbers, balances, or stock figures. Do not say an invoice, payment, or accounting record was created.',
+            ],
+            ['role' => 'user', 'content' => $message],
+        ]);
+        $text = trim((string) ($result['content'] ?? ''));
+        if ($text === '') {
+            return aiAgentReplyUnknown();
+        }
+        return [
+            'text' => $text,
+            'facts' => '',
+            'analysis' => '',
+            'invoices' => [],
+            'actions' => [],
+            'follow_up' => null,
+        ];
+    } catch (Throwable $e) {
+        error_log('ai-agent general reply: ' . $e->getMessage());
+        return aiAgentReplyUnknown();
+    }
+}
+
+function aiAgentCompanyBriefingText(): string
+{
+    $briefing = aiAgentGenerateDailyBriefing();
+    $summary = is_array($briefing['receivables'] ?? null) ? $briefing['receivables'] : [];
+    $currency = (string) ($briefing['currency'] ?? 'TZS');
+    $parts = [];
+    $parts[] = (string) ($briefing['greeting'] ?? 'Hello') . '.';
+    $parts[] = 'There are ' . (int) ($briefing['total_attention_items'] ?? 0) . ' items that need attention.';
+    if (!empty($summary['available'])) {
+        $parts[] = (int) ($summary['overdue_count'] ?? 0) . ' customer invoices are overdue, totaling ' . aiAgentFormatMoney((float) ($summary['overdue_amount'] ?? 0), $currency, true) . '.';
+        $parts[] = 'Outstanding receivables are ' . aiAgentFormatMoney((float) ($summary['outstanding_amount'] ?? 0), $currency) . '.';
+    }
+    if (!empty($briefing['approvals']['available'])) {
+        $parts[] = (int) ($briefing['approvals']['pending_count'] ?? 0) . ' payment vouchers are waiting for approval.';
+    }
+    if (!empty($briefing['stock']['available'])) {
+        $parts[] = (int) ($briefing['stock']['low_stock_count'] ?? 0) . ' products are below the minimum level.';
+    }
+    if (!empty($briefing['procurement']['available'])) {
+        $parts[] = (int) ($briefing['procurement']['stalled_count'] ?? 0) . ' purchase requests have been waiting, the oldest for ' . (int) ($briefing['procurement']['oldest_wait_days'] ?? 0) . ' days.';
+    }
+    if (!empty($briefing['narrative']['analysis'])) {
+        $parts[] = (string) $briefing['narrative']['analysis'];
+    }
+    return implode(' ', $parts);
+}
+
 function aiAgentAnswer(string $message): array
 {
     $ctx = aiAgentContext();
@@ -848,6 +1048,10 @@ function aiAgentAnswer(string $message): array
 
     if ($q === '') {
         return aiAgentReplyUnknown();
+    }
+    $invoiceReply = aiAgentHandleInvoiceCommand($message);
+    if ($invoiceReply !== null) {
+        return $invoiceReply;
     }
     if (preg_match('/follow[- ]?up/', $q)) {
         $invoice = null;
@@ -1014,7 +1218,7 @@ function aiAgentAnswer(string $message): array
         ];
     }
 
-    return aiAgentReplyUnknown();
+    return aiAgentGeneralReply($message);
 }
 
 /**

@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/includes/functions.php';
 require_once __DIR__ . '/includes/agent-lib.php';
-require_once __DIR__ . '/includes/ace-client.php';
+if (is_file(dirname(__DIR__, 2) . '/includes/ai_helpers.php')) {
+    require_once dirname(__DIR__, 2) . '/includes/ai_helpers.php';
+}
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -42,9 +44,6 @@ try {
             $ctx = aiAgentContext();
             $invoiceId = (int) ($_POST['invoice_id'] ?? 0);
             $invoice = aiAgentInvoiceById($ctx, $invoiceId);
-            $aceReply = $invoice === null ? null : aiAgentAskAce(
-                'Call ultitech_prepare_follow_up with invoice_id ' . $invoiceId . '. Tell the user the draft is not sent.'
-            );
             if ($invoice === null) {
                 $reply = [
                     'text' => 'That invoice is not in the current company.',
@@ -55,18 +54,10 @@ try {
                     'follow_up' => null,
                     'source' => 'erp',
                 ];
-            } elseif (is_array($aceReply)) {
-                if (empty($aceReply['follow_up'])) {
-                    $aceReply['follow_up'] = aiAgentFollowUpDraft($invoice, (string) $ctx['company_name']);
-                }
-                if ($aceReply['invoices'] === []) {
-                    $aceReply['invoices'] = [$invoice];
-                }
-                $reply = $aceReply;
             } else {
                 $reply = [
                     'text' => $invoice['customer_name'] . ' has invoice ' . $invoice['invoice_number'] . ' of ' . aiAgentFormatMoney((float) $invoice['balance_due'], (string) $ctx['currency']) . ' outstanding.',
-                    'facts' => 'ACE is not running, so this draft was prepared directly from ERP data. It has not been sent.',
+                    'facts' => 'The message below is a draft only. It has not been sent.',
                     'analysis' => '',
                     'invoices' => [$invoice],
                     'actions' => [['label' => 'View invoice', 'url' => (string) $invoice['view_url']]],
@@ -79,20 +70,10 @@ try {
         }
 
         if ($action === 'ace_briefing') {
-            $reply = aiAgentAskAce('daily briefing', 'briefing');
-            if (!is_array($reply)) {
-                $briefing = aiAgentGenerateDailyBriefing();
-                echo json_encode([
-                    'ok' => true,
-                    'source' => 'erp',
-                    'text' => trim((string) ($briefing['narrative']['facts'] ?? '') . ' ' . (string) ($briefing['narrative']['analysis'] ?? '')),
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                exit;
-            }
             echo json_encode([
                 'ok' => true,
-                'source' => 'ace',
-                'text' => (string) $reply['text'],
+                'source' => 'erp',
+                'text' => aiAgentCompanyBriefingText(),
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             exit;
         }
@@ -101,12 +82,8 @@ try {
         if (strlen($message) > 500) {
             $message = substr($message, 0, 500);
         }
-        $reply = aiAgentAskAce($message);
-        if (!is_array($reply)) {
-            $reply = aiAgentAnswer($message);
-            $reply['source'] = 'erp';
-            $reply['facts'] = trim((string) ($reply['facts'] ?? '') . ' ACE is not running, so this answer comes directly from ERP data.');
-        }
+        $reply = aiAgentAnswer($message);
+        $reply['source'] = 'erp';
         echo json_encode(['ok' => true, 'reply' => $reply], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }

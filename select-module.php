@@ -261,14 +261,6 @@ $push([
     'icon' => 'performance',
     'color' => '#e11d48',
 ]);
-$push([
-    'id' => 'driver_kpi',
-    'label' => 'Driver KPI',
-    'desc' => 'On-time, vehicle care & documentation scores',
-    'href' => $companyRoute('driver-kpi/index') . '?module=driver_kpi',
-    'icon' => 'deliveries',
-    'color' => '#0e7490',
-]);
 
 if ($isAdmin || $isRootAdminUsername) {
     $settingsHubQs = ['module' => 'settings'];

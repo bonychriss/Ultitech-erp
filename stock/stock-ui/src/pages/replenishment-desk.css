@@ -863,9 +863,56 @@
   color: #475569;
 }
 
+.repl-desk-invoice-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.repl-desk-invoice-split section {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .repl-desk-invoice-split {
+    grid-template-columns: 1fr;
+  }
+}
+
 .repl-desk-detail-msg {
   font-size: 0.75rem;
   color: #64748b;
+}
+
+.repl-desk-star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.repl-desk-star svg {
+  width: 16px;
+  height: 16px;
+}
+
+.repl-desk-star:hover,
+.repl-desk-star.is-marked {
+  color: #eab308;
+  background: transparent;
+}
+
+.repl-desk-star:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .repl-desk-invoice-table {

@@ -19,6 +19,9 @@ RewriteRule ^payroll/(run-payroll|edit-payslip|payslip|settings|my-payslips)/?$ 
 # Attendance → Laravel + React clock desk
 RewriteRule ^attendance/?$ attendance/index.php?module=attendance [L,QSA,NC]
 RewriteRule ^attendance/index(\.php)?/?$ attendance/index.php?module=attendance [L,QSA,NC]
+# Clock-in and other attendance APIs live in parent attendance/, not under this folder.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^attendance/(.+)$ ../attendance/$1?company_slug=ultimate&module=attendance [L,QSA]
 
 # Notifications centre → Laravel + React (physical notifications.php stub)
 RewriteRule ^notifications/?$ notifications.php [L,QSA,NC]

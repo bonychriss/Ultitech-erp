@@ -198,6 +198,20 @@ $laravelListDesks = [
     'quote-edit',
 ];
 if ($desk !== '' && in_array($desk, $laravelListDesks, true)) {
+    // Quotation delete is a POST to this desk. The Laravel page route is GET-only,
+    // so run the legacy create.php handler (it redirects back after delete).
+    if (
+        $desk === 'quotations'
+        && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST'
+        && isset($_POST['delete_ids'])
+    ) {
+        $entry = $salesDeskEntries['quotations'] ?? '';
+        if ($entry !== '' && is_file($entry)) {
+            require $entry;
+            exit;
+        }
+    }
+
     // Order→invoice conversion still needs legacy create.php (GET + order_id).
     if ($desk === 'invoice-create' && (int) ($_GET['order_id'] ?? 0) > 0) {
         // fall through to legacy entry

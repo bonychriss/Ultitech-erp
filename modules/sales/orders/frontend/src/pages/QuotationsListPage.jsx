@@ -166,6 +166,7 @@ export default function QuotationsListPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const selectionAnchorRef = useRef(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [filterPanelStyle, setFilterPanelStyle] = useState(null);
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
@@ -296,6 +297,19 @@ export default function QuotationsListPage() {
     return mineOk && matchesSearch && matchesStatus;
   }), [quotations, search, statusFilter, myQuotationsOnly, currentUserId]);
 
+  useEffect(() => {
+    const visible = new Set(filteredQuotations.map((q) => q.id));
+    setSelectedIds((prev) => {
+      let changed = false;
+      const next = new Set();
+      prev.forEach((id) => {
+        if (visible.has(id)) next.add(id);
+        else changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [filteredQuotations]);
+
   const quotationStats = useMemo(() => {
     const y = new Date().getFullYear();
     let totalVal = 0;
@@ -346,8 +360,8 @@ export default function QuotationsListPage() {
     return chips;
   }, [statusFilter, myQuotationsOnly]);
 
-  function toggleSelection(id, e) {
-    e.stopPropagation();
+  function toggleSelection(id) {
+    selectionAnchorRef.current = id;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -356,18 +370,48 @@ export default function QuotationsListPage() {
     });
   }
 
-  function handleSelectAll(e) {
-    if (e.target.checked) {
-      setSelectedIds(new Set(filteredQuotations.map((q) => q.id)));
-    } else {
-      setSelectedIds(new Set());
+  function selectRange(id) {
+    const ids = filteredQuotations.map((q) => q.id);
+    const end = ids.indexOf(id);
+    const anchor = selectionAnchorRef.current;
+    const start = anchor == null ? end : ids.indexOf(anchor);
+    if (start < 0 || end < 0) {
+      toggleSelection(id);
+      return;
     }
+    const from = Math.min(start, end);
+    const to = Math.max(start, end);
+    selectionAnchorRef.current = id;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (let i = from; i <= to; i += 1) next.add(ids[i]);
+      return next;
+    });
+  }
+
+  function handleRowClick(event, quotation) {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      toggleSelection(quotation.id);
+      return;
+    }
+    if (event.shiftKey) {
+      event.preventDefault();
+      selectRange(quotation.id);
+      return;
+    }
+    goView(quotation.id);
+  }
+
+  async function handleDeleteIds(ids) {
+    const clean = ids.map((id) => Number(id)).filter((id) => id > 0);
+    if (!clean.length) return;
+    if (!(await confirmDeleteQuotations())) return;
+    submitDeleteForm(urls.delete_post || 'create.php', clean);
   }
 
   async function handleDelete() {
-    const ids = Array.from(selectedIds);
-    if (!(await confirmDeleteQuotations())) return;
-    submitDeleteForm(urls.delete_post || 'create.php', ids);
+    await handleDeleteIds(Array.from(selectedIds));
   }
 
   function handleNewClick() {
@@ -745,13 +789,8 @@ export default function QuotationsListPage() {
             <table className="exp-desk-table">
               <thead>
                 <tr>
-                  <th className="qt-col-check">
-                    <input
-                      type="checkbox"
-                      className="qt-checkbox"
-                      onChange={handleSelectAll}
-                      checked={filteredQuotations.length > 0 && filteredQuotations.every((q) => selectedIds.has(q.id))}
-                    />
+                  <th className="qt-col-check qt-col-serial" title="Quotations in this list">
+                    {filteredQuotations.length}
                   </th>
                   <th>Number</th>
                   <th>Customer</th>
@@ -763,27 +802,20 @@ export default function QuotationsListPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredQuotations.map((q) => (
+                {filteredQuotations.map((q, index) => (
                   <tr
                     key={q.id}
-                    className="exp-desk-row-clickable"
+                    className={`exp-desk-row-clickable${selectedIds.has(q.id) ? ' qt-row-selected' : ''}`}
                     tabIndex={0}
-                    onClick={() => goView(q.id)}
+                    onClick={(event) => handleRowClick(event, q)}
                     onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
+                      if (event.key === 'Enter') {
                         event.preventDefault();
                         goView(q.id);
                       }
                     }}
                   >
-                    <td className="qt-col-check" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        className="qt-checkbox"
-                        checked={selectedIds.has(q.id)}
-                        onChange={(e) => toggleSelection(q.id, e)}
-                      />
-                    </td>
+                    <td className="qt-col-check qt-col-serial">{index + 1}</td>
                     <td>
                       <span className="exp-desk-ref">{q.order_number}</span>
                       {supportsOrderTypeSplit && q.order_type && (
@@ -839,6 +871,31 @@ export default function QuotationsListPage() {
                                 Invoice
                               </a>
                             ) : null}
+                            <button
+                              type="button"
+                              className="qt-actions-delete"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(null);
+                                if (!quotationStatusIsDeletable(q.status) || rowHasInvoice(q)) {
+                                  const message = 'Only a draft, quotation, or cancelled quotation with no invoice can be deleted.';
+                                  if (typeof window.Swal !== 'undefined') {
+                                    window.Swal.fire({
+                                      icon: 'info',
+                                      title: 'This quotation cannot be deleted',
+                                      text: message,
+                                    });
+                                  } else {
+                                    window.alert(message);
+                                  }
+                                  return;
+                                }
+                                handleDeleteIds([q.id]);
+                              }}
+                            >
+                              <i className="fas fa-trash-alt" style={{ width: 20, color: '#dc2626' }} />
+                              Delete
+                            </button>
                           </div>
                         )}
                       </div>

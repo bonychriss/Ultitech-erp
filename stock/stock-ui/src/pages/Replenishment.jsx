@@ -12,7 +12,9 @@ import {
   HiOutlineMagnifyingGlass,
   HiOutlineQuestionMarkCircle,
   HiOutlineShoppingCart,
+  HiOutlineStar,
   HiOutlineXMark,
+  HiStar,
 } from 'react-icons/hi2';
 import './replenishment-desk.css';
 
@@ -178,14 +180,88 @@ function PoTypeModal({ order, urls, onClose }) {
   );
 }
 
-function DemandPanel({ product, cacheEntry, loading }) {
-  const pending = Number(product.pending_demand ?? 0);
+function InvoiceRows({ items, invoiceFallback, orderFallback, emptyLabel, mode = 'sales', onToggleStar, pendingStarId = 0 }) {
+  if (!items.length) {
+    return <div className="repl-desk-detail-msg">{emptyLabel}</div>;
+  }
+
+  const isVoucher = mode === 'voucher';
+
+  return (
+    <div className="repl-desk-table-wrap">
+      <table className="repl-desk-invoice-table">
+        <thead>
+          <tr>
+            {isVoucher ? <th className="is-center">Checked</th> : null}
+            <th>{isVoucher ? 'Payment voucher' : 'Invoice'}</th>
+            <th>{isVoucher ? 'Our invoice' : 'Sales order'}</th>
+            <th>{isVoucher ? 'Payee' : 'Customer'}</th>
+            {isVoucher ? null : <th className="is-center">Qty</th>}
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item, idx) => (
+            <tr key={`${item.invoice_id || 0}-${item.order_id || 0}-${idx}`}>
+              {isVoucher ? (
+                <td className="is-center">
+                  <button
+                    type="button"
+                    className={`repl-desk-star${item.is_reference ? ' is-marked' : ''}`}
+                    title={item.is_reference
+                      ? 'Checked. Click to clear. This is the same star as on the payment voucher.'
+                      : 'Mark this voucher as checked. This is the same star as on the payment voucher.'}
+                    aria-label={item.is_reference ? 'Clear checked mark' : 'Mark voucher as checked'}
+                    aria-pressed={!!item.is_reference}
+                    disabled={!item.invoice_id || pendingStarId === Number(item.invoice_id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onToggleStar) onToggleStar(item);
+                    }}
+                  >
+                    {item.is_reference ? <HiStar aria-hidden="true" /> : <HiOutlineStar aria-hidden="true" />}
+                  </button>
+                </td>
+              ) : null}
+              <td>
+                {item.invoice_id ? (
+                  <a href={item.invoice_url} target="_blank" rel="noopener noreferrer">
+                    {item.invoice_number || `${invoiceFallback}-${item.invoice_id}`}
+                  </a>
+                ) : (
+                  <span className="repl-desk-muted">{isVoucher ? 'No voucher' : 'Not invoiced'}</span>
+                )}
+              </td>
+              <td>
+                {isVoucher ? (
+                  item.our_invoice || item.order_number || '—'
+                ) : item.order_id ? (
+                  <a href={item.order_url} target="_blank" rel="noopener noreferrer">
+                    {item.order_number || `${orderFallback}-${item.order_id}`}
+                  </a>
+                ) : (
+                  '—'
+                )}
+              </td>
+              <td>{item.customer_name || '—'}</td>
+              {isVoucher ? null : <td className="is-center">{item.line_qty}</td>}
+              <td>{item.order_status || item.invoice_status || '—'}</td>
+              <td>{formatDate(item.invoice_date || item.order_date)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DemandPanel({ product, cacheEntry, loading, onToggleStar, pendingStarId }) {
   const name = product.name || '';
 
   if (loading) {
     return (
       <div className="repl-desk-detail-panel">
-        <h4>Invoices / orders driving replenishment</h4>
         <div className="repl-desk-detail-msg">Loading invoices…</div>
       </div>
     );
@@ -194,78 +270,59 @@ function DemandPanel({ product, cacheEntry, loading }) {
   if (cacheEntry?.error) {
     return (
       <div className="repl-desk-detail-panel">
-        <h4>Invoices / orders driving replenishment</h4>
         <div className="repl-desk-detail-msg">{cacheEntry.error}</div>
       </div>
     );
   }
 
-  const items = cacheEntry?.items || [];
-  if (!items.length) {
-    const reason = pending > 0
-      ? 'No matching sales orders or invoices were found for this product. They may be on a different company database or already fulfilled.'
-      : 'No open sales invoices were found for this product. It may be listed due to low stock or reorder level only.';
-    return (
-      <div className="repl-desk-detail-panel">
-        <h4>Invoices / orders driving replenishment</h4>
-        <div className="repl-desk-detail-msg">
-          {reason}
-          {name ? <span className="repl-desk-muted"> ({name})</span> : null}
-        </div>
-      </div>
-    );
-  }
+  const salesItems = cacheEntry?.items || [];
+  const supplierItems = cacheEntry?.supplierItems || [];
 
   return (
     <div className="repl-desk-detail-panel">
-      <h4>Invoices / orders driving replenishment</h4>
-      <div className="repl-desk-table-wrap">
-        <table className="repl-desk-invoice-table">
-          <thead>
-            <tr>
-              <th>Invoice</th>
-              <th>Sales order</th>
-              <th>Customer</th>
-              <th className="is-center">Qty</th>
-              <th>Status</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, idx) => (
-              <tr key={`${item.invoice_id || 0}-${item.order_id || 0}-${idx}`}>
-                <td>
-                  {item.invoice_id ? (
-                    <a href={item.invoice_url} target="_blank" rel="noopener noreferrer">
-                      {item.invoice_number || `INV-${item.invoice_id}`}
-                    </a>
-                  ) : (
-                    <span className="repl-desk-muted">Not invoiced</span>
-                  )}
-                </td>
-                <td>
-                  {item.order_id ? (
-                    <a href={item.order_url} target="_blank" rel="noopener noreferrer">
-                      {item.order_number || `SO-${item.order_id}`}
-                    </a>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td>{item.customer_name || '—'}</td>
-                <td className="is-center">{item.line_qty}</td>
-                <td>{item.order_status || item.invoice_status || '—'}</td>
-                <td>{formatDate(item.invoice_date || item.order_date)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="repl-desk-invoice-split">
+        <section>
+          <h4>Invoices / orders driving replenishment</h4>
+          <InvoiceRows
+            items={salesItems}
+            invoiceFallback="INV"
+            orderFallback="SO"
+            emptyLabel={name
+              ? `No open sales invoices were found for ${name}.`
+              : 'No open sales invoices were found for this product.'}
+          />
+        </section>
+        <section>
+          <h4>Payment vouchers</h4>
+          {supplierItems.length ? (
+            <p className="repl-desk-detail-msg">Open the voucher to see the supplier invoice.</p>
+          ) : null}
+          <InvoiceRows
+            items={supplierItems}
+            invoiceFallback="PV"
+            orderFallback="PV"
+            mode="voucher"
+            onToggleStar={onToggleStar}
+            pendingStarId={pendingStarId}
+            emptyLabel={name
+              ? `No payment voucher is attached to the sales invoices for ${name}.`
+              : 'No payment voucher is attached to this product\'s sales invoices.'}
+          />
+        </section>
       </div>
     </div>
   );
 }
 
+function isSupplierFileUrl(url) {
+  const value = String(url || '');
+  return value.includes('download_invoice.php') || value.includes('open_attachment.php');
+}
+
 function documentEmbedUrl(row) {
+  if (isSupplierFileUrl(row?.invoice_print_url) || isSupplierFileUrl(row?.invoice_url)) {
+    return String(row.invoice_print_url || row.invoice_url);
+  }
   let url = '';
   if (row?.invoice_print_url) url = row.invoice_print_url;
   else if (row?.invoice_url) {
@@ -451,7 +508,7 @@ function ReferenceInvoices({ productName = '', references = [], demandSources = 
                 <h3 id="repl-inv-modal-title" className="repl-desk-modal-title repl-desk-modal-title--inline">
                   {preview.title}
                 </h3>
-                {preview.src && preview.src.includes('/invoices/print.php') ? (
+                {preview.src && (isSupplierFileUrl(preview.src) || preview.src.includes('/invoices/print.php')) ? (
                   <button
                     type="button"
                     className={`repl-desk-modal-download${downloadState !== 'idle' ? ` is-${downloadState}` : ''}`}
@@ -563,6 +620,23 @@ function ReferenceInvoices({ productName = '', references = [], demandSources = 
                             ].filter(Boolean).join(' · ')}
                           </span>
                         </button>
+                      ) : row.invoice_url || row.order_url ? (
+                        <a
+                          className="repl-desk-modal-list-btn"
+                          href={row.order_url || row.invoice_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <span className="repl-desk-modal-list-name">{primaryLabel}</span>
+                          <span className="repl-desk-modal-list-meta">
+                            {[
+                              orderLabel && invoiceLabel && orderLabel !== invoiceLabel ? orderLabel : '',
+                              row.customer_name || '',
+                              row.line_qty !== '' && row.line_qty != null ? `Qty ${row.line_qty}` : '',
+                              formatDate(row.invoice_date || row.order_date),
+                            ].filter(Boolean).join(' · ')}
+                          </span>
+                        </a>
                       ) : (
                         <span>
                           <span className="repl-desk-modal-list-name">{primaryLabel}</span>
@@ -615,17 +689,23 @@ export default function Replenishment({ data }) {
     purchases: urls.purchases || '../purchases/index.php',
     createDomestic: urls.createDomestic || '../purchases/domestic_create.php',
     createImport: urls.createImport || '../purchases/create.php',
+    referenceToggle: urls.referenceToggle || '/toggle-voucher-reference.php',
   };
 
   const [query, setQuery] = useState(initialSearch || '');
   const [expandedId, setExpandedId] = useState(null);
   const [loadingId, setLoadingId] = useState(null);
   const [orderDraft, setOrderDraft] = useState(null);
+  const [pendingStarId, setPendingStarId] = useState(0);
   const [invoiceCache, setInvoiceCache] = useState(() => {
     const seeded = {};
     (items || []).forEach((item) => {
-      if (Array.isArray(item.demand_sources)) {
-        seeded[String(item.id)] = { error: '', items: item.demand_sources };
+      if (Array.isArray(item.demand_sources) || Array.isArray(item.supplier_invoices)) {
+        seeded[String(item.id)] = {
+          error: '',
+          items: Array.isArray(item.demand_sources) ? item.demand_sources : [],
+          supplierItems: Array.isArray(item.supplier_invoices) ? item.supplier_invoices : [],
+        };
       }
     });
     return seeded;
@@ -674,7 +754,7 @@ export default function Replenishment({ data }) {
 
   const loadInvoices = async (product) => {
     const productId = String(product.id);
-    if (invoiceCache[productId]) return;
+    if (invoiceCache[productId] && Array.isArray(invoiceCache[productId].supplierItems)) return;
     setLoadingId(productId);
     try {
       const sep = invoicesApiUrl.includes('?') ? '&' : '?';
@@ -692,7 +772,11 @@ export default function Replenishment({ data }) {
       }
       setInvoiceCache((prev) => ({
         ...prev,
-        [productId]: { error: '', items: Array.isArray(payload.items) ? payload.items : [] },
+        [productId]: {
+          error: '',
+          items: Array.isArray(payload.items) ? payload.items : [],
+          supplierItems: Array.isArray(payload.supplier_items) ? payload.supplier_items : [],
+        },
       }));
     } catch {
       setInvoiceCache((prev) => ({
@@ -701,6 +785,49 @@ export default function Replenishment({ data }) {
       }));
     } finally {
       setLoadingId(null);
+    }
+  };
+
+  const applyVoucherStar = (voucherId, marked) => {
+    setInvoiceCache((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        const entry = next[key];
+        if (!Array.isArray(entry?.supplierItems)) return;
+        let changed = false;
+        const supplierItems = entry.supplierItems.map((row) => {
+          if (Number(row.invoice_id) !== Number(voucherId)) return row;
+          changed = true;
+          return { ...row, is_reference: marked };
+        });
+        if (changed) next[key] = { ...entry, supplierItems };
+      });
+      return next;
+    });
+  };
+
+  const toggleVoucherStar = async (row) => {
+    const voucherId = Number(row?.invoice_id || 0);
+    if (!voucherId || pendingStarId) return;
+    const previous = !!row.is_reference;
+    setPendingStarId(voucherId);
+    applyVoucherStar(voucherId, !previous);
+    try {
+      const res = await fetch(links.referenceToggle, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `voucher_id=${encodeURIComponent(voucherId)}`,
+      });
+      const payload = await res.json().catch(() => null);
+      if (!payload?.ok) {
+        throw new Error(payload?.error || 'Could not save the mark.');
+      }
+      applyVoucherStar(voucherId, parseInt(String(payload.is_reference ?? '0'), 10) === 1);
+    } catch {
+      applyVoucherStar(voucherId, previous);
+    } finally {
+      setPendingStarId(0);
     }
   };
 
@@ -869,6 +996,8 @@ export default function Replenishment({ data }) {
                               product={item}
                               cacheEntry={invoiceCache[cacheKey]}
                               loading={loadingId === cacheKey && !invoiceCache[cacheKey]}
+                              onToggleStar={toggleVoucherStar}
+                              pendingStarId={pendingStarId}
                             />
                           </td>
                         </tr>

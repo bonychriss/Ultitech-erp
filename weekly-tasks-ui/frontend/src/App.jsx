@@ -1480,6 +1480,71 @@ function KpiCatalog({ item, hubUrl }) {
   )
 }
 
+function peopleLabel(count) {
+  const total = Number(count) || 0
+  return total === 1 ? '1 person' : `${total} people`
+}
+
+function DepartmentTable({ dept }) {
+  return (
+    <div className="wt-table">
+      <div className="wt-row wt-row--head">
+        <span>Name</span>
+        <span>Score</span>
+        <span>Tasks</span>
+        <span>Activity</span>
+      </div>
+      {(dept.people || []).map((person) => (
+        <a key={person.id} className="wt-row" href={person.href || '#'}>
+          <span className="wt-person">
+            <span className="wt-avatar" aria-hidden="true">{initials(person.name)}</span>
+            <span>
+              {person.name}
+              {person.isViewer ? <span className="wt-you">You</span> : null}
+            </span>
+          </span>
+          <span className="wt-score-cell">
+            <strong>{Number(person.score) || 0}%</strong>
+            <span className={`wt-pill wt-pill--${person.bandKey}`}>{person.band}</span>
+          </span>
+          <span>{Number(person.tasksDone) || 0}/{Number(person.tasksAssigned) || 0}</span>
+          <span>{Number(person.activity) || 0}%</span>
+        </a>
+      ))}
+    </div>
+  )
+}
+
+function DepartmentCards({ departments }) {
+  const cards = [...departments].sort((a, b) => {
+    const score = (Number(b.score) || 0) - (Number(a.score) || 0)
+    if (score !== 0) return score
+    return String(a.name || '').localeCompare(String(b.name || ''))
+  })
+  return (
+    <section className="wt-dept" aria-label="Departments">
+      <h2 className="wt-dept-title">Departments</h2>
+      <div className="wt-insight-list">
+        {cards.map((dept, index) => {
+          const gap = Number(dept.gap) || 0
+          return (
+            <article key={dept.slug || dept.name} className="wt-insight">
+              <span className="wt-insight-rank">{index + 1}</span>
+              <strong className="wt-insight-name">{dept.name}</strong>
+              <strong className="wt-insight-score">{Number(dept.score) || 0}%</strong>
+              <span className={`wt-pill wt-pill--${dept.bandKey}`}>{dept.band}</span>
+              <span className="wt-insight-people">{peopleLabel(dept.peopleCount)}</span>
+              <span className="wt-insight-top">Top {dept.topName} {Number(dept.topScore) || 0}%</span>
+              <span className={gap > 0 ? 'wt-gap is-up' : gap < 0 ? 'wt-gap is-down' : 'wt-gap'}>{dept.gapLabel}</span>
+              <a className="wt-insight-link" href={dept.href || '#'}>View department</a>
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 export default function App() {
   const data = cfg()
   const month = data.month || {}
@@ -1500,6 +1565,39 @@ export default function App() {
 
   if (data.detail || data.detailMissing) {
     return <Detail month={month} detail={data.detail} missing={Boolean(data.detailMissing)} />
+  }
+
+  const focus = String(data.department || '')
+  const focused = focus
+    ? departments.find((dept) => dept.slug === focus)
+    : null
+
+  if (focused) {
+    const gap = Number(focused.gap) || 0
+    return (
+      <div className="wt-dash">
+        <a className="wt-back" href={data.boardUrl || '#'}>Back</a>
+        <header className="wt-head">
+          <div>
+            <h1 className="wt-title">{focused.name}</h1>
+            <p className="wt-sub">{month.label || 'This month'}</p>
+          </div>
+          <div className="wt-week">
+            <MonthSelect month={month} />
+          </div>
+        </header>
+        <div className="wt-insight-summary">
+          <span>
+            <span className="wt-sum-kicker">Average</span>
+            <strong>{Number(focused.score) || 0}%</strong>
+          </span>
+          <span className={`wt-pill wt-pill--${focused.bandKey}`}>{focused.band}</span>
+          <span>Top {focused.topName} {Number(focused.topScore) || 0}%</span>
+          <span className={gap > 0 ? 'wt-gap is-up' : gap < 0 ? 'wt-gap is-down' : 'wt-gap'}>{focused.gapLabel}</span>
+        </div>
+        <DepartmentTable dept={focused} />
+      </div>
+    )
   }
 
   return (
@@ -1531,36 +1629,9 @@ export default function App() {
 
       {departments.length === 0 ? (
         <p className="wt-empty">No active people for this month.</p>
-      ) : departments.map((dept) => (
-        <section key={dept.name} id={`dept-${String(dept.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`} className="wt-dept">
-          <h2 className="wt-dept-title">{dept.name}</h2>
-          <div className="wt-table">
-            <div className="wt-row wt-row--head">
-              <span>Name</span>
-              <span>Score</span>
-              <span>Tasks</span>
-              <span>Activity</span>
-            </div>
-            {(dept.people || []).map((person) => (
-              <a key={person.id} className="wt-row" href={person.href || '#'}>
-                <span className="wt-person">
-                  <span className="wt-avatar" aria-hidden="true">{initials(person.name)}</span>
-                  <span>
-                    {person.name}
-                    {person.isViewer ? <span className="wt-you">You</span> : null}
-                  </span>
-                </span>
-                <span className="wt-score-cell">
-                  <strong>{Number(person.score) || 0}%</strong>
-                  <span className={`wt-pill wt-pill--${person.bandKey}`}>{person.band}</span>
-                </span>
-                <span>{Number(person.tasksDone) || 0}/{Number(person.tasksAssigned) || 0}</span>
-                <span>{Number(person.activity) || 0}%</span>
-              </a>
-            ))}
-          </div>
-        </section>
-      ))}
+      ) : (
+        <DepartmentCards departments={departments} />
+      )}
     </div>
   )
 }

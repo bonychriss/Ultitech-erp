@@ -54,7 +54,7 @@ function weeklyTasksUiLoadReactAssets(): ?array
     ];
 }
 
-function weeklyTasksUiMonthUrl($monthOffset = 0, int $userId = 0, string $measure = ''): string
+function weeklyTasksUiMonthUrl($monthOffset = 0, int $userId = 0, string $measure = '', ?string $dept = null): string
 {
     $base = function_exists('company_url')
         ? company_url('weekly_tasks/ai_assistant.php')
@@ -76,6 +76,13 @@ function weeklyTasksUiMonthUrl($monthOffset = 0, int $userId = 0, string $measur
     }
     if ($userId < 1 && $measure === '') {
         $query['kpi'] = 'hr';
+    }
+    if ($dept === null && isset($_GET['dept'])) {
+        $dept = (string) $_GET['dept'];
+    }
+    $dept = trim(strtolower((string) preg_replace('/[^a-z0-9\-]/', '', (string) $dept)), '-');
+    if ($dept !== '') {
+        $query['dept'] = $dept;
     }
 
     return $base . '?' . http_build_query($query);
@@ -2962,7 +2969,7 @@ function weeklyTasksUiPerformanceSummary(array $departments, string $boardUrl): 
             'people' => count($scores),
             'band' => $band['label'],
             'bandKey' => $band['key'],
-            'href' => $boardUrl . '#dept-' . $slug,
+            'href' => $boardUrl . '&dept=' . rawurlencode($slug),
         ];
     }
     $companyScore = $all ? (int) round(array_sum($all) / count($all)) : 0;
@@ -3369,8 +3376,43 @@ function weeklyTasksUiBuildPayload(): array
 
             return $b['score'] <=> $a['score'];
         });
-        $departments[] = ['name' => $name, 'people' => $people];
+        $scores = array_map(static function (array $person): int {
+            return (int) ($person['score'] ?? 0);
+        }, $people);
+        $average = $scores ? (int) round(array_sum($scores) / count($scores)) : 0;
+        $averageBand = weeklyTasksUiBand($average);
+        $top = $people[0];
+        $slug = trim(strtolower((string) preg_replace('/[^a-z0-9]+/i', '-', $name)), '-');
+        $departments[] = [
+            'name' => $name,
+            'slug' => $slug,
+            'score' => $average,
+            'band' => $averageBand['label'],
+            'bandKey' => $averageBand['key'],
+            'peopleCount' => count($people),
+            'topName' => (string) ($top['name'] ?? ''),
+            'topScore' => (int) ($top['score'] ?? 0),
+            'href' => weeklyTasksUiMonthUrl($offsets, 0, '', $slug),
+            'people' => $people,
+        ];
     }
+    $companyScores = [];
+    foreach ($departments as $dept) {
+        foreach ($dept['people'] as $person) {
+            $companyScores[] = (int) ($person['score'] ?? 0);
+        }
+    }
+    $companyScore = $companyScores ? (int) round(array_sum($companyScores) / count($companyScores)) : 0;
+    foreach ($departments as $index => $dept) {
+        $gap = (int) $dept['score'] - $companyScore;
+        $departments[$index]['gap'] = $gap;
+        $departments[$index]['gapLabel'] = $gap > 0
+            ? ($gap . ' above company')
+            : ($gap < 0 ? (abs($gap) . ' below company') : 'Same as company');
+    }
+    $focusDepartment = isset($_GET['dept'])
+        ? trim(strtolower((string) preg_replace('/[^a-z0-9\-]/', '', (string) $_GET['dept'])), '-')
+        : '';
 
     if ($hubOnly) {
         $screen = weeklyTasksUiKpiScreen('');
@@ -3409,6 +3451,8 @@ function weeklyTasksUiBuildPayload(): array
             ['key' => 'improve', 'label' => 'Improvement plan', 'count' => $bandCounts['improve']],
         ],
         'departments' => $departments,
+        'department' => $focusDepartment,
+        'boardUrl' => weeklyTasksUiMonthUrl($offsets, 0, '', ''),
         'trend' => ($selectedId === 0 && $measureView === null && $pdo instanceof PDO && $users)
             ? weeklyTasksUiTeamTrend($pdo, $users)
             : null,

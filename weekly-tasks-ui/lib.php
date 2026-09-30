@@ -2013,6 +2013,244 @@ function weeklyTasksUiItShared(array $bundle): array
         'accuracyRecurring' => $recurring,
         'accuracyPct' => $accuracyPct,
         'problems' => array_values($problems),
+        'downDates' => array_keys($down),
+    ];
+}
+
+function weeklyTasksUiHourLabel(int $minutes): string
+{
+    if ($minutes < 1) {
+        return '0 hrs';
+    }
+    if ($minutes < 60) {
+        return $minutes . ' min';
+    }
+    $hours = $minutes / 60;
+    $rounded = abs($hours - round($hours)) < 0.05 ? (string) (int) round($hours) : number_format($hours, 1, '.', '');
+
+    return $rounded . ' hrs';
+}
+
+function weeklyTasksUiClockStamp(string $day, string $clock): int
+{
+    $clock = trim($clock);
+    if ($clock === '' || $day === '') {
+        return 0;
+    }
+    if (preg_match('/^\d{4}-\d{2}-\d{2}/', $clock)) {
+        $stamp = strtotime($clock);
+
+        return $stamp ? (int) $stamp : 0;
+    }
+    $stamp = strtotime($day . ' ' . substr($clock, 0, 8));
+
+    return $stamp ? (int) $stamp : 0;
+}
+
+/**
+ * Daily availability, signed-in usage, and the three people on the system the longest.
+ *
+ * @param array<int,int> $offsets
+ * @return array<string,mixed>
+ */
+function weeklyTasksUiUptimeBoard(PDO $pdo, array $offsets): array
+{
+    $bundle = weeklyTasksUiItLoad($pdo, $offsets);
+    $shared = weeklyTasksUiItShared($bundle);
+    $down = [];
+    foreach ($shared['downDates'] ?? [] as $day) {
+        $down[(string) $day] = true;
+    }
+    $today = date('Y-m-d');
+    $minutes = [];
+    $useDays = [];
+    $filled = [];
+    $addUse = static function (int $userId, string $day, int $mins) use (&$minutes, &$useDays, &$filled): void {
+        $day = substr($day, 0, 10);
+        if ($userId < 1 || $day === '') {
+            return;
+        }
+        $useDays[$userId][$day] = true;
+        if ($mins < 1) {
+            return;
+        }
+        $key = $userId . '|' . $day;
+        $filled[$key] = true;
+        $cap = 16 * 60;
+        $minutes[$userId][$day] = min($cap, (int) ($minutes[$userId][$day] ?? 0) + $mins);
+    };
+
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        if (function_exists('tableExists') && tableExists('attendance_records', $pdo)) {
+            try {
+                $st = $pdo->prepare('SELECT user_id, `date` AS day, time_in, time_out, total_hours FROM attendance_records WHERE `date` BETWEEN ? AND ?');
+                $st->execute([$start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $userId = (int) ($row['user_id'] ?? 0);
+                    $day = substr((string) ($row['day'] ?? ''), 0, 10);
+                    $stored = (float) ($row['total_hours'] ?? 0);
+                    $mins = 0;
+                    if ($stored > 0) {
+                        $mins = (int) round(min(16, $stored) * 60);
+                    } else {
+                        $in = weeklyTasksUiClockStamp($day, (string) ($row['time_in'] ?? ''));
+                        $out = weeklyTasksUiClockStamp($day, (string) ($row['time_out'] ?? ''));
+                        if ($in > 0 && $out > $in) {
+                            $mins = (int) min(16 * 60, round(($out - $in) / 60));
+                        } elseif ($in > 0 && $day === $today) {
+                            $mins = (int) min(12 * 60, round((time() - $in) / 60));
+                        }
+                    }
+                    $addUse($userId, $day, $mins);
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        if (function_exists('tableExists') && tableExists('attendance', $pdo)) {
+            try {
+                $st = $pdo->prepare(
+                    'SELECT user_id, sign_type, signed_at
+                     FROM attendance
+                     WHERE signed_at IS NOT NULL AND DATE(signed_at) BETWEEN ? AND ?
+                     ORDER BY signed_at'
+                );
+                $st->execute([$start, $end]);
+                $events = [];
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $userId = (int) ($row['user_id'] ?? 0);
+                    $signedAt = (string) ($row['signed_at'] ?? '');
+                    $day = substr($signedAt, 0, 10);
+                    if ($userId < 1 || $day === '' || isset($filled[$userId . '|' . $day])) {
+                        continue;
+                    }
+                    $events[$userId][$day][] = $row;
+                }
+                foreach ($events as $userId => $days) {
+                    foreach ($days as $day => $list) {
+                        $in = 0;
+                        $out = 0;
+                        foreach ($list as $event) {
+                            $stamp = strtotime((string) ($event['signed_at'] ?? '')) ?: 0;
+                            $type = strtolower((string) ($event['sign_type'] ?? 'sign_in'));
+                            if ($type === 'sign_out') {
+                                $out = $stamp;
+                            } elseif ($in === 0) {
+                                $in = $stamp;
+                            }
+                        }
+                        $mins = 0;
+                        if ($in > 0 && $out > $in) {
+                            $mins = (int) min(16 * 60, round(($out - $in) / 60));
+                        } elseif ($in > 0 && $day === $today) {
+                            $mins = (int) min(12 * 60, round((time() - $in) / 60));
+                        }
+                        $addUse((int) $userId, (string) $day, $mins);
+                    }
+                }
+            } catch (Throwable $e) {
+            }
+        }
+    }
+
+    $names = [];
+    try {
+        $nameRows = $pdo->query('SELECT id, full_name FROM users')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        foreach ($nameRows as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            $name = trim((string) ($row['full_name'] ?? ''));
+            if ($id > 0 && $name !== '') {
+                $names[$id] = $name;
+            }
+        }
+    } catch (Throwable $e) {
+    }
+
+    $ranked = [];
+    $dayMinutes = [];
+    foreach ($useDays as $userId => $days) {
+        $userMinutes = 0;
+        foreach (array_keys($days) as $day) {
+            $got = (int) ($minutes[$userId][$day] ?? 0);
+            $userMinutes += $got;
+            $dayMinutes[$day] = (int) ($dayMinutes[$day] ?? 0) + $got;
+        }
+        $ranked[] = [
+            'name' => $names[(int) $userId] ?? 'User',
+            'minutes' => $userMinutes,
+            'days' => count($days),
+        ];
+    }
+    usort($ranked, static function (array $a, array $b): int {
+        if ($a['minutes'] === $b['minutes']) {
+            return $b['days'] <=> $a['days'];
+        }
+
+        return $b['minutes'] <=> $a['minutes'];
+    });
+    $top = [];
+    foreach (array_slice($ranked, 0, 3) as $person) {
+        $top[] = [
+            'name' => $person['name'],
+            'minutes' => (int) $person['minutes'],
+            'hoursLabel' => weeklyTasksUiHourLabel((int) $person['minutes']),
+            'days' => (int) $person['days'],
+        ];
+    }
+
+    $chart = [];
+    $usageChart = [];
+    $rangeStart = null;
+    $rangeEnd = null;
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        $rangeStart = $rangeStart === null || $start < $rangeStart ? $start : $rangeStart;
+        $rangeEnd = $rangeEnd === null || $end > $rangeEnd ? $end : $rangeEnd;
+    }
+    $maxMinutes = 0;
+    foreach ($dayMinutes as $got) {
+        $maxMinutes = max($maxMinutes, (int) $got);
+    }
+    if ($rangeStart && $rangeEnd) {
+        try {
+            $cursor = new DateTime($rangeStart);
+            $last = new DateTime(min($rangeEnd, $today));
+            while ($cursor <= $last) {
+                $key = $cursor->format('Y-m-d');
+                $up = empty($down[$key]);
+                $got = (int) ($dayMinutes[$key] ?? 0);
+                $chart[] = [
+                    'label' => $cursor->format('j M'),
+                    'value' => $up ? 1 : 0,
+                    'today' => $key === $today ? 1 : 0,
+                ];
+                $usageChart[] = [
+                    'label' => $cursor->format('j M'),
+                    'minutes' => $got,
+                    'value' => $maxMinutes > 0 ? round($got / $maxMinutes, 4) : 0,
+                    'today' => $key === $today ? 1 : 0,
+                ];
+                $cursor->modify('+1 day');
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    $usageMinutes = 0;
+    foreach ($dayMinutes as $got) {
+        $usageMinutes += (int) $got;
+    }
+
+    return [
+        'uptimePct' => (int) ($shared['uptimePct'] ?? 0),
+        'downDays' => (int) ($shared['downDays'] ?? 0),
+        'elapsed' => (int) ($shared['elapsed'] ?? 0),
+        'usageMinutes' => $usageMinutes,
+        'usageLabel' => weeklyTasksUiHourLabel($usageMinutes),
+        'scaleLabel' => weeklyTasksUiHourLabel($maxMinutes),
+        'chart' => $chart,
+        'usage' => $usageChart,
+        'top' => $top,
     ];
 }
 

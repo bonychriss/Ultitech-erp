@@ -1049,7 +1049,7 @@ a.wt-compare-row:hover,
 .wt-att-chart-icon {
   display: inline-flex;
   margin-top: 2px;
-  color: #7c3aed;
+  color: #4c6ef5;
 }
 
 .wt-att-chart h2 {
@@ -1077,24 +1077,22 @@ a.wt-compare-row:hover,
   stroke-dasharray: 4 4;
 }
 
-.wt-att-line {
-  fill: none;
-  stroke: #7c3aed;
-  stroke-width: 2;
-  stroke-linejoin: round;
-  stroke-linecap: round;
+.wt-att-bar {
+  fill: #4c6ef5;
 }
 
-.wt-att-dot {
-  fill: #fff;
-  stroke: #7c3aed;
-  stroke-width: 2;
+.wt-att-bar.is-today {
+  fill: #3b5bdb;
 }
 
-.wt-att-marker {
-  stroke: #c4b5fd;
+.wt-att-bar-cap {
+  fill: #e7eeff;
+}
+
+.wt-att-bar-cap.is-today {
+  fill: #f8fafc;
+  stroke: #dbe4ff;
   stroke-width: 1;
-  stroke-dasharray: 3 3;
 }
 
 .wt-att-tick,
@@ -1104,8 +1102,13 @@ a.wt-compare-row:hover,
 }
 
 .wt-att-label {
-  fill: #64748b;
+  fill: #94a3b8;
   font-size: 9px;
+}
+
+.wt-att-label.is-today {
+  fill: #1e293b;
+  font-weight: 700;
 }
 
 .wt-att-value {

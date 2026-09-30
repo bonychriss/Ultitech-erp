@@ -858,33 +858,44 @@ function AttIcon({ name }) {
 function AttendanceBoard({ board }) {
   const chart = Array.isArray(board?.chart) ? board.chart : []
   const width = 760
-  const height = 240
-  const left = 28
-  const right = 16
-  const top = 16
-  const bottom = 58
+  const height = 210
+  const left = 12
+  const right = 28
+  const top = 14
+  const bottom = 46
   const plotW = width - left - right
   const plotH = height - top - bottom
   if (!chart.length) return null
-  const xAt = (index) => left + (chart.length <= 1 ? plotW / 2 : (index / (chart.length - 1)) * plotW)
+  const slot = plotW / chart.length
+  const barW = Math.max(6, Math.min(16, slot * 0.46))
+  const base = top + plotH
   const yAt = (value) => top + plotH - (Math.min(1, Number(value) || 0) * plotH)
-  const points = chart.map((point, index) => ({
-    x: xAt(index),
-    y: yAt(point.value),
-    label: point.label || String(point.day || index + 1),
-    day: point.day || point.label,
-    present: Number(point.present) === 1 || Number(point.value) > 0,
-    today: Number(point.today) === 1,
-  }))
-  const line = points.map((point, index) => `${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ')
+  const bars = chart.map((point, index) => {
+    const present = Number(point.present) === 1 || Number(point.value) > 0
+    const today = Number(point.today) === 1
+    const reach = present ? (today ? 0.96 : 0.78) : 0
+    const cap = present ? Math.min(16, plotH * 0.16) : 0
+    const full = reach * plotH
+    const body = Math.max(0, full - cap)
+    const x = left + slot * index + (slot - barW) / 2
+    return {
+      key: `${point.label || index}-${index}`,
+      x,
+      label: point.label || String(point.day || index + 1),
+      present,
+      today,
+      body,
+      cap,
+      full,
+    }
+  })
   return (
     <div className="wt-att">
       <section className="wt-att-chart" aria-label="Attendance chart">
         <div className="wt-att-chart-head">
           <span className="wt-att-chart-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M4 16l4.5-5 3.5 3L20 6" />
-              <circle cx="20" cy="6" r="1.4" fill="currentColor" stroke="none" />
+              <path d="M5 19V10M10 19V5M15 19v-7M20 19V8" />
             </svg>
           </span>
           <div>
@@ -893,24 +904,44 @@ function AttendanceBoard({ board }) {
           </div>
         </div>
         <svg className="wt-att-svg" viewBox={`0 0 ${width} ${height}`} role="img">
-          {[0, 1].map((tick) => {
+          {[0, 0.5, 1].map((tick) => {
             const y = yAt(tick)
             return (
               <g key={tick}>
                 <line className="wt-att-grid" x1={left} x2={width - right} y1={y} y2={y} />
-                <text className="wt-att-tick" x={left - 8} y={y + 3} textAnchor="end">{tick}</text>
+                <text className="wt-att-tick" x={width - 4} y={y + 3} textAnchor="end">{tick === 0.5 ? '' : tick}</text>
               </g>
             )
           })}
-          <path className="wt-att-line" d={line} />
-          {points.map((point) => (
-            <g key={point.label}>
-              {point.today ? (
-                <line className="wt-att-marker" x1={point.x} x2={point.x} y1={top} y2={top + plotH} />
+          {bars.map((bar) => (
+            <g key={bar.key}>
+              {bar.present ? (
+                <>
+                  <rect
+                    className={bar.today ? 'wt-att-bar-cap is-today' : 'wt-att-bar-cap'}
+                    x={bar.x}
+                    y={base - bar.full}
+                    width={barW}
+                    height={bar.full}
+                    rx={barW / 2}
+                  />
+                  <rect
+                    className={bar.today ? 'wt-att-bar is-today' : 'wt-att-bar'}
+                    x={bar.x}
+                    y={base - bar.body}
+                    width={barW}
+                    height={bar.body}
+                  />
+                </>
               ) : null}
-              {point.present ? <circle className="wt-att-dot" cx={point.x} cy={point.y} r="4.5" /> : null}
-              <text className="wt-att-label" x={point.x} y={top + plotH + 14} textAnchor="end" transform={`rotate(-45 ${point.x} ${top + plotH + 14})`}>
-                {point.label}
+              <text
+                className={bar.today ? 'wt-att-label is-today' : 'wt-att-label'}
+                x={bar.x + barW / 2}
+                y={base + 14}
+                textAnchor="end"
+                transform={`rotate(-45 ${bar.x + barW / 2} ${base + 14})`}
+              >
+                {bar.label}
               </text>
             </g>
           ))}

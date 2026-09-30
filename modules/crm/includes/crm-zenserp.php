@@ -82,6 +82,40 @@ function crmZenserpSaveApiKey(PDO $pdo, string $key): void
     $stmt->execute([$key, $key]);
 }
 
+function crmZenserpPayloadMessage(array $payload): string
+{
+    $direct = $payload['error'] ?? $payload['message'] ?? '';
+    if (is_string($direct) && trim($direct) !== '') {
+        return trim($direct);
+    }
+    $parts = [];
+    $errors = $payload['errors'] ?? null;
+    if (is_string($errors) && trim($errors) !== '') {
+        return trim($errors);
+    }
+    if (!is_array($errors)) {
+        return '';
+    }
+    foreach ($errors as $item) {
+        if (is_string($item) && trim($item) !== '') {
+            $parts[] = trim($item);
+            continue;
+        }
+        if (!is_array($item)) {
+            continue;
+        }
+        foreach ($item as $field => $text) {
+            $text = is_scalar($text) ? trim((string) $text) : '';
+            if ($text === '') {
+                continue;
+            }
+            $parts[] = trim((string) $field) . ': ' . $text;
+        }
+    }
+
+    return trim(implode(' ', $parts));
+}
+
 /**
  * @param array<string, scalar> $query
  * @return array{ok:bool,payload:?array,error:string}
@@ -92,7 +126,8 @@ function crmZenserpRequest(PDO $pdo, array $query): array
     if ($key === '') {
         return ['ok' => false, 'payload' => null, 'error' => 'Add a Zenserp API key to search Google for customers.'];
     }
-    $query['search_engine'] = 'google';
+    $query['engine'] = 'google';
+    unset($query['search_engine']);
     $url = 'https://app.zenserp.com/api/v2/search?' . http_build_query($query);
     $ch = curl_init($url);
     if ($ch === false) {
@@ -117,11 +152,14 @@ function crmZenserpRequest(PDO $pdo, array $query): array
     if (!is_array($payload)) {
         return ['ok' => false, 'payload' => null, 'error' => 'Google search returned an unexpected response.'];
     }
+    $message = crmZenserpPayloadMessage($payload);
     if ($code === 401 || $code === 403) {
-        return ['ok' => false, 'payload' => null, 'error' => 'Zenserp rejected the API key. In Settings, paste the key from the Zenserp dashboard and save it again.'];
+        if ($message === '' || preg_match('/api\s*key|apikey/i', $message)) {
+            $message = 'Zenserp rejected the API key. In Settings, paste the key from the Zenserp dashboard and save it again.';
+        }
+        return ['ok' => false, 'payload' => null, 'error' => $message];
     }
     if ($code < 200 || $code >= 300) {
-        $message = trim((string) ($payload['error'] ?? $payload['message'] ?? ''));
         return ['ok' => false, 'payload' => null, 'error' => $message !== '' ? $message : 'Google search failed.'];
     }
 

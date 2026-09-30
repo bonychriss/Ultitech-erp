@@ -929,41 +929,43 @@ function AttendanceCards({ board }) {
     { key: 'late', label: 'Came late', hint: 'Arrived after start time', icon: 'late', empty: 'No late days this month.' },
     { key: 'pending', label: 'Pending task', hint: 'Tasks not yet completed', icon: 'pending', empty: 'No pending tasks this month.' },
   ]
+  const openCard = cards.find((card) => card.key === open) || null
+  const openItems = openCard && Array.isArray(byKey[openCard.key]?.items) ? byKey[openCard.key].items : []
   return (
     <section className="wt-att-kpi-card" aria-label="Attendance details">
-      {cards.map((card) => {
-        const items = Array.isArray(byKey[card.key]?.items) ? byKey[card.key].items : []
-        const active = open === card.key
-        return (
-          <div key={card.key} className={`wt-att-kpi wt-att-kpi--${card.key}${active ? ' is-open' : ''}`}>
+      <div className="wt-att-kpi-row">
+        {cards.map((card) => {
+          const active = open === card.key
+          return (
             <button
+              key={card.key}
               type="button"
-              className="wt-att-kpi-btn"
+              className={`wt-att-kpi-btn wt-att-kpi--${card.key}${active ? ' is-open' : ''}`}
               aria-expanded={active}
               onClick={() => setOpen(active ? '' : card.key)}
             >
-              <span className="wt-att-ico"><AttIcon name={card.icon} /></span>
-              <span className="wt-att-kpi-copy">
+              <span className="wt-att-kpi-head">
+                <span className="wt-att-ico"><AttIcon name={card.icon} /></span>
                 <strong>{card.label}</strong>
-                <span>{card.hint}</span>
               </span>
+              <span className="wt-att-kpi-hint">{card.hint}</span>
               <b>{Number(byKey[card.key]?.count) || 0}</b>
             </button>
-            {active ? (
-              <div className="wt-att-kpi-details">
-                {items.length === 0 ? (
-                  <p>{card.empty}</p>
-                ) : items.map((item, index) => (
-                  <article key={`${card.key}-${index}`}>
-                    <span>{card.key === 'pending' ? (item.title || 'Pending task') : card.label}</span>
-                    {item.when ? <time>{item.when}</time> : null}
-                  </article>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
+      {openCard ? (
+        <div className="wt-att-kpi-details">
+          {openItems.length === 0 ? (
+            <p>{openCard.empty}</p>
+          ) : openItems.map((item, index) => (
+            <article key={`${openCard.key}-${index}`}>
+              <span>{openCard.key === 'pending' ? (item.title || 'Pending task') : openCard.label}</span>
+              {item.when ? <time>{item.when}</time> : null}
+            </article>
+          ))}
+        </div>
+      ) : null}
     </section>
   )
 }

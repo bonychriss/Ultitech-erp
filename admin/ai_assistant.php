@@ -63,6 +63,10 @@ $presetPills = $modulePresets[$activeModule] ?? $defaultPresets;
 
 $apiConfig = ai_settings_for_api();
 $aiEnabled = $apiConfig['is_enabled'];
+$agentApiUrl = function_exists('company_url')
+    ? company_url('modules/ai-agent/api.php')
+    : (function_exists('app_url') ? app_url('/modules/ai-agent/api.php') : '/modules/ai-agent/api.php');
+$agentCsrf = function_exists('csrf_token') ? csrf_token() : '';
 
 // Retrieve recent chats
 $recentChats = [];
@@ -281,6 +285,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
             box-shadow: 0 0 0 3px var(--ai-primary-glow);
         }
 
+        .btn-ai-listen {
+            background: #eef2ff;
+            border: none;
+            color: #3730a3;
+            border-radius: 10px;
+            padding: 0 16px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .btn-ai-listen.is-listening {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
         .btn-ai-send {
             background: linear-gradient(135deg, var(--ai-primary) 0%, var(--ai-secondary) 100%);
             border: none;
@@ -896,34 +913,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
                                 </button>
                             </div>
                             <h3 style="font-family:'Outfit'; font-size:18px; margin-bottom:16px; padding: 0 24px;">
-                                <i class="bi bi-chat-quote-fill text-primary"></i> <?= htmlspecialchars($chatTitle) ?>
+                                <i class="bi bi-chat-quote-fill text-primary"></i> Ask the agent
                             </h3>
                             
                             <div class="chat-container">
-                                <div class="chat-messages" id="chatMessages">
-                                    <div class="message-bubble assistant">
-                                        Hello <?= htmlspecialchars(explode(' ', $_SESSION['full_name'])[0]) ?>! What can I do for you today? Describe your ideas...
-                                    </div>
-                                    <?php if (isset($_GET['kpi'])): ?>
-                                        <div class="message-bubble user">
-                                            Explain KPI: <?= htmlspecialchars($_GET['kpi']) ?> (Value: <?= htmlspecialchars($_GET['val'] ?? '-') ?>)
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <div class="mb-3 preset-pills-wrap">
-                                    <?php foreach ($presetPills as $pill): ?>
-                                        <span class="preset-pill" onclick="sendPreset(<?= json_encode($pill['prompt'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) ?>)">
-                                            <i class="bi bi-<?= htmlspecialchars($pill['icon']) ?> text-<?= htmlspecialchars($pill['color']) ?>"></i>
-                                            <?= htmlspecialchars($pill['label']) ?>
-                                        </span>
-                                    <?php endforeach; ?>
-                                </div>
+                                <div class="chat-messages" id="chatMessages"></div>
 
                                 <div class="chat-input-wrap">
-                                    <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." aria-label="AI Question">
-                                    <button class="btn btn-ai-send" id="btnSendChat" onclick="sendChatMessage()">
-                                        Send <i class="bi bi-send-fill ms-1"></i>
+                                    <input type="text" class="chat-input" id="chatInput" maxlength="500" placeholder="Type or speak a command about invoices, balances, or today's briefing" aria-label="Message" autocomplete="off">
+                                    <button type="button" class="btn-ai-listen" id="btnListen" onclick="listenToAgent()">
+                                        <i class="bi bi-mic"></i> Listen
+                                    </button>
+                                    <button type="button" class="btn btn-ai-send" id="btnSendChat" onclick="sendChatMessage()">
+                                        <i class="bi bi-send"></i> Ask
                                     </button>
                                 </div>
                             </div>
@@ -938,6 +940,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
 </div>
 
 <script>
+    const agentApiUrl = <?= json_encode($agentApiUrl, JSON_UNESCAPED_SLASHES) ?>;
+    const agentCsrf = <?= json_encode($agentCsrf) ?>;
+
+    function speakAgent(text) {
+        const value = String(text || '').trim();
+        if (!value || !window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(value);
+        utterance.lang = 'en-US';
+        utterance.rate = 1;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function listenToAgent() {
+        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const button = document.getElementById('btnListen');
+        if (!Speech) {
+            appendMessage('assistant', 'This browser cannot listen. Type the command in the message box.');
+            return;
+        }
+        const recognition = new Speech();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.onstart = function () {
+            window.speechSynthesis && window.speechSynthesis.cancel();
+            if (button) {
+                button.classList.add('is-listening');
+                button.innerHTML = '<i class="bi bi-mic"></i> Listening';
+            }
+        };
+        recognition.onend = function () {
+            if (button) {
+                button.classList.remove('is-listening');
+                button.innerHTML = '<i class="bi bi-mic"></i> Listen';
+            }
+        };
+        recognition.onerror = function (event) {
+            if (button) {
+                button.classList.remove('is-listening');
+                button.innerHTML = '<i class="bi bi-mic"></i> Listen';
+            }
+            if (event.error === 'not-allowed' || event.error === 'audio-capture' || event.error === 'no-speech') {
+                appendMessage('assistant', 'I could not hear a command. Try again, or type it.');
+            }
+        };
+        recognition.onresult = function (event) {
+            const said = String(event.results && event.results[0] && event.results[0][0] ? event.results[0][0].transcript : '').trim();
+            if (said) {
+                document.getElementById('chatInput').value = said;
+                sendChatMessage();
+            }
+        };
+        recognition.start();
+    }
+
+    function renderAgentReply(reply) {
+        const wrap = document.getElementById('chatMessages');
+        const el = document.createElement('div');
+        el.className = 'message-bubble assistant';
+        const text = document.createElement('div');
+        text.textContent = (reply && reply.text) || '';
+        el.appendChild(text);
+        if (reply && reply.facts) {
+            const facts = document.createElement('div');
+            facts.textContent = reply.facts;
+            el.appendChild(facts);
+        }
+        (reply && reply.actions ? reply.actions : []).forEach(function (action) {
+            if (!action || !action.url) return;
+            const link = document.createElement('a');
+            link.href = action.url;
+            link.textContent = action.label || 'Open';
+            link.className = 'btn btn-sm btn-outline-primary mt-2 me-2';
+            el.appendChild(link);
+        });
+        (reply && reply.invoices ? reply.invoices : []).forEach(function (invoice) {
+            if (!invoice || !invoice.view_url) return;
+            const link = document.createElement('a');
+            link.href = invoice.view_url;
+            link.textContent = 'View ' + (invoice.invoice_number || 'invoice');
+            link.className = 'btn btn-sm btn-outline-primary mt-2 me-2';
+            el.appendChild(link);
+        });
+        wrap.appendChild(el);
+        wrap.scrollTop = wrap.scrollHeight;
+        speakAgent(reply && reply.text);
+        const nextUrl = String(reply && reply.navigate || '');
+        if (nextUrl.charAt(0) === '/' && nextUrl.charAt(1) !== '/') {
+            window.location.assign(nextUrl);
+        }
+        return el;
+    }
+
     function isMobileAiLayout() {
         return window.matchMedia('(max-width: 991.98px)').matches;
     }
@@ -1069,39 +1164,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
         const inp = document.getElementById('chatInput');
         const text = inp.value.trim();
         if (!text) return;
-        
+
         inp.value = '';
-        appendMessage('user', text);
-        
-        const loader = appendMessage('assistant', '<span class="spinner-border spinner-border-sm"></span> Thinking...');
-        
-        // Call backend API
-        const formData = new FormData();
-        formData.append('ajax_action', 'explain_kpi');
-        formData.append('params[kpi]', 'User Question');
-        formData.append('params[value]', text);
-        
-        // Add active module parameter from URL search parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const activeModule = urlParams.get('module') || 'general';
-        formData.append('params[active_module]', activeModule);
-        
-        fetch(window.location.pathname, {
+        appendMessage('user', text.replace(/[&<>"']/g, function (ch) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+        }));
+        const loader = appendMessage('assistant', 'Working on that...');
+
+        const body = new URLSearchParams();
+        body.set('action', 'ask');
+        body.set('csrf', agentCsrf);
+        body.set('message', text);
+
+        fetch(agentApiUrl, {
             method: 'POST',
-            body: formData
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
         })
-        .then(r => r.json())
-        .then(data => {
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
             loader.remove();
-            if (data.success) {
-                appendMessage('assistant', data.analysis);
+            if (data && data.ok && data.reply) {
+                renderAgentReply(data.reply);
             } else {
-                appendMessage('assistant', 'Error: ' + data.error);
+                appendMessage('assistant', (data && data.error) || 'I could not read ERP data for this company.');
             }
         })
-        .catch(err => {
+        .catch(function () {
             loader.remove();
-            appendMessage('assistant', 'Offline / Connection error occurred.');
+            appendMessage('assistant', 'I could not read ERP data for this company.');
         });
     }
 

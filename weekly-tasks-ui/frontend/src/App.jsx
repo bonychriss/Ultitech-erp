@@ -326,7 +326,7 @@ function SalesMeasureCards({ items }) {
         return (
           <Row key={item.name} className="wt-nc-card wt-kpi-card" href={item.href || undefined}>
             <span className="wt-nc-icon" aria-hidden="true">
-              <RecordIcon kind="sales" />
+              <RecordIcon kind={measureIcon(item)} />
             </span>
             <div className="wt-nc-body">
               <p className="wt-nc-kicker">{item.group || 'Sales'}</p>
@@ -677,6 +677,15 @@ function InvoiceIcon() {
   )
 }
 
+function measureIcon(item) {
+  const key = String(item?.key || '')
+  if (key === 'system-uptime') return 'uptime'
+  if (key === 'it-support-response-resolution') return 'support'
+  if (key === 'data-backup') return 'backup'
+  if (key === 'system-accuracy') return 'accuracy'
+  return 'sales'
+}
+
 function RecordIcon({ kind }) {
   if (kind === 'quote') return <QuoteIcon />
   if (kind === 'converted') {
@@ -711,6 +720,42 @@ function RecordIcon({ kind }) {
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
         <rect x="4" y="5" width="16" height="15" rx="2" />
         <path d="M8 3v4M16 3v4M4 10h16" />
+      </svg>
+    )
+  }
+  if (kind === 'uptime') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M4 13a8 8 0 1 0 2.2-5.5" />
+        <path d="M4 4v5h5" />
+        <path d="M12 8v5l3 2" />
+      </svg>
+    )
+  }
+  if (kind === 'support') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M4 13a8 8 0 0 1 16 0" />
+        <rect x="3" y="13" width="4" height="6" rx="1" />
+        <rect x="17" y="13" width="4" height="6" rx="1" />
+        <path d="M12 19v1a2 2 0 0 0 2 2h1" />
+      </svg>
+    )
+  }
+  if (kind === 'backup') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <ellipse cx="12" cy="6" rx="7" ry="3" />
+        <path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6" />
+        <path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />
+      </svg>
+    )
+  }
+  if (kind === 'accuracy') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M12 3 5 6v6c0 4.2 2.8 7.2 7 8.5 4.2-1.3 7-4.3 7-8.5V6l-7-3z" />
+        <path d="m9 12 2 2 4-4" />
       </svg>
     )
   }

@@ -74,7 +74,7 @@ function weeklyTasksUiMonthUrl($monthOffset = 0, int $userId = 0, string $measur
     if ($measure !== '') {
         $query['measure'] = $measure;
     }
-    if ($userId < 1 && $measure === '' && (string) ($_GET['kpi'] ?? '') === 'hr') {
+    if ($userId < 1 && $measure === '') {
         $query['kpi'] = 'hr';
     }
 
@@ -2944,6 +2944,9 @@ function weeklyTasksUiKpiScreen(string $kpi): array
     if ($kpi === '') {
         $cards = [];
         foreach ($catalog as $item) {
+            if ($item['id'] !== 'hr') {
+                continue;
+            }
             $cards[] = [
                 'id' => $item['id'],
                 'label' => $item['label'],
@@ -2959,20 +2962,6 @@ function weeklyTasksUiKpiScreen(string $kpi): array
             'detailMissing' => false,
         ];
     }
-    foreach ($catalog as $item) {
-        if ($item['id'] !== $kpi || $kpi === 'hr') {
-            continue;
-        }
-
-        return [
-            'catalog' => $item,
-            'hubUrl' => weeklyTasksUiKpiUrl(),
-            'detail' => null,
-            'measure' => null,
-            'detailMissing' => false,
-        ];
-    }
-
     return weeklyTasksUiKpiScreen('');
 }
 

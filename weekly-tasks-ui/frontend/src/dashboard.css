@@ -785,6 +785,10 @@ a.wt-kpi-card {
   white-space: nowrap;
 }
 
+.wt-kpi-card .wt-kpi-details span {
+  white-space: normal;
+}
+
 .wt-compare {
   background: #fff;
   border: 1px solid #e5e7eb;
@@ -926,6 +930,21 @@ a.wt-compare-row:hover,
 
 .wt-compare-name {
   color: #111827;
+}
+
+.wt-kpi-line {
+  grid-template-columns: minmax(180px, 1.6fr) minmax(0, 1fr) 72px;
+}
+
+.wt-kpi-line .wt-compare-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wt-kpi-line .wt-compare-name small {
+  color: #64748b;
+  font-size: 0.75rem;
 }
 
 .wt-compare-done {

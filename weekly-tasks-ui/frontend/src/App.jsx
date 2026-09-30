@@ -1389,11 +1389,78 @@ function MeasurePage({ month, measure }) {
   )
 }
 
+function KpiHub({ items }) {
+  const cards = Array.isArray(items) ? items : []
+  return (
+    <div className="wt-dash">
+      <header className="wt-head">
+        <div>
+          <h1 className="wt-title">Smart KPI</h1>
+          <p className="wt-sub">Choose a KPI</p>
+        </div>
+      </header>
+      <div className="wt-nc-section-list">
+        {cards.map((item) => (
+          <a key={item.id} className="wt-nc-card wt-kpi-card" href={item.href || '#'}>
+            <span className="wt-nc-icon" aria-hidden="true">
+              <RecordIcon kind={item.id === 'hr' ? 'attendance' : item.id === 'sales' ? 'sales' : item.id === 'inventory' ? 'backup' : item.id === 'finance' ? 'accuracy' : item.id === 'it' ? 'uptime' : item.id === 'drivers' ? 'customer' : 'quote'} />
+            </span>
+            <div className="wt-nc-body">
+              <h3 className="wt-nc-title">{item.label}</h3>
+              <p className="wt-kpi-details"><span>{item.desc}</span></p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function KpiCatalog({ item, hubUrl }) {
+  const lines = Array.isArray(item?.lines) ? item.lines : []
+  return (
+    <div className="wt-dash">
+      <a className="wt-back" href={hubUrl || '#'}>Back</a>
+      <header className="wt-head">
+        <div>
+          <h1 className="wt-title">{item?.label || 'KPI'}</h1>
+          <p className="wt-sub">{item?.desc || ''}</p>
+        </div>
+      </header>
+      <div className="wt-compare">
+        <div className="wt-compare-row wt-kpi-line wt-compare-row--head">
+          <span>KPI</span>
+          <span>Target</span>
+          <span>Weight</span>
+        </div>
+        {lines.map((line) => (
+          <div key={line.name} className="wt-compare-row wt-kpi-line">
+            <span className="wt-compare-name">
+              <strong>{line.name}</strong>
+              <small>{line.measure}</small>
+            </span>
+            <span>{line.target}</span>
+            <span>{line.weight}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const data = cfg()
   const month = data.month || {}
   const bands = Array.isArray(data.bands) ? data.bands : []
   const departments = Array.isArray(data.departments) ? data.departments : []
+
+  if (Array.isArray(data.hub)) {
+    return <KpiHub items={data.hub} />
+  }
+
+  if (data.catalog) {
+    return <KpiCatalog item={data.catalog} hubUrl={data.hubUrl} />
+  }
 
   if (data.measure) {
     return <MeasurePage month={month} measure={data.measure} />
@@ -1405,9 +1472,10 @@ export default function App() {
 
   return (
     <div className="wt-dash">
+      {data.hubUrl ? <a className="wt-back" href={data.hubUrl}>Back</a> : null}
       <header className="wt-head">
         <div>
-          <h1 className="wt-title">Performance</h1>
+          <h1 className="wt-title">HR performance</h1>
           <p className="wt-sub">{month.label || 'This month'}</p>
         </div>
         <div className="wt-week">

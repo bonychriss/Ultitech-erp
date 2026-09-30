@@ -1208,6 +1208,78 @@ a.wt-compare-row:hover,
   }
 }
 
+.wt-up-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wt-up-top {
+  margin-top: 14px;
+}
+
+.wt-up-top h2 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: #111827;
+}
+
+.wt-up-top p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.wt-up-top ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wt-up-top li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.wt-up-top li span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4c6ef5;
+}
+
+.wt-up-top li strong {
+  font-size: 0.92rem;
+  color: #111827;
+}
+
+.wt-up-top li em {
+  font-style: normal;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: #1e293b;
+}
+
+.wt-up-top li small {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+@media (max-width: 720px) {
+  .wt-up-top ol {
+    grid-template-columns: 1fr;
+  }
+}
+
 .wt-att-kpi-details p {
   margin: 0;
   font-size: 0.78rem;

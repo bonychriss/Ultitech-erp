@@ -1001,6 +1001,142 @@ function AttendanceCards({ board }) {
   )
 }
 
+function ToneChart({ title, subtitle, points, topLabel }) {
+  const chart = Array.isArray(points) ? points : []
+  const width = 760
+  const height = 210
+  const left = 12
+  const right = 46
+  const top = 14
+  const bottom = 46
+  const plotW = width - left - right
+  const plotH = height - top - bottom
+  if (!chart.length) return null
+  const slot = plotW / chart.length
+  const barW = Math.max(6, Math.min(16, slot * 0.46))
+  const base = top + plotH
+  const yAt = (value) => top + plotH - (Math.min(1, Number(value) || 0) * plotH)
+  const bars = chart.map((point, index) => {
+    const amount = Math.min(1, Math.max(0, Number(point.value) || 0))
+    const today = Number(point.today) === 1
+    const full = amount * plotH
+    const cap = amount > 0 ? Math.min(16, full * 0.18) : 0
+    const body = Math.max(0, full - cap)
+    const x = left + slot * index + (slot - barW) / 2
+    return {
+      key: `${point.label || index}-${index}`,
+      x,
+      label: point.label || '',
+      show: amount > 0,
+      today,
+      body,
+      full,
+    }
+  })
+  return (
+    <section className="wt-att-chart" aria-label={title}>
+      <div className="wt-att-chart-head">
+        <span className="wt-att-chart-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M5 19V10M10 19V5M15 19v-7M20 19V8" />
+          </svg>
+        </span>
+        <div>
+          <h2>{title}</h2>
+          <p>{subtitle}</p>
+        </div>
+      </div>
+      <svg className="wt-att-svg" viewBox={`0 0 ${width} ${height}`} role="img">
+        {[0, 0.5, 1].map((tick) => {
+          const y = yAt(tick)
+          const text = tick === 1 ? topLabel : tick === 0 ? '0' : ''
+          return (
+            <g key={tick}>
+              <line className="wt-att-grid" x1={left} x2={width - right} y1={y} y2={y} />
+              <text className="wt-att-tick" x={width - 4} y={y + 3} textAnchor="end">{text}</text>
+            </g>
+          )
+        })}
+        {bars.map((bar) => (
+          <g key={bar.key}>
+            {bar.show ? (
+              <>
+                <rect
+                  className={bar.today ? 'wt-att-bar-cap is-today' : 'wt-att-bar-cap'}
+                  x={bar.x}
+                  y={base - bar.full}
+                  width={barW}
+                  height={bar.full}
+                  rx={barW / 2}
+                />
+                <rect
+                  className={bar.today ? 'wt-att-bar is-today' : 'wt-att-bar'}
+                  x={bar.x}
+                  y={base - bar.body}
+                  width={barW}
+                  height={bar.body}
+                />
+              </>
+            ) : null}
+            <text
+              className={bar.today ? 'wt-att-label is-today' : 'wt-att-label'}
+              x={bar.x + barW / 2}
+              y={base + 14}
+              textAnchor="end"
+              transform={`rotate(-45 ${bar.x + barW / 2} ${base + 14})`}
+            >
+              {bar.label}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </section>
+  )
+}
+
+function UptimeBoard({ board, rows }) {
+  const top = Array.isArray(board?.top) ? board.top : []
+  const outages = Array.isArray(rows) ? rows : []
+  return (
+    <>
+      <div className="wt-up-charts">
+        <ToneChart
+          title="System uptime"
+          subtitle={`${Number(board?.uptimePct) || 0}% available · ${Number(board?.downDays) || 0} down days`}
+          points={board?.chart}
+          topLabel="100%"
+        />
+        <ToneChart
+          title="Usage"
+          subtitle={`${board?.usageLabel || '0 hrs'} signed in`}
+          points={board?.usage}
+          topLabel={board?.scaleLabel || '0'}
+        />
+      </div>
+      <section className="wt-up-top" aria-label="Highest uptime">
+        <h2>Highest uptime</h2>
+        {top.length === 0 ? (
+          <p>No one signed in this period.</p>
+        ) : (
+          <ol>
+            {top.map((person, index) => (
+              <li key={`${person.name}-${index}`}>
+                <span>{index + 1}</span>
+                <strong>{person.name}</strong>
+                <em>{person.hoursLabel}</em>
+                <small>{Number(person.days) || 0} {Number(person.days) === 1 ? 'day' : 'days'}</small>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+      {outages.length ? (
+        <RecordCards rows={outages} label="Outage" kind="attendance" />
+      ) : null}
+    </>
+  )
+}
+
 function MeasurePage({ month, measure }) {
   const rows = Array.isArray(measure.rows) ? measure.rows : []
   const breakdown = Array.isArray(measure.items) ? measure.items : []
@@ -1046,7 +1182,26 @@ function MeasurePage({ month, measure }) {
           <AttendanceCards board={measure.board} />
         </>
       ) : null}
-      {measure.key === 'attendance' && measure.configured && measure.board ? null : (
+      {measure.key === 'system-uptime' && measure.configured && measure.board ? (
+        <section className="wt-att-page">
+          <header className="wt-att-top">
+            <span className="wt-att-top-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <path d="M4 13a8 8 0 1 0 2.2-5.5" />
+                <path d="M4 4v5h5" />
+                <path d="M12 8v5l3 2" />
+              </svg>
+            </span>
+            <div>
+              <h1>System Uptime</h1>
+              <p>{Number(measure.board.uptimePct) || 0}% available · {measure.board.usageLabel || '0 hrs'} used</p>
+            </div>
+            <MonthSelect month={month} boxed />
+          </header>
+          <UptimeBoard board={measure.board} rows={rows} />
+        </section>
+      ) : null}
+      {(measure.key === 'attendance' || measure.key === 'system-uptime') && measure.configured && measure.board ? null : (
       <>
       <header className="wt-head">
         <div>

@@ -2247,7 +2247,7 @@ function weeklyTasksUiUptimeBoard(PDO $pdo, array $offsets): array
         'elapsed' => (int) ($shared['elapsed'] ?? 0),
         'usageMinutes' => $usageMinutes,
         'usageLabel' => weeklyTasksUiHourLabel($usageMinutes),
-        'scaleLabel' => weeklyTasksUiHourLabel($maxMinutes),
+        'scaleLabel' => $maxMinutes > 0 ? weeklyTasksUiHourLabel($maxMinutes) : '',
         'chart' => $chart,
         'usage' => $usageChart,
         'top' => $top,
@@ -2996,6 +2996,7 @@ function weeklyTasksUiBuildPayload(): array
             $empty = 'Nothing recorded in this period.';
             $breakdown = [];
             $attendanceBoard = null;
+            $uptimeBoard = null;
             if ($measureKey === 'sales-performance') {
                 $breakdown = $salesLines;
                 $empty = 'No sales performance recorded in this period.';
@@ -3024,6 +3025,9 @@ function weeklyTasksUiBuildPayload(): array
                 ][$measureKey];
             } elseif (in_array($measureKey, ['system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy'], true)) {
                 $rows = weeklyTasksUiItLines($pdo, $selectedId, $offsets, $measureKey);
+                if ($measureKey === 'system-uptime') {
+                    $uptimeBoard = weeklyTasksUiUptimeBoard($pdo, $offsets);
+                }
                 $empty = [
                     'system-uptime' => 'No outage recorded in this period.',
                     'it-support-response-resolution' => 'No IT issues recorded in this period.',
@@ -3039,7 +3043,7 @@ function weeklyTasksUiBuildPayload(): array
             $salesMeasure = in_array($measureKey, ['monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'], true);
             $itMeasure = in_array($measureKey, ['system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy'], true);
             $itAbout = [
-                'system-uptime' => 'A day counts as down when a task or report says the system was down. Days with no such report stay up. The target is 99% of the days so far.',
+                'system-uptime' => 'A day counts as down when a task or report says the system was down. Usage is the time people were signed in. The top three are the people with the most signed-in time.',
                 'it-support-response-resolution' => 'An IT issue is a support task on this person. Within 24 hrs means it was finished within a day of being logged. Issues still inside that day are left out.',
                 'data-backup' => 'Each backup file saved this period. Successful means the file is not empty. The target is every backup successful, and at least one backup.',
                 'system-accuracy' => 'A system problem counts once. Recurred means the same problem was logged again. The target is 95% of problems happening only once.',
@@ -3055,7 +3059,7 @@ function weeklyTasksUiBuildPayload(): array
                 'configured' => (bool) ($match['configured'] ?? false),
                 'rows' => $measureKey === 'customer-visits' ? [] : (!empty($match['configured']) ? $rows : []),
                 'items' => $breakdown,
-                'board' => $attendanceBoard,
+                'board' => $attendanceBoard ?: $uptimeBoard,
                 'empty' => $measureKey === 'customer-visits' ? 'Coming soon' : $empty,
                 'backUrl' => $salesMeasure
                     ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'sales-performance')

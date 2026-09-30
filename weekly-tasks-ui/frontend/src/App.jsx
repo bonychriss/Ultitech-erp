@@ -923,82 +923,48 @@ function AttendanceBoard({ board }) {
 function AttendanceCards({ board }) {
   const stats = Array.isArray(board?.stats) ? board.stats : []
   const byKey = Object.fromEntries(stats.map((stat) => [stat.key, stat]))
+  const [open, setOpen] = useState('')
   const cards = [
-    { key: 'early', label: 'Came early', hint: 'Arrived before start time', icon: 'early' },
-    { key: 'late', label: 'Came late', hint: 'Arrived after start time', icon: 'late' },
-    { key: 'pending', label: 'Pending task', hint: 'Tasks not yet completed', icon: 'pending' },
+    { key: 'early', label: 'Came early', hint: 'Arrived before start time', icon: 'early', empty: 'No early days this month.' },
+    { key: 'late', label: 'Came late', hint: 'Arrived after start time', icon: 'late', empty: 'No late days this month.' },
+    { key: 'pending', label: 'Pending task', hint: 'Tasks not yet completed', icon: 'pending', empty: 'No pending tasks this month.' },
   ]
-  const details = []
-  ;(byKey.signout?.items || []).forEach((item, index) => {
-    details.push({
-      key: `signout-${index}`,
-      tone: 'signout',
-      icon: 'signout',
-      label: 'Forgot to sign out',
-      hint: 'Did not sign out at the end of the day',
-      when: item.when || '',
-    })
-  })
-  ;(byKey.pending?.items || []).forEach((item, index) => {
-    details.push({
-      key: `pending-${index}`,
-      tone: 'pending',
-      icon: 'clock',
-      label: 'Pending task',
-      hint: item.title || 'Tasks not yet completed',
-      when: item.when || '',
-    })
-  })
-  ;(byKey.early?.items || []).forEach((item, index) => {
-    details.push({
-      key: `early-${index}`,
-      tone: 'early',
-      icon: 'early',
-      label: 'Came early',
-      hint: 'Arrived before start time',
-      when: item.when || '',
-    })
-  })
-  ;(byKey.late?.items || []).forEach((item, index) => {
-    details.push({
-      key: `late-${index}`,
-      tone: 'late',
-      icon: 'late',
-      label: 'Came late',
-      hint: 'Arrived after start time',
-      when: item.when || '',
-    })
-  })
   return (
-    <div className="wt-att-cards">
-      {cards.map((card) => (
-        <section key={card.key} className={`wt-att-stat wt-att-stat--${card.key}`}>
-          <span className="wt-att-ico"><AttIcon name={card.icon} /></span>
-          <div>
-            <strong>{card.label}</strong>
-            <span>{card.hint}</span>
+    <section className="wt-att-kpi-card" aria-label="Attendance details">
+      {cards.map((card) => {
+        const items = Array.isArray(byKey[card.key]?.items) ? byKey[card.key].items : []
+        const active = open === card.key
+        return (
+          <div key={card.key} className={`wt-att-kpi wt-att-kpi--${card.key}${active ? ' is-open' : ''}`}>
+            <button
+              type="button"
+              className="wt-att-kpi-btn"
+              aria-expanded={active}
+              onClick={() => setOpen(active ? '' : card.key)}
+            >
+              <span className="wt-att-ico"><AttIcon name={card.icon} /></span>
+              <span className="wt-att-kpi-copy">
+                <strong>{card.label}</strong>
+                <span>{card.hint}</span>
+              </span>
+              <b>{Number(byKey[card.key]?.count) || 0}</b>
+            </button>
+            {active ? (
+              <div className="wt-att-kpi-details">
+                {items.length === 0 ? (
+                  <p>{card.empty}</p>
+                ) : items.map((item, index) => (
+                  <article key={`${card.key}-${index}`}>
+                    <span>{card.key === 'pending' ? (item.title || 'Pending task') : card.label}</span>
+                    {item.when ? <time>{item.when}</time> : null}
+                  </article>
+                ))}
+              </div>
+            ) : null}
           </div>
-          <b>{Number(byKey[card.key]?.count) || 0}</b>
-        </section>
-      ))}
-      {details.map((item) => (
-        <article key={item.key} className={`wt-att-detail wt-att-detail--${item.tone}`}>
-          <span className="wt-att-ico"><AttIcon name={item.icon} /></span>
-          <div>
-            <strong>{item.label}</strong>
-            <span>{item.hint}</span>
-          </div>
-          {item.when ? (
-            <time>
-              {item.when}
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                <path d="M9 6l6 6-6 6" />
-              </svg>
-            </time>
-          ) : null}
-        </article>
-      ))}
-    </div>
+        )
+      })}
+    </section>
   )
 }
 

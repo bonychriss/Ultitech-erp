@@ -1663,11 +1663,66 @@
   border-radius: 14px;
 }
 
-.crm-market-switch {
+.crm-market-toggle {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  width: fit-content;
+  margin: 0;
+  cursor: pointer;
+}
+
+.crm-market-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.crm-market-toggle-track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px !important;
+  background: #cbd5e1;
+  transition: background 0.15s ease;
+}
+
+.crm-market-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50% !important;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.22);
+  transition: transform 0.15s ease;
+}
+
+.crm-market-toggle input:checked + .crm-market-toggle-track {
+  background: #4f46e5;
+}
+
+.crm-market-toggle input:checked + .crm-market-toggle-track::after {
+  transform: translateX(18px);
+}
+
+.crm-market-toggle input:focus-visible + .crm-market-toggle-track {
+  outline: 2px solid #a5b4fc;
+  outline-offset: 2px;
+}
+
+.crm-market-toggle input:disabled + .crm-market-toggle-track {
+  opacity: 0.55;
+}
+
+.crm-market-toggle:has(input:disabled) {
+  cursor: default;
 }
 
 .crm-market-switch-state {

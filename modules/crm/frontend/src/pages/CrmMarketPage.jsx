@@ -1540,25 +1540,23 @@ export default function CrmMarketPage() {
           </div>
         )}
         <form className="crm-market-form crm-market-form--card" onSubmit={(e) => void onSaveSettings(e)}>
-          <div className="crm-market-switch">
-            <button
-              type="button"
-              className={`crm-desk-btn ${searchSource === 'rapid' ? 'crm-desk-btn-primary' : 'crm-desk-btn-secondary'}`}
+          <label className="crm-market-toggle">
+            <input
+              type="checkbox"
+              checked={searchSource === 'rapid'}
               disabled={sourceSaving !== ''}
-              onClick={() => void chooseSearchSource('rapid')}
-            >
-              {sourceSaving === 'rapid' ? 'Saving...' : 'Enable'}
-            </button>
-            <button
-              type="button"
-              className="crm-desk-btn crm-desk-btn-secondary"
-              disabled={sourceSaving !== '' || searchSource !== 'rapid'}
-              onClick={() => void chooseSearchSource('')}
-            >
-              {sourceSaving === 'off' && searchSource === 'rapid' ? 'Saving...' : 'Disable'}
-            </button>
-            <span className="crm-market-switch-state">{searchSource === 'rapid' ? 'Used for search' : 'Not used for search'}</span>
-          </div>
+              aria-label="Use this search provider"
+              onChange={(event) => void chooseSearchSource(event.target.checked ? 'rapid' : '')}
+            />
+            <span className="crm-market-toggle-track" aria-hidden="true" />
+            <span className="crm-market-switch-state">
+              {(sourceSaving === 'rapid' || (sourceSaving === 'off' && searchSource === 'rapid'))
+                ? 'Saving...'
+                : searchSource === 'rapid'
+                  ? 'Used for search'
+                  : 'Not used for search'}
+            </span>
+          </label>
           <label className="crm-market-field">
             <span>Search provider</span>
             <select
@@ -1632,25 +1630,23 @@ export default function CrmMarketPage() {
           </div>
         </form>
         <form className="crm-market-form crm-market-form--card" onSubmit={(event) => void saveZenserpFromSearch(event)}>
-          <div className="crm-market-switch">
-            <button
-              type="button"
-              className={`crm-desk-btn ${searchSource === 'zenserp' ? 'crm-desk-btn-primary' : 'crm-desk-btn-secondary'}`}
+          <label className="crm-market-toggle">
+            <input
+              type="checkbox"
+              checked={searchSource === 'zenserp'}
               disabled={sourceSaving !== ''}
-              onClick={() => void chooseSearchSource('zenserp')}
-            >
-              {sourceSaving === 'zenserp' ? 'Saving...' : 'Enable'}
-            </button>
-            <button
-              type="button"
-              className="crm-desk-btn crm-desk-btn-secondary"
-              disabled={sourceSaving !== '' || searchSource !== 'zenserp'}
-              onClick={() => void chooseSearchSource('')}
-            >
-              Disable
-            </button>
-            <span className="crm-market-switch-state">{searchSource === 'zenserp' ? 'Used for search' : 'Not used for search'}</span>
-          </div>
+              aria-label="Use Zenserp for search"
+              onChange={(event) => void chooseSearchSource(event.target.checked ? 'zenserp' : '')}
+            />
+            <span className="crm-market-toggle-track" aria-hidden="true" />
+            <span className="crm-market-switch-state">
+              {(sourceSaving === 'zenserp' || (sourceSaving === 'off' && searchSource === 'zenserp'))
+                ? 'Saving...'
+                : searchSource === 'zenserp'
+                  ? 'Used for search'
+                  : 'Not used for search'}
+            </span>
+          </label>
           <label className="crm-market-field">
             <span>Zenserp API key {zenserpReady ? '(saved)' : '(not set)'}</span>
             <input

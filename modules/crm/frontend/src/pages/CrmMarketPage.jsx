@@ -22,6 +22,7 @@ import {
   runMarketSearch,
   fetchMarketSuggest,
   saveMarketMessage,
+  saveMarketSearchSource,
   saveMarketSettings,
   saveZenserpKey,
   testMarketSettings,
@@ -530,6 +531,8 @@ export default function CrmMarketPage() {
   const [zenserpReady, setZenserpReady] = useState(null);
   const [zenserpKey, setZenserpKey] = useState('');
   const [zenserpSaving, setZenserpSaving] = useState(false);
+  const [searchSource, setSearchSource] = useState('');
+  const [sourceSaving, setSourceSaving] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [searchRows, setSearchRows] = useState([]);
@@ -667,6 +670,26 @@ export default function CrmMarketPage() {
     };
   }, [isSearch]);
 
+  const chooseSearchSource = async (source) => {
+    setSourceSaving(source || 'off');
+    setError('');
+    try {
+      const data = await saveMarketSearchSource(source);
+      setSearchSource(String(data?.searchSource || ''));
+      setMessage(
+        data?.searchSource === 'zenserp'
+          ? 'Search will use Zenserp.'
+          : data?.searchSource === 'rapid'
+            ? 'Search will use this provider.'
+            : 'That provider is off.'
+      );
+    } catch (err) {
+      setError(err.message || 'Could not update the search provider.');
+    } finally {
+      setSourceSaving('');
+    }
+  };
+
   const saveZenserpFromSearch = async (event) => {
     event.preventDefault();
     setZenserpSaving(true);
@@ -721,6 +744,7 @@ export default function CrmMarketPage() {
         if (cancelled) return;
         setStatus(data || {});
         setZenserpReady(Boolean(data?.zenserp));
+        setSearchSource(String(data?.searchSource || ''));
       })
       .catch(() => {});
     return () => {
@@ -1516,6 +1540,25 @@ export default function CrmMarketPage() {
           </div>
         )}
         <form className="crm-market-form crm-market-form--card" onSubmit={(e) => void onSaveSettings(e)}>
+          <div className="crm-market-switch">
+            <button
+              type="button"
+              className={`crm-desk-btn ${searchSource === 'rapid' ? 'crm-desk-btn-primary' : 'crm-desk-btn-secondary'}`}
+              disabled={sourceSaving !== ''}
+              onClick={() => void chooseSearchSource('rapid')}
+            >
+              {sourceSaving === 'rapid' ? 'Saving...' : 'Enable'}
+            </button>
+            <button
+              type="button"
+              className="crm-desk-btn crm-desk-btn-secondary"
+              disabled={sourceSaving !== '' || searchSource !== 'rapid'}
+              onClick={() => void chooseSearchSource('')}
+            >
+              {sourceSaving === 'off' && searchSource === 'rapid' ? 'Saving...' : 'Disable'}
+            </button>
+            <span className="crm-market-switch-state">{searchSource === 'rapid' ? 'Used for search' : 'Not used for search'}</span>
+          </div>
           <label className="crm-market-field">
             <span>Search provider</span>
             <select
@@ -1589,6 +1632,25 @@ export default function CrmMarketPage() {
           </div>
         </form>
         <form className="crm-market-form crm-market-form--card" onSubmit={(event) => void saveZenserpFromSearch(event)}>
+          <div className="crm-market-switch">
+            <button
+              type="button"
+              className={`crm-desk-btn ${searchSource === 'zenserp' ? 'crm-desk-btn-primary' : 'crm-desk-btn-secondary'}`}
+              disabled={sourceSaving !== ''}
+              onClick={() => void chooseSearchSource('zenserp')}
+            >
+              {sourceSaving === 'zenserp' ? 'Saving...' : 'Enable'}
+            </button>
+            <button
+              type="button"
+              className="crm-desk-btn crm-desk-btn-secondary"
+              disabled={sourceSaving !== '' || searchSource !== 'zenserp'}
+              onClick={() => void chooseSearchSource('')}
+            >
+              Disable
+            </button>
+            <span className="crm-market-switch-state">{searchSource === 'zenserp' ? 'Used for search' : 'Not used for search'}</span>
+          </div>
           <label className="crm-market-field">
             <span>Zenserp API key {zenserpReady ? '(saved)' : '(not set)'}</span>
             <input

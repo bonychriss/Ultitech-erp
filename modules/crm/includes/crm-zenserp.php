@@ -16,6 +16,37 @@ function crmZenserpApiKey(PDO $pdo): string
     }
 }
 
+function crmMarketActiveSearch(PDO $pdo): string
+{
+    try {
+        $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'crm_market_active_search' LIMIT 1");
+        $stmt->execute();
+        $value = strtolower(trim((string) $stmt->fetchColumn()));
+    } catch (Throwable $e) {
+        $value = '';
+    }
+    if ($value === 'zenserp' || $value === 'rapid' || $value === 'off') {
+        return $value === 'off' ? '' : $value;
+    }
+    if (crmZenserpApiKey($pdo) !== '') {
+        return 'zenserp';
+    }
+
+    return 'rapid';
+}
+
+function crmMarketSaveActiveSearch(PDO $pdo, string $source): string
+{
+    $source = strtolower(trim($source));
+    if ($source !== 'zenserp' && $source !== 'rapid') {
+        $source = 'off';
+    }
+    $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES ('crm_market_active_search', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+    $stmt->execute([$source, $source]);
+
+    return $source === 'off' ? '' : $source;
+}
+
 function crmZenserpSaveApiKey(PDO $pdo, string $key): void
 {
     $key = trim($key);
@@ -254,7 +285,7 @@ function crmZenserpOrganicRows(array $payload): array
         if ($blocked) {
             continue;
         }
-        $name = trim((string) preg_replace('/\s+[\|\-–—:].*$/u', '', $title));
+        $name = trim((string) preg_replace('/\s+[\|\-??:].*$/u', '', $title));
         if ($name === '') {
             $name = $title;
         }

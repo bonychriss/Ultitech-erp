@@ -199,6 +199,13 @@ export async function checkCustomerGoogle(id) {
   return request(`${apiBase()}?${params.toString()}`);
 }
 
+export async function saveMarketSearchSource(source) {
+  return request(`${apiBase()}?action=market_search_source_save`, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'market_search_source_save', source: String(source || '') }),
+  });
+}
+
 export async function saveZenserpKey(key) {
   return request(`${apiBase()}?action=zenserp_key_save`, {
     method: 'POST',

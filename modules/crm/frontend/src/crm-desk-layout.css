@@ -1663,6 +1663,19 @@
   border-radius: 14px;
 }
 
+.crm-market-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.crm-market-switch-state {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
 .crm-market-settings-actions {
   display: flex;
   flex-wrap: wrap;

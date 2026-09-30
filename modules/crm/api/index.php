@@ -112,6 +112,7 @@ try {
         case 'market_status':
             $marketStatus = crmMarketStatus($companyId);
             $marketStatus['zenserp'] = crmZenserpApiKey($pdo) !== '';
+            $marketStatus['searchSource'] = crmMarketActiveSearch($pdo);
             crmDeskJsonResponse(true, $marketStatus);
             break;
 
@@ -379,6 +380,12 @@ try {
                 'needsKey' => false,
                 'results' => $found['results'],
             ]);
+            break;
+
+        case 'market_search_source_save':
+            $source = crmMarketSaveActiveSearch($pdo, (string) ($jsonBody['source'] ?? ''));
+            $label = $source === 'zenserp' ? 'Search will use Zenserp.' : ($source === 'rapid' ? 'Search will use this provider.' : 'That provider is off.');
+            crmDeskJsonResponse(true, ['searchSource' => $source], $label);
             break;
 
         case 'zenserp_key_save':

@@ -1743,8 +1743,521 @@ function weeklyTasksUiSalesLines(PDO $pdo, int $userId, array $offsets, string $
 }
 
 /**
+ * @param array<int,int> $offsets
+ * @return array<string,bool>
+ */
+function weeklyTasksUiItDaySet(array $offsets): array
+{
+    $days = [];
+    $today = date('Y-m-d');
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        if ($start > $today) {
+            continue;
+        }
+        if ($end > $today) {
+            $end = $today;
+        }
+        try {
+            $cursor = new DateTime($start);
+            $last = new DateTime($end);
+        } catch (Throwable $e) {
+            continue;
+        }
+        while ($cursor <= $last) {
+            $days[$cursor->format('Y-m-d')] = true;
+            $cursor->modify('+1 day');
+        }
+    }
+
+    return $days;
+}
+
+function weeklyTasksUiItPeopleIds(PDO $pdo): array
+{
+    try {
+        $rows = $pdo->query('SELECT id, department, role FROM users WHERE is_active = 1')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+    $ids = [];
+    foreach ($rows as $row) {
+        if (weeklyTasksUiDepartmentName((string) ($row['department'] ?? ''), (string) ($row['role'] ?? '')) !== 'IT') {
+            continue;
+        }
+        $id = (int) ($row['id'] ?? 0);
+        if ($id > 0) {
+            $ids[] = $id;
+        }
+    }
+
+    return $ids;
+}
+
+function weeklyTasksUiItNormalize(string $text): string
+{
+    $text = strtolower($text);
+    $text = preg_replace('/[^a-z0-9 ]+/', ' ', $text) ?? '';
+    $text = trim((string) preg_replace('/\s+/', ' ', $text));
+    if (strlen($text) > 80) {
+        $text = substr($text, 0, 80);
+    }
+
+    return $text;
+}
+
+function weeklyTasksUiItIsOutage(string $text): bool
+{
+    return (bool) preg_match('/\b(outage|server down|system down|downtime|site down|erp down)\b/i', $text);
+}
+
+function weeklyTasksUiItIsSupport(string $text): bool
+{
+    return (bool) preg_match('/\b(support|ticket|helpdesk|password|printer|wifi|wi-fi|issue|error|bug|problem|outage|downtime|backup|restore|fix)\b/i', $text);
+}
+
+function weeklyTasksUiItIsProblem(string $text): bool
+{
+    return (bool) preg_match('/\b(error|bug|problem|issue|crash|fail|failed|outage|downtime)\b/i', $text);
+}
+
+/**
+ * Shared IT records for the selected months.
+ *
+ * @param array<int,int> $offsets
+ * @return array{days:array<string,bool>,tasks:array<int,array<string,mixed>>,suggestions:array<int,array<string,mixed>>,backups:array<int,array<string,mixed>>}
+ */
+function weeklyTasksUiItLoad(PDO $pdo, array $offsets): array
+{
+    $days = weeklyTasksUiItDaySet($offsets);
+    $tasks = [];
+    $suggestions = [];
+    $backups = [];
+    if (!$days) {
+        return ['days' => $days, 'tasks' => $tasks, 'suggestions' => $suggestions, 'backups' => $backups];
+    }
+    $start = min(array_keys($days)) . ' 00:00:00';
+    $end = max(array_keys($days)) . ' 23:59:59';
+
+    if (function_exists('tableExists') && tableExists('weekly_plans', $pdo) && tableExists('weekly_plan_items', $pdo)) {
+        try {
+            $st = $pdo->prepare(
+                'SELECT p.user_id, i.task_description AS text, i.is_completed, i.completed_at, i.created_at
+                 FROM weekly_plan_items i
+                 INNER JOIN weekly_plans p ON p.id = i.plan_id
+                 WHERE i.created_at BETWEEN ? AND ?'
+            );
+            $st->execute([$start, $end]);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $tasks[] = [
+                    'userId' => (int) ($row['user_id'] ?? 0),
+                    'text' => trim((string) ($row['text'] ?? '')),
+                    'done' => (int) ($row['is_completed'] ?? 0) === 1,
+                    'completedAt' => (string) ($row['completed_at'] ?? ''),
+                    'createdAt' => (string) ($row['created_at'] ?? ''),
+                ];
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    if (function_exists('tableExists') && tableExists('weekly_missions', $pdo)) {
+        try {
+            $st = $pdo->prepare(
+                "SELECT user_id, title, description, status, completed_at, created_at
+                 FROM weekly_missions
+                 WHERE created_at BETWEEN ? AND ?"
+            );
+            $st->execute([$start, $end]);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $text = trim((string) ($row['title'] ?? ''));
+                $extra = trim((string) ($row['description'] ?? ''));
+                if ($extra !== '') {
+                    $text = trim($text . ' ' . $extra);
+                }
+                $tasks[] = [
+                    'userId' => (int) ($row['user_id'] ?? 0),
+                    'text' => $text,
+                    'done' => (string) ($row['status'] ?? '') === 'Completed' || !empty($row['completed_at']),
+                    'completedAt' => (string) ($row['completed_at'] ?? ''),
+                    'createdAt' => (string) ($row['created_at'] ?? ''),
+                ];
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    if (function_exists('tableExists') && tableExists('developer_suggestions', $pdo)) {
+        try {
+            $st = $pdo->prepare(
+                'SELECT suggestion, status, created_at FROM developer_suggestions WHERE created_at BETWEEN ? AND ?'
+            );
+            $st->execute([$start, $end]);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $suggestions[] = [
+                    'text' => trim((string) ($row['suggestion'] ?? '')),
+                    'status' => (string) ($row['status'] ?? ''),
+                    'createdAt' => (string) ($row['created_at'] ?? ''),
+                ];
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    $engine = dirname(__DIR__) . '/modules/backup/includes/backup-engine.php';
+    if (is_file($engine)) {
+        require_once $engine;
+    }
+    if (function_exists('backupEngineList')) {
+        $companyId = function_exists('currentCompanyId') ? (int) currentCompanyId() : (int) ($_SESSION['company_id'] ?? 0);
+        try {
+            foreach (backupEngineList($companyId) as $file) {
+                $id = (string) ($file['id'] ?? '');
+                $day = '';
+                if (preg_match('/^backup_(\d{4})(\d{2})(\d{2})_/', $id, $match)) {
+                    $day = $match[1] . '-' . $match[2] . '-' . $match[3];
+                }
+                if ($day === '' || empty($days[$day])) {
+                    continue;
+                }
+                $backups[] = [
+                    'title' => (string) ($file['filename'] ?? $id),
+                    'day' => $day,
+                    'when' => $day !== '' ? date('j M Y', strtotime($day)) : '',
+                    'ok' => (int) ($file['size_bytes'] ?? 0) > 0,
+                    'size' => (string) ($file['size_label'] ?? ''),
+                ];
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    return ['days' => $days, 'tasks' => $tasks, 'suggestions' => $suggestions, 'backups' => $backups];
+}
+
+/**
+ * @param array<string,mixed> $bundle
+ * @return array<string,mixed>
+ */
+function weeklyTasksUiItShared(array $bundle): array
+{
+    $days = is_array($bundle['days'] ?? null) ? $bundle['days'] : [];
+    $down = [];
+    $problems = [];
+    $markDown = static function (string $createdAt) use (&$down, $days): void {
+        $day = substr($createdAt, 0, 10);
+        if ($day !== '' && !empty($days[$day])) {
+            $down[$day] = true;
+        }
+    };
+    $markProblem = static function (string $text, string $createdAt) use (&$problems): void {
+        if (!weeklyTasksUiItIsProblem($text)) {
+            return;
+        }
+        $key = weeklyTasksUiItNormalize($text);
+        if ($key === '') {
+            return;
+        }
+        if (!isset($problems[$key])) {
+            $problems[$key] = ['text' => $text, 'count' => 0, 'when' => ''];
+        }
+        $problems[$key]['count']++;
+        $stamp = substr($createdAt, 0, 10);
+        if ($stamp !== '' && ($problems[$key]['when'] === '' || $stamp < $problems[$key]['when'])) {
+            $problems[$key]['when'] = $stamp;
+        }
+    };
+    foreach ($bundle['tasks'] ?? [] as $task) {
+        $text = (string) ($task['text'] ?? '');
+        $created = (string) ($task['createdAt'] ?? '');
+        if (weeklyTasksUiItIsOutage($text)) {
+            $markDown($created);
+        }
+        $markProblem($text, $created);
+    }
+    foreach ($bundle['suggestions'] ?? [] as $row) {
+        $text = (string) ($row['text'] ?? '');
+        $created = (string) ($row['createdAt'] ?? '');
+        if (weeklyTasksUiItIsOutage($text)) {
+            $markDown($created);
+        }
+        $markProblem($text, $created);
+    }
+
+    $elapsed = count($days);
+    $downDays = count($down);
+    $uptimePct = $elapsed > 0 ? (int) round((($elapsed - $downDays) / $elapsed) * 100) : 0;
+    $backupTotal = count($bundle['backups'] ?? []);
+    $backupOk = 0;
+    foreach ($bundle['backups'] ?? [] as $file) {
+        if (!empty($file['ok'])) {
+            $backupOk++;
+        }
+    }
+    $backupPct = $backupTotal > 0 ? (int) round(($backupOk / $backupTotal) * 100) : 0;
+    $distinct = count($problems);
+    $recurring = 0;
+    foreach ($problems as $problem) {
+        if ((int) $problem['count'] > 1) {
+            $recurring++;
+        }
+    }
+    $accuracyPct = $distinct > 0 ? (int) round((($distinct - $recurring) / $distinct) * 100) : 100;
+
+    return [
+        'elapsed' => $elapsed,
+        'downDays' => $downDays,
+        'uptimePct' => $uptimePct,
+        'backupTotal' => $backupTotal,
+        'backupOk' => $backupOk,
+        'backupPct' => $backupPct,
+        'accuracyTotal' => $distinct,
+        'accuracyRecurring' => $recurring,
+        'accuracyPct' => $accuracyPct,
+        'problems' => array_values($problems),
+    ];
+}
+
+/**
+ * @param array<string,mixed> $bundle
+ * @return array{total:int,onTime:int,rows:array<int,array<string,mixed>>}
+ */
+function weeklyTasksUiItSupportForUser(array $bundle, int $userId): array
+{
+    $total = 0;
+    $onTime = 0;
+    $rows = [];
+    foreach ($bundle['tasks'] ?? [] as $task) {
+        if ((int) ($task['userId'] ?? 0) !== $userId) {
+            continue;
+        }
+        $text = (string) ($task['text'] ?? '');
+        if ($text === '' || !weeklyTasksUiItIsSupport($text)) {
+            continue;
+        }
+        $createdAt = (string) ($task['createdAt'] ?? '');
+        $created = $createdAt !== '' ? strtotime($createdAt) : false;
+        $completedAt = (string) ($task['completedAt'] ?? '');
+        $completed = $completedAt !== '' ? strtotime($completedAt) : false;
+        $done = !empty($task['done']);
+        if (!$done) {
+            if ($created && (time() - $created) < 86400) {
+                continue;
+            }
+            $within = false;
+        } else {
+            $within = $created && $completed && ($completed - $created) <= 86400;
+        }
+        $total++;
+        if ($within) {
+            $onTime++;
+        }
+        $day = $created ? date('Y-m-d', $created) : substr($createdAt, 0, 10);
+        $rows[] = [
+            'title' => $text,
+            'date' => $day,
+            'when' => $day !== '' ? date('j M Y', strtotime($day)) : '',
+            'status' => $within ? 'Within 24 hrs' : ($done ? 'Late' : 'Still open'),
+            'kicker' => 'IT issue',
+        ];
+    }
+
+    return ['total' => $total, 'onTime' => $onTime, 'rows' => $rows];
+}
+
+/**
+ * @param array<int,int> $offsets
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiItScores(PDO $pdo, array $offsets): array
+{
+    $people = weeklyTasksUiItPeopleIds($pdo);
+    if (!$people) {
+        return [];
+    }
+    $bundle = weeklyTasksUiItLoad($pdo, $offsets);
+    $shared = weeklyTasksUiItShared($bundle);
+    $uptimeScore = weeklyTasksUiRatioScore((float) $shared['uptimePct'], 99);
+    $backupScore = weeklyTasksUiRatioScore((float) $shared['backupPct'], 100);
+    $accuracyScore = weeklyTasksUiRatioScore((float) $shared['accuracyPct'], 95);
+    $out = [];
+    foreach ($people as $id) {
+        $support = weeklyTasksUiItSupportForUser($bundle, (int) $id);
+        $supportPct = $support['total'] > 0 ? (int) round(($support['onTime'] / $support['total']) * 100) : 0;
+        $supportScore = weeklyTasksUiRatioScore((float) $supportPct, 95);
+        $weighted = [
+            ['weight' => 30, 'score' => $uptimeScore, 'on' => (int) $shared['elapsed'] > 0],
+            ['weight' => 20, 'score' => $supportScore, 'on' => $support['total'] > 0],
+            ['weight' => 20, 'score' => $backupScore, 'on' => true],
+            ['weight' => 30, 'score' => $accuracyScore, 'on' => true],
+        ];
+        $weightSum = 0;
+        $acc = 0.0;
+        foreach ($weighted as $part) {
+            if (!$part['on']) {
+                continue;
+            }
+            $weightSum += (int) $part['weight'];
+            $acc += (int) $part['score'] * (int) $part['weight'];
+        }
+        $out[(int) $id] = [
+            'score' => $weightSum > 0 ? (int) round($acc / $weightSum) : 0,
+            'uptimePct' => (int) $shared['uptimePct'],
+            'elapsed' => (int) $shared['elapsed'],
+            'downDays' => (int) $shared['downDays'],
+            'supportPct' => $supportPct,
+            'supportTotal' => (int) $support['total'],
+            'supportOnTime' => (int) $support['onTime'],
+            'backupPct' => (int) $shared['backupPct'],
+            'backupTotal' => (int) $shared['backupTotal'],
+            'backupOk' => (int) $shared['backupOk'],
+            'accuracyPct' => (int) $shared['accuracyPct'],
+            'accuracyTotal' => (int) $shared['accuracyTotal'],
+            'accuracyRecurring' => (int) $shared['accuracyRecurring'],
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * @param array<string,mixed>|null $it
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiItItems(?array $it): array
+{
+    $it = $it ?: [];
+    $uptime = (int) ($it['uptimePct'] ?? 0);
+    $down = (int) ($it['downDays'] ?? 0);
+    $elapsed = (int) ($it['elapsed'] ?? 0);
+    $supportTotal = (int) ($it['supportTotal'] ?? 0);
+    $supportPct = (int) ($it['supportPct'] ?? 0);
+    $backupTotal = (int) ($it['backupTotal'] ?? 0);
+    $backupPct = (int) ($it['backupPct'] ?? 0);
+    $accuracy = (int) ($it['accuracyPct'] ?? 100);
+    $problems = (int) ($it['accuracyTotal'] ?? 0);
+    $recurring = (int) ($it['accuracyRecurring'] ?? 0);
+
+    return [
+        [
+            'name' => 'System Uptime',
+            'group' => 'IT',
+            'expected' => '99% available',
+            'actual' => $elapsed > 0 ? ($uptime . '% · ' . $down . ' down day' . ($down === 1 ? '' : 's')) : 'Not recorded',
+            'configured' => true,
+            'met' => $elapsed > 0 && $uptime >= 99,
+            'note' => $elapsed > 0 ? 'System uptime: ' . $uptime . ' of 99%' : 'System uptime: Not recorded',
+            'spoken' => $elapsed > 0 ? 'system uptime is ' . $uptime . ' of 99%' : '',
+        ],
+        [
+            'name' => 'IT Support Response & Resolution',
+            'group' => 'IT',
+            'expected' => '95% within 24 hrs',
+            'actual' => $supportTotal > 0
+                ? ($supportPct . '% · ' . (int) ($it['supportOnTime'] ?? 0) . ' of ' . $supportTotal)
+                : 'Not recorded',
+            'configured' => true,
+            'met' => $supportTotal > 0 && $supportPct >= 95,
+            'note' => $supportTotal > 0 ? 'IT support: ' . $supportPct . ' of 95%' : 'IT support: Not recorded',
+            'spoken' => $supportTotal > 0 ? 'IT support is ' . $supportPct . ' of 95%' : '',
+        ],
+        [
+            'name' => 'Data Backup',
+            'group' => 'IT',
+            'expected' => '100% successful',
+            'actual' => $backupTotal > 0 ? ($backupPct . '% · ' . (int) ($it['backupOk'] ?? 0) . ' of ' . $backupTotal) : 'No backup',
+            'configured' => true,
+            'met' => $backupTotal > 0 && $backupPct >= 100,
+            'note' => $backupTotal > 0 ? 'Data backup: ' . $backupPct . ' of 100%' : 'Data backup: No backup',
+            'spoken' => $backupTotal > 0 ? 'data backup is ' . $backupPct . ' of 100%' : 'data backup has no backup this period',
+        ],
+        [
+            'name' => 'System Accuracy',
+            'group' => 'IT',
+            'expected' => '95% without a repeat',
+            'actual' => $problems > 0
+                ? ($accuracy . '% · ' . $recurring . ' recurring')
+                : 'No problems recorded',
+            'configured' => true,
+            'met' => $accuracy >= 95,
+            'note' => 'System accuracy: ' . $accuracy . ' of 95%',
+            'spoken' => 'system accuracy is ' . $accuracy . ' of 95%',
+        ],
+    ];
+}
+
+/**
+ * @param array<int,int> $offsets
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiItLines(PDO $pdo, int $userId, array $offsets, string $metric): array
+{
+    $bundle = weeklyTasksUiItLoad($pdo, $offsets);
+    if ($metric === 'system-uptime') {
+        $rows = [];
+        $seen = [];
+        foreach (array_merge($bundle['tasks'], $bundle['suggestions']) as $row) {
+            $text = (string) ($row['text'] ?? '');
+            if (!weeklyTasksUiItIsOutage($text)) {
+                continue;
+            }
+            $day = substr((string) ($row['createdAt'] ?? ''), 0, 10);
+            if ($day === '' || empty($bundle['days'][$day]) || isset($seen[$day])) {
+                continue;
+            }
+            $seen[$day] = true;
+            $rows[] = [
+                'title' => $text,
+                'date' => $day,
+                'when' => date('j M Y', strtotime($day)),
+                'status' => 'System down',
+                'kicker' => 'Outage',
+            ];
+        }
+
+        return $rows;
+    }
+    if ($metric === 'it-support-response-resolution') {
+        return weeklyTasksUiItSupportForUser($bundle, $userId)['rows'];
+    }
+    if ($metric === 'data-backup') {
+        $rows = [];
+        foreach ($bundle['backups'] as $file) {
+            $rows[] = [
+                'title' => (string) ($file['title'] ?? 'Backup'),
+                'date' => (string) ($file['day'] ?? ''),
+                'when' => (string) ($file['when'] ?? ''),
+                'status' => !empty($file['ok'])
+                    ? ('Successful' . ((string) ($file['size'] ?? '') !== '' ? ' · ' . $file['size'] : ''))
+                    : 'Empty file',
+                'kicker' => 'Backup',
+            ];
+        }
+
+        return $rows;
+    }
+    if ($metric === 'system-accuracy') {
+        $rows = [];
+        foreach (weeklyTasksUiItShared($bundle)['problems'] as $problem) {
+            $count = (int) ($problem['count'] ?? 0);
+            $day = (string) ($problem['when'] ?? '');
+            $rows[] = [
+                'title' => (string) ($problem['text'] ?? 'Problem'),
+                'date' => $day,
+                'when' => $day !== '' ? date('j M Y', strtotime($day)) : '',
+                'status' => $count > 1 ? ('Recurred · ' . $count) : 'Once',
+                'kicker' => 'Problem',
+            ];
+        }
+
+        return $rows;
+    }
+
+    return [];
+}
+
+/**
  * @param array{score:int,onTime:int,vehicle:int,documents:int}|null $driver
  * @param array<string,mixed>|null $sales
+ * @param array<string,mixed>|null $it
  * @return array<string,mixed>
  */
 function weeklyTasksUiPersonDetail(
@@ -1767,7 +2280,8 @@ function weeklyTasksUiPersonDetail(
     int $monthOffset,
     string $photo = '',
     string $role = '',
-    ?array $sales = null
+    ?array $sales = null,
+    ?array $it = null
 ): array {
     $items = [
         [
@@ -1805,6 +2319,7 @@ function weeklyTasksUiPersonDetail(
         ['key' => 'documents', 'name' => 'Delivery documents', 'expected' => '100%'],
     ];
     $salesLines = [];
+    $itLines = [];
     if ($department === 'Drivers') {
         $driver = $driver ?: ['onTime' => 0, 'vehicle' => 0, 'documents' => 0];
         foreach ($driverLines as $line) {
@@ -1832,6 +2347,18 @@ function weeklyTasksUiPersonDetail(
             'note' => '',
             'spoken' => '',
         ];
+    } elseif ($department === 'IT') {
+        $itLines = weeklyTasksUiItItems($it);
+        $itScore = (int) (is_array($it) ? ($it['score'] ?? 0) : 0);
+        $items[] = [
+            'name' => 'IT performance',
+            'expected' => '100%',
+            'actual' => $itScore . '%',
+            'configured' => true,
+            'met' => $itScore >= 100,
+            'note' => '',
+            'spoken' => '',
+        ];
     } else {
         $label = $department === 'Other' ? 'Role' : $department;
         $items[] = [
@@ -1848,7 +2375,7 @@ function weeklyTasksUiPersonDetail(
     $improvements = [];
     $behind = [];
     $unset = [];
-    foreach (array_merge($items, $salesLines) as $item) {
+    foreach (array_merge($items, $salesLines, $itLines) as $item) {
         if ($item['configured'] && $item['met']) {
             continue;
         }
@@ -1894,6 +2421,7 @@ function weeklyTasksUiPersonDetail(
         'nextUrl' => $monthOffset < 0 ? weeklyTasksUiMonthUrl($monthOffset + 1, $userId) : '',
         'items' => $items,
         'salesLines' => $salesLines,
+        'itLines' => $itLines,
         'improvements' => $improvements,
         'insight' => $insight,
     ];
@@ -1914,6 +2442,7 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
         $attendance = weeklyTasksUiMonthAttendance($pdo, $start, $end);
         $drivers = weeklyTasksUiMonthDriverScores($pdo, $mondays);
         $salesScores = weeklyTasksUiSalesScores($pdo, [$offset]);
+        $itScores = weeklyTasksUiItScores($pdo, [$offset]);
         $taskTarget = max(1, 7 * $weekCount);
         $todoTarget = max(1, 5 * $weekCount);
         $weekdays = max(1, $weekdays);
@@ -1931,8 +2460,11 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
             $attendanceScore = (int) min(100, round(($days / $weekdays) * 100));
             $driver = $drivers[$id] ?? null;
             $sales = $salesScores[$id] ?? null;
+            $it = $itScores[$id] ?? null;
             if ($department === 'Sales') {
                 $activity = (int) ($sales['score'] ?? 0);
+            } elseif ($department === 'IT') {
+                $activity = (int) ($it['score'] ?? 0);
             } elseif (($department === 'Drivers' || $driver !== null) && $driver && !empty($driver['recorded'])) {
                 $activity = (int) $driver['score'];
             } else {
@@ -2032,6 +2564,7 @@ function weeklyTasksUiBuildPayload(): array
     $users = [];
     $driverScores = [];
     $salesScores = [];
+    $itScores = [];
     if ($pdo instanceof PDO) {
         try {
             $st = $pdo->query('SELECT id, full_name, department, role, profile_photo FROM users WHERE is_active = 1 ORDER BY full_name ASC');
@@ -2041,6 +2574,7 @@ function weeklyTasksUiBuildPayload(): array
         }
         $driverScores = weeklyTasksUiMonthDriverScores($pdo, $mondays);
         $salesScores = weeklyTasksUiSalesScores($pdo, $offsets);
+        $itScores = weeklyTasksUiItScores($pdo, $offsets);
         $settingsLib = dirname(__DIR__) . '/modules/sales/settings/includes/settings-lib.php';
         if (is_file($settingsLib)) {
             require_once $settingsLib;
@@ -2076,9 +2610,12 @@ function weeklyTasksUiBuildPayload(): array
         $attendanceScore = (int) min(100, round(($days / $weekdays) * 100));
         $driver = $driverScores[$id] ?? null;
         $sales = $salesScores[$id] ?? null;
+        $it = $itScores[$id] ?? null;
         $isDriver = $department === 'Drivers' || $driver !== null;
         if ($department === 'Sales') {
             $activity = (int) ($sales['score'] ?? 0);
+        } elseif ($department === 'IT') {
+            $activity = (int) ($it['score'] ?? 0);
         } elseif ($isDriver && $driver && !empty($driver['recorded'])) {
             $activity = (int) $driver['score'];
         } else {
@@ -2125,6 +2662,21 @@ function weeklyTasksUiBuildPayload(): array
                     'deliveries' => 0,
                     'deliveriesOnTime' => 0,
                     'deliveryPct' => 0,
+                ]) : null,
+                $department === 'IT' ? ($it ?: [
+                    'score' => 0,
+                    'uptimePct' => 0,
+                    'elapsed' => 0,
+                    'downDays' => 0,
+                    'supportPct' => 0,
+                    'supportTotal' => 0,
+                    'supportOnTime' => 0,
+                    'backupPct' => 0,
+                    'backupTotal' => 0,
+                    'backupOk' => 0,
+                    'accuracyPct' => 100,
+                    'accuracyTotal' => 0,
+                    'accuracyRecurring' => 0,
                 ]) : null
             );
         }
@@ -2164,6 +2716,14 @@ function weeklyTasksUiBuildPayload(): array
             $salesLines[$index]['key'] = $key;
             $salesLines[$index]['href'] = weeklyTasksUiMonthUrl($offsets, $selectedId, $key);
         }
+        $itLines = is_array($detail['itLines'] ?? null) ? $detail['itLines'] : [];
+        unset($detail['itLines']);
+        foreach ($itLines as $index => $item) {
+            $name = (string) ($item['name'] ?? '');
+            $key = trim(strtolower((string) preg_replace('/[^a-z0-9]+/i', '-', $name)), '-');
+            $itLines[$index]['key'] = $key;
+            $itLines[$index]['href'] = weeklyTasksUiMonthUrl($offsets, $selectedId, $key);
+        }
     }
 
     $measureView = null;
@@ -2184,6 +2744,14 @@ function weeklyTasksUiBuildPayload(): array
                 }
             }
         }
+        if ($match === null) {
+            foreach ($itLines as $item) {
+                if (($item['key'] ?? '') === $measureKey) {
+                    $match = $item;
+                    break;
+                }
+            }
+        }
         if ($match) {
             $rows = [];
             $empty = 'Nothing recorded in this period.';
@@ -2192,6 +2760,9 @@ function weeklyTasksUiBuildPayload(): array
             if ($measureKey === 'sales-performance') {
                 $breakdown = $salesLines;
                 $empty = 'No sales performance recorded in this period.';
+            } elseif ($measureKey === 'it-performance') {
+                $breakdown = $itLines;
+                $empty = 'No IT performance recorded in this period.';
             } elseif ($measureKey === 'tasks') {
                 $rows = weeklyTasksUiTaskLines($pdo, $selectedId, $offsets);
                 $empty = 'No tasks recorded in this period.';
@@ -2212,6 +2783,14 @@ function weeklyTasksUiBuildPayload(): array
                     'customer-visits' => 'No customer visits recorded in this period.',
                     'goods-delivery' => 'No deliveries in this period.',
                 ][$measureKey];
+            } elseif (in_array($measureKey, ['system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy'], true)) {
+                $rows = weeklyTasksUiItLines($pdo, $selectedId, $offsets, $measureKey);
+                $empty = [
+                    'system-uptime' => 'No outage recorded in this period.',
+                    'it-support-response-resolution' => 'No IT issues recorded in this period.',
+                    'data-backup' => 'No backup in this period.',
+                    'system-accuracy' => 'No system problems recorded in this period.',
+                ][$measureKey];
             } elseif (in_array($measureKey, ['on-time-delivery', 'vehicle-care', 'delivery-documents'], true)) {
                 $rows = weeklyTasksUiDriverLines($pdo, $selectedId, $offsets, $measureKey);
                 $empty = $measureKey === 'delivery-documents'
@@ -2219,6 +2798,13 @@ function weeklyTasksUiBuildPayload(): array
                     : 'No driver performance recorded in this period.';
             }
             $salesMeasure = in_array($measureKey, ['monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'], true);
+            $itMeasure = in_array($measureKey, ['system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy'], true);
+            $itAbout = [
+                'system-uptime' => 'A day counts as down when a task or report says the system was down. Days with no such report stay up. The target is 99% of the days so far.',
+                'it-support-response-resolution' => 'An IT issue is a support task on this person. Within 24 hrs means it was finished within a day of being logged. Issues still inside that day are left out.',
+                'data-backup' => 'Each backup file saved this period. Successful means the file is not empty. The target is every backup successful, and at least one backup.',
+                'system-accuracy' => 'A system problem counts once. Recurred means the same problem was logged again. The target is 95% of problems happening only once.',
+            ];
             $measureView = [
                 'key' => $measureKey,
                 'title' => $measureKey === 'quotation-conversion'
@@ -2234,8 +2820,14 @@ function weeklyTasksUiBuildPayload(): array
                 'empty' => $measureKey === 'customer-visits' ? 'Coming soon' : $empty,
                 'backUrl' => $salesMeasure
                     ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'sales-performance')
-                    : weeklyTasksUiMonthUrl($offsets, $selectedId),
-                'about' => $measureKey === 'quotation-conversion' ? [
+                    : ($itMeasure
+                        ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'it-performance')
+                        : weeklyTasksUiMonthUrl($offsets, $selectedId)),
+                'about' => isset($itAbout[$measureKey]) ? [
+                    'score' => '',
+                    'note' => '',
+                    'text' => $itAbout[$measureKey],
+                ] : ($measureKey === 'quotation-conversion' ? [
                     'score' => (string) ($match['score'] ?? ''),
                     'note' => (string) ($match['scoreNote'] ?? ''),
                     'text' => 'Submitted means the quotation was sent and has not become an invoice yet.',

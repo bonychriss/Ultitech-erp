@@ -3033,7 +3033,9 @@ function weeklyTasksUiBuildPayload(): array
     $selectedId = isset($_GET['user']) ? (int) $_GET['user'] : 0;
     $kpi = isset($_GET['kpi']) ? (string) preg_replace('/[^a-z]/', '', strtolower((string) $_GET['kpi'])) : '';
     $measureAsked = isset($_GET['measure']) ? (string) preg_replace('/[^a-z0-9\-]/', '', strtolower((string) $_GET['measure'])) : '';
-    $hubOnly = $selectedId < 1 && $measureAsked === '' && $kpi !== 'hr';
+    if ($selectedId < 1 && $measureAsked === '' && $kpi !== 'hr') {
+        return weeklyTasksUiKpiScreen($kpi);
+    }
     $offsets = weeklyTasksUiSelectedOffsets();
     $monthOffset = $offsets[0];
     $weekCount = 0;
@@ -3413,14 +3415,6 @@ function weeklyTasksUiBuildPayload(): array
     $focusDepartment = isset($_GET['dept'])
         ? trim(strtolower((string) preg_replace('/[^a-z0-9\-]/', '', (string) $_GET['dept'])), '-')
         : '';
-
-    if ($hubOnly) {
-        $screen = weeklyTasksUiKpiScreen('');
-        $screen['monthLabel'] = $monthLabel;
-        $screen['summary'] = weeklyTasksUiPerformanceSummary($departments, weeklyTasksUiKpiUrl('hr'));
-
-        return $screen;
-    }
 
     $monthOptions = [];
     for ($i = 0; $i >= -11; $i--) {

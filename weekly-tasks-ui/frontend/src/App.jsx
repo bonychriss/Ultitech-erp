@@ -962,7 +962,7 @@ function AttendanceBoard({ board }) {
           })}
         </svg>
       </section>
-      <div className="wt-att-stats">
+      <div className="wt-att-cards">
         {cards.map((card) => (
           <section key={card.key} className={`wt-att-stat wt-att-stat--${card.key}`}>
             <span className="wt-att-ico"><AttIcon name={card.icon} /></span>
@@ -973,28 +973,24 @@ function AttendanceBoard({ board }) {
             <b>{Number(byKey[card.key]?.count) || 0}</b>
           </section>
         ))}
+        {details.map((item) => (
+          <article key={item.key} className={`wt-att-detail wt-att-detail--${item.tone}`}>
+            <span className="wt-att-ico"><AttIcon name={item.icon} /></span>
+            <div>
+              <strong>{item.label}</strong>
+              <span>{item.hint}</span>
+            </div>
+            {item.when ? (
+              <time>
+                {item.when}
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+              </time>
+            ) : null}
+          </article>
+        ))}
       </div>
-      {details.length ? (
-        <div className="wt-att-details">
-          {details.map((item) => (
-            <article key={item.key} className={`wt-att-detail wt-att-detail--${item.tone}`}>
-              <span className="wt-att-ico"><AttIcon name={item.icon} /></span>
-              <div>
-                <strong>{item.label}</strong>
-                <span>{item.hint}</span>
-              </div>
-              {item.when ? (
-                <time>
-                  {item.when}
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                    <path d="M9 6l6 6-6 6" />
-                  </svg>
-                </time>
-              ) : null}
-            </article>
-          ))}
-        </div>
-      ) : null}
     </div>
   )
 }

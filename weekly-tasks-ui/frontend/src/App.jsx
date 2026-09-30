@@ -1013,7 +1013,7 @@ function ToneChart({ title, subtitle, points, topLabel }) {
   const plotH = height - top - bottom
   if (!chart.length) return null
   const slot = plotW / chart.length
-  const barW = Math.max(6, Math.min(16, slot * 0.46))
+  const barW = Math.max(12, Math.min(chart.length <= 8 ? 42 : 16, slot * 0.42))
   const base = top + plotH
   const yAt = (value) => top + plotH - (Math.min(1, Number(value) || 0) * plotH)
   const bars = chart.map((point, index) => {
@@ -1067,7 +1067,7 @@ function ToneChart({ title, subtitle, points, topLabel }) {
                   y={base - bar.full}
                   width={barW}
                   height={bar.full}
-                  rx={barW / 2}
+                  rx={4}
                 />
                 <rect
                   className={bar.today ? 'wt-att-bar is-today' : 'wt-att-bar'}

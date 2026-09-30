@@ -2017,6 +2017,18 @@ function weeklyTasksUiItShared(array $bundle): array
     ];
 }
 
+function weeklyTasksUiRangeLabel(DateTime $start, DateTime $end): string
+{
+    if ($start->format('Y-m-d') === $end->format('Y-m-d')) {
+        return $start->format('j M');
+    }
+    if ($start->format('Y-m') === $end->format('Y-m')) {
+        return $start->format('j') . '–' . $end->format('j M');
+    }
+
+    return $start->format('j M') . '–' . $end->format('j M');
+}
+
 function weeklyTasksUiHourLabel(int $minutes): string
 {
     if ($minutes < 1) {
@@ -2207,33 +2219,76 @@ function weeklyTasksUiUptimeBoard(PDO $pdo, array $offsets): array
         $rangeStart = $rangeStart === null || $start < $rangeStart ? $start : $rangeStart;
         $rangeEnd = $rangeEnd === null || $end > $rangeEnd ? $end : $rangeEnd;
     }
-    $maxMinutes = 0;
-    foreach ($dayMinutes as $got) {
-        $maxMinutes = max($maxMinutes, (int) $got);
-    }
+    $days = [];
     if ($rangeStart && $rangeEnd) {
         try {
             $cursor = new DateTime($rangeStart);
             $last = new DateTime(min($rangeEnd, $today));
             while ($cursor <= $last) {
                 $key = $cursor->format('Y-m-d');
-                $up = empty($down[$key]);
-                $got = (int) ($dayMinutes[$key] ?? 0);
-                $chart[] = [
-                    'label' => $cursor->format('j M'),
-                    'value' => $up ? 1 : 0,
-                    'today' => $key === $today ? 1 : 0,
-                ];
-                $usageChart[] = [
-                    'label' => $cursor->format('j M'),
-                    'minutes' => $got,
-                    'value' => $maxMinutes > 0 ? round($got / $maxMinutes, 4) : 0,
+                $days[] = [
+                    'key' => $key,
+                    'up' => empty($down[$key]) ? 1 : 0,
+                    'minutes' => (int) ($dayMinutes[$key] ?? 0),
                     'today' => $key === $today ? 1 : 0,
                 ];
                 $cursor->modify('+1 day');
             }
         } catch (Throwable $e) {
         }
+    }
+    $count = count($days);
+    $span = 1;
+    if ($count > 10) {
+        $span = 7;
+    }
+    if ($count > 60) {
+        $span = 14;
+    }
+    $usageBuckets = [];
+    $maxMinutes = 0;
+    for ($i = 0; $i < $count; $i += $span) {
+        $slice = array_slice($days, $i, $span);
+        $n = count($slice);
+        if ($n < 1) {
+            continue;
+        }
+        $upSum = 0;
+        $mins = 0;
+        $todayFlag = 0;
+        foreach ($slice as $day) {
+            $upSum += (int) $day['up'];
+            $mins += (int) $day['minutes'];
+            if (!empty($day['today'])) {
+                $todayFlag = 1;
+            }
+        }
+        try {
+            $first = new DateTime((string) $slice[0]['key']);
+            $lastDay = new DateTime((string) $slice[$n - 1]['key']);
+            $label = weeklyTasksUiRangeLabel($first, $lastDay);
+        } catch (Throwable $e) {
+            $label = (string) $slice[0]['key'];
+        }
+        $maxMinutes = max($maxMinutes, $mins);
+        $chart[] = [
+            'label' => $label,
+            'value' => round($upSum / $n, 4),
+            'today' => $todayFlag,
+        ];
+        $usageBuckets[] = [
+            'label' => $label,
+            'minutes' => $mins,
+            'today' => $todayFlag,
+        ];
+    }
+    foreach ($usageBuckets as $bucket) {
+        $usageChart[] = [
+            'label' => $bucket['label'],
+            'minutes' => $bucket['minutes'],
+            'value' => $maxMinutes > 0 ? round($bucket['minutes'] / $maxMinutes, 4) : 0,
+            'today' => $bucket['today'],
+        ];
     }
 
     $usageMinutes = 0;

@@ -184,6 +184,7 @@ html[data-theme="dark"] main.ai-agent-react-root {
     background: #4338ca;
     color: #fff;
     text-decoration: none;
+    gap: 6px;
     padding: 8px 12px;
     font-size: 0.9rem;
     cursor: pointer;

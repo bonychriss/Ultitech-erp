@@ -177,8 +177,9 @@ function GmailAttachCard({
 }
 
 export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
-  const { attachments, salesOrderDocs, purchaseOrderDocs, swiftProxy, documents, permissions } = data
+  const { attachments, purchaseOrderDocs, salesOrderDocs, swiftProxy, documents, permissions } = data
   const poDocs = Array.isArray(purchaseOrderDocs) ? purchaseOrderDocs : []
+  const soDocs = Array.isArray(salesOrderDocs) ? salesOrderDocs : []
   if (!documents.hasSupporting && !documents.mismatch) return null
 
   const count = Number(documents.headerCount) || 0
@@ -194,7 +195,7 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
       </div>
       <div className="vv-card-body">
         <div className="vv-gmail-list" role="list">
-          {salesOrderDocs.map((so) => {
+          {soDocs.map((so) => {
             const viewUrl = withPoEmbed(String(so.pdfLink || '').replace(/([?&])download=1(&|$)/, '$1').replace(/[?&]$/, ''))
             const downloadUrl = (() => {
               const base = String(so.pdfLink || '').replace(/([?&])download=1(&|$)/, '$1').replace(/[?&]$/, '')
@@ -215,19 +216,6 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
             )
           })}
 
-          {poDocs.map((po) => (
-            <GmailAttachCard
-              key={`po-${po.id}`}
-              iconClass="fa-file-invoice"
-              name={`${po.poNumber}.pdf`}
-              sub={po.supplierName ? `Purchase Order — ${po.supplierName}` : 'Purchase Order'}
-              viewHref={po.viewLink}
-              downloadHref={po.viewLink}
-              previewUrl={po.viewLink}
-              htmlEmbed
-            />
-          ))}
-
           {attachments.map((att) => (
             <GmailAttachCard
               key={att.id}
@@ -241,6 +229,19 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
               previewUrl={att.missing ? undefined : att.proxyLink}
               canDelete={permissions.canDeleteAttachment && att.id > 0}
               onDelete={() => onDeleteAttachment(att.id)}
+            />
+          ))}
+
+          {poDocs.map((po) => (
+            <GmailAttachCard
+              key={`po-${po.id}`}
+              iconClass="fa-file-invoice"
+              name={`${po.poNumber}.pdf`}
+              sub="Purchase Order"
+              viewHref={po.viewLink}
+              downloadHref={po.viewLink}
+              previewUrl={po.viewLink}
+              htmlEmbed
             />
           ))}
 

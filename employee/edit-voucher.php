@@ -219,13 +219,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['limited_classificatio
             $linked_sales_order_ids[(int) $_POST['linked_sales_order_id']] = (int) $_POST['linked_sales_order_id'];
         }
         $linked_sales_order_ids = array_values($linked_sales_order_ids);
-        $result = saveApprovedVoucherLimitedClassification(
-            $pdo,
-            $voucher_id,
-            (int) $_SESSION['user_id'],
-            (string) ($_POST['voucher_purpose'] ?? 'general'),
-            $linked_sales_order_ids
-        );
+        $description = trim((string) ($_POST['description'] ?? ''));
+        if ($description === '') {
+            $error = 'Please enter a description.';
+            $result = ['ok' => false, 'message' => $error];
+        } else {
+            $result = saveApprovedVoucherLimitedClassification(
+                $pdo,
+                $voucher_id,
+                (int) $_SESSION['user_id'],
+                (string) ($_POST['voucher_purpose'] ?? 'general'),
+                $linked_sales_order_ids,
+                $description
+            );
+        }
         if ($result['ok']) {
             $redirectUrl = 'view-voucher.php?id=' . $voucher_id;
             if (isset($_GET['module']) && (string) $_GET['module'] !== '') {
@@ -687,6 +694,43 @@ if (empty($linkedSoIds) && !empty($voucher['linked_sales_order_id'])) {
 }
 $linkedSoIds = array_values($linkedSoIds);
 
+if ($linkedSoIds !== []) {
+    $haveSo = [];
+    foreach ($salesOrders as $soRow) {
+        $haveSo[(int) ($soRow['id'] ?? 0)] = true;
+    }
+    $missingSo = [];
+    foreach ($linkedSoIds as $sid) {
+        $sid = (int) $sid;
+        if ($sid > 0 && !isset($haveSo[$sid])) {
+            $missingSo[] = $sid;
+        }
+    }
+    if ($missingSo !== []) {
+        try {
+            $ph = implode(',', array_fill(0, count($missingSo), '?'));
+            $stMissing = $pdo->prepare("
+                SELECT
+                    so.id,
+                    so.order_number,
+                    so.status,
+                    so.created_at,
+                    COALESCE(c.company_name, c.contact_person, 'Unknown Customer') AS customer_name,
+                    COALESCE(u.full_name, 'Unassigned') AS salesperson_name
+                FROM sales_orders so
+                LEFT JOIN customers c ON c.id = so.customer_id
+                LEFT JOIN users u ON u.id = so.created_by
+                WHERE so.id IN ($ph)
+            ");
+            $stMissing->execute($missingSo);
+            foreach ($stMissing->fetchAll(PDO::FETCH_ASSOC) ?: [] as $extraSo) {
+                $salesOrders[] = $extraSo;
+            }
+        } catch (Throwable $e) {
+        }
+    }
+}
+
 $linkedPoIds = [];
 if (function_exists('parseLinkedStockPoIdsFromVoucher')) {
     $linkedPoIds = parseLinkedStockPoIdsFromVoucher($voucher);
@@ -800,6 +844,11 @@ $editVoucherConfig = [
     'poDocumentUrl' => function_exists('app_url')
         ? app_url('/employee/create-voucher-ui/po-document.php')
         : 'create-voucher-ui/po-document.php',
+    'soDocumentUrl' => function_exists('company_url')
+        ? company_url('modules/sales/orders/print.php')
+        : (function_exists('app_url')
+            ? app_url('/modules/sales/orders/print.php')
+            : '../modules/sales/orders/print.php'),
     'poViewBaseUrl' => function_exists('app_url')
         ? app_url('/stock/modules/purchases/view_po.php')
         : '/stock/modules/purchases/view_po.php',

@@ -40,6 +40,7 @@ export const CFG = {
   purchaseOrders: RAW.purchaseOrders || [],
   poViewBaseUrl: RAW.poViewBaseUrl || '/stock/modules/purchases/view_po.php',
   poDocumentUrl: RAW.poDocumentUrl || 'create-voucher-ui/po-document.php',
+  soDocumentUrl: RAW.soDocumentUrl || '../modules/sales/orders/print.php',
   initial: RAW.initial || null,
   attachments: Array.isArray(RAW.attachments) ? RAW.attachments : [],
   flash: RAW.flash || null,

@@ -306,7 +306,7 @@ body.page-invoices-desk .exp-desk-btn-create {
   vertical-align: middle;
 }
 
-.inv-invoices-table .inv-desk-table col.inv-col-check { width: 2.75rem; }
+.inv-invoices-table .inv-desk-table col.inv-col-check { width: 3.5rem; }
 .inv-invoices-table .inv-desk-table col.inv-col-number { width: 11%; }
 .inv-invoices-table .inv-desk-table col.inv-col-customer { width: 24%; }
 .inv-invoices-table .inv-desk-table col.inv-col-salesperson { width: 16%; }
@@ -346,10 +346,29 @@ body.page-invoices-desk .exp-desk-btn-create {
 
 /* Column alignment — headers match body */
 .inv-invoices-table .inv-desk-table .inv-col-check {
-  padding-left: 0.85rem;
-  padding-right: 0.5rem;
-  text-align: left;
+  width: 3.5rem;
+  min-width: 3.5rem;
+  max-width: 3.5rem;
+  padding-left: 0.65rem;
+  padding-right: 0.45rem;
   overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.inv-invoices-table .qt-col-serial {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.inv-invoices-table .inv-desk-table th.qt-col-serial {
+  color: #0f172a;
+}
+
+.inv-invoices-table .exp-desk-row-clickable.qt-row-selected {
+  background: #eef2ff;
 }
 
 .inv-invoices-table .inv-desk-table th.inv-col-total,

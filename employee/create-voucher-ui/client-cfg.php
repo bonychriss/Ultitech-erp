@@ -137,6 +137,11 @@ function createVoucherBuildClientCfg(array $data = []): array
             : (function_exists('app_url')
                 ? app_url('/employee/create-voucher-ui/po-document.php')
                 : 'create-voucher-ui/po-document.php'),
+        'soDocumentUrl' => function_exists('company_url')
+            ? company_url('modules/sales/orders/print.php')
+            : (function_exists('app_url')
+                ? app_url('/modules/sales/orders/print.php')
+                : '../modules/sales/orders/print.php'),
         'flash' => $data['flash'] ?? null,
         'error' => (string) ($data['error'] ?? ''),
     ];

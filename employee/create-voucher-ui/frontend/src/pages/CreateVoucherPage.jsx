@@ -101,6 +101,12 @@ function draftOr(key, fallback) {
   return BOOT_DRAFT[key]
 }
 
+function soDocumentHref(soId) {
+  const base = String(CFG.soDocumentUrl || '').replace(/\?.*$/, '')
+  if (!base || !soId) return ''
+  return `${base}?id=${encodeURIComponent(soId)}&embed=1`
+}
+
 function poDocumentHref(poId) {
   const base = String(CFG.poDocumentUrl || '').replace(/\?.*$/, '')
   if (!base || !poId) return ''
@@ -140,6 +146,7 @@ export default function CreateVoucherPage() {
   const [poViewError, setPoViewError] = useState('')
   const [soSearch, setSoSearch] = useState('')
   const [soOpen, setSoOpen] = useState(false)
+  const [soDocsOpen, setSoDocsOpen] = useState(false)
   const [currencyOpen, setCurrencyOpen] = useState(false)
   const currencyRef = useRef(null)
 
@@ -174,13 +181,27 @@ export default function CreateVoucherPage() {
   const salesOrders = CFG.salesOrders || []
   const filteredSO = useMemo(() => {
     const q = soSearch.trim().toLowerCase()
-    if (!q) return salesOrders
-    return salesOrders.filter((so) =>
-      [so.order_number, so.customer_name, so.salesperson_name, so.status]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q)),
-    )
-  }, [salesOrders, soSearch])
+    let rows = salesOrders
+    if (q) {
+      rows = salesOrders.filter((so) =>
+        [so.order_number, so.customer_name, so.salesperson_name, so.status]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q)),
+      )
+    }
+    if (selectedSO.size === 0) return rows
+    const selected = []
+    const rest = []
+    rows.forEach((so) => {
+      if (selectedSO.has(Number(so.id))) selected.push(so)
+      else rest.push(so)
+    })
+    return [...selected, ...rest]
+  }, [salesOrders, soSearch, selectedSO])
+  const selectedSoRows = useMemo(
+    () => salesOrders.filter((so) => selectedSO.has(Number(so.id))),
+    [salesOrders, selectedSO],
+  )
 
   const purchaseOrders = CFG.purchaseOrders || []
   const filteredPO = useMemo(() => {
@@ -393,10 +414,12 @@ export default function CreateVoucherPage() {
   }
 
   function toggleSO(id) {
+    const n = Number(id)
+    if (!n) return
     setSelectedSO((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      if (next.has(n)) next.delete(n)
+      else next.add(n)
       return next
     })
   }
@@ -483,7 +506,10 @@ export default function CreateVoucherPage() {
   }
 
   function validate() {
-    if (IS_LIMITED) return ''
+    if (IS_LIMITED) {
+      if (!description.trim()) return 'Please enter a description.'
+      return ''
+    }
     if (!payeeId) return 'Please select a payee.'
     if (!dateCreated) return 'Please choose a date.'
     if (!description.trim()) return 'Please enter a description.'
@@ -788,9 +814,9 @@ export default function CreateVoucherPage() {
                             {filteredSO.length === 0 ? (
                               <div className="cv-so-empty">No sales orders found</div>
                             ) : (
-                              filteredSO.slice(0, 50).map((so) => (
-                                <label key={so.id} className={`cv-so-item${selectedSO.has(so.id) ? ' is-checked' : ''}`}>
-                                  <input type="checkbox" checked={selectedSO.has(so.id)} onChange={() => toggleSO(so.id)} />
+                              filteredSO.slice(0, 50 + selectedSO.size).map((so) => (
+                                <label key={so.id} className={`cv-so-item${selectedSO.has(Number(so.id)) ? ' is-checked' : ''}`}>
+                                  <input type="checkbox" checked={selectedSO.has(Number(so.id))} onChange={() => toggleSO(so.id)} />
                                   <span className="cv-so-no">{so.order_number}</span>
                                   <span className="cv-so-cust">{so.customer_name}</span>
                                   <span className="cv-so-status">{so.status}</span>
@@ -799,7 +825,45 @@ export default function CreateVoucherPage() {
                             )}
                           </div>
                           {selectedSO.size > 0 && (
-                            <div className="cv-so-count">{selectedSO.size} sales order{selectedSO.size > 1 ? 's' : ''} linked</div>
+                            <div className="cv-so-linked">
+                              <div className="cv-so-count">
+                                <span>{selectedSO.size} sales order{selectedSO.size > 1 ? 's' : ''} linked</span>
+                                <button
+                                  type="button"
+                                  className={`cv-so-doc-toggle${soDocsOpen ? ' is-open' : ''}`}
+                                  aria-expanded={soDocsOpen}
+                                  aria-label={soDocsOpen ? 'Hide linked sales order' : 'Show linked sales order'}
+                                  onClick={() => setSoDocsOpen((v) => !v)}
+                                >
+                                  <ChevronDown size={16} />
+                                </button>
+                              </div>
+                              {soDocsOpen && (
+                                <div className="cv-so-docs">
+                                  {selectedSoRows.map((so) => (
+                                    <div key={so.id} className="cv-so-doc-row">
+                                      <button
+                                        type="button"
+                                        className="cv-so-doc-del"
+                                        aria-label={`Remove ${so.order_number}`}
+                                        title="Remove"
+                                        onClick={() => toggleSO(so.id)}
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                      <a
+                                        className="cv-so-doc-name"
+                                        href={soDocumentHref(so.id)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
+                                        {so.order_number}
+                                      </a>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
@@ -941,7 +1005,6 @@ export default function CreateVoucherPage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     required
-                    disabled={fieldsLocked}
                   />
                   {fieldErr(filled.description, 'Please enter a description.')}
                 </div>

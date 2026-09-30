@@ -1853,7 +1853,14 @@ function crmMarketRunSearch(string $q, string $location, ?PDO $erpPdo = null, in
     if ($pdoForScope instanceof PDO) {
         crmMarketBackfillLegacyCompanyScope($pdoForScope);
     }
-    $found = crmMarketRapidSearch($query, $location);
+    if ($erpPdo instanceof PDO && function_exists('crmZenserpApiKey') && crmZenserpApiKey($erpPdo) !== '') {
+        $found = crmZenserpMarketSearch($erpPdo, $q, $location);
+    } else {
+        $found = crmMarketRapidSearch($query, $location);
+        if (!$found['ok'] && stripos($found['error'], 'key') !== false) {
+            $found['error'] = 'Add a Zenserp API key to search Google for customers.';
+        }
+    }
     if (!$found['ok']) {
         throw new InvalidArgumentException($found['error'] !== '' ? $found['error'] : 'Search failed.');
     }

@@ -27,31 +27,20 @@ function crmZenserpSaveApiKey(PDO $pdo, string $key): void
 }
 
 /**
- * @return array{ok:bool,query:string,results:array<int,array{title:string,url:string,snippet:string}>,error:string}
+ * @param array<string, scalar> $query
+ * @return array{ok:bool,payload:?array,error:string}
  */
-function crmZenserpSearch(PDO $pdo, string $query): array
+function crmZenserpRequest(PDO $pdo, array $query): array
 {
-    $query = trim($query);
-    if ($query === '') {
-        return ['ok' => false, 'query' => '', 'results' => [], 'error' => 'This customer has no name to search.'];
-    }
     $key = crmZenserpApiKey($pdo);
     if ($key === '') {
-        return ['ok' => false, 'query' => $query, 'results' => [], 'error' => 'Add a Zenserp API key to check customers on Google.'];
+        return ['ok' => false, 'payload' => null, 'error' => 'Add a Zenserp API key to search Google for customers.'];
     }
-
-    $url = 'https://app.zenserp.com/api/v2/search?' . http_build_query([
-        'q' => $query,
-        'search_engine' => 'google',
-        'gl' => 'tz',
-        'hl' => 'en',
-        'num' => 5,
-        'location' => 'Dar es Salaam,Tanzania',
-    ]);
-
+    $query['search_engine'] = 'google';
+    $url = 'https://app.zenserp.com/api/v2/search?' . http_build_query($query);
     $ch = curl_init($url);
     if ($ch === false) {
-        return ['ok' => false, 'query' => $query, 'results' => [], 'error' => 'Google check could not start.'];
+        return ['ok' => false, 'payload' => null, 'error' => 'Google search could not start.'];
     }
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
@@ -65,42 +54,50 @@ function crmZenserpSearch(PDO $pdo, string $query): array
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     curl_close($ch);
-
     if ($raw === false || $curlError !== '') {
-        return ['ok' => false, 'query' => $query, 'results' => [], 'error' => 'Google check failed. Try again.'];
+        return ['ok' => false, 'payload' => null, 'error' => 'Google search failed. Try again.'];
     }
-
     $payload = json_decode((string) $raw, true);
     if (!is_array($payload)) {
-        return ['ok' => false, 'query' => $query, 'results' => [], 'error' => 'Google check returned an unexpected response.'];
+        return ['ok' => false, 'payload' => null, 'error' => 'Google search returned an unexpected response.'];
     }
     if ($code === 401 || $code === 403) {
         $message = trim((string) ($payload['error'] ?? $payload['message'] ?? ''));
-        return ['ok' => false, 'query' => $query, 'results' => [], 'error' => $message !== '' ? $message : 'Zenserp rejected the API key.'];
+        return ['ok' => false, 'payload' => null, 'error' => $message !== '' ? $message : 'Zenserp rejected the API key.'];
     }
     if ($code < 200 || $code >= 300) {
         $message = trim((string) ($payload['error'] ?? $payload['message'] ?? ''));
-        return ['ok' => false, 'query' => $query, 'results' => [], 'error' => $message !== '' ? $message : 'Google check failed.'];
+        return ['ok' => false, 'payload' => null, 'error' => $message !== '' ? $message : 'Google search failed.'];
     }
 
-    $rows = $payload['organic'] ?? $payload['organic_results'] ?? [];
-    if (!is_array($rows)) {
-        $rows = [];
+    return ['ok' => true, 'payload' => $payload, 'error' => ''];
+}
+
+/**
+ * @return array{ok:bool,query:string,results:array<int,array{title:string,url:string,snippet:string}>,error:string}
+ */
+function crmZenserpSearch(PDO $pdo, string $query): array
+{
+    $query = trim($query);
+    if ($query === '') {
+        return ['ok' => false, 'query' => '', 'results' => [], 'error' => 'This customer has no name to search.'];
+    }
+    $found = crmZenserpRequest($pdo, [
+        'q' => $query,
+        'gl' => 'tz',
+        'hl' => 'en',
+        'num' => 5,
+        'location' => 'Dar es Salaam,Tanzania',
+    ]);
+    if (!$found['ok'] || !is_array($found['payload'])) {
+        return ['ok' => false, 'query' => $query, 'results' => [], 'error' => $found['error']];
     }
     $results = [];
-    foreach ($rows as $row) {
-        if (!is_array($row)) {
-            continue;
-        }
-        $link = trim((string) ($row['url'] ?? $row['link'] ?? ''));
-        $title = trim((string) ($row['title'] ?? ''));
-        if ($link === '' || $title === '') {
-            continue;
-        }
+    foreach (crmZenserpOrganicRows($found['payload']) as $row) {
         $results[] = [
-            'title' => $title,
-            'url' => $link,
-            'snippet' => trim((string) ($row['description'] ?? $row['snippet'] ?? '')),
+            'title' => $row['name'],
+            'url' => $row['website'],
+            'snippet' => $row['address'],
         ];
         if (count($results) >= 5) {
             break;
@@ -108,4 +105,171 @@ function crmZenserpSearch(PDO $pdo, string $query): array
     }
 
     return ['ok' => true, 'query' => $query, 'results' => $results, 'error' => ''];
+}
+
+/**
+ * Google businesses and websites for a Market keyword such as "mining".
+ *
+ * @return array{ok:bool,rows:list<array<string,mixed>>,error:string}
+ */
+function crmZenserpMarketSearch(PDO $pdo, string $keyword, string $location): array
+{
+    $keyword = trim($keyword);
+    $location = trim($location) ?: 'Tanzania';
+    if ($keyword === '') {
+        return ['ok' => false, 'rows' => [], 'error' => 'Enter a search term.'];
+    }
+    $q = $keyword;
+    if (!preg_match('/\bcompan/i', $q)) {
+        $q .= ' companies';
+    }
+    if (stripos($q, $location) === false) {
+        $q .= ' in ' . $location;
+    }
+    $places = [
+        'tanzania' => ['gl' => 'tz', 'location' => 'Dar es Salaam,Tanzania'],
+        'kenya' => ['gl' => 'ke', 'location' => 'Nairobi,Kenya'],
+        'uganda' => ['gl' => 'ug', 'location' => 'Kampala,Uganda'],
+        'rwanda' => ['gl' => 'rw', 'location' => 'Kigali,Rwanda'],
+        'south africa' => ['gl' => 'za', 'location' => 'Johannesburg,South Africa'],
+        'united arab emirates' => ['gl' => 'ae', 'location' => 'Dubai,United Arab Emirates'],
+        'india' => ['gl' => 'in', 'location' => 'Mumbai,India'],
+        'united kingdom' => ['gl' => 'gb', 'location' => 'London,United Kingdom'],
+        'united states' => ['gl' => 'us', 'location' => 'New York,United States'],
+        'china' => ['gl' => 'cn', 'location' => 'Shanghai,China'],
+    ];
+    $place = $places[strtolower($location)] ?? ['gl' => 'tz', 'location' => ''];
+    $params = [
+        'q' => $q,
+        'gl' => $place['gl'],
+        'hl' => 'en',
+        'num' => 10,
+    ];
+    if ($place['location'] !== '') {
+        $params['location'] = $place['location'];
+    }
+    $found = crmZenserpRequest($pdo, $params);
+    if (!$found['ok'] && $place['location'] !== '') {
+        unset($params['location']);
+        $found = crmZenserpRequest($pdo, $params);
+    }
+    if (!$found['ok'] || !is_array($found['payload'])) {
+        return ['ok' => false, 'rows' => [], 'error' => $found['error']];
+    }
+
+    $rows = [];
+    $seen = [];
+    foreach (array_merge(crmZenserpLocalRows($found['payload']), crmZenserpOrganicRows($found['payload'])) as $row) {
+        $key = strtolower($row['website'] !== '' ? $row['website'] : $row['name']);
+        if ($key === '' || isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $row['type'] = $row['type'] !== '' ? $row['type'] : ucfirst($keyword);
+        $row['city'] = $row['city'] !== '' ? $row['city'] : $location;
+        $rows[] = $row;
+        if (count($rows) >= 20) {
+            break;
+        }
+    }
+
+    return ['ok' => true, 'rows' => $rows, 'error' => ''];
+}
+
+/**
+ * @return list<array<string,mixed>>
+ */
+function crmZenserpLocalRows(array $payload): array
+{
+    $lists = [];
+    foreach (['local_results', 'local_pack', 'places', 'maps_results', 'maps'] as $key) {
+        if (!isset($payload[$key]) || !is_array($payload[$key])) {
+            continue;
+        }
+        $node = $payload[$key];
+        if (isset($node['places']) && is_array($node['places'])) {
+            $node = $node['places'];
+        }
+        if (array_is_list($node)) {
+            $lists[] = $node;
+        }
+    }
+    $out = [];
+    foreach ($lists as $list) {
+        foreach ($list as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $name = trim((string) ($item['title'] ?? $item['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $url = trim((string) ($item['url'] ?? $item['website'] ?? $item['link'] ?? ''));
+            $out[] = [
+                'id' => 'zs-' . substr(sha1($url !== '' ? $url : $name), 0, 16),
+                'name' => $name,
+                'phone' => trim((string) ($item['phone'] ?? $item['phone_number'] ?? '')),
+                'address' => trim((string) ($item['address'] ?? '')),
+                'website' => $url,
+                'email' => '',
+                'rating' => isset($item['rating']) ? (float) $item['rating'] : null,
+                'type' => trim((string) ($item['type'] ?? $item['category'] ?? 'Google')),
+                'city' => trim((string) ($item['city'] ?? '')),
+            ];
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * @return list<array<string,mixed>>
+ */
+function crmZenserpOrganicRows(array $payload): array
+{
+    $rows = $payload['organic'] ?? $payload['organic_results'] ?? [];
+    if (!is_array($rows)) {
+        return [];
+    }
+    $skip = ['wikipedia.org', 'youtube.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com', 'google.com', 'google.co.tz'];
+    $out = [];
+    foreach ($rows as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $url = trim((string) ($item['url'] ?? $item['link'] ?? ''));
+        $title = trim((string) ($item['title'] ?? ''));
+        if ($url === '' || $title === '') {
+            continue;
+        }
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $host = preg_replace('/^www\./', '', $host) ?? $host;
+        $blocked = false;
+        foreach ($skip as $domain) {
+            if ($host === $domain || str_ends_with($host, '.' . $domain)) {
+                $blocked = true;
+                break;
+            }
+        }
+        if ($blocked) {
+            continue;
+        }
+        $name = trim((string) preg_replace('/\s+[\|\-–—:].*$/u', '', $title));
+        if ($name === '') {
+            $name = $title;
+        }
+        $out[] = [
+            'id' => 'zs-' . substr(sha1($url), 0, 16),
+            'name' => $name,
+            'phone' => '',
+            'address' => trim((string) ($item['description'] ?? $item['snippet'] ?? '')),
+            'website' => $url,
+            'email' => '',
+            'rating' => null,
+            'type' => 'Website',
+            'city' => '',
+        ];
+    }
+
+    return $out;
 }

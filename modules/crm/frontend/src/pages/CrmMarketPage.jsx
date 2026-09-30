@@ -23,6 +23,7 @@ import {
   fetchMarketSuggest,
   saveMarketMessage,
   saveMarketSettings,
+  saveZenserpKey,
   testMarketSettings,
 } from '../api';
 
@@ -526,6 +527,9 @@ export default function CrmMarketPage() {
   });
   const [searchLocation, setSearchLocation] = useState('Tanzania');
   const [searchBusy, setSearchBusy] = useState(false);
+  const [zenserpReady, setZenserpReady] = useState(null);
+  const [zenserpKey, setZenserpKey] = useState('');
+  const [zenserpSaving, setZenserpSaving] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [searchRows, setSearchRows] = useState([]);
@@ -647,6 +651,37 @@ export default function CrmMarketPage() {
       cancelled = true;
     };
   }, [isHistory, isNewLeads, isSearch]);
+
+  useEffect(() => {
+    if (!isSearch) return undefined;
+    let cancelled = false;
+    fetchMarketStatus()
+      .then((data) => {
+        if (!cancelled) setZenserpReady(Boolean(data?.zenserp));
+      })
+      .catch(() => {
+        if (!cancelled) setZenserpReady(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSearch]);
+
+  const saveZenserpFromSearch = async (event) => {
+    event.preventDefault();
+    setZenserpSaving(true);
+    setError('');
+    try {
+      await saveZenserpKey(zenserpKey);
+      setZenserpKey('');
+      setZenserpReady(true);
+      setMessage('Zenserp API key saved. Search again for companies on Google.');
+    } catch (err) {
+      setError(err.message || 'Could not save the Zenserp API key.');
+    } finally {
+      setZenserpSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (!isMessage) return undefined;
@@ -1580,7 +1615,7 @@ export default function CrmMarketPage() {
                 onBlur={() => {
                   setTimeout(() => setSuggestOpen(false), 180);
                 }}
-                placeholder="Type a business or keyword..."
+                placeholder="Type an industry, such as mining"
                 aria-label="Search businesses"
                 autoComplete="off"
               />
@@ -1626,6 +1661,22 @@ export default function CrmMarketPage() {
             />
           </div>
         </form>
+
+        {zenserpReady === false ? (
+          <form className="crm-google-key crm-market-zenserp" onSubmit={(event) => void saveZenserpFromSearch(event)}>
+            <p>Paste a Zenserp API key once. Then a word like mining returns companies from Google and their websites.</p>
+            <input
+              type="password"
+              value={zenserpKey}
+              autoComplete="off"
+              placeholder="Zenserp API key"
+              onChange={(event) => setZenserpKey(event.target.value)}
+            />
+            <button type="submit" className="crm-desk-btn crm-desk-btn-primary" disabled={zenserpSaving || !zenserpKey.trim()}>
+              {zenserpSaving ? 'Saving…' : 'Save key'}
+            </button>
+          </form>
+        ) : null}
 
         {(message || (error && !quotaError)) && (
           <div className={`crm-market-flash ${error ? 'is-error' : 'is-ok'}`} role="status">

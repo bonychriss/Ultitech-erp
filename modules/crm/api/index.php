@@ -6,8 +6,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/crm-lib.php';
 require_once __DIR__ . '/../includes/crm-sales-bridge.php';
-require_once __DIR__ . '/../includes/crm-market-bridge.php';
 require_once __DIR__ . '/../includes/crm-zenserp.php';
+require_once __DIR__ . '/../includes/crm-market-bridge.php';
 
 $rawBody = file_get_contents('php://input') ?: '';
 $jsonBody = json_decode($rawBody, true);
@@ -110,7 +110,9 @@ try {
             break;
 
         case 'market_status':
-            crmDeskJsonResponse(true, crmMarketStatus($companyId));
+            $marketStatus = crmMarketStatus($companyId);
+            $marketStatus['zenserp'] = crmZenserpApiKey($pdo) !== '';
+            crmDeskJsonResponse(true, $marketStatus);
             break;
 
         case 'market_leads':

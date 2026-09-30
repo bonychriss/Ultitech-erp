@@ -857,6 +857,70 @@ function AttIcon({ name }) {
 
 function AttendanceBoard({ board }) {
   const chart = Array.isArray(board?.chart) ? board.chart : []
+  const width = 760
+  const height = 240
+  const left = 28
+  const right = 16
+  const top = 16
+  const bottom = 58
+  const plotW = width - left - right
+  const plotH = height - top - bottom
+  if (!chart.length) return null
+  const xAt = (index) => left + (chart.length <= 1 ? plotW / 2 : (index / (chart.length - 1)) * plotW)
+  const yAt = (value) => top + plotH - (Math.min(1, Number(value) || 0) * plotH)
+  const points = chart.map((point, index) => ({
+    x: xAt(index),
+    y: yAt(point.value),
+    label: point.label || String(point.day || index + 1),
+    day: point.day || point.label,
+    present: Number(point.present) === 1 || Number(point.value) > 0,
+    today: Number(point.today) === 1,
+  }))
+  const line = points.map((point, index) => `${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ')
+  return (
+    <div className="wt-att">
+      <section className="wt-att-chart" aria-label="Attendance chart">
+        <div className="wt-att-chart-head">
+          <span className="wt-att-chart-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M4 16l4.5-5 3.5 3L20 6" />
+              <circle cx="20" cy="6" r="1.4" fill="currentColor" stroke="none" />
+            </svg>
+          </span>
+          <div>
+            <h2>Attendance Overview</h2>
+            <p>Daily attendance for the selected month</p>
+          </div>
+        </div>
+        <svg className="wt-att-svg" viewBox={`0 0 ${width} ${height}`} role="img">
+          {[0, 1].map((tick) => {
+            const y = yAt(tick)
+            return (
+              <g key={tick}>
+                <line className="wt-att-grid" x1={left} x2={width - right} y1={y} y2={y} />
+                <text className="wt-att-tick" x={left - 8} y={y + 3} textAnchor="end">{tick}</text>
+              </g>
+            )
+          })}
+          <path className="wt-att-line" d={line} />
+          {points.map((point) => (
+            <g key={point.label}>
+              {point.today ? (
+                <line className="wt-att-marker" x1={point.x} x2={point.x} y1={top} y2={top + plotH} />
+              ) : null}
+              {point.present ? <circle className="wt-att-dot" cx={point.x} cy={point.y} r="4.5" /> : null}
+              <text className="wt-att-label" x={point.x} y={top + plotH + 14} textAnchor="end" transform={`rotate(-45 ${point.x} ${top + plotH + 14})`}>
+                {point.label}
+              </text>
+            </g>
+          ))}
+        </svg>
+      </section>
+    </div>
+  )
+}
+
+function AttendanceCards({ board }) {
   const stats = Array.isArray(board?.stats) ? board.stats : []
   const byKey = Object.fromEntries(stats.map((stat) => [stat.key, stat]))
   const cards = [
@@ -905,92 +969,35 @@ function AttendanceBoard({ board }) {
       when: item.when || '',
     })
   })
-  const scale = 5
-  const width = 360
-  const height = 150
-  const left = 26
-  const right = 8
-  const top = 16
-  const bottom = 28
-  const plotW = width - left - right
-  const plotH = height - top - bottom
-  const slot = chart.length ? plotW / chart.length : plotW
-  const barW = Math.min(36, slot * 0.5)
-  if (!chart.length && !stats.length) return null
   return (
-    <div className="wt-att">
-      <section className="wt-att-chart" aria-label="Attendance chart">
-        <div className="wt-att-chart-head">
-          <span className="wt-att-chart-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-              <rect x="3" y="12" width="4" height="8" rx="1" />
-              <rect x="10" y="7" width="4" height="13" rx="1" />
-              <rect x="17" y="4" width="4" height="16" rx="1" />
-            </svg>
-          </span>
+    <div className="wt-att-cards">
+      {cards.map((card) => (
+        <section key={card.key} className={`wt-att-stat wt-att-stat--${card.key}`}>
+          <span className="wt-att-ico"><AttIcon name={card.icon} /></span>
           <div>
-            <h2>Attendance Overview</h2>
-            <p>Daily attendance for the selected month</p>
+            <strong>{card.label}</strong>
+            <span>{card.hint}</span>
           </div>
-        </div>
-        <svg className="wt-att-svg" viewBox={`0 0 ${width} ${height}`} role="img">
-          {[0, 1, 2, 3, 4, 5].map((tick) => {
-            const y = top + plotH - (tick / scale) * plotH
-            return (
-              <g key={tick}>
-                <line className="wt-att-grid" x1={left} x2={width - right} y1={y} y2={y} />
-                <text className="wt-att-tick" x={left - 6} y={y + 3} textAnchor="end">{tick}</text>
-              </g>
-            )
-          })}
-          {chart.map((bar, index) => {
-            const value = Math.min(scale, Number(bar.value) || 0)
-            const barH = (value / scale) * plotH
-            const x = left + index * slot + (slot - barW) / 2
-            const y = top + plotH - barH
-            return (
-              <g key={bar.label}>
-                {barH > 0 ? <rect className="wt-att-rect" x={x} y={y} width={barW} height={barH} rx="4" /> : null}
-                {value > 0 ? (
-                  <text className="wt-att-value" x={x + barW / 2} y={y - 5} textAnchor="middle">{value}</text>
-                ) : null}
-                <text className="wt-att-label" x={left + index * slot + slot / 2} y={height - 8} textAnchor="middle">
-                  {bar.label}
-                </text>
-              </g>
-            )
-          })}
-        </svg>
-      </section>
-      <div className="wt-att-cards">
-        {cards.map((card) => (
-          <section key={card.key} className={`wt-att-stat wt-att-stat--${card.key}`}>
-            <span className="wt-att-ico"><AttIcon name={card.icon} /></span>
-            <div>
-              <strong>{card.label}</strong>
-              <span>{card.hint}</span>
-            </div>
-            <b>{Number(byKey[card.key]?.count) || 0}</b>
-          </section>
-        ))}
-        {details.map((item) => (
-          <article key={item.key} className={`wt-att-detail wt-att-detail--${item.tone}`}>
-            <span className="wt-att-ico"><AttIcon name={item.icon} /></span>
-            <div>
-              <strong>{item.label}</strong>
-              <span>{item.hint}</span>
-            </div>
-            {item.when ? (
-              <time>
-                {item.when}
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                  <path d="M9 6l6 6-6 6" />
-                </svg>
-              </time>
-            ) : null}
-          </article>
-        ))}
-      </div>
+          <b>{Number(byKey[card.key]?.count) || 0}</b>
+        </section>
+      ))}
+      {details.map((item) => (
+        <article key={item.key} className={`wt-att-detail wt-att-detail--${item.tone}`}>
+          <span className="wt-att-ico"><AttIcon name={item.icon} /></span>
+          <div>
+            <strong>{item.label}</strong>
+            <span>{item.hint}</span>
+          </div>
+          {item.when ? (
+            <time>
+              {item.when}
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </time>
+          ) : null}
+        </article>
+      ))}
     </div>
   )
 }
@@ -1020,22 +1027,25 @@ function MeasurePage({ month, measure }) {
     <div className="wt-dash">
       <a className="wt-back" href={measure.backUrl || '#'}>Back</a>
       {measure.key === 'attendance' && measure.configured && measure.board ? (
-        <section className="wt-att-page">
-          <header className="wt-att-top">
-            <span className="wt-att-top-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
-                <rect x="4" y="5" width="16" height="15" rx="2" />
-                <path d="M8 3v4M16 3v4M4 10h16" />
-              </svg>
-            </span>
-            <div>
-              <h1>Attendance</h1>
-              <p>{measure.summary}</p>
-            </div>
-            <MonthSelect month={month} boxed />
-          </header>
-          <AttendanceBoard board={measure.board} />
-        </section>
+        <>
+          <section className="wt-att-page">
+            <header className="wt-att-top">
+              <span className="wt-att-top-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+                  <rect x="4" y="5" width="16" height="15" rx="2" />
+                  <path d="M8 3v4M16 3v4M4 10h16" />
+                </svg>
+              </span>
+              <div>
+                <h1>Attendance</h1>
+                <p>{measure.summary}</p>
+              </div>
+              <MonthSelect month={month} boxed />
+            </header>
+            <AttendanceBoard board={measure.board} />
+          </section>
+          <AttendanceCards board={measure.board} />
+        </>
       ) : null}
       {measure.key === 'attendance' && measure.configured && measure.board ? null : (
       <>

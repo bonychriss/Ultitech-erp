@@ -1082,25 +1082,18 @@ function weeklyTasksUiAttendanceBoard(PDO $pdo, int $userId, array $offsets): ar
         try {
             $cursor = new DateTime($rangeStart);
             $last = new DateTime($rangeEnd);
+            $today = date('Y-m-d');
             while ($cursor <= $last) {
-                $weekStart = clone $cursor;
-                $weekEnd = (clone $cursor)->modify('sunday this week');
-                if ($weekEnd > $last) {
-                    $weekEnd = clone $last;
-                }
-                $count = 0;
-                $day = clone $weekStart;
-                while ($day <= $weekEnd) {
-                    if (isset($present[$day->format('Y-m-d')])) {
-                        $count++;
-                    }
-                    $day->modify('+1 day');
-                }
+                $key = $cursor->format('Y-m-d');
+                $here = isset($present[$key]);
                 $chart[] = [
-                    'label' => $weekStart->format('j') . '–' . $weekEnd->format('j M'),
-                    'value' => $count,
+                    'label' => $cursor->format('j M'),
+                    'day' => $cursor->format('j'),
+                    'value' => $here ? 1 : 0,
+                    'present' => $here ? 1 : 0,
+                    'today' => $key === $today ? 1 : 0,
                 ];
-                $cursor = (clone $weekEnd)->modify('+1 day');
+                $cursor->modify('+1 day');
             }
         } catch (Throwable $e) {
         }

@@ -2093,45 +2093,68 @@ function crmMarketAttachHistoryAssignedCounts(array $records, int $userId, int $
     if ($records === []) {
         return $records;
     }
-    if ($userId <= 0) {
-        foreach ($records as &$record) {
-            $record['assignedCount'] = 0;
-            $record['totalAssignedCount'] = 0;
-            $record['viewed'] = true;
-        }
-        unset($record);
-        return $records;
-    }
 
-    $viewedMap = array_fill_keys(crmMarketListHistoryViewedIds($userId), true);
-
-    foreach ($records as &$record) {
+    $ids = [];
+    foreach ($records as $record) {
         $historyId = trim((string) ($record['id'] ?? ''));
-        if ($historyId === '') {
-            $record['assignedCount'] = 0;
-            $record['totalAssignedCount'] = 0;
-            $record['viewed'] = true;
-            continue;
+        if ($historyId !== '') {
+            $ids[] = $historyId;
+        }
+    }
+    $counts = [];
+    $pdo = crmMarketPdo(true);
+    if ($pdo instanceof PDO && $ids !== []) {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $params = $ids;
+        $mineExpr = '0';
+        if ($userId > 0) {
+            $mineExpr = 'SUM(CASE WHEN assigned_to = ? THEN 1 ELSE 0 END)';
+            array_unshift($params, $userId);
         }
         try {
-            $rows = crmMarketListSearchHistoryResults($historyId, $companyId);
-            $record['assignedCount'] = count(crmMarketFilterAssignedToUser($rows, $userId));
-            $totalAssigned = 0;
-            foreach ($rows as $row) {
-                $aid = (int) ($row['assigned_to'] ?? $row['assignedTo'] ?? 0);
-                if ($aid > 0) {
-                    $totalAssigned++;
-                }
+            $stmt = $pdo->prepare("
+                SELECT history_id,
+                       {$mineExpr} AS mine_count,
+                       SUM(CASE WHEN assigned_to IS NOT NULL AND assigned_to > 0 THEN 1 ELSE 0 END) AS total_count
+                FROM search_results
+                WHERE history_id IN ({$placeholders})
+                GROUP BY history_id
+            ");
+            $stmt->execute($params);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $counts[(string) ($row['history_id'] ?? '')] = [
+                    'mine' => (int) ($row['mine_count'] ?? 0),
+                    'total' => (int) ($row['total_count'] ?? 0),
+                ];
             }
-            $record['totalAssignedCount'] = $totalAssigned;
         } catch (Throwable $e) {
-            $record['assignedCount'] = 0;
-            $record['totalAssignedCount'] = 0;
+            $counts = [];
         }
-        $record['viewed'] = isset($viewedMap[$historyId]);
+    }
+
+    $viewedMap = $userId > 0 ? array_fill_keys(crmMarketListHistoryViewedIds($userId), true) : [];
+    foreach ($records as &$record) {
+        $historyId = trim((string) ($record['id'] ?? ''));
+        $record['assignedCount'] = $counts[$historyId]['mine'] ?? 0;
+        $record['totalAssignedCount'] = $counts[$historyId]['total'] ?? 0;
+        $record['viewed'] = $userId <= 0 || $historyId === '' || isset($viewedMap[$historyId]);
+        foreach (['query', 'location', 'category'] as $field) {
+            $record[$field] = crmMarketUtf8((string) ($record[$field] ?? ''));
+        }
     }
     unset($record);
+
     return $records;
+}
+
+function crmMarketUtf8(string $value): string
+{
+    if ($value === '' || preg_match('//u', $value)) {
+        return $value;
+    }
+    $clean = iconv('UTF-8', 'UTF-8//IGNORE', $value);
+
+    return is_string($clean) ? $clean : '';
 }
 
 /**

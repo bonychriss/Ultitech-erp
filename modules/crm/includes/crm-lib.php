@@ -494,10 +494,18 @@ function crmDeskJsonResponse(bool $success, mixed $data = null, ?string $message
 {
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
+    $flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+    if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+        $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+    }
+    $json = json_encode([
         'success' => $success,
         'message' => $message,
         'data' => $data,
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    ], $flags);
+    if ($json === false) {
+        $json = '{"success":false,"message":"Could not read that response.","data":null}';
+    }
+    echo $json;
     exit;
 }

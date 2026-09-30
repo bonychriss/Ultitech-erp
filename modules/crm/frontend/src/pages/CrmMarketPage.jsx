@@ -2112,11 +2112,13 @@ export default function CrmMarketPage() {
             ) : historyRows.length === 0 ? (
               <NothingSummaryState
                 src={nothingSrc}
-                title="No saved searches yet"
+                title={error ? 'Could not load saved searches' : 'No saved searches yet'}
                 copy={
-                  historyMineOnly
-                    ? 'Run a Search in CRM Market. Assigned companies appear here for each sales person.'
-                    : 'Run a Search in CRM Market. Open a saved search to see clients assigned across all sales users.'
+                  error
+                    ? error
+                    : historyMineOnly
+                      ? 'Run a Search in CRM Market. Assigned companies appear here for each sales person.'
+                      : 'Run a Search in CRM Market. Open a saved search to see clients assigned across all sales users.'
                 }
               />
             ) : (

@@ -29,6 +29,7 @@ use App\Http\Controllers\RevenueDeskPageController;
 use App\Http\Controllers\RevenuePageController;
 use App\Http\Controllers\AttendancePageController;
 use App\Http\Controllers\AiAgentPageController;
+use App\Http\Controllers\AiAssistantPageController;
 use App\Http\Controllers\NotificationsPageController;
 use App\Http\Controllers\WeeklyTasksPageController;
 use App\Http\Controllers\DeliveriesPageController;
@@ -129,6 +130,9 @@ Route::middleware([AttachErpContext::class])->group(function () {
 
     // AI Agent (React receivables + briefing; chat API stays on modules/ai-agent/api.php)
     Route::get('/ai-agent', [AiAgentPageController::class, 'show'])->name('ai-agent.page');
+
+    // AI Assistant chat (React; commands stay on modules/ai-agent/api.php)
+    Route::get('/ai-assistant', [AiAssistantPageController::class, 'show'])->name('ai-assistant.page');
 
     // Notifications centre (React; mark-read APIs stay on PHP includes/api)
     Route::get('/notifications', [NotificationsPageController::class, 'show'])->name('notifications.page');

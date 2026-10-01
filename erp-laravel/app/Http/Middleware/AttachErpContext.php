@@ -25,6 +25,7 @@ class AttachErpContext
             ?? $GLOBALS['ERP_REVENUE_CONTEXT']
             ?? $GLOBALS['ERP_ATTENDANCE_CONTEXT']
             ?? $GLOBALS['ERP_AI_AGENT_CONTEXT']
+            ?? $GLOBALS['ERP_AI_ASSISTANT_CONTEXT']
             ?? $GLOBALS['ERP_NOTIFICATIONS_CONTEXT']
             ?? $GLOBALS['ERP_WEEKLY_TASKS_CONTEXT']
             ?? $GLOBALS['ERP_DELIVERIES_CONTEXT']

@@ -129,6 +129,12 @@ $isCompanySettingsPage = ($current_page === 'company-settings.php')
 if ($isCompanySettingsPage) {
     $active_module = 'company-settings';
 }
+if (strpos(str_replace('\\', '/', $script_name), 'ai_assistant.php') !== false) {
+    $aiAssistantModule = strtolower(trim((string) ($_GET['module'] ?? $_SESSION['active_module'] ?? '')));
+    if ($aiAssistantModule !== '') {
+        $active_module = $aiAssistantModule;
+    }
+}
 
 // Customer Statement (Sales): show only statement-related shortcuts, not full Sales menu
 $script_name_norm = str_replace('\\', '/', $script_name);

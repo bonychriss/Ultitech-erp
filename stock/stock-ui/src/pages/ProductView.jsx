@@ -359,6 +359,8 @@ export default function ProductView({ data }) {
                 <th>Date</th>
                 <th>Type</th>
                 <th>Qty</th>
+                <th>Before</th>
+                <th>After</th>
                 <th>Ref</th>
                 <th>Notes</th>
               </tr>
@@ -366,7 +368,7 @@ export default function ProductView({ data }) {
             <tbody>
               {movements.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="pv-muted" style={{ textAlign: 'center', padding: '1.5rem' }}>
+                  <td colSpan={7} className="pv-muted" style={{ textAlign: 'center', padding: '1.5rem' }}>
                     No movements recorded
                   </td>
                 </tr>
@@ -378,6 +380,8 @@ export default function ProductView({ data }) {
                       <MovementType type={mov.movement_type} />
                     </td>
                     <td style={{ fontWeight: 700 }}>{mov.quantity}</td>
+                    <td>{mov.qty_before == null ? '—' : mov.qty_before}</td>
+                    <td>{mov.qty_after == null ? '—' : mov.qty_after}</td>
                     <td>
                       {mov.reference_type || '—'}
                       {mov.reference_id != null && mov.reference_id !== '' ? ` #${mov.reference_id}` : ''}

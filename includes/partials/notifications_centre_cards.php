@@ -369,6 +369,9 @@ if (!function_exists('nc_card_visual')) {
         $title = strtolower(trim((string) ($n['title'] ?? '')));
         $blob = $title . ' ' . strtolower((string) ($n['message'] ?? '')) . ' ' . strtolower((string) ($n['type'] ?? ''));
 
+        if (preg_match('/wrong invoice/', $blob) && !preg_match('/\b(approved|reversed|cancelled)\b/', $title)) {
+            return ['icon' => 'fas fa-exclamation-circle', 'tone' => 'rose'];
+        }
         if (str_contains($title, 'draft payroll') || preg_match('/\bdraft payroll\b/', $blob)) {
             return ['icon' => 'fas fa-file-invoice-dollar', 'tone' => 'blue'];
         }

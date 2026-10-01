@@ -342,7 +342,7 @@ function salesInvoiceCorrectionsNotify(PDO $pdo, int $invoiceId, int $reporterId
 /**
  * Tell the salesperson the decision. Tell finance when money was already received.
  */
-function salesInvoiceCorrectionsNotifyDecision(PDO $pdo, int $invoiceId, int $reporterId, int $actorId, string $decision, string $note = ''): void
+function salesInvoiceCorrectionsNotifyDecision(PDO $pdo, int $invoiceId, int $reporterId, int $actorId, string $decision, string $note = '', string $stockNote = ''): void
 {
     $st = $pdo->prepare('SELECT invoice_number, amount_paid FROM invoices WHERE id = ? LIMIT 1');
     $st->execute([$invoiceId]);
@@ -364,6 +364,9 @@ function salesInvoiceCorrectionsNotifyDecision(PDO $pdo, int $invoiceId, int $re
             if ($paid) {
                 $message .= ' Money already received still needs a collections review.';
             }
+            if ($stockNote !== '') {
+                $message .= ' ' . $stockNote;
+            }
             salesInvoiceCorrectionsPushNotice($pdo, $reporterId, 'Wrong invoice reversed', $message, 'success');
         } else {
             $message = 'Your report on ' . $number . ' was rejected. The invoice stays as it is.';
@@ -372,6 +375,10 @@ function salesInvoiceCorrectionsNotifyDecision(PDO $pdo, int $invoiceId, int $re
             }
             salesInvoiceCorrectionsPushNotice($pdo, $reporterId, 'Wrong invoice report rejected', $message, 'info');
         }
+    }
+
+    if ($approved && $stockNote !== '') {
+        salesInvoiceCorrectionsNotifyStock($pdo, $actorId, $reporterId, 'Stock returned', $stockNote);
     }
 
     if (!$paid) {
@@ -490,7 +497,9 @@ function salesInvoiceCorrectionsApprove(PDO $pdo, int $reportId, int $adminId): 
             (int) $report['invoice_id'],
             (int) $report['reported_by'],
             $adminId,
-            'approve'
+            'approve',
+            '',
+            (string) ($reversed['stock_note'] ?? '')
         );
     } catch (Throwable $e) {
     }
@@ -537,16 +546,235 @@ function salesInvoiceReverseWrong(PDO $pdo, int $invoiceId, string $reason): arr
     }
 
     $glNote = salesInvoiceReverseLedger($pdo, $invoice);
+    $stock = salesInvoiceRestoreStock($pdo, $invoice);
     $number = trim((string) ($invoice['invoice_number'] ?? ('#' . $invoiceId)));
     $message = $number . ' is cancelled and taken out of sales and receivables.';
     if ($glNote !== '') {
         $message .= ' ' . $glNote;
     }
+    if ($stock['note'] !== '') {
+        $message .= ' ' . $stock['note'];
+    }
     if ((float) ($invoice['amount_paid'] ?? 0) > 0.009) {
         $message .= ' Money already received is still on the voided revenue voucher and needs a collections review.';
     }
 
-    return ['ok' => true, 'message' => $message];
+    return ['ok' => true, 'message' => $message, 'stock_note' => $stock['note']];
+}
+
+function salesInvoiceQtyText(float $qty): string
+{
+    $qty = round($qty, 2);
+    if (abs($qty - (int) round($qty)) < 0.001) {
+        return (string) (int) round($qty);
+    }
+
+    return rtrim(rtrim(number_format($qty, 2, '.', ''), '0'), '.');
+}
+
+/**
+ * Put invoice line quantities back into stock and record the before and after amounts.
+ *
+ * @return array{note:string}
+ */
+function salesInvoiceRestoreStock(PDO $pdo, array $invoice): array
+{
+    $empty = ['note' => ''];
+    $orderId = (int) ($invoice['order_id'] ?? 0);
+    $invoiceId = (int) ($invoice['id'] ?? 0);
+    if ($orderId < 1 || $invoiceId < 1) {
+        return $empty;
+    }
+    $number = trim((string) ($invoice['invoice_number'] ?? ''));
+    if ($number === '') {
+        $number = '#' . $invoiceId;
+    }
+    $marker = 'Wrong invoice ' . $number . ' reversed.';
+
+    try {
+        $already = $pdo->prepare('SELECT id FROM stock_movements WHERE notes LIKE ? LIMIT 1');
+        $already->execute([$marker . '%']);
+        if ($already->fetchColumn()) {
+            return ['note' => 'Stock was already returned for this invoice.'];
+        }
+    } catch (Throwable $e) {
+        return $empty;
+    }
+
+    try {
+        $items = $pdo->prepare(
+            'SELECT soi.product_id, soi.quantity, p.name
+             FROM sales_order_items soi
+             LEFT JOIN products p ON p.id = soi.product_id
+             WHERE soi.order_id = ?'
+        );
+        $items->execute([$orderId]);
+        $rows = $items->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return $empty;
+    }
+
+    $lines = [];
+    foreach ($rows as $row) {
+        $productId = (int) ($row['product_id'] ?? 0);
+        $qty = (float) ($row['quantity'] ?? 0);
+        if ($productId < 1 || $qty <= 0) {
+            continue;
+        }
+        if (!isset($lines[$productId])) {
+            $name = trim((string) ($row['name'] ?? ''));
+            $lines[$productId] = [
+                'name' => $name !== '' ? $name : ('Product #' . $productId),
+                'quantity' => 0.0,
+            ];
+        }
+        $lines[$productId]['quantity'] += $qty;
+    }
+    if ($lines === []) {
+        return $empty;
+    }
+
+    $mvCols = [];
+    try {
+        $mvCols = $pdo->query('SHOW COLUMNS FROM stock_movements')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return $empty;
+    }
+    $mvNames = array_map(static fn (array $col): string => (string) ($col['Field'] ?? ''), $mvCols);
+    if (!in_array('qty_before', $mvNames, true)) {
+        try {
+            $pdo->exec('ALTER TABLE stock_movements ADD COLUMN qty_before DECIMAL(12,2) NULL');
+            $mvNames[] = 'qty_before';
+        } catch (Throwable $e) {
+        }
+    }
+    if (!in_array('qty_after', $mvNames, true)) {
+        try {
+            $pdo->exec('ALTER TABLE stock_movements ADD COLUMN qty_after DECIMAL(12,2) NULL');
+            $mvNames[] = 'qty_after';
+        } catch (Throwable $e) {
+        }
+    }
+
+    $refType = 'invoice_reversal';
+    foreach ($mvCols as $col) {
+        if ((string) ($col['Field'] ?? '') !== 'reference_type') {
+            continue;
+        }
+        $type = strtolower((string) ($col['Type'] ?? ''));
+        if (str_starts_with($type, 'enum(') && !str_contains($type, 'invoice_reversal')) {
+            $refType = str_contains($type, 'adjustment') ? 'adjustment' : 'sale';
+        }
+    }
+
+    $summaries = [];
+    foreach ($lines as $productId => $line) {
+        try {
+            $stockSt = $pdo->prepare('SELECT id, quantity FROM stock WHERE product_id = ? LIMIT 1');
+            $stockSt->execute([$productId]);
+            $stock = $stockSt->fetch(PDO::FETCH_ASSOC);
+            $before = $stock ? (float) $stock['quantity'] : 0.0;
+            $after = $before + (float) $line['quantity'];
+            $stockId = $stock ? (int) $stock['id'] : 0;
+            $stockCols = $pdo->query('SHOW COLUMNS FROM stock')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if ($stock) {
+                if (in_array('last_updated', $stockCols, true)) {
+                    $pdo->prepare('UPDATE stock SET quantity = ?, last_updated = NOW() WHERE id = ?')
+                        ->execute([$after, (int) $stock['id']]);
+                } else {
+                    $pdo->prepare('UPDATE stock SET quantity = ? WHERE id = ?')
+                        ->execute([$after, (int) $stock['id']]);
+                }
+            } elseif (in_array('location', $stockCols, true) && in_array('last_updated', $stockCols, true)) {
+                $pdo->prepare("INSERT INTO stock (product_id, quantity, location, last_updated) VALUES (?, ?, 'Warehouse A', NOW())")
+                    ->execute([$productId, $after]);
+            } else {
+                $pdo->prepare('INSERT INTO stock (product_id, quantity) VALUES (?, ?)')
+                    ->execute([$productId, $after]);
+            }
+
+            $beforeText = salesInvoiceQtyText($before);
+            $afterText = salesInvoiceQtyText($after);
+            $note = $marker . ' Quantity before ' . $beforeText . ', after ' . $afterText . '.';
+            $fields = ['product_id', 'movement_type', 'quantity', 'reference_type', 'reference_id', 'notes', 'created_at'];
+            $placeholders = ['?', '?', '?', '?', '?', '?', 'NOW()'];
+            $values = [$productId, 'in', (float) $line['quantity'], $refType, (string) $invoiceId, $note];
+            if (in_array('qty_before', $mvNames, true)) {
+                $fields[] = 'qty_before';
+                $placeholders[] = '?';
+                $values[] = $before;
+            }
+            if (in_array('qty_after', $mvNames, true)) {
+                $fields[] = 'qty_after';
+                $placeholders[] = '?';
+                $values[] = $after;
+            }
+            $quoted = implode(', ', array_map(static fn (string $field): string => '`' . $field . '`', $fields));
+            try {
+                $pdo->prepare('INSERT INTO stock_movements (' . $quoted . ') VALUES (' . implode(', ', $placeholders) . ')')
+                    ->execute($values);
+            } catch (Throwable $moveError) {
+                if ($stockId > 0) {
+                    $pdo->prepare('UPDATE stock SET quantity = ? WHERE id = ?')->execute([$before, $stockId]);
+                }
+                throw $moveError;
+            }
+            $summaries[] = $line['name'] . ' ' . salesInvoiceQtyText((float) $line['quantity'])
+                . ' (before ' . $beforeText . ', after ' . $afterText . ')';
+        } catch (Throwable $e) {
+            error_log('salesInvoiceRestoreStock: ' . $e->getMessage());
+        }
+    }
+
+    if ($summaries === []) {
+        return ['note' => 'Stock could not be returned.'];
+    }
+
+    return ['note' => 'Stock returned: ' . implode('; ', $summaries) . '.'];
+}
+
+function salesInvoiceCorrectionsNotifyStock(PDO $pdo, int $actorId, int $reporterId, string $title, string $message): void
+{
+    $userDb = ($GLOBALS['pdo'] ?? null) instanceof PDO ? $GLOBALS['pdo'] : $pdo;
+    try {
+        $cols = $userDb->query('SHOW COLUMNS FROM users')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Throwable $e) {
+        return;
+    }
+    if (!in_array('department', $cols, true) && !in_array('extra_roles', $cols, true)) {
+        return;
+    }
+    $select = ['id'];
+    if (in_array('department', $cols, true)) {
+        $select[] = 'department';
+    }
+    if (in_array('extra_roles', $cols, true)) {
+        $select[] = 'extra_roles';
+    }
+    $sql = 'SELECT ' . implode(', ', $select) . ' FROM users';
+    if (in_array('is_active', $cols, true)) {
+        $sql .= ' WHERE is_active = 1 OR is_active IS NULL';
+    }
+    try {
+        $people = $userDb->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return;
+    }
+    foreach ($people as $person) {
+        $id = (int) ($person['id'] ?? 0);
+        if ($id < 1 || $id === $actorId || $id === $reporterId) {
+            continue;
+        }
+        $dept = strtolower((string) ($person['department'] ?? ''));
+        $extra = strtolower((string) ($person['extra_roles'] ?? ''));
+        $isStock = preg_match('/\b(stock|store|warehouse|inventory)\b/', $dept) === 1
+            || str_contains($extra, 'stock')
+            || str_contains($extra, 'store');
+        if (!$isStock) {
+            continue;
+        }
+        salesInvoiceCorrectionsPushNotice($pdo, $id, $title, $message, 'info');
+    }
 }
 
 function salesInvoiceReverseLedger(PDO $pdo, array $invoice): string

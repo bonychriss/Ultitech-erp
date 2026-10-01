@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, Check, ChevronDown, Info, Trash2, Upload, X } from 'lucide-react';
 import { fetchCorrections, fetchInvoicesInit, postCorrection } from '../api/invoicesListDesk';
+import { fetchInvoiceViewInit } from '../api/invoiceViewDesk';
+import InvoiceDocumentPane from '../components/InvoiceDocumentPane';
 
 function todayIso() {
   const now = new Date();
@@ -59,9 +61,16 @@ export default function WrongInvoicesPage() {
   const reasonRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
+  const [reverseReport, setReverseReport] = useState(null);
+  const [reverseError, setReverseError] = useState('');
+  const [reversing, setReversing] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const aboutRef = useRef(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState('');
+  const [previewData, setPreviewData] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,6 +104,56 @@ export default function WrongInvoicesPage() {
     document.addEventListener('mousedown', onPointerDown);
     return () => document.removeEventListener('mousedown', onPointerDown);
   }, [aboutOpen]);
+
+  useEffect(() => {
+    if (!preview) return undefined;
+    function onKeyDown(event) {
+      if (event.key === 'Escape') setPreview(null);
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [preview]);
+
+  useEffect(() => {
+    if (!previewData?.document_font_family || !previewData?.font_stylesheets) return undefined;
+    const links = [];
+    const template = document.createElement('template');
+    template.innerHTML = previewData.font_stylesheets.trim();
+    template.content.querySelectorAll('link[rel="stylesheet"]').forEach((node) => {
+      const href = node.getAttribute('href');
+      if (!href || document.querySelector(`link[data-ov-doc-font="${href}"]`)) return;
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      link.dataset.ovDocFont = href;
+      document.head.appendChild(link);
+      links.push(link);
+    });
+    return () => {
+      links.forEach((node) => node.remove());
+    };
+  }, [previewData?.document_font_family, previewData?.font_stylesheets]);
+
+  async function openInvoicePreview(report) {
+    const id = Number(report?.invoice_id || 0);
+    if (id < 1) return;
+    setPreview(report);
+    setPreviewData(null);
+    setPreviewError('');
+    setPreviewLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('id', String(id));
+      const moduleName = init?.module || new URLSearchParams(window.location.search).get('module') || 'sales';
+      if (moduleName) params.set('module', moduleName);
+      const payload = await fetchInvoiceViewInit(params);
+      setPreviewData(payload);
+    } catch (err) {
+      setPreviewError(err instanceof Error ? err.message : 'Could not open the invoice.');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!invoiceMenuOpen) return undefined;
@@ -207,20 +266,9 @@ export default function WrongInvoicesPage() {
     const correctionsUrl = init?.urls?.corrections;
     if (!correctionsUrl) return;
     if (action === 'approve') {
-      if (typeof window.Swal !== 'undefined') {
-        const result = await window.Swal.fire({
-          title: 'Reverse this invoice?',
-          text: `${report.invoice_number} will be cancelled. It leaves sales and receivables, and the ledger posting is reversed. The invoice stays on the invoice list as cancelled.`,
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: 'Approve and reverse',
-          confirmButtonColor: '#b45309',
-          cancelButtonColor: '#94a3b8',
-        });
-        if (!result.isConfirmed) return;
-      } else if (!window.confirm(`Reverse ${report.invoice_number}?`)) {
-        return;
-      }
+      setReverseError('');
+      setReverseReport(report);
+      return;
     }
     let note = '';
     if (action === 'reject') {
@@ -252,6 +300,23 @@ export default function WrongInvoicesPage() {
       } else {
         window.alert(err.message || 'Could not update');
       }
+    }
+  }
+
+  async function confirmReverse() {
+    const correctionsUrl = init?.urls?.corrections;
+    if (!correctionsUrl || !reverseReport || reversing) return;
+    setReversing(true);
+    setReverseError('');
+    try {
+      const data = await postCorrection(correctionsUrl, { action: 'approve', id: reverseReport.id });
+      setReports(Array.isArray(data.reports) ? data.reports : []);
+      setReverseReport(null);
+      setNotice(data.message || 'The invoice is cancelled.');
+    } catch (err) {
+      setReverseError(err instanceof Error ? err.message : 'Could not update');
+    } finally {
+      setReversing(false);
     }
   }
 
@@ -298,6 +363,68 @@ export default function WrongInvoicesPage() {
           </button>
         </div>
       </div>
+
+      {reverseReport ? createPortal(
+        <div className="inv-wrong-modal" role="presentation">
+          <button
+            type="button"
+            className="inv-wrong-modal-backdrop"
+            aria-label="Close"
+            onClick={() => { if (!reversing) setReverseReport(null); }}
+          />
+          <div className="inv-wrong-modal-card inv-wrong-confirm" role="dialog" aria-modal="true" aria-labelledby="inv-wrong-reverse-title">
+            <h2 id="inv-wrong-reverse-title">
+              <AlertCircle size={20} aria-hidden="true" />
+              Reverse this invoice?
+            </h2>
+            <p>
+              {reverseReport.invoice_number} will be cancelled. It leaves sales and receivables, and the ledger posting is reversed. The invoice stays on the invoice list as cancelled.
+            </p>
+            {reverseError ? <p className="inv-wrong-form-error" role="alert">{reverseError}</p> : null}
+            <div className="inv-wrong-form-actions">
+              <button type="button" className="exp-desk-btn exp-desk-btn-ghost" onClick={() => setReverseReport(null)} disabled={reversing}>
+                Cancel
+              </button>
+              <button type="button" className="exp-desk-btn exp-desk-btn-primary" onClick={confirmReverse} disabled={reversing}>
+                {reversing ? 'Reversing...' : 'Approve and reverse'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
+
+      {preview ? createPortal(
+        <div className="inv-wrong-modal inv-wrong-preview" role="presentation">
+          <button type="button" className="inv-wrong-modal-backdrop" aria-label="Close" onClick={() => setPreview(null)} />
+          <div className="inv-wrong-preview-card" role="dialog" aria-modal="true" aria-labelledby="inv-wrong-preview-title">
+            <div className="inv-wrong-preview-head">
+              <h2 id="inv-wrong-preview-title">{preview.invoice_number || 'Invoice'}</h2>
+              <button type="button" className="inv-wrong-preview-close" aria-label="Close" onClick={() => setPreview(null)}>
+                <X size={18} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="inv-wrong-preview-body">
+              {previewLoading ? <p className="exp-desk-empty-sub">Loading invoice...</p> : null}
+              {previewError ? <p className="inv-wrong-form-error" role="alert">{previewError}</p> : null}
+              {previewData?.document_html ? (
+                <InvoiceDocumentPane
+                  html={previewData.document_html}
+                  fontFamily={previewData.document_font_family || ''}
+                />
+              ) : null}
+              {previewData?.catalog_html ? (
+                <InvoiceDocumentPane
+                  html={previewData.catalog_html}
+                  fontFamily={previewData.document_font_family || ''}
+                  className="ov-catalog-pane"
+                />
+              ) : null}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
 
       {formOpen ? createPortal(
         <div className="inv-wrong-modal" role="presentation">
@@ -487,7 +614,9 @@ export default function WrongInvoicesPage() {
                   <tr key={report.id}>
                     <td>{report.reported_on || '-'}</td>
                     <td>
-                      <span className="exp-desk-ref">{report.invoice_number}</span>
+                      <button type="button" className="exp-desk-ref inv-wrong-invoice-link" onClick={() => openInvoicePreview(report)}>
+                        {report.invoice_number}
+                      </button>
                       <div className="exp-desk-subdate">{formatCurrency(report.total_amount)}</div>
                     </td>
                     <td>{report.customer_name || '-'}</td>

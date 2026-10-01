@@ -302,6 +302,10 @@ function notificationsUiVisual(array $n): array
         $visual = ['icon' => 'check', 'tone' => 'green'];
     }
 
+    if (preg_match('/wrong invoice/', $blob) && ($visual['icon'] ?? '') !== 'check') {
+        $visual = ['icon' => 'invoice-wrong', 'tone' => 'rose'];
+    }
+
     $visual['module'] = $module;
 
     return $visual;

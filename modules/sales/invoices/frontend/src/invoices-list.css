@@ -130,6 +130,29 @@
   color: #0f172a;
 }
 
+.inv-wrong-confirm {
+  width: min(26rem, 100%);
+  gap: 12px;
+}
+
+.inv-wrong-confirm h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inv-wrong-confirm h2 svg {
+  flex-shrink: 0;
+  color: #c2410c;
+}
+
+.inv-wrong-confirm p:not(.inv-wrong-form-error) {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #475569;
+}
+
 .inv-wrong-modal-card label {
   display: flex;
   flex-direction: column;
@@ -430,6 +453,67 @@
   border: 1px solid #e2e8f0;
   background: #fff;
   color: #334155;
+}
+
+button.inv-wrong-invoice-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #1d4ed8;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 0 !important;
+}
+
+button.inv-wrong-invoice-link:hover {
+  text-decoration: underline;
+}
+
+.inv-wrong-preview-card {
+  position: relative;
+  width: min(920px, 100%);
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #f8fafc;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+}
+
+.inv-wrong-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0.85rem 1rem;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.inv-wrong-preview-head h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.inv-wrong-preview-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 999px !important;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+}
+
+.inv-wrong-preview-body {
+  overflow: auto;
+  padding: 1rem;
 }
 
 .inv-report-status {

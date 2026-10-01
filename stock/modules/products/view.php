@@ -137,6 +137,8 @@ foreach ($movements as $mov) {
         'created_at' => (string) ($mov['created_at'] ?? ''),
         'movement_type' => (string) ($mov['movement_type'] ?? ''),
         'quantity' => (float) ($mov['quantity'] ?? 0),
+        'qty_before' => array_key_exists('qty_before', $mov) && $mov['qty_before'] !== null ? (float) $mov['qty_before'] : null,
+        'qty_after' => array_key_exists('qty_after', $mov) && $mov['qty_after'] !== null ? (float) $mov['qty_after'] : null,
         'reference_type' => (string) ($mov['reference_type'] ?? ''),
         'reference_id' => $mov['reference_id'] ?? null,
         'notes' => (string) ($mov['notes'] ?? ''),

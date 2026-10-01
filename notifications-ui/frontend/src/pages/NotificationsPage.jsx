@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Clock,
   FileText,
+  FileWarning,
   Gauge,
   LineChart,
   Mail,
@@ -113,10 +114,10 @@ function moduleColor(item) {
 function iconStyle(item) {
   // Keep module brand color even for success/alert status (select-module solid hue).
   const fg = moduleColor(item)
-  if (item.icon === 'alert') {
+  if (item.icon === 'alert' || item.icon === 'invoice-wrong') {
     return { background: 'transparent', color: '#e11d48' }
   }
-  // Solid icon on clean white ù matches select-module icon treatment (no fogged box).
+  // Solid icon on clean white ? matches select-module icon treatment (no fogged box).
   return { background: 'transparent', color: fg }
 }
 
@@ -176,6 +177,8 @@ function IconFor({ icon, color }) {
       return <Check {...props} />
     case 'alert':
       return <AlertTriangle {...props} />
+    case 'invoice-wrong':
+      return <FileWarning {...props} />
     default:
       return <Bell {...props} />
   }

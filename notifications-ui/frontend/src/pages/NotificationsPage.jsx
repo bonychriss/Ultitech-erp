@@ -133,6 +133,33 @@ function badgeStyle(item) {
   }
 }
 
+function ProductFan({ images }) {
+  const cards = (Array.isArray(images) ? images : []).filter((img) => img && img.url).slice(0, 6)
+  const count = cards.length
+  if (!count) return null
+  return (
+    <span className={`ncr-fan ncr-fan--${count}`} aria-hidden>
+      {cards.map((img, index) => {
+        const shift = index - (count - 1) / 2
+        const angle = count === 1 ? 0 : shift * (26 / Math.max(count - 1, 1))
+        const x = count === 1 ? 0 : shift * (count > 3 ? 16 : 20)
+        return (
+          <span
+            key={`${img.url}-${index}`}
+            className="ncr-fan-card"
+            style={{
+              transform: `translate(-50%, -50%) translateX(${x}px) rotate(${angle}deg)`,
+              zIndex: index + 1,
+            }}
+          >
+            <img src={img.url} alt="" />
+          </span>
+        )
+      })}
+    </span>
+  )
+}
+
 function IconFor({ icon, color }) {
   const props = {
     size: 20,
@@ -428,13 +455,22 @@ export default function NotificationsPage() {
                             className="ncr-row-main"
                             onClick={openItem}
                           >
-                            <span
-                              className={iconClass}
-                              style={colors}
-                              aria-hidden
-                            >
-                              <IconFor icon={item.icon} color={colors.color} />
-                            </span>
+                            {Array.isArray(item.images) && item.images.length > 0 ? (
+                              <span className="ncr-fan-wrap">
+                                <ProductFan images={item.images} />
+                                <span className="ncr-fan-badge" style={colors} aria-hidden>
+                                  <IconFor icon={item.icon} color={colors.color} />
+                                </span>
+                              </span>
+                            ) : (
+                              <span
+                                className={iconClass}
+                                style={colors}
+                                aria-hidden
+                              >
+                                <IconFor icon={item.icon} color={colors.color} />
+                              </span>
+                            )}
                             <div className="ncr-row-body">
                               <div className="ncr-row-kicker">
                                 <span

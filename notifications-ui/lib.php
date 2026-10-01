@@ -518,6 +518,58 @@ function notificationsUiFormatVoucherCopy(array $n): array
 }
 
 /**
+ * Product photos for a wrong-invoice reversal, so the notice can show them.
+ *
+ * @param array<string,mixed> $n
+ * @return list<array{url:string,name:string}>
+ */
+function notificationsUiWrongInvoiceImages(array $n): array
+{
+    $blob = (string) ($n['title'] ?? '') . ' ' . (string) ($n['message'] ?? '');
+    if (!preg_match('/wrong invoice/i', $blob) || !preg_match('/\b(INV-[A-Z0-9-]+)\b/i', $blob, $match)) {
+        return [];
+    }
+    global $pdo;
+    if (!($pdo instanceof PDO) || !function_exists('app_url')) {
+        return [];
+    }
+    $number = $match[1];
+    try {
+        $prodCols = $pdo->query('SHOW COLUMNS FROM products')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $imgExpr = in_array('main_image', $prodCols, true)
+            ? 'p.main_image'
+            : (in_array('image', $prodCols, true) ? 'p.image' : "''");
+        $st = $pdo->prepare(
+            "SELECT DISTINCT p.id, p.name, {$imgExpr} AS image_name
+             FROM stock_movements sm
+             INNER JOIN products p ON p.id = sm.product_id
+             WHERE sm.notes LIKE ?
+             ORDER BY p.id ASC
+             LIMIT 6"
+        );
+        $st->execute(['Wrong invoice ' . $number . ' reversed%']);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $images = [];
+    foreach ($rows as $row) {
+        $productId = (int) ($row['id'] ?? 0);
+        $file = basename(str_replace('\\', '/', trim((string) ($row['image_name'] ?? ''))));
+        if ($productId < 1 || $file === '' || $file === '.') {
+            continue;
+        }
+        $images[] = [
+            'url' => app_url('/stock/product_image.php?product_id=' . $productId . '&size=thumbnail&file=' . rawurlencode($file)),
+            'name' => trim((string) ($row['name'] ?? '')),
+        ];
+    }
+
+    return $images;
+}
+
+/**
  * @param array<string,mixed> $n
  * @return array<string,mixed>
  */
@@ -553,6 +605,8 @@ function notificationsUiNormalizeItem(array $n): array
         $message = $formatted['message'];
     }
 
+    $images = notificationsUiWrongInvoiceImages($n);
+
     return [
         'id' => $compositeId,
         'rawId' => $id,
@@ -566,6 +620,7 @@ function notificationsUiNormalizeItem(array $n): array
         'period' => notificationsUiPeriodOf($created),
         'tone' => $visual['tone'],
         'icon' => $visual['icon'],
+        'images' => $images,
         'module' => $module,
         'moduleLabel' => notificationsUiModuleLabel($module),
         'type' => (string) ($n['type'] ?? 'info'),

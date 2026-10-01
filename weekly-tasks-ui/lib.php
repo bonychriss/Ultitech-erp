@@ -3081,12 +3081,11 @@ function weeklyTasksUiDayLabel(float $days): string
 function weeklyTasksUiLeadInsight(array $rows): string
 {
     if (!$rows) {
-        return 'No purchase orders were marked Received in the selected months, so lead time stays out of the score.';
+        return 'No purchase orders were received in the selected months.';
     }
     $orders = [];
     $sum = 0;
     $onTime = 0;
-    $sameDay = 0;
     foreach ($rows as $row) {
         $days = (int) ($row['days'] ?? 0);
         $orders[] = [
@@ -3097,44 +3096,37 @@ function weeklyTasksUiLeadInsight(array $rows): string
         if ($days <= 3) {
             $onTime++;
         }
-        if ($days === 0) {
-            $sameDay++;
-        }
     }
     $count = count($orders);
     $late = $count - $onTime;
     $average = $sum / $count;
-    $sentence = $count . ($count === 1 ? ' order was' : ' orders were') . ' received, averaging ' . weeklyTasksUiDayLabel($average) . '. ';
-    $sentence .= $onTime . ' of ' . $count . ' arrived within 3 days';
-    if ($sameDay > 0) {
-        $sentence .= ', and ' . $sameDay . ($sameDay === 1 ? ' was received the same day' : ' were received the same day');
-    }
-    $sentence .= '. ';
+    $label = weeklyTasksUiDayLabel($average);
     if ($average <= 3) {
-        $sentence .= 'That meets the 3-day target, so this 20% of the procurement score is met.';
-    } else {
-        $sentence .= 'That misses the 3-day target, so this 20% of the procurement score is missed.';
+        return 'Average lead time is ' . $label . ', within the 3-day target.';
     }
-    if ($late > 0) {
-        usort($orders, static function (array $a, array $b): int {
-            return $b['days'] <=> $a['days'];
-        });
-        $slow = [];
-        $lateSum = 0;
-        foreach ($orders as $order) {
-            if ($order['days'] <= 3) {
-                continue;
-            }
-            $lateSum += $order['days'];
-            if (count($slow) < 3) {
-                $slow[] = $order['title'] . ' (' . weeklyTasksUiDayLabel((float) $order['days']) . ')';
-            }
+    $sentence = 'Average lead time is ' . $label . ', above the 3-day target.';
+    $pulledUp = $late > 0 && $onTime > $late;
+    if ($pulledUp) {
+        $sentence .= ' Most orders arrived within 3 days.';
+    } elseif ($onTime === 0) {
+        $sentence .= ' None arrived within 3 days.';
+    } else {
+        $sentence .= ' Only ' . $onTime . ' of ' . $count . ' arrived within 3 days.';
+    }
+    usort($orders, static function (array $a, array $b): int {
+        return $b['days'] <=> $a['days'];
+    });
+    $slow = [];
+    foreach ($orders as $order) {
+        if ($order['days'] <= 3 || count($slow) >= 3) {
+            continue;
         }
-        $sentence .= ' The longest waits are ' . weeklyTasksUiJoinList($slow) . '.';
-        $rest = $count - $late;
-        if ($rest > 0) {
-            $sentence .= ' The other ' . $rest . ' average ' . weeklyTasksUiDayLabel(($sum - $lateSum) / $rest) . '.';
-        }
+        $slow[] = $order['title'] . ' (' . weeklyTasksUiDayLabel((float) $order['days']) . ')';
+    }
+    if ($slow) {
+        $sentence .= $pulledUp
+            ? ' A few long waits raise the average: ' . weeklyTasksUiJoinList($slow) . '.'
+            : ' The longest are ' . weeklyTasksUiJoinList($slow) . '.';
     }
 
     return $sentence;

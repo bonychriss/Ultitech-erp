@@ -1428,10 +1428,7 @@ function LeadPane({ tone, title, hint, rows, total, expanded, onToggle, onOpen }
                     className={canOpen ? 'wt-lead-row--link' : undefined}
                     onClick={canOpen ? () => onOpen(row) : undefined}
                   >
-                    <td>
-                      <strong>{row.title}</strong>
-                      <span className="wt-lead-sub">{days === 1 ? '1 day' : `${days} days`}</span>
-                    </td>
+                    <td>{row.title}</td>
                     <td className={late ? 'wt-lead-days wt-lead-days--miss' : 'wt-lead-days wt-lead-days--met'}>
                       {days === 1 ? '1 day' : `${days} days`}
                     </td>

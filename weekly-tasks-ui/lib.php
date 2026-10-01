@@ -3508,6 +3508,13 @@ function weeklyTasksUiProcurementItems(?array $procurement): array
             'group' => 'Procurement',
             'expected' => '95% on time · weight 15%',
             'actual' => $received > 0 ? ($supplierPct . '% · ' . $onTime . ' of ' . $received . ' on time') : 'No purchases received',
+            'about' => $received > 0
+                ? ($onTime . ' of ' . $received . ' received orders were on time. That is ' . $supplierPct . '%. The target is 95%, so this one is ' . ($supplierPct >= 95 ? 'Met' : 'Missed') . '. It counts as 15% of the procurement score.'
+                    . "\n\nTo earn the points, at least 95 of every 100 received orders must arrive on time."
+                    . "\n\nAn order counts when you mark it Received in the months selected. The date used is the day you last update it while its status is Received. There is no separate receipt date."
+                    . "\n\nIt is on time when you set an expected delivery date and the goods arrive on or before that date. If you set no expected date, the goods must arrive within 3 days of the day you created the purchase order. Count whole days. If the received date is earlier than the order date, it counts as 0."
+                    . "\n\nMark the order Received on the day the goods arrive. Agree a delivery date with the supplier and meet it. If there is no date, receive within 3 days, and follow up before an order passes 3 days.")
+                : "To earn this 15%, at least 95 of every 100 received orders must arrive on time.\n\nAn order counts when you mark it Received. The date used is the day you last update it while its status is Received.\n\nIt is on time when you set an expected delivery date and receive on or before that date, or when you set no date and receive within 3 days of creating the order.\n\nMark Received on the day the goods arrive. Agree a delivery date and meet it. Follow up before an order passes 3 days.",
             'configured' => true,
             'met' => $received === 0 || $supplierPct >= 95,
             'note' => $received > 0 ? 'Supplier performance: ' . $supplierPct . ' of 95%' : 'Supplier performance: no purchases received',

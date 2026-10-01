@@ -1370,7 +1370,57 @@ function LeadTimeTables({ rows, onOpen }) {
   )
 }
 
-function LeadPane({ tone, title, hint, rows, total, expanded, onToggle, onOpen }) {
+function supplierLate(row) {
+  if (row && (row.onTime === 0 || row.onTime === 1 || row.onTime === '0' || row.onTime === '1')) {
+    return Number(row.onTime) !== 1
+  }
+  const status = String(row?.status || '')
+  if (/^on time/i.test(status)) return false
+  if (/^late/i.test(status)) return true
+  return leadDays(row) > 3
+}
+
+function SupplierTables({ rows, onOpen }) {
+  const [showMissed, setShowMissed] = useState(false)
+  const [showMet, setShowMet] = useState(false)
+  const sorted = [...rows].sort((a, b) => leadDays(b) - leadDays(a))
+  const missed = sorted.filter((row) => supplierLate(row))
+  const met = sorted.filter((row) => !supplierLate(row))
+  return (
+    <div className="wt-lead">
+      <LeadPane
+        tone="miss"
+        title="Late orders / Exceptions"
+        hint="Orders that missed the on-time target."
+        rows={showMissed ? missed : missed.slice(0, 3)}
+        total={missed.length}
+        expanded={showMissed}
+        onToggle={() => setShowMissed((value) => !value)}
+        onOpen={onOpen}
+        emptyMiss="No orders were late."
+        emptyMet="No orders were on time."
+        statusMet="On time"
+        lateFor={supplierLate}
+      />
+      <LeadPane
+        tone="met"
+        title="Other supplier records"
+        hint="The remaining orders, received on time."
+        rows={showMet ? met : met.slice(0, 4)}
+        total={met.length}
+        expanded={showMet}
+        onToggle={() => setShowMet((value) => !value)}
+        onOpen={onOpen}
+        emptyMiss="No orders were late."
+        emptyMet="No orders were on time."
+        statusMet="On time"
+        lateFor={supplierLate}
+      />
+    </div>
+  )
+}
+
+function LeadPane({ tone, title, hint, rows, total, expanded, onToggle, onOpen, statusMiss = 'Missed target', statusMet = 'Within target', emptyMiss = 'No orders missed the 3-day target.', emptyMet = 'No orders were received within 3 days.', lateFor = (row) => leadDays(row) > 3 }) {
   const missed = tone === 'miss'
   return (
     <section className="wt-lead-card" aria-label={title}>
@@ -1405,7 +1455,7 @@ function LeadPane({ tone, title, hint, rows, total, expanded, onToggle, onOpen }
         ) : null}
       </header>
       {total === 0 ? (
-        <p className="wt-lead-empty">{missed ? 'No orders missed the 3-day target.' : 'No orders were received within 3 days.'}</p>
+        <p className="wt-lead-empty">{missed ? emptyMiss : emptyMet}</p>
       ) : (
         <div className="wt-lead-scroll">
           <table className="wt-lead-table">
@@ -1420,7 +1470,7 @@ function LeadPane({ tone, title, hint, rows, total, expanded, onToggle, onOpen }
             <tbody>
               {rows.map((row, index) => {
                 const days = leadDays(row)
-                const late = days > 3
+                const late = lateFor(row)
                 const canOpen = typeof onOpen === 'function' && Boolean(row.documentUrl)
                 return (
                   <tr
@@ -1447,7 +1497,7 @@ function LeadPane({ tone, title, hint, rows, total, expanded, onToggle, onOpen }
                             <path d="m8 12 2.5 2.5L16 9" />
                           </svg>
                         )}
-                        {late ? 'Missed target' : 'Within target'}
+                        {late ? statusMiss : statusMet}
                       </span>
                     </td>
                   </tr>
@@ -1572,7 +1622,9 @@ function MeasurePage({ month, measure }) {
         )
       ) : measure.key === 'lead-time' ? (
         <LeadTimeTables rows={rows} onOpen={openDocument} />
-      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy', 'invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables', 'supplier-performance', 'cost-saving', 'stock-availability', 'purchase-order-accuracy'].includes(measure.key) ? (
+      ) : measure.key === 'supplier-performance' ? (
+        <SupplierTables rows={rows} onOpen={openDocument} />
+      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy', 'invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables', 'cost-saving', 'stock-availability', 'purchase-order-accuracy'].includes(measure.key) ? (
         <RecordCards
           rows={rows}
           onOpen={openDocument}

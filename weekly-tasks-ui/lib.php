@@ -3132,6 +3132,43 @@ function weeklyTasksUiLeadInsight(array $rows): string
     return $sentence;
 }
 
+function weeklyTasksUiSupplierInsight(array $rows): string
+{
+    if (!$rows) {
+        return 'No purchase orders were received in the selected months.';
+    }
+    $late = [];
+    $onTime = 0;
+    foreach ($rows as $row) {
+        $days = (int) ($row['days'] ?? 0);
+        $ok = array_key_exists('onTime', $row) ? (int) $row['onTime'] === 1 : $days <= 3;
+        if ($ok) {
+            $onTime++;
+            continue;
+        }
+        $late[] = [
+            'title' => trim((string) ($row['title'] ?? 'Order')) ?: 'Order',
+            'days' => $days,
+        ];
+    }
+    $count = count($rows);
+    $pct = (int) round(($onTime / $count) * 100);
+    $sentence = $onTime . ' of ' . $count . ' orders were on time, which is ' . $pct . '%. ';
+    $sentence .= $pct >= 95 ? 'That meets the 95% target.' : 'That is below the 95% target.';
+    if ($late) {
+        usort($late, static function (array $a, array $b): int {
+            return $b['days'] <=> $a['days'];
+        });
+        $slow = [];
+        foreach (array_slice($late, 0, 3) as $order) {
+            $slow[] = $order['title'] . ' (' . weeklyTasksUiDayLabel((float) $order['days']) . ')';
+        }
+        $sentence .= ' The late orders include ' . weeklyTasksUiJoinList($slow) . '.';
+    }
+
+    return $sentence;
+}
+
 function weeklyTasksUiDateInRanges(string $day, array $ranges): bool
 {
     if ($day === '') {
@@ -3302,6 +3339,8 @@ function weeklyTasksUiProcurementSnapshot(PDO $pdo, array $offsets): array
                         'title' => $title,
                         'date' => $receivedOn,
                         'when' => $when,
+                        'days' => $days,
+                        'onTime' => $ontime ? 1 : 0,
                         'status' => $ontime ? 'On time' : ('Late · ' . weeklyTasksUiDayLabel((float) $days)),
                         'kicker' => 'Supplier',
                         'mark' => 'supplier',
@@ -4453,7 +4492,9 @@ function weeklyTasksUiBuildPayload(): array
                     : (!empty($match['configured']) ? ((string) $match['expected'] . ' · ' . (string) $match['actual']) : 'Target not set'),
                 'configured' => (bool) ($match['configured'] ?? false),
                 'rows' => $measureKey === 'customer-visits' ? [] : (!empty($match['configured']) ? $rows : []),
-                'insight' => $measureKey === 'lead-time' ? weeklyTasksUiLeadInsight($rows) : '',
+                'insight' => $measureKey === 'lead-time'
+                    ? weeklyTasksUiLeadInsight($rows)
+                    : ($measureKey === 'supplier-performance' ? weeklyTasksUiSupplierInsight($rows) : ''),
                 'items' => $breakdown,
                 'board' => $attendanceBoard ?: $uptimeBoard,
                 'empty' => $measureKey === 'customer-visits' ? 'Coming soon' : $empty,

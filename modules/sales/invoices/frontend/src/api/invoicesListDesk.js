@@ -32,6 +32,26 @@ export async function fetchInvoicesInit() {
   return data;
 }
 
+export async function fetchCorrections(correctionsUrl) {
+  const res = await fetch(correctionsUrl, { credentials: 'same-origin' });
+  const data = await parseJson(res);
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.message || data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+export async function postCorrection(correctionsUrl, fields) {
+  const fd = new FormData();
+  Object.entries(fields).forEach(([key, value]) => fd.append(key, value));
+  const res = await fetch(correctionsUrl, { method: 'POST', body: fd, credentials: 'same-origin' });
+  const data = await parseJson(res);
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.message || data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 export async function deleteInvoices(ids, deleteUrl) {
   const fd = new FormData();
   ids.forEach((id) => fd.append('ids[]', id));

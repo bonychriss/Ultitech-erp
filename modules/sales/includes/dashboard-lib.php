@@ -753,6 +753,7 @@ function dashboardInitData(): array
         ),
         'urls' => [
             'new_quote' => sales_module_url('orders/create.php', ['module' => $module]),
+            'wrong_invoices' => sales_module_url('invoices/corrections.php', ['module' => $module]),
             'catalogue' => function_exists('sales_catalogue_url') ? sales_catalogue_url('quote') : '',
             'product_view' => dashboardDeskStockProductViewUrl(),
         ],

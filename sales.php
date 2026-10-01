@@ -53,6 +53,7 @@ $GLOBALS['ERP_CONTEXT']['module'] = 'sales';
 /** @var array<string,string> $salesDeskEntries */
 $salesDeskEntries = [
     'invoices' => __DIR__ . '/modules/sales/invoices/index.php',
+    'wrong-invoices' => __DIR__ . '/modules/sales/invoices/corrections.php',
     'orders' => __DIR__ . '/modules/sales/orders/index.php',
     'customers' => __DIR__ . '/modules/sales/customers/index.php',
     'my-sales' => __DIR__ . '/modules/sales/my-sales/index.php',
@@ -181,6 +182,7 @@ if (!is_file($laravelEnv) && is_file($laravelEnvExample)) {
 // List + create/view/edit desks: Blade via erp-laravel (print/payment/admin stay legacy).
 $laravelListDesks = [
     'invoices',
+    'wrong-invoices',
     'orders',
     'quotations',
     'quote-requests',

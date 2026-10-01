@@ -16,6 +16,39 @@
   margin-bottom: 1rem;
 }
 
+.sd-wrong-invoice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.sd-wrong-invoice-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.sd-wrong-invoice strong {
+  display: block;
+  color: #111827;
+}
+
+.sd-wrong-invoice small {
+  display: block;
+  margin-top: 2px;
+  color: #64748b;
+}
+
 .page-sales-dashboard-desk #root {
   min-width: 0;
 }

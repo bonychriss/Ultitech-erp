@@ -13,6 +13,7 @@ final class DeskShell
     {
         return [
             'invoices',
+            'wrong-invoices',
             'orders',
             'quotations',
             'quote-requests',
@@ -60,6 +61,7 @@ final class DeskShell
 
         return match ($desk) {
             'invoices' => $this->invoices(),
+            'wrong-invoices' => $this->wrongInvoices(),
             'orders' => $this->orders(),
             'quotations' => $this->quotations(),
             'quote-requests' => $this->quoteRequests(),
@@ -202,6 +204,37 @@ final class DeskShell
 
         return $this->pack(
             'Invoices',
+            $this->listBody('page-invoices-desk invoices-dashboard-page'),
+            $assets,
+            $script,
+            ['sweetAlert' => true]
+        );
+    }
+
+    private function wrongInvoices(): ?array
+    {
+        $lib = $this->root() . '/modules/sales/invoices/includes/invoices-lib.php';
+        if (!is_file($lib)) {
+            return null;
+        }
+        require_once $lib;
+        if (function_exists('invoicesDeskBootstrap')) {
+            invoicesDeskBootstrap();
+        }
+        if (!function_exists('invoicesDeskModuleAssetUrls')) {
+            return null;
+        }
+        $assets = invoicesDeskModuleAssetUrls();
+        if ($assets === null) {
+            return null;
+        }
+
+        $script = 'window.__INVOICES_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__INVOICES_PAGE__ = ' . json_encode('corrections', JSON_UNESCAPED_SLASHES) . ';'
+            . 'window.__SALES_DESK_ENGINE__ = ' . json_encode('erp-laravel Domains/Sales', JSON_UNESCAPED_SLASHES) . ';';
+
+        return $this->pack(
+            'Wrong invoices',
             $this->listBody('page-invoices-desk invoices-dashboard-page'),
             $assets,
             $script,

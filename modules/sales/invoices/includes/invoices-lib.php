@@ -235,6 +235,46 @@ function salesInvoicesListRenderReactShell(): void
     invoicesDeskEmitHtmlAndExit($html);
 }
 
+/**
+ * Render the wrong-invoices React shell, separate from the invoice list.
+ */
+function salesInvoicesCorrectionsRenderReactShell(): void
+{
+    $assets = invoicesDeskModuleAssetUrls();
+    if ($assets === null) {
+        http_response_code(503);
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<!DOCTYPE html><html><head><title>Wrong invoices</title></head><body style="font-family:sans-serif;padding:2rem;">';
+        echo '<h1>Wrong invoices</h1>';
+        echo '<p>The React UI has not been built yet. Run <code>npm install</code> and <code>npm run build</code> inside <code>modules/sales/invoices/frontend/</code>.</p>';
+        echo '</body></html>';
+        exit;
+    }
+
+    $page_title = 'Wrong invoices';
+    $employeeHeaderTitle = 'Wrong invoices';
+    $hideHeaderCompanyBranding = true;
+    $employeeHeaderExtraClass = 'employee-header--exp-desk';
+    $bodyExtraClass = 'page-exp-desk exp-dashboard-page page-invoices-desk invoices-dashboard-page';
+    $invoicesPage = 'corrections';
+    $invoicesHeadMarkup = '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') . '">'
+        . "\n" . '<script>window.__INVOICES_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
+        . 'window.__INVOICES_PAGE__ = ' . json_encode('corrections', JSON_UNESCAPED_SLASHES) . ';</script>';
+
+    ob_start();
+    try {
+        require dirname(__FILE__) . '/invoices-react-shell.php';
+        $html = (string) ob_get_clean();
+    } catch (Throwable $e) {
+        if (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        throw $e;
+    }
+
+    invoicesDeskEmitHtmlAndExit($html);
+}
+
 function invoicesDeskPublicUrl(string $relativePath): string
 {
     $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
@@ -717,8 +757,25 @@ function sales_invoices_list_init_data(): array
     $isUltimate = function_exists('isUltimate') && isUltimate();
     $supportsOrderTypeSplit = function_exists('salesSupportsTruckInvoices') && salesSupportsTruckInvoices();
 
+    $apiInvoices = invoices_desk_invoices_for_api($invoices);
+    $correctionMap = [];
+    $correctionPending = 0;
+    $correctionsFile = dirname(__DIR__, 2) . '/includes/invoice-corrections-lib.php';
+    if (is_file($correctionsFile)) {
+        require_once $correctionsFile;
+        if ($salesDb instanceof PDO && function_exists('salesInvoiceCorrectionsStatusMap')) {
+            $correctionMap = salesInvoiceCorrectionsStatusMap($salesDb);
+            $correctionPending = salesInvoiceCorrectionsPendingCount($salesDb);
+        }
+    }
+    foreach ($apiInvoices as &$apiInvoice) {
+        $apiInvoice['correction_status'] = (string) ($correctionMap[(int) ($apiInvoice['id'] ?? 0)] ?? '');
+    }
+    unset($apiInvoice);
+
     return [
-        'invoices' => invoices_desk_invoices_for_api($invoices),
+        'invoices' => $apiInvoices,
+        'wrong_invoice_pending' => $correctionPending,
         'current_user_id' => (int) ($_SESSION['user_id'] ?? 0),
         'is_admin' => function_exists('isAdmin') && isAdmin(),
         'can_register_payment' => (function_exists('isFinance') && isFinance())
@@ -740,6 +797,8 @@ function sales_invoices_list_init_data(): array
             'view' => sales_module_url('invoices/view.php', ['module' => $module]),
             'print' => sales_module_url('invoices/print.php', ['module' => $module]),
             'delete' => sales_module_url('invoices/delete.php', ['module' => $module]),
+            'corrections' => sales_module_url('invoices/api/corrections.php', ['module' => $module]),
+            'wrong_invoices' => sales_module_url('invoices/corrections.php', ['module' => $module]),
             'settings' => sales_module_url('settings/index.php', ['module' => $module]),
             'list' => sales_module_url('invoices/index.php', ['module' => $module]),
         ],

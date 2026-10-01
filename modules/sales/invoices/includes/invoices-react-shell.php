@@ -8,8 +8,9 @@
 $invoicesPage = $invoicesPage ?? 'create';
 $bodyExtraClass = $bodyExtraClass ?? 'page-inv-desk inv-dashboard-page';
 $employeeHeaderExtraClass = $employeeHeaderExtraClass ?? 'employee-header--inv-desk';
-$mainRootClass = ($invoicesPage === 'list') ? 'exp-desk-react-root' : 'inv-desk-react-root';
-$bodyPageClass = ($invoicesPage === 'list') ? 'page-exp-desk exp-dashboard-page page-invoices-desk invoices-dashboard-page' : 'page-inv-desk inv-dashboard-page';
+$invoicesListLayout = in_array($invoicesPage, ['list', 'corrections'], true);
+$mainRootClass = $invoicesListLayout ? 'exp-desk-react-root' : 'inv-desk-react-root';
+$bodyPageClass = $invoicesListLayout ? 'page-exp-desk exp-dashboard-page page-invoices-desk invoices-dashboard-page' : 'page-inv-desk inv-dashboard-page';
 $GLOBALS['_erp_header_style_linked'] = true;?>
 <!DOCTYPE html>
 <html lang="en">

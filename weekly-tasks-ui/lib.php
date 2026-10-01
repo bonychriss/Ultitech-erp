@@ -2715,6 +2715,7 @@ function weeklyTasksUiFinanceSnapshot(PDO $pdo, array $offsets): array
         } elseif ($row['order_total'] !== null && abs((float) $row['total_amount'] - (float) $row['order_total']) > 1) {
             $reason = 'Does not match the order';
         }
+        $cancelled = in_array($status, ['cancelled', 'canceled', 'void', 'voided'], true);
         $invoices++;
         if ($reason !== '') {
             $invoiceErrors++;
@@ -2722,8 +2723,10 @@ function weeklyTasksUiFinanceSnapshot(PDO $pdo, array $offsets): array
         $total = (float) ($row['total_amount'] ?? 0);
         $paidAmount = (float) ($row['amount_paid'] ?? 0);
         $balance = (float) ($row['balance_due'] ?? 0);
-        $invoiced += $total;
-        $collected += $paidAmount;
+        if (!$cancelled) {
+            $invoiced += $total;
+            $collected += $paidAmount;
+        }
         $customer = trim((string) ($row['company_name'] ?? ''));
         $number = trim((string) ($row['invoice_number'] ?? ''));
         $title = $number !== '' ? $number : 'Invoice';
@@ -2741,6 +2744,9 @@ function weeklyTasksUiFinanceSnapshot(PDO $pdo, array $offsets): array
             'mark' => 'invoice',
             'documentUrl' => weeklyTasksUiInvoiceUrl($id),
         ];
+        if ($cancelled) {
+            continue;
+        }
         if ($balance <= 0.009) {
             $collectStatus = 'Collected · ' . $amount;
         } elseif ($paidAmount > 0.009) {

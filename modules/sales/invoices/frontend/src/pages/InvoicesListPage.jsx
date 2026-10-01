@@ -17,7 +17,7 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { deleteInvoices, fetchInvoicesInit, resolveInvoiceRevenueEntry } from '../api/invoicesListDesk';
+import { deleteInvoices, fetchInvoicesInit, postCorrection, resolveInvoiceRevenueEntry } from '../api/invoicesListDesk';
 import InvoiceKpiTraceModal from '../components/InvoiceKpiTraceModal';
 import InvoiceRegisterPaymentModal from '../components/InvoiceRegisterPaymentModal.jsx';
 import { resolveInvoiceKpiTrace } from '../utils/invoiceKpiTrace';
@@ -234,6 +234,7 @@ export default function InvoicesListPage() {
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
   const [payEntryId, setPayEntryId] = useState(null);
   const [payBusyId, setPayBusyId] = useState(null);
+  const [notice, setNotice] = useState('');
 
   const filterDropdownRef = useRef(null);
   const filterBtnRef = useRef(null);
@@ -467,6 +468,51 @@ export default function InvoicesListPage() {
         window.Swal.fire({ icon: 'error', title: 'Delete failed', text: err.message || 'Network error' });
       } else {
         window.alert(err.message || 'Delete failed');
+      }
+    }
+  }
+
+  async function handleReportInvoice(inv, e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setOpenMenuId(null);
+    const correctionsUrl = urls.corrections;
+    if (!correctionsUrl) return;
+    const status = String(inv.status || '').toLowerCase();
+    if (['cancelled', 'canceled'].includes(status) || inv.correction_status === 'pending') return;
+
+    let reason = '';
+    if (typeof window.Swal !== 'undefined') {
+      const result = await window.Swal.fire({
+        title: 'Report wrong invoice',
+        text: `${inv.invoice_number || 'This invoice'} stays on record until an admin reverses it.`,
+        input: 'textarea',
+        inputPlaceholder: 'What is wrong with this invoice?',
+        inputAttributes: { maxlength: 500 },
+        showCancelButton: true,
+        confirmButtonText: 'Report',
+        confirmButtonColor: '#b45309',
+        cancelButtonColor: '#94a3b8',
+        inputValidator: (value) => (!value || !String(value).trim() ? 'Say what is wrong.' : undefined),
+      });
+      if (!result.isConfirmed) return;
+      reason = String(result.value || '');
+    } else {
+      reason = window.prompt('What is wrong with this invoice?') || '';
+      if (!reason.trim()) return;
+    }
+
+    try {
+      const data = await postCorrection(correctionsUrl, { action: 'report', invoice_id: inv.id, reason });
+      setInvoices((rows) => rows.map((row) => (row.id === inv.id ? { ...row, correction_status: 'pending' } : row)));
+      setNotice(data.message || 'Reported. An admin will approve the reversal.');
+    } catch (err) {
+      if (typeof window.Swal !== 'undefined') {
+        window.Swal.fire({ icon: 'error', title: 'Could not report', text: err.message || 'Network error' });
+      } else {
+        window.alert(err.message || 'Could not report');
       }
     }
   }
@@ -777,6 +823,12 @@ export default function InvoicesListPage() {
   return (
     <div className="exp-desk-page">
       {init.flash && <div className="exp-desk-flash exp-desk-flash-success" role="status">{init.flash}</div>}
+      {notice ? (
+        <div className="exp-desk-flash-ok" role="status">
+          <span>{notice}</span>
+          <button type="button" className="exp-desk-flash-dismiss" aria-label="Dismiss" onClick={() => setNotice('')}>×</button>
+        </div>
+      ) : null}
       {renderFiltersPanel()}
 
       <div className="exp-desk-page-header">
@@ -1018,6 +1070,14 @@ export default function InvoicesListPage() {
                                 <i className={`fas ${payBusyId === inv.id ? 'fa-spinner fa-spin' : 'fa-money-bill-wave'}`} style={{ width: 20, color: '#94a3b8' }} />
                                 {payBusyId === inv.id ? 'Opening...' : 'Pay'}
                               </button>
+                            ) : null}
+                            {!['cancelled', 'canceled'].includes(String(inv.status || '').toLowerCase()) && inv.correction_status !== 'pending' ? (
+                              <button type="button" onClick={(e) => handleReportInvoice(inv, e)}>
+                                <i className="fas fa-flag" style={{ width: 20, color: '#94a3b8' }} /> Report wrong invoice
+                              </button>
+                            ) : null}
+                            {inv.correction_status === 'pending' ? (
+                              <span className="inv-report-waiting">Waiting for admin</span>
                             ) : null}
                             {isAdmin && (
                               <button type="button" className="qt-actions-delete" onClick={(e) => handleDeleteInvoice(inv, e)}>

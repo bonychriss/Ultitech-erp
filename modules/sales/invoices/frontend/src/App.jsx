@@ -4,6 +4,8 @@ import InvoicesListPage from './pages/InvoicesListPage.jsx';
 
 import InvoiceViewPage from './pages/InvoiceViewPage.jsx';
 
+import WrongInvoicesPage from './pages/WrongInvoicesPage.jsx';
+
 
 
 export default function App() {
@@ -13,6 +15,12 @@ export default function App() {
   if (page === 'list') {
 
     return <InvoicesListPage />;
+
+  }
+
+  if (page === 'corrections') {
+
+    return <WrongInvoicesPage />;
 
   }
 

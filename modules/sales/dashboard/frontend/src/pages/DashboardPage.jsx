@@ -317,6 +317,17 @@ export default function DashboardPage() {
   return (
     <>
       <FlashAlerts flash={data.flash} />
+      {data.urls?.wrong_invoices ? (
+        <a className="dash-card sd-wrong-invoice" href={data.urls.wrong_invoices}>
+          <span className="sd-wrong-invoice-mark" aria-hidden="true">
+            <AlertTriangle size={16} />
+          </span>
+          <span>
+            <strong>Wrong invoice</strong>
+            <small>Report an invoice that should not have been issued. An admin approves it and reverses the recording.</small>
+          </span>
+        </a>
+      ) : null}
 
       <div className="kpi-overview">
         <KpiCard

@@ -2434,6 +2434,7 @@ function sales_module_url(string $relativePath, array $query = []): string
         'dashboard/' => 'sales',
         'dashboard' => 'sales',
         'invoices/index.php' => 'sales/invoices',
+        'invoices/corrections.php' => 'sales/wrong-invoices',
         'invoices/' => 'sales/invoices',
         'invoices' => 'sales/invoices',
         'invoices/create.php' => 'sales/invoice-create',

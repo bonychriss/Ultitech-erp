@@ -342,7 +342,7 @@ function salesInvoiceCorrectionsNotify(PDO $pdo, int $invoiceId, int $reporterId
 /**
  * Tell the salesperson the decision. Tell finance when money was already received.
  */
-function salesInvoiceCorrectionsNotifyDecision(PDO $pdo, int $invoiceId, int $reporterId, int $actorId, string $decision, string $note = '', string $stockNote = ''): void
+function salesInvoiceCorrectionsNotifyDecision(PDO $pdo, int $invoiceId, int $reporterId, int $actorId, string $decision, string $note = '', string $stockNote = '', string $detail = ''): void
 {
     $st = $pdo->prepare('SELECT invoice_number, amount_paid FROM invoices WHERE id = ? LIMIT 1');
     $st->execute([$invoiceId]);
@@ -358,7 +358,19 @@ function salesInvoiceCorrectionsNotifyDecision(PDO $pdo, int $invoiceId, int $re
     $approved = $decision === 'approve';
     $note = trim($note);
 
-    if ($reporterId > 0 && $reporterId !== $actorId) {
+    $detail = trim($detail);
+    if ($approved && $detail !== '') {
+        $hearers = [];
+        if ($reporterId > 0) {
+            $hearers[$reporterId] = true;
+        }
+        if ($actorId > 0) {
+            $hearers[$actorId] = true;
+        }
+        foreach (array_keys($hearers) as $hearerId) {
+            salesInvoiceCorrectionsPushNotice($pdo, (int) $hearerId, 'Wrong invoice reversed', $detail, 'success');
+        }
+    } elseif ($reporterId > 0 && $reporterId !== $actorId) {
         if ($approved) {
             $message = 'Your report on ' . $number . ' was approved. The invoice is cancelled.';
             if ($paid) {
@@ -377,8 +389,14 @@ function salesInvoiceCorrectionsNotifyDecision(PDO $pdo, int $invoiceId, int $re
         }
     }
 
-    if ($approved && $stockNote !== '') {
-        salesInvoiceCorrectionsNotifyStock($pdo, $actorId, $reporterId, 'Stock returned', $stockNote);
+    if ($approved && ($detail !== '' || $stockNote !== '')) {
+        salesInvoiceCorrectionsNotifyStock(
+            $pdo,
+            $actorId,
+            $reporterId,
+            'Wrong invoice reversed',
+            $detail !== '' ? $detail : $stockNote
+        );
     }
 
     if (!$paid) {
@@ -499,7 +517,8 @@ function salesInvoiceCorrectionsApprove(PDO $pdo, int $reportId, int $adminId): 
             $adminId,
             'approve',
             '',
-            (string) ($reversed['stock_note'] ?? '')
+            (string) ($reversed['stock_note'] ?? ''),
+            (string) ($reversed['message'] ?? '')
         );
     } catch (Throwable $e) {
     }

@@ -52,6 +52,14 @@ function reportEngineDomains(): array
             'department_default' => 'Store / Inventory',
             'color' => '#059669',
         ],
+        'operations' => [
+            'key' => 'operations',
+            'label' => 'Operations Report',
+            'icon' => 'bi-gear',
+            'description' => 'Operations department report for the selected period.',
+            'department_default' => 'Operations',
+            'color' => '#0e7490',
+        ],
     ];
 }
 
@@ -195,6 +203,15 @@ function reportEngineSectionCatalog(string $domain): array
             'vehicle_utilization' => 'Vehicle Utilization',
             'trend_analysis' => 'Trip Trend Analysis',
         ],
+        'operations' => [
+            'overall_summary' => 'Overall report',
+            'client_followups' => '1. Client follow-ups',
+            'documents_preparation' => '2. Documents preparation',
+            'social_media' => '3. Social media management',
+            'operations_achievements' => 'Achievements',
+            'operations_challenges' => 'Challenges',
+            'operations_conclusion' => 'Conclusion',
+        ],
         'store_warehouse' => [
             'inventory_overview' => 'Stock Overview',
             'stock_movement_analysis' => 'Stock Movement',
@@ -252,6 +269,10 @@ function reportEngineDefaultSections(string $domain): array
             'operational_challenges', 'key_findings', 'recommendations',
             'action_plan', 'conclusion',
         ],
+        'operations' => [
+            'cover', 'overall_summary', 'client_followups', 'documents_preparation', 'social_media',
+            'operations_achievements', 'operations_challenges', 'operations_conclusion',
+        ],
         'store_warehouse' => [
             'cover', 'executive_summary', 'kpi_overview', 'inventory_overview',
             'stock_movement_analysis', 'purchase_activity', 'stock_status_analysis',
@@ -306,7 +327,7 @@ function reportEngineBuildCoverHtml(string $domain, array $meta): string
     }
 
     // Procurement / Store / Fleet use the formal cover layout (design benchmark only).
-    if (in_array($domain, ['procurement', 'store_warehouse', 'fleet'], true)) {
+    if (in_array($domain, ['procurement', 'store_warehouse', 'fleet', 'operations'], true)) {
         $department = trim((string) ($meta['department'] ?? ''));
         if ($domain === 'fleet') {
             if ($department === '' || preg_match('/^(logistics|fleet|driver|drivers)$/i', $department)) {
@@ -315,6 +336,13 @@ function reportEngineBuildCoverHtml(string $domain, array $meta): string
                 $department = strtoupper($department);
             }
             $heroLine1 = 'DRIVER &amp; FLEET';
+        } elseif ($domain === 'operations') {
+            if ($department === '' || preg_match('/^operations?$/i', $department)) {
+                $department = 'OPERATIONS DEPARTMENT';
+            } else {
+                $department = strtoupper($department);
+            }
+            $heroLine1 = 'OVERALL';
         } elseif ($domain === 'procurement') {
             if ($department === '' || preg_match('/^(procurement|purchasing)$/i', $department)) {
                 $department = 'PROCUREMENT DEPARTMENT';

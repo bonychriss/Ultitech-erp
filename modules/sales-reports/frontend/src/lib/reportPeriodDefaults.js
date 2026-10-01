@@ -41,6 +41,51 @@ export function formatDateRangeLabel(startDate, endDate) {
   return `${fmt(startDt)} - ${fmt(endDt)}`
 }
 
+const QUARTER_PERIOD_LABELS = ['JANUARY-MARCH', 'APRIL-JUNE', 'JULY-SEPTEMBER', 'OCTOBER-DECEMBER']
+
+export const QUARTER_CHOICES = [
+  { quarter: 1, label: 'Q1', months: 'January - March' },
+  { quarter: 2, label: 'Q2', months: 'April - June' },
+  { quarter: 3, label: 'Q3', months: 'July - September' },
+  { quarter: 4, label: 'Q4', months: 'October - December' },
+]
+
+export function quarterYearOptions(now = new Date()) {
+  const year = now.getFullYear()
+  return [0, 1, 2, 3, 4, 5].map((offset) => year - offset)
+}
+
+export function quarterDateRange(year, quarter) {
+  const y = Number(year)
+  const q = Number(quarter)
+  if (!Number.isInteger(y) || y < 2000 || y > 2100 || q < 1 || q > 4) return null
+  const startMonth = (q - 1) * 3
+  const end = new Date(y, startMonth + 3, 0)
+  const pad = (n) => String(n).padStart(2, '0')
+  return {
+    start_date: `${y}-${pad(startMonth + 1)}-01`,
+    end_date: `${y}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`,
+    period_label: QUARTER_PERIOD_LABELS[q - 1],
+  }
+}
+
+export function buildQuarterDefaults(year, quarter, baseDefaults = {}, user = {}, reportLabel = 'Sales Report') {
+  const range = quarterDateRange(year, quarter)
+  if (!range) return null
+  const titleLabel = String(reportLabel || baseDefaults.report_label || 'Sales Report').trim() || 'Sales Report'
+  return {
+    ...baseDefaults,
+    report_name: `${range.period_label} ${titleLabel} ${year}`.replace(/\s+/g, ' ').trim(),
+    report_type: 'quarterly',
+    template_key: baseDefaults.template_key || 'department_quarterly',
+    start_date: range.start_date,
+    end_date: range.end_date,
+    period_label: range.period_label,
+    prepared_by: baseDefaults.prepared_by ?? '',
+    department: user.department || baseDefaults.department || 'Sales',
+  }
+}
+
 export function currentMonthRange() {
   const now = new Date()
   const y = now.getFullYear()

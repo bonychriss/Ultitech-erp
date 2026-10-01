@@ -1,19 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CFG } from '../config.js'
-import { buildMonthlyDefaults, currentMonthRange, formatDateRangeLabel } from '../lib/reportPeriodDefaults.js'
+import {
+  QUARTER_CHOICES,
+  buildMonthlyDefaults,
+  buildQuarterDefaults,
+  currentMonthRange,
+  formatDateRangeLabel,
+  quarterDateRange,
+  quarterYearOptions,
+} from '../lib/reportPeriodDefaults.js'
 
 function periodDescriptions(domainKey, domainLabel) {
   const short = (domainLabel || 'Report').replace(/\s+Report$/i, '') || 'Report'
   if (domainKey === 'sales') {
     return {
       monthly: 'Pick your own start and end dates for the monthly report.',
-      quarterly: 'Department sales report for the current quarter (matches the PDF template).',
+      quarterly: 'Choose which quarter this department sales report should cover.',
       annual: 'Full-year sales summary for the current calendar year.',
     }
   }
   return {
     monthly: `Pick your own start and end dates for the monthly ${short.toLowerCase()} report.`,
-    quarterly: `${short} report for the current quarter.`,
+    quarterly: `Choose which quarter this ${short.toLowerCase()} report should cover.`,
     annual: `Full-year ${short.toLowerCase()} summary for the current calendar year.`,
   }
 }
@@ -53,6 +61,8 @@ export default function CreateReportTypeModal({ open, onClose, onSelect, initial
   const [step, setStep] = useState('')
   const [selectedDomain, setSelectedDomain] = useState(null)
   const [monthlyOption, setMonthlyOption] = useState(null)
+  const [quarterOption, setQuarterOption] = useState(null)
+  const [quarterYear, setQuarterYear] = useState(() => new Date().getFullYear())
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [rangeError, setRangeError] = useState('')
@@ -84,6 +94,8 @@ export default function CreateReportTypeModal({ open, onClose, onSelect, initial
       setStep('')
       setSelectedDomain(null)
       setMonthlyOption(null)
+      setQuarterOption(null)
+      setQuarterYear(new Date().getFullYear())
       setRangeError('')
       setSkipDomainPicker(false)
       const { start_date, end_date } = currentMonthRange()
@@ -158,6 +170,12 @@ export default function CreateReportTypeModal({ open, onClose, onSelect, initial
       setRangeError('')
       return
     }
+    if (option.key === 'quarterly') {
+      setQuarterOption(option)
+      setQuarterYear(new Date().getFullYear())
+      setStep('quarter-pick')
+      return
+    }
     if (!selectedDomain) return
     const defaults = buildDomainPeriodDefaults(option, selectedDomain, user)
     onSelect({
@@ -167,6 +185,36 @@ export default function CreateReportTypeModal({ open, onClose, onSelect, initial
       label: selectedDomain.label,
       defaults,
       date_range: option.date_range || formatDateRangeLabel(defaults.start_date, defaults.end_date),
+    })
+  }
+
+  function handleQuarterSelect(quarter) {
+    if (!selectedDomain || !quarterOption) return
+    const built = buildQuarterDefaults(
+      quarterYear,
+      quarter,
+      quarterOption.defaults || {},
+      user,
+      selectedDomain.label || 'Sales Report',
+    )
+    if (!built) return
+    const withDomain = {
+      ...built,
+      report_domain: selectedDomain.key,
+      template_key: selectedDomain.key === 'sales' ? 'department_quarterly' : 'standard',
+      report_type: 'quarterly',
+      prepared_by: selectedDomain.key === 'sales' ? (built.prepared_by ?? '') : (user.name || ''),
+      department: user.department || selectedDomain.department_default || built.department || '',
+      filters: {},
+    }
+    const range = quarterDateRange(quarterYear, quarter)
+    onSelect({
+      ...quarterOption,
+      report_domain: selectedDomain.key,
+      domain: selectedDomain.key,
+      label: selectedDomain.label,
+      defaults: withDomain,
+      date_range: range ? formatDateRangeLabel(range.start_date, range.end_date) : '',
     })
   }
 
@@ -277,6 +325,56 @@ export default function CreateReportTypeModal({ open, onClose, onSelect, initial
                   <span className="sr-create-type-desc">{option.description}</span>
                 </button>
               ))}
+            </div>
+          </>
+        )}
+
+        {step === 'quarter-pick' && selectedDomain && (
+          <>
+            <header className="sr-modal-header">
+              <div>
+                <button type="button" className="sr-create-type-back" onClick={() => setStep('period-type')}>
+                  <i className="bi bi-arrow-left" aria-hidden="true" /> Back
+                </button>
+                <h2 id="sr-create-type-title">Select quarter</h2>
+                <p className="sr-muted">Choose the quarter this report should cover.</p>
+              </div>
+              <button type="button" className="sr-modal-close" onClick={handleClose} aria-label="Close">
+                <i className="bi bi-x-lg" aria-hidden="true" />
+              </button>
+            </header>
+            <div className="sr-quarter-picker">
+              <label className="sr-field sr-quarter-year">
+                <span>Year</span>
+                <select
+                  className="sr-input"
+                  value={quarterYear}
+                  onChange={(e) => setQuarterYear(Number(e.target.value))}
+                >
+                  {quarterYearOptions().map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="sr-quarter-grid">
+                {QUARTER_CHOICES.map((choice) => {
+                  const range = quarterDateRange(quarterYear, choice.quarter)
+                  return (
+                    <button
+                      key={choice.quarter}
+                      type="button"
+                      className="sr-create-type-card"
+                      onClick={() => handleQuarterSelect(choice.quarter)}
+                    >
+                      <span className="sr-create-type-label">{choice.label}</span>
+                      <span className="sr-create-type-range">{choice.months}</span>
+                      {range && (
+                        <span className="sr-create-type-desc">{formatDateRangeLabel(range.start_date, range.end_date)}</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </>
         )}

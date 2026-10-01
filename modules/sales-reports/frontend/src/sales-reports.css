@@ -805,6 +805,27 @@ body.sidebar-collapsed .sr-modal-backdrop {
   cursor: pointer;
 }
 
+.sr-quarter-picker {
+  padding: 0 1.25rem 1.5rem;
+}
+
+.sr-quarter-year {
+  max-width: 220px;
+  margin: 0 auto 1rem;
+  text-align: left;
+}
+
+html body .sr-quarter-year select.sr-input {
+  width: 100%;
+  border-radius: 8px !important;
+}
+
+.sr-quarter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
 .sr-create-range-form {
   padding: 0 1.25rem 0;
 }

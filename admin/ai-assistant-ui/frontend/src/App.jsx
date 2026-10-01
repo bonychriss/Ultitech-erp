@@ -88,7 +88,6 @@ export default function App() {
   const [listening, setListening] = useState(false)
   const [busy, setBusy] = useState(false)
   const scroller = useRef(null)
-  const box = useRef(null)
 
   useEffect(() => {
     const node = scroller.current
@@ -97,19 +96,11 @@ export default function App() {
     sessionStorage.setItem(storageKey(), JSON.stringify(keep))
   }, [thread])
 
-  const resize = () => {
-    const node = box.current
-    if (!node) return
-    node.style.height = 'auto'
-    node.style.height = Math.min(node.scrollHeight, 180) + 'px'
-  }
-
   const ask = (text, voiced) => {
     const value = String(text || '').trim()
     if (!value || busy) return
     setBusy(true)
     setMessage('')
-    if (box.current) box.current.style.height = 'auto'
     setThread((prev) => [
       ...prev.filter((item) => !item.pending),
       { role: 'user', text: value },
@@ -237,23 +228,14 @@ export default function App() {
           <label className="visually-hidden" htmlFor="ai-message" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden' }}>
             Message
           </label>
-          <textarea
+          <input
             id="ai-message"
-            ref={box}
-            rows={1}
+            type="text"
             maxLength={500}
             placeholder="Message"
+            autoComplete="off"
             value={message}
-            onChange={(event) => {
-              setMessage(event.target.value)
-              resize()
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault()
-                ask(message, false)
-              }
-            }}
+            onChange={(event) => setMessage(event.target.value)}
           />
           <button type="button" className={`gpt-icon${listening ? ' is-listening' : ''}`} onClick={listen} aria-label={listening ? 'Listening' : 'Listen'}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

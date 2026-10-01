@@ -147,38 +147,35 @@
 .gpt-compose {
   display: flex;
   flex-direction: row;
-  align-items: flex-end;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
   width: min(760px, calc(100% - 32px));
   margin: 0 auto;
   flex: none;
-  height: auto;
+  height: 52px;
   border: 1px solid #e3e3e3;
-  border-radius: 28px !important;
-  padding: 8px 8px 8px 18px;
+  border-radius: 26px !important;
+  padding: 0 8px 0 18px;
   background: #fff;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }
 
-.gpt-compose textarea {
+.gpt-compose input {
   flex: 1 1 auto;
-  width: 1% !important;
-  height: 24px;
-  min-height: 24px !important;
-  max-height: 160px !important;
+  width: 100% !important;
+  height: 24px !important;
+  min-height: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  resize: none;
   outline: none;
   background: transparent !important;
   font: inherit;
   font-size: 16px !important;
   line-height: 24px !important;
-  padding: 6px 0 !important;
+  padding: 0 !important;
   margin: 0;
   color: inherit;
-  text-align: left;
 }
 
 .gpt-icon, .gpt-send {
@@ -192,7 +189,7 @@
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  margin: 0 0 2px;
+  margin: 0;
   line-height: 1;
 }
 
@@ -226,7 +223,7 @@ html[data-theme="dark"] .gpt-compose {
   border-color: #424242;
   color: #ececec;
 }
-html[data-theme="dark"] .gpt-compose textarea { color: #ececec; }
+html[data-theme="dark"] .gpt-compose input { color: #ececec; }
 html[data-theme="dark"] .gpt-send { background: #ececec; color: #212121; }
 html[data-theme="dark"] .gpt-send:disabled { background: #424242; color: #8d8d8d; }
 html[data-theme="dark"] .gpt-links a { color: #ececec; }

@@ -863,45 +863,8 @@ function aiAgentClearInvoiceDraft(): void
  * @param array<string,mixed> $draft
  * @return array<string,mixed>
  */
-function aiAgentTakeInvoiceDetails(string $message, array $draft): array
+function aiAgentInvoiceReply(string $text): array
 {
-    if (preg_match('/customer(?:\s+name)?\s+is\s+([a-z0-9][a-z0-9 .&\'-]{1,80}?)(?=\s+amount\b|\s+description\b|$)/i', $message, $match)) {
-        $draft['customer_name'] = trim($match[1]);
-    } elseif (preg_match('/\bfor\s+([a-z][a-z0-9 .&\'-]{1,60}?)\s+for\s+[0-9]/i', $message, $match)) {
-        $draft['customer_name'] = trim($match[1]);
-    }
-    if (preg_match('/amount\s+is\s+([0-9][0-9,]*(?:\.\d+)?)/i', $message, $match)
-        || preg_match('/(?:tsh|tzs)\s*([0-9][0-9,]*(?:\.\d+)?)/i', $message, $match)) {
-        $draft['amount'] = (float) str_replace(',', '', $match[1]);
-    } elseif (!empty($draft['customer_name']) && preg_match('/\bfor\s+([0-9][0-9,]*(?:\.\d+)?)\b/i', $message, $match)) {
-        $draft['amount'] = (float) str_replace(',', '', $match[1]);
-    }
-    if (preg_match('/leave it blank|no description|description blank|without (?:a )?description/i', $message)) {
-        $draft['description'] = '';
-        $draft['description_set'] = true;
-    } elseif (preg_match('/description(?:\s+is)?\s+(.+)$/i', $message, $match)) {
-        $draft['description'] = trim($match[1]);
-        $draft['description_set'] = true;
-    }
-    return $draft;
-}
-
-/**
- * @param array<string,mixed> $draft
- * @return array<string,mixed>
- */
-function aiAgentInvoicePrompt(array $draft): array
-{
-    $missing = [];
-    if (trim((string) ($draft['customer_name'] ?? '')) === '') {
-        $missing[] = 'the customer name';
-    }
-    if ((float) ($draft['amount'] ?? 0) <= 0) {
-        $missing[] = 'the amount';
-    }
-    $text = $missing === []
-        ? 'I can create that invoice.'
-        : 'I can create an invoice. I still need ' . implode(' and ', $missing) . '. The description can be left blank.';
     return [
         'text' => $text,
         'facts' => '',
@@ -910,6 +873,283 @@ function aiAgentInvoicePrompt(array $draft): array
         'actions' => [],
         'follow_up' => null,
     ];
+}
+
+function aiAgentTakeInvoiceDetails(string $message, array $draft): array
+{
+    $raw = trim($message);
+    $explicit = false;
+    if (preg_match('/\bnew customer\b/i', $raw)) {
+        $draft['new_customer'] = true;
+        $draft['customer_id'] = 0;
+        $explicit = true;
+    }
+    if (preg_match('/\bnew customer(?:\s+(?:named|called|is))?\s+([a-z][a-z0-9 .&\'-]{1,60}?)(?=\s+\+?[0-9]{6,}|\s+\S+@|\s+product\b|\s+phone\b|\s+email\b|$)/i', $raw, $match)) {
+        $draft['customer_name'] = trim($match[1]);
+        $draft['new_customer'] = true;
+        $explicit = true;
+    } elseif (preg_match('/customer(?:\s+name)?\s*(?:is|:)\s+(.+?)(?=\s+product\b|\s+phone\b|\s+email\b|$)/i', $raw, $match)) {
+        $draft['customer_name'] = trim($match[1]);
+        $explicit = true;
+    } elseif (preg_match('/\bfor\s+([a-z][a-z0-9 .&\'-]{1,60}?)\s+for\s+(.+?)(?=\s+(?:qty|quantity|amount)\b|$)/i', $raw, $match)) {
+        $left = trim($match[1]);
+        if (!preg_match('/^(me|us)$/i', $left)) {
+            $draft['customer_name'] = $left;
+            $draft['product_name'] = trim($match[2]);
+            $draft['product_id'] = 0;
+            $explicit = true;
+        }
+    }
+    if (preg_match('/\bproduct(?:\s+name)?\s*(?:is|:)\s+(.+?)(?=\s+(?:qty|quantity|amount|phone|email)\b|$)/i', $raw, $match)) {
+        $draft['product_name'] = trim($match[1]);
+        $draft['product_id'] = 0;
+        $explicit = true;
+    }
+    if (preg_match('/\b(?:qty|quantity)\s*(?:is|:)?\s*(\d+)/i', $raw, $match)) {
+        $draft['quantity'] = max(1, (int) $match[1]);
+        $explicit = true;
+    }
+    if (preg_match('/\b(?:phone|mobile)\s*(?:number\s*)?(?:is|:)?\s*(\+?[0-9][0-9 \-]{5,18})/i', $raw, $match)) {
+        $draft['phone'] = trim($match[1]);
+        $explicit = true;
+    }
+    if (preg_match('/\bemail\s*(?:is|:)?\s*(\S+@\S+)/i', $raw, $match)) {
+        $draft['email'] = trim($match[1], " \t.,");
+        $explicit = true;
+    }
+    if (preg_match('/amount\s+is\s+([0-9][0-9,]*(?:\.\d+)?)/i', $raw, $match)
+        || preg_match('/(?:tsh|tzs)\s*([0-9][0-9,]*(?:\.\d+)?)/i', $raw, $match)) {
+        $draft['amount'] = (float) str_replace(',', '', $match[1]);
+        $explicit = true;
+    }
+    if (!empty($draft['new_customer'])) {
+        if (trim((string) ($draft['phone'] ?? '')) === '' && preg_match('/(\+?[0-9][0-9\-]{6,18})/', $raw, $match)) {
+            $draft['phone'] = $match[1];
+            $explicit = true;
+        }
+        if (trim((string) ($draft['email'] ?? '')) === '' && preg_match('/([A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,})/i', $raw, $match)) {
+            $draft['email'] = $match[1];
+            $explicit = true;
+        }
+    }
+    if ($explicit || preg_match('/\b(?:create|make|raise|issue|generate|write|add)\b/i', $raw)) {
+        return $draft;
+    }
+
+    $short = strlen($raw) <= 80 && !str_contains($raw, '?');
+    if (!$short) {
+        return $draft;
+    }
+    $awaiting = (string) ($draft['awaiting'] ?? '');
+    if ($awaiting === 'customer' || ($awaiting === '' && trim((string) ($draft['customer_name'] ?? '')) === '')) {
+        $draft['customer_name'] = $raw;
+        $draft['customer_id'] = 0;
+        return $draft;
+    }
+    if ($awaiting === 'amount' && preg_match('/([0-9][0-9,]*(?:\.\d+)?)/', $raw, $match)) {
+        $draft['amount'] = (float) str_replace(',', '', $match[1]);
+        return $draft;
+    }
+    if ($awaiting === 'product' || ($awaiting === '' && trim((string) ($draft['product_name'] ?? '')) === '')) {
+        $draft['product_name'] = $raw;
+        $draft['product_id'] = 0;
+    }
+    return $draft;
+}
+
+/**
+ * @param array<string,mixed> $draft
+ * @return array<string,mixed>
+ */
+/**
+ * @return array{id:int,name:string,unit_price:float}|null
+ */
+function aiAgentProductPrice(PDO $db, int $id): ?array
+{
+    if ($id <= 0 || !function_exists('columnExists') || !columnExists('products', 'unit_price', $db)) {
+        return null;
+    }
+    $stmt = $db->prepare('SELECT id, name, unit_price FROM products WHERE id = ?');
+    $stmt->execute([$id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) {
+        return null;
+    }
+    return [
+        'id' => (int) $row['id'],
+        'name' => (string) $row['name'],
+        'unit_price' => (float) $row['unit_price'],
+    ];
+}
+
+/**
+ * @param array<string, mixed> $draft
+ * @return array{draft: array<string, mixed>, text: string, ready: bool}
+ */
+function aiAgentPrepareInvoiceDraft(array $ctx, array $draft): array
+{
+    $db = $ctx['db'];
+    $companyId = (int) $ctx['company_id'];
+    $shared = (bool) $ctx['shared'];
+    $name = trim((string) ($draft['customer_name'] ?? ''));
+    $isNew = !empty($draft['new_customer']);
+    if ($name === '') {
+        $draft['awaiting'] = 'customer';
+        return [
+            'draft' => $draft,
+            'ready' => false,
+            'text' => 'I can create an invoice from this company\'s records. Which customer is it for? Use a customer already saved here, or say new customer and the name.',
+        ];
+    }
+
+    if ($isNew) {
+        $phone = trim((string) ($draft['phone'] ?? ''));
+        $email = trim((string) ($draft['email'] ?? ''));
+        if ($phone === '' || $email === '') {
+            $draft['awaiting'] = 'contact';
+            return [
+                'draft' => $draft,
+                'ready' => false,
+                'text' => 'I will add ' . $name . ' as a new customer. I still need a phone number and an email.',
+            ];
+        }
+    } else {
+        $customerScope = aiAgentScopeSql($db, 'customers', 'customers', $companyId, $shared);
+        $rows = aiAgentFindNamedRows($db, 'customers', 'company_name', $name, $customerScope);
+        $picked = aiAgentPickNamedRow($rows, $name);
+        if ($picked === null) {
+            if ($rows === []) {
+                $draft['awaiting'] = 'customer';
+                return [
+                    'draft' => $draft,
+                    'ready' => false,
+                    'text' => 'I don\'t have a customer named ' . $name . ' in this company. Say new customer if I should add them.',
+                ];
+            }
+            $choices = implode(', ', array_map(static fn (array $row): string => (string) $row['name'], $rows));
+            $draft['awaiting'] = 'customer';
+            return [
+                'draft' => $draft,
+                'ready' => false,
+                'text' => 'More than one customer matches. Which one: ' . $choices . '?',
+            ];
+        }
+        $draft['customer_id'] = (int) $picked['id'];
+        $draft['customer_name'] = (string) $picked['name'];
+    }
+
+    $productName = trim((string) ($draft['product_name'] ?? ''));
+    if ($productName === '') {
+        $draft['awaiting'] = 'product';
+        return [
+            'draft' => $draft,
+            'ready' => false,
+            'text' => 'Which product from the catalogue should I put on the invoice?',
+        ];
+    }
+    $productScope = aiAgentScopeSql($db, 'products', 'products', $companyId, $shared);
+    $products = aiAgentFindNamedRows($db, 'products', 'name', $productName, $productScope);
+    $product = aiAgentPickNamedRow($products, $productName);
+    if ($product === null) {
+        if ($products === []) {
+            $draft['awaiting'] = 'product';
+            return [
+                'draft' => $draft,
+                'ready' => false,
+                'text' => 'I don\'t have a product named ' . $productName . ' in the catalogue. Which product should I use?',
+            ];
+        }
+        $choices = implode(', ', array_map(static fn (array $row): string => (string) $row['name'], $products));
+        $draft['awaiting'] = 'product';
+        return [
+            'draft' => $draft,
+            'ready' => false,
+            'text' => 'More than one product matches. Which one: ' . $choices . '?',
+        ];
+    }
+    $priced = aiAgentProductPrice($db, (int) $product['id']);
+    $unit = (float) ($priced['unit_price'] ?? 0);
+    if ($unit <= 0 && (float) ($draft['amount'] ?? 0) > 0) {
+        $unit = (float) $draft['amount'];
+    }
+    if ($unit <= 0) {
+        $draft['awaiting'] = 'amount';
+        $draft['product_id'] = (int) $product['id'];
+        $draft['product_name'] = (string) $product['name'];
+        return [
+            'draft' => $draft,
+            'ready' => false,
+            'text' => (string) $product['name'] . ' has no selling price in the catalogue. What amount should I use?',
+        ];
+    }
+    $qty = max(1, (int) ($draft['quantity'] ?? 1));
+    $draft['product_id'] = (int) $product['id'];
+    $draft['product_name'] = (string) ($priced['name'] ?? $product['name']);
+    $draft['quantity'] = $qty;
+    $draft['unit_price'] = $unit;
+    $draft['amount'] = $unit * $qty;
+    $draft['awaiting'] = '';
+    $money = aiAgentFormatMoney((float) $draft['amount'], (string) $ctx['currency']);
+    $who = $isNew ? ('new customer ' . $draft['customer_name']) : (string) $draft['customer_name'];
+    return [
+        'draft' => $draft,
+        'ready' => true,
+        'text' => 'I have prepared an invoice for ' . $who . ' for ' . $qty . ' x ' . $draft['product_name'] . ' (' . $money . '). Do you want me to create it?',
+    ];
+}
+
+/**
+ * @param array<string, mixed> $draft
+ * @return array{ok:bool,message:string,id?:int}
+ */
+function aiAgentAddCustomer(array $ctx, array $draft): array
+{
+    $file = dirname(__DIR__, 2) . '/sales/customers/includes/catalogue-lib.php';
+    if (!is_file($file)) {
+        return ['ok' => false, 'message' => 'I could not add that customer.'];
+    }
+    require_once $file;
+    if (!function_exists('customerAddCreateFromInput')) {
+        return ['ok' => false, 'message' => 'I could not add that customer.'];
+    }
+    $previousModule = $_SESSION['active_module'] ?? null;
+    $name = trim((string) ($draft['customer_name'] ?? ''));
+    $currency = strtoupper(trim((string) ($ctx['currency'] ?? 'TZS')));
+    if ($currency === '') {
+        $currency = 'TZS';
+    }
+    $result = customerAddCreateFromInput([
+        'company_name' => $name,
+        'contact_person' => $name,
+        'email' => trim((string) ($draft['email'] ?? '')),
+        'phone' => trim((string) ($draft['phone'] ?? '')),
+        'address' => 'Not provided',
+        'city' => 'Dar es Salaam',
+        'country' => 'Tanzania',
+        'source' => 'AI Agent',
+        'payment_terms' => 'Net 30',
+        'currency' => $currency,
+        'customer_type' => 'retail',
+    ]);
+    if ($previousModule === null) {
+        unset($_SESSION['active_module']);
+    } else {
+        $_SESSION['active_module'] = $previousModule;
+    }
+    if (!empty($result['error'])) {
+        return ['ok' => false, 'message' => (string) $result['error']];
+    }
+    $db = $ctx['db'];
+    $scope = aiAgentScopeSql($db, 'customers', 'customers', (int) $ctx['company_id'], (bool) $ctx['shared']);
+    $stmt = $db->prepare(
+        'SELECT id FROM customers WHERE LOWER(company_name) = LOWER(?)' . $scope[0] . ' ORDER BY id DESC LIMIT 1'
+    );
+    $stmt->execute(array_merge([$name], $scope[1]));
+    $id = (int) $stmt->fetchColumn();
+    if ($id <= 0) {
+        return ['ok' => false, 'message' => 'The customer was not saved in this company.'];
+    }
+    return ['ok' => true, 'message' => 'Customer added.', 'id' => $id];
 }
 
 /**
@@ -923,12 +1163,22 @@ function aiAgentHandleInvoiceCommand(string $message): ?array
     $confirm = (bool) preg_match('/^(yes|y|confirm|confirmed|go ahead|do it|proceed|ok|okay)$/', $q);
     $cancel = (bool) preg_match('/^(no|cancel|stop)$/', $q);
     if ($draft !== [] && $confirm) {
-        $customer = trim((string) ($draft['customer_name'] ?? ''));
-        $amount = (float) ($draft['amount'] ?? 0);
-        if ($customer === '' || $amount <= 0) {
-            return aiAgentInvoicePrompt($draft);
+        $ctx = aiAgentContext();
+        $prepared = aiAgentPrepareInvoiceDraft($ctx, $draft);
+        if (empty($prepared['ready'])) {
+            aiAgentStoreInvoiceDraft($prepared['draft']);
+            return aiAgentInvoiceReply((string) $prepared['text']);
         }
-        $created = aiAgentCreateCustomerInvoice(aiAgentContext(), $customer, $amount, (string) ($draft['description'] ?? ''));
+        $draft = $prepared['draft'];
+        if (!empty($draft['new_customer']) && (int) ($draft['customer_id'] ?? 0) <= 0) {
+            $added = aiAgentAddCustomer($ctx, $draft);
+            if (empty($added['ok'])) {
+                aiAgentStoreInvoiceDraft($draft);
+                return aiAgentInvoiceReply((string) ($added['message'] ?? 'I could not add that customer.'));
+            }
+            $draft['customer_id'] = (int) $added['id'];
+        }
+        $created = aiAgentCreateCustomerInvoice($ctx, $draft);
         aiAgentClearInvoiceDraft();
         return [
             'text' => (string) ($created['message'] ?? 'I could not create that invoice.'),
@@ -953,30 +1203,17 @@ function aiAgentHandleInvoiceCommand(string $message): ?array
         ];
     }
     $isCreate = (bool) preg_match('/\b(?:create|make|raise|issue|generate|write|add)\b.{0,80}\binvoices?\b/', $q);
-    $hasDetails = (bool) preg_match('/customer(?:\s+name)?\s+is\s+|amount\s+is\s+|description\b|leave it blank/i', $message);
-    if (!$isCreate && !($draft !== [] && $hasDetails)) {
+    $continues = $draft !== []
+        && strlen($q) <= 120
+        && !str_contains($q, '?')
+        && !preg_match('/^(what|which|how|show|open|who|why|hello|hi|hey|hellow)\b/', $q);
+    if (!$isCreate && !$continues) {
         return null;
     }
     $draft = aiAgentTakeInvoiceDetails($message, $draft);
-    $customer = trim((string) ($draft['customer_name'] ?? ''));
-    $amount = (float) ($draft['amount'] ?? 0);
-    if ($customer === '' || $amount <= 0) {
-        $draft['ready'] = false;
-        aiAgentStoreInvoiceDraft($draft);
-        return aiAgentInvoicePrompt($draft);
-    }
-    $draft['ready'] = true;
-    $draft['description'] = (string) ($draft['description'] ?? '');
-    aiAgentStoreInvoiceDraft($draft);
-    $ctx = aiAgentContext();
-    return [
-        'text' => 'I have prepared an invoice for ' . $customer . ' for ' . aiAgentFormatMoney($amount, (string) $ctx['currency']) . '. Do you want me to create it?',
-        'facts' => '',
-        'analysis' => '',
-        'invoices' => [],
-        'actions' => [],
-        'follow_up' => null,
-    ];
+    $prepared = aiAgentPrepareInvoiceDraft(aiAgentContext(), $draft);
+    aiAgentStoreInvoiceDraft($prepared['draft']);
+    return aiAgentInvoiceReply((string) $prepared['text']);
 }
 
 /**
@@ -1411,50 +1648,31 @@ function aiAgentPickNamedRow(array $rows, string $name): ?array
  * @param array<string,mixed> $ctx
  * @return array{ok:bool,message:string,invoices?:list<array<string,mixed>>}
  */
-function aiAgentCreateCustomerInvoice(array $ctx, string $customerName, float $amount, string $description): array
+function aiAgentCreateCustomerInvoice(array $ctx, array $draft): array
 {
-    $customerName = trim($customerName);
-    $description = trim($description);
-    if ($customerName === '' || $amount <= 0) {
-        return ['ok' => false, 'message' => 'I need the customer and the amount before I can create an invoice.'];
+    $customerId = (int) ($draft['customer_id'] ?? 0);
+    $customerName = trim((string) ($draft['customer_name'] ?? ''));
+    $productId = (int) ($draft['product_id'] ?? 0);
+    $productName = trim((string) ($draft['product_name'] ?? ''));
+    $qty = max(1, (int) ($draft['quantity'] ?? 1));
+    $unit = (float) ($draft['unit_price'] ?? 0);
+    $amount = $unit * $qty;
+    if ($customerId <= 0 || $customerName === '' || $productId <= 0 || $unit <= 0) {
+        return ['ok' => false, 'message' => 'I need a customer from this company and a product from the catalogue before I can create an invoice.'];
     }
     $db = $ctx['db'];
-    $customerScope = aiAgentScopeSql($db, 'customers', 'customers', (int) $ctx['company_id'], (bool) $ctx['shared']);
-    $customers = aiAgentFindNamedRows($db, 'customers', 'company_name', $customerName, $customerScope);
-    $customer = aiAgentPickNamedRow($customers, $customerName);
-    if ($customer === null) {
-        if ($customers === []) {
-            return ['ok' => false, 'message' => 'No customer in this company matches that name.'];
-        }
-        $names = implode(', ', array_map(static fn (array $row): string => $row['name'], $customers));
-        return ['ok' => false, 'message' => 'More than one customer matches. Which one should I use: ' . $names . '?'];
-    }
-    $items = [];
-    $productName = '';
-    if ($description !== '') {
-        $productScope = aiAgentScopeSql($db, 'products', 'products', (int) $ctx['company_id'], (bool) $ctx['shared']);
-        $products = aiAgentFindNamedRows($db, 'products', 'name', $description, $productScope);
-        $product = aiAgentPickNamedRow($products, $description);
-        if ($product === null && count($products) > 1) {
-            $names = implode(', ', array_map(static fn (array $row): string => $row['name'], $products));
-            return ['ok' => false, 'message' => 'More than one product matches. Which one should I use: ' . $names . '?'];
-        }
-        if ($product !== null) {
-            $productName = $product['name'];
-            $items[] = [
-                'product_id' => $product['id'],
-                'quantity' => 1,
-                'unit_price' => $amount,
-                'discount' => 0,
-                'description' => $description,
-            ];
-        }
-    }
+    $items = [[
+        'product_id' => $productId,
+        'quantity' => $qty,
+        'unit_price' => $unit,
+        'discount' => 0,
+        'description' => $productName,
+    ]];
 
     require_once dirname(__DIR__, 2) . '/sales/includes/invoice-direct-create.php';
     $today = date('Y-m-d');
     $input = [
-        'customer_id' => $customer['id'],
+        'customer_id' => $customerId,
         'invoice_date' => $today,
         'due_date' => date('Y-m-d', strtotime('+30 days')),
         'order_type' => 'spare',
@@ -1488,17 +1706,14 @@ function aiAgentCreateCustomerInvoice(array $ctx, string $customerName, float $a
     }
     $label = $number !== '' ? $number : ('invoice ' . $invoiceId);
     $money = aiAgentFormatMoney($amount, (string) $ctx['currency']);
-    $message = 'Created ' . $label . ' for ' . $customer['name'] . ' for ' . $money . '.';
-    if ($productName !== '') {
-        $message = 'Created ' . $label . ' for ' . $customer['name'] . ' for ' . $money . ', product ' . $productName . '.';
-    }
+    $message = 'Created ' . $label . ' for ' . $customerName . ' for ' . $qty . ' x ' . $productName . ' (' . $money . ').';
     return [
         'ok' => true,
         'message' => $message,
         'invoices' => [[
             'id' => $invoiceId,
             'invoice_number' => $label,
-            'customer_name' => $customer['name'],
+            'customer_name' => $customerName,
             'balance_due' => $amount,
             'currency' => (string) $ctx['currency'],
             'view_url' => aiAgentInvoiceViewUrl($invoiceId),

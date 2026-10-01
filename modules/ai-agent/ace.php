@@ -238,12 +238,18 @@ try {
     }
 
     if ($action === 'create_invoice') {
-        $created = aiAgentCreateCustomerInvoice(
-            $ctx,
-            (string) ($body['customer_name'] ?? ''),
-            (float) ($body['amount'] ?? 0),
-            (string) ($body['description'] ?? '')
-        );
+        $prepared = aiAgentPrepareInvoiceDraft($ctx, [
+            'customer_name' => (string) ($body['customer_name'] ?? ''),
+            'product_name' => (string) ($body['product_name'] ?? $body['description'] ?? ''),
+            'quantity' => (int) ($body['quantity'] ?? 1),
+            'amount' => (float) ($body['amount'] ?? 0),
+            'new_customer' => !empty($body['new_customer']),
+            'phone' => (string) ($body['phone'] ?? ''),
+            'email' => (string) ($body['email'] ?? ''),
+        ]);
+        $created = !empty($prepared['ready'])
+            ? aiAgentCreateCustomerInvoice($ctx, $prepared['draft'])
+            : ['ok' => false, 'message' => (string) $prepared['text'], 'invoices' => []];
         echo json_encode([
             'ok' => !empty($created['ok']),
             'message' => (string) ($created['message'] ?? ''),

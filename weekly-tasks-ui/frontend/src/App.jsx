@@ -721,6 +721,11 @@ function measureIcon(item) {
   if (key === 'invoice-accuracy') return 'invoice'
   if (key === 'cashbook-and-expenses-recordings' || key === 'timely-reports-returns-submission') return 'cashbook'
   if (key === 'receivables') return 'receivables'
+  if (key === 'lead-time') return 'lead'
+  if (key === 'supplier-performance') return 'supplier'
+  if (key === 'cost-saving') return 'saving'
+  if (key === 'stock-availability') return 'stock'
+  if (key === 'purchase-order-accuracy') return 'accuracy'
   return 'sales'
 }
 
@@ -804,6 +809,41 @@ function RecordIcon({ kind }) {
         <rect x="3" y="5" width="18" height="14" rx="2" />
         <path d="M3 10h18" />
         <path d="M7 15h4" />
+      </svg>
+    )
+  }
+  if (kind === 'lead') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v5l3 2" />
+      </svg>
+    )
+  }
+  if (kind === 'supplier') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M3 8h13v9H3z" />
+        <path d="M16 11h3l2 3v3h-5" />
+        <circle cx="7" cy="18" r="1.5" />
+        <circle cx="18" cy="18" r="1.5" />
+      </svg>
+    )
+  }
+  if (kind === 'saving') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M12 3v18" />
+        <path d="M16 7.5c0-1.5-1.8-2.5-4-2.5s-4 1-4 2.5 1.8 2.5 4 2.5 4 1 4 2.5-1.8 2.5-4 2.5-4-1-4-2.5" />
+      </svg>
+    )
+  }
+  if (kind === 'stock') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M4 8 12 4l8 4-8 4-8-4z" />
+        <path d="M4 12l8 4 8-4" />
+        <path d="M4 16l8 4 8-4" />
       </svg>
     )
   }
@@ -1301,7 +1341,7 @@ function MeasurePage({ month, measure }) {
       win.downloadDeliveryNote()
     }
   }
-  const financeBoard = measure.key === 'finance-performance' && breakdown.length > 0
+  const financeBoard = (measure.key === 'finance-performance' || measure.key === 'procurement-performance') && breakdown.length > 0
   return (
     <div className="wt-dash">
       {financeBoard ? null : <a className="wt-back" href={measure.backUrl || '#'}>Back</a>}
@@ -1377,7 +1417,7 @@ function MeasurePage({ month, measure }) {
         ) : (
           <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
         )
-      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy', 'invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables'].includes(measure.key) ? (
+      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy', 'invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables', 'lead-time', 'supplier-performance', 'cost-saving', 'stock-availability', 'purchase-order-accuracy'].includes(measure.key) ? (
         <RecordCards
           rows={rows}
           onOpen={openDocument}
@@ -1397,6 +1437,11 @@ function MeasurePage({ month, measure }) {
             'cashbook-and-expenses-recordings': 'Recording',
             'timely-reports-returns-submission': 'Recording',
             receivables: 'Receivable',
+            'lead-time': 'Lead time',
+            'supplier-performance': 'Supplier',
+            'cost-saving': 'Saving',
+            'stock-availability': 'Stock',
+            'purchase-order-accuracy': 'Purchase order',
           }[measure.key] || 'To-do'}
           kind={
             measure.key === 'attendance' ? 'attendance'
@@ -1405,7 +1450,12 @@ function MeasurePage({ month, measure }) {
                   : measure.key === 'invoice-accuracy' ? 'invoice'
                     : measure.key === 'cashbook-and-expenses-recordings' || measure.key === 'timely-reports-returns-submission' ? 'cashbook'
                       : measure.key === 'receivables' ? 'receivables'
-                        : 'sales'
+                        : measure.key === 'lead-time' ? 'lead'
+                          : measure.key === 'supplier-performance' ? 'supplier'
+                            : measure.key === 'cost-saving' ? 'saving'
+                              : measure.key === 'stock-availability' ? 'stock'
+                                : measure.key === 'purchase-order-accuracy' ? 'accuracy'
+                                  : 'sales'
           }
         />
       ) : (

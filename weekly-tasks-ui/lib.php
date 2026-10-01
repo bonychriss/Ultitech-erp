@@ -3069,11 +3069,450 @@ function weeklyTasksUiFinanceLines(PDO $pdo, array $offsets, string $metric): ar
     return [];
 }
 
+function weeklyTasksUiDayLabel(float $days): string
+{
+    $rounded = round($days, 1);
+    $whole = abs($rounded - round($rounded)) < 0.05;
+    $text = $whole ? (string) (int) round($rounded) : number_format($rounded, 1, '.', '');
+
+    return $text . ((float) $text === 1.0 ? ' day' : ' days');
+}
+
+function weeklyTasksUiDateInRanges(string $day, array $ranges): bool
+{
+    if ($day === '') {
+        return false;
+    }
+    foreach ($ranges as $range) {
+        if ($day >= $range[0] && $day <= $range[1]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * @return array<int,int>
+ */
+function weeklyTasksUiProcurementPeopleIds(PDO $pdo): array
+{
+    try {
+        $rows = $pdo->query('SELECT id, department, role FROM users WHERE is_active = 1')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+    $ids = [];
+    foreach ($rows as $row) {
+        if (weeklyTasksUiDepartmentName((string) ($row['department'] ?? ''), (string) ($row['role'] ?? '')) !== 'Procurement') {
+            continue;
+        }
+        $id = (int) ($row['id'] ?? 0);
+        if ($id > 0) {
+            $ids[] = $id;
+        }
+    }
+
+    return $ids;
+}
+
+/**
+ * Lead time is days from the order date to receipt, target 3 days.
+ * Supplier performance is receipts on time. Cost saving is repeat buys below the last price.
+ * Stock availability is items still in stock. Purchase order accuracy is orders without a pricing, quantity, or document error.
+ *
+ * @param array<int,int> $offsets
+ * @return array<string,mixed>
+ */
+function weeklyTasksUiProcurementSnapshot(PDO $pdo, array $offsets): array
+{
+    $ranges = [];
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        $ranges[] = [$start, $end];
+    }
+    $leadRows = [];
+    $supplierRows = [];
+    $savingRows = [];
+    $stockRows = [];
+    $accuracyRows = [];
+    $received = 0;
+    $leadDays = 0;
+    $onTime = 0;
+    $comparable = 0;
+    $cheaper = 0;
+    $poCount = 0;
+    $poErrors = 0;
+    $stockItems = 0;
+    $stockAvailable = 0;
+    $poUrl = static function (int $id): string {
+        return $id > 0 ? weeklyTasksUiModuleUrl('stock/modules/purchases/view_po.php?id=' . $id) : '';
+    };
+
+    $linesByPo = [];
+    if (function_exists('tableExists') && tableExists('stocks_po_items', $pdo) && tableExists('stocks_purchase_orders', $pdo)) {
+        try {
+            $hasItems = tableExists('stocks_items', $pdo);
+            $nameSql = $hasItems ? 's.name' : "''";
+            $join = $hasItems ? 'LEFT JOIN stocks_items s ON s.id = i.item_id' : '';
+            $st = $pdo->query(
+                "SELECT i.po_id, i.item_id, i.unit_cost, i.qty_ordered, i.qty_received, {$nameSql} AS item_name,
+                        po.po_number, po.status, DATE(po.created_at) AS ordered_on, DATE(po.updated_at) AS touched_on,
+                        po.expected_delivery_date, po.invoice_attachment
+                 FROM stocks_po_items i
+                 JOIN stocks_purchase_orders po ON po.id = i.po_id
+                 {$join}
+                 ORDER BY po.id, i.id"
+            );
+            $lastCost = [];
+            foreach ($st ? ($st->fetchAll(PDO::FETCH_ASSOC) ?: []) : [] as $row) {
+                $poId = (int) ($row['po_id'] ?? 0);
+                $itemId = (int) ($row['item_id'] ?? 0);
+                $cost = (float) ($row['unit_cost'] ?? 0);
+                $linesByPo[$poId][] = $row;
+                $prev = $lastCost[$itemId] ?? null;
+                $ordered = (string) ($row['ordered_on'] ?? '');
+                if ($prev !== null && $prev > 0 && $cost > 0 && weeklyTasksUiDateInRanges($ordered, $ranges)) {
+                    $comparable++;
+                    $saved = $cost < $prev;
+                    if ($saved) {
+                        $cheaper++;
+                    }
+                    $name = trim((string) ($row['item_name'] ?? ''));
+                    $number = trim((string) ($row['po_number'] ?? ''));
+                    $title = $name !== '' ? $name : 'Item';
+                    if ($number !== '') {
+                        $title .= ' · ' . $number;
+                    }
+                    $savingRows[] = [
+                        'title' => $title,
+                        'date' => $ordered,
+                        'when' => $ordered !== '' ? date('j M Y', strtotime($ordered)) : '',
+                        'status' => $saved
+                            ? ('Cheaper · ' . weeklyTasksUiMoney($cost) . ' from ' . weeklyTasksUiMoney($prev))
+                            : ('No saving · ' . weeklyTasksUiMoney($cost) . ' vs ' . weeklyTasksUiMoney($prev)),
+                        'kicker' => 'Cost saving',
+                        'mark' => 'saving',
+                        'documentUrl' => $poUrl($poId),
+                    ];
+                }
+                if ($itemId > 0 && $cost > 0) {
+                    $lastCost[$itemId] = $cost;
+                }
+            }
+        } catch (Throwable $e) {
+        }
+        try {
+            $orders = $pdo->query(
+                "SELECT id, po_number, status, DATE(created_at) AS ordered_on, DATE(updated_at) AS touched_on,
+                        expected_delivery_date, invoice_attachment
+                 FROM stocks_purchase_orders
+                 ORDER BY created_at, id"
+            )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            foreach ($orders as $order) {
+                $id = (int) ($order['id'] ?? 0);
+                $status = strtolower(trim((string) ($order['status'] ?? '')));
+                $ordered = (string) ($order['ordered_on'] ?? '');
+                $number = trim((string) ($order['po_number'] ?? ''));
+                $title = $number !== '' ? $number : 'Purchase order';
+                $cancelled = in_array($status, ['cancelled', 'canceled'], true);
+                $isReceived = in_array($status, ['received', 'completed', 'closed'], true);
+                $receivedOn = $isReceived ? (string) ($order['touched_on'] ?? '') : '';
+                if ($isReceived && weeklyTasksUiDateInRanges($receivedOn, $ranges)) {
+                    $days = 0;
+                    if ($ordered !== '' && $receivedOn !== '') {
+                        $days = (int) floor((strtotime($receivedOn) - strtotime($ordered)) / 86400);
+                        if ($days < 0) {
+                            $days = 0;
+                        }
+                    }
+                    $expected = substr((string) ($order['expected_delivery_date'] ?? ''), 0, 10);
+                    $ontime = $expected !== '' ? ($receivedOn !== '' && $receivedOn <= $expected) : ($days <= 3);
+                    $received++;
+                    $leadDays += $days;
+                    if ($ontime) {
+                        $onTime++;
+                    }
+                    $when = $receivedOn !== '' ? date('j M Y', strtotime($receivedOn)) : '';
+                    $leadRows[] = [
+                        'title' => $title,
+                        'date' => $receivedOn,
+                        'when' => $when,
+                        'status' => weeklyTasksUiDayLabel((float) $days),
+                        'kicker' => 'Lead time',
+                        'mark' => 'lead',
+                        'documentUrl' => $poUrl($id),
+                    ];
+                    $supplierRows[] = [
+                        'title' => $title,
+                        'date' => $receivedOn,
+                        'when' => $when,
+                        'status' => $ontime ? 'On time' : ('Late · ' . weeklyTasksUiDayLabel((float) $days)),
+                        'kicker' => 'Supplier',
+                        'mark' => 'supplier',
+                        'documentUrl' => $poUrl($id),
+                    ];
+                }
+                if (!weeklyTasksUiDateInRanges($ordered, $ranges)) {
+                    continue;
+                }
+                $reasons = [];
+                if ($cancelled) {
+                    $reasons[] = 'Cancelled';
+                } else {
+                    if ($isReceived && trim((string) ($order['invoice_attachment'] ?? '')) === '') {
+                        $reasons[] = 'Missing supplier invoice';
+                    }
+                    foreach ($linesByPo[$id] ?? [] as $line) {
+                        if ((float) ($line['unit_cost'] ?? 0) <= 0 && !in_array('Pricing', $reasons, true)) {
+                            $reasons[] = 'Pricing';
+                        }
+                        if ((float) ($line['qty_received'] ?? 0) > (float) ($line['qty_ordered'] ?? 0) + 0.0001 && !in_array('Quantity', $reasons, true)) {
+                            $reasons[] = 'Quantity';
+                        }
+                    }
+                }
+                $poCount++;
+                if ($reasons) {
+                    $poErrors++;
+                }
+                $accuracyRows[] = [
+                    'title' => $title,
+                    'date' => $ordered,
+                    'when' => $ordered !== '' ? date('j M Y', strtotime($ordered)) : '',
+                    'status' => $reasons ? ('Error · ' . implode(', ', $reasons)) : 'Error-free',
+                    'kicker' => 'Purchase order',
+                    'mark' => 'accuracy',
+                    'documentUrl' => $poUrl($id),
+                ];
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    if (function_exists('tableExists') && tableExists('stocks_items', $pdo)) {
+        try {
+            $items = $pdo->query('SELECT id, name, stock_quantity FROM stocks_items ORDER BY name, id')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            foreach ($items as $item) {
+                $stockItems++;
+                $qty = (float) ($item['stock_quantity'] ?? 0);
+                $name = trim((string) ($item['name'] ?? ''));
+                if ($qty > 0) {
+                    $stockAvailable++;
+                    continue;
+                }
+                $stockRows[] = [
+                    'title' => $name !== '' ? $name : 'Item',
+                    'date' => '',
+                    'when' => '',
+                    'status' => 'Out of stock',
+                    'kicker' => 'Stock',
+                    'mark' => 'stock',
+                ];
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    if ($stockItems === 0 && function_exists('tableExists') && tableExists('products', $pdo) && tableExists('stock', $pdo)) {
+        try {
+            $items = $pdo->query(
+                "SELECT p.id, p.name, COALESCE(SUM(s.quantity), 0) AS qty
+                 FROM products p
+                 LEFT JOIN stock s ON s.product_id = p.id
+                 WHERE LOWER(COALESCE(p.status, 'active')) NOT IN ('inactive', 'deleted')
+                 GROUP BY p.id, p.name
+                 ORDER BY p.name, p.id"
+            )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            foreach ($items as $item) {
+                $stockItems++;
+                $qty = (float) ($item['qty'] ?? 0);
+                if ($qty > 0) {
+                    $stockAvailable++;
+                    continue;
+                }
+                $name = trim((string) ($item['name'] ?? ''));
+                $stockRows[] = [
+                    'title' => $name !== '' ? $name : 'Product',
+                    'date' => '',
+                    'when' => '',
+                    'status' => 'Out of stock',
+                    'kicker' => 'Stock',
+                    'mark' => 'stock',
+                ];
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    $leadAvg = $received > 0 ? $leadDays / $received : 0.0;
+    $leadPct = $received > 0 ? ($leadAvg <= 3 ? 100 : (int) min(100, round((3 / max($leadAvg, 0.1)) * 100))) : 0;
+    $supplierPct = $received > 0 ? (int) round(($onTime / $received) * 100) : 0;
+    $savingPct = $comparable > 0 ? (int) round(($cheaper / $comparable) * 100) : 0;
+    $stockPct = $stockItems > 0 ? (int) round(($stockAvailable / $stockItems) * 100) : 0;
+    $accuracyPct = $poCount > 0 ? (int) round((($poCount - $poErrors) / $poCount) * 100) : 0;
+    $weighted = [
+        ['weight' => 20, 'score' => $leadPct, 'on' => $received > 0],
+        ['weight' => 15, 'score' => weeklyTasksUiRatioScore((float) $supplierPct, 95), 'on' => $received > 0],
+        ['weight' => 40, 'score' => weeklyTasksUiRatioScore((float) $savingPct, 90), 'on' => $comparable > 0],
+        ['weight' => 20, 'score' => weeklyTasksUiRatioScore((float) $stockPct, 90), 'on' => $stockItems > 0],
+        ['weight' => 5, 'score' => weeklyTasksUiRatioScore((float) $accuracyPct, 100), 'on' => $poCount > 0],
+    ];
+    $weightSum = 0;
+    $acc = 0.0;
+    foreach ($weighted as $part) {
+        if (!$part['on']) {
+            continue;
+        }
+        $weightSum += (int) $part['weight'];
+        $acc += (int) $part['score'] * (int) $part['weight'];
+    }
+
+    return [
+        'score' => $weightSum > 0 ? (int) round($acc / $weightSum) : 0,
+        'scored' => $weightSum > 0,
+        'received' => $received,
+        'leadAvg' => $leadAvg,
+        'leadMet' => $received > 0 && $leadAvg <= 3,
+        'onTime' => $onTime,
+        'supplierPct' => $supplierPct,
+        'comparable' => $comparable,
+        'cheaper' => $cheaper,
+        'savingPct' => $savingPct,
+        'stockItems' => $stockItems,
+        'stockAvailable' => $stockAvailable,
+        'stockPct' => $stockPct,
+        'poCount' => $poCount,
+        'poErrors' => $poErrors,
+        'accuracyPct' => $accuracyPct,
+        'leadRows' => $leadRows,
+        'supplierRows' => $supplierRows,
+        'savingRows' => $savingRows,
+        'stockRows' => $stockRows,
+        'accuracyRows' => $accuracyRows,
+    ];
+}
+
+/**
+ * @param array<int,int> $offsets
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiProcurementScores(PDO $pdo, array $offsets): array
+{
+    $people = weeklyTasksUiProcurementPeopleIds($pdo);
+    if (!$people) {
+        return [];
+    }
+    $snapshot = weeklyTasksUiProcurementSnapshot($pdo, $offsets);
+    unset($snapshot['leadRows'], $snapshot['supplierRows'], $snapshot['savingRows'], $snapshot['stockRows'], $snapshot['accuracyRows']);
+    $out = [];
+    foreach ($people as $id) {
+        $out[(int) $id] = $snapshot;
+    }
+
+    return $out;
+}
+
+/**
+ * @param array<string,mixed>|null $procurement
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiProcurementItems(?array $procurement): array
+{
+    $procurement = $procurement ?: [];
+    $received = (int) ($procurement['received'] ?? 0);
+    $leadAvg = (float) ($procurement['leadAvg'] ?? 0);
+    $onTime = (int) ($procurement['onTime'] ?? 0);
+    $supplierPct = (int) ($procurement['supplierPct'] ?? 0);
+    $comparable = (int) ($procurement['comparable'] ?? 0);
+    $cheaper = (int) ($procurement['cheaper'] ?? 0);
+    $savingPct = (int) ($procurement['savingPct'] ?? 0);
+    $stockItems = (int) ($procurement['stockItems'] ?? 0);
+    $stockAvailable = (int) ($procurement['stockAvailable'] ?? 0);
+    $stockPct = (int) ($procurement['stockPct'] ?? 0);
+    $poCount = (int) ($procurement['poCount'] ?? 0);
+    $poErrors = (int) ($procurement['poErrors'] ?? 0);
+    $accuracyPct = (int) ($procurement['accuracyPct'] ?? 0);
+    $clean = max(0, $poCount - $poErrors);
+
+    return [
+        [
+            'name' => 'Lead Time',
+            'group' => 'Procurement',
+            'expected' => '3 days or less · weight 20%',
+            'actual' => $received > 0 ? weeklyTasksUiDayLabel($leadAvg) : 'No purchases received',
+            'configured' => true,
+            'met' => $received === 0 || $leadAvg <= 3,
+            'note' => $received > 0 ? 'Lead time: ' . weeklyTasksUiDayLabel($leadAvg) : 'Lead time: no purchases received',
+            'spoken' => $received > 0 ? 'lead time is ' . weeklyTasksUiDayLabel($leadAvg) : '',
+        ],
+        [
+            'name' => 'Supplier Performance',
+            'group' => 'Procurement',
+            'expected' => '95% on time · weight 15%',
+            'actual' => $received > 0 ? ($supplierPct . '% · ' . $onTime . ' of ' . $received . ' on time') : 'No purchases received',
+            'configured' => true,
+            'met' => $received === 0 || $supplierPct >= 95,
+            'note' => $received > 0 ? 'Supplier performance: ' . $supplierPct . ' of 95%' : 'Supplier performance: no purchases received',
+            'spoken' => $received > 0 ? 'supplier performance is ' . $supplierPct . ' of 95%' : '',
+        ],
+        [
+            'name' => 'Cost Saving',
+            'group' => 'Procurement',
+            'expected' => '90% cheaper than last buy · weight 40%',
+            'actual' => $comparable > 0 ? ($savingPct . '% · ' . $cheaper . ' of ' . $comparable) : 'No repeat purchases',
+            'configured' => true,
+            'met' => $comparable === 0 || $savingPct >= 90,
+            'note' => $comparable > 0 ? 'Cost saving: ' . $savingPct . ' of 90%' : 'Cost saving: no repeat purchases',
+            'spoken' => $comparable > 0 ? 'cost saving is ' . $savingPct . ' of 90%' : '',
+        ],
+        [
+            'name' => 'Stock Availability',
+            'group' => 'Procurement',
+            'expected' => '90% in stock · weight 20%',
+            'actual' => $stockItems > 0 ? ($stockPct . '% · ' . $stockAvailable . ' of ' . $stockItems . ' in stock') : 'Not recorded',
+            'configured' => true,
+            'met' => $stockItems > 0 && $stockPct >= 90,
+            'note' => $stockItems > 0 ? 'Stock availability: ' . $stockPct . ' of 90%' : '',
+            'spoken' => $stockItems > 0 ? 'stock availability is ' . $stockPct . ' of 90%' : '',
+        ],
+        [
+            'name' => 'Purchase Order Accuracy',
+            'group' => 'Procurement',
+            'expected' => '100% error-free · weight 5%',
+            'actual' => $poCount > 0 ? ($accuracyPct . '% · ' . $clean . ' of ' . $poCount) : 'No purchase orders',
+            'configured' => true,
+            'met' => $poCount === 0 || $accuracyPct >= 100,
+            'note' => $poCount > 0 ? 'Purchase order accuracy: ' . $accuracyPct . ' of 100%' : 'Purchase order accuracy: no purchase orders',
+            'spoken' => $poCount > 0 ? 'purchase order accuracy is ' . $accuracyPct . ' of 100%' : '',
+        ],
+    ];
+}
+
+/**
+ * @param array<int,int> $offsets
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiProcurementLines(PDO $pdo, array $offsets, string $metric): array
+{
+    $snapshot = weeklyTasksUiProcurementSnapshot($pdo, $offsets);
+    $map = [
+        'lead-time' => 'leadRows',
+        'supplier-performance' => 'supplierRows',
+        'cost-saving' => 'savingRows',
+        'stock-availability' => 'stockRows',
+        'purchase-order-accuracy' => 'accuracyRows',
+    ];
+    $key = $map[$metric] ?? '';
+
+    return $key !== '' ? ($snapshot[$key] ?? []) : [];
+}
+
 /**
  * @param array{score:int,onTime:int,vehicle:int,documents:int}|null $driver
  * @param array<string,mixed>|null $sales
  * @param array<string,mixed>|null $it
  * @param array<string,mixed>|null $finance
+ * @param array<string,mixed>|null $procurement
  * @return array<string,mixed>
  */
 function weeklyTasksUiPersonDetail(
@@ -3098,7 +3537,8 @@ function weeklyTasksUiPersonDetail(
     string $role = '',
     ?array $sales = null,
     ?array $it = null,
-    ?array $finance = null
+    ?array $finance = null,
+    ?array $procurement = null
 ): array {
     $items = [
         [
@@ -3138,6 +3578,7 @@ function weeklyTasksUiPersonDetail(
     $salesLines = [];
     $itLines = [];
     $financeLines = [];
+    $procurementLines = [];
     if ($department === 'Drivers') {
         $driver = $driver ?: ['onTime' => 0, 'vehicle' => 0, 'documents' => 0];
         foreach ($driverLines as $line) {
@@ -3188,6 +3629,20 @@ function weeklyTasksUiPersonDetail(
             'configured' => true,
             'pending' => !$financeScored,
             'met' => $financeScored && $financeScore >= 100,
+            'note' => '',
+            'spoken' => '',
+        ];
+    } elseif ($department === 'Procurement') {
+        $procurementLines = weeklyTasksUiProcurementItems($procurement);
+        $procurementScore = (int) (is_array($procurement) ? ($procurement['score'] ?? 0) : 0);
+        $procurementScored = !empty($procurement['scored']);
+        $items[] = [
+            'name' => 'Procurement performance',
+            'expected' => '100%',
+            'actual' => $procurementScored ? ($procurementScore . '%') : 'Not due yet',
+            'configured' => true,
+            'pending' => !$procurementScored,
+            'met' => $procurementScored && $procurementScore >= 100,
             'note' => '',
             'spoken' => '',
         ];
@@ -3255,6 +3710,7 @@ function weeklyTasksUiPersonDetail(
         'salesLines' => $salesLines,
         'itLines' => $itLines,
         'financeLines' => $financeLines,
+        'procurementLines' => $procurementLines,
         'improvements' => $improvements,
         'insight' => $insight,
     ];
@@ -3277,6 +3733,7 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
         $salesScores = weeklyTasksUiSalesScores($pdo, [$offset]);
         $itScores = weeklyTasksUiItScores($pdo, [$offset]);
         $financeScores = weeklyTasksUiFinanceScores($pdo, [$offset]);
+        $procurementScores = weeklyTasksUiProcurementScores($pdo, [$offset]);
         $taskTarget = max(1, 7 * $weekCount);
         $todoTarget = max(1, 5 * $weekCount);
         $weekdays = max(1, $weekdays);
@@ -3296,12 +3753,15 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
             $sales = $salesScores[$id] ?? null;
             $it = $itScores[$id] ?? null;
             $finance = $financeScores[$id] ?? null;
+            $procurement = $procurementScores[$id] ?? null;
             if ($department === 'Sales') {
                 $activity = (int) ($sales['score'] ?? 0);
             } elseif ($department === 'IT') {
                 $activity = (int) ($it['score'] ?? 0);
             } elseif ($department === 'Finance' && is_array($finance) && !empty($finance['scored'])) {
                 $activity = (int) $finance['score'];
+            } elseif ($department === 'Procurement' && is_array($procurement) && !empty($procurement['scored'])) {
+                $activity = (int) $procurement['score'];
             } elseif (($department === 'Drivers' || $driver !== null) && $driver && !empty($driver['recorded'])) {
                 $activity = (int) $driver['score'];
             } else {
@@ -3393,12 +3853,12 @@ function weeklyTasksUiKpiCatalog(): array
             $line('Inventory Count', 'Monthly and weekly stock counts completed accurately', '100%', '25%'),
             $line('Stock Availability', 'Customer orders fulfilled without a stock-out', '98%', '20%'),
         ]),
-        $card('procurement', 'Procurement KPIs', 'Lead time, suppliers, savings and purchase orders', [
-            $line('Lead Time', 'Average purchase lead time', '3 days or less', '20%'),
-            $line('Supplier Performance', 'On-time supplier delivery', '95% or better', '15%'),
-            $line('Cost Saving', 'Savings from negotiation', '90% or better', '40%'),
-            $line('Stock Availability', 'No stock-outs', '90%', '20%'),
-            $line('Purchase Order Accuracy', 'Pricing, specification and document errors', '100%', '5%'),
+        $card('procurement', 'Procurement KPIs', 'Lead time, suppliers, savings, stock and purchase orders', [
+            $line('Lead Time', 'Average days from order to receipt', '3 days or less', '20%'),
+            $line('Supplier Performance', 'Receipts on time', '95%', '15%'),
+            $line('Cost Saving', 'Repeat buys below the last price', '90%', '40%'),
+            $line('Stock Availability', 'Items still in stock', '90%', '20%'),
+            $line('Purchase Order Accuracy', 'Orders without a pricing, quantity, or document error', '100%', '5%'),
         ]),
         $card('finance', 'Finance KPIs', 'Invoice accuracy, cashbook, expenses and receivables', [
             $line('Invoice Accuracy', 'Error-free invoices', '100%', '30%'),
@@ -3557,6 +4017,7 @@ function weeklyTasksUiBuildPayload(): array
     $salesScores = [];
     $itScores = [];
     $financeScores = [];
+    $procurementScores = [];
     if ($pdo instanceof PDO) {
         try {
             $st = $pdo->query('SELECT id, full_name, department, role, profile_photo FROM users WHERE is_active = 1 ORDER BY full_name ASC');
@@ -3568,6 +4029,7 @@ function weeklyTasksUiBuildPayload(): array
         $salesScores = weeklyTasksUiSalesScores($pdo, $offsets);
         $itScores = weeklyTasksUiItScores($pdo, $offsets);
         $financeScores = weeklyTasksUiFinanceScores($pdo, $offsets);
+        $procurementScores = weeklyTasksUiProcurementScores($pdo, $offsets);
         $settingsLib = dirname(__DIR__) . '/modules/sales/settings/includes/settings-lib.php';
         if (is_file($settingsLib)) {
             require_once $settingsLib;
@@ -3605,6 +4067,7 @@ function weeklyTasksUiBuildPayload(): array
         $sales = $salesScores[$id] ?? null;
         $it = $itScores[$id] ?? null;
         $finance = $financeScores[$id] ?? null;
+        $procurement = $procurementScores[$id] ?? null;
         $isDriver = $department === 'Drivers' || $driver !== null;
         if ($department === 'Sales') {
             $activity = (int) ($sales['score'] ?? 0);
@@ -3612,6 +4075,8 @@ function weeklyTasksUiBuildPayload(): array
             $activity = (int) ($it['score'] ?? 0);
         } elseif ($department === 'Finance' && is_array($finance) && !empty($finance['scored'])) {
             $activity = (int) $finance['score'];
+        } elseif ($department === 'Procurement' && is_array($procurement) && !empty($procurement['scored'])) {
+            $activity = (int) $procurement['score'];
         } elseif ($isDriver && $driver && !empty($driver['recorded'])) {
             $activity = (int) $driver['score'];
         } else {
@@ -3688,6 +4153,23 @@ function weeklyTasksUiBuildPayload(): array
                     'recordings' => 0,
                     'cashbookRecorded' => false,
                     'expensesRecorded' => false,
+                ]) : null,
+                $department === 'Procurement' ? ($procurement ?: [
+                    'score' => 0,
+                    'scored' => false,
+                    'received' => 0,
+                    'leadAvg' => 0,
+                    'onTime' => 0,
+                    'supplierPct' => 0,
+                    'comparable' => 0,
+                    'cheaper' => 0,
+                    'savingPct' => 0,
+                    'stockItems' => 0,
+                    'stockAvailable' => 0,
+                    'stockPct' => 0,
+                    'poCount' => 0,
+                    'poErrors' => 0,
+                    'accuracyPct' => 0,
                 ]) : null
             );
         }
@@ -3708,6 +4190,7 @@ function weeklyTasksUiBuildPayload(): array
     $salesLines = [];
     $itLines = [];
     $financeLines = [];
+    $procurementLines = [];
     if (is_array($detail)) {
         $detail['backUrl'] = weeklyTasksUiMonthUrl($offsets);
         $measureNames = [
@@ -3745,6 +4228,14 @@ function weeklyTasksUiBuildPayload(): array
             $financeLines[$index]['key'] = $key;
             $financeLines[$index]['href'] = weeklyTasksUiMonthUrl($offsets, $selectedId, $key);
         }
+        $procurementLines = is_array($detail['procurementLines'] ?? null) ? $detail['procurementLines'] : [];
+        unset($detail['procurementLines']);
+        foreach ($procurementLines as $index => $item) {
+            $name = (string) ($item['name'] ?? '');
+            $key = trim(strtolower((string) preg_replace('/[^a-z0-9]+/i', '-', $name)), '-');
+            $procurementLines[$index]['key'] = $key;
+            $procurementLines[$index]['href'] = weeklyTasksUiMonthUrl($offsets, $selectedId, $key);
+        }
     }
 
     $measureView = null;
@@ -3781,6 +4272,14 @@ function weeklyTasksUiBuildPayload(): array
                 }
             }
         }
+        if ($match === null) {
+            foreach ($procurementLines as $item) {
+                if (($item['key'] ?? '') === $measureKey) {
+                    $match = $item;
+                    break;
+                }
+            }
+        }
         if ($match) {
             $rows = [];
             $empty = 'Nothing recorded in this period.';
@@ -3796,6 +4295,9 @@ function weeklyTasksUiBuildPayload(): array
             } elseif ($measureKey === 'finance-performance') {
                 $breakdown = $financeLines;
                 $empty = 'No finance performance recorded in this period.';
+            } elseif ($measureKey === 'procurement-performance') {
+                $breakdown = $procurementLines;
+                $empty = 'No procurement performance recorded in this period.';
             } elseif ($measureKey === 'tasks') {
                 $rows = weeklyTasksUiTaskLines($pdo, $selectedId, $offsets);
                 $empty = 'No tasks recorded in this period.';
@@ -3827,6 +4329,15 @@ function weeklyTasksUiBuildPayload(): array
                     'data-backup' => 'No backup in this period.',
                     'system-accuracy' => 'No system problems recorded in this period.',
                 ][$measureKey];
+            } elseif (in_array($measureKey, ['lead-time', 'supplier-performance', 'cost-saving', 'stock-availability', 'purchase-order-accuracy'], true)) {
+                $rows = weeklyTasksUiProcurementLines($pdo, $offsets, $measureKey);
+                $empty = [
+                    'lead-time' => 'No purchases received in this period.',
+                    'supplier-performance' => 'No purchases received in this period.',
+                    'cost-saving' => 'No repeat purchases in this period.',
+                    'stock-availability' => 'No items are out of stock.',
+                    'purchase-order-accuracy' => 'No purchase orders in this period.',
+                ][$measureKey];
             } elseif (in_array($measureKey, ['invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables'], true)) {
                 $rows = weeklyTasksUiFinanceLines($pdo, $offsets, $measureKey);
                 $empty = [
@@ -3844,6 +4355,7 @@ function weeklyTasksUiBuildPayload(): array
             $salesMeasure = in_array($measureKey, ['monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'], true);
             $itMeasure = in_array($measureKey, ['system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy'], true);
             $financeMeasure = in_array($measureKey, ['invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables'], true);
+            $procurementMeasure = in_array($measureKey, ['lead-time', 'supplier-performance', 'cost-saving', 'stock-availability', 'purchase-order-accuracy'], true);
             $itAbout = [
                 'system-uptime' => 'A day counts as down when a task or report says the system was down. Usage is the time people were signed in. The top three are the people with the most signed-in time.',
                 'it-support-response-resolution' => 'These are the requests sent from Suggest. Within 24 hrs means the request was marked done within a day of being sent. Requests still inside that day are listed, and left out of the percentage.',
@@ -3855,6 +4367,13 @@ function weeklyTasksUiBuildPayload(): array
                 'cashbook-and-expenses-recordings' => 'Cashbook counts when a cash book entry is dated in this month. Expenses count when an expense is dated in this month. The target is both recorded, weighted 30%.',
                 'timely-reports-returns-submission' => 'Cashbook counts when a cash book entry is dated in this month. Expenses count when an expense is dated in this month. The target is both recorded, weighted 30%.',
                 'receivables' => 'Money received divided by the invoice totals for this month. The target is 95% collected, weighted 40%. Collected means paid in full. Outstanding means a balance is still due.',
+            ];
+            $procurementAbout = [
+                'lead-time' => 'Days from the purchase order date to the day it was received. The target is 3 days or less, weighted 20%.',
+                'supplier-performance' => 'A receipt is on time when it arrives by the expected date, or within 3 days when no expected date was set. The target is 95%, weighted 15%.',
+                'cost-saving' => 'A repeat buy counts as a saving when its price is below the last price paid for that item. The target is 90%, weighted 40%.',
+                'stock-availability' => 'Items with a quantity above zero, divided by all stocked items. The target is 90% in stock, weighted 20%.',
+                'purchase-order-accuracy' => 'An order is an error when it is cancelled, a received order has no supplier invoice, a price is missing, or more was received than ordered. The target is 100%, weighted 5%.',
             ];
             $measureView = [
                 'key' => $measureKey,
@@ -3869,7 +4388,7 @@ function weeklyTasksUiBuildPayload(): array
                 'items' => $breakdown,
                 'board' => $attendanceBoard ?: $uptimeBoard,
                 'empty' => $measureKey === 'customer-visits' ? 'Coming soon' : $empty,
-                'progress' => $measureKey === 'finance-performance'
+                'progress' => in_array($measureKey, ['finance-performance', 'procurement-performance'], true)
                     ? (!empty($match['pending']) ? 100 : (int) filter_var((string) ($match['actual'] ?? '0'), FILTER_SANITIZE_NUMBER_INT))
                     : null,
                 'backUrl' => $salesMeasure
@@ -3878,11 +4397,17 @@ function weeklyTasksUiBuildPayload(): array
                         ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'it-performance')
                         : ($financeMeasure
                             ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'finance-performance')
-                            : weeklyTasksUiMonthUrl($offsets, $selectedId))),
+                            : ($procurementMeasure
+                                ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'procurement-performance')
+                                : weeklyTasksUiMonthUrl($offsets, $selectedId)))),
                 'about' => isset($financeAbout[$measureKey]) ? [
                     'score' => '',
                     'note' => '',
                     'text' => $financeAbout[$measureKey],
+                ] : (isset($procurementAbout[$measureKey]) ? [
+                    'score' => '',
+                    'note' => '',
+                    'text' => $procurementAbout[$measureKey],
                 ] : (isset($itAbout[$measureKey]) ? [
                     'score' => '',
                     'note' => '',
@@ -3899,7 +4424,7 @@ function weeklyTasksUiBuildPayload(): array
                     'score' => '',
                     'note' => '',
                     'text' => 'Days from the order date to the delivery date. On time means within 2 days. Late means it took longer.',
-                ] : null)))),
+                ] : null))))),
             ];
         }
     }

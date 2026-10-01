@@ -1412,6 +1412,18 @@ function MeasurePage({ month, measure }) {
         </div>
         <MonthSelect month={month} />
       </header>
+      {measure.insight ? (
+        <section className="wt-dept" aria-label="Smart insight">
+          <h2 className="wt-dept-title wt-insight-title">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 18h6M10 21h4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              <path d="M12 3a6 6 0 0 0-3.2 11.1c.5.4.8 1 .8 1.6V17h4.8v-1.3c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+            </svg>
+            Smart insight
+          </h2>
+          <p className="wt-insight">{measure.insight}</p>
+        </section>
+      ) : null}
       {!measure.configured ? (
         <p className="wt-empty wt-empty--card">Target not set.</p>
       ) : breakdown.length ? (

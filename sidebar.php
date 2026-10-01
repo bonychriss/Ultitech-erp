@@ -528,6 +528,7 @@ switch ($active_module) {
         addItem($menuItems, 'quote-requests', 'Quote requests', 'inbox', $prefix . 'sales/quote-requests?module=sales');
         addItem($menuItems, 'orders', 'Sales Orders', 'bag', $prefix . 'modules/sales/orders/index.php?module=sales');
         addItem($menuItems, 'invoices', 'Invoices', 'receipt', $prefix . 'modules/sales/invoices/index.php?module=sales');
+        addItem($menuItems, 'customer-performance', 'Customer Performance', 'trophy', $prefix . 'modules/sales/customer-performance/index.php?module=sales');
         addItem($menuItems, 'sales-settings', 'Sales Settings', 'gear', $prefix . 'sales/settings?module=sales');
         // Record Payment hidden
         if ($is_admin) {

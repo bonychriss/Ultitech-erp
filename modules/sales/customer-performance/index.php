@@ -902,8 +902,8 @@ html body main.cp-page .cp-field select { height: 2.45rem; border: 1px solid #d7
 .cp-alert p { margin: 0; font-weight: 650; }
 .cp-alert-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .cp-alert .cp-ghost { background: transparent; border-color: #e7a3a3; color: #7f1d1d; }
-.cp-cust-kpis { display: grid; grid-template-columns: 1.1fr 1.3fr 0.8fr; gap: 12px; margin-bottom: 0.9rem; }
-.cp-cust-kpis article { background: #fff; border: 1px solid #e7edf3; border-radius: 14px; padding: 0.9rem 1rem; }
+.cp-cust-kpis { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 0.9rem; }
+.cp-cust-kpis article { flex: 0 1 auto; width: 230px; max-width: 100%; background: #fff; border: 1px solid #e7edf3; border-radius: 14px; padding: 0.85rem 0.9rem; }
 .cp-cust-kpis span { display: block; color: #64748b; font-size: 0.82rem; font-weight: 650; }
 .cp-cust-kpis strong { display: block; margin-top: 0.35rem; font-size: 1.55rem; letter-spacing: -0.03em; }
 .cp-cust-kpis em { display: block; margin-top: 0.25rem; color: #94a3b8; font-style: normal; font-size: 0.78rem; }
@@ -993,7 +993,7 @@ html[data-theme="dark"] .cp-table tbody tr.cp-row:hover td { background: #334155
     .cp-page { padding-left: 0.75rem; padding-right: 0.75rem; }
     .cp-kpis, .cp-analytics, .cp-detail-grid, .cp-cust-kpis { grid-template-columns: 1fr; }
     .cp-split, .cp-detail-head, .cp-cust-head, .cp-alert, .cp-inv-foot { flex-direction: column; align-items: stretch; }
-    .cp-mchart-card, .cp-age-card { width: 100%; }
+    .cp-mchart-card, .cp-age-card, .cp-cust-kpis article { width: 100%; }
     .cp-hero-main { align-items: flex-start; }
     .cp-cup { width: 64px; height: 64px; }
     .cp-pager { flex-direction: column; align-items: flex-start; }

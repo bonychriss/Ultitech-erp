@@ -89,6 +89,16 @@ function reportEngineSectionAutofillMap(string $domain): array
             'performance_overview' => ['fleet_prose' => true, 'fleet_prose_key' => 'executive_summary', 'erp' => ['fleet_overview_table']],
             'detailed_analysis' => ['erp' => ['driver_performance', 'delivery_list']],
         ],
+        'operations' => [
+            'cover' => ['type' => 'cover'],
+            'overall_summary' => ['keep_template' => true],
+            'client_followups' => ['operations_followups' => true],
+            'documents_preparation' => ['keep_template' => true],
+            'social_media' => ['keep_template' => true],
+            'operations_achievements' => ['keep_template' => true],
+            'operations_challenges' => ['keep_template' => true],
+            'operations_conclusion' => ['keep_template' => true],
+        ],
         'store_warehouse' => [
             'cover' => ['type' => 'cover'],
             'executive_summary' => ['store_prose' => true],
@@ -146,6 +156,10 @@ function reportEngineAutofillSections(PDO $pdo, array $report, array $sections):
         }
 
         $cfg = $map[$key] ?? ['ai' => true];
+        if (!empty($cfg['keep_template'])) {
+            $filled[] = $section;
+            continue;
+        }
         $title = $catalog[$key] ?? (string) ($section['title'] ?? ucfirst($key));
         $parts = [];
 
@@ -164,6 +178,9 @@ function reportEngineAutofillSections(PDO $pdo, array $report, array $sections):
             } elseif (!empty($cfg['store_prose'])) {
                 $proseKey = (string) ($cfg['store_prose_key'] ?? $key);
                 $parts[] = reportDomainStoreProseSection($pdo, $report, $proseKey);
+            } elseif (!empty($cfg['operations_followups'])) {
+                require_once __DIR__ . '/report-domain-operations.php';
+                $parts[] = reportDomainOperationsFollowupsBody($pdo, $report);
             } elseif (!empty($cfg['ai'])) {
                 $ai = reportEngineGenerateAiText($pdo, $report, $key);
                 $parts[] = (string) ($ai['text'] ?? '');
@@ -176,7 +193,7 @@ function reportEngineAutofillSections(PDO $pdo, array $report, array $sections):
                     error_log('reportEngineAutofillSections erp ' . $source . ': ' . $e->getMessage());
                 }
             }
-            if (empty($cfg['ai']) && empty($cfg['erp']) && empty($cfg['fleet_prose']) && empty($cfg['store_prose']) && empty($cfg['procurement_prose'])) {
+            if (empty($cfg['ai']) && empty($cfg['erp']) && empty($cfg['fleet_prose']) && empty($cfg['store_prose']) && empty($cfg['procurement_prose']) && empty($cfg['operations_followups'])) {
                 $ai = reportEngineGenerateAiText($pdo, $report, $key);
                 $parts[] = (string) ($ai['text'] ?? '<p></p>');
             }

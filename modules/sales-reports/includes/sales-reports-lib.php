@@ -481,6 +481,12 @@ function salesReportsDefaultSectionContent(string $key, array $meta): string
     $catalog = $domain === 'sales' ? salesReportsSectionCatalog() : reportEngineSectionCatalog($domain);
     $title = $catalog[$key] ?? ucfirst(str_replace('_', ' ', $key));
 
+    if ($domain === 'operations') {
+        require_once __DIR__ . '/report-domain-operations.php';
+
+        return reportDomainOperationsSectionContent($key, $meta, $title);
+    }
+
     return match ($key) {
         'cover' => reportEngineBuildCoverHtml($domain, $meta),
         'executive_summary' => salesReportsSectionHeading('Executive Summary')

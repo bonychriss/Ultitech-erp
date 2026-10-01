@@ -37,6 +37,7 @@ if (!$isNew) {
     }
 } else {
     require_once __DIR__ . '/includes/report-engine.php';
+    require_once __DIR__ . '/includes/report-domain-operations.php';
 
     $user = [
         'name' => (string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? ''),
@@ -69,7 +70,9 @@ if (!$isNew) {
             $initConfig['selectedPeriod'] = $period !== '' ? $period : $reportDomain;
             $initConfig['defaults'] = [
                 'report_domain' => $reportDomain,
-                'report_name' => salesReportsFormatCoverPeriod($startDate, $endDate) . ' ' . ($domainMeta['label'] ?? 'Report'),
+                'report_name' => $reportDomain === 'operations'
+                    ? reportDomainOperationsReportName($startDate, $endDate)
+                    : salesReportsFormatCoverPeriod($startDate, $endDate) . ' ' . ($domainMeta['label'] ?? 'Report'),
                 'report_type' => $period !== '' ? $period : 'management',
                 'template_key' => 'standard',
                 'start_date' => $startDate,
@@ -83,10 +86,12 @@ if (!$isNew) {
             $initConfig['selectedPeriod'] = $period;
             $initConfig['defaults'] = [
                 'report_domain' => $reportDomain,
-                'report_name' => salesReportsFormatCoverPeriod(
-                    $periodDefaults['start_date'],
-                    $periodDefaults['end_date']
-                ) . ' ' . ($domainMeta['label'] ?? 'Report'),
+                'report_name' => $reportDomain === 'operations'
+                    ? reportDomainOperationsReportName($periodDefaults['start_date'], $periodDefaults['end_date'])
+                    : salesReportsFormatCoverPeriod(
+                        $periodDefaults['start_date'],
+                        $periodDefaults['end_date']
+                    ) . ' ' . ($domainMeta['label'] ?? 'Report'),
                 'report_type' => $period,
                 'template_key' => 'standard',
                 'start_date' => $periodDefaults['start_date'],

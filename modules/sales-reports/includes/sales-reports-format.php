@@ -278,7 +278,12 @@ function salesReportsPeriodDefaults(string $period, array $user = [], ?string $s
         $reportType = 'annual';
     } else {
         $period = 'quarterly';
-        $dates = salesReportsCurrentQuarterDates();
+        if ($startDate && $endDate && preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)
+            && strtotime($endDate) >= strtotime($startDate)) {
+            $dates = ['start_date' => $startDate, 'end_date' => $endDate];
+        } else {
+            $dates = salesReportsCurrentQuarterDates();
+        }
         $templateKey = 'department_quarterly';
         $reportType = 'quarterly';
     }
@@ -310,7 +315,7 @@ function salesReportsPeriodOptions(array $user = []): array
         [
             'key' => 'quarterly',
             'label' => 'Quarterly Report',
-            'description' => 'Department sales report for the current quarter (matches the PDF template).',
+            'description' => 'Choose which quarter this department sales report should cover.',
             'icon' => 'bi-calendar3',
         ],
         [

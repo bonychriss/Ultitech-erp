@@ -23,6 +23,7 @@ function salesReportsExportHtml(array $report, string $contentHtml, bool $forPri
         'store_warehouse' => 'Confidential Store Report',
         'finance' => 'Confidential Finance Report',
         'fleet' => 'Confidential Fleet Report',
+        'operations' => 'Confidential Operations Report',
         default => 'Confidential Sales Report',
     };
 

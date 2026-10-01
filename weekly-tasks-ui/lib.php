@@ -3440,6 +3440,9 @@ function weeklyTasksUiProcurementItems(?array $procurement): array
             'group' => 'Procurement',
             'expected' => '3 days or less · weight 20%',
             'actual' => $received > 0 ? weeklyTasksUiDayLabel($leadAvg) : 'No purchases received',
+            'about' => $received > 0
+                ? (weeklyTasksUiDayLabel($leadAvg) . ' is the average time from the purchase-order date to the received date, for orders marked Received in the months you selected. The target is 3 days or less, so this one is ' . ($leadAvg <= 3 ? 'Met' : 'Missed') . '. It still counts as 20% of the procurement score.' . "\n\nFor each received order:\n\nThe start date is the day the purchase order was created.\nThe end date is the day that order was last updated while its status was Received. These orders do not store a separate receipt date.\nThe gap is whole days. A negative gap is counted as 0.")
+                : "Lead time is the average time from the purchase-order date to the received date, for orders marked Received in the months you selected. The target is 3 days or less. It counts as 20% of the procurement score.\n\nFor each received order:\n\nThe start date is the day the purchase order was created.\nThe end date is the day that order was last updated while its status was Received. These orders do not store a separate receipt date.\nThe gap is whole days. A negative gap is counted as 0.",
             'configured' => true,
             'met' => $received === 0 || $leadAvg <= 3,
             'note' => $received > 0 ? 'Lead time: ' . weeklyTasksUiDayLabel($leadAvg) : 'Lead time: no purchases received',
@@ -4369,12 +4372,15 @@ function weeklyTasksUiBuildPayload(): array
                 'receivables' => 'Money received divided by the invoice totals for this month. The target is 95% collected, weighted 40%. Collected means paid in full. Outstanding means a balance is still due.',
             ];
             $procurementAbout = [
-                'lead-time' => 'Days from the purchase order date to the day it was received. The target is 3 days or less, weighted 20%.',
+                'lead-time' => 'Lead time is the average time from the purchase-order date to the received date, for orders marked Received in the months you selected. The target is 3 days or less. It counts as 20% of the procurement score.',
                 'supplier-performance' => 'A receipt is on time when it arrives by the expected date, or within 3 days when no expected date was set. The target is 95%, weighted 15%.',
                 'cost-saving' => 'A repeat buy counts as a saving when its price is below the last price paid for that item. The target is 90%, weighted 40%.',
                 'stock-availability' => 'Items with a quantity above zero, divided by all stocked items. The target is 90% in stock, weighted 20%.',
                 'purchase-order-accuracy' => 'An order is an error when it is cancelled, a received order has no supplier invoice, a price is missing, or more was received than ordered. The target is 100%, weighted 5%.',
             ];
+            if (!empty($match['about'])) {
+                $procurementAbout[$measureKey] = (string) $match['about'];
+            }
             $measureView = [
                 'key' => $measureKey,
                 'title' => $measureKey === 'quotation-conversion'

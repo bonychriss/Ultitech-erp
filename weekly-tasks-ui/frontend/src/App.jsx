@@ -326,7 +326,19 @@ function FinanceBoard({ month, measure, items }) {
               </span>
               <div className="wt-nc-body">
                 <p className="wt-nc-kicker">{item.group || 'Finance'}</p>
-                <h3 className="wt-nc-title">{item.name}</h3>
+                <h3 className="wt-nc-title wt-nc-title--about">
+                  <span>{item.name}</span>
+                  {item.about ? (
+                    <span
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                      }}
+                    >
+                      <AboutNote about={{ text: item.about }} />
+                    </span>
+                  ) : null}
+                </h3>
                 <p className="wt-nc-message">{expected} · {actual}</p>
               </div>
               <em className={`wt-status wt-fin-pill wt-status--${status.key}`}>

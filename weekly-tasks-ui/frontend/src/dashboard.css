@@ -51,12 +51,18 @@
   background: #f3f4f6;
 }
 
+.wt-nc-title--about {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .wt-about-pop {
   position: absolute;
   z-index: 20;
   top: calc(100% + 8px);
   left: 0;
-  width: 240px;
+  width: min(320px, 70vw);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -66,8 +72,9 @@
   border-radius: 10px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
   font-size: 0.82rem;
-  line-height: 1.35;
+  line-height: 1.45;
   color: #374151;
+  white-space: pre-line;
 }
 
 .wt-about-pop strong {

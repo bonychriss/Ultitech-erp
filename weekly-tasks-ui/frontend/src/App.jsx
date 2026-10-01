@@ -1332,6 +1332,138 @@ function UptimeBoard({ board, rows }) {
   )
 }
 
+function leadDays(row) {
+  if (row && row.days != null && row.days !== '') return Number(row.days) || 0
+  const match = String(row?.status || '').match(/(\d+(?:\.\d+)?)/)
+  return match ? Number(match[1]) : 0
+}
+
+function LeadTimeTables({ rows, onOpen }) {
+  const [showMissed, setShowMissed] = useState(false)
+  const [showMet, setShowMet] = useState(false)
+  const sorted = [...rows].sort((a, b) => leadDays(b) - leadDays(a))
+  const missed = sorted.filter((row) => leadDays(row) > 3)
+  const met = sorted.filter((row) => leadDays(row) <= 3)
+  return (
+    <div className="wt-lead">
+      <LeadPane
+        tone="miss"
+        title="Longest waits / Exceptions"
+        hint="Top orders with the longest lead times (missed target)."
+        rows={showMissed ? missed : missed.slice(0, 3)}
+        total={missed.length}
+        expanded={showMissed}
+        onToggle={() => setShowMissed((value) => !value)}
+        onOpen={onOpen}
+      />
+      <LeadPane
+        tone="met"
+        title="Other lead time records"
+        hint="The remaining orders, received within 3 days."
+        rows={showMet ? met : met.slice(0, 4)}
+        total={met.length}
+        expanded={showMet}
+        onToggle={() => setShowMet((value) => !value)}
+        onOpen={onOpen}
+      />
+    </div>
+  )
+}
+
+function LeadPane({ tone, title, hint, rows, total, expanded, onToggle, onOpen }) {
+  const missed = tone === 'miss'
+  return (
+    <section className="wt-lead-card" aria-label={title}>
+      <header className="wt-lead-head">
+        <div className="wt-lead-heading">
+          <span className={`wt-lead-mark wt-lead-mark--${tone}`} aria-hidden="true">
+            {missed ? (
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="8" />
+                <path d="M12 8v5" />
+                <path d="M12 16h.01" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="8" />
+                <path d="m8 12 2.5 2.5L16 9" />
+              </svg>
+            )}
+          </span>
+          <div>
+            <h2>{title}</h2>
+            <p>{hint}</p>
+          </div>
+        </div>
+        {total > rows.length || expanded ? (
+          <button type="button" className="wt-lead-all" onClick={onToggle}>
+            {expanded ? 'Show less' : 'View all'}
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path d="m9 6 6 6-6 6" />
+            </svg>
+          </button>
+        ) : null}
+      </header>
+      {total === 0 ? (
+        <p className="wt-lead-empty">{missed ? 'No orders missed the 3-day target.' : 'No orders were received within 3 days.'}</p>
+      ) : (
+        <div className="wt-lead-scroll">
+          <table className="wt-lead-table">
+            <thead>
+              <tr>
+                <th>Purchase Request</th>
+                <th>Lead time</th>
+                <th>Date received</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => {
+                const days = leadDays(row)
+                const late = days > 3
+                const canOpen = typeof onOpen === 'function' && Boolean(row.documentUrl)
+                return (
+                  <tr
+                    key={`${row.title}-${row.date}-${index}`}
+                    className={canOpen ? 'wt-lead-row--link' : undefined}
+                    onClick={canOpen ? () => onOpen(row) : undefined}
+                  >
+                    <td>
+                      <strong>{row.title}</strong>
+                      <span className="wt-lead-sub">{days === 1 ? '1 day' : `${days} days`}</span>
+                    </td>
+                    <td className={late ? 'wt-lead-days wt-lead-days--miss' : 'wt-lead-days wt-lead-days--met'}>
+                      {days === 1 ? '1 day' : `${days} days`}
+                    </td>
+                    <td>{row.when || '—'}</td>
+                    <td>
+                      <span className={late ? 'wt-lead-pill wt-lead-pill--miss' : 'wt-lead-pill wt-lead-pill--met'}>
+                        {late ? (
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                            <circle cx="12" cy="12" r="8" />
+                            <path d="M12 8v5" />
+                            <path d="M12 16h.01" />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                            <circle cx="12" cy="12" r="8" />
+                            <path d="m8 12 2.5 2.5L16 9" />
+                          </svg>
+                        )}
+                        {late ? 'Missed target' : 'Within target'}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  )
+}
+
 function MeasurePage({ month, measure }) {
   const rows = Array.isArray(measure.rows) ? measure.rows : []
   const breakdown = Array.isArray(measure.items) ? measure.items : []
@@ -1441,7 +1573,9 @@ function MeasurePage({ month, measure }) {
         ) : (
           <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
         )
-      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy', 'invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables', 'lead-time', 'supplier-performance', 'cost-saving', 'stock-availability', 'purchase-order-accuracy'].includes(measure.key) ? (
+      ) : measure.key === 'lead-time' ? (
+        <LeadTimeTables rows={rows} onOpen={openDocument} />
+      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy', 'invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables', 'supplier-performance', 'cost-saving', 'stock-availability', 'purchase-order-accuracy'].includes(measure.key) ? (
         <RecordCards
           rows={rows}
           onOpen={openDocument}
@@ -1461,7 +1595,6 @@ function MeasurePage({ month, measure }) {
             'cashbook-and-expenses-recordings': 'Recording',
             'timely-reports-returns-submission': 'Recording',
             receivables: 'Receivable',
-            'lead-time': 'Lead time',
             'supplier-performance': 'Supplier',
             'cost-saving': 'Saving',
             'stock-availability': 'Stock',
@@ -1474,8 +1607,7 @@ function MeasurePage({ month, measure }) {
                   : measure.key === 'invoice-accuracy' ? 'invoice'
                     : measure.key === 'cashbook-and-expenses-recordings' || measure.key === 'timely-reports-returns-submission' ? 'cashbook'
                       : measure.key === 'receivables' ? 'receivables'
-                        : measure.key === 'lead-time' ? 'lead'
-                          : measure.key === 'supplier-performance' ? 'supplier'
+                        : measure.key === 'supplier-performance' ? 'supplier'
                             : measure.key === 'cost-saving' ? 'saving'
                               : measure.key === 'stock-availability' ? 'stock'
                                 : measure.key === 'purchase-order-accuracy' ? 'accuracy'

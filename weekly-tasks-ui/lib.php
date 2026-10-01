@@ -3774,6 +3774,9 @@ function weeklyTasksUiBuildPayload(): array
                 'items' => $breakdown,
                 'board' => $attendanceBoard ?: $uptimeBoard,
                 'empty' => $measureKey === 'customer-visits' ? 'Coming soon' : $empty,
+                'progress' => $measureKey === 'finance-performance'
+                    ? (!empty($match['pending']) ? 100 : (int) filter_var((string) ($match['actual'] ?? '0'), FILTER_SANITIZE_NUMBER_INT))
+                    : null,
                 'backUrl' => $salesMeasure
                     ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'sales-performance')
                     : ($itMeasure

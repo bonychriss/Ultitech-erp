@@ -274,10 +274,80 @@ function MonthSelect({ month, boxed = false }) {
 
 function itemStatus(item) {
   if (!item.configured) return { key: 'none', label: 'Not configured' }
-  if (item.pending) return { key: 'none', label: 'Due' }
+  if (item.pending) return { key: 'due', label: 'Due' }
   if (String(item.actual || '') === 'Not recorded') return { key: 'none', label: 'Not recorded' }
   if (item.met) return { key: 'met', label: 'Met' }
   return { key: 'short', label: 'Missed' }
+}
+
+function FinanceBoard({ month, measure, items }) {
+  const progress = Math.max(0, Math.min(100, Number(measure.progress) || 0))
+  return (
+    <div className="wt-fin">
+      <div className="wt-fin-bar">
+        <a className="wt-back" href={measure.backUrl || '#'}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <path d="M15 6 9 12l6 6" />
+          </svg>
+          Back
+        </a>
+        <MonthSelect month={month} boxed />
+      </div>
+      <section className="wt-fin-hero">
+        <span className="wt-fin-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <path d="M4 19V5M4 19h16" />
+            <path d="m7 14 4-4 3 3 5-6" />
+          </svg>
+        </span>
+        <div className="wt-fin-hero-copy">
+          <h1>{measure.title}</h1>
+          <p>{measure.summary}</p>
+        </div>
+        <div className="wt-fin-progress">
+          <span>Overall progress</span>
+          <div className="wt-fin-track" aria-hidden="true">
+            <span style={{ width: `${progress}%` }} />
+          </div>
+          <strong>{progress}%</strong>
+        </div>
+      </section>
+      <div className="wt-fin-list">
+        {items.map((item) => {
+          const status = itemStatus(item)
+          const tone = measureIcon(item) === 'report' ? 'amber' : 'green'
+          const expected = item.configured ? item.expected : 'Not configured'
+          const actual = item.configured ? item.actual : 'Not configured'
+          const Row = item.href ? 'a' : 'article'
+          return (
+            <Row key={item.name} className={`wt-nc-card wt-kpi-card wt-fin-card wt-fin-card--${tone}`} href={item.href || undefined}>
+              <span className="wt-fin-icon" aria-hidden="true">
+                <RecordIcon kind={measureIcon(item)} />
+              </span>
+              <div className="wt-nc-body">
+                <p className="wt-nc-kicker">{item.group || 'Finance'}</p>
+                <h3 className="wt-nc-title">{item.name}</h3>
+                <p className="wt-nc-message">{expected} · {actual}</p>
+              </div>
+              <em className={`wt-status wt-fin-pill wt-status--${status.key}`}>
+                {status.key === 'met' ? (
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="m5 12 5 5L20 7" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8" />
+                    <path d="M12 8v5l3 2" />
+                  </svg>
+                )}
+                {status.label}
+              </em>
+            </Row>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 function SalesMeasureCards({ items }) {
@@ -1213,9 +1283,11 @@ function MeasurePage({ month, measure }) {
       win.downloadDeliveryNote()
     }
   }
+  const financeBoard = measure.key === 'finance-performance' && breakdown.length > 0
   return (
     <div className="wt-dash">
-      <a className="wt-back" href={measure.backUrl || '#'}>Back</a>
+      {financeBoard ? null : <a className="wt-back" href={measure.backUrl || '#'}>Back</a>}
+      {financeBoard ? <FinanceBoard month={month} measure={measure} items={breakdown} /> : null}
       {measure.key === 'attendance' && measure.configured && measure.board ? (
         <>
           <section className="wt-att-page">
@@ -1256,7 +1328,7 @@ function MeasurePage({ month, measure }) {
           <UptimeBoard board={measure.board} rows={rows} />
         </section>
       ) : null}
-      {(measure.key === 'attendance' || measure.key === 'system-uptime') && measure.configured && measure.board ? null : (
+      {(measure.key === 'attendance' || measure.key === 'system-uptime') && measure.configured && measure.board || financeBoard ? null : (
       <>
       <header className="wt-head">
         <div>

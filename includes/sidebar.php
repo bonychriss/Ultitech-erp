@@ -265,6 +265,7 @@ switch ($active_module) {
 
         addItem($menuItems, 'invoices', 'Invoices', 'currency', $prefix . 'modules/sales/invoices/index.php?module=sales');
         addItem($menuItems, 'invoice-corrections', 'Wrong invoices', 'exclamation-triangle', $prefix . 'sales/wrong-invoices?module=sales');
+        addItem($menuItems, 'customer-performance', 'Customer Performance', 'trophy', $prefix . 'modules/sales/customer-performance/index.php?module=sales');
         addItem($menuItems, 'supplier-statement', 'Supplier statement', 'file-invoice', $prefix . 'stock/statements');
 
         addItem($menuItems, 'create-invoice', 'Create Invoice', 'currency', $prefix . 'modules/sales/invoices/create.php?module=sales');

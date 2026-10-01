@@ -56,6 +56,7 @@ $salesDeskEntries = [
     'wrong-invoices' => __DIR__ . '/modules/sales/invoices/corrections.php',
     'orders' => __DIR__ . '/modules/sales/orders/index.php',
     'customers' => __DIR__ . '/modules/sales/customers/index.php',
+    'customer-performance' => __DIR__ . '/modules/sales/customer-performance/index.php',
     'my-sales' => __DIR__ . '/modules/sales/my-sales/index.php',
     'catalogue' => __DIR__ . '/modules/sales/catalogue.php',
     'customer-catalogue' => __DIR__ . '/modules/sales/customers/catalogue.php',

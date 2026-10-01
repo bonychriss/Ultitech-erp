@@ -2686,6 +2686,32 @@ function weeklyTasksUiFinanceSnapshot(PDO $pdo, array $offsets): array
         }
     }
 
+    $wrongReports = [];
+    if ($invoiceIds && function_exists('tableExists') && tableExists('sales_invoice_corrections', $pdo)) {
+        try {
+            $ids = array_keys($invoiceIds);
+            $marks = implode(',', array_fill(0, count($ids), '?'));
+            $st = $pdo->prepare(
+                "SELECT invoice_id, status, reason
+                 FROM sales_invoice_corrections
+                 WHERE invoice_id IN ($marks)
+                 ORDER BY id ASC"
+            );
+            $st->execute($ids);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $report) {
+                $reportId = (int) ($report['invoice_id'] ?? 0);
+                if ($reportId < 1) {
+                    continue;
+                }
+                $wrongReports[$reportId] = [
+                    'status' => strtolower(trim((string) ($report['status'] ?? ''))),
+                    'reason' => trim((string) ($report['reason'] ?? '')),
+                ];
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
     $creditIds = [];
     if ($invoiceIds && function_exists('tableExists') && tableExists('revenue_entries', $pdo)) {
         try {
@@ -2707,8 +2733,14 @@ function weeklyTasksUiFinanceSnapshot(PDO $pdo, array $offsets): array
 
     foreach ($invoiceIds as $id => $row) {
         $status = strtolower(trim((string) ($row['status'] ?? '')));
+        $report = $wrongReports[$id] ?? null;
+        $reportStatus = (string) ($report['status'] ?? '');
         $reason = '';
-        if (in_array($status, ['cancelled', 'canceled', 'void', 'voided'], true)) {
+        if ($reportStatus === 'approved') {
+            $reason = 'Wrong invoice';
+        } elseif ($reportStatus === 'pending') {
+            $reason = 'Reported as wrong';
+        } elseif (in_array($status, ['cancelled', 'canceled', 'void', 'voided'], true)) {
             $reason = 'Cancelled';
         } elseif (isset($creditIds[$id])) {
             $reason = 'Credit note';
@@ -2929,10 +2961,10 @@ function weeklyTasksUiFinanceItems(?array $finance): array
             'expected' => '100% error-free · weight 30%',
             'actual' => $invoices > 0
                 ? ($invoicePct . '% · ' . $clean . ' of ' . $invoices)
-                : 'Not recorded',
+                : '100% · none issued',
             'configured' => true,
-            'met' => $invoices > 0 && $invoicePct >= 100,
-            'note' => $invoices > 0 ? 'Invoice accuracy: ' . $invoicePct . ' of 100%' : 'Invoice accuracy: Not recorded',
+            'met' => $invoices === 0 || $invoicePct >= 100,
+            'note' => $invoices > 0 ? 'Invoice accuracy: ' . $invoicePct . ' of 100%' : 'Invoice accuracy: no invoices issued',
             'spoken' => $invoices > 0 ? 'invoice accuracy is ' . $invoicePct . ' of 100%' : '',
         ],
         [
@@ -3763,7 +3795,7 @@ function weeklyTasksUiBuildPayload(): array
                 'system-accuracy' => 'A system problem counts once. Recurred means the same problem was logged again. The target is 95% of problems happening only once.',
             ];
             $financeAbout = [
-                'invoice-accuracy' => 'An invoice is error-free when it is not cancelled, it matches the order total, and it has no credit note. The target is 100%, weighted 30%.',
+                'invoice-accuracy' => 'An invoice is error-free when it was not reported as wrongly issued, it is not cancelled, it matches the order total, and it has no credit note. An approved wrong-invoice report counts as an error. The target is 100%, weighted 30%.',
                 'timely-reports-returns-submission' => 'A monthly finance report counts once it is no longer a draft. On time means it was submitted by the 5th of the next month. The target is every report on time, weighted 30%.',
                 'receivables' => 'Money received divided by the invoice totals for this month. The target is 95% collected, weighted 40%. Collected means paid in full. Outstanding means a balance is still due.',
             ];

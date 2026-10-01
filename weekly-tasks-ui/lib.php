@@ -2638,16 +2638,23 @@ function weeklyTasksUiFinancePeopleIds(PDO $pdo): array
     return $ids;
 }
 
-function weeklyTasksUiFinanceReportSubmitted(string $status): bool
+function weeklyTasksUiModuleUrl(string $path): string
 {
-    return in_array(strtolower(trim($status)), ['under_review', 'approved', 'final', 'archived', 'submitted'], true);
+    $path = ltrim($path, '/');
+    if (function_exists('company_url')) {
+        return company_url($path);
+    }
+    if (function_exists('app_url')) {
+        return app_url('/' . $path);
+    }
+
+    return '/' . $path;
 }
 
 /**
  * Shared finance result for the selected months.
- * Invoice accuracy is error-free invoices. A monthly finance report is on time
- * when it leaves draft by the 5th of the next month. Receivables is money received
- * divided by invoice totals.
+ * Invoice accuracy is error-free invoices. Cashbook and expenses count when each
+ * has a recording dated in the month. Receivables is money received divided by invoice totals.
  *
  * @param array<int,int> $offsets
  * @return array<string,mixed>
@@ -2797,96 +2804,146 @@ function weeklyTasksUiFinanceSnapshot(PDO $pdo, array $offsets): array
         ];
     }
 
-    $reports = [];
-    if (function_exists('tableExists') && tableExists('sales_reports', $pdo)) {
-        try {
-            $hasDomain = $pdo->query("SHOW COLUMNS FROM sales_reports LIKE 'report_domain'")->fetch();
-            if ($hasDomain) {
-                $reports = $pdo->query(
-                    "SELECT id, report_name, status, start_date, end_date, created_at, updated_at
-                     FROM sales_reports
-                     WHERE deleted_at IS NULL AND report_domain = 'finance'
-                     ORDER BY start_date, id"
-                )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $recordingRows = [];
+    $seenCash = [];
+    $seenExpense = [];
+    $cashbookCount = 0;
+    $expenseCount = 0;
+    $cashbookReady = function_exists('tableExists') && tableExists('cash_book_entries', $pdo);
+    $expenseReady = function_exists('tableExists') && tableExists('erp_expenses', $pdo);
+    $expenseRequestReady = !$expenseReady && function_exists('tableExists') && tableExists('expenses_requests', $pdo);
+    $cashbookUrl = weeklyTasksUiModuleUrl('cashbook?module=petty_cash');
+    $expenseUrl = weeklyTasksUiModuleUrl('modules/expenses/index.php?module=expenses');
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        if ($cashbookReady) {
+            try {
+                $st = $pdo->prepare(
+                    'SELECT e.id, e.entry_date, e.entry_type, e.amount, e.party_name, e.remark, b.name AS book_name
+                     FROM cash_book_entries e
+                     LEFT JOIN cash_books b ON b.id = e.book_id
+                     WHERE e.entry_date BETWEEN ? AND ?
+                     ORDER BY e.entry_date, e.id'
+                );
+                $st->execute([$start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $id = (int) ($row['id'] ?? 0);
+                    if ($id < 1 || isset($seenCash[$id])) {
+                        continue;
+                    }
+                    $seenCash[$id] = true;
+                    $cashbookCount++;
+                    $type = strtolower(trim((string) ($row['entry_type'] ?? '')));
+                    $party = trim((string) ($row['party_name'] ?? ''));
+                    $remark = trim((string) ($row['remark'] ?? ''));
+                    $book = trim((string) ($row['book_name'] ?? ''));
+                    $title = $party !== '' ? $party : ($remark !== '' ? $remark : ($book !== '' ? $book : 'Cashbook entry'));
+                    $day = (string) ($row['entry_date'] ?? '');
+                    $recordingRows[] = [
+                        'title' => $title,
+                        'date' => $day,
+                        'when' => $day !== '' ? date('j M Y', strtotime($day)) : '',
+                        'status' => ($type === 'out' ? 'Cash out' : 'Cash in') . ' · ' . weeklyTasksUiMoney((float) ($row['amount'] ?? 0)),
+                        'kicker' => 'Cashbook',
+                        'mark' => 'cashbook',
+                        'documentUrl' => $cashbookUrl,
+                    ];
+                }
+            } catch (Throwable $e) {
             }
-        } catch (Throwable $e) {
-            $reports = [];
+        }
+        if ($expenseReady || $expenseRequestReady) {
+            try {
+                if ($expenseReady) {
+                    $st = $pdo->prepare(
+                        "SELECT id, expense_number, date, payee, amount, description, status
+                         FROM erp_expenses
+                         WHERE date BETWEEN ? AND ?
+                           AND LOWER(COALESCE(status, '')) <> 'deleted'
+                         ORDER BY date, id"
+                    );
+                } else {
+                    $st = $pdo->prepare(
+                        'SELECT id, voucher_number AS expense_number, date, description, amount, status
+                         FROM expenses_requests
+                         WHERE date BETWEEN ? AND ?
+                         ORDER BY date, id'
+                    );
+                }
+                $st->execute([$start, $end]);
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                    $id = (int) ($row['id'] ?? 0);
+                    if ($id < 1 || isset($seenExpense[$id])) {
+                        continue;
+                    }
+                    $seenExpense[$id] = true;
+                    $expenseCount++;
+                    $number = trim((string) ($row['expense_number'] ?? ''));
+                    $payee = trim((string) ($row['payee'] ?? ''));
+                    if ($payee === '') {
+                        $payee = trim((string) ($row['description'] ?? ''));
+                    }
+                    $title = $number !== '' ? $number : 'Expense';
+                    if ($payee !== '' && strcasecmp($payee, $title) !== 0) {
+                        $title .= ' · ' . $payee;
+                    }
+                    $day = (string) ($row['date'] ?? '');
+                    $status = trim((string) ($row['status'] ?? ''));
+                    $statusLabel = 'Recorded · ' . weeklyTasksUiMoney((float) ($row['amount'] ?? 0));
+                    if ($status !== '' && strtolower($status) !== 'pending') {
+                        $statusLabel .= ' · ' . ucfirst($status);
+                    }
+                    $recordingRows[] = [
+                        'title' => $title,
+                        'date' => $day,
+                        'when' => $day !== '' ? date('j M Y', strtotime($day)) : '',
+                        'status' => $statusLabel,
+                        'kicker' => 'Expense',
+                        'mark' => 'expense',
+                        'documentUrl' => $expenseUrl,
+                    ];
+                }
+            } catch (Throwable $e) {
+            }
         }
     }
-
-    $today = date('Y-m-d');
-    $reportsDue = 0;
-    $reportsOnTime = 0;
-    $reportsPending = 0;
-    $reportRows = [];
-    foreach ($offsets as $offset) {
-        [$start, $end, $label] = weeklyTasksUiMonthWindow((int) $offset);
-        $deadline = date('Y-m-05', strtotime($start . ' +1 month'));
-        $best = '';
-        $draftName = '';
-        $submittedName = '';
-        $submittedOn = '';
-        foreach ($reports as $report) {
-            $reportStart = (string) ($report['start_date'] ?? '');
-            $reportEnd = (string) ($report['end_date'] ?? '');
-            if ($reportStart === '' || $reportEnd === '' || $reportStart > $end || $reportEnd < $start) {
-                continue;
-            }
-            $name = trim((string) ($report['report_name'] ?? 'Monthly report'));
-            if (!weeklyTasksUiFinanceReportSubmitted((string) ($report['status'] ?? ''))) {
-                if ($draftName === '') {
-                    $draftName = $name;
-                }
-                continue;
-            }
-            $stamp = (string) ($report['updated_at'] ?? $report['created_at'] ?? '');
-            $day = substr($stamp, 0, 10);
-            if ($day !== '' && $day <= $deadline) {
-                $best = 'ontime';
-                $submittedName = $name;
-                $submittedOn = $day;
-                break;
-            }
-            if ($best !== 'ontime') {
-                $best = 'late';
-                $submittedName = $name;
-                $submittedOn = $day;
-            }
-        }
-        if ($best === 'ontime') {
-            $reportsDue++;
-            $reportsOnTime++;
-            $rowStatus = 'On time' . ($submittedName !== '' ? ' · ' . $submittedName : '');
-        } elseif ($best === 'late') {
-            $reportsDue++;
-            $lateWhen = $submittedOn !== '' ? date('j M Y', strtotime($submittedOn)) : 'after the 5th';
-            $rowStatus = 'Late · ' . $lateWhen;
-        } elseif ($today <= $deadline) {
-            $reportsPending++;
-            $rowStatus = $draftName !== '' ? ('Draft · due by ' . date('j M', strtotime($deadline))) : ('Due by ' . date('j M', strtotime($deadline)));
-        } else {
-            $reportsDue++;
-            $rowStatus = $draftName !== '' ? 'Draft · not submitted' : 'Not submitted';
-        }
-        $reportRows[] = [
-            'title' => $submittedName !== '' ? $submittedName : ($draftName !== '' ? $draftName : ($label . ' monthly report')),
-            'date' => $deadline,
-            'when' => 'By ' . date('j M Y', strtotime($deadline)),
-            'status' => $rowStatus,
-            'kicker' => 'Report',
-            'mark' => 'report',
+    if ($cashbookReady && $cashbookCount === 0) {
+        $recordingRows[] = [
+            'title' => 'Cashbook',
+            'date' => '',
+            'when' => '',
+            'status' => 'Not recorded',
+            'kicker' => 'Cashbook',
+            'mark' => 'cashbook',
+            'documentUrl' => $cashbookUrl,
         ];
     }
+    if (($expenseReady || $expenseRequestReady) && $expenseCount === 0) {
+        $recordingRows[] = [
+            'title' => 'Expenses',
+            'date' => '',
+            'when' => '',
+            'status' => 'Not recorded',
+            'kicker' => 'Expense',
+            'mark' => 'expense',
+            'documentUrl' => $expenseUrl,
+        ];
+    }
+    usort($recordingRows, static function (array $a, array $b): int {
+        return strcmp((string) ($a['date'] ?? ''), (string) ($b['date'] ?? ''));
+    });
 
     $invoicePct = $invoices > 0 ? (int) round((($invoices - $invoiceErrors) / $invoices) * 100) : 0;
     $collectionPct = $invoiced > 0 ? (int) round(($collected / $invoiced) * 100) : 0;
     $invoiceScore = weeklyTasksUiRatioScore((float) $invoicePct, 100);
     $collectionScore = weeklyTasksUiRatioScore((float) $collectionPct, 95);
-    $reportPct = $reportsDue > 0 ? (int) round(($reportsOnTime / $reportsDue) * 100) : 0;
-    $reportScore = weeklyTasksUiRatioScore((float) $reportPct, 100);
+    $recordingsReady = $cashbookReady || $expenseReady || $expenseRequestReady;
+    $recordings = ($cashbookCount > 0 ? 1 : 0) + ($expenseCount > 0 ? 1 : 0);
+    $recordingPct = (int) round(($recordings / 2) * 100);
+    $recordingScore = weeklyTasksUiRatioScore((float) $recordingPct, 100);
     $weighted = [
         ['weight' => 30, 'score' => $invoiceScore, 'on' => $invoices > 0],
-        ['weight' => 30, 'score' => $reportScore, 'on' => $reportsDue > 0],
+        ['weight' => 30, 'score' => $recordingScore, 'on' => $recordingsReady],
         ['weight' => 40, 'score' => $collectionScore, 'on' => $invoiced > 0],
     ];
     $weightSum = 0;
@@ -2908,11 +2965,12 @@ function weeklyTasksUiFinanceSnapshot(PDO $pdo, array $offsets): array
         'collected' => $collected,
         'invoiced' => $invoiced,
         'collectionPct' => $collectionPct,
-        'reportsDue' => $reportsDue,
-        'reportsOnTime' => $reportsOnTime,
-        'reportsPending' => $reportsPending,
+        'recordingsReady' => $recordingsReady,
+        'recordings' => $recordings,
+        'cashbookRecorded' => $cashbookCount > 0,
+        'expensesRecorded' => $expenseCount > 0,
         'invoiceRows' => $invoiceRows,
-        'reportRows' => $reportRows,
+        'recordingRows' => $recordingRows,
         'receivableRows' => $receivableRows,
     ];
 }
@@ -2928,7 +2986,7 @@ function weeklyTasksUiFinanceScores(PDO $pdo, array $offsets): array
         return [];
     }
     $snapshot = weeklyTasksUiFinanceSnapshot($pdo, $offsets);
-    unset($snapshot['invoiceRows'], $snapshot['reportRows'], $snapshot['receivableRows']);
+    unset($snapshot['invoiceRows'], $snapshot['recordingRows'], $snapshot['receivableRows']);
     $out = [];
     foreach ($people as $id) {
         $out[(int) $id] = $snapshot;
@@ -2950,9 +3008,8 @@ function weeklyTasksUiFinanceItems(?array $finance): array
     $clean = max(0, $invoices - $errors);
     $collectionPct = (int) ($finance['collectionPct'] ?? 0);
     $invoiced = (float) ($finance['invoiced'] ?? 0);
-    $reportsDue = (int) ($finance['reportsDue'] ?? 0);
-    $reportsOnTime = (int) ($finance['reportsOnTime'] ?? 0);
-    $reportsPending = (int) ($finance['reportsPending'] ?? 0);
+    $recordingsReady = !empty($finance['recordingsReady']);
+    $recordings = (int) ($finance['recordings'] ?? 0);
 
     return [
         [
@@ -2968,17 +3025,14 @@ function weeklyTasksUiFinanceItems(?array $finance): array
             'spoken' => $invoices > 0 ? 'invoice accuracy is ' . $invoicePct . ' of 100%' : '',
         ],
         [
-            'name' => 'Timely Reports / returns submission',
+            'name' => 'Cashbook and expenses recordings',
             'group' => 'Finance',
-            'expected' => 'Monthly reports by 5th · weight 30%',
-            'actual' => $reportsDue > 0
-                ? ($reportsOnTime . ' of ' . $reportsDue . ' by the 5th')
-                : ($reportsPending > 0 ? 'Due by the 5th' : 'Not recorded'),
+            'expected' => 'Both recorded · weight 30%',
+            'actual' => $recordingsReady ? ($recordings . ' of 2 recorded') : 'Not recorded',
             'configured' => true,
-            'pending' => $reportsDue === 0 && $reportsPending > 0,
-            'met' => $reportsDue > 0 && $reportsOnTime >= $reportsDue,
-            'note' => $reportsDue > 0 ? 'Timely reports: ' . $reportsOnTime . ' of ' . $reportsDue . ' by the 5th' : '',
-            'spoken' => $reportsDue > 0 ? 'timely reports are ' . $reportsOnTime . ' of ' . $reportsDue . ' by the 5th' : '',
+            'met' => $recordingsReady && $recordings >= 2,
+            'note' => $recordingsReady ? ('Cashbook and expenses: ' . $recordings . ' of 2 recorded') : '',
+            'spoken' => $recordingsReady ? ('cashbook and expenses are ' . $recordings . ' of 2 recorded') : '',
         ],
         [
             'name' => 'Receivables',
@@ -3005,8 +3059,8 @@ function weeklyTasksUiFinanceLines(PDO $pdo, array $offsets, string $metric): ar
     if ($metric === 'invoice-accuracy') {
         return $snapshot['invoiceRows'];
     }
-    if ($metric === 'timely-reports-returns-submission') {
-        return $snapshot['reportRows'];
+    if ($metric === 'cashbook-and-expenses-recordings' || $metric === 'timely-reports-returns-submission') {
+        return $snapshot['recordingRows'];
     }
     if ($metric === 'receivables') {
         return $snapshot['receivableRows'];
@@ -3346,9 +3400,9 @@ function weeklyTasksUiKpiCatalog(): array
             $line('Stock Availability', 'No stock-outs', '90%', '20%'),
             $line('Purchase Order Accuracy', 'Pricing, specification and document errors', '100%', '5%'),
         ]),
-        $card('finance', 'Finance KPIs', 'Invoice accuracy, reports and receivables', [
+        $card('finance', 'Finance KPIs', 'Invoice accuracy, cashbook, expenses and receivables', [
             $line('Invoice Accuracy', 'Error-free invoices', '100%', '30%'),
-            $line('Timely Reports / returns submission', 'Monthly reports', 'By 5th', '30%'),
+            $line('Cashbook and expenses recordings', 'Cashbook and expense entries', 'Both recorded', '30%'),
             $line('Receivables', 'Collection performance', '95%', '40%'),
         ]),
         $card('it', 'IT KPIs', 'Uptime, support, backup and system accuracy', [
@@ -3630,9 +3684,10 @@ function weeklyTasksUiBuildPayload(): array
                     'collected' => 0,
                     'invoiced' => 0,
                     'collectionPct' => 0,
-                    'reportsDue' => 0,
-                    'reportsOnTime' => 0,
-                    'reportsPending' => 0,
+                    'recordingsReady' => false,
+                    'recordings' => 0,
+                    'cashbookRecorded' => false,
+                    'expensesRecorded' => false,
                 ]) : null
             );
         }
@@ -3772,11 +3827,12 @@ function weeklyTasksUiBuildPayload(): array
                     'data-backup' => 'No backup in this period.',
                     'system-accuracy' => 'No system problems recorded in this period.',
                 ][$measureKey];
-            } elseif (in_array($measureKey, ['invoice-accuracy', 'timely-reports-returns-submission', 'receivables'], true)) {
+            } elseif (in_array($measureKey, ['invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables'], true)) {
                 $rows = weeklyTasksUiFinanceLines($pdo, $offsets, $measureKey);
                 $empty = [
                     'invoice-accuracy' => 'No invoices in this period.',
-                    'timely-reports-returns-submission' => 'No monthly report in this period.',
+                    'cashbook-and-expenses-recordings' => 'No cashbook or expense recording in this period.',
+                    'timely-reports-returns-submission' => 'No cashbook or expense recording in this period.',
                     'receivables' => 'No invoices to collect in this period.',
                 ][$measureKey];
             } elseif (in_array($measureKey, ['on-time-delivery', 'vehicle-care', 'delivery-documents'], true)) {
@@ -3787,7 +3843,7 @@ function weeklyTasksUiBuildPayload(): array
             }
             $salesMeasure = in_array($measureKey, ['monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'], true);
             $itMeasure = in_array($measureKey, ['system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy'], true);
-            $financeMeasure = in_array($measureKey, ['invoice-accuracy', 'timely-reports-returns-submission', 'receivables'], true);
+            $financeMeasure = in_array($measureKey, ['invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables'], true);
             $itAbout = [
                 'system-uptime' => 'A day counts as down when a task or report says the system was down. Usage is the time people were signed in. The top three are the people with the most signed-in time.',
                 'it-support-response-resolution' => 'These are the requests sent from Suggest. Within 24 hrs means the request was marked done within a day of being sent. Requests still inside that day are listed, and left out of the percentage.',
@@ -3796,7 +3852,8 @@ function weeklyTasksUiBuildPayload(): array
             ];
             $financeAbout = [
                 'invoice-accuracy' => 'An invoice is error-free when it was not reported as wrongly issued, it is not cancelled, it matches the order total, and it has no credit note. An approved wrong-invoice report counts as an error. The target is 100%, weighted 30%.',
-                'timely-reports-returns-submission' => 'A monthly finance report counts once it is no longer a draft. On time means it was submitted by the 5th of the next month. The target is every report on time, weighted 30%.',
+                'cashbook-and-expenses-recordings' => 'Cashbook counts when a cash book entry is dated in this month. Expenses count when an expense is dated in this month. The target is both recorded, weighted 30%.',
+                'timely-reports-returns-submission' => 'Cashbook counts when a cash book entry is dated in this month. Expenses count when an expense is dated in this month. The target is both recorded, weighted 30%.',
                 'receivables' => 'Money received divided by the invoice totals for this month. The target is 95% collected, weighted 40%. Collected means paid in full. Outstanding means a balance is still due.',
             ];
             $measureView = [

@@ -315,7 +315,7 @@ function FinanceBoard({ month, measure, items }) {
       <div className="wt-fin-list">
         {items.map((item) => {
           const status = itemStatus(item)
-          const tone = measureIcon(item) === 'report' ? 'amber' : 'green'
+          const tone = measureIcon(item) === 'cashbook' ? 'amber' : 'green'
           const expected = item.configured ? item.expected : 'Not configured'
           const actual = item.configured ? item.actual : 'Not configured'
           const Row = item.href ? 'a' : 'article'
@@ -719,7 +719,7 @@ function measureIcon(item) {
   if (key === 'data-backup') return 'backup'
   if (key === 'system-accuracy') return 'accuracy'
   if (key === 'invoice-accuracy') return 'invoice'
-  if (key === 'timely-reports-returns-submission') return 'report'
+  if (key === 'cashbook-and-expenses-recordings' || key === 'timely-reports-returns-submission') return 'cashbook'
   if (key === 'receivables') return 'receivables'
   return 'sales'
 }
@@ -798,6 +798,24 @@ function RecordIcon({ kind }) {
     )
   }
   if (kind === 'invoice') return <InvoiceIcon />
+  if (kind === 'cashbook') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="M3 10h18" />
+        <path d="M7 15h4" />
+      </svg>
+    )
+  }
+  if (kind === 'expense') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M7 3.5h7l5 5V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" />
+        <path d="M14 3.5V9h5" />
+        <path d="M9 13h6M9 16.5h4" />
+      </svg>
+    )
+  }
   if (kind === 'report') {
     return (
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -1359,7 +1377,7 @@ function MeasurePage({ month, measure }) {
         ) : (
           <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
         )
-      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy', 'invoice-accuracy', 'timely-reports-returns-submission', 'receivables'].includes(measure.key) ? (
+      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy', 'invoice-accuracy', 'cashbook-and-expenses-recordings', 'timely-reports-returns-submission', 'receivables'].includes(measure.key) ? (
         <RecordCards
           rows={rows}
           onOpen={openDocument}
@@ -1376,7 +1394,8 @@ function MeasurePage({ month, measure }) {
             'data-backup': 'Backup',
             'system-accuracy': 'Accuracy',
             'invoice-accuracy': 'Invoice',
-            'timely-reports-returns-submission': 'Report',
+            'cashbook-and-expenses-recordings': 'Recording',
+            'timely-reports-returns-submission': 'Recording',
             receivables: 'Receivable',
           }[measure.key] || 'To-do'}
           kind={
@@ -1384,7 +1403,7 @@ function MeasurePage({ month, measure }) {
               : measure.key === 'todo' ? 'todo'
                 : measure.key === 'new-customers' ? 'customer'
                   : measure.key === 'invoice-accuracy' ? 'invoice'
-                    : measure.key === 'timely-reports-returns-submission' ? 'report'
+                    : measure.key === 'cashbook-and-expenses-recordings' || measure.key === 'timely-reports-returns-submission' ? 'cashbook'
                       : measure.key === 'receivables' ? 'receivables'
                         : 'sales'
           }

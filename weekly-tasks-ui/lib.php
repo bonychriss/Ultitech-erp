@@ -2986,10 +2986,10 @@ function weeklyTasksUiFinanceItems(?array $finance): array
             'expected' => '95% collected · weight 40%',
             'actual' => $invoiced > 0
                 ? ($collectionPct . '% · ' . weeklyTasksUiMoney((float) ($finance['collected'] ?? 0)) . ' of ' . weeklyTasksUiMoney($invoiced))
-                : 'Not recorded',
+                : '100% · nothing to collect',
             'configured' => true,
-            'met' => $invoiced > 0 && $collectionPct >= 95,
-            'note' => $invoiced > 0 ? 'Receivables: ' . $collectionPct . ' of 95%' : 'Receivables: Not recorded',
+            'met' => $invoiced === 0 || $collectionPct >= 95,
+            'note' => $invoiced > 0 ? 'Receivables: ' . $collectionPct . ' of 95%' : 'Receivables: nothing to collect',
             'spoken' => $invoiced > 0 ? 'receivables are ' . $collectionPct . ' of 95%' : '',
         ],
     ];

@@ -1,6 +1,7 @@
 <?php
 // modules/payroll/payslip_batch.php
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/payroll-lib.php';
 
 // Strict Access Control
 define('ALLOW_ANONYMOUS_PAYROLL', true);
@@ -16,7 +17,8 @@ if (!$run) die("Run not found");
 // Fetch All Payslips
 $stmt = $pdo->prepare("
     SELECT p.*, pr.month, pr.year, u.full_name, u.role, u.department,
-           es.bank_name, es.account_number, es.nssf_number, es.tin_number
+           es.bank_name, es.account_number, es.nssf_number, es.tin_number,
+           es.transport_allowance AS salary_transport_allowance
     FROM " . payroll_table('payslips') . " p
     JOIN " . payroll_table('payroll_runs') . " pr ON p.payroll_run_id = pr.id
     JOIN users u ON p.user_id = u.id
@@ -124,9 +126,15 @@ $slips = $stmt->fetchAll();
                     <td class="amount-col"><?= number_format($slip['basic_salary'], 2) ?></td>
                     <td class="amount-col"></td>
                 </tr>
+                <?php $allowanceSplit = payrollDeskSplitAllowanceBucket($slip); ?>
                 <tr>
-                    <td>Allowances</td>
-                    <td class="amount-col"><?= number_format($slip['total_allowances'], 2) ?></td>
+                    <td>Transport Allowance</td>
+                    <td class="amount-col"><?= number_format($allowanceSplit['transport'], 2) ?></td>
+                    <td class="amount-col"></td>
+                </tr>
+                <tr>
+                    <td>Other Allowance</td>
+                    <td class="amount-col"><?= number_format($allowanceSplit['overtimeAllowances'], 2) ?></td>
                     <td class="amount-col"></td>
                 </tr>
                 <tr class="table-light">

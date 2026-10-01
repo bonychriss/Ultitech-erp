@@ -89,6 +89,7 @@ $sql4 = "CREATE TABLE IF NOT EXISTS " . payroll_table('payslips') . " (
   `payroll_run_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `basic_salary` decimal(15,2) NOT NULL,
+  `transport_allowance` decimal(15,2) NOT NULL DEFAULT 0.00,
   `total_allowances` decimal(15,2) DEFAULT 0.00,
   `overtime_allowances` decimal(15,2) NOT NULL DEFAULT 0.00,
   `bonus_commission` decimal(15,2) NOT NULL DEFAULT 0.00,

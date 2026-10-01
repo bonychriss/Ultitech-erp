@@ -21,7 +21,8 @@ if (!$run) {
 
 $stmt = $pdo->prepare("
     SELECT p.*, u.full_name, u.department,
-           es.bank_name, es.account_number, es.nssf_number, es.tin_number
+           es.bank_name, es.account_number, es.nssf_number, es.tin_number,
+           es.transport_allowance AS salary_transport_allowance
     FROM " . payroll_table('payslips') . " p
     JOIN users u ON p.user_id = u.id
     LEFT JOIN " . payroll_table('employee_salary') . " es ON u.id = es.user_id
@@ -45,6 +46,7 @@ $fmt = static function ($n): string {
 
 $totals = [
     'basic' => 0.0,
+    'transport' => 0.0,
     'allowances' => 0.0,
     'bonus' => 0.0,
     'gross' => 0.0,
@@ -73,6 +75,7 @@ $totals = [
             <th class="header-main">NAME OF THE EMPLOYEE</th>
             <th class="header-main">DEPARTMENT</th>
             <th class="header-main">BASIC SALARIES</th>
+            <th class="header-main">TRANSPORT ALLOWANCE</th>
             <th class="header-main">OVERTIME &amp; ALLOWANCES</th>
             <th class="header-main">BONUS / COMMISSION</th>
             <th class="header-main">GROSS SALARIES</th>
@@ -90,7 +93,9 @@ $totals = [
     <tbody>
         <?php foreach ($slips as $i => $slip):
             $basic = (float) ($slip['basic_salary'] ?? 0);
-            $allowances = (float) ($slip['total_allowances'] ?? 0);
+            $split = payrollDeskSplitAllowanceBucket($slip);
+            $transport = $split['transport'];
+            $allowances = $split['overtimeAllowances'];
             $bonus = (float) ($slip['bonus_commission'] ?? 0);
             $gross = (float) ($slip['gross_salary'] ?? 0);
             $nssf = (float) ($slip['nssf_deduction'] ?? 0);
@@ -105,6 +110,7 @@ $totals = [
             $employerCost = (float) ($slip['employer_cost'] ?? ($gross + $employerNssf + $sdl + $wcf));
 
             $totals['basic'] += $basic;
+            $totals['transport'] += $transport;
             $totals['allowances'] += $allowances;
             $totals['bonus'] += $bonus;
             $totals['gross'] += $gross;
@@ -123,6 +129,7 @@ $totals = [
             <td><?= htmlspecialchars((string) ($slip['full_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
             <td><?= htmlspecialchars((string) ($slip['department'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
             <td><?= $fmt($basic) ?></td>
+            <td><?= $fmt($transport) ?></td>
             <td><?= $fmt($allowances) ?></td>
             <td><?= $fmt($bonus) ?></td>
             <td><?= $fmt($gross) ?></td>
@@ -142,6 +149,7 @@ $totals = [
             <td>GRAND TOTALS</td>
             <td></td>
             <td><?= $fmt($totals['basic']) ?></td>
+            <td><?= $fmt($totals['transport']) ?></td>
             <td><?= $fmt($totals['allowances']) ?></td>
             <td><?= $fmt($totals['bonus']) ?></td>
             <td><?= $fmt($totals['gross']) ?></td>

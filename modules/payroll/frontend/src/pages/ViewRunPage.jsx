@@ -422,6 +422,7 @@ export default function ViewRunPage() {
                   <th scope="col">Name of the employee</th>
                   <th scope="col">Department</th>
                   <th scope="col">Basic salaries</th>
+                  <th scope="col" title="Each employee's transport allowance, included in gross salary">Transport allowance</th>
                   <th scope="col">Overtime &amp; allowances</th>
                   <th scope="col">Bonus / commission</th>
                   <th scope="col">Gross salaries</th>
@@ -440,10 +441,12 @@ export default function ViewRunPage() {
               <tbody>
                 {slips.map((slip, index) => {
                   const basic = Number(slip.basicSalary) || 0;
-                  const overtimeAllowances = Number(slip.allowances) || 0;
+                  const transport = Number(slip.transportAllowance) || 0;
+                  const allowanceBucket = Number(slip.allowances) || 0;
+                  const overtimeAllowances = Math.max(0, allowanceBucket - transport);
                   const bonus = Number(slip.bonusCommission) || 0;
                   const adjustment = Number(slip.monthlyAdjustment) || 0;
-                  const gross = Number(slip.grossSalary) || (basic + overtimeAllowances + bonus + adjustment);
+                  const gross = Number(slip.grossSalary) || (basic + transport + overtimeAllowances + bonus + adjustment);
                   const nssf = Number(slip.nssfDeduction) || 0;
                   const taxable = Number(slip.taxableSalary) || Math.max(0, gross - nssf);
                   const paye = Number(slip.taxDeduction) || 0;
@@ -484,6 +487,7 @@ export default function ViewRunPage() {
                       <span className="pay-desk-dept">{String(slip.department || '-').toUpperCase()}</span>
                     </td>
                     <td>{formatAmount(basic)}</td>
+                    <td title="Transport allowance from this employee's salary">{formatAmount(transport)}</td>
                     <td>{formatAmount(overtimeAllowances)}</td>
                     <td>{formatAmount(bonus)}</td>
                     <td>{formatAmount(gross)}</td>
@@ -570,7 +574,8 @@ export default function ViewRunPage() {
                 <tr>
                   <td colSpan={3} className="pay-run-total-label">Grand totals</td>
                   <td>{formatAmount(totals.basic)}</td>
-                  <td>{formatAmount(totals.allowances)}</td>
+                  <td>{formatAmount(totals.transport)}</td>
+                  <td>{formatAmount(Math.max(0, (Number(totals.allowances) || 0) - (Number(totals.transport) || 0)))}</td>
                   <td>{formatAmount(totals.bonus)}</td>
                   <td>{formatAmount(totals.gross)}</td>
                   <td className="pay-run-deduct">{formatAmount(totals.nssf)}</td>

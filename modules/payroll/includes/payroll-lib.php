@@ -440,6 +440,35 @@ function payrollDeskDeleteRun(PDO $pdo, int $runId): void
 }
 
 /**
+ * Split the stored allowance bucket into transport and the overtime column.
+ * Gross stays basic + full bucket + bonus + adjustment. Transport is a slice
+ * of that bucket, snapshotted on the payslip or taken from the salary record
+ * when it still fits inside the bucket.
+ *
+ * @param array<string,mixed> $row
+ * @return array{transport:float,overtimeAllowances:float,allowanceBucket:float}
+ */
+function payrollDeskSplitAllowanceBucket(array $row): array
+{
+    $bucket = round((float) ($row['total_allowances'] ?? 0), 2);
+    $stored = round((float) ($row['transport_allowance'] ?? 0), 2);
+    $salary = round((float) ($row['salary_transport_allowance'] ?? 0), 2);
+
+    $transport = 0.0;
+    if ($stored > 0.009) {
+        $transport = min($stored, max(0.0, $bucket));
+    } elseif ($salary > 0.009 && $salary <= $bucket + 0.009) {
+        $transport = min($salary, max(0.0, $bucket));
+    }
+
+    return [
+        'transport' => round($transport, 2),
+        'overtimeAllowances' => round(max(0.0, $bucket - $transport), 2),
+        'allowanceBucket' => $bucket,
+    ];
+}
+
+/**
  * @return array<string, mixed>
  */
 function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
@@ -463,9 +492,11 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT p.*, u.full_name, u.department, u.email
+        'SELECT p.*, u.full_name, u.department, u.email,
+                es.transport_allowance AS salary_transport_allowance
          FROM ' . payroll_table('payslips') . ' p
          JOIN users u ON p.user_id = u.id
+         LEFT JOIN ' . payroll_table('employee_salary') . ' es ON es.user_id = p.user_id
          WHERE p.payroll_run_id = ?
          ORDER BY u.full_name ASC'
     );
@@ -474,6 +505,7 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
 
     $totals = [
         'basic' => 0.0,
+        'transport' => 0.0,
         'allowances' => 0.0,
         'bonus' => 0.0,
         'gross' => 0.0,
@@ -490,6 +522,8 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
     $slips = [];
     foreach ($rows as $row) {
         $basic = (float) ($row['basic_salary'] ?? 0);
+        $split = payrollDeskSplitAllowanceBucket($row);
+        $transport = $split['transport'];
         $allowances = (float) ($row['total_allowances'] ?? 0);
         $bonus = (float) ($row['bonus_commission'] ?? 0);
         $gross = (float) ($row['gross_salary'] ?? 0);
@@ -503,6 +537,7 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
         $other = (float) ($row['other_deductions'] ?? 0);
         $net = (float) ($row['net_salary'] ?? 0);
         $totals['basic'] += $basic;
+        $totals['transport'] += $transport;
         $totals['allowances'] += $allowances;
         $totals['bonus'] += $bonus;
         $totals['gross'] += $gross;
@@ -524,8 +559,9 @@ function payrollDeskGetRunPayload(PDO $pdo, int $runId): array
             'email' => trim((string) ($row['email'] ?? '')),
             'department' => (string) ($row['department'] ?? ''),
             'basicSalary' => $basic,
+            'transportAllowance' => $transport,
             'allowances' => $allowances,
-            'overtimeAllowances' => (float) ($row['overtime_allowances'] ?? 0),
+            'overtimeAllowances' => $split['overtimeAllowances'],
             'bonusCommission' => $bonus,
             'monthlyAdjustment' => (float) ($row['monthly_adjustment'] ?? 0),
             'grossSalary' => $gross,
@@ -692,6 +728,7 @@ function payrollDeskBuildPayslipPdfAttachment(PDO $pdo, array $slip, array $run)
             SELECT p.*, pr.month, pr.year, pr.run_date, pr.run_by, pr.id AS payroll_run_id,
                    u.full_name, u.email, u.department,
                    es.bank_name, es.account_number, es.nssf_number, es.tin_number,
+                   es.transport_allowance AS salary_transport_allowance,
                    runner.full_name AS runner_name, runner.signature_path AS runner_signature_path,
                    runner.role AS runner_role, runner.department AS runner_department
             FROM " . payroll_table('payslips') . " p
@@ -891,7 +928,9 @@ function payrollDeskBuildPayslipPdfAttachment(PDO $pdo, array $slip, array $run)
     };
 
     $basic = (float) ($slip['basic_salary'] ?? 0);
-    $allowances = (float) ($slip['total_allowances'] ?? 0);
+    $split = payrollDeskSplitAllowanceBucket($slip);
+    $transport = $split['transport'];
+    $allowances = $split['overtimeAllowances'];
     $bonus = (float) ($slip['bonus_commission'] ?? 0);
     $adjustment = (float) ($slip['monthly_adjustment'] ?? 0);
     $nssf = (float) ($slip['nssf_deduction'] ?? 0);
@@ -909,9 +948,8 @@ function payrollDeskBuildPayslipPdfAttachment(PDO $pdo, array $slip, array $run)
             . '<td class="num">' . $safe($earn) . '</td><td class="num">' . $safe($ded) . '</td></tr>';
     };
     $addRow('Basic Salary', $money($basic), '-');
-    if ($allowances > 0) {
-        $addRow('Overtime & Allowances', $money($allowances), '-');
-    }
+    $addRow('Transport Allowance', $money($transport), '-');
+    $addRow('Other Allowance', $money($allowances), '-');
     if ($bonus > 0) {
         $addRow('Bonus / Commission', $money($bonus), '-');
     }
@@ -2224,10 +2262,10 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
         $total_payout = 0.0;
         $insertSlip = $pdo->prepare(
             'INSERT INTO ' . payroll_table('payslips') . '
-            (payroll_run_id, user_id, basic_salary, total_allowances, overtime_allowances, bonus_commission,
+            (payroll_run_id, user_id, basic_salary, transport_allowance, total_allowances, overtime_allowances, bonus_commission,
              monthly_adjustment, gross_salary, taxable_salary, tax_deduction, nssf_deduction,
              employer_nssf, sdl_amount, wcf_amount, employer_cost, other_deductions, net_salary)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
 
         foreach ($users as $user) {
@@ -2253,7 +2291,8 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
                 }
             }
 
-            // Excel E = overtime & allowances (house + transport + OT + dynamic)
+            // Allowance bucket includes transport so gross stays unchanged.
+            // The register shows transport on its own column and overtime as the remainder.
             $totalAllowances = $house + $transport + $overtime + $dynamic_allowances;
             // Excel G = D + E + F (+ monthly adjustment kept for legacy)
             $gross = $basic + $totalAllowances + $bonus + $adj;
@@ -2264,6 +2303,7 @@ function payrollDeskGenerateRun(PDO $pdo, int $month, int $year, int $runByUserI
                 $runId,
                 (int) $user['id'],
                 $basic,
+                $transport,
                 $totalAllowances,
                 $overtime,
                 $bonus,
@@ -2386,10 +2426,12 @@ function payrollDeskGetPayslipEditPayload(PDO $pdo, int $payslipId): array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT p.*, pr.status AS run_status, pr.id AS run_id, u.full_name, u.id AS employee_user_id, pr.month, pr.year
+        'SELECT p.*, pr.status AS run_status, pr.id AS run_id, u.full_name, u.id AS employee_user_id, pr.month, pr.year,
+                es.transport_allowance AS salary_transport_allowance
          FROM ' . payroll_table('payslips') . ' p
          JOIN ' . payroll_table('payroll_runs') . ' pr ON p.payroll_run_id = pr.id
          JOIN users u ON p.user_id = u.id
+         LEFT JOIN ' . payroll_table('employee_salary') . ' es ON es.user_id = p.user_id
          WHERE p.id = ?'
     );
     $stmt->execute([$payslipId]);
@@ -2407,6 +2449,7 @@ function payrollDeskGetPayslipEditPayload(PDO $pdo, int $payslipId): array
     $month = (int) ($slip['month'] ?? 0);
     $periodDate = sprintf('%04d-%02d-01', $year, max(1, $month));
     $runId = (int) ($slip['run_id'] ?? $slip['payroll_run_id'] ?? 0);
+    $split = payrollDeskSplitAllowanceBucket($slip);
 
     return [
         'payslip' => [
@@ -2419,7 +2462,8 @@ function payrollDeskGetPayslipEditPayload(PDO $pdo, int $payslipId): array
             'year' => $year,
             'runStatus' => $runStatus,
             'basicSalary' => (float) ($slip['basic_salary'] ?? 0),
-            'totalAllowances' => (float) ($slip['total_allowances'] ?? 0),
+            'transportAllowance' => $split['transport'],
+            'totalAllowances' => $split['overtimeAllowances'],
             'overtimeAllowances' => (float) ($slip['overtime_allowances'] ?? 0),
             'bonusCommission' => (float) ($slip['bonus_commission'] ?? 0),
             'monthlyAdjustment' => (float) ($slip['monthly_adjustment'] ?? 0),
@@ -2454,7 +2498,13 @@ function payrollDeskSavePayslip(PDO $pdo, int $payslipId, array $payload): array
     $runId = (int) ($current['payslip']['runId'] ?? 0);
 
     $basic = (float) ($payload['basic_salary'] ?? $payload['basicSalary'] ?? 0);
-    $allowances = (float) ($payload['total_allowances'] ?? $payload['totalAllowances'] ?? 0);
+    $sentTransport = array_key_exists('transport_allowance', $payload) || array_key_exists('transportAllowance', $payload);
+    $transport = $sentTransport
+        ? round((float) ($payload['transport_allowance'] ?? $payload['transportAllowance'] ?? 0), 2)
+        : round((float) ($current['payslip']['transportAllowance'] ?? 0), 2);
+    $overtimeColumn = (float) ($payload['total_allowances'] ?? $payload['totalAllowances'] ?? 0);
+    // The edit form sends overtime excluding transport. Store both inside the allowance bucket.
+    $allowances = $sentTransport ? round($overtimeColumn + $transport, 2) : $overtimeColumn;
     $overtime = (float) ($payload['overtime_allowances'] ?? $payload['overtimeAllowances'] ?? 0);
     $bonus = (float) ($payload['bonus_commission'] ?? $payload['bonusCommission'] ?? 0);
     $adjustment = (float) ($payload['monthly_adjustment'] ?? $payload['monthlyAdjustment'] ?? 0);
@@ -2491,14 +2541,14 @@ function payrollDeskSavePayslip(PDO $pdo, int $payslipId, array $payload): array
 
         $stmt = $pdo->prepare(
             'UPDATE ' . payroll_table('payslips') . '
-             SET basic_salary = ?, total_allowances = ?, overtime_allowances = ?, bonus_commission = ?,
+             SET basic_salary = ?, transport_allowance = ?, total_allowances = ?, overtime_allowances = ?, bonus_commission = ?,
                  monthly_adjustment = ?, gross_salary = ?, taxable_salary = ?,
                  nssf_deduction = ?, tax_deduction = ?, employer_nssf = ?, sdl_amount = ?, wcf_amount = ?,
                  employer_cost = ?, other_deductions = ?, net_salary = ?, remarks = ?
              WHERE id = ?'
         );
         $stmt->execute([
-            $basic, $allowances, $overtime, $bonus, $adjustment, $gross, $taxable,
+            $basic, $transport, $allowances, $overtime, $bonus, $adjustment, $gross, $taxable,
             $nssf, $tax, $employerNssf, $sdl, $wcf, $employerCost, $other, $net, $remarks, $payslipId,
         ]);
 
@@ -2684,24 +2734,27 @@ function payrollDeskEnsureExcelPayrollSchema(PDO $pdo): void
     }
     $checked = true;
 
-    $addColumn = static function (PDO $pdo, string $table, string $column, string $definition): void {
+    $addColumn = static function (PDO $pdo, string $table, string $column, string $definition): bool {
         if (!function_exists('payroll_table_exists') || !payroll_table_exists($table)) {
-            return;
+            return false;
         }
         try {
             $cols = $pdo->query('SHOW COLUMNS FROM ' . payroll_table($table))->fetchAll(PDO::FETCH_COLUMN);
             if (!in_array($column, $cols, true)) {
                 $pdo->exec('ALTER TABLE ' . payroll_table($table) . ' ADD COLUMN `' . $column . '` ' . $definition);
+                return true;
             }
         } catch (Throwable $e) {
             // Ignore — older DBs may lack ALTER rights; generate will fail loudly if needed.
         }
+        return false;
     };
 
     $addColumn($pdo, 'employee_salary', 'overtime_allowances', 'decimal(15,2) NOT NULL DEFAULT 0.00');
     $addColumn($pdo, 'employee_salary', 'bonus_commission', 'decimal(15,2) NOT NULL DEFAULT 0.00');
     $addColumn($pdo, 'employee_salary', 'excluded_from_payroll', 'tinyint(1) NOT NULL DEFAULT 0');
 
+    $transportColumnAdded = $addColumn($pdo, 'payslips', 'transport_allowance', 'decimal(15,2) NOT NULL DEFAULT 0.00');
     $addColumn($pdo, 'payslips', 'overtime_allowances', 'decimal(15,2) NOT NULL DEFAULT 0.00');
     $addColumn($pdo, 'payslips', 'bonus_commission', 'decimal(15,2) NOT NULL DEFAULT 0.00');
     $addColumn($pdo, 'payslips', 'taxable_salary', 'decimal(15,2) NOT NULL DEFAULT 0.00');
@@ -2709,6 +2762,21 @@ function payrollDeskEnsureExcelPayrollSchema(PDO $pdo): void
     $addColumn($pdo, 'payslips', 'sdl_amount', 'decimal(15,2) NOT NULL DEFAULT 0.00');
     $addColumn($pdo, 'payslips', 'wcf_amount', 'decimal(15,2) NOT NULL DEFAULT 0.00');
     $addColumn($pdo, 'payslips', 'employer_cost', 'decimal(15,2) NOT NULL DEFAULT 0.00');
+
+    if ($transportColumnAdded && function_exists('payroll_table_exists') && payroll_table_exists('payslips') && payroll_table_exists('employee_salary')) {
+        try {
+            $pdo->exec(
+                'UPDATE ' . payroll_table('payslips') . ' p
+                 INNER JOIN ' . payroll_table('employee_salary') . ' es ON es.user_id = p.user_id
+                 SET p.transport_allowance = es.transport_allowance
+                 WHERE COALESCE(p.transport_allowance, 0) = 0
+                   AND COALESCE(es.transport_allowance, 0) > 0
+                   AND p.total_allowances + 0.009 >= es.transport_allowance'
+            );
+        } catch (Throwable $e) {
+            // Display still falls back to the salary record when the snapshot is empty.
+        }
+    }
 
     if (function_exists('payroll_table_exists') && payroll_table_exists('payroll_settings')) {
         try {

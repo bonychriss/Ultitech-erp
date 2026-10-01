@@ -11,6 +11,7 @@ import EmployeeAvatar from '../components/EmployeeAvatar.jsx';
 
 const emptyForm = {
   basicSalary: '',
+  transportAllowance: '',
   totalAllowances: '',
   overtimeAllowances: '',
   bonusCommission: '',
@@ -68,6 +69,7 @@ export default function EditPayslipForm({
       const slip = data.payslip || {};
       setForm({
         basicSalary: slip.basicSalary ?? '',
+        transportAllowance: slip.transportAllowance ?? '',
         totalAllowances: slip.totalAllowances ?? '',
         overtimeAllowances: slip.overtimeAllowances ?? '',
         bonusCommission: slip.bonusCommission ?? '',
@@ -98,13 +100,14 @@ export default function EditPayslipForm({
 
   const netPreview = useMemo(() => {
     const basic = Number(form.basicSalary) || 0;
+    const transport = Number(form.transportAllowance) || 0;
     const allowances = Number(form.totalAllowances) || 0;
     const bonus = Number(form.bonusCommission) || 0;
     const adj = Number(form.monthlyAdjustment) || 0;
     const nssf = Number(form.nssfDeduction) || 0;
     const tax = Number(form.taxDeduction) || 0;
     const other = Number(form.otherDeductions) || 0;
-    return basic + allowances + bonus + adj - nssf - tax - other;
+    return basic + transport + allowances + bonus + adj - nssf - tax - other;
   }, [form]);
 
   function updateField(key, value) {
@@ -121,6 +124,7 @@ export default function EditPayslipForm({
       const res = await savePayslipEdit({
         id: payslipId,
         basicSalary: Number(form.basicSalary) || 0,
+        transportAllowance: Number(form.transportAllowance) || 0,
         totalAllowances: Number(form.totalAllowances) || 0,
         overtimeAllowances: Number(form.overtimeAllowances) || 0,
         bonusCommission: Number(form.bonusCommission) || 0,
@@ -134,6 +138,7 @@ export default function EditPayslipForm({
       const next = res.data?.payslip || {};
       setForm({
         basicSalary: next.basicSalary ?? form.basicSalary,
+        transportAllowance: next.transportAllowance ?? form.transportAllowance,
         totalAllowances: next.totalAllowances ?? form.totalAllowances,
         overtimeAllowances: next.overtimeAllowances ?? form.overtimeAllowances,
         bonusCommission: next.bonusCommission ?? form.bonusCommission,
@@ -198,6 +203,7 @@ export default function EditPayslipForm({
         <section className="pay-ca-section">
           <h3 className="pay-ca-section-title">Earnings</h3>
           <Field id="basic_salary" label="Basic salary" value={form.basicSalary} onChange={(v) => updateField('basicSalary', v)} />
+          <Field id="transport_allowance" label="Transport allowance" value={form.transportAllowance} onChange={(v) => updateField('transportAllowance', v)} />
           <Field id="total_allowances" label="Overtime & allowances" value={form.totalAllowances} onChange={(v) => updateField('totalAllowances', v)} />
           <Field id="bonus_commission" label="Bonus / commission" value={form.bonusCommission} onChange={(v) => updateField('bonusCommission', v)} />
           <Field id="monthly_adjustment" label="Adjustments" value={form.monthlyAdjustment} onChange={(v) => updateField('monthlyAdjustment', v)} />

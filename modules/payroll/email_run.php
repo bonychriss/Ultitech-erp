@@ -1,6 +1,7 @@
 <?php
 // modules/payroll/email_run.php
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/payroll-lib.php';
 require_once '../../includes/mailer.php';
 
 // Strict Access Control
@@ -47,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $stmt = $pdo->prepare("
             SELECT p.*, u.full_name, u.email, u.role, u.department,
                    es.bank_name, es.account_number, es.nssf_number, es.tin_number,
+                   es.transport_allowance AS salary_transport_allowance,
                    runner.full_name as runner_name, runner.role as runner_role
             FROM " . payroll_table('payslips') . " p
             JOIN users u ON p.user_id = u.id
@@ -77,8 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $subject = "Payslip for " . $month_year . " - " . $company_name;
         
         // Formatting numbers
+        $allowanceSplit = payrollDeskSplitAllowanceBucket($slip);
         $basic = number_format($slip['basic_salary'], 2);
-        $allowances = number_format($slip['total_allowances'], 2);
+        $transportAllow = number_format($allowanceSplit['transport'], 2);
+        $otherAllow = number_format($allowanceSplit['overtimeAllowances'], 2);
         $gross = number_format($slip['gross_salary'], 2);
         $nssf = number_format($slip['nssf_deduction'], 2);
         $tax = number_format($slip['tax_deduction'], 2);
@@ -175,13 +179,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>$basic</td>
                             <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>-</td>
                         </tr>
-                        " . ($slip['total_allowances'] > 0 ? "
                         <tr>
                             <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>2.</td>
-                            <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>Total Allowances</td>
-                            <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>$allowances</td>
+                            <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>Transport Allowance</td>
+                            <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>$transportAllow</td>
                             <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>-</td>
-                        </tr>" : "") . "
+                        </tr>
+                        <tr>
+                            <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>3.</td>
+                            <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>Other Allowance</td>
+                            <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>$otherAllow</td>
+                            <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>-</td>
+                        </tr>
                         " . ($slip['monthly_adjustment'] != 0 ? "
                         <tr>
                             <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>3.</td>
@@ -280,6 +289,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 $stmt = $pdo->prepare("
     SELECT p.*, u.full_name, u.email, u.role, u.department,
            es.bank_name, es.account_number, es.nssf_number, es.tin_number,
+           es.transport_allowance AS salary_transport_allowance,
            runner.full_name as runner_name, runner.role as runner_role
     FROM " . payroll_table('payslips') . " p
     JOIN users u ON p.user_id = u.id
@@ -316,8 +326,10 @@ foreach ($slips as $slip) {
     $subject = "Payslip for " . $month_year . " - " . $company_name;
     
     // Formatting numbers
+    $allowanceSplit = payrollDeskSplitAllowanceBucket($slip);
     $basic = number_format($slip['basic_salary'], 2);
-    $allowances = number_format($slip['total_allowances'], 2);
+    $transportAllow = number_format($allowanceSplit['transport'], 2);
+    $otherAllow = number_format($allowanceSplit['overtimeAllowances'], 2);
     $gross = number_format($slip['gross_salary'], 2);
     $nssf = number_format($slip['nssf_deduction'], 2);
     $tax = number_format($slip['tax_deduction'], 2);
@@ -413,13 +425,18 @@ foreach ($slips as $slip) {
                         <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>$basic</td>
                         <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>-</td>
                     </tr>
-                    " . ($slip['total_allowances'] > 0 ? "
                     <tr>
                         <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>2.</td>
-                        <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>Total Allowances</td>
-                        <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>$allowances</td>
+                        <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>Transport Allowance</td>
+                        <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>$transportAllow</td>
                         <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>-</td>
-                    </tr>" : "") . "
+                    </tr>
+                    <tr>
+                        <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>3.</td>
+                        <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>Other Allowance</td>
+                        <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>$otherAllow</td>
+                        <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px; text-align: right;'>-</td>
+                    </tr>
                     " . ($slip['monthly_adjustment'] != 0 ? "
                     <tr>
                         <td style='padding: 12px 10px; border-bottom: 1px solid #e0e0e0; font-size: 14px;'>3.</td>

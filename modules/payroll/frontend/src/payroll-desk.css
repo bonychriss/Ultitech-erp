@@ -1195,7 +1195,7 @@ html[data-theme="dark"] .pay-desk-confirm-link--primary:hover:not(:disabled) {
 }
 
 .pay-run-table.pay-run-register {
-  min-width: 1680px;
+  min-width: 1800px;
   width: max-content;
   table-layout: auto;
   border-collapse: separate;

@@ -11,6 +11,7 @@ $stmt = $pdo->prepare("
     SELECT p.*, pr.month, pr.year, pr.run_date, pr.run_by,
            u.full_name, u.email, u.role, u.department,
            es.bank_name, es.account_number, es.nssf_number, es.tin_number,
+           es.transport_allowance AS salary_transport_allowance,
            runner.full_name as runner_name,
            runner.department as runner_department,
            runner.role as runner_role,
@@ -793,14 +794,23 @@ if (
                         <td class="text-end"><?= number_format((float) $slip['basic_salary'], 2) ?></td>
                         <td class="text-end">-</td>
                     </tr>
-                    <?php if ((float) $slip['total_allowances'] > 0): ?>
+                    <?php
+                    $allowanceSplit = function_exists('payrollDeskSplitAllowanceBucket')
+                        ? payrollDeskSplitAllowanceBucket($slip)
+                        : ['transport' => 0.0, 'overtimeAllowances' => (float) ($slip['total_allowances'] ?? 0)];
+                    ?>
                     <tr>
                         <td><?= ++$rowNo ?>.</td>
-                        <td>Overtime &amp; Allowances</td>
-                        <td class="text-end"><?= number_format((float) $slip['total_allowances'], 2) ?></td>
+                        <td>Transport Allowance</td>
+                        <td class="text-end"><?= number_format((float) $allowanceSplit['transport'], 2) ?></td>
                         <td class="text-end">-</td>
                     </tr>
-                    <?php endif; ?>
+                    <tr>
+                        <td><?= ++$rowNo ?>.</td>
+                        <td>Other Allowance</td>
+                        <td class="text-end"><?= number_format((float) $allowanceSplit['overtimeAllowances'], 2) ?></td>
+                        <td class="text-end">-</td>
+                    </tr>
                     <?php if ((float) ($slip['bonus_commission'] ?? 0) > 0): ?>
                     <tr>
                         <td><?= ++$rowNo ?>.</td>

@@ -2615,9 +2615,373 @@ function weeklyTasksUiItLines(PDO $pdo, int $userId, array $offsets, string $met
 }
 
 /**
+ * @return array<int,int>
+ */
+function weeklyTasksUiFinancePeopleIds(PDO $pdo): array
+{
+    try {
+        $rows = $pdo->query('SELECT id, department, role FROM users WHERE is_active = 1')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+    $ids = [];
+    foreach ($rows as $row) {
+        if (weeklyTasksUiDepartmentName((string) ($row['department'] ?? ''), (string) ($row['role'] ?? '')) !== 'Finance') {
+            continue;
+        }
+        $id = (int) ($row['id'] ?? 0);
+        if ($id > 0) {
+            $ids[] = $id;
+        }
+    }
+
+    return $ids;
+}
+
+function weeklyTasksUiFinanceReportSubmitted(string $status): bool
+{
+    return in_array(strtolower(trim($status)), ['under_review', 'approved', 'final', 'archived', 'submitted'], true);
+}
+
+/**
+ * Shared finance result for the selected months.
+ * Invoice accuracy is error-free invoices. A monthly finance report is on time
+ * when it leaves draft by the 5th of the next month. Receivables is money received
+ * divided by invoice totals.
+ *
+ * @param array<int,int> $offsets
+ * @return array<string,mixed>
+ */
+function weeklyTasksUiFinanceSnapshot(PDO $pdo, array $offsets): array
+{
+    $invoiceRows = [];
+    $receivableRows = [];
+    $invoices = 0;
+    $invoiceErrors = 0;
+    $collected = 0.0;
+    $invoiced = 0.0;
+    $invoiceIds = [];
+
+    foreach ($offsets as $offset) {
+        [$start, $end] = weeklyTasksUiMonthWindow((int) $offset);
+        if (!function_exists('tableExists') || !tableExists('invoices', $pdo)) {
+            continue;
+        }
+        try {
+            $st = $pdo->prepare(
+                'SELECT i.id, i.invoice_number, i.invoice_date, i.total_amount, i.amount_paid, i.balance_due, i.status,
+                    so.total_amount AS order_total, c.company_name
+                 FROM invoices i
+                 LEFT JOIN sales_orders so ON so.id = i.order_id
+                 LEFT JOIN customers c ON c.id = i.customer_id
+                 WHERE i.invoice_date BETWEEN ? AND ?
+                 ORDER BY i.invoice_date, i.id'
+            );
+            $st->execute([$start, $end]);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $id = (int) ($row['id'] ?? 0);
+                $invoiceIds[$id] = $row;
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    $creditIds = [];
+    if ($invoiceIds && function_exists('tableExists') && tableExists('revenue_entries', $pdo)) {
+        try {
+            $ids = array_keys($invoiceIds);
+            $marks = implode(',', array_fill(0, count($ids), '?'));
+            $st = $pdo->prepare(
+                "SELECT DISTINCT source_invoice_id
+                 FROM revenue_entries
+                 WHERE source_invoice_id IN ($marks)
+                   AND (LOWER(COALESCE(narration, '')) LIKE '%credit note%' OR voucher_number LIKE 'CN-%')"
+            );
+            $st->execute($ids);
+            foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $id) {
+                $creditIds[(int) $id] = true;
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    foreach ($invoiceIds as $id => $row) {
+        $status = strtolower(trim((string) ($row['status'] ?? '')));
+        $reason = '';
+        if (in_array($status, ['cancelled', 'canceled', 'void', 'voided'], true)) {
+            $reason = 'Cancelled';
+        } elseif (isset($creditIds[$id])) {
+            $reason = 'Credit note';
+        } elseif ($row['order_total'] !== null && abs((float) $row['total_amount'] - (float) $row['order_total']) > 1) {
+            $reason = 'Does not match the order';
+        }
+        $invoices++;
+        if ($reason !== '') {
+            $invoiceErrors++;
+        }
+        $total = (float) ($row['total_amount'] ?? 0);
+        $paidAmount = (float) ($row['amount_paid'] ?? 0);
+        $balance = (float) ($row['balance_due'] ?? 0);
+        $invoiced += $total;
+        $collected += $paidAmount;
+        $customer = trim((string) ($row['company_name'] ?? ''));
+        $number = trim((string) ($row['invoice_number'] ?? ''));
+        $title = $number !== '' ? $number : 'Invoice';
+        if ($customer !== '') {
+            $title .= ' · ' . $customer;
+        }
+        $when = !empty($row['invoice_date']) ? date('j M Y', strtotime((string) $row['invoice_date'])) : '';
+        $amount = weeklyTasksUiMoney($total);
+        $invoiceRows[] = [
+            'title' => $title,
+            'date' => (string) ($row['invoice_date'] ?? ''),
+            'when' => $when,
+            'status' => $reason === '' ? 'Error-free' : ('Error · ' . $reason),
+            'kicker' => 'Invoice',
+            'mark' => 'invoice',
+            'documentUrl' => weeklyTasksUiInvoiceUrl($id),
+        ];
+        if ($balance <= 0.009) {
+            $collectStatus = 'Collected · ' . $amount;
+        } elseif ($paidAmount > 0.009) {
+            $collectStatus = 'Partial · ' . weeklyTasksUiMoney($paidAmount) . ' of ' . $amount;
+        } else {
+            $collectStatus = 'Outstanding · ' . $amount;
+        }
+        $receivableRows[] = [
+            'title' => $title,
+            'date' => (string) ($row['invoice_date'] ?? ''),
+            'when' => $when,
+            'status' => $collectStatus,
+            'kicker' => 'Receivable',
+            'mark' => 'receivables',
+            'documentUrl' => weeklyTasksUiInvoiceUrl($id),
+        ];
+    }
+
+    $reports = [];
+    if (function_exists('tableExists') && tableExists('sales_reports', $pdo)) {
+        try {
+            $hasDomain = $pdo->query("SHOW COLUMNS FROM sales_reports LIKE 'report_domain'")->fetch();
+            if ($hasDomain) {
+                $reports = $pdo->query(
+                    "SELECT id, report_name, status, start_date, end_date, created_at, updated_at
+                     FROM sales_reports
+                     WHERE deleted_at IS NULL AND report_domain = 'finance'
+                     ORDER BY start_date, id"
+                )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
+        } catch (Throwable $e) {
+            $reports = [];
+        }
+    }
+
+    $today = date('Y-m-d');
+    $reportsDue = 0;
+    $reportsOnTime = 0;
+    $reportsPending = 0;
+    $reportRows = [];
+    foreach ($offsets as $offset) {
+        [$start, $end, $label] = weeklyTasksUiMonthWindow((int) $offset);
+        $deadline = date('Y-m-05', strtotime($start . ' +1 month'));
+        $best = '';
+        $draftName = '';
+        $submittedName = '';
+        $submittedOn = '';
+        foreach ($reports as $report) {
+            $reportStart = (string) ($report['start_date'] ?? '');
+            $reportEnd = (string) ($report['end_date'] ?? '');
+            if ($reportStart === '' || $reportEnd === '' || $reportStart > $end || $reportEnd < $start) {
+                continue;
+            }
+            $name = trim((string) ($report['report_name'] ?? 'Monthly report'));
+            if (!weeklyTasksUiFinanceReportSubmitted((string) ($report['status'] ?? ''))) {
+                if ($draftName === '') {
+                    $draftName = $name;
+                }
+                continue;
+            }
+            $stamp = (string) ($report['updated_at'] ?? $report['created_at'] ?? '');
+            $day = substr($stamp, 0, 10);
+            if ($day !== '' && $day <= $deadline) {
+                $best = 'ontime';
+                $submittedName = $name;
+                $submittedOn = $day;
+                break;
+            }
+            if ($best !== 'ontime') {
+                $best = 'late';
+                $submittedName = $name;
+                $submittedOn = $day;
+            }
+        }
+        if ($best === 'ontime') {
+            $reportsDue++;
+            $reportsOnTime++;
+            $rowStatus = 'On time' . ($submittedName !== '' ? ' · ' . $submittedName : '');
+        } elseif ($best === 'late') {
+            $reportsDue++;
+            $lateWhen = $submittedOn !== '' ? date('j M Y', strtotime($submittedOn)) : 'after the 5th';
+            $rowStatus = 'Late · ' . $lateWhen;
+        } elseif ($today <= $deadline) {
+            $reportsPending++;
+            $rowStatus = $draftName !== '' ? ('Draft · due by ' . date('j M', strtotime($deadline))) : ('Due by ' . date('j M', strtotime($deadline)));
+        } else {
+            $reportsDue++;
+            $rowStatus = $draftName !== '' ? 'Draft · not submitted' : 'Not submitted';
+        }
+        $reportRows[] = [
+            'title' => $submittedName !== '' ? $submittedName : ($draftName !== '' ? $draftName : ($label . ' monthly report')),
+            'date' => $deadline,
+            'when' => 'By ' . date('j M Y', strtotime($deadline)),
+            'status' => $rowStatus,
+            'kicker' => 'Report',
+            'mark' => 'report',
+        ];
+    }
+
+    $invoicePct = $invoices > 0 ? (int) round((($invoices - $invoiceErrors) / $invoices) * 100) : 0;
+    $collectionPct = $invoiced > 0 ? (int) round(($collected / $invoiced) * 100) : 0;
+    $invoiceScore = weeklyTasksUiRatioScore((float) $invoicePct, 100);
+    $collectionScore = weeklyTasksUiRatioScore((float) $collectionPct, 95);
+    $reportPct = $reportsDue > 0 ? (int) round(($reportsOnTime / $reportsDue) * 100) : 0;
+    $reportScore = weeklyTasksUiRatioScore((float) $reportPct, 100);
+    $weighted = [
+        ['weight' => 30, 'score' => $invoiceScore, 'on' => $invoices > 0],
+        ['weight' => 30, 'score' => $reportScore, 'on' => $reportsDue > 0],
+        ['weight' => 40, 'score' => $collectionScore, 'on' => $invoiced > 0],
+    ];
+    $weightSum = 0;
+    $acc = 0.0;
+    foreach ($weighted as $part) {
+        if (!$part['on']) {
+            continue;
+        }
+        $weightSum += (int) $part['weight'];
+        $acc += (int) $part['score'] * (int) $part['weight'];
+    }
+
+    return [
+        'score' => $weightSum > 0 ? (int) round($acc / $weightSum) : 0,
+        'scored' => $weightSum > 0,
+        'invoices' => $invoices,
+        'invoiceErrors' => $invoiceErrors,
+        'invoicePct' => $invoicePct,
+        'collected' => $collected,
+        'invoiced' => $invoiced,
+        'collectionPct' => $collectionPct,
+        'reportsDue' => $reportsDue,
+        'reportsOnTime' => $reportsOnTime,
+        'reportsPending' => $reportsPending,
+        'invoiceRows' => $invoiceRows,
+        'reportRows' => $reportRows,
+        'receivableRows' => $receivableRows,
+    ];
+}
+
+/**
+ * @param array<int,int> $offsets
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiFinanceScores(PDO $pdo, array $offsets): array
+{
+    $people = weeklyTasksUiFinancePeopleIds($pdo);
+    if (!$people) {
+        return [];
+    }
+    $snapshot = weeklyTasksUiFinanceSnapshot($pdo, $offsets);
+    unset($snapshot['invoiceRows'], $snapshot['reportRows'], $snapshot['receivableRows']);
+    $out = [];
+    foreach ($people as $id) {
+        $out[(int) $id] = $snapshot;
+    }
+
+    return $out;
+}
+
+/**
+ * @param array<string,mixed>|null $finance
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiFinanceItems(?array $finance): array
+{
+    $finance = $finance ?: [];
+    $invoices = (int) ($finance['invoices'] ?? 0);
+    $errors = (int) ($finance['invoiceErrors'] ?? 0);
+    $invoicePct = (int) ($finance['invoicePct'] ?? 0);
+    $clean = max(0, $invoices - $errors);
+    $collectionPct = (int) ($finance['collectionPct'] ?? 0);
+    $invoiced = (float) ($finance['invoiced'] ?? 0);
+    $reportsDue = (int) ($finance['reportsDue'] ?? 0);
+    $reportsOnTime = (int) ($finance['reportsOnTime'] ?? 0);
+    $reportsPending = (int) ($finance['reportsPending'] ?? 0);
+
+    return [
+        [
+            'name' => 'Invoice Accuracy',
+            'group' => 'Finance',
+            'expected' => '100% error-free · weight 30%',
+            'actual' => $invoices > 0
+                ? ($invoicePct . '% · ' . $clean . ' of ' . $invoices)
+                : 'Not recorded',
+            'configured' => true,
+            'met' => $invoices > 0 && $invoicePct >= 100,
+            'note' => $invoices > 0 ? 'Invoice accuracy: ' . $invoicePct . ' of 100%' : 'Invoice accuracy: Not recorded',
+            'spoken' => $invoices > 0 ? 'invoice accuracy is ' . $invoicePct . ' of 100%' : '',
+        ],
+        [
+            'name' => 'Timely Reports / returns submission',
+            'group' => 'Finance',
+            'expected' => 'Monthly reports by 5th · weight 30%',
+            'actual' => $reportsDue > 0
+                ? ($reportsOnTime . ' of ' . $reportsDue . ' by the 5th')
+                : ($reportsPending > 0 ? 'Due by the 5th' : 'Not recorded'),
+            'configured' => true,
+            'pending' => $reportsDue === 0 && $reportsPending > 0,
+            'met' => $reportsDue > 0 && $reportsOnTime >= $reportsDue,
+            'note' => $reportsDue > 0 ? 'Timely reports: ' . $reportsOnTime . ' of ' . $reportsDue . ' by the 5th' : '',
+            'spoken' => $reportsDue > 0 ? 'timely reports are ' . $reportsOnTime . ' of ' . $reportsDue . ' by the 5th' : '',
+        ],
+        [
+            'name' => 'Receivables',
+            'group' => 'Finance',
+            'expected' => '95% collected · weight 40%',
+            'actual' => $invoiced > 0
+                ? ($collectionPct . '% · ' . weeklyTasksUiMoney((float) ($finance['collected'] ?? 0)) . ' of ' . weeklyTasksUiMoney($invoiced))
+                : 'Not recorded',
+            'configured' => true,
+            'met' => $invoiced > 0 && $collectionPct >= 95,
+            'note' => $invoiced > 0 ? 'Receivables: ' . $collectionPct . ' of 95%' : 'Receivables: Not recorded',
+            'spoken' => $invoiced > 0 ? 'receivables are ' . $collectionPct . ' of 95%' : '',
+        ],
+    ];
+}
+
+/**
+ * @param array<int,int> $offsets
+ * @return array<int,array<string,mixed>>
+ */
+function weeklyTasksUiFinanceLines(PDO $pdo, array $offsets, string $metric): array
+{
+    $snapshot = weeklyTasksUiFinanceSnapshot($pdo, $offsets);
+    if ($metric === 'invoice-accuracy') {
+        return $snapshot['invoiceRows'];
+    }
+    if ($metric === 'timely-reports-returns-submission') {
+        return $snapshot['reportRows'];
+    }
+    if ($metric === 'receivables') {
+        return $snapshot['receivableRows'];
+    }
+
+    return [];
+}
+
+/**
  * @param array{score:int,onTime:int,vehicle:int,documents:int}|null $driver
  * @param array<string,mixed>|null $sales
  * @param array<string,mixed>|null $it
+ * @param array<string,mixed>|null $finance
  * @return array<string,mixed>
  */
 function weeklyTasksUiPersonDetail(
@@ -2641,7 +3005,8 @@ function weeklyTasksUiPersonDetail(
     string $photo = '',
     string $role = '',
     ?array $sales = null,
-    ?array $it = null
+    ?array $it = null,
+    ?array $finance = null
 ): array {
     $items = [
         [
@@ -2680,6 +3045,7 @@ function weeklyTasksUiPersonDetail(
     ];
     $salesLines = [];
     $itLines = [];
+    $financeLines = [];
     if ($department === 'Drivers') {
         $driver = $driver ?: ['onTime' => 0, 'vehicle' => 0, 'documents' => 0];
         foreach ($driverLines as $line) {
@@ -2719,6 +3085,20 @@ function weeklyTasksUiPersonDetail(
             'note' => '',
             'spoken' => '',
         ];
+    } elseif ($department === 'Finance') {
+        $financeLines = weeklyTasksUiFinanceItems($finance);
+        $financeScore = (int) (is_array($finance) ? ($finance['score'] ?? 0) : 0);
+        $financeScored = !empty($finance['scored']);
+        $items[] = [
+            'name' => 'Finance performance',
+            'expected' => '100%',
+            'actual' => $financeScored ? ($financeScore . '%') : 'Not due yet',
+            'configured' => true,
+            'pending' => !$financeScored,
+            'met' => $financeScored && $financeScore >= 100,
+            'note' => '',
+            'spoken' => '',
+        ];
     } else {
         $label = $department === 'Other' ? 'Role' : $department;
         $items[] = [
@@ -2735,8 +3115,8 @@ function weeklyTasksUiPersonDetail(
     $improvements = [];
     $behind = [];
     $unset = [];
-    foreach (array_merge($items, $salesLines, $itLines) as $item) {
-        if ($item['configured'] && $item['met']) {
+    foreach (array_merge($items, $salesLines, $itLines, $financeLines) as $item) {
+        if (($item['configured'] && $item['met']) || !empty($item['pending'])) {
             continue;
         }
         if (!empty($item['note'])) {
@@ -2782,6 +3162,7 @@ function weeklyTasksUiPersonDetail(
         'items' => $items,
         'salesLines' => $salesLines,
         'itLines' => $itLines,
+        'financeLines' => $financeLines,
         'improvements' => $improvements,
         'insight' => $insight,
     ];
@@ -2803,6 +3184,7 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
         $drivers = weeklyTasksUiMonthDriverScores($pdo, $mondays);
         $salesScores = weeklyTasksUiSalesScores($pdo, [$offset]);
         $itScores = weeklyTasksUiItScores($pdo, [$offset]);
+        $financeScores = weeklyTasksUiFinanceScores($pdo, [$offset]);
         $taskTarget = max(1, 7 * $weekCount);
         $todoTarget = max(1, 5 * $weekCount);
         $weekdays = max(1, $weekdays);
@@ -2821,10 +3203,13 @@ function weeklyTasksUiTeamTrend(PDO $pdo, array $users): array
             $driver = $drivers[$id] ?? null;
             $sales = $salesScores[$id] ?? null;
             $it = $itScores[$id] ?? null;
+            $finance = $financeScores[$id] ?? null;
             if ($department === 'Sales') {
                 $activity = (int) ($sales['score'] ?? 0);
             } elseif ($department === 'IT') {
                 $activity = (int) ($it['score'] ?? 0);
+            } elseif ($department === 'Finance' && is_array($finance) && !empty($finance['scored'])) {
+                $activity = (int) $finance['score'];
             } elseif (($department === 'Drivers' || $driver !== null) && $driver && !empty($driver['recorded'])) {
                 $activity = (int) $driver['score'];
             } else {
@@ -2925,7 +3310,7 @@ function weeklyTasksUiKpiCatalog(): array
         ]),
         $card('finance', 'Finance KPIs', 'Invoice accuracy, reports and receivables', [
             $line('Invoice Accuracy', 'Error-free invoices', '100%', '30%'),
-            $line('Timely Reports', 'Monthly reports and returns', 'By the 5th', '30%'),
+            $line('Timely Reports / returns submission', 'Monthly reports', 'By 5th', '30%'),
             $line('Receivables', 'Collection performance', '95%', '40%'),
         ]),
         $card('it', 'IT KPIs', 'Uptime, support, backup and system accuracy', [
@@ -3079,6 +3464,7 @@ function weeklyTasksUiBuildPayload(): array
     $driverScores = [];
     $salesScores = [];
     $itScores = [];
+    $financeScores = [];
     if ($pdo instanceof PDO) {
         try {
             $st = $pdo->query('SELECT id, full_name, department, role, profile_photo FROM users WHERE is_active = 1 ORDER BY full_name ASC');
@@ -3089,6 +3475,7 @@ function weeklyTasksUiBuildPayload(): array
         $driverScores = weeklyTasksUiMonthDriverScores($pdo, $mondays);
         $salesScores = weeklyTasksUiSalesScores($pdo, $offsets);
         $itScores = weeklyTasksUiItScores($pdo, $offsets);
+        $financeScores = weeklyTasksUiFinanceScores($pdo, $offsets);
         $settingsLib = dirname(__DIR__) . '/modules/sales/settings/includes/settings-lib.php';
         if (is_file($settingsLib)) {
             require_once $settingsLib;
@@ -3125,11 +3512,14 @@ function weeklyTasksUiBuildPayload(): array
         $driver = $driverScores[$id] ?? null;
         $sales = $salesScores[$id] ?? null;
         $it = $itScores[$id] ?? null;
+        $finance = $financeScores[$id] ?? null;
         $isDriver = $department === 'Drivers' || $driver !== null;
         if ($department === 'Sales') {
             $activity = (int) ($sales['score'] ?? 0);
         } elseif ($department === 'IT') {
             $activity = (int) ($it['score'] ?? 0);
+        } elseif ($department === 'Finance' && is_array($finance) && !empty($finance['scored'])) {
+            $activity = (int) $finance['score'];
         } elseif ($isDriver && $driver && !empty($driver['recorded'])) {
             $activity = (int) $driver['score'];
         } else {
@@ -3192,6 +3582,19 @@ function weeklyTasksUiBuildPayload(): array
                     'accuracyPct' => 100,
                     'accuracyTotal' => 0,
                     'accuracyRecurring' => 0,
+                ]) : null,
+                $department === 'Finance' ? ($finance ?: [
+                    'score' => 0,
+                    'scored' => false,
+                    'invoices' => 0,
+                    'invoiceErrors' => 0,
+                    'invoicePct' => 0,
+                    'collected' => 0,
+                    'invoiced' => 0,
+                    'collectionPct' => 0,
+                    'reportsDue' => 0,
+                    'reportsOnTime' => 0,
+                    'reportsPending' => 0,
                 ]) : null
             );
         }
@@ -3211,6 +3614,7 @@ function weeklyTasksUiBuildPayload(): array
 
     $salesLines = [];
     $itLines = [];
+    $financeLines = [];
     if (is_array($detail)) {
         $detail['backUrl'] = weeklyTasksUiMonthUrl($offsets);
         $measureNames = [
@@ -3240,6 +3644,14 @@ function weeklyTasksUiBuildPayload(): array
             $itLines[$index]['key'] = $key;
             $itLines[$index]['href'] = weeklyTasksUiMonthUrl($offsets, $selectedId, $key);
         }
+        $financeLines = is_array($detail['financeLines'] ?? null) ? $detail['financeLines'] : [];
+        unset($detail['financeLines']);
+        foreach ($financeLines as $index => $item) {
+            $name = (string) ($item['name'] ?? '');
+            $key = trim(strtolower((string) preg_replace('/[^a-z0-9]+/i', '-', $name)), '-');
+            $financeLines[$index]['key'] = $key;
+            $financeLines[$index]['href'] = weeklyTasksUiMonthUrl($offsets, $selectedId, $key);
+        }
     }
 
     $measureView = null;
@@ -3268,6 +3680,14 @@ function weeklyTasksUiBuildPayload(): array
                 }
             }
         }
+        if ($match === null) {
+            foreach ($financeLines as $item) {
+                if (($item['key'] ?? '') === $measureKey) {
+                    $match = $item;
+                    break;
+                }
+            }
+        }
         if ($match) {
             $rows = [];
             $empty = 'Nothing recorded in this period.';
@@ -3280,6 +3700,9 @@ function weeklyTasksUiBuildPayload(): array
             } elseif ($measureKey === 'it-performance') {
                 $breakdown = $itLines;
                 $empty = 'No IT performance recorded in this period.';
+            } elseif ($measureKey === 'finance-performance') {
+                $breakdown = $financeLines;
+                $empty = 'No finance performance recorded in this period.';
             } elseif ($measureKey === 'tasks') {
                 $rows = weeklyTasksUiTaskLines($pdo, $selectedId, $offsets);
                 $empty = 'No tasks recorded in this period.';
@@ -3311,6 +3734,13 @@ function weeklyTasksUiBuildPayload(): array
                     'data-backup' => 'No backup in this period.',
                     'system-accuracy' => 'No system problems recorded in this period.',
                 ][$measureKey];
+            } elseif (in_array($measureKey, ['invoice-accuracy', 'timely-reports-returns-submission', 'receivables'], true)) {
+                $rows = weeklyTasksUiFinanceLines($pdo, $offsets, $measureKey);
+                $empty = [
+                    'invoice-accuracy' => 'No invoices in this period.',
+                    'timely-reports-returns-submission' => 'No monthly report in this period.',
+                    'receivables' => 'No invoices to collect in this period.',
+                ][$measureKey];
             } elseif (in_array($measureKey, ['on-time-delivery', 'vehicle-care', 'delivery-documents'], true)) {
                 $rows = weeklyTasksUiDriverLines($pdo, $selectedId, $offsets, $measureKey);
                 $empty = $measureKey === 'delivery-documents'
@@ -3319,11 +3749,17 @@ function weeklyTasksUiBuildPayload(): array
             }
             $salesMeasure = in_array($measureKey, ['monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery'], true);
             $itMeasure = in_array($measureKey, ['system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy'], true);
+            $financeMeasure = in_array($measureKey, ['invoice-accuracy', 'timely-reports-returns-submission', 'receivables'], true);
             $itAbout = [
                 'system-uptime' => 'A day counts as down when a task or report says the system was down. Usage is the time people were signed in. The top three are the people with the most signed-in time.',
                 'it-support-response-resolution' => 'These are the requests sent from Suggest. Within 24 hrs means the request was marked done within a day of being sent. Requests still inside that day are listed, and left out of the percentage.',
                 'data-backup' => 'Each backup file saved this period. Successful means the file is not empty. The target is every backup successful, and at least one backup.',
                 'system-accuracy' => 'A system problem counts once. Recurred means the same problem was logged again. The target is 95% of problems happening only once.',
+            ];
+            $financeAbout = [
+                'invoice-accuracy' => 'An invoice is error-free when it is not cancelled, it matches the order total, and it has no credit note. The target is 100%, weighted 30%.',
+                'timely-reports-returns-submission' => 'A monthly finance report counts once it is no longer a draft. On time means it was submitted by the 5th of the next month. The target is every report on time, weighted 30%.',
+                'receivables' => 'Money received divided by the invoice totals for this month. The target is 95% collected, weighted 40%. Collected means paid in full. Outstanding means a balance is still due.',
             ];
             $measureView = [
                 'key' => $measureKey,
@@ -3342,8 +3778,14 @@ function weeklyTasksUiBuildPayload(): array
                     ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'sales-performance')
                     : ($itMeasure
                         ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'it-performance')
-                        : weeklyTasksUiMonthUrl($offsets, $selectedId)),
-                'about' => isset($itAbout[$measureKey]) ? [
+                        : ($financeMeasure
+                            ? weeklyTasksUiMonthUrl($offsets, $selectedId, 'finance-performance')
+                            : weeklyTasksUiMonthUrl($offsets, $selectedId))),
+                'about' => isset($financeAbout[$measureKey]) ? [
+                    'score' => '',
+                    'note' => '',
+                    'text' => $financeAbout[$measureKey],
+                ] : (isset($itAbout[$measureKey]) ? [
                     'score' => '',
                     'note' => '',
                     'text' => $itAbout[$measureKey],
@@ -3359,7 +3801,7 @@ function weeklyTasksUiBuildPayload(): array
                     'score' => '',
                     'note' => '',
                     'text' => 'Days from the order date to the delivery date. On time means within 2 days. Late means it took longer.',
-                ] : null))),
+                ] : null)))),
             ];
         }
     }

@@ -274,6 +274,8 @@ function MonthSelect({ month, boxed = false }) {
 
 function itemStatus(item) {
   if (!item.configured) return { key: 'none', label: 'Not configured' }
+  if (item.pending) return { key: 'none', label: 'Due' }
+  if (String(item.actual || '') === 'Not recorded') return { key: 'none', label: 'Not recorded' }
   if (item.met) return { key: 'met', label: 'Met' }
   return { key: 'short', label: 'Missed' }
 }
@@ -646,6 +648,9 @@ function measureIcon(item) {
   if (key === 'it-support-response-resolution') return 'support'
   if (key === 'data-backup') return 'backup'
   if (key === 'system-accuracy') return 'accuracy'
+  if (key === 'invoice-accuracy') return 'invoice'
+  if (key === 'timely-reports-returns-submission') return 'report'
+  if (key === 'receivables') return 'receivables'
   return 'sales'
 }
 
@@ -719,6 +724,24 @@ function RecordIcon({ kind }) {
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path d="M12 3 5 6v6c0 4.2 2.8 7.2 7 8.5 4.2-1.3 7-4.3 7-8.5V6l-7-3z" />
         <path d="m9 12 2 2 4-4" />
+      </svg>
+    )
+  }
+  if (kind === 'invoice') return <InvoiceIcon />
+  if (kind === 'report') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="4" y="3" width="16" height="18" rx="2" />
+        <path d="M8 8h8M8 12h8M8 16h5" />
+      </svg>
+    )
+  }
+  if (kind === 'receivables') {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <ellipse cx="12" cy="7" rx="7" ry="3" />
+        <path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7" />
+        <path d="M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5" />
       </svg>
     )
   }
@@ -1264,7 +1287,7 @@ function MeasurePage({ month, measure }) {
         ) : (
           <p className="wt-empty wt-empty--card">{measure.empty || 'Nothing recorded in this period.'}</p>
         )
-      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy'].includes(measure.key) ? (
+      ) : ['todo', 'attendance', 'monthly-sales-revenue', 'new-customers', 'quotation-conversion', 'collections', 'customer-visits', 'goods-delivery', 'system-uptime', 'it-support-response-resolution', 'data-backup', 'system-accuracy', 'invoice-accuracy', 'timely-reports-returns-submission', 'receivables'].includes(measure.key) ? (
         <RecordCards
           rows={rows}
           onOpen={openDocument}
@@ -1280,12 +1303,18 @@ function MeasurePage({ month, measure }) {
             'it-support-response-resolution': 'Support',
             'data-backup': 'Backup',
             'system-accuracy': 'Accuracy',
+            'invoice-accuracy': 'Invoice',
+            'timely-reports-returns-submission': 'Report',
+            receivables: 'Receivable',
           }[measure.key] || 'To-do'}
           kind={
             measure.key === 'attendance' ? 'attendance'
               : measure.key === 'todo' ? 'todo'
                 : measure.key === 'new-customers' ? 'customer'
-                  : 'sales'
+                  : measure.key === 'invoice-accuracy' ? 'invoice'
+                    : measure.key === 'timely-reports-returns-submission' ? 'report'
+                      : measure.key === 'receivables' ? 'receivables'
+                        : 'sales'
           }
         />
       ) : (

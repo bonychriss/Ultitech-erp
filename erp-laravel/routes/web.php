@@ -18,6 +18,7 @@ use App\Http\Controllers\PayrollDeskPageController;
 use App\Http\Controllers\PayrollPageController;
 use App\Http\Controllers\LetterDeskPageController;
 use App\Http\Controllers\LetterPageController;
+use App\Http\Controllers\WebsitePageController;
 use App\Http\Controllers\AdminDeskPageController;
 use App\Http\Controllers\SuggestApiController;
 use App\Http\Controllers\SuggestPageController;
@@ -79,6 +80,9 @@ Route::middleware([AttachErpContext::class])->group(function () {
     Route::match(['get', 'post'], '/payroll/desk/{desk}', [PayrollDeskPageController::class, 'show'])
         ->where('desk', PayrollDeskShell::deskRegex())
         ->name('payroll.page.desk');
+
+    // Website (Ultimate shop sync)
+    Route::match(['get', 'post'], '/website', [WebsitePageController::class, 'show'])->name('website.page');
 
     // Letter
     Route::get('/letter', [LetterPageController::class, 'show'])->name('letter.page');

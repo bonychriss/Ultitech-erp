@@ -76,7 +76,6 @@ final class DeskShell
             'transfers' => 'stock/modules/transfers/index.php',
             'fleet-parts' => 'stock/modules/fleet_parts/index.php',
             'analytics' => 'stock/modules/analytics/index.php',
-            'web-services' => 'stock/web-services.php',
         ];
     }
 

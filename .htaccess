@@ -76,6 +76,13 @@ RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/modules/payroll/settings\.php$ payroll.php?company_slug=$1&module=payroll&desk=settings [QSA,L,NC]
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/modules/payroll/my_payslips\.php$ payroll.php?company_slug=$1&module=payroll&desk=my-payslips [QSA,L,NC]
+# /{company_slug}/website → Website module
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/website/?$ website.php?company_slug=$1&module=website [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/modules/website/index(\.php)?$ website.php?company_slug=$1&module=website [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/web-services/?$ website.php?company_slug=$1&module=website [QSA,L,NC]
 # /{company_slug}/letter → Laravel+React letter desk
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/letter/?$ letter.php?company_slug=$1&module=letter [QSA,L,NC]
@@ -121,7 +128,7 @@ RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/stock/?$ stock.php?module=stocks&company_slug=$1 [QSA,L,NC]
 # /{company_slug}/stock/{desk}
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
-RewriteRule ^([A-Za-z0-9-]+)/stock/(dashboard|catalogue|settings|product-detail|products|product-view|product-create|product-edit|products-import|categories|category-add|category-edit|brands|brand-edit|uploads|uploads-upload|uploads-recycle|suppliers|supplier-add|supplier-edit|supplier-view|statements|shipments|shipment-create|shipment-edit|shipment-view|shipment-receive|shipment-import|shippers|shipper-add|shipper-edit|purchases|purchase-create|purchase-edit|purchase-view|purchase-receive|purchase-classification|purchase-payments|purchase-receipt-audit|replenishment|reports|reports-purchases|movements|stock-adjust|stock-batches|transfers|fleet-parts|analytics|web-services)/?$ stock.php?module=stocks&company_slug=$1&desk=$2 [QSA,L,NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/(dashboard|catalogue|settings|product-detail|products|product-view|product-create|product-edit|products-import|categories|category-add|category-edit|brands|brand-edit|uploads|uploads-upload|uploads-recycle|suppliers|supplier-add|supplier-edit|supplier-view|statements|shipments|shipment-create|shipment-edit|shipment-view|shipment-receive|shipment-import|shippers|shipper-add|shipper-edit|purchases|purchase-create|purchase-edit|purchase-view|purchase-receive|purchase-classification|purchase-payments|purchase-receipt-audit|replenishment|reports|reports-purchases|movements|stock-adjust|stock-batches|transfers|fleet-parts|analytics)/?$ stock.php?module=stocks&company_slug=$1&desk=$2 [QSA,L,NC]
 # /{company_slug}/stock/product/{id}
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/stock/product/([0-9]+)/?$ stock.php?module=stocks&company_slug=$1&desk=product-view&id=$2 [QSA,L,NC]

@@ -1,7 +1,7 @@
 <?php
 /**
- * POST endpoint for the webServices React desk.
- * GET is rendered by erp-laravel Stock DeskShell.
+ * POST endpoint for the Website module.
+ * GET is rendered by erp-laravel WebsitePageController.
  */
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/functions.php';

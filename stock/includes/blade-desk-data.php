@@ -932,12 +932,12 @@ if (!function_exists('stock_blade_web_services_data')) {
         require_once dirname(__DIR__) . '/includes/web-services-lib.php';
         $pending = webSyncPending($pdo);
 
-        $syncUrl = function_exists('stock_desk_url')
-            ? stock_desk_url('web-services', ['ajax' => 'sync'])
-            : stock_blade_desk_url('web-services', ['ajax' => 'sync']);
-        $cancelUrl = function_exists('stock_desk_url')
-            ? stock_desk_url('web-services', ['ajax' => 'cancel'])
-            : stock_blade_desk_url('web-services', ['ajax' => 'cancel']);
+        $websiteUrl = function_exists('company_url') ? company_url('website') : '/website';
+        $joinQuery = static function (string $url, string $query): string {
+            return $url . (str_contains($url, '?') ? '&' : '?') . $query;
+        };
+        $syncUrl = $joinQuery($websiteUrl, 'ajax=sync');
+        $cancelUrl = $joinQuery($websiteUrl, 'ajax=cancel');
 
         return [
             'pending' => $pending,

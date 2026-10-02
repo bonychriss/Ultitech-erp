@@ -36,6 +36,9 @@ if (stripos($path_to_check, '/modules/warehouses/') !== false
 } elseif (stripos($path_to_check, 'stock') !== false || stripos($path_to_check, 'procurement') !== false) {
     $active_module = 'stocks';
 }
+if (stripos($path_to_check, '/website') !== false || (($_GET['module'] ?? '') === 'website')) {
+    $active_module = 'website';
+}
 if (stripos($path_to_check, '/sales/') !== false) {
     $active_module = 'sales';
 }
@@ -467,9 +470,10 @@ switch ($active_module) {
         addItem($menuItems, 'warehouses', 'Warehouses', 'building', app_url('store-management-system/index.php?module=warehouses'));
         addItem($menuItems, 'transfers', 'Stock Transfers', 'arrow-left-right', $prefix . 'stock/modules/transfers/index.php?module=warehouses', 'Soon');
         addItem($menuItems, 'reports', 'Reports', 'file-text', $prefix . 'stock/modules/reports/stock.php', 'Soon');
-        if (function_exists('isUltimate') && isUltimate()) {
-            addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'stock/web-services');
-        }
+        break;
+
+    case 'website':
+        addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'website');
         break;
 
     case 'warehouses':

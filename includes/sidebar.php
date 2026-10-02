@@ -19,6 +19,9 @@ $path_to_check = $script_name . ($_SERVER['PHP_SELF'] ?? '') . ($_SERVER['REQUES
 if (stripos($path_to_check, 'stock') !== false || stripos($path_to_check, 'procurement') !== false) {
     $active_module = 'stocks';
 }
+if (stripos($path_to_check, '/website') !== false || (($_GET['module'] ?? '') === 'website')) {
+    $active_module = 'website';
+}
 if (stripos($path_to_check, '/attendance/') !== false
     || stripos($path_to_check, 'attendance/index.php') !== false
     || stripos($path_to_check, 'view-attendance') !== false
@@ -216,9 +219,10 @@ switch ($active_module) {
         addItem($menuItems, 'stock-control', 'Stock Control', 'cog', $prefix . 'stock/movements');
         addItem($menuItems, 'reports', 'Reports', 'document-text', $prefix . 'stock/reports');
         addItem($menuItems, 'settings', 'Settings', 'cog', $prefix . 'stock/settings');
-        if (function_exists('isUltimate') && isUltimate()) {
-            addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'stock/web-services');
-        }
+        break;
+
+    case 'website':
+        addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'website');
         break;
 
     case 'crm':

@@ -10,5 +10,5 @@ deployment:
     - /bin/cp -f resources/views/backend/quotes/index.blade.php resources/views/backend/quotes/show.blade.php resources/views/backend/quotes/print.blade.php $DEPLOYPATH/resources/views/backend/quotes/
     - /bin/cp -f routes/ultitech_quotes.php $DEPLOYPATH/routes/
     - /bin/cp -f resources/views/frontend/product_details/details.blade.php $DEPLOYPATH/resources/views/frontend/product_details/
-    - /bin/cp -f resources/views/frontend/partials/cart/addedToCart.blade.php $DEPLOYPATH/resources/views/frontend/partials/cart/
+    - /bin/cp -f resources/views/frontend/partials/cart/addedToCart.blade.php resources/views/frontend/partials/cart/addToCart.blade.php $DEPLOYPATH/resources/views/frontend/partials/cart/
     - /bin/cp -f resources/views/frontend/layouts/app.blade.php $DEPLOYPATH/resources/views/frontend/layouts/

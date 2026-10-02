@@ -3,6 +3,7 @@ import {
   Bell,
   Compass,
   Coins,
+  Globe,
   FileText,
   Inbox,
   Mail,
@@ -410,6 +411,7 @@ const ICONS = {
   inbox: Inbox,
   letter: LetterIcon,
   layout: Palette,
+  website: Globe,
 }
 
 function ModuleIcon({ name, color }) {

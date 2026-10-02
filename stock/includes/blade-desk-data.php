@@ -921,3 +921,28 @@ if (!function_exists('stock_blade_product_create_data')) {
         ];
     }
 }
+
+if (!function_exists('stock_blade_web_services_data')) {
+    /**
+     * @return array<string,mixed>
+     */
+    function stock_blade_web_services_data(): array
+    {
+        $pdo = stock_blade_bootstrap();
+        require_once dirname(__DIR__) . '/includes/web-services-lib.php';
+        $pending = webSyncPending($pdo);
+
+        $websiteUrl = function_exists('company_url') ? company_url('website') : '/website';
+        $joinQuery = static function (string $url, string $query): string {
+            return $url . (str_contains($url, '?') ? '&' : '?') . $query;
+        };
+        $syncUrl = $joinQuery($websiteUrl, 'ajax=sync');
+        $cancelUrl = $joinQuery($websiteUrl, 'ajax=cancel');
+
+        return [
+            'pending' => $pending,
+            'syncUrl' => $syncUrl,
+            'cancelUrl' => $cancelUrl,
+        ];
+    }
+}

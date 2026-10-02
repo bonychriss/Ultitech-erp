@@ -3081,12 +3081,11 @@ function weeklyTasksUiDayLabel(float $days): string
 function weeklyTasksUiLeadInsight(array $rows): string
 {
     if (!$rows) {
-        return 'No purchase orders were marked Received in the selected months, so lead time stays out of the score.';
+        return 'No purchase orders were received in the selected months.';
     }
     $orders = [];
     $sum = 0;
     $onTime = 0;
-    $sameDay = 0;
     foreach ($rows as $row) {
         $days = (int) ($row['days'] ?? 0);
         $orders[] = [
@@ -3097,44 +3096,74 @@ function weeklyTasksUiLeadInsight(array $rows): string
         if ($days <= 3) {
             $onTime++;
         }
-        if ($days === 0) {
-            $sameDay++;
-        }
     }
     $count = count($orders);
     $late = $count - $onTime;
     $average = $sum / $count;
-    $sentence = $count . ($count === 1 ? ' order was' : ' orders were') . ' received, averaging ' . weeklyTasksUiDayLabel($average) . '. ';
-    $sentence .= $onTime . ' of ' . $count . ' arrived within 3 days';
-    if ($sameDay > 0) {
-        $sentence .= ', and ' . $sameDay . ($sameDay === 1 ? ' was received the same day' : ' were received the same day');
-    }
-    $sentence .= '. ';
+    $label = weeklyTasksUiDayLabel($average);
     if ($average <= 3) {
-        $sentence .= 'That meets the 3-day target, so this 20% of the procurement score is met.';
-    } else {
-        $sentence .= 'That misses the 3-day target, so this 20% of the procurement score is missed.';
+        return 'Average lead time is ' . $label . ', within the 3-day target.';
     }
-    if ($late > 0) {
-        usort($orders, static function (array $a, array $b): int {
+    $sentence = 'Average lead time is ' . $label . ', above the 3-day target.';
+    $pulledUp = $late > 0 && $onTime > $late;
+    if ($pulledUp) {
+        $sentence .= ' Most orders arrived within 3 days.';
+    } elseif ($onTime === 0) {
+        $sentence .= ' None arrived within 3 days.';
+    } else {
+        $sentence .= ' Only ' . $onTime . ' of ' . $count . ' arrived within 3 days.';
+    }
+    usort($orders, static function (array $a, array $b): int {
+        return $b['days'] <=> $a['days'];
+    });
+    $slow = [];
+    foreach ($orders as $order) {
+        if ($order['days'] <= 3 || count($slow) >= 3) {
+            continue;
+        }
+        $slow[] = $order['title'] . ' (' . weeklyTasksUiDayLabel((float) $order['days']) . ')';
+    }
+    if ($slow) {
+        $sentence .= $pulledUp
+            ? ' A few long waits raise the average: ' . weeklyTasksUiJoinList($slow) . '.'
+            : ' The longest are ' . weeklyTasksUiJoinList($slow) . '.';
+    }
+
+    return $sentence;
+}
+
+function weeklyTasksUiSupplierInsight(array $rows): string
+{
+    if (!$rows) {
+        return 'No purchase orders were received in the selected months.';
+    }
+    $late = [];
+    $onTime = 0;
+    foreach ($rows as $row) {
+        $days = (int) ($row['days'] ?? 0);
+        $ok = array_key_exists('onTime', $row) ? (int) $row['onTime'] === 1 : $days <= 3;
+        if ($ok) {
+            $onTime++;
+            continue;
+        }
+        $late[] = [
+            'title' => trim((string) ($row['title'] ?? 'Order')) ?: 'Order',
+            'days' => $days,
+        ];
+    }
+    $count = count($rows);
+    $pct = (int) round(($onTime / $count) * 100);
+    $sentence = $onTime . ' of ' . $count . ' orders were on time, which is ' . $pct . '%. ';
+    $sentence .= $pct >= 95 ? 'That meets the 95% target.' : 'That is below the 95% target.';
+    if ($late) {
+        usort($late, static function (array $a, array $b): int {
             return $b['days'] <=> $a['days'];
         });
         $slow = [];
-        $lateSum = 0;
-        foreach ($orders as $order) {
-            if ($order['days'] <= 3) {
-                continue;
-            }
-            $lateSum += $order['days'];
-            if (count($slow) < 3) {
-                $slow[] = $order['title'] . ' (' . weeklyTasksUiDayLabel((float) $order['days']) . ')';
-            }
+        foreach (array_slice($late, 0, 3) as $order) {
+            $slow[] = $order['title'] . ' (' . weeklyTasksUiDayLabel((float) $order['days']) . ')';
         }
-        $sentence .= ' The longest waits are ' . weeklyTasksUiJoinList($slow) . '.';
-        $rest = $count - $late;
-        if ($rest > 0) {
-            $sentence .= ' The other ' . $rest . ' average ' . weeklyTasksUiDayLabel(($sum - $lateSum) / $rest) . '.';
-        }
+        $sentence .= ' The late orders include ' . weeklyTasksUiJoinList($slow) . '.';
     }
 
     return $sentence;
@@ -3310,6 +3339,8 @@ function weeklyTasksUiProcurementSnapshot(PDO $pdo, array $offsets): array
                         'title' => $title,
                         'date' => $receivedOn,
                         'when' => $when,
+                        'days' => $days,
+                        'onTime' => $ontime ? 1 : 0,
                         'status' => $ontime ? 'On time' : ('Late · ' . weeklyTasksUiDayLabel((float) $days)),
                         'kicker' => 'Supplier',
                         'mark' => 'supplier',
@@ -3516,6 +3547,13 @@ function weeklyTasksUiProcurementItems(?array $procurement): array
             'group' => 'Procurement',
             'expected' => '95% on time · weight 15%',
             'actual' => $received > 0 ? ($supplierPct . '% · ' . $onTime . ' of ' . $received . ' on time') : 'No purchases received',
+            'about' => $received > 0
+                ? ($onTime . ' of ' . $received . ' received orders were on time. That is ' . $supplierPct . '%. The target is 95%, so this one is ' . ($supplierPct >= 95 ? 'Met' : 'Missed') . '. It counts as 15% of the procurement score.'
+                    . "\n\nTo earn the points, at least 95 of every 100 received orders must arrive on time."
+                    . "\n\nAn order counts when you mark it Received in the months selected. The date used is the day you last update it while its status is Received. There is no separate receipt date."
+                    . "\n\nIt is on time when you set an expected delivery date and the goods arrive on or before that date. If you set no expected date, the goods must arrive within 3 days of the day you created the purchase order. Count whole days. If the received date is earlier than the order date, it counts as 0."
+                    . "\n\nMark the order Received on the day the goods arrive. Agree a delivery date with the supplier and meet it. If there is no date, receive within 3 days, and follow up before an order passes 3 days.")
+                : "To earn this 15%, at least 95 of every 100 received orders must arrive on time.\n\nAn order counts when you mark it Received. The date used is the day you last update it while its status is Received.\n\nIt is on time when you set an expected delivery date and receive on or before that date, or when you set no date and receive within 3 days of creating the order.\n\nMark Received on the day the goods arrive. Agree a delivery date and meet it. Follow up before an order passes 3 days.",
             'configured' => true,
             'met' => $received === 0 || $supplierPct >= 95,
             'note' => $received > 0 ? 'Supplier performance: ' . $supplierPct . ' of 95%' : 'Supplier performance: no purchases received',
@@ -4454,7 +4492,9 @@ function weeklyTasksUiBuildPayload(): array
                     : (!empty($match['configured']) ? ((string) $match['expected'] . ' · ' . (string) $match['actual']) : 'Target not set'),
                 'configured' => (bool) ($match['configured'] ?? false),
                 'rows' => $measureKey === 'customer-visits' ? [] : (!empty($match['configured']) ? $rows : []),
-                'insight' => $measureKey === 'lead-time' ? weeklyTasksUiLeadInsight($rows) : '',
+                'insight' => $measureKey === 'lead-time'
+                    ? weeklyTasksUiLeadInsight($rows)
+                    : ($measureKey === 'supplier-performance' ? weeklyTasksUiSupplierInsight($rows) : ''),
                 'items' => $breakdown,
                 'board' => $attendanceBoard ?: $uptimeBoard,
                 'empty' => $measureKey === 'customer-visits' ? 'Coming soon' : $empty,

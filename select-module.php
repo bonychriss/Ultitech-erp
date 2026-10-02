@@ -205,6 +205,16 @@ $push([
     'icon' => 'stock',
     'color' => '#1e3a8a',
 ]);
+if (function_exists('isUltimate') && isUltimate()) {
+    $push([
+        'id' => 'website',
+        'label' => 'Website',
+        'desc' => 'Send Ultimate products to ultimate.co.tz',
+        'href' => $companyRoute('website'),
+        'icon' => 'website',
+        'color' => '#0f766e',
+    ]);
+}
 $push([
     'id' => 'warehouses',
     'label' => 'Warehouses / Stores',

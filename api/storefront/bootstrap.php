@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Storefront sync API bootstrap — Roadmaster tenant PDO + bearer auth.
+ * Storefront sync API bootstrap ï¿½ tenant PDO + bearer auth.
+ * Default company is Roadmaster. Ultimate website uses ?company_slug=ultimate.
  */
 
 $publicHtmlRoot = dirname(__DIR__, 2);
@@ -11,13 +12,20 @@ if (!is_file($publicHtmlRoot . '/includes/config.php')) {
     $publicHtmlRoot = dirname(__DIR__, 1);
 }
 
-$_GET['company_slug'] = $_GET['company_slug'] ?? 'roadmaster';
-if (empty($_SESSION['company_slug'])) {
-    if (session_status() === PHP_SESSION_NONE) {
-        @session_start();
-    }
-    $_SESSION['company_slug'] = 'roadmaster';
+$storefrontSlug = strtolower(trim((string) ($_GET['company_slug'] ?? 'roadmaster')));
+if (!in_array($storefrontSlug, ['ultimate', 'roadmaster'], true)) {
+    $storefrontSlug = 'roadmaster';
+}
+$_GET['company_slug'] = $storefrontSlug;
+
+if (session_status() === PHP_SESSION_NONE) {
+    @session_start();
+}
+$_SESSION['company_slug'] = $storefrontSlug;
+if ($storefrontSlug === 'roadmaster') {
     $_SESSION['company_id'] = 2;
+} else {
+    unset($_SESSION['company_id']);
 }
 
 require_once $publicHtmlRoot . '/includes/config.php';

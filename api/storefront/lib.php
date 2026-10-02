@@ -55,7 +55,7 @@ function storefrontApiExpectedToken(): string
             // ignore
         }
     }
-    // Dev default — override in env.local.php / system_settings for production
+    // Dev default ï¿½ override in env.local.php / system_settings for production
     return 'roadmaster-storefront-dev-token-change-me';
 }
 
@@ -103,6 +103,7 @@ function storefrontApiFetchProducts(PDO $pdo, ?int $id = null): array
 
     $itemTypeSelect = in_array('item_type', $prodCols, true) ? 'p.item_type' : "'' AS item_type";
     $brandSelect = in_array('brand', $prodCols, true) ? 'p.brand' : "'' AS brand";
+    $currencySelect = in_array('currency', $prodCols, true) ? "COALESCE(NULLIF(TRIM(p.currency), ''), 'TZS')" : "'TZS'";
     $activeWhere = '';
     if (in_array('is_active', $prodCols, true)) {
         $activeWhere = ' AND COALESCE(p.is_active, 1) = 1';
@@ -117,6 +118,7 @@ function storefrontApiFetchProducts(PDO $pdo, ?int $id = null): array
 
     $sql = "
         SELECT p.id, p.product_code, p.name, p.description, p.unit_price AS selling_price,
+               $currencySelect AS currency,
                $imgSelect, $itemTypeSelect, $brandSelect,
                COALESCE((SELECT SUM(quantity) FROM stock WHERE product_id = p.id), 0) AS stock_quantity";
     $sql .= $hasCat ? ", COALESCE(MAX(c.name), '') AS category_name" : ", '' AS category_name";
@@ -149,6 +151,7 @@ function storefrontApiFetchProducts(PDO $pdo, ?int $id = null): array
             'name' => (string) ($row['name'] ?? ''),
             'description' => (string) ($row['description'] ?? ''),
             'price' => $price,
+            'currency' => strtoupper(trim((string) ($row['currency'] ?? 'TZS'))) ?: 'TZS',
             'stock_qty' => (float) ($row['stock_quantity'] ?? 0),
             'category' => (string) ($row['category_name'] ?? ''),
             'brand' => (string) ($row['brand'] ?? ''),

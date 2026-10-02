@@ -43,6 +43,11 @@ RewriteRule ^modules/payroll/run_payroll\.php$ payroll.php?desk=run-payroll [L,Q
 RewriteRule ^modules/payroll/edit_payslip\.php$ payroll.php?desk=edit-payslip [L,QSA,NC]
 RewriteRule ^modules/payroll/settings\.php$ payroll.php?desk=settings [L,QSA,NC]
 RewriteRule ^modules/payroll/my_payslips\.php$ payroll.php?desk=my-payslips [L,QSA,NC]
+# Website module
+RewriteRule ^website/?$ website.php?module=website [L,QSA,NC]
+RewriteRule ^modules/website/?$ website.php?module=website [L,QSA,NC]
+RewriteRule ^modules/website/index(\.php)?/?$ website.php?module=website [L,QSA,NC]
+RewriteRule ^stock/web-services/?$ website.php?module=website [L,QSA,NC]
 # Letter → Laravel+React letter bridge
 RewriteRule ^letter/?$ letter.php?module=letter [L,QSA,NC]
 RewriteRule ^letter/(compose|stamp|inbox)/?$ letter.php?desk=$1&module=letter [L,QSA,NC]

@@ -1582,23 +1582,23 @@ a.wt-compare-row:hover,
 .wt-lead {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .wt-lead-card {
   background: #fff;
   border: 1px solid #e7eef8;
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
 
 .wt-lead-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 18px 6px;
+  padding: 10px 14px 4px;
 }
 
 .wt-lead-heading {
@@ -1610,14 +1610,14 @@ a.wt-compare-row:hover,
 
 .wt-lead-heading h2 {
   margin: 0;
-  font-size: 0.98rem;
-  font-weight: 650;
+  font-size: 0.92rem;
+  font-weight: 500;
   color: #0f172a;
 }
 
 .wt-lead-heading p {
-  margin: 2px 0 0;
-  font-size: 0.78rem;
+  margin: 1px 0 0;
+  font-size: 0.74rem;
   color: #94a3b8;
 }
 
@@ -1651,16 +1651,16 @@ a.wt-compare-row:hover,
   background: transparent;
   color: #2563eb;
   font-size: 0.84rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .wt-lead-empty {
   margin: 0;
-  padding: 8px 18px 16px;
+  padding: 4px 14px 10px;
   color: #64748b;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
 }
 
 .wt-lead-scroll {
@@ -1674,18 +1674,18 @@ a.wt-compare-row:hover,
 
 .wt-lead-table th {
   text-align: left;
-  padding: 10px 18px;
-  font-size: 0.78rem;
+  padding: 6px 14px;
+  font-size: 0.74rem;
   font-weight: 500;
   color: #94a3b8;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .wt-lead-table td {
-  padding: 14px 18px;
+  padding: 7px 14px;
   border-bottom: 1px solid #f8fafc;
   vertical-align: middle;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   color: #334155;
 }
 
@@ -1701,12 +1701,6 @@ a.wt-compare-row:hover,
   background: #f8fafc;
 }
 
-.wt-lead-table td strong {
-  display: block;
-  color: #0f172a;
-  font-weight: 650;
-}
-
 .wt-lead-sub {
   display: block;
   margin-top: 2px;
@@ -1716,7 +1710,7 @@ a.wt-compare-row:hover,
 }
 
 .wt-lead-days {
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -1731,11 +1725,11 @@ a.wt-compare-row:hover,
 .wt-lead-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
+  gap: 4px;
+  padding: 2px 8px;
   border-radius: 999px !important;
-  font-size: 0.78rem;
-  font-weight: 650;
+  font-size: 0.74rem;
+  font-weight: 500;
   white-space: nowrap;
 }
 

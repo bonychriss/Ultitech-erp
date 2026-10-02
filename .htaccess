@@ -76,6 +76,13 @@ RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/modules/payroll/settings\.php$ payroll.php?company_slug=$1&module=payroll&desk=settings [QSA,L,NC]
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/modules/payroll/my_payslips\.php$ payroll.php?company_slug=$1&module=payroll&desk=my-payslips [QSA,L,NC]
+# /{company_slug}/website → Website module
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/website/?$ website.php?company_slug=$1&module=website [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/modules/website/index(\.php)?$ website.php?company_slug=$1&module=website [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/stock/web-services/?$ website.php?company_slug=$1&module=website [QSA,L,NC]
 # /{company_slug}/letter → Laravel+React letter desk
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/letter/?$ letter.php?company_slug=$1&module=letter [QSA,L,NC]

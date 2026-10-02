@@ -1042,6 +1042,16 @@ try {
     }
     $pdo = $probe;
     ensureLinkTables($pdo);
+    if (!$isCli && strtolower((string) ($_GET['format'] ?? '')) === 'status') {
+        $ids = array_map('intval', $pdo->query('SELECT ultitech_product_id FROM ultitech_links')->fetchAll(PDO::FETCH_COLUMN) ?: []);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => true,
+            'linked_ids' => $ids,
+            'count' => count($ids),
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     $catalog = fetchCatalog();
     $count = count($catalog['products'] ?? []);
     note('UltiTech returned ' . $count . ' Ultimate products.');

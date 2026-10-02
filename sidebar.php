@@ -467,6 +467,9 @@ switch ($active_module) {
         addItem($menuItems, 'warehouses', 'Warehouses', 'building', app_url('store-management-system/index.php?module=warehouses'));
         addItem($menuItems, 'transfers', 'Stock Transfers', 'arrow-left-right', $prefix . 'stock/modules/transfers/index.php?module=warehouses', 'Soon');
         addItem($menuItems, 'reports', 'Reports', 'file-text', $prefix . 'stock/modules/reports/stock.php', 'Soon');
+        if (function_exists('isUltimate') && isUltimate()) {
+            addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'stock/web-services');
+        }
         break;
 
     case 'warehouses':

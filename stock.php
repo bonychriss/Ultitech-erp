@@ -115,6 +115,7 @@ $stockDeskEntries = [
     'transfers' => __DIR__ . '/stock/modules/transfers/index.php',
     'fleet-parts' => __DIR__ . '/stock/modules/fleet_parts/index.php',
     'analytics' => __DIR__ . '/stock/modules/analytics/index.php',
+    'web-services' => __DIR__ . '/stock/web-services.php',
 ];
 
 if (!is_file($laravelAutoload)) {

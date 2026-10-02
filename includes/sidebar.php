@@ -216,6 +216,9 @@ switch ($active_module) {
         addItem($menuItems, 'stock-control', 'Stock Control', 'cog', $prefix . 'stock/movements');
         addItem($menuItems, 'reports', 'Reports', 'document-text', $prefix . 'stock/reports');
         addItem($menuItems, 'settings', 'Settings', 'cog', $prefix . 'stock/settings');
+        if (function_exists('isUltimate') && isUltimate()) {
+            addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'stock/web-services');
+        }
         break;
 
     case 'crm':

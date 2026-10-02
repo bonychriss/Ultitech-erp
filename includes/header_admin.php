@@ -118,6 +118,7 @@ $__adminHeaderIsEmpty = !$__adminHeaderShowHeading && !$__adminHeaderCenter && !
             <?php endif; ?>
             <?php if (empty($hideHeaderThemeAndNotifications)): ?>
             <?php require __DIR__ . '/partials/header_pv_tasks.php'; ?>
+            <?php require __DIR__ . '/partials/header_quote_requests.php'; ?>
             <?php require __DIR__ . '/partials/header_notifications.php'; ?>
             <?php endif; ?>
             <?php if (!empty($employeeHeaderRightHtml)): ?>

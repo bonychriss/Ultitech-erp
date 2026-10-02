@@ -38,15 +38,6 @@ class WebsitePageController extends Controller
             )->header('Content-Type', 'text/html; charset=UTF-8');
         }
 
-        $beforeRoot = '';
-        $quoteLib = rtrim((string) config('erp.app_root'), '\\/') . '/stock/includes/web-services-lib.php';
-        if (is_file($quoteLib)) {
-            require_once $quoteLib;
-            if (function_exists('webQuoteRequestsPanel')) {
-                $beforeRoot = webQuoteRequestsPanel();
-            }
-        }
-
         $GLOBALS['page_title'] = $viewData['pageTitle'];
         $page_title = $viewData['pageTitle'];
         $employeeHeaderTitle = $viewData['employeeHeaderTitle'];
@@ -54,7 +45,6 @@ class WebsitePageController extends Controller
         $employeeHeaderExtraClass = $viewData['employeeHeaderExtraClass'];
 
         return view('erp.react-shell', $viewData + [
-            'beforeRoot' => $beforeRoot,
             'page_title' => $page_title,
             'employeeHeaderTitle' => $employeeHeaderTitle,
             'hideHeaderCompanyBranding' => $hideHeaderCompanyBranding,

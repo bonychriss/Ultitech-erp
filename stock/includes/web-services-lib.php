@@ -274,11 +274,14 @@ function webQuoteProductImages(PDO $pdo, array $ids): array
     return $map;
 }
 
-function webQuoteRequestsPanel(): string
+/**
+ * @return list<array<string,mixed>>
+ */
+function webQuoteRequestGroups(?PDO $pdo = null): array
 {
-    $pdo = $GLOBALS['pdo'] ?? null;
+    $pdo = $pdo instanceof PDO ? $pdo : ($GLOBALS['pdo'] ?? null);
     if (!($pdo instanceof PDO)) {
-        return '';
+        return [];
     }
     $lib = dirname(__DIR__, 2) . '/modules/sales/quote-requests/includes/quote-requests-lib.php';
     if (is_file($lib)) {
@@ -288,7 +291,7 @@ function webQuoteRequestsPanel(): string
     try {
         $rows = $pdo->query('SELECT * FROM website_quote_requests ORDER BY id DESC LIMIT 400')->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (Throwable $e) {
-        return '';
+        return [];
     }
 
     $productIds = [];
@@ -330,6 +333,24 @@ function webQuoteRequestsPanel(): string
             'unit_price' => $price,
             'image' => $image,
         ]);
+    }
+
+    $list = [];
+    foreach ($order as $key) {
+        $list[] = $groups[$key];
+    }
+
+    return $list;
+}
+
+function webQuoteRequestsPanel(): string
+{
+    $order = [];
+    $groups = [];
+    foreach (webQuoteRequestGroups() as $quote) {
+        $key = (string) ($quote['quote_number'] ?? '');
+        $order[] = $key;
+        $groups[$key] = $quote;
     }
 
     $h = static function (string $value): string {

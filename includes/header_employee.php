@@ -177,6 +177,7 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
             }
             ?>
             <?php require __DIR__ . '/partials/header_pv_tasks.php'; ?>
+            <?php require __DIR__ . '/partials/header_quote_requests.php'; ?>
             <?php require __DIR__ . '/partials/header_notifications.php'; ?>
             <?php endif; ?>
         </div>

@@ -11,8 +11,11 @@
  */
 declare(strict_types=1);
 
-const ULTITECH_QUOTE_URL = 'https://ultitech.io/api/storefront/quote.php?company_slug=ultimate';
-const ULTITECH_API_TOKEN = 'roadmaster-storefront-dev-token-change-me';
+require_once __DIR__ . '/bridge-lib.php';
+
+if (!defined('ULTITECH_API_TOKEN')) {
+    define('ULTITECH_API_TOKEN', 'roadmaster-storefront-dev-token-change-me');
+}
 const QUOTE_WEB_KEY = 'ugt7k-sync-4m2p';
 const QUOTE_BUTTON_MARKER = 'ultitech/quote-button.js';
 
@@ -92,7 +95,7 @@ function ultitechQuoteColumns(PDO $pdo, string $table): array
 
 function ultitechQuoteScriptTag(): string
 {
-    return '<script src="/ultitech/quote-button.js?v=1" defer></script>';
+    return '<script src="/ultitech/quote-button.js?v=2" defer></script>';
 }
 
 function ultitechInstallQuoteButton(PDO $pdo): string
@@ -114,6 +117,11 @@ function ultitechInstallQuoteButton(PDO $pdo): string
         foreach ($rows as $row) {
             $value = (string) ($row['value'] ?? '');
             if (str_contains($value, QUOTE_BUTTON_MARKER)) {
+                $next = preg_replace('#<script[^>]*' . preg_quote(QUOTE_BUTTON_MARKER, '#') . '[^>]*></script>#', $tag, $value);
+                if (is_string($next) && $next !== $value) {
+                    $up = $pdo->prepare('UPDATE business_settings SET value = ? WHERE id = ?');
+                    $up->execute([$next, (int) $row['id']]);
+                }
                 $updated = true;
                 continue;
             }
@@ -127,6 +135,13 @@ function ultitechInstallQuoteButton(PDO $pdo): string
         $data = ['type' => 'footer_script', 'value' => $tag];
         if (isset($cols['lang'])) {
             $data['lang'] = 'en';
+        }
+        $now = date('Y-m-d H:i:s');
+        if (isset($cols['created_at'])) {
+            $data['created_at'] = $now;
+        }
+        if (isset($cols['updated_at'])) {
+            $data['updated_at'] = $now;
         }
         $fields = array_keys($data);
         $sql = 'INSERT INTO business_settings (`' . implode('`,`', $fields) . '`) VALUES (' . implode(',', array_fill(0, count($fields), '?')) . ')';
@@ -166,80 +181,42 @@ function ultitechQuoteSubmit(PDO $pdo): void
     $raw = file_get_contents('php://input');
     $body = json_decode(is_string($raw) ? $raw : '', true);
     if (!is_array($body)) {
-        ultitechQuoteJson(['success' => false, 'error' => 'Invalid request'], 400);
+        ultitechQuoteJson(['success' => false, 'message' => 'Please check the form and try again.'], 400);
     }
     if (trim((string) ($body['company_website'] ?? '')) !== '') {
-        ultitechQuoteJson(['success' => true]);
+        ultitechQuoteJson(['success' => true, 'message' => ultitechCustomerMessage()]);
     }
-    $name = trim((string) ($body['customer_name'] ?? ''));
-    $phone = trim((string) ($body['customer_phone'] ?? ''));
-    $email = trim((string) ($body['customer_email'] ?? ''));
-    $notes = trim((string) ($body['notes'] ?? ''));
-    $productName = trim((string) ($body['product_name'] ?? ''));
-    $websiteId = (int) ($body['website_product_id'] ?? 0);
-    $qty = (float) ($body['quantity'] ?? 1);
-    if ($name === '' || $phone === '') {
-        ultitechQuoteJson(['success' => false, 'error' => 'Name and phone are required.'], 400);
+    $items = $body['items'] ?? [];
+    if (!is_array($items) || $items === []) {
+        $items = [[
+            'website_product_id' => (int) ($body['website_product_id'] ?? 0),
+            'product_name' => (string) ($body['product_name'] ?? ''),
+            'quantity' => $body['quantity'] ?? 1,
+        ]];
     }
-    if ($qty <= 0) {
-        $qty = 1;
-    }
-
-    $ultiId = 0;
-    $sku = '';
     try {
-        $st = $pdo->prepare('SELECT ultitech_product_id, sku FROM ultitech_links WHERE website_product_id = ? LIMIT 1');
-        $st->execute([$websiteId]);
-        $link = $st->fetch();
-        if (is_array($link)) {
-            $ultiId = (int) ($link['ultitech_product_id'] ?? 0);
-            $sku = (string) ($link['sku'] ?? '');
-        }
+        $saved = ultitechSaveQuote($pdo, [
+            'customer_name' => $body['customer_name'] ?? '',
+            'customer_phone' => $body['customer_phone'] ?? '',
+            'customer_email' => $body['customer_email'] ?? '',
+            'notes' => $body['notes'] ?? '',
+            'items' => $items,
+        ]);
+    } catch (InvalidArgumentException $e) {
+        ultitechQuoteJson(['success' => false, 'message' => $e->getMessage()], 400);
     } catch (Throwable $e) {
-        $ultiId = 0;
+        ultitechQuoteJson(['success' => false, 'message' => 'Please try again in a moment.'], 500);
     }
-
-    $item = [
-        'product_sku' => $sku,
-        'product_name' => $productName,
-        'quantity' => $qty,
-        'website_product_id' => $websiteId,
-    ];
-    if ($ultiId > 0) {
-        $item['product_id'] = $ultiId;
+    try {
+        ultitechSyncQuote($pdo, (int) $saved['id']);
+    } catch (Throwable $e) {
+        // The quote is already stored. The customer does not need the sync error.
     }
-    $payload = [
-        'customer_name' => $name,
-        'customer_email' => $email,
-        'customer_phone' => $phone,
-        'notes' => $notes,
-        'items' => [$item],
-    ];
-
-    if (!function_exists('curl_init')) {
-        ultitechQuoteJson(['success' => false, 'error' => 'Could not reach UltiTech.'], 500);
-    }
-    $ch = curl_init(ULTITECH_QUOTE_URL);
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 40,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . ULTITECH_API_TOKEN,
-            'Content-Type: application/json',
-            'Accept: application/json',
-        ],
-        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+    ultitechQuoteJson([
+        'success' => true,
+        'message' => ultitechCustomerMessage(),
+        'quote_number' => $saved['quote_number'],
     ]);
-    $response = curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    $json = json_decode(is_string($response) ? $response : '', true);
-    if (!is_array($json) || $code >= 400 || empty($json['success'])) {
-        $error = is_array($json) ? (string) ($json['error'] ?? '') : '';
-        ultitechQuoteJson(['success' => false, 'error' => $error !== '' ? $error : 'Could not send the request.'], 502);
-    }
-    ultitechQuoteJson(['success' => true, 'quote_number' => (string) ($json['quote_number'] ?? '')]);
 }
 
 if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
@@ -255,7 +232,7 @@ if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
             header('Content-Type: text/html; charset=utf-8');
             echo '<!DOCTYPE html><html><body style="font-family:Georgia,serif;max-width:720px;margin:40px auto;padding:0 16px">';
             echo '<h1>Request quote</h1><p>' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</p>';
-            echo '<p><a href="https://ultimate.co.tz/search">Open a product</a> and use Request quote next to Add to cart.</p>';
+            echo '<p><a href="https://ultimate.co.tz/search">Open a product</a> and use Add to quote next to Add to cart.</p>';
             echo '</body></html>';
             exit;
         }
@@ -264,7 +241,7 @@ if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
         echo 'POST required';
     } catch (Throwable $e) {
         if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
-            ultitechQuoteJson(['success' => false, 'error' => $e->getMessage()], 500);
+            ultitechQuoteJson(['success' => false, 'message' => 'Please try again in a moment.'], 500);
         }
         http_response_code(500);
         header('Content-Type: text/html; charset=utf-8');

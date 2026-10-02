@@ -1059,27 +1059,46 @@ try {
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    $catalog = fetchCatalog();
-    $count = count($catalog['products'] ?? []);
-    note('UltiTech returned ' . $count . ' Ultimate products.');
+    $catalog = null;
+    try {
+        $catalog = fetchCatalog();
+    } catch (Throwable $e) {
+        note('UltiTech catalog is unavailable. Shop products stay as they are. Pending orders and quotes will still be sent. ' . $e->getMessage());
+    }
+    $count = is_array($catalog) ? count($catalog['products'] ?? []) : 0;
+    if (is_array($catalog)) {
+        note('UltiTech returned ' . $count . ' Ultimate products.');
+    }
 
     if ($isCli) {
-        $offset = 0;
-        $last = null;
-        do {
-            $last = runBatch($pdo, $catalog, $offset);
-            $offset = (int) $last['next'];
-            note('Saved ' . $offset . ' of ' . $last['total'] . '.');
-        } while (empty($last['done']));
+        $last = ['stats' => loadStats(), 'total' => $count];
+        if (is_array($catalog)) {
+            $offset = 0;
+            do {
+                $last = runBatch($pdo, $catalog, $offset);
+                $offset = (int) $last['next'];
+                note('Saved ' . $offset . ' of ' . $last['total'] . '.');
+            } while (empty($last['done']));
+        }
         pushOrders($pdo);
+        if (function_exists('ultitechProcessQueue')) {
+            $queued = ultitechProcessQueue($pdo);
+            note('Quote queue synced ' . $queued . '.');
+        }
         note('Finished. Created ' . $last['stats']['created'] . ', updated ' . $last['stats']['updated'] . '.');
         exit(empty($last['stats']['errors']) ? 0 : 1);
     }
 
     $offset = max(0, (int) ($_GET['offset'] ?? 0));
     $phase = (string) ($_GET['phase'] ?? 'products');
+    if (!is_array($catalog)) {
+        $phase = 'orders';
+    }
     if ($phase === 'orders') {
         pushOrders($pdo);
+        if (function_exists('ultitechProcessQueue')) {
+            ultitechProcessQueue($pdo);
+        }
         $stats = loadStats();
         $done = true;
         $nextUrl = '';
@@ -1142,7 +1161,7 @@ $self = htmlspecialchars((string) ($_SERVER['PHP_SELF'] ?? 'sync.php'), ENT_QUOT
       </ul>
     <?php endif; ?>
     <?php if ($done && $phase === 'orders'): ?>
-      <p>Active Ultimate products now use the shopÔøΩs normal pages. A customer can open a product and place an order when its UltiTech stock is above zero. Orders placed from now on are sent to UltiTech the next time this file runs.</p>
+      <p>Active Ultimate products now use the shopùs normal pages. A customer can open a product and place an order when its UltiTech stock is above zero. Orders placed from now on are sent to UltiTech the next time this file runs.</p>
       <p>In cPanel ? Cron Jobs, run this every 15 minutes so prices and stock stay current:</p>
       <p><code>php <?= htmlspecialchars(str_replace('\\', '/', __FILE__), ENT_QUOTES, 'UTF-8') ?></code></p>
       <p><a href="https://ultimate.co.tz/search">Open the shop catalog</a></p>

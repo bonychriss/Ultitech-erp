@@ -53,6 +53,18 @@ try {
         $quoteNumber = 'QT-' . date('Ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
     }
 
+    $existing = $pdo->prepare('SELECT id FROM website_quote_requests WHERE quote_number = ? ORDER BY id ASC');
+    $existing->execute([$quoteNumber]);
+    $already = array_map('intval', $existing->fetchAll(PDO::FETCH_COLUMN) ?: []);
+    if ($already !== []) {
+        storefrontApiJson([
+            'success' => true,
+            'quote_number' => $quoteNumber,
+            'ids' => $already,
+            'count' => count($already),
+        ]);
+    }
+
     $ids = [];
     foreach ($items as $item) {
         $ids[] = salesQuoteRequestsInsert($pdo, [

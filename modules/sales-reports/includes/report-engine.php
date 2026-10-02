@@ -40,8 +40,8 @@ function reportEngineDomains(): array
             'key' => 'fleet',
             'label' => 'Driver / Fleet Report',
             'icon' => 'bi-truck',
-            'description' => 'Delivery trips, driver performance, route costs, and fleet operations.',
-            'department_default' => 'Logistics',
+            'description' => 'Rider delivery report for the selected period, with monthly routes and routes by rider.',
+            'department_default' => 'Delivery and Logistics',
             'color' => '#d97706',
         ],
         'store_warehouse' => [
@@ -190,6 +190,12 @@ function reportEngineSectionCatalog(string $domain): array
             'comparative_period_analysis' => 'Comparative Period Analysis',
         ],
         'fleet' => [
+            'fleet_introduction' => '1. Introduction',
+            'fleet_performance' => '2. Performance Report',
+            'fleet_overall' => '3. Overall Performance Summary',
+            'fleet_achievements' => '4. Key Achievements',
+            'fleet_challenges' => '5. Challenges Encountered',
+            'fleet_conclusion' => '6. Conclusion',
             'kpi_fleet_overview' => 'Key Performance Indicators & Fleet Overview',
             'driver_performance' => 'Driver Performance',
             'trip_status_analysis' => 'Trip Status Analysis',
@@ -263,11 +269,8 @@ function reportEngineDefaultSections(string $domain): array
             'key_findings', 'recommendations', 'action_plan', 'conclusion',
         ],
         'fleet' => [
-            'cover', 'executive_summary', 'kpi_fleet_overview',
-            'driver_performance', 'trip_status_analysis', 'delivery_status_analysis',
-            'key_fleet_activities', 'period_comparison',
-            'operational_challenges', 'key_findings', 'recommendations',
-            'action_plan', 'conclusion',
+            'cover', 'fleet_introduction', 'fleet_performance', 'fleet_overall',
+            'fleet_achievements', 'fleet_challenges', 'fleet_conclusion',
         ],
         'operations' => [
             'cover', 'overall_summary', 'client_followups', 'documents_preparation', 'social_media',
@@ -330,12 +333,12 @@ function reportEngineBuildCoverHtml(string $domain, array $meta): string
     if (in_array($domain, ['procurement', 'store_warehouse', 'fleet', 'operations'], true)) {
         $department = trim((string) ($meta['department'] ?? ''));
         if ($domain === 'fleet') {
-            if ($department === '' || preg_match('/^(logistics|fleet|driver|drivers)$/i', $department)) {
-                $department = 'DRIVER / FLEET DEPARTMENT';
+            if ($department === '' || preg_match('/^(logistics|fleet|driver|drivers|delivery and logistics)$/i', $department)) {
+                $department = 'DELIVERY AND LOGISTICS DEPARTMENT';
             } else {
                 $department = strtoupper($department);
             }
-            $heroLine1 = 'DRIVER &amp; FLEET';
+            $heroLine1 = '';
         } elseif ($domain === 'operations') {
             if ($department === '' || preg_match('/^operations?$/i', $department)) {
                 $department = 'OPERATIONS DEPARTMENT';
@@ -386,8 +389,10 @@ function reportEngineBuildCoverHtml(string $domain, array $meta): string
             . $preparedLine
             . $preparedSpacer
             . '<p style="font-size:15pt; font-weight:700; letter-spacing:0.06em; margin:0;">' . $periodLabel . '</p>'
-            . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:12px 0 4px;">' . $heroLine1 . '</p>'
-            . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:0;">REPORT ' . $year . '</p>'
+            . ($heroLine1 !== ''
+                ? '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:12px 0 4px;">' . $heroLine1 . '</p>'
+                : '')
+            . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:12px 0 0;">REPORT ' . $year . '</p>'
             . '</div>';
     }
 

@@ -65,6 +65,12 @@ function reportEngineSectionAutofillMap(string $domain): array
         ],
         'fleet' => [
             'cover' => ['type' => 'cover'],
+            'fleet_introduction' => ['fleet_simple' => true],
+            'fleet_performance' => ['fleet_simple' => true],
+            'fleet_overall' => ['fleet_simple' => true],
+            'fleet_achievements' => ['fleet_simple' => true],
+            'fleet_challenges' => ['fleet_simple' => true],
+            'fleet_conclusion' => ['fleet_simple' => true],
             'executive_summary' => ['fleet_prose' => true],
             'kpi_fleet_overview' => ['erp' => ['fleet_overview_table']],
             'driver_performance' => ['erp' => ['driver_performance']],
@@ -178,6 +184,9 @@ function reportEngineAutofillSections(PDO $pdo, array $report, array $sections):
             } elseif (!empty($cfg['store_prose'])) {
                 $proseKey = (string) ($cfg['store_prose_key'] ?? $key);
                 $parts[] = reportDomainStoreProseSection($pdo, $report, $proseKey);
+            } elseif (!empty($cfg['fleet_simple'])) {
+                require_once __DIR__ . '/report-domain-fleet-simple.php';
+                $parts[] = reportDomainFleetSimpleBody($pdo, $report, $key);
             } elseif (!empty($cfg['operations_followups'])) {
                 require_once __DIR__ . '/report-domain-operations.php';
                 $parts[] = reportDomainOperationsFollowupsBody($pdo, $report);
@@ -193,7 +202,7 @@ function reportEngineAutofillSections(PDO $pdo, array $report, array $sections):
                     error_log('reportEngineAutofillSections erp ' . $source . ': ' . $e->getMessage());
                 }
             }
-            if (empty($cfg['ai']) && empty($cfg['erp']) && empty($cfg['fleet_prose']) && empty($cfg['store_prose']) && empty($cfg['procurement_prose']) && empty($cfg['operations_followups'])) {
+            if (empty($cfg['ai']) && empty($cfg['erp']) && empty($cfg['fleet_prose']) && empty($cfg['fleet_simple']) && empty($cfg['store_prose']) && empty($cfg['procurement_prose']) && empty($cfg['operations_followups'])) {
                 $ai = reportEngineGenerateAiText($pdo, $report, $key);
                 $parts[] = (string) ($ai['text'] ?? '<p></p>');
             }

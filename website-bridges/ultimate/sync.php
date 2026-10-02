@@ -1125,7 +1125,7 @@ $self = htmlspecialchars((string) ($_SERVER['PHP_SELF'] ?? 'sync.php'), ENT_QUOT
       </ul>
     <?php endif; ?>
     <?php if ($done && $phase === 'orders'): ?>
-      <p>Active Ultimate products now use the shopùs normal pages. A customer can open a product and place an order when its UltiTech stock is above zero. Orders placed from now on are sent to UltiTech the next time this file runs.</p>
+      <p>Active Ultimate products now use the shopÔøΩs normal pages. A customer can open a product and place an order when its UltiTech stock is above zero. Orders placed from now on are sent to UltiTech the next time this file runs.</p>
       <p>In cPanel ? Cron Jobs, run this every 15 minutes so prices and stock stay current:</p>
       <p><code>php <?= htmlspecialchars(str_replace('\\', '/', __FILE__), ENT_QUOTES, 'UTF-8') ?></code></p>
       <p><a href="https://ultimate.co.tz/search">Open the shop catalog</a></p>

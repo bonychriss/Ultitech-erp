@@ -22,7 +22,7 @@ function reportEngineRefreshLiveBlocks(PDO $pdo, array $report, string $html): s
         static function (array $m) use ($pdo, $domain, $filters) {
             $source = $m[1];
             $data = reportEngineFetchErpData($pdo, $domain, $source, $filters);
-            return '<div class="sr-erp-block" data-erp-source="' . htmlspecialchars($source, ENT_QUOTES) . '" data-erp-mode="live" contenteditable="false">' . ($data['html'] ?? '') . '</div>';
+            return '<div class="sr-erp-block" data-erp-source="' . htmlspecialchars($source, ENT_QUOTES) . '" data-erp-mode="live">' . ($data['html'] ?? '') . '</div>';
         },
         $html
     ) ?? $html;

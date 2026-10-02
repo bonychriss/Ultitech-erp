@@ -78,7 +78,7 @@ function salesReportsErpBlockHtml(string $source, string $innerHtml, string $mod
 
     return '<div class="sr-erp-block" data-erp-source="' . htmlspecialchars($source, ENT_QUOTES, 'UTF-8')
         . '" data-erp-mode="' . htmlspecialchars($mode, ENT_QUOTES, 'UTF-8')
-        . '" contenteditable="false">' . $innerHtml . '</div>';
+        . '">' . $innerHtml . '</div>';
 }
 
 function salesReportsBuildCoverSection(array $report): string

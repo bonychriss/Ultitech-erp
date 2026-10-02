@@ -32,8 +32,8 @@ export default function ErpInsertModal({ erpMenu, reportId, onClose, onInsert })
         </div>
         <div className="word-modal-body">
           <div className="word-mode-picker">
-            <label><input type="radio" name="erpMode" checked={mode === 'live'} onChange={() => setMode('live')} /> <strong>Live Data</strong> - updates from ERP</label>
-            <label><input type="radio" name="erpMode" checked={mode === 'snapshot'} onChange={() => setMode('snapshot')} /> <strong>Snapshot</strong> - editable copy</label>
+            <label><input type="radio" name="erpMode" checked={mode === 'live'} onChange={() => setMode('live')} /> <strong>Live Data</strong> - refreshes from ERP, and the cells stay editable</label>
+            <label><input type="radio" name="erpMode" checked={mode === 'snapshot'} onChange={() => setMode('snapshot')} /> <strong>Snapshot</strong> - fixed copy you can edit</label>
           </div>
           <div className="word-erp-grid">
             {Object.entries(erpMenu).map(([group, items]) => (

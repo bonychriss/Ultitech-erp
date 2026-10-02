@@ -89,7 +89,7 @@ function salesReportsCan(string $action): bool
     return match ($action) {
         'view' => true,
         'create' => $isManager || salesReportsIsSalesStaff(),
-        'edit' => $isManager || salesReportsIsSalesStaff(),
+        'edit' => true,
         'delete' => $isAdmin || $isManager,
         'export' => true,
         'approve' => $isAdmin || $isManager,

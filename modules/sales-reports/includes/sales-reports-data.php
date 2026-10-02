@@ -767,7 +767,7 @@ function salesReportsRefreshLiveBlocks(PDO $pdo, string $html, array $filters): 
         static function (array $m) use ($pdo, $filters) {
             $source = $m[1];
             $data = salesReportsFetchErpData($pdo, $source, $filters);
-            return '<div class="sr-erp-block" data-erp-source="' . htmlspecialchars($source, ENT_QUOTES) . '" data-erp-mode="live" contenteditable="false">' . ($data['html'] ?? '') . '</div>';
+            return '<div class="sr-erp-block" data-erp-source="' . htmlspecialchars($source, ENT_QUOTES) . '" data-erp-mode="live">' . ($data['html'] ?? '') . '</div>';
         },
         $html
     ) ?? $html;

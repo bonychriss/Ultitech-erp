@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CFG, apiUrl } from '../config.js'
-import { prepareHtmlForEditor, loadHtmlIntoEditor } from '../lib/prepareHtmlForEditor.js'
+import { prepareHtmlForEditor, loadHtmlIntoEditor, unlockEditorTables } from '../lib/prepareHtmlForEditor.js'
 import WordDocument from '../components/WordDocument.jsx'
 import WordRibbon from '../components/WordRibbon.jsx'
 import CreateReportTypeModal from '../components/CreateReportTypeModal.jsx'
@@ -495,7 +495,8 @@ export default function ReportEditorPage() {
 
   const insertHtml = (html) => {
     if (editor) {
-      editor.insertContent(html)
+      editor.insertContent(prepareHtmlForEditor(html))
+      unlockEditorTables(editor.getBody())
       setDirty(true)
     }
   }

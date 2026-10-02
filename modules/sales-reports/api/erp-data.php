@@ -25,7 +25,7 @@ $filters = reportEngineFiltersFromReport($report);
 $data = reportEngineFetchErpData($pdo, $domain, $source, $filters);
 
 $modeAttr = $mode === 'snapshot' ? 'snapshot' : 'live';
-$html = '<div class="sr-erp-block" data-erp-source="' . htmlspecialchars($source, ENT_QUOTES) . '" data-erp-mode="' . $modeAttr . '" contenteditable="' . ($modeAttr === 'snapshot' ? 'true' : 'false') . '">' . ($data['html'] ?? '') . '</div>';
+$html = '<div class="sr-erp-block" data-erp-source="' . htmlspecialchars($source, ENT_QUOTES) . '" data-erp-mode="' . $modeAttr . '">' . ($data['html'] ?? '') . '</div>';
 
 echo json_encode([
     'success' => true,

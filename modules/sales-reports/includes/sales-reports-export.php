@@ -59,6 +59,11 @@ function salesReportsExportHtml(array $report, string $contentHtml, bool $forPri
             h3 { font-size: 11pt; color: #333; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; font-weight: 700; }
             table { border-collapse: collapse; width: 100%; margin: 12px 0; }
             .sr-report-body th, .sr-report-body td { border: 1px solid #d7dbe3; padding: 7px 9px; vertical-align: top; }
+            .sr-report-body th.sr-no-line-bottom, .sr-report-body td.sr-no-line-bottom { border-bottom: 0; }
+            .sr-report-body th.sr-no-line-top, .sr-report-body td.sr-no-line-top { border-top: 0; }
+            .sr-report-body th.sr-no-line-left, .sr-report-body td.sr-no-line-left { border-left: 0; }
+            .sr-report-body th.sr-no-line-right, .sr-report-body td.sr-no-line-right { border-right: 0; }
+            hr { border: 0; border-top: 1px solid #9a9a9a; height: 0; margin: 12px 0; }
             th { background: #1a1a2e; color: #fff; font-size: 9pt; text-align: left; }
             td.sr-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
             .report-header { position: relative; text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1a1a2e; padding-bottom: 20px; padding-top: 8px; min-height: 72px; }

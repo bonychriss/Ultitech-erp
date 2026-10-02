@@ -1,9 +1,29 @@
+import { useEffect, useState } from 'react'
 import InsertTablePicker from './InsertTablePicker.jsx'
 import TableRibbonTools from './TableRibbonTools.jsx'
 import EditorUndoRedo from './EditorUndoRedo.jsx'
 import RibbonToolButton from './RibbonToolButton.jsx'
+import { deleteMarkedLines, lineEraserActive, markedLineCount, toggleLineEraser } from '../lib/deleteDocumentLine.js'
 
 export default function WordRibbon({ editor, activeTab, onTabChange }) {
+  const [erasing, setErasing] = useState(false)
+  const [marked, setMarked] = useState(0)
+
+  useEffect(() => {
+    if (!editor) {
+      setErasing(false)
+      setMarked(0)
+      return undefined
+    }
+    const sync = (event) => {
+      setErasing(event?.active != null ? Boolean(event.active) : lineEraserActive(editor))
+      setMarked(event?.count != null ? event.count : markedLineCount(editor))
+    }
+    editor.on('sr-line-eraser', sync)
+    sync()
+    return () => editor.off('sr-line-eraser', sync)
+  }, [editor])
+
   const exec = (cmd, value) => {
     if (!editor) return
     editor.execCommand(cmd, false, value)
@@ -101,6 +121,8 @@ export default function WordRibbon({ editor, activeTab, onTabChange }) {
               <RibbonToolButton icon="bi-image" label="Image" onClick={() => editor?.execCommand('mceImage')} />
               <RibbonToolButton icon="bi-link-45deg" label="Link" onClick={() => exec('mceInsertLink')} />
               <RibbonToolButton icon="bi-hr" label="Line" onClick={() => exec('InsertHorizontalRule')} />
+              <RibbonToolButton icon="bi-pencil" label="Remove" title="Click a line to delete it. Hold and drag to highlight several, then click Delete." className={erasing ? 'is-open' : ''} onClick={() => toggleLineEraser(editor)} />
+              <RibbonToolButton icon="bi-trash" label="Delete" title="Delete the highlighted lines" disabled={!marked} onClick={() => deleteMarkedLines(editor)} />
               <RibbonToolButton icon="bi-file-break" label="Page Break" onClick={() => exec('mcePageBreak')} />
             </div>
           </div>

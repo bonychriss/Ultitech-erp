@@ -5,6 +5,7 @@ import { registerTableRowColumnColor } from '../lib/tinymceTableRowColColor.js'
 import { preventEditorScrollJump } from '../lib/tinymceScrollFix.js'
 import { prepareHtmlForEditor, loadHtmlIntoEditor } from '../lib/prepareHtmlForEditor.js'
 import { layoutEditorPages, scheduleEditorPages } from '../lib/layoutEditorPages.js'
+import { registerLineDeletion } from '../lib/deleteDocumentLine.js'
 
 const EDITOR_PAGE_HEIGHT = 1056
 
@@ -32,6 +33,22 @@ const CONTENT_STYLE = `
   p { margin: 0 0 10pt; }
   table { border-collapse: collapse; width: 100%; margin: 12pt 0; font-size: 10pt; }
   td, th { border: 1px solid #bbb; padding: 6px 8px; vertical-align: top; }
+  td.sr-no-line-bottom, th.sr-no-line-bottom { border-bottom: 0 !important; }
+  td.sr-no-line-top, th.sr-no-line-top { border-top: 0 !important; }
+  td.sr-no-line-left, th.sr-no-line-left { border-left: 0 !important; }
+  td.sr-no-line-right, th.sr-no-line-right { border-right: 0 !important; }
+  body.sr-erasing, body.sr-erasing * { cursor: crosshair !important; }
+  td.sr-line-mark-top, th.sr-line-mark-top { box-shadow: inset 0 4px 0 #f5c518 !important; }
+  td.sr-line-mark-bottom, th.sr-line-mark-bottom { box-shadow: inset 0 -4px 0 #f5c518 !important; }
+  td.sr-line-mark-left, th.sr-line-mark-left { box-shadow: inset 4px 0 0 #f5c518 !important; }
+  td.sr-line-mark-right, th.sr-line-mark-right { box-shadow: inset -4px 0 0 #f5c518 !important; }
+  hr.sr-line-mark { outline: 3px solid #f5c518; outline-offset: 1px; }
+  td.sr-line-hot-top, th.sr-line-hot-top { box-shadow: inset 0 3px 0 #d83b01 !important; }
+  td.sr-line-hot-bottom, th.sr-line-hot-bottom { box-shadow: inset 0 -3px 0 #d83b01 !important; }
+  td.sr-line-hot-left, th.sr-line-hot-left { box-shadow: inset 3px 0 0 #d83b01 !important; }
+  td.sr-line-hot-right, th.sr-line-hot-right { box-shadow: inset -3px 0 0 #d83b01 !important; }
+  hr.sr-line-hot { outline: 2px solid #d83b01; outline-offset: 2px; }
+  hr { border: 0; border-top: 1px solid #9a9a9a; height: 0; margin: 12px 0; background: transparent; cursor: pointer; }
   th { background: #1a1a2e; color: #fff; font-weight: 600; }
   ul { margin: 8pt 0 12pt 18pt; }
   li { margin-bottom: 6pt; }
@@ -69,6 +86,12 @@ export default function WordDocument({ initialContent, onChange, onInit, readOnl
   readOnlyRef.current = readOnly
 
   useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || typeof editor.mode?.set !== 'function') return
+    editor.mode.set(readOnly ? 'readonly' : 'design')
+  }, [readOnly])
+
+  useEffect(() => {
     const host = hostRef.current
     if (!host) return undefined
 
@@ -100,7 +123,8 @@ export default function WordDocument({ initialContent, onChange, onInit, readOnl
           highlight_on_focus: false,
           verify_html: false,
           readonly: Boolean(readOnlyRef.current),
-          extended_valid_elements: 'div[class|style|id|contenteditable|data-*],section[class|style|id|data-*],span[class|style],h1,h2,h3,p[class|style],table[class|style],thead,tbody,tr,td[colspan|rowspan|class|style],th[colspan|rowspan|class|style],ul,ol,li,img[src|alt|width|height|style],a[href|target|class|style],br,strong,em,u',
+          object_resizing: 'img',
+          extended_valid_elements: 'div[class|style|id|contenteditable|data-*],section[class|style|id|data-*],span[class|style],h1,h2,h3,p[class|style],table[class|style],thead,tbody,tr,td[colspan|rowspan|class|style],th[colspan|rowspan|class|style],ul,ol,li,img[src|alt|width|height|style],a[href|target|class|style],br,hr,strong,em,u',
           plugins: [
             'lists', 'link', 'table', 'image', 'pagebreak',
             'searchreplace', 'wordcount', 'charmap',
@@ -118,6 +142,7 @@ export default function WordDocument({ initialContent, onChange, onInit, readOnl
           setup: (editor) => {
             registerTinyMceTableIcons(editor)
             registerTableRowColumnColor(editor)
+            registerLineDeletion(editor)
             editor.on('GetContent', (event) => {
               if (typeof event.content !== 'string') return
               if (!event.content.includes('sr-page-gap') && !event.content.includes('sr-editor-page')) return

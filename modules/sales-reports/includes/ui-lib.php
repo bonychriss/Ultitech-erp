@@ -309,6 +309,7 @@ function salesReportsUiBuildEditorConfig(PDO $pdo, int $reportId): ?array
         }
         $contentHtml = $withCover;
     }
+    $contentHtml = preg_replace('/\scontenteditable\s*=\s*(["\'])false\1/i', '', $contentHtml) ?? $contentHtml;
 
     $erpMenu = reportEngineErpMenu($domain);
     $sectionCatalog = reportEngineSectionCatalog($domain);

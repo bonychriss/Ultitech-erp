@@ -18,12 +18,25 @@ function unwrapSectionNodes(root) {
 /** ERP blocks are stored with contenteditable=false for live refresh; unwrap so tables are fully editable. */
 function unwrapErpBlocks(root) {
   root.querySelectorAll('.sr-erp-block').forEach((block) => {
+    block.removeAttribute('contenteditable')
     const parent = block.parentNode
     if (!parent) return
     while (block.firstChild) {
       parent.insertBefore(block.firstChild, block)
     }
     block.remove()
+  })
+}
+
+/** Drop the lock that kept ERP table cells from accepting typing. Page gaps stay fixed. */
+export function unlockEditorTables(root) {
+  if (!root?.querySelectorAll) return
+  root.querySelectorAll('[contenteditable]').forEach((node) => {
+    if (node.classList?.contains('sr-page-gap')) return
+    const locked = (node.getAttribute('contenteditable') || '').toLowerCase() === 'false'
+    if (!locked) return
+    node.removeAttribute('contenteditable')
+    node.classList?.remove('mceNonEditable')
   })
 }
 
@@ -52,6 +65,7 @@ export function prepareHtmlForEditor(html) {
       if (root) {
         unwrapSectionNodes(root)
         unwrapErpBlocks(root)
+        unlockEditorTables(root)
         const parsed = root.innerHTML.trim()
         if (parsed !== '') {
           out = parsed
@@ -72,6 +86,7 @@ export function loadHtmlIntoEditor(editor, html) {
   const body = editor.getBody()
   if (!body) return
   body.innerHTML = next
+  unlockEditorTables(body)
   if (typeof editor.nodeChanged === 'function') {
     editor.nodeChanged()
   }

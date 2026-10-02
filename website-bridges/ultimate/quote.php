@@ -95,7 +95,7 @@ function ultitechQuoteColumns(PDO $pdo, string $table): array
 
 function ultitechQuoteScriptTag(): string
 {
-    return '<script src="/ultitech/quote-button.js?v=3" defer></script>';
+    return '<script src="/ultitech/quote-button.js?v=4" defer></script>';
 }
 
 function ultitechInstallQuoteButton(PDO $pdo): string

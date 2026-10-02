@@ -46,22 +46,40 @@
     };
   }
 
+  function addProducts(items) {
+    var rows = load();
+    (items || []).forEach(function (product) {
+      var id = parseInt(product && product.website_product_id, 10);
+      if (!id) return;
+      var found = false;
+      rows.forEach(function (row) {
+        if (row.website_product_id === id) {
+          row.quantity = qty((parseFloat(row.quantity) || 0) + qty(product.quantity));
+          row.product_name = product.product_name || row.product_name;
+          found = true;
+        }
+      });
+      if (!found) {
+        rows.push({
+          website_product_id: id,
+          product_name: product.product_name || "Product",
+          quantity: qty(product.quantity),
+          unit_price: product.unit_price || null
+        });
+      }
+    });
+    save(rows);
+    if (typeof ugtCloseCart === "function") ugtCloseCart();
+    openPanel();
+  }
+
   function addCurrent() {
     var product = productFromPage();
     if (!product) return;
-    var rows = load();
-    var found = false;
-    rows.forEach(function (row) {
-      if (row.website_product_id === product.website_product_id) {
-        row.quantity = qty(row.quantity + product.quantity);
-        row.product_name = product.product_name;
-        found = true;
-      }
-    });
-    if (!found) rows.push(product);
-    save(rows);
-    openPanel();
+    addProducts([product]);
   }
+
+  window.ultitechAddQuoteItems = addProducts;
 
   function paintCount() {
     var n = load().reduce(function (sum, row) { return sum + (row.quantity > 0 ? 1 : 0); }, 0);
@@ -239,6 +257,25 @@
     wrap.appendChild(button);
   }
 
+  function bindCartQuote() {
+    if (window.__ultitechCartQuote) return;
+    window.__ultitechCartQuote = true;
+    document.addEventListener("click", function (event) {
+      var button = event.target.closest(".ugt-cart-request-quote");
+      if (!button) return;
+      event.preventDefault();
+      var node = document.getElementById("ugt-cart-quote-items");
+      var items = [];
+      try {
+        items = JSON.parse(node ? node.textContent : "[]");
+      } catch (e) {
+        items = [];
+      }
+      if (!items.length) return;
+      addProducts(items);
+    });
+  }
+
   function bindCartModalQuote() {
     if (window.__ultitechQuoteFromCart) return;
     window.__ultitechQuoteFromCart = true;
@@ -256,6 +293,7 @@
     ensureUi();
     mountProductButton();
     bindCartModalQuote();
+    bindCartQuote();
   }
 
   if (document.readyState === "loading") {

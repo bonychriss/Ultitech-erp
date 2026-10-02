@@ -42,8 +42,36 @@
       website_product_id: id,
       product_name: name || "Product",
       quantity: qty(qtyInput ? qtyInput.value : 1),
-      unit_price: price ? parseFloat(price) : null
+      unit_price: price ? parseFloat(price) : null,
+      image: pageImage()
     };
+  }
+
+  function pageImage() {
+    var img = document.querySelector(".product-gallery img[data-src]");
+    if (!img) return "";
+    return img.getAttribute("data-src") || "";
+  }
+
+  function safeImage(url) {
+    if (typeof url !== "string") return "";
+    url = url.trim();
+    if (/^https?:\/\//i.test(url) || url.charAt(0) === "/") return url;
+    return "";
+  }
+
+  function cartImages() {
+    var map = {};
+    var node = document.getElementById("ugt-cart-quote-items");
+    if (!node) return map;
+    try {
+      JSON.parse(node.textContent || "[]").forEach(function (item) {
+        var id = parseInt(item && item.website_product_id, 10);
+        var image = safeImage(item && item.image);
+        if (id && image) map[id] = image;
+      });
+    } catch (e) {}
+    return map;
   }
 
   function addProducts(items) {
@@ -56,6 +84,7 @@
         if (row.website_product_id === id) {
           row.quantity = qty((parseFloat(row.quantity) || 0) + qty(product.quantity));
           row.product_name = product.product_name || row.product_name;
+          if (safeImage(product.image)) row.image = safeImage(product.image);
           found = true;
         }
       });
@@ -64,7 +93,8 @@
           website_product_id: id,
           product_name: product.product_name || "Product",
           quantity: qty(product.quantity),
-          unit_price: product.unit_price || null
+          unit_price: product.unit_price || null,
+          image: safeImage(product.image)
         });
       }
     });
@@ -92,11 +122,17 @@
     if (!rows.length) {
       return '<p class="uq-empty">No products yet. Open a product and choose Add to quote.</p>';
     }
+    var images = cartImages();
     return rows.map(function (row, index) {
+      var src = safeImage(row.image) || images[row.website_product_id] || "";
+      var thumb = src
+        ? '<img class="uq-thumb" alt="" src="' + src.replace(/"/g, "%22") + '">'
+        : '<span class="uq-thumb"></span>';
       return '<div class="uq-line">' +
+        thumb +
         '<div class="uq-name"></div>' +
         '<label>Qty <input type="number" min="0.01" step="any" data-index="' + index + '" value="' + row.quantity + '"></label>' +
-        '<button type="button" data-remove="' + index + '">Remove</button>' +
+        '<button type="button" data-remove="' + index + '" aria-label="Remove"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z"/></svg></button>' +
         "</div>";
     }).join("");
   }
@@ -130,10 +166,13 @@
       "#ultitech-quote-panel[hidden]{display:none}",
       ".uq-sheet{background:#fff;width:min(560px,100%);max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:18px 18px 28px;font:14px/1.4 Arial,sans-serif;color:#111}",
       ".uq-sheet h2{margin:0 0 8px;font-size:20px}",
-      ".uq-line{display:flex;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #e5e7eb}",
+      ".uq-line{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #e5e7eb}",
+      ".uq-thumb{width:48px;height:48px;object-fit:cover;border-radius:6px;background:#f1f5f9;flex:0 0 48px}",
       ".uq-name{flex:1;font-weight:600}",
       ".uq-line input{width:88px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px}",
-      ".uq-line button,.uq-close,.uq-add{border:0;background:#f1f5f9;border-radius:8px;padding:8px 10px;cursor:pointer}",
+      ".uq-close,.uq-add{border:0;background:#f1f5f9;border-radius:8px;padding:8px 10px;cursor:pointer}",
+      ".uq-line button{border:0;background:transparent;color:#64748b;width:36px;height:36px;border-radius:8px;padding:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 36px}",
+      ".uq-line button:hover{background:#fee2e2;color:#b91c1c}",
       ".uq-form{display:grid;gap:8px;margin-top:12px}",
       ".uq-form input,.uq-form textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px}",
       ".uq-submit{background:#0f766e;color:#fff;border:0;border-radius:999px;padding:12px 16px;font-weight:700;cursor:pointer}",

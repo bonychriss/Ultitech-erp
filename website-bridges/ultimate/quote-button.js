@@ -120,7 +120,7 @@
   function linesHtml() {
     var rows = load();
     if (!rows.length) {
-      return '<p class="uq-empty">No products yet. Open a product and choose Add to quote.</p>';
+      return '<p class="uq-empty">No products yet. Open a product and choose Request quote.</p>';
     }
     var images = cartImages();
     return rows.map(function (row, index) {
@@ -147,9 +147,34 @@
   function openPanel() {
     var panel = document.getElementById("ultitech-quote-panel");
     if (!panel) return;
+    clearSent();
     panel.querySelector(".uq-lines").innerHTML = linesHtml();
     fillNames();
     panel.hidden = false;
+  }
+
+  function clearSent() {
+    var sheet = document.querySelector("#ultitech-quote-panel .uq-sheet");
+    if (!sheet) return;
+    sheet.classList.remove("is-sent");
+    var title = sheet.querySelector("h2");
+    if (title) title.textContent = "Your quotation";
+    var done = sheet.querySelector(".uq-done");
+    if (done) done.textContent = "";
+    var msg = sheet.querySelector(".uq-msg");
+    if (msg) msg.textContent = "";
+  }
+
+  function showSent(message) {
+    var sheet = document.querySelector("#ultitech-quote-panel .uq-sheet");
+    if (!sheet) return;
+    sheet.classList.add("is-sent");
+    var title = sheet.querySelector("h2");
+    if (title) title.textContent = "Request received";
+    var done = sheet.querySelector(".uq-done");
+    if (done) done.textContent = message;
+    var msg = sheet.querySelector(".uq-msg");
+    if (msg) msg.textContent = "";
   }
 
   function closePanel() {
@@ -177,6 +202,9 @@
       ".uq-form input,.uq-form textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px}",
       ".uq-submit{background:#0f766e;color:#fff;border:0;border-radius:999px;padding:12px 16px;font-weight:700;cursor:pointer}",
       ".uq-msg{margin-top:10px}",
+      ".uq-done{display:none;margin:12px 0 4px;font-size:16px;line-height:1.5}",
+      ".uq-sheet.is-sent .uq-form,.uq-sheet.is-sent .uq-lines{display:none}",
+      ".uq-sheet.is-sent .uq-done{display:block}",
       ".uq-hp{position:absolute;left:-9999px}"
     ].join("");
     document.head.appendChild(style);
@@ -195,6 +223,7 @@
       '<button type="button" class="uq-close">Close</button>' +
       "<h2>Your quotation</h2>" +
       '<div class="uq-lines"></div>' +
+      '<p class="uq-done"></p>' +
       '<form class="uq-form">' +
       '<input name="customer_name" required placeholder="Your name" autocomplete="name">' +
       '<input name="customer_phone" required placeholder="Phone" autocomplete="tel">' +
@@ -258,8 +287,7 @@
       if (data && data.success) {
         save([]);
         form.reset();
-        panelLinesClear();
-        msg.textContent = data.message || "Your request has been received successfully. Our sales person will contact you shortly.";
+        showSent(data.message || "Your request has been received successfully. Our sales person will contact you shortly.");
         return;
       }
       msg.textContent = (data && data.message) || "Please check the form and try again.";
@@ -267,11 +295,6 @@
       button.disabled = false;
       msg.textContent = "Please try again in a moment.";
     });
-  }
-
-  function panelLinesClear() {
-    var box = document.querySelector("#ultitech-quote-panel .uq-lines");
-    if (box) box.innerHTML = linesHtml();
   }
 
   function mountProductButton() {

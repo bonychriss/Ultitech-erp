@@ -81,7 +81,7 @@ export default function WebServices({ data }) {
               Cancel
             </button>
           ) : null}
-          <button type="button" className="prod-desk-btn prod-desk-btn-primary" onClick={sync} disabled={syncing}>
+          <button type="button" className="prod-desk-btn prod-desk-btn-primary prod-desk-btn-pill" onClick={sync} disabled={syncing}>
             <HiOutlineArrowPath aria-hidden="true" />
             <span>{syncing ? 'Syncing...' : 'Sync to website'}</span>
           </button>

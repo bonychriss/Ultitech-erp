@@ -391,6 +391,13 @@
   color: #fff !important;
 }
 
+/* Beat assets/css/style.css `button { border-radius: 0 !important }`. */
+button.prod-desk-btn.prod-desk-btn-pill,
+body.page-products-desk button.prod-desk-btn.prod-desk-btn-pill {
+  border-radius: 9999px !important;
+  padding: 0.55rem 1.25rem;
+}
+
 .prod-desk-btn-secondary {
   background: #fff;
   color: #334155 !important;

@@ -921,3 +921,22 @@ if (!function_exists('stock_blade_product_create_data')) {
         ];
     }
 }
+
+if (!function_exists('stock_blade_web_services_data')) {
+    /**
+     * @return array<string,mixed>
+     */
+    function stock_blade_web_services_data(): array
+    {
+        $pdo = stock_blade_bootstrap();
+        require_once dirname(__DIR__) . '/includes/web-services-lib.php';
+        $pending = webSyncPending($pdo);
+
+        return [
+            'pending' => $pending,
+            'syncUrl' => function_exists('stock_desk_url')
+                ? stock_desk_url('web-services', ['ajax' => 'sync'])
+                : stock_blade_desk_url('web-services', ['ajax' => 'sync']),
+        ];
+    }
+}

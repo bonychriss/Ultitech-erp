@@ -93,7 +93,7 @@ final class DeskShell
      */
     public static function bladeDesks(): array
     {
-        return ['dashboard', 'products', 'brands', 'product-create'];
+        return ['dashboard', 'products', 'brands', 'product-create', 'web-services'];
     }
 
     public static function isBladeDesk(string $desk): bool
@@ -178,6 +178,14 @@ final class DeskShell
                 stock_blade_brands_list_data(),
                 $assets,
                 ['employeeHeaderTitle' => 'Brands', 'sweetAlert' => true]
+            ),
+            'web-services' => $this->pack(
+                'webServices',
+                'page-products-desk',
+                'web-services',
+                stock_blade_web_services_data(),
+                $assets,
+                ['employeeHeaderTitle' => 'webServices']
             ),
             'product-create' => $this->pack(
                 'Add Product',

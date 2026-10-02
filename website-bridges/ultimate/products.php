@@ -9,7 +9,7 @@
  *
  * Then open:
  *
- *   https://ultimate.co.tz/ultitech/products.php
+ *   https://ultimate.co.tz/ultitech/products.php 
  *
  * Edit the two settings below before you test.
  */

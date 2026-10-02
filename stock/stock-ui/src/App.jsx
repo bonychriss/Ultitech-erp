@@ -26,6 +26,7 @@ import PurchaseEdit from './pages/PurchaseEdit';
 import PurchaseReceive from './pages/PurchaseReceive';
 import SalesCatalogue from './pages/SalesCatalogue';
 import Settings from './pages/Settings';
+import WebServices from './pages/WebServices';
 
 export default function App({ page = 'dashboard', data = {} }) {
   switch (page) {
@@ -81,6 +82,8 @@ export default function App({ page = 'dashboard', data = {} }) {
       return <SalesCatalogue data={data} />;
     case 'settings':
       return <Settings data={data} />;
+    case 'web-services':
+      return <WebServices data={data} />;
     case 'dashboard':
     default:
       return <Dashboard data={data} />;

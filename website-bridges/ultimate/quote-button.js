@@ -239,9 +239,23 @@
     wrap.appendChild(button);
   }
 
+  function bindCartModalQuote() {
+    if (window.__ultitechQuoteFromCart) return;
+    window.__ultitechQuoteFromCart = true;
+    document.addEventListener("click", function (event) {
+      var button = event.target.closest(".ultitech-quote-from-cart");
+      if (!button) return;
+      event.preventDefault();
+      if (window.jQuery) window.jQuery("#addToCart").modal("hide");
+      var pageButton = document.getElementById("ultitech-add-quote") || document.querySelector(".ultitech-request-quote");
+      if (pageButton) pageButton.click();
+    });
+  }
+
   function start() {
     ensureUi();
     mountProductButton();
+    bindCartModalQuote();
   }
 
   if (document.readyState === "loading") {

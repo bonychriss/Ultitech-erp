@@ -244,7 +244,7 @@ $self = h((string) ($_SERVER['PHP_SELF'] ?? 'products.php'));
 <body>
 <main>
   <h1>Show UltiTech products on ultimate.co.tz</h1>
-  <p class="lead">Prices, names, descriptions, photos, and stock on the website must come from UltiTech. Do not type product prices on the website by hand. When a price changes in UltiTech, the website reads the new price from this file.</p>
+  <p class="lead">The file that puts UltiTech products onto the shop, and sends new orders back, is <code>sync.php</code> in this same folder. Upload it to <code>public_html/ultitech/sync.php</code> and open it with the key written at the top of that file.</p>
 
   <h2>1. In UltiTech</h2>
   <div class="card">
@@ -290,7 +290,7 @@ $self = h((string) ($_SERVER['PHP_SELF'] ?? 'products.php'));
       <tr><td><code>description</code></td><td>Product details.</td></tr>
       <tr><td><code>price</code></td><td>Selling price from UltiTech. Show this number.</td></tr>
       <tr><td><code>currency</code></td><td>Usually TZS, unless the product uses another currency in UltiTech.</td></tr>
-      <tr><td><code>stock_qty</code></td><td>Quantity in stock. Hide or mark ÔøΩout of stockÔøΩ when this is 0.</td></tr>
+      <tr><td><code>stock_qty</code></td><td>Quantity in stock. Hide or mark ùout of stockù when this is 0.</td></tr>
       <tr><td><code>category</code></td><td>Category name.</td></tr>
       <tr><td><code>brand</code></td><td>Brand, when the product has one.</td></tr>
       <tr><td><code>image_url</code></td><td>Photo hosted on UltiTech. Use it as the image address.</td></tr>
@@ -304,7 +304,7 @@ $json = file_get_contents('https://ultimate.co.tz/ultitech/products.php?format=j
 $data = json_decode($json, true);
 foreach ($data['products'] ?? [] as $product) {
     echo htmlspecialchars($product['name'])
-        . ' ÔøΩ '
+        . ' ù '
         . number_format((float) $product['price'], 2)
         . ' '
         . htmlspecialchars($product['currency']);
@@ -322,7 +322,7 @@ PHP
       $rows = $preview['payload']['products'] ?? [];
       $when = (int) ($preview['payload']['fetched_at'] ?? 0);
     ?>
-    <p class="ok"><?= count($rows) ?> products<?= !empty($preview['from_cache']) ? ' (saved copy)' : ' (just read from UltiTech)' ?><?= $when ? ' ÔøΩ ' . h(date('Y-m-d H:i', $when)) : '' ?>.</p>
+    <p class="ok"><?= count($rows) ?> products<?= !empty($preview['from_cache']) ? ' (saved copy)' : ' (just read from UltiTech)' ?><?= $when ? ' ù ' . h(date('Y-m-d H:i', $when)) : '' ?>.</p>
     <table>
       <thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Category</th></tr></thead>
       <tbody>

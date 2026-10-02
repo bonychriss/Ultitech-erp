@@ -221,14 +221,22 @@
     if (!/\/product\//.test(location.pathname)) return;
     var cart = document.querySelector("button.add-to-cart");
     if (!cart || document.getElementById("ultitech-add-quote")) return;
+    var wrap = cart.closest(".mt-3") || cart.parentElement;
+    if (!wrap) return;
+    wrap.classList.add("product-cart-buttons");
+    if (!document.getElementById("ultitech-product-buttons-style")) {
+      var style = document.createElement("style");
+      style.id = "ultitech-product-buttons-style";
+      style.textContent = ".product-cart-buttons{display:flex;flex-wrap:wrap;align-items:stretch;gap:12px}.product-cart-buttons>.btn{margin:0!important;min-width:160px;min-height:46px;padding:10px 18px;display:inline-flex!important;align-items:center;justify-content:center;gap:8px;line-height:1.2}";
+      document.head.appendChild(style);
+    }
     var button = document.createElement("button");
     button.id = "ultitech-add-quote";
     button.type = "button";
-    button.className = "btn btn-outline-primary";
-    button.style.marginLeft = "8px";
-    button.textContent = "Add to quote";
+    button.className = "btn btn-outline-dark fw-600 rounded-0";
+    button.textContent = "Request quote";
     button.addEventListener("click", addCurrent);
-    cart.insertAdjacentElement("afterend", button);
+    wrap.appendChild(button);
   }
 
   function start() {

@@ -17,6 +17,18 @@ function ultitechCustomerMessage(): string
     return 'Your request has been received successfully. Our sales person will contact you shortly.';
 }
 
+function ultitechSafeImage(string $url): string
+{
+    $url = trim($url);
+    if ($url === '' || strlen($url) > 500) {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $url) || str_starts_with($url, '/')) {
+        return $url;
+    }
+    return '';
+}
+
 function ultitechRedact(string $text): string
 {
     $text = preg_replace('/Bearer\s+\S+/i', 'Bearer [redacted]', $text) ?? $text;
@@ -70,6 +82,14 @@ function ultitechEnsureQuoteSchema(PDO $pdo): void
         updated_at DATETIME NULL,
         KEY idx_quote_items_quote (quote_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    try {
+        $col = $pdo->query("SHOW COLUMNS FROM quote_items LIKE 'image_url'");
+        if ($col && !$col->fetch()) {
+            $pdo->exec('ALTER TABLE quote_items ADD COLUMN image_url VARCHAR(500) NULL');
+        }
+    } catch (Throwable $e) {
+        // Older shops still save the quote without a photo column.
+    }
     $pdo->exec("CREATE TABLE IF NOT EXISTS sync_queue (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
         entity_type VARCHAR(32) NOT NULL,
@@ -131,9 +151,20 @@ function ultitechSaveQuote(PDO $pdo, array $input): array
         ) VALUES (?, ?, ?, ?, ?, \'pending\', \'pending\', ?, ?)');
         $ins->execute([$number, $name, $phone, $email !== '' ? $email : null, $notes !== '' ? $notes : null, $now, $now]);
         $quoteId = (int) $pdo->lastInsertId();
-        $itemIns = $pdo->prepare('INSERT INTO quote_items (
-            quote_id, product_id, ultitech_product_id, product_name, sku, quantity, unit_price, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $hasImage = false;
+        try {
+            $col = $pdo->query("SHOW COLUMNS FROM quote_items LIKE 'image_url'");
+            $hasImage = $col && (bool) $col->fetch();
+        } catch (Throwable $e) {
+            $hasImage = false;
+        }
+        $itemIns = $hasImage
+            ? $pdo->prepare('INSERT INTO quote_items (
+                quote_id, product_id, ultitech_product_id, product_name, sku, quantity, unit_price, image_url, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            : $pdo->prepare('INSERT INTO quote_items (
+                quote_id, product_id, ultitech_product_id, product_name, sku, quantity, unit_price, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $saved = 0;
         foreach ($items as $item) {
             if (!is_array($item)) {
@@ -180,7 +211,8 @@ function ultitechSaveQuote(PDO $pdo, array $input): array
             if ($productName === '') {
                 $productName = 'Product';
             }
-            $itemIns->execute([
+            $image = ultitechSafeImage((string) ($item['image'] ?? ''));
+            $values = [
                 $quoteId,
                 $websiteId > 0 ? $websiteId : null,
                 $ultiId > 0 ? $ultiId : null,
@@ -188,9 +220,13 @@ function ultitechSaveQuote(PDO $pdo, array $input): array
                 $sku !== '' ? $sku : null,
                 $qty,
                 $price,
-                $now,
-                $now,
-            ]);
+            ];
+            if ($hasImage) {
+                $values[] = $image !== '' ? $image : null;
+            }
+            $values[] = $now;
+            $values[] = $now;
+            $itemIns->execute($values);
             $saved++;
         }
         if ($saved === 0) {
@@ -265,6 +301,13 @@ function ultitechSyncQuote(PDO $pdo, int $quoteId): bool
         ];
         if (!empty($item['ultitech_product_id'])) {
             $row['product_id'] = (int) $item['ultitech_product_id'];
+        }
+        if ($item['unit_price'] !== null && $item['unit_price'] !== '') {
+            $row['unit_price'] = (float) $item['unit_price'];
+        }
+        $image = ultitechSafeImage((string) ($item['image_url'] ?? ''));
+        if ($image !== '') {
+            $row['image'] = $image;
         }
         $payloadItems[] = $row;
     }

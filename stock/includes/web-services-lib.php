@@ -214,3 +214,203 @@ function webSyncRun(int $userId = 0, string $run = ''): array
     }
     throw new RuntimeException('Sync did not finish.');
 }
+
+function webQuoteSafeImage(string $url): string
+{
+    $url = trim($url);
+    if ($url === '' || strlen($url) > 500) {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $url) || str_starts_with($url, '/')) {
+        return $url;
+    }
+
+    return '';
+}
+
+/**
+ * @param list<int> $ids
+ * @return array<int,string>
+ */
+function webQuoteProductImages(PDO $pdo, array $ids): array
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+    if ($ids === []) {
+        return [];
+    }
+    $in = implode(',', $ids);
+    $files = [];
+    try {
+        $cols = $pdo->query('SHOW COLUMNS FROM products')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        if (in_array('main_image', $cols, true)) {
+            foreach ($pdo->query('SELECT id, main_image FROM products WHERE id IN (' . $in . ')') as $row) {
+                $files[(int) $row['id']] = (string) ($row['main_image'] ?? '');
+            }
+        }
+    } catch (Throwable $e) {
+        $files = [];
+    }
+    try {
+        foreach ($pdo->query('SELECT product_id, image_name FROM product_images WHERE product_id IN (' . $in . ') ORDER BY is_primary DESC, id ASC') as $row) {
+            $pid = (int) ($row['product_id'] ?? 0);
+            if ($pid > 0 && empty($files[$pid])) {
+                $files[$pid] = (string) ($row['image_name'] ?? '');
+            }
+        }
+    } catch (Throwable $e) {
+        // product_images is optional
+    }
+    $map = [];
+    foreach ($files as $pid => $file) {
+        if (!function_exists('stock_product_list_image_url')) {
+            break;
+        }
+        $url = webQuoteSafeImage((string) stock_product_list_image_url($pid, $file, 'thumbnail'));
+        if ($url !== '') {
+            $map[$pid] = $url;
+        }
+    }
+
+    return $map;
+}
+
+function webQuoteRequestsPanel(): string
+{
+    $pdo = $GLOBALS['pdo'] ?? null;
+    if (!($pdo instanceof PDO)) {
+        return '';
+    }
+    $lib = dirname(__DIR__, 2) . '/modules/sales/quote-requests/includes/quote-requests-lib.php';
+    if (is_file($lib)) {
+        require_once $lib;
+        salesQuoteRequestsEnsureSchema($pdo);
+    }
+    try {
+        $rows = $pdo->query('SELECT * FROM website_quote_requests ORDER BY id DESC LIMIT 400')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return '';
+    }
+
+    $productIds = [];
+    foreach ($rows as $row) {
+        $productIds[] = (int) ($row['product_id'] ?? 0);
+    }
+    $images = webQuoteProductImages($pdo, $productIds);
+    $groups = [];
+    $order = [];
+    foreach ($rows as $row) {
+        $key = trim((string) ($row['quote_number'] ?? ''));
+        if ($key === '') {
+            $key = 'row-' . (int) ($row['id'] ?? 0);
+        }
+        if (!isset($groups[$key])) {
+            if (count($order) >= 40) {
+                continue;
+            }
+            $order[] = $key;
+            $groups[$key] = [
+                'quote_number' => $key,
+                'customer_name' => (string) ($row['customer_name'] ?? ''),
+                'customer_email' => (string) ($row['customer_email'] ?? ''),
+                'customer_phone' => (string) ($row['customer_phone'] ?? ''),
+                'notes' => (string) ($row['notes'] ?? ''),
+                'created_at' => (string) ($row['created_at'] ?? ''),
+                'items' => [],
+            ];
+        }
+        $payload = json_decode((string) ($row['payload'] ?? ''), true);
+        $payload = is_array($payload) ? $payload : [];
+        $pid = (int) ($row['product_id'] ?? 0);
+        $image = $images[$pid] ?? webQuoteSafeImage((string) ($payload['image'] ?? ''));
+        $price = isset($payload['unit_price']) ? (float) $payload['unit_price'] : 0.0;
+        $qty = (float) ($row['quantity'] ?? 1);
+        array_unshift($groups[$key]['items'], [
+            'name' => (string) ($row['product_name'] ?? ''),
+            'quantity' => $qty,
+            'unit_price' => $price,
+            'image' => $image,
+        ]);
+    }
+
+    $h = static function (string $value): string {
+        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+    };
+    $money = static function (float $amount): string {
+        return 'TZS ' . number_format($amount, 2);
+    };
+    $when = static function (string $value) use ($h): string {
+        $ts = strtotime($value);
+        return $ts ? $h(date('d M Y, H:i', $ts)) : $h($value);
+    };
+
+    $html = '<section class="ugt-web-quotes">'
+        . '<div class="ugt-web-quotes-head"><h2>Quote requests</h2>'
+        . '<p>Submitted from ultimate.co.tz. A sales person can follow up from the name and phone on each request.</p></div>';
+    if ($order === []) {
+        $html .= '<div class="ugt-web-quotes-empty">No quotation requests yet.</div></section>';
+        return $html . webQuoteRequestsCss();
+    }
+    foreach ($order as $key) {
+        $quote = $groups[$key];
+        $subtotal = 0.0;
+        $lines = '';
+        foreach ($quote['items'] as $item) {
+            $line = $item['unit_price'] > 0 ? $item['unit_price'] * $item['quantity'] : 0.0;
+            $subtotal += $line;
+            $qtyLabel = abs($item['quantity'] - round($item['quantity'])) < 0.001
+                ? (string) (int) round($item['quantity'])
+                : rtrim(rtrim(number_format($item['quantity'], 2, '.', ''), '0'), '.');
+            $thumb = $item['image'] !== ''
+                ? '<img src="' . $h($item['image']) . '" alt="">'
+                : '<span class="ugt-web-quote-thumb"></span>';
+            $lines .= '<div class="ugt-web-quote-line">' . $thumb
+                . '<div class="ugt-web-quote-name">' . $h($item['name'] !== '' ? $item['name'] : 'Product') . '</div>'
+                . '<div class="ugt-web-quote-qty">' . $h($qtyLabel) . '×</div>'
+                . '<div class="ugt-web-quote-price">' . ($line > 0 ? $h($money($line)) : '') . '</div>'
+                . '</div>';
+        }
+        $meta = [];
+        if ($quote['customer_phone'] !== '') {
+            $meta[] = $h($quote['customer_phone']);
+        }
+        if ($quote['customer_email'] !== '') {
+            $meta[] = $h($quote['customer_email']);
+        }
+        $html .= '<article class="ugt-web-quote">'
+            . '<header><div><strong>' . $h($quote['quote_number']) . '</strong>'
+            . '<span>' . $h($quote['customer_name']) . '</span></div>'
+            . '<time>' . $when($quote['created_at']) . '</time></header>'
+            . ($meta !== [] ? '<p class="ugt-web-quote-meta">' . implode(' · ', $meta) . '</p>' : '')
+            . ($quote['notes'] !== '' ? '<p class="ugt-web-quote-notes">' . $h($quote['notes']) . '</p>' : '')
+            . $lines
+            . ($subtotal > 0 ? '<footer>Subtotal <strong>' . $h($money($subtotal)) . '</strong></footer>' : '')
+            . '</article>';
+    }
+    $html .= '</section>' . webQuoteRequestsCss();
+
+    return $html;
+}
+
+function webQuoteRequestsCss(): string
+{
+    return '<style>
+.ugt-web-quotes{margin:0 0 1.25rem;font-family:DM Sans,system-ui,sans-serif;color:#0f172a}
+.ugt-web-quotes-head h2{margin:0 0 .25rem;font-size:1.15rem}
+.ugt-web-quotes-head p,.ugt-web-quotes-empty{margin:0 0 .75rem;color:#64748b;font-size:.925rem}
+.ugt-web-quote{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin:0 0 12px}
+.ugt-web-quote header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.ugt-web-quote header strong{display:block;font-size:.95rem}
+.ugt-web-quote header span{color:#334155}
+.ugt-web-quote time{color:#64748b;font-size:.8rem;white-space:nowrap}
+.ugt-web-quote-meta,.ugt-web-quote-notes{margin:.35rem 0 0;color:#475569;font-size:.875rem}
+.ugt-web-quote-line{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #f1f5f9}
+.ugt-web-quote-line img,.ugt-web-quote-thumb{width:42px;height:42px;object-fit:cover;border-radius:6px;background:#f1f5f9;flex:0 0 42px}
+.ugt-web-quote-name{flex:1;font-weight:600;font-size:.9rem}
+.ugt-web-quote-qty,.ugt-web-quote-price{color:#475569;font-size:.875rem;white-space:nowrap}
+.ugt-web-quote footer{display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px}
+html[data-theme="dark"] .ugt-web-quotes{color:#e2e8f0}
+html[data-theme="dark"] .ugt-web-quote{background:#1e293b;border-color:#334155}
+html[data-theme="dark"] .ugt-web-quotes-head p,html[data-theme="dark"] .ugt-web-quote time,html[data-theme="dark"] .ugt-web-quote-meta,html[data-theme="dark"] .ugt-web-quote-notes,html[data-theme="dark"] .ugt-web-quote-qty,html[data-theme="dark"] .ugt-web-quote-price{color:#94a3b8}
+html[data-theme="dark"] .ugt-web-quote header span{color:#e2e8f0}
+</style>';
+}

@@ -227,7 +227,7 @@
     if (!document.getElementById("ultitech-product-buttons-style")) {
       var style = document.createElement("style");
       style.id = "ultitech-product-buttons-style";
-      style.textContent = ".product-cart-buttons{display:flex;flex-wrap:wrap;align-items:stretch;gap:12px}.product-cart-buttons>.btn{margin:0!important;min-width:160px;min-height:46px;padding:10px 18px;display:inline-flex!important;align-items:center;justify-content:center;gap:8px;line-height:1.2}";
+      style.textContent = ".product-cart-buttons{display:flex;flex-wrap:wrap;align-items:stretch;gap:12px}.product-cart-buttons>.btn{margin:0!important;min-width:160px;min-height:46px;padding:10px 18px;display:inline-flex!important;align-items:center;justify-content:center;gap:8px;line-height:1.2}.product-cart-buttons>.btn.d-none,.product-cart-buttons>.out-of-stock{display:none!important}";
       document.head.appendChild(style);
     }
     var button = document.createElement("button");

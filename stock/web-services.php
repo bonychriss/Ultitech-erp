@@ -18,12 +18,31 @@ if (!function_exists('isUltimate') || !isUltimate()) {
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    if ((string) ($_GET['ajax'] ?? '') !== 'sync') {
+    $action = (string) ($_GET['ajax'] ?? '');
+    $userId = (int) ($_SESSION['user_id'] ?? 0);
+    $run = (string) ($_GET['run'] ?? '');
+    if ($action === 'cancel') {
+        webSyncRequestCancel($userId, $run);
+        echo json_encode(['ok' => true, 'cancelled' => true], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    if ($action !== 'sync') {
         echo json_encode(['ok' => false, 'error' => 'Unknown action.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
     $before = array_map(static fn ($row) => (int) $row['id'], webSyncActiveProducts($pdo));
-    $result = webSyncRun();
+    $result = webSyncRun($userId, $run);
+    if (!empty($result['cancelled'])) {
+        echo json_encode([
+            'ok' => false,
+            'cancelled' => true,
+            'error' => 'Sync cancelled.',
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     webSyncMarkSent($pdo, $before);
     $result['pending'] = count(webSyncPending($pdo));
     echo json_encode($result, JSON_UNESCAPED_UNICODE);

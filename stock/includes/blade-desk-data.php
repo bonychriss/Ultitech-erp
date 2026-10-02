@@ -932,11 +932,17 @@ if (!function_exists('stock_blade_web_services_data')) {
         require_once dirname(__DIR__) . '/includes/web-services-lib.php';
         $pending = webSyncPending($pdo);
 
+        $syncUrl = function_exists('stock_desk_url')
+            ? stock_desk_url('web-services', ['ajax' => 'sync'])
+            : stock_blade_desk_url('web-services', ['ajax' => 'sync']);
+        $cancelUrl = function_exists('stock_desk_url')
+            ? stock_desk_url('web-services', ['ajax' => 'cancel'])
+            : stock_blade_desk_url('web-services', ['ajax' => 'cancel']);
+
         return [
             'pending' => $pending,
-            'syncUrl' => function_exists('stock_desk_url')
-                ? stock_desk_url('web-services', ['ajax' => 'sync'])
-                : stock_blade_desk_url('web-services', ['ajax' => 'sync']),
+            'syncUrl' => $syncUrl,
+            'cancelUrl' => $cancelUrl,
         ];
     }
 }

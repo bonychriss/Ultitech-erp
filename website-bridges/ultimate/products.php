@@ -144,7 +144,7 @@ function ultitech_load_catalog(bool $force = false): array
             'image_url' => (string) ($row['image_url'] ?? ''),
         ];
     }
-
+    
     $payload = [
         'success' => true,
         'source' => 'ultitech',

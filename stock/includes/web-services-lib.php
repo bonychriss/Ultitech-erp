@@ -7,6 +7,38 @@ function webSyncUrl(): string
     return 'https://ultimate.co.tz/ultitech/sync.php?key=ugt7k-sync-4m2p';
 }
 
+function webSyncRunId(string $run): string
+{
+    $run = preg_replace('/[^a-zA-Z0-9._-]/', '', $run) ?? '';
+
+    return $run !== '' ? $run : '0';
+}
+
+function webSyncCancelPath(int $userId, string $run): string
+{
+    return sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ugt-web-sync-cancel-' . $userId . '-' . webSyncRunId($run);
+}
+
+function webSyncRequestCancel(int $userId, string $run): void
+{
+    if ($userId > 0) {
+        file_put_contents(webSyncCancelPath($userId, $run), (string) time());
+    }
+}
+
+function webSyncClearCancel(int $userId, string $run): void
+{
+    $path = webSyncCancelPath($userId, $run);
+    if (is_file($path)) {
+        @unlink($path);
+    }
+}
+
+function webSyncIsCancelled(int $userId, string $run): bool
+{
+    return $userId > 0 && is_file(webSyncCancelPath($userId, $run));
+}
+
 function webSyncEnsureTable(PDO $pdo): void
 {
     $pdo->exec('CREATE TABLE IF NOT EXISTS website_sync_sent (
@@ -91,7 +123,7 @@ function webSyncPending(PDO $pdo): array
     return $pending;
 }
 
-function webSyncFetch(string $url): string
+function webSyncFetch(string $url, int $userId = 0, string $run = ''): string
 {
     if (!function_exists('curl_init')) {
         throw new RuntimeException('PHP curl is not enabled.');
@@ -101,12 +133,20 @@ function webSyncFetch(string $url): string
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_TIMEOUT => 180,
+        CURLOPT_NOPROGRESS => false,
+        CURLOPT_PROGRESSFUNCTION => static function () use ($userId, $run): int {
+            return webSyncIsCancelled($userId, $run) ? 1 : 0;
+        },
         CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     ]);
     $body = curl_exec($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $errno = curl_errno($ch);
     $err = curl_error($ch);
     curl_close($ch);
+    if (webSyncIsCancelled($userId, $run) || $errno === CURLE_ABORTED_BY_CALLBACK) {
+        throw new RuntimeException('Sync cancelled.');
+    }
     if (!is_string($body) || $body === '' || $code >= 400) {
         throw new RuntimeException('Website sync failed (HTTP ' . $code . '). ' . $err);
     }
@@ -132,18 +172,33 @@ function webSyncNextUrl(string $html, string $current): ?string
     return $origin . '/ultitech/' . ltrim($next, '/');
 }
 
-function webSyncRun(): array
+function webSyncRun(int $userId = 0, string $run = ''): array
 {
     @set_time_limit(0);
     $url = webSyncUrl();
     $seen = [];
     $summary = '';
+    $finish = static function (array $result) use ($userId, $run): array {
+        webSyncClearCancel($userId, $run);
+
+        return $result;
+    };
     for ($step = 1; $step <= 80; $step++) {
+        if (webSyncIsCancelled($userId, $run)) {
+            return $finish(['ok' => false, 'cancelled' => true]);
+        }
         if (isset($seen[$url])) {
             throw new RuntimeException('Sync repeated the same step.');
         }
         $seen[$url] = true;
-        $html = webSyncFetch($url);
+        try {
+            $html = webSyncFetch($url, $userId, $run);
+        } catch (RuntimeException $e) {
+            if ($e->getMessage() === 'Sync cancelled.' || webSyncIsCancelled($userId, $run)) {
+                return $finish(['ok' => false, 'cancelled' => true]);
+            }
+            throw $e;
+        }
         $text = trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($html), ENT_QUOTES, 'UTF-8')) ?? '');
         if (str_contains($text, 'Connection stopped')) {
             throw new RuntimeException('The website sync stopped.');
@@ -153,7 +208,7 @@ function webSyncRun(): array
         }
         $next = webSyncNextUrl($html, $url);
         if ($next === null) {
-            return ['ok' => true, 'summary' => $summary !== '' ? $summary : 'Sync finished.'];
+            return $finish(['ok' => true, 'summary' => $summary !== '' ? $summary : 'Sync finished.']);
         }
         $url = $next;
     }

@@ -1042,6 +1042,13 @@ try {
     }
     $pdo = $probe;
     ensureLinkTables($pdo);
+    $quoteFile = __DIR__ . '/quote.php';
+    if (is_file($quoteFile)) {
+        require_once $quoteFile;
+        if (function_exists('ultitechInstallQuoteButton')) {
+            note(ultitechInstallQuoteButton($pdo));
+        }
+    }
     if (!$isCli && strtolower((string) ($_GET['format'] ?? '')) === 'status') {
         $ids = array_map('intval', $pdo->query('SELECT ultitech_product_id FROM ultitech_links')->fetchAll(PDO::FETCH_COLUMN) ?: []);
         header('Content-Type: application/json; charset=utf-8');

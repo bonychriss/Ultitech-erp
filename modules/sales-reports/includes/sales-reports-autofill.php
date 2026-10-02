@@ -169,17 +169,18 @@ function salesReportsApplyAutofill(PDO $pdo, int $reportId, bool $force = false)
     }
 
     if (!$force && !salesReportsDocumentNeedsAutofill($doc, $sections)) {
-        $contentHtml = salesReportsUiMergeDocumentHtml($doc, $sections);
+        $contentHtml = salesReportsEnsureCoverHtml($report, salesReportsUiMergeDocumentHtml($doc, $sections));
         return [
             'success' => true,
             'skipped' => true,
             'content_html' => $contentHtml,
-            'sections' => $sections,
+            'sections' => salesReportsApplyCoverToSections($report, $sections),
         ];
     }
 
     $filled = salesReportsAutofillSections($pdo, $report, $sections);
-    $contentHtml = salesReportsRenderSectionsHtml($filled, $report);
+    $filled = salesReportsApplyCoverToSections($report, $filled);
+    $contentHtml = salesReportsEnsureCoverHtml($report, salesReportsRenderSectionsHtml($filled, $report));
     $sectionsJson = salesReportsJsonEncode($filled);
 
     $userId = salesReportsUserId();

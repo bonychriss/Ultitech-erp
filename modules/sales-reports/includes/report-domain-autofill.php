@@ -241,13 +241,13 @@ function reportEngineApplyAutofill(PDO $pdo, int $reportId, bool $force = false)
         return [
             'success' => true,
             'skipped' => true,
-            'content_html' => salesReportsUiMergeDocumentHtml($doc, $sections),
-            'sections' => $sections,
+            'content_html' => salesReportsEnsureCoverHtml($report, salesReportsUiMergeDocumentHtml($doc, $sections)),
+            'sections' => salesReportsApplyCoverToSections($report, $sections),
         ];
     }
 
-    $filled = reportEngineAutofillSections($pdo, $report, $sections);
-    $contentHtml = salesReportsRenderSectionsHtml($filled, $report);
+    $filled = salesReportsApplyCoverToSections($report, reportEngineAutofillSections($pdo, $report, $sections));
+    $contentHtml = salesReportsEnsureCoverHtml($report, salesReportsRenderSectionsHtml($filled, $report));
     $sectionsJson = salesReportsJsonEncode($filled);
     $userId = salesReportsUserId();
 

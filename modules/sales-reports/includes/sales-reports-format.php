@@ -151,37 +151,88 @@ function salesReportsPreparedByLine(array $meta, string $style = ''): string
 
 function salesReportsBuildDepartmentCoverHtml(array $meta): string
 {
-    $department = htmlspecialchars(salesReportsDepartmentLabel($meta), ENT_QUOTES, 'UTF-8');
-    $company = htmlspecialchars((string) ($_SESSION['company_name'] ?? 'Company'), ENT_QUOTES, 'UTF-8');
-    $periodLabel = htmlspecialchars(
-        salesReportsFormatCoverPeriod(
-            (string) ($meta['start_date'] ?? ''),
-            (string) ($meta['end_date'] ?? '')
-        ),
-        ENT_QUOTES,
-        'UTF-8'
-    );
-    $year = htmlspecialchars(
-        salesReportsFormatCoverYear(
-            (string) ($meta['start_date'] ?? ''),
-            (string) ($meta['end_date'] ?? '')
-        ),
-        ENT_QUOTES,
-        'UTF-8'
-    );
-    $preparedLine = salesReportsPreparedByLine($meta, 'font-size:11pt; margin:0 0 64px;');
-    $preparedSpacer = $preparedLine === '' ? '<div style="margin-bottom:64px;"></div>' : '';
+    if (!function_exists('reportEngineBuildCoverHtml')) {
+        require_once __DIR__ . '/report-engine.php';
+    }
 
-    return '<div class="sr-cover-page" style="position:relative;text-align:center; page-break-after:always; padding:72px 32px 96px;">'
-        . salesReportsCompanyLogoHtml('72px', 'top-right')
-        . '<p style="font-size:13pt; letter-spacing:0.12em; margin:0 0 28px; font-weight:600;">' . $department . '</p>'
-        . '<p style="font-size:17pt; font-weight:700; margin:0 0 48px;">' . $company . '</p>'
-        . $preparedLine
-        . $preparedSpacer
-        . '<p style="font-size:15pt; font-weight:700; letter-spacing:0.06em; margin:0;">' . $periodLabel . '</p>'
-        . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:12px 0 4px;">SALES</p>'
-        . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:0;">REPORT ' . $year . '</p>'
-        . '</div>';
+    $domain = function_exists('reportEngineReportDomain') ? reportEngineReportDomain($meta) : 'sales';
+
+    return reportEngineBuildCoverHtml($domain, $meta);
+}
+
+function salesReportsFindDivEnd(string $html, int $start): ?int
+{
+    $length = strlen($html);
+    $depth = 0;
+    $i = $start;
+    while ($i < $length && preg_match('/<\/?div\b[^>]*>/i', $html, $match, PREG_OFFSET_CAPTURE, $i)) {
+        $tag = $match[0][0];
+        $at = $match[0][1];
+        $i = $at + strlen($tag);
+        if (preg_match('/^<div\b/i', $tag)) {
+            $depth++;
+            continue;
+        }
+        $depth--;
+        if ($depth === 0) {
+            return $i;
+        }
+    }
+
+    return null;
+}
+
+function salesReportsRemoveCoverBlocks(string $html): string
+{
+    $offset = 0;
+    while (($pos = stripos($html, 'sr-cover-page', $offset)) !== false) {
+        $start = strripos(substr($html, 0, $pos), '<div');
+        if ($start === false) {
+            break;
+        }
+        $end = salesReportsFindDivEnd($html, $start);
+        if ($end === null) {
+            break;
+        }
+        $html = substr($html, 0, $start) . substr($html, $end);
+        $offset = $start;
+    }
+
+    return $html;
+}
+
+function salesReportsEnsureCoverHtml(array $meta, string $html): string
+{
+    $cover = salesReportsBuildDepartmentCoverHtml($meta);
+
+    return $cover . ltrim(salesReportsRemoveCoverBlocks($html));
+}
+
+function salesReportsApplyCoverToSections(array $meta, array $sections): array
+{
+    $coverHtml = salesReportsBuildDepartmentCoverHtml($meta);
+    $updated = false;
+    foreach ($sections as &$section) {
+        if (($section['key'] ?? '') === 'cover') {
+            $section['content'] = $coverHtml;
+            $section['visible'] = true;
+            $updated = true;
+            break;
+        }
+    }
+    unset($section);
+    if (!$updated) {
+        array_unshift($sections, [
+            'id' => 'cover',
+            'key' => 'cover',
+            'title' => 'Cover Page',
+            'order' => 0,
+            'visible' => true,
+            'content' => $coverHtml,
+        ]);
+    }
+
+    return $sections;
 }
 
 function salesReportsRefreshCoverInHtml(string $html, array $meta): string
@@ -190,10 +241,7 @@ function salesReportsRefreshCoverInHtml(string $html, array $meta): string
         return $html;
     }
 
-    $newCover = salesReportsBuildDepartmentCoverHtml($meta);
-    $updated = preg_replace('/<div class="sr-cover-page"[^>]*>.*?<\/div>/is', $newCover, $html, 1);
-
-    return is_string($updated) && $updated !== '' ? $updated : $html;
+    return salesReportsEnsureCoverHtml($meta, $html);
 }
 
 function salesReportsSectionHeading(string $title): string
@@ -299,7 +347,7 @@ function salesReportsPeriodDefaults(string $period, array $user = [], ?string $s
         'end_date' => $dates['end_date'],
         'period_label' => $periodLabel,
         'prepared_by' => '',
-        'department' => trim((string) ($user['department'] ?? 'Sales')),
+        'department' => 'Sales',
     ];
 }
 

@@ -397,7 +397,7 @@ function salesReportsCreate(PDO $pdo, array $data): int
         $data['start_date'] ?? date('Y-m-01'),
         $data['end_date'] ?? date('Y-m-d'),
         trim((string) ($data['prepared_by'] ?? '')),
-        trim((string) ($data['department'] ?? ($_SESSION['department'] ?? reportEngineDomains()[$domain]['department_default'] ?? ''))),
+        reportEngineStoredDepartment($domain, (string) ($data['department'] ?? '')),
         trim((string) ($data['branch'] ?? '')),
         $status,
         trim((string) ($data['description'] ?? '')),

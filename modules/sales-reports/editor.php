@@ -78,7 +78,7 @@ if (!$isNew) {
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'prepared_by' => $user['name'],
-                'department' => $user['department'] !== '' ? $user['department'] : ($domainMeta['department_default'] ?? 'Sales'),
+                'department' => reportEngineStoredDepartment($reportDomain, (string) ($domainMeta['department_default'] ?? '')),
                 'filters' => [],
             ];
         } elseif ($period !== '') {
@@ -98,7 +98,7 @@ if (!$isNew) {
                 'end_date' => $periodDefaults['end_date'],
                 'period_label' => $periodDefaults['period_label'] ?? '',
                 'prepared_by' => $user['name'],
-                'department' => $user['department'] !== '' ? $user['department'] : ($domainMeta['department_default'] ?? 'Sales'),
+                'department' => reportEngineStoredDepartment($reportDomain, (string) ($domainMeta['department_default'] ?? '')),
                 'filters' => [],
             ];
         } else {

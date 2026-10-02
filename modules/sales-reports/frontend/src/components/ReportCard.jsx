@@ -17,6 +17,7 @@ function ExportMenu({ reportId }) {
   }, [])
 
   const formats = [
+    { key: 'preview', label: 'Preview' },
     { key: 'pdf', label: 'PDF' },
     { key: 'word', label: 'Word' },
     { key: 'excel', label: 'Excel' },

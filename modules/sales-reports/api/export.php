@@ -34,6 +34,9 @@ match ($format) {
     'pdf' => salesReportsExportPdf($report, $contentHtml),
     'word', 'docx' => salesReportsExportWord($report, $contentHtml),
     'excel', 'csv' => salesReportsExportExcel($report, $pdo),
+    'preview' => (static function () use ($report, $contentHtml) {
+        echo salesReportsExportHtml($report, $contentHtml, true);
+    })(),
     'print' => (static function () use ($report, $contentHtml) {
         echo salesReportsExportHtml($report, $contentHtml, true);
         echo '<script>window.onload=function(){window.print();}</script>';

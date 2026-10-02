@@ -281,6 +281,34 @@ function salesReportsUiBuildEditorConfig(PDO $pdo, int $reportId): ?array
     $doc = salesReportsGetDocument($pdo, $reportId);
     $sections = json_decode((string) ($doc['sections_json'] ?? '[]'), true) ?: [];
     $contentHtml = salesReportsUiMergeDocumentHtml($doc, $sections);
+    $storedDepartment = trim((string) ($report['department'] ?? ''));
+    $coverHasStaffDepartment = preg_match('/MANAGEMENT\s+DEPARTMENT/i', $contentHtml) === 1;
+    if (reportEngineCoverDepartmentIsGeneric($storedDepartment) && !in_array(strtolower($storedDepartment), [
+        '', 'sales', 'marketing', 'sales and marketing', 'procurement', 'purchasing', 'finance',
+        'operations', 'operation', 'fleet', 'logistics', 'delivery and logistics', 'warehouse',
+        'store', 'inventory', 'store / inventory',
+    ], true)) {
+        $report['department'] = reportEngineStoredDepartment($domain, '');
+        if (function_exists('salesReportsUpdate')) {
+            salesReportsUpdate($pdo, $reportId, ['department' => $report['department']]);
+        }
+        $coverHasStaffDepartment = true;
+    }
+    if ($coverHasStaffDepartment && function_exists('salesReportsRefreshCoverInHtml')) {
+        $contentHtml = salesReportsRefreshCoverInHtml($contentHtml, $report);
+    }
+    if (function_exists('salesReportsEnsureCoverHtml')) {
+        $withCover = salesReportsEnsureCoverHtml($report, $contentHtml);
+        $sections = salesReportsApplyCoverToSections($report, $sections);
+        if ($withCover !== $contentHtml
+            && function_exists('salesReportsCanEditReport')
+            && salesReportsCanEditReport($report)
+            && function_exists('salesReportsSaveDocument')
+            && function_exists('salesReportsJsonEncode')) {
+            salesReportsSaveDocument($pdo, $reportId, salesReportsJsonEncode($sections), $withCover, false);
+        }
+        $contentHtml = $withCover;
+    }
 
     $erpMenu = reportEngineErpMenu($domain);
     $sectionCatalog = reportEngineSectionCatalog($domain);

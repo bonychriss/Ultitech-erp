@@ -39,7 +39,7 @@ function buildDomainPeriodDefaults(option, domain, user = {}) {
       ...base,
       report_domain: 'sales',
       prepared_by: base.prepared_by ?? '',
-      department: user.department || base.department || 'Sales',
+      department: domain.department_default || base.department || 'Sales',
     }
   }
 
@@ -52,7 +52,7 @@ function buildDomainPeriodDefaults(option, domain, user = {}) {
     end_date: end,
     period_label: periodLabel,
     prepared_by: user.name || '',
-    department: user.department || domain.department_default || '',
+    department: domain.department_default || '',
     filters: {},
   }
 }
@@ -204,7 +204,7 @@ export default function CreateReportTypeModal({ open, onClose, onSelect, initial
       template_key: selectedDomain.key === 'sales' ? 'department_quarterly' : 'standard',
       report_type: 'quarterly',
       prepared_by: selectedDomain.key === 'sales' ? (built.prepared_by ?? '') : (user.name || ''),
-      department: user.department || selectedDomain.department_default || built.department || '',
+      department: selectedDomain.department_default || built.department || 'Sales',
       filters: {},
     }
     const range = quarterDateRange(quarterYear, quarter)
@@ -238,7 +238,7 @@ export default function CreateReportTypeModal({ open, onClose, onSelect, initial
       template_key: selectedDomain.key === 'sales' ? (defaults.template_key || 'monthly') : 'standard',
       report_type: selectedDomain.key === 'sales' ? (defaults.report_type || 'monthly') : 'monthly',
       prepared_by: selectedDomain.key === 'sales' ? (defaults.prepared_by ?? '') : (user.name || ''),
-      department: user.department || selectedDomain.department_default || defaults.department || '',
+      department: selectedDomain.department_default || defaults.department || 'Sales',
       filters: {},
     }
     onSelect({

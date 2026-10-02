@@ -26,7 +26,7 @@ export function buildMonthlyDefaults(startDate, endDate, baseDefaults = {}, user
     end_date: end,
     period_label: periodLabel,
     prepared_by: '',
-    department: user.department || baseDefaults.department || 'Sales',
+    department: baseDefaults.department || 'Sales',
   }
 }
 
@@ -82,7 +82,7 @@ export function buildQuarterDefaults(year, quarter, baseDefaults = {}, user = {}
     end_date: range.end_date,
     period_label: range.period_label,
     prepared_by: baseDefaults.prepared_by ?? '',
-    department: user.department || baseDefaults.department || 'Sales',
+    department: baseDefaults.department || 'Sales',
   }
 }
 

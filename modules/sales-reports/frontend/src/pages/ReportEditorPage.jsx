@@ -333,7 +333,7 @@ export default function ReportEditorPage() {
           end_date: defaults.end_date,
           template_key: defaults.template_key || (defaults.report_domain && defaults.report_domain !== 'sales' ? 'standard' : 'monthly'),
           prepared_by: defaults.prepared_by || '',
-          department: defaults.department || CFG.user?.department,
+          department: defaults.department || '',
           filters: defaults.filters || {},
         }),
       })
@@ -639,6 +639,9 @@ export default function ReportEditorPage() {
                 </button>
                 {exportOpen && (
                   <div className="word-export-dropdown">
+                    <button type="button" onClick={() => handleExport('preview')}>
+                      <i className="bi bi-eye" aria-hidden="true" /> Preview
+                    </button>
                     <button type="button" onClick={() => handleExport('pdf')}>
                       <i className="bi bi-file-earmark-pdf" aria-hidden="true" /> Download PDF
                     </button>

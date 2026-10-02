@@ -29,9 +29,9 @@ export async function downloadReportExport(url, { format = 'pdf', onStatus } = {
 
   notify('Preparing download...')
 
-  if (format === 'print') {
+  if (format === 'print' || format === 'preview') {
     window.open(url, '_blank', 'noopener,noreferrer')
-    notify('Opening print view...')
+    notify(format === 'preview' ? 'Opening preview...' : 'Opening print view...')
     await new Promise((resolve) => window.setTimeout(resolve, 900))
     return
   }
@@ -77,6 +77,8 @@ export function exportStatusLabel(format) {
       return 'Downloading Excel file...'
     case 'print':
       return 'Opening print view...'
+    case 'preview':
+      return 'Opening preview...'
     default:
       return 'Downloading...'
   }

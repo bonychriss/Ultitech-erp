@@ -599,9 +599,9 @@
   padding: 0;
 }
 .word-canvas .sr-cover-page {
-  min-height: 680px;
+  min-height: 980px;
   display: block;
-  text-align: center;
+  text-align: left;
   page-break-after: always;
   position: relative;
 }
@@ -708,13 +708,21 @@
 }
 .word-doc-page .tox-tinymce {
   border: none !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05) !important;
+  box-shadow: none !important;
   outline: none !important;
   width: 100% !important;
   max-width: 100% !important;
   min-height: 1056px !important;
   height: auto !important;
-  background: #fff !important;
+  background: #e8e6e3 !important;
+}
+.word-doc-page .tox-editor-container,
+.word-doc-page .tox-sidebar-wrap,
+.word-doc-page .tox-edit-area,
+.word-doc-page .tox-edit-area__iframe {
+  background: #e8e6e3 !important;
+  border: none !important;
+  overflow: hidden !important;
 }
 .word-doc-page .tox-editor-container {
   min-height: 1056px !important;

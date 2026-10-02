@@ -322,104 +322,149 @@ function reportEngineDomainLabel(string $domain): string
     return reportEngineDomains()[reportEngineNormalizeDomain($domain)]['label'] ?? 'Report';
 }
 
+function reportEngineCoverDepartmentIsGeneric(string $department): bool
+{
+    $department = strtolower(trim(preg_replace('/\s+/', ' ', $department) ?? $department));
+
+    return in_array($department, [
+        '', 'sales', 'marketing', 'sales and marketing', 'logistics', 'fleet', 'driver', 'drivers',
+        'delivery and logistics', 'operations', 'operation', 'procurement', 'purchasing',
+        'warehouse', 'store', 'inventory', 'store / inventory', 'finance',
+        'management', 'management department', 'admin', 'administration', 'administrator',
+        'general', 'head office', 'director', 'manager',
+    ], true);
+}
+
+function reportEngineStoredDepartment(string $domain, string $department): string
+{
+    $domain = reportEngineNormalizeDomain($domain);
+    $fallback = trim((string) (reportEngineDomains()[$domain]['department_default'] ?? 'Sales'));
+    $department = trim($department);
+    if ($department === '' || reportEngineCoverDepartmentIsGeneric($department)) {
+        return $fallback !== '' ? $fallback : 'Sales';
+    }
+
+    return $department;
+}
+
+function reportEngineCoverDepartmentName(string $domain, array $meta): string
+{
+    $domain = reportEngineNormalizeDomain($domain);
+    $department = trim((string) ($meta['department'] ?? ''));
+    $defaults = [
+        'sales' => 'SALES AND MARKETING DEPARTMENT',
+        'fleet' => 'DELIVERY AND LOGISTICS DEPARTMENT',
+        'operations' => 'OPERATIONS DEPARTMENT',
+        'procurement' => 'PROCUREMENT DEPARTMENT',
+        'store_warehouse' => 'STORE / INVENTORY DEPARTMENT',
+        'finance' => 'FINANCE DEPARTMENT',
+    ];
+    if (reportEngineCoverDepartmentIsGeneric($department)) {
+        return $defaults[$domain] ?? strtoupper(reportEngineDomainLabel($domain));
+    }
+    $upper = strtoupper($department);
+    if (!str_contains($upper, 'DEPARTMENT')) {
+        $upper .= ' DEPARTMENT';
+    }
+
+    return $upper;
+}
+
+function reportEngineCoverImageUrl(string $file): string
+{
+    $relative = 'assets/cover/' . ltrim($file, '/');
+    if (function_exists('app_url')) {
+        return rtrim((string) app_url('/modules/sales-reports'), '/') . '/' . $relative;
+    }
+
+    return '/modules/sales-reports/' . $relative;
+}
+
+function reportEngineRewriteCoverImagesForPdf(string $html): string
+{
+    $dir = str_replace('\\', '/', dirname(__DIR__) . '/assets/cover');
+
+    return preg_replace_callback(
+        '#src="([^"]*?assets/cover/(logo-\d+\.png))"#',
+        static function (array $match) use ($dir): string {
+            $path = $dir . '/' . $match[2];
+            if (!is_file($path)) {
+                return $match[0];
+            }
+
+            return 'src="' . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . '"';
+        },
+        $html
+    ) ?? $html;
+}
+
 function reportEngineBuildCoverHtml(string $domain, array $meta): string
 {
     $domain = reportEngineNormalizeDomain($domain);
-    if ($domain === 'sales') {
-        return salesReportsBuildDepartmentCoverHtml($meta);
+    $department = htmlspecialchars(reportEngineCoverDepartmentName($domain, $meta), ENT_QUOTES, 'UTF-8');
+    $companyName = trim((string) ($_SESSION['company_name'] ?? ''));
+    if ($companyName === '') {
+        $companyName = 'ULTIMATE GENERAL TRADING';
     }
+    $company = htmlspecialchars(strtoupper($companyName), ENT_QUOTES, 'UTF-8');
+    $periodLabel = htmlspecialchars(
+        salesReportsFormatCoverPeriod(
+            (string) ($meta['start_date'] ?? ''),
+            (string) ($meta['end_date'] ?? '')
+        ),
+        ENT_QUOTES,
+        'UTF-8'
+    );
+    $year = htmlspecialchars(
+        salesReportsFormatCoverYear(
+            (string) ($meta['start_date'] ?? ''),
+            (string) ($meta['end_date'] ?? '')
+        ),
+        ENT_QUOTES,
+        'UTF-8'
+    );
+    $logo = htmlspecialchars(reportEngineCoverImageUrl('logo-0.png'), ENT_QUOTES, 'UTF-8');
+    $mark = htmlspecialchars(reportEngineCoverImageUrl('logo-1.png'), ENT_QUOTES, 'UTF-8');
+    $blue = '#082a75';
+    $navy = '#0f0d29';
+    $cell = 'border:0; padding:0;';
+    $rule = static function (int $width) use ($cell, $blue): string {
+        return '<table border="0" cellspacing="0" cellpadding="0" style="width:' . $width . 'px; border-collapse:collapse; border:0; margin:0 0 14px;">'
+            . '<tr><td style="' . $cell . ' width:' . $width . 'px; height:4px; background:' . $blue . '; font-size:1px; line-height:1px;">&nbsp;</td></tr></table>';
+    };
 
-    // Procurement / Store / Fleet use the formal cover layout (design benchmark only).
-    if (in_array($domain, ['procurement', 'store_warehouse', 'fleet', 'operations'], true)) {
-        $department = trim((string) ($meta['department'] ?? ''));
-        if ($domain === 'fleet') {
-            if ($department === '' || preg_match('/^(logistics|fleet|driver|drivers|delivery and logistics)$/i', $department)) {
-                $department = 'DELIVERY AND LOGISTICS DEPARTMENT';
-            } else {
-                $department = strtoupper($department);
-            }
-            $heroLine1 = '';
-        } elseif ($domain === 'operations') {
-            if ($department === '' || preg_match('/^operations?$/i', $department)) {
-                $department = 'OPERATIONS DEPARTMENT';
-            } else {
-                $department = strtoupper($department);
-            }
-            $heroLine1 = 'OVERALL';
-        } elseif ($domain === 'procurement') {
-            if ($department === '' || preg_match('/^(procurement|purchasing)$/i', $department)) {
-                $department = 'PROCUREMENT DEPARTMENT';
-            } else {
-                $department = strtoupper($department);
-            }
-            $heroLine1 = 'PROCUREMENT';
-        } else {
-            if ($department === '' || preg_match('/^(warehouse|store|inventory)$/i', $department)) {
-                $department = 'STORE / INVENTORY DEPARTMENT';
-            } else {
-                $department = strtoupper($department);
-            }
-            $heroLine1 = 'STORE';
-        }
-        $company = htmlspecialchars((string) ($_SESSION['company_name'] ?? 'Company'), ENT_QUOTES, 'UTF-8');
-        $periodLabel = htmlspecialchars(
-            salesReportsFormatCoverPeriod(
-                (string) ($meta['start_date'] ?? ''),
-                (string) ($meta['end_date'] ?? '')
-            ),
-            ENT_QUOTES,
-            'UTF-8'
-        );
-        $year = htmlspecialchars(
-            salesReportsFormatCoverYear(
-                (string) ($meta['start_date'] ?? ''),
-                (string) ($meta['end_date'] ?? '')
-            ),
-            ENT_QUOTES,
-            'UTF-8'
-        );
-        $preparedLine = salesReportsPreparedByLine($meta, 'font-size:11pt; margin:0 0 64px;');
-        $preparedSpacer = $preparedLine === '' ? '<div style="margin-bottom:64px;"></div>' : '';
-
-        return '<div class="sr-cover-page" style="position:relative;text-align:center; page-break-after:always; padding:72px 32px 96px;">'
-            . salesReportsCompanyLogoHtml('72px', 'top-right')
-            . '<p style="font-size:13pt; letter-spacing:0.12em; margin:0 0 28px; font-weight:600;">'
-            . htmlspecialchars($department, ENT_QUOTES, 'UTF-8') . '</p>'
-            . '<p style="font-size:17pt; font-weight:700; margin:0 0 48px;">' . $company . '</p>'
-            . $preparedLine
-            . $preparedSpacer
-            . '<p style="font-size:15pt; font-weight:700; letter-spacing:0.06em; margin:0;">' . $periodLabel . '</p>'
-            . ($heroLine1 !== ''
-                ? '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:12px 0 4px;">' . $heroLine1 . '</p>'
-                : '')
-            . '<p style="font-size:20pt; font-weight:700; letter-spacing:0.2em; margin:12px 0 0;">REPORT ' . $year . '</p>'
-            . '</div>';
-    }
-
-    $title = htmlspecialchars((string) ($meta['report_name'] ?? reportEngineDomainLabel($domain)), ENT_QUOTES, 'UTF-8');
-    $period = htmlspecialchars(salesReportsFormatCoverPeriod(
-        (string) ($meta['start_date'] ?? ''),
-        (string) ($meta['end_date'] ?? '')
-    ), ENT_QUOTES, 'UTF-8');
-    $year = htmlspecialchars(salesReportsFormatCoverYear(
-        (string) ($meta['start_date'] ?? ''),
-        (string) ($meta['end_date'] ?? '')
-    ), ENT_QUOTES, 'UTF-8');
-    $prepared = salesReportsPreparedByLine($meta);
-    $logo = salesReportsCompanyLogoHtml('72px', 'center');
-    $dept = htmlspecialchars(reportEngineDomains()[$domain]['label'] ?? 'Report', ENT_QUOTES, 'UTF-8');
-    $company = htmlspecialchars((string) ($_SESSION['company_name'] ?? 'Company'), ENT_QUOTES, 'UTF-8');
-
-    return '<div class="sr-cover-page" style="page-break-after:always;text-align:center;padding:48px 24px;">'
-        . $logo
-        . '<h1 style="font-size:28px;margin:24px 0 8px;font-weight:700;">' . $title . '</h1>'
-        . '<p style="font-size:14px;color:#64748b;margin:0 0 4px;">' . $company . '</p>'
-        . '<p style="font-size:13px;color:#475569;margin:0 0 24px;">' . $dept . '</p>'
-        . '<p style="font-size:15px;margin:0 0 8px;"><strong>Reporting Period:</strong> ' . $period . '</p>'
-        . '<p style="font-size:14px;color:#64748b;margin:0 0 32px;">Year ' . $year . '</p>'
-        . $prepared
-        . '<p style="font-size:12px;color:#94a3b8;margin-top:32px;">Generated ' . date('d M Y') . '</p>'
-        . '</div>';
+    return '<div class="sr-cover-page" style="page-break-after:always; mso-page-break-after:always; background:#ffffff; text-align:left;">'
+        . '<table border="0" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:0; margin:0;">'
+        . '<tr>'
+        . '<td style="' . $cell . ' width:51%; vertical-align:top; padding:48px 12px 0 36px;">'
+        . $rule(108)
+        . '<p style="margin:0; font-family:Arial, sans-serif; font-size:28pt; font-weight:700; color:' . $blue . '; line-height:1.08;">' . $periodLabel . '</p>'
+        . '<p style="margin:8px 0 0; font-family:Arial, sans-serif; font-size:28pt; font-weight:700; color:' . $blue . '; line-height:1.08;">REPORT ' . $year . '</p>'
+        . '</td>'
+        . '<td style="' . $cell . ' width:49%; vertical-align:top; text-align:right; padding:24px 20px 0 0;">'
+        . '<img src="' . $logo . '" alt="" style="width:210px; height:auto;" />'
+        . '</td>'
+        . '</tr>'
+        . '<tr><td colspan="2" style="' . $cell . ' height:108mm; font-size:1px; line-height:1px;">&nbsp;</td></tr>'
+        . '<tr>'
+        . '<td colspan="2" style="' . $cell . ' background:' . $navy . '; vertical-align:bottom;">'
+        . '<table border="0" cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:0; margin:0; background:' . $navy . ';">'
+        . '<tr>'
+        . '<td style="' . $cell . ' width:51%; height:52mm; background:#ffffff; vertical-align:bottom; padding:0 16px 7mm 36px;">'
+        . '<p style="margin:0 0 8px; font-family:Cambria, Georgia, serif; font-size:11pt; letter-spacing:0.04em; color:' . $blue . ';">' . $department . '</p>'
+        . $rule(120)
+        . '<p style="margin:0; font-family:Cambria, Georgia, serif; font-size:12pt; font-weight:700; color:' . $blue . ';">' . $company . '</p>'
+        . '</td>'
+        . '<td style="' . $cell . ' width:49%; height:52mm; background:' . $navy . '; text-align:center; vertical-align:bottom; padding:0 0 8mm 0;">'
+        . '<img src="' . $mark . '" alt="" style="width:68px; height:auto;" />'
+        . '</td>'
+        . '</tr>'
+        . '<tr><td colspan="2" style="' . $cell . ' height:26mm; background:' . $navy . '; font-size:1px; line-height:1px;">&nbsp;</td></tr>'
+        . '</table>'
+        . '</td>'
+        . '</tr>'
+        . '</table>'
+        . '<!-- /sr-cover-page --></div>';
 }
 
 function reportEnginePeriodDefaults(string $domain, array $user, ?string $startDate, ?string $endDate): array
@@ -437,7 +482,7 @@ function reportEnginePeriodDefaults(string $domain, array $user, ?string $startD
         'end_date' => $range['end_date'],
         'report_name' => $periodLabel . ' ' . ($meta['label'] ?? 'Report'),
         'prepared_by' => trim((string) ($user['name'] ?? '')),
-        'department' => trim((string) ($user['department'] ?? $meta['department_default'] ?? '')),
+        'department' => reportEngineStoredDepartment($domain, (string) ($meta['department_default'] ?? '')),
         'filters' => [],
     ];
 }

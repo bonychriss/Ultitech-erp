@@ -4,22 +4,25 @@ import { registerTinyMceTableIcons } from '../lib/tinymceTableIcons.js'
 import { registerTableRowColumnColor } from '../lib/tinymceTableRowColColor.js'
 import { preventEditorScrollJump } from '../lib/tinymceScrollFix.js'
 import { prepareHtmlForEditor, loadHtmlIntoEditor } from '../lib/prepareHtmlForEditor.js'
+import { layoutEditorPages, scheduleEditorPages } from '../lib/layoutEditorPages.js'
 
 const EDITOR_PAGE_HEIGHT = 1056
 
 const CONTENT_STYLE = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
-  html { background: #fff; }
+  html, body { background: #e8e6e3 !important; }
   body {
     font-family: 'DM Sans', sans-serif;
     font-size: 11pt;
     line-height: 1.5;
     color: #000;
-    max-width: 816px;
-    margin: 0 auto;
-    padding: 72px 96px 96px;
+    max-width: none;
+    margin: 0;
+    padding: 0;
     min-height: ${EDITOR_PAGE_HEIGHT - 120}px;
     outline: none;
+    border: 0;
+    background: #e8e6e3 !important;
   }
   body:focus { outline: none; }
   h1 { font-size: 22pt; text-align: center; margin-bottom: 12pt; font-weight: 700; }
@@ -35,7 +38,11 @@ const CONTENT_STYLE = `
   .sr-erp-block { background: transparent; border: none; border-radius: 0; padding: 0; margin: 0; }
   .sr-data-table { width: 100%; }
   .sr-section { display: block; margin: 0; padding: 0; border: none; }
-  .sr-cover-page { text-align: center; min-height: 640px; padding: 72px 32px 96px; position: relative; }
+  .sr-cover-page { text-align: left; min-height: 980px; padding: 0; margin: 0; background: #fff; border: 0; border-radius: 12px; overflow: hidden; box-shadow: none; page-break-after: always; }
+  .sr-editor-page { display: block; background: #fff; min-height: 980px; margin: 0; padding: 72px 96px 96px; border: 0; border-radius: 12px; overflow: hidden; box-shadow: none; }
+  .sr-page-gap, .sr-page-gap[contenteditable="false"] { display: block !important; clear: both; height: 36px !important; margin: 0 !important; padding: 0 !important; background: transparent !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; overflow: hidden !important; line-height: 0 !important; font-size: 0 !important; color: transparent !important; user-select: none; pointer-events: none; }
+  .sr-cover-page table { width: 100%; margin: 0; border: none !important; border-collapse: collapse; }
+  .sr-cover-page td, .sr-cover-page th { border: none !important; }
   .sr-company-logo { margin: 0 auto 28px; text-align: center; }
   .sr-company-logo--top-right { position: absolute; top: 0; right: 0; margin: 0; text-align: right; }
   .sr-company-logo img { max-height: 72px; max-width: 220px; height: auto; width: auto; display: inline-block; }
@@ -111,8 +118,25 @@ export default function WordDocument({ initialContent, onChange, onInit, readOnl
           setup: (editor) => {
             registerTinyMceTableIcons(editor)
             registerTableRowColumnColor(editor)
+            editor.on('GetContent', (event) => {
+              if (typeof event.content !== 'string') return
+              if (!event.content.includes('sr-page-gap') && !event.content.includes('sr-editor-page')) return
+              const parsed = new DOMParser().parseFromString(`<div id="sr-root">${event.content}</div>`, 'text/html')
+              const root = parsed.getElementById('sr-root')
+              if (!root) return
+              root.querySelectorAll('.sr-page-gap').forEach((node) => node.remove())
+              root.querySelectorAll('.sr-editor-page').forEach((page) => {
+                const parent = page.parentNode
+                while (page.firstChild) parent.insertBefore(page.firstChild, page)
+                page.remove()
+              })
+              event.content = root.innerHTML
+            })
             editor.on('change input undo redo SetContent', () => {
               onChangeRef.current?.(editor.getContent())
+            })
+            editor.on('input undo redo SetContent', () => {
+              scheduleEditorPages(editor)
             })
           },
           init_instance_callback: (editor) => {
@@ -126,6 +150,11 @@ export default function WordDocument({ initialContent, onChange, onInit, readOnl
             }
             setEditorReady(true)
             onInitRef.current?.(editor)
+            try {
+              layoutEditorPages(editor)
+            } catch (err) {
+              console.error(err)
+            }
           },
         })
       })

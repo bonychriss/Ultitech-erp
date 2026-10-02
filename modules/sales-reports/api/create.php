@@ -24,7 +24,7 @@ try {
         'start_date' => $body['start_date'] ?? date('Y-m-01'),
         'end_date' => $body['end_date'] ?? date('Y-m-d'),
         'prepared_by' => trim((string) ($body['prepared_by'] ?? '')),
-        'department' => $body['department'] ?? (string) ($_SESSION['department'] ?? (reportEngineDomains()[$domain]['department_default'] ?? 'Sales')),
+        'department' => reportEngineStoredDepartment($domain, (string) ($body['department'] ?? '')),
         'branch' => $body['branch'] ?? '',
         'status' => 'draft',
         'description' => $body['description'] ?? '',

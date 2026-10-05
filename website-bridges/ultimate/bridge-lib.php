@@ -12,6 +12,12 @@ if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
 
 const ULTITECH_QUOTE_API = 'https://ultitech.io/api/storefront/quote.php?company_slug=ultimate';
 
+function ultitechQuoteApiUrl(): string
+{
+    $url = getenv('ULTITECH_QUOTE_API');
+    return is_string($url) && $url !== '' ? $url : ULTITECH_QUOTE_API;
+}
+
 function ultitechCustomerMessage(): string
 {
     return 'Your request has been received successfully. Our sales person will contact you shortly.';
@@ -324,7 +330,7 @@ function ultitechSyncQuote(PDO $pdo, int $quoteId): bool
     $ok = false;
     $reference = '';
     if ($token !== '' && function_exists('curl_init')) {
-        $ch = curl_init(ULTITECH_QUOTE_API);
+        $ch = curl_init(ultitechQuoteApiUrl());
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
             CURLOPT_RETURNTRANSFER => true,

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   HiOutlineArrowLeft,
+  HiOutlineChatBubbleLeftEllipsis,
   HiOutlineChatBubbleLeftRight,
   HiOutlineEnvelope,
   HiOutlinePhone,
@@ -135,7 +136,6 @@ export default function QuoteRequestDetail({ data }) {
             <h1>{quote.number}</h1>
             <span className={`qrd-status qrd-status--${quote.statusKey}`}>{quote.statusLabel}</span>
           </div>
-          <p className="qrd-meta">Received {quote.receivedAt} from ultimate.co.tz</p>
         </div>
         <div className="qrd-actions">
           <Action href={links.call} icon={HiOutlinePhone} label="Call" />
@@ -177,7 +177,15 @@ export default function QuoteRequestDetail({ data }) {
             )}
           </div>
         </div>
-        {customer.notes && <p className="qrd-notes">{customer.notes}</p>}
+        {customer.notes && (
+          <div className="qrd-notes" role="note">
+            <span className="qrd-notes-label">
+              <HiOutlineChatBubbleLeftEllipsis aria-hidden="true" />
+              Customer requirements
+            </span>
+            <p>{customer.notes}</p>
+          </div>
+        )}
       </section>
 
       <section className="qrd-card">

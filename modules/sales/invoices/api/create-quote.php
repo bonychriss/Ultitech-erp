@@ -15,6 +15,26 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     $result = sales_process_direct_quote_create($_POST);
+    $websiteQuote = substr(trim((string) ($_POST['website_quote'] ?? '')), 0, 64);
+    if ($websiteQuote !== '') {
+        $quoteDbs = [$GLOBALS['pdo'] ?? null];
+        if (function_exists('sales_pdo')) {
+            $quoteDbs[] = sales_pdo();
+        }
+        $updated = [];
+        foreach ($quoteDbs as $quoteDb) {
+            if (!($quoteDb instanceof PDO) || in_array($quoteDb, $updated, true)) {
+                continue;
+            }
+            $updated[] = $quoteDb;
+            try {
+                $quoteDb->prepare('UPDATE website_quote_requests SET status = \'quoted\' WHERE quote_number = ? AND LOWER(TRIM(COALESCE(status, \'\'))) NOT IN (\'deleted\', \'quoted\', \'accepted\', \'rejected\', \'closed\')')
+                    ->execute([$websiteQuote]);
+            } catch (Throwable $e) {
+                error_log('create-quote website_quote status: ' . $e->getMessage());
+            }
+        }
+    }
     echo json_encode([
         'ok' => true,
         'order_id' => $result['order_id'],

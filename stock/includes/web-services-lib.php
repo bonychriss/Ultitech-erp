@@ -411,9 +411,11 @@ function webQuoteStatusInfo(string $status): array
 {
     $status = strtolower(trim($status));
     $map = [
-        'new' => ['Open', 'open'],
-        'open' => ['Open', 'open'],
-        'pending' => ['Open', 'open'],
+        '' => ['New', 'new'],
+        'new' => ['New', 'new'],
+        'open' => ['New', 'new'],
+        'pending' => ['New', 'new'],
+        'read' => ['Read', 'read'],
         'contacted' => ['Contacted', 'contacted'],
         'quoted' => ['Quoted', 'quoted'],
         'accepted' => ['Accepted', 'accepted'],
@@ -421,7 +423,23 @@ function webQuoteStatusInfo(string $status): array
         'rejected' => ['Rejected', 'rejected'],
     ];
 
-    return $map[$status] ?? [ucfirst($status !== '' ? $status : 'open'), 'closed'];
+    return $map[$status] ?? [ucfirst($status), 'closed'];
+}
+
+function webQuoteMarkRead(string $quoteNumber): bool
+{
+    $pdo = $GLOBALS['pdo'] ?? null;
+    if (!($pdo instanceof PDO) || $quoteNumber === '') {
+        return false;
+    }
+    try {
+        $stmt = $pdo->prepare('UPDATE website_quote_requests SET status = \'read\' WHERE quote_number = ? AND LOWER(TRIM(COALESCE(status, \'\'))) IN (\'\', \'new\', \'open\', \'pending\')');
+        $stmt->execute([$quoteNumber]);
+
+        return $stmt->rowCount() > 0;
+    } catch (Throwable $e) {
+        return false;
+    }
 }
 
 function webQuoteIcon(string $name): string
@@ -547,14 +565,14 @@ function webQuoteDate(string $createdAt): string
 function webQuoteKpiCards(array $quotes): string
 {
     $weekAgo = time() - 7 * 86400;
-    $k = ['total' => count($quotes), 'week' => 0, 'open' => 0, 'quoted' => 0, 'accepted' => 0, 'value' => 0.0];
+    $k = ['total' => count($quotes), 'week' => 0, 'new' => 0, 'quoted' => 0, 'accepted' => 0, 'value' => 0.0];
     foreach ($quotes as $quote) {
         [, $key] = webQuoteStatusInfo((string) ($quote['status'] ?? 'new'));
         if ((strtotime((string) $quote['created_at']) ?: 0) >= $weekAgo) {
             $k['week']++;
         }
-        if ($key === 'open') {
-            $k['open']++;
+        if ($key === 'new') {
+            $k['new']++;
         }
         if ($key === 'quoted' || $key === 'accepted') {
             $k['quoted']++;
@@ -577,7 +595,7 @@ function webQuoteKpiCards(array $quotes): string
 
     return '<section class="uq-kpis" aria-label="Quote request summary">'
         . $card('indigo', 'total requests', 'list', '<span data-kpi="total">' . $k['total'] . '</span>', '<span data-kpi="week">' . $k['week'] . '</span> in the last 7 days', false, 'all')
-        . $card('amber', 'open', 'clock', '<span data-kpi="open">' . $k['open'] . '</span>', 'not yet contacted', false, 'open')
+        . $card('amber', 'new', 'clock', '<span data-kpi="new">' . $k['new'] . '</span>', 'not yet viewed', false, 'new')
         . $card('violet', 'quoted', 'doc', '<span data-kpi="quoted">' . $k['quoted'] . '</span>', '<span data-kpi="accepted">' . $k['accepted'] . '</span> accepted', false, 'quoted')
         . $card('teal', 'estimated value', 'cash', '<span data-kpi="value">' . webQuoteH(webQuoteMoney($k['value'])) . '</span>', 'at website prices', true, 'value')
         . '</section>';
@@ -701,6 +719,9 @@ function webQuoteRequestDetailData(string $quoteNumber): array
         return $data;
     }
 
+    if (webQuoteStatusInfo((string) ($quote['status'] ?? 'new'))[1] === 'new' && webQuoteMarkRead($quote['quote_number'])) {
+        $quote['status'] = 'read';
+    }
     [$statusLabel, $statusKey] = webQuoteStatusInfo((string) ($quote['status'] ?? 'new'));
     $name = $quote['customer_name'] !== '' ? $quote['customer_name'] : 'Website customer';
     $phone = $quote['customer_phone'];
@@ -964,11 +985,11 @@ function webQuoteRequestsScript(): string
     }
     function refreshKpis() {
         var weekAgo = Date.now() / 1000 - 7 * 86400;
-        var k = { total: rows.length, week: 0, open: 0, quoted: 0, accepted: 0, value: 0 };
+        var k = { total: rows.length, week: 0, "new": 0, quoted: 0, accepted: 0, value: 0 };
         rows.forEach(function (row) {
             var st = row.getAttribute("data-status");
             if (parseInt(row.getAttribute("data-ts"), 10) >= weekAgo) k.week++;
-            if (st === "open") k.open++;
+            if (st === "new") k["new"]++;
             if (st === "quoted" || st === "accepted") k.quoted++;
             if (st === "accepted") k.accepted++;
             k.value += parseFloat(row.getAttribute("data-total")) || 0;
@@ -1076,7 +1097,7 @@ function webQuoteRequestsScript(): string
     }
     function cardMatch(row) {
         var rowStatus = row.getAttribute("data-status");
-        if (filters.card === "open") return rowStatus === "open";
+        if (filters.card === "new") return rowStatus === "new";
         if (filters.card === "quoted") return rowStatus === "quoted" || rowStatus === "accepted";
         if (filters.card === "value") return parseFloat(row.getAttribute("data-total") || "0") > 0;
         return true;
@@ -1104,7 +1125,7 @@ function webQuoteRequestsScript(): string
     var presets = Array.prototype.slice.call(panel.querySelectorAll(".uq-preset"));
     var chips = document.getElementById("uq-chips");
     var dateLabels = { today: "Today", "7": "Last 7 days", "30": "Last 30 days", month: "This month" };
-    var cardLabels = { open: "Open requests", quoted: "Quoted or accepted", value: "With estimated value" };
+    var cardLabels = { "new": "New requests", quoted: "Quoted or accepted", value: "With estimated value" };
     var cards = Array.prototype.slice.call(document.querySelectorAll(".uq-kpi[data-card]"));
     function openPanel(open) {
         panel.hidden = !open;
@@ -1350,7 +1371,8 @@ function webQuoteRequestsCss(): string
 .uq-row-date{color:#475569;white-space:nowrap}
 .uq-row-go{display:inline-flex;justify-content:center}
 .uq-badge{display:inline-block;padding:4px 12px;border-radius:999px;font-size:.78rem;font-weight:600;white-space:nowrap;letter-spacing:0}
-.uq-badge--open{background:#dcfce7;color:#15803d}
+.uq-badge--new{background:#dcfce7;color:#15803d}
+.uq-badge--read{background:#e0f2fe;color:#0369a1}
 .uq-badge--contacted{background:#dbeafe;color:#1d4ed8}
 .uq-badge--quoted{background:#ede9fe;color:#6d28d9}
 .uq-badge--accepted{background:#ccfbf1;color:#0f766e}
@@ -1442,7 +1464,8 @@ html[data-theme="dark"] .uq-bulk-clear:hover{background:#334155;color:#f1f5f9}
 html[data-theme="dark"] .uq-bulk .uq-bulk-delete{background:transparent;border-color:rgba(248,113,113,.5);color:#fca5a5}
 html[data-theme="dark"] .uq-bulk .uq-bulk-delete:hover{background:rgba(229,56,79,.15);border-color:#f87171}
 html[data-theme="dark"] .uq-badge{color:#fff}
-html[data-theme="dark"] .uq-badge--open{background:#16a34a}
+html[data-theme="dark"] .uq-badge--new{background:#16a34a}
+html[data-theme="dark"] .uq-badge--read{background:#0284c7}
 html[data-theme="dark"] .uq-badge--contacted{background:#2563eb}
 html[data-theme="dark"] .uq-badge--quoted{background:#7c3aed}
 html[data-theme="dark"] .uq-badge--accepted{background:#059669}

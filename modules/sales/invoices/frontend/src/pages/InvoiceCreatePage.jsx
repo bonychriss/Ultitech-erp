@@ -285,6 +285,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState([]);
   const [websiteQuoteNote, setWebsiteQuoteNote] = useState('');
+  const [websiteQuoteNumber, setWebsiteQuoteNumber] = useState('');
   const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
   const [rateHint, setRateHint] = useState('Select one or more currencies. BOT rates load automatically for non-TZS codes.');
   const [rateLoadingCodes, setRateLoadingCodes] = useState([]);
@@ -403,6 +404,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
       const websiteQuote = pageParams.get('website_quote') || '';
       const draft = websiteQuote ? null : readFormDraft(docIsQuote);
       if (websiteQuote) {
+        setWebsiteQuoteNumber(websiteQuote);
         const missing = Number(pageParams.get('website_missing')) || 0;
         setWebsiteQuoteNote(missing > 0
           ? `Filled in from website request ${websiteQuote}. ${missing} requested ${missing === 1 ? 'product is' : 'products are'} not in UltiTech yet; add ${missing === 1 ? 'it' : 'them'} manually.`
@@ -854,6 +856,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
       formData.append('valid_until', validUntil);
       if (!isEditMode) {
         formData.append('status', 'quotation');
+        if (websiteQuoteNumber) formData.append('website_quote', websiteQuoteNumber);
       }
       formData.append('created_by', String(createdBy || init?.current_user_id || ''));
     } else {

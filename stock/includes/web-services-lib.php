@@ -123,13 +123,28 @@ function webSyncPending(PDO $pdo): array
     return $pending;
 }
 
-function webSyncFetch(string $url, int $userId = 0, string $run = ''): string
+/**
+ * Hosting server behind Cloudflare for ultimate.co.tz (cPanel host.sadjawebtools.com).
+ * Used when Cloudflare refuses requests coming from the UltiTech server.
+ */
+function webSyncOriginIp(): string
 {
-    if (!function_exists('curl_init')) {
-        throw new RuntimeException('PHP curl is not enabled.');
+    $env = getenv('ULTIMATE_SHOP_ORIGIN_IP');
+    if (is_string($env) && filter_var(trim($env), FILTER_VALIDATE_IP)) {
+        return trim($env);
     }
+
+    return '213.136.73.52';
+}
+
+/**
+ * @return array{body:string,code:int,errno:int,error:string,cloudflare:bool}
+ */
+function webSyncCurl(string $url, int $userId, string $run, bool $viaOrigin): array
+{
+    $cloudflare = false;
     $ch = curl_init($url);
-    curl_setopt_array($ch, [
+    $opts = [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_TIMEOUT => 180,
@@ -137,21 +152,60 @@ function webSyncFetch(string $url, int $userId = 0, string $run = ''): string
         CURLOPT_PROGRESSFUNCTION => static function () use ($userId, $run): int {
             return webSyncIsCancelled($userId, $run) ? 1 : 0;
         },
+        CURLOPT_HEADERFUNCTION => static function ($curl, string $line) use (&$cloudflare): int {
+            if (stripos($line, 'cf-ray:') === 0 || stripos($line, 'server: cloudflare') === 0) {
+                $cloudflare = true;
+            }
+            return strlen($line);
+        },
         CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    ]);
+    ];
+    if ($viaOrigin) {
+        $host = (string) parse_url($url, PHP_URL_HOST);
+        $opts[CURLOPT_RESOLVE] = [$host . ':443:' . webSyncOriginIp(), $host . ':80:' . webSyncOriginIp()];
+    }
+    curl_setopt_array($ch, $opts);
     $body = curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $errno = curl_errno($ch);
-    $err = curl_error($ch);
+    $result = [
+        'body' => is_string($body) ? $body : '',
+        'code' => (int) curl_getinfo($ch, CURLINFO_HTTP_CODE),
+        'errno' => curl_errno($ch),
+        'error' => curl_error($ch),
+        'cloudflare' => $cloudflare,
+    ];
     curl_close($ch);
-    if (webSyncIsCancelled($userId, $run) || $errno === CURLE_ABORTED_BY_CALLBACK) {
+
+    return $result;
+}
+
+function webSyncFetch(string $url, int $userId = 0, string $run = ''): string
+{
+    static $useOrigin = false;
+    if (!function_exists('curl_init')) {
+        throw new RuntimeException('PHP curl is not enabled.');
+    }
+    $res = webSyncCurl($url, $userId, $run, $useOrigin);
+    if (webSyncIsCancelled($userId, $run) || $res['errno'] === CURLE_ABORTED_BY_CALLBACK) {
         throw new RuntimeException('Sync cancelled.');
     }
-    if (!is_string($body) || $body === '' || $code >= 400) {
-        throw new RuntimeException('Website sync failed (HTTP ' . $code . '). ' . $err);
+    $blocked = in_array($res['code'], [403, 429, 503], true) || $res['errno'] !== 0;
+    if (!$useOrigin && $blocked) {
+        $first = $res;
+        $res = webSyncCurl($url, $userId, $run, true);
+        if (webSyncIsCancelled($userId, $run) || $res['errno'] === CURLE_ABORTED_BY_CALLBACK) {
+            throw new RuntimeException('Sync cancelled.');
+        }
+        if ($res['body'] !== '' && $res['code'] < 400 && $res['errno'] === 0) {
+            $useOrigin = true;
+        } elseif ($first['cloudflare']) {
+            throw new RuntimeException('Cloudflare blocked the UltiTech server (HTTP ' . $first['code'] . '), and the shop server answered HTTP ' . $res['code'] . '.');
+        }
+    }
+    if ($res['body'] === '' || $res['code'] >= 400) {
+        throw new RuntimeException('Website sync failed (HTTP ' . $res['code'] . '). ' . $res['error']);
     }
 
-    return $body;
+    return $res['body'];
 }
 
 function webSyncNextUrl(string $html, string $current): ?string

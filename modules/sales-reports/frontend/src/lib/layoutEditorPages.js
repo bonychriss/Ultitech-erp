@@ -72,17 +72,25 @@ function restoreSelection(editor, body, saved) {
   }
 }
 
+function documentScroller() {
+  return document.querySelector('.word-scroll')
+}
+
 function fitEditorFrame(editor) {
   const doc = editor?.getDoc?.()
   const body = editor?.getBody?.()
   const iframe = editor?.iframeElement
   if (!doc || !body || !iframe) return
+  const scroller = documentScroller()
+  const top = scroller?.scrollTop ?? 0
   const height = Math.max(body.scrollHeight, doc.documentElement?.scrollHeight || 0, 1056) + 24
-  iframe.style.height = `${height}px`
+  const next = `${height}px`
+  if (iframe.style.height !== next) iframe.style.height = next
   const area = iframe.closest?.('.tox-edit-area')
-  if (area) area.style.height = `${height}px`
+  if (area && area.style.height !== next) area.style.height = next
   const container = editor.getContainer?.()
   if (container) container.style.height = 'auto'
+  if (scroller) scroller.scrollTop = top
 }
 
 function hookImages(editor, body) {
@@ -123,6 +131,8 @@ export function layoutEditorPages(editor) {
   if (!body || !win) return
 
   const scrollY = win.scrollY || 0
+  const scroller = documentScroller()
+  const scrollerTop = scroller?.scrollTop ?? 0
   const saved = rememberSelection(editor, body)
 
   const run = () => {
@@ -177,10 +187,14 @@ export function layoutEditorPages(editor) {
   }
 
   win.scrollTo(0, scrollY)
+  if (scroller) scroller.scrollTop = scrollerTop
   restoreSelection(editor, body, saved)
   hookFonts(editor)
   fitEditorFrame(editor)
-  requestAnimationFrame(() => fitEditorFrame(editor))
+  requestAnimationFrame(() => {
+    fitEditorFrame(editor)
+    if (scroller) scroller.scrollTop = scrollerTop
+  })
 }
 
 export function scheduleEditorPages(editor) {

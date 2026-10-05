@@ -19,7 +19,7 @@ export function restoreEditorBookmark(editor, bookmark) {
 }
 
 function canvasScrollEl() {
-  return document.querySelector('.word-canvas-scroll')
+  return document.querySelector('.word-scroll')
 }
 
 /** Keep the document viewport steady while TinyMCE moves the caret (e.g. after table insert). */

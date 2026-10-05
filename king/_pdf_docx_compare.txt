@@ -1,0 +1,39 @@
+PDF: Employment_Contract_LETTERHEAD.pdf (10 pages)
+DOCX: Employment_Contract_EDITABLE_v3.docx
+
+Cover photo in DOCX: YES (body image sizes=[1870745])
+Letterhead header image: YES
+Sections (cover+body): 2
+Cover asset from LETTERHEAD.pdf page 1: YES
+TOC absent: PDF=True DOCX=True
+No phone/web contact footer text: PDF=True DOCX=True
+Has 'WHEREAS': PDF=True DOCX=True
+Has 'AND': PDF=True DOCX=True
+Has 'IN WITNESS WHEREOF': PDF=True DOCX=True
+Has 'EMPLOYMENT CONTRACT': PDF=True DOCX=True
+Has 'Signature:': PDF=True DOCX=True
+Clause refs PDF=93 DOCX=93
+Missing clauses in DOCX: []
+Extra clauses in DOCX: []
+Section numbers PDF~['1', '2', '3', '4', '5', '6', '7', '9', '10', '11', '12', '13', '14', '15', '16']
+Section numbers DOCX=['1', '2', '3', '4', '5', '6', '7', '9', '10', '11', '12', '13', '14', '15', '16']
+Missing section numbers in DOCX: []
+Editable body paragraphs: 183 (OK)
+
+CHECKS:
+  [PASS] cover_photo
+  [PASS] letterhead_header
+  [PASS] two_sections
+  [PASS] no_toc
+  [PASS] no_contact_footer
+  [PASS] whereas
+  [PASS] and
+  [PASS] witness
+  [PASS] employer_sig
+  [PASS] employee_accept
+  [PASS] clauses_complete
+  [PASS] sections_complete
+  [PASS] editable_body
+  [PASS] same_page_count_band
+
+OVERALL: MATCH - DONE

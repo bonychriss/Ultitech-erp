@@ -1,51 +1,33 @@
-/** Stop the editor from jumping scroll when tables are clicked or the table toolbar opens. */
+/** Stop the page from shifting when the editor is focused or a table is clicked. */
+
+function documentScroller() {
+  return document.querySelector('.word-scroll')
+}
+
 export function preventEditorScrollJump(editor) {
-  if (!editor?.selection || !editor?.dom) return
+  if (!editor) return
 
-  const scrollParent = () => document.querySelector('.word-canvas-scroll')
-
-  const isInTable = (node) => {
-    if (!node) return false
-    return Boolean(editor.dom.getParent(node, 'td,th,table,caption'))
-  }
-
-  const lockScroll = () => {
-    const el = scrollParent()
-    if (!el) return () => {}
-    const top = el.scrollTop
+  const hold = () => {
+    const el = documentScroller()
+    const top = el?.scrollTop ?? 0
+    const winTop = window.scrollY || 0
     const restore = () => {
-      el.scrollTop = top
+      if (el && el.scrollTop !== top) el.scrollTop = top
+      if ((window.scrollY || 0) !== winTop) window.scrollTo(0, winTop)
     }
     restore()
-    return restore
-  }
-
-  // TinyMCE scrolls the parent page when the caret moves � skip that inside tables.
-  editor.selection.scrollIntoView = () => {}
-
-  editor.on('mousedown touchstart', (e) => {
-    if (!isInTable(e.target)) return
-    const restore = lockScroll()
-    const run = () => restore()
-    editor.on('mouseup touchend', run, { once: true })
-    requestAnimationFrame(run)
-    setTimeout(run, 0)
-    setTimeout(run, 50)
-    setTimeout(run, 120)
-    setTimeout(run, 250)
-  })
-
-  editor.on('NodeChange', () => {
-    const node = editor.selection?.getNode?.()
-    if (!isInTable(node)) return
-    const restore = lockScroll()
     requestAnimationFrame(restore)
     requestAnimationFrame(() => requestAnimationFrame(restore))
-  })
+    setTimeout(restore, 0)
+    setTimeout(restore, 50)
+    setTimeout(restore, 120)
+    setTimeout(restore, 250)
+  }
 
-  editor.on('ResizeEditor', () => {
-    const node = editor.selection?.getNode?.()
-    if (!isInTable(node)) return
-    lockScroll()
+  editor.on('ScrollIntoView', (event) => {
+    event.preventDefault()
   })
+  if (editor.selection) editor.selection.scrollIntoView = () => {}
+
+  editor.on('mousedown touchstart focus NodeChange', hold)
 }

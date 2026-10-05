@@ -1,0 +1,125 @@
+===== cover =====
+DRIVER / FLEET DEPARTMENT
+Ultimate Trading
+Prepared by: Fleet Preview
+JANUARY
+DRIVER & FLEET
+REPORT 2026
+
+===== executive_summary =====
+EXECUTIVE SUMMARY
+During the reporting period from 01 January 2026 to 31 January 2026, the fleet recorded 6 trips (1 completed) and 4 delivery orders, involving 2 active drivers and no vehicle IDs recorded on trips. Delivery completion rate was 50.0% and on-time rate was 0.0%. Detailed KPIs, status breakdowns, and period comparison follow.
+
+===== kpi_fleet_overview =====
+KEY PERFORMANCE INDICATORS & FLEET OVERVIEW
+Performance MetricOperational Value (January 2026)
+Total / Completed Trips6 / 1
+Planned / In Transit Trips1 / 4
+Total / Completed Deliveries4 / 2
+Delivery Completion Rate50.0%
+On-Time Delivery Rate0.0% (n=2)
+Open / Pending / Rejected Orders1 / 0 / 1
+Overdue Open Orders0
+Delivery Notes (period)17
+Active Drivers2
+Vehicles UtilizedNot recorded
+Total Distance TraveledNot recorded
+Total Route CostNot recorded
+Average Customer Rating5.00 / 5
+Data notes:
+Vehicle IDs are missing on trip records in this period, so vehicle utilization cannot be reported.
+Odometer readings are missing or zero for trips in this period, so distance traveled cannot be reported.
+Route cost is missing or zero on delivery orders in this period, so route cost cannot be reported.
+
+===== driver_performance =====
+DRIVER PERFORMANCE
+DriverTripsCompletedMileage (km)
+SHABANI MBAGA41—
+BONIFACE CHRISPIN20—
+
+===== trip_status_analysis =====
+TRIP STATUS ANALYSIS
+Trip status breakdown for 01 Jan 2026 - 31 Jan 2026: In transit: 4 (66.7%); Completed: 1 (16.7%); Planned: 1 (16.7%).
+
+Trip StatusCount% of Trips
+In transit466.7%
+Completed116.7%
+Planned116.7%
+
+===== delivery_status_analysis =====
+DELIVERY ORDER STATUS ANALYSIS
+Delivery order status breakdown for 01 Jan 2026 - 31 Jan 2026: Delivered: 2 (50.0%); In transit: 1 (25.0%); Rejected: 1 (25.0%).
+
+Order StatusCount% of Orders
+Delivered250.0%
+In transit125.0%
+Rejected125.0%
+
+===== key_fleet_activities =====
+KEY FLEET ACTIVITIES
+Key fleet activities for the period are summarized below from ERP trip, delivery, and delivery-note counts.
+
+ActivityDetail
+Trips recorded6 trip(s) (1 completed) during 01 Jan 2026 - 31 Jan 2026.
+Deliveries processed4 delivery order(s) (2 completed) during 01 Jan 2026 - 31 Jan 2026.
+Delivery notes issued17 delivery note(s) dated in 01 Jan 2026 - 31 Jan 2026.
+Open delivery orders1 order(s) still open (not delivered, completed, closed, or rejected).
+
+===== period_comparison =====
+PERIOD COMPARISON
+Comparing 01 Jan 2026 - 31 Jan 2026 with the prior period (01 Dec 2025 - 31 Dec 2025): trips changed by +4 (+200.0%), deliveries by -4 (-50.0%), completed deliveries by 0 (0.0%), on-time rate by -50.0 pp. Detailed metric comparisons are available in the period comparison table.
+
+Metric01 Jan 2026 - 31 Jan 202601 Dec 2025 - 31 Dec 2025Change
+Total trips62+4 (+200.0%)
+Completed trips12-1 (-50.0%)
+Total deliveries48-4 (-50.0%)
+Completed deliveries220 (0.0%)
+Completion rate50.0%25.0%+25.0 pp
+On-time rate0.0%50.0%-50.0 pp
+Active drivers220 (0.0%)
+Vehicles used000 (0.0%)
+Open orders16-5 (-83.3%)
+Overdue orders000 (0.0%)
+Delivery notes170+17 (n/a)
+
+===== operational_challenges =====
+OPERATIONAL CHALLENGES
+Operational challenges identified from fleet ERP data:
+Open trips: 5 of 6 trip(s) are not marked completed.
+Open orders: 1 delivery order(s) remain open.
+Rejected orders: 1 order(s) were rejected in the period.
+On-time performance: On-time delivery rate is 0.0% based on 2 completed order(s) with deadline and completion timestamps.
+
+===== key_findings =====
+KEY FINDINGS
+Operational volume: 6 trips and 4 deliveries recorded for January 2026.
+Completion performance: Delivery completion rate stood at 50.0% (2 of 4).
+On-time performance: 0.0% on-time across 2 completed order(s) with both deadline and completion timestamps.
+Resource deployment: 2 drivers active; vehicle IDs were not recorded on trips.
+Open work & exceptions: 5 open trip(s); 1 open order(s); 1 rejected order(s).
+Mileage capture: Trip odometer values are missing or zero, so distance KPIs cannot be interpreted for this period.
+
+===== recommendations =====
+RECOMMENDATIONS
+Close open trips: Update status for 5 trip(s) still not marked completed.
+Improve completion: Investigate incomplete or pending delivery orders dragging completion below 80%.
+Improve on-time delivery: Review late completions against delivery deadlines and adjust dispatch timing.
+Capture vehicle IDs: Require vehicle assignment on every trip so utilization reporting becomes usable.
+Capture odometer readings: Record start/end odometer on trips to enable mileage KPIs.
+Capture route costs: Enter route cost on delivery orders when available for cost analysis.
+
+===== action_plan =====
+FLEET ACTION PLAN
+Phase 1: Review (Days 1–3)
+Review KPI table, status breakdowns, and driver performance with the logistics lead.
+Assign owners to clear 5 open trip(s) and 1 open delivery order(s).
+Phase 2: Correct (Days 4–7)
+Resolve open/overdue items and incomplete delivery statuses.
+Close data gaps for vehicle IDs, odometer readings, and route costs where missing.
+Phase 3: Improve (Days 8+)
+Track weekly trip and delivery targets against this period baseline.
+Report progress in the next fleet review using the period comparison section.
+
+===== conclusion =====
+CONCLUSION
+The January 2026 fleet review recorded 6 trips, 4 deliveries, 50.0% delivery completion, 0.0% on-time. Management should use the KPI table, status breakdowns, and recommendations above to sustain performance and close any open operational gaps.

@@ -192,7 +192,16 @@ export default function ReportEditorPage() {
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return undefined
-    const onScroll = () => hideChrome()
+    let lastTop = el.scrollTop
+    const onScroll = () => {
+      const nextTop = el.scrollTop
+      if (Math.abs(nextTop - lastTop) < 28) {
+        lastTop = nextTop
+        return
+      }
+      lastTop = nextTop
+      hideChrome()
+    }
     el.addEventListener('scroll', onScroll, { passive: true })
     el.addEventListener('wheel', onScroll, { passive: true })
     el.addEventListener('touchmove', onScroll, { passive: true })
@@ -208,7 +217,16 @@ export default function ReportEditorPage() {
     const win = typeof editor.getWin === 'function' ? editor.getWin() : null
     const doc = typeof editor.getDoc === 'function' ? editor.getDoc() : null
     const body = typeof editor.getBody === 'function' ? editor.getBody() : null
-    const onScroll = () => hideChrome()
+    let lastTop = win?.scrollY || 0
+    const onScroll = () => {
+      const nextTop = win?.scrollY || 0
+      if (Math.abs(nextTop - lastTop) < 28) {
+        lastTop = nextTop
+        return
+      }
+      lastTop = nextTop
+      hideChrome()
+    }
     win?.addEventListener?.('scroll', onScroll, { passive: true })
     win?.addEventListener?.('wheel', onScroll, { passive: true })
     doc?.addEventListener?.('scroll', onScroll, { passive: true })

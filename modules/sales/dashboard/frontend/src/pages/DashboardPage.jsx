@@ -67,17 +67,17 @@ function KpiCard({
       }}
       aria-label={`View ${title} summary`}
     >
-      <div className="kpi-card-header">
-        <div className={`kpi-card-icon ${iconClass}`}>{icon}</div>
+      <div className={`kpi-card-icon ${iconClass}`}>{icon}</div>
+      <div className="kpi-card-body">
         <div className="kpi-card-title">{title}</div>
+        <div className="kpi-card-value">
+          {value}
+          {trend != null ? (
+            <span className={`kpi-trend-indicator ${trendClass || ''}`}>{trend}</span>
+          ) : null}
+        </div>
+        {subtext ? <div className="kpi-card-subtext">{subtext}</div> : null}
       </div>
-      <div className="kpi-card-value">
-        {value}
-        {trend != null ? (
-          <span className={`kpi-trend-indicator ${trendClass || ''}`}>{trend}</span>
-        ) : null}
-      </div>
-      {subtext ? <div className="kpi-card-subtext">{subtext}</div> : null}
     </div>
   );
 }
@@ -317,17 +317,6 @@ export default function DashboardPage() {
   return (
     <>
       <FlashAlerts flash={data.flash} />
-      {data.urls?.wrong_invoices ? (
-        <a className="dash-card sd-wrong-invoice" href={data.urls.wrong_invoices}>
-          <span className="sd-wrong-invoice-mark" aria-hidden="true">
-            <AlertTriangle size={16} />
-          </span>
-          <span>
-            <strong>Wrong invoice</strong>
-            <small>Report an invoice that should not have been issued. An admin approves it and reverses the recording.</small>
-          </span>
-        </a>
-      ) : null}
 
       <div className="kpi-overview">
         <KpiCard

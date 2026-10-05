@@ -439,6 +439,8 @@ function webQuoteIcon(string $name): string
         'chat' => '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.8-.9L3 21l2-5.2a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.4-8.5 8.4 8.4 0 0 1 8.5 8z"/>',
         'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
         'box' => '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
+        'clock' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        'cash' => '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
         'trash' => '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>',
     ];
 
@@ -492,16 +494,19 @@ function webQuoteCsrf(): string
     return function_exists('csrf_token') ? (string) csrf_token() : '';
 }
 
-function webQuoteDeleteRequest(string $quoteNumber): bool
+/**
+ * @param list<string> $quoteNumbers
+ */
+function webQuoteDeleteRequests(array $quoteNumbers): bool
 {
     $pdo = $GLOBALS['pdo'] ?? null;
     $lib = dirname(__DIR__, 2) . '/modules/sales/quote-requests/includes/quote-requests-lib.php';
-    if (!($pdo instanceof PDO) || $quoteNumber === '' || !is_file($lib)) {
+    if (!($pdo instanceof PDO) || $quoteNumbers === [] || !is_file($lib)) {
         return false;
     }
     require_once $lib;
 
-    return salesQuoteRequestsDelete($pdo, $quoteNumber) > 0;
+    return salesQuoteRequestsDelete($pdo, $quoteNumbers) > 0;
 }
 
 function webQuoteDeleteDialog(): string
@@ -525,6 +530,48 @@ function webQuoteDate(string $createdAt): string
     return $ts ? date('d M Y, H:i', $ts) : $createdAt;
 }
 
+/**
+ * @param list<array<string,mixed>> $quotes
+ */
+function webQuoteKpiCards(array $quotes): string
+{
+    $weekAgo = time() - 7 * 86400;
+    $k = ['total' => count($quotes), 'week' => 0, 'open' => 0, 'quoted' => 0, 'accepted' => 0, 'value' => 0.0];
+    foreach ($quotes as $quote) {
+        [, $key] = webQuoteStatusInfo((string) ($quote['status'] ?? 'new'));
+        if ((strtotime((string) $quote['created_at']) ?: 0) >= $weekAgo) {
+            $k['week']++;
+        }
+        if ($key === 'open') {
+            $k['open']++;
+        }
+        if ($key === 'quoted' || $key === 'accepted') {
+            $k['quoted']++;
+        }
+        if ($key === 'accepted') {
+            $k['accepted']++;
+        }
+        $k['value'] += webQuoteTotal($quote);
+    }
+
+    $card = static function (string $tone, string $label, string $icon, string $value, string $foot, bool $money = false): string {
+        return '<article class="uq-kpi">'
+            . '<span class="uq-kpi-icon uq-kpi-icon--' . $tone . '">' . webQuoteIcon($icon) . '</span>'
+            . '<div class="uq-kpi-body">'
+            . '<div class="uq-kpi-label">' . $label . '</div>'
+            . '<div class="uq-kpi-value' . ($money ? ' uq-kpi-value--money' : '') . '">' . $value . '</div>'
+            . '<div class="uq-kpi-helper">' . $foot . '</div>'
+            . '</div></article>';
+    };
+
+    return '<section class="uq-kpis" aria-label="Quote request summary">'
+        . $card('indigo', 'total requests', 'list', '<span data-kpi="total">' . $k['total'] . '</span>', '<span data-kpi="week">' . $k['week'] . '</span> in the last 7 days')
+        . $card('amber', 'open', 'clock', '<span data-kpi="open">' . $k['open'] . '</span>', 'not yet contacted')
+        . $card('violet', 'quoted', 'doc', '<span data-kpi="quoted">' . $k['quoted'] . '</span>', '<span data-kpi="accepted">' . $k['accepted'] . '</span> accepted')
+        . $card('teal', 'estimated value', 'cash', '<span data-kpi="value">' . webQuoteH(webQuoteMoney($k['value'])) . '</span>', 'at website prices', true)
+        . '</section>';
+}
+
 function webQuoteRequestsPanel(bool $withHeading = true): string
 {
     $quotes = webQuoteRequestGroups();
@@ -542,6 +589,8 @@ function webQuoteRequestsPanel(bool $withHeading = true): string
         . ($withHeading ? '<div class="uq-title-row"><h1>Quote requests</h1></div>' : '')
         . '<p class="uq-sub">' . webQuoteIcon('mail') . '<span>Submitted from ultimate.co.tz. Open a request to see the customer and products.</span></p>'
         . '</div>'
+        . '<a class="uq-new" href="' . webQuoteH($newUrl) . '">' . webQuoteIcon('plus') . '<span>New Quote Request</span></a>'
+        . webQuoteKpiCards($quotes)
         . '<div class="uq-tools">'
         . '<label class="uq-search">' . webQuoteIcon('search') . '<input type="search" id="uq-search" placeholder="Search by quote ID, customer or product..." autocomplete="off"></label>'
         . '<label class="uq-select">' . webQuoteIcon('calendar') . '<select id="uq-date" aria-label="Date range">'
@@ -552,7 +601,6 @@ function webQuoteRequestsPanel(bool $withHeading = true): string
         $html .= '<option value="' . webQuoteH($key) . '">' . webQuoteH($label) . '</option>';
     }
     $html .= '</select></label>'
-        . '<a class="uq-new" href="' . webQuoteH($newUrl) . '">' . webQuoteIcon('plus') . '<span>New Quote Request</span></a>'
         . '</div></div>';
 
     if ($quotes === []) {
@@ -560,7 +608,7 @@ function webQuoteRequestsPanel(bool $withHeading = true): string
     }
 
     $html .= '<div class="uq-list" role="list">'
-        . '<div class="uq-list-head"><span>Quote</span><span>Customer</span><span>Items</span><span class="uq-right">Est. total</span><span>Received</span><span>Status</span><span></span></div>';
+        . '<div class="uq-list-head"><label class="uq-pick"><input type="checkbox" id="uq-check-all" aria-label="Select all shown requests"></label><span>Quote</span><span>Customer</span><span>Items</span><span class="uq-right">Est. total</span><span>Received</span><span>Status</span><span></span></div>';
 
     foreach ($quotes as $quote) {
         [$statusLabel, $statusKey] = webQuoteStatusInfo((string) ($quote['status'] ?? 'new'));
@@ -576,16 +624,18 @@ function webQuoteRequestsPanel(bool $withHeading = true): string
 
         $customerName = $quote['customer_name'] !== '' ? $quote['customer_name'] : 'Website customer';
         $html .= '<div class="uq-row" role="listitem"'
-            . ' data-ts="' . $ts . '" data-status="' . webQuoteH($statusKey) . '" data-search="' . webQuoteH(strtolower(implode(' ', $search))) . '">'
+            . ' data-ts="' . $ts . '" data-total="' . $total . '" data-status="' . webQuoteH($statusKey) . '" data-search="' . webQuoteH(strtolower(implode(' ', $search))) . '">'
+            . '<label class="uq-pick"><input type="checkbox" class="uq-check" aria-label="Select ' . webQuoteH($quote['quote_number']) . '"></label>'
             . '<span class="uq-row-quote"><span class="uq-row-icon">' . webQuoteIcon('doc') . '</span>'
-            . '<a class="uq-row-link" href="' . webQuoteH(webQuotePageUrl($quote['quote_number'])) . '"><strong>' . webQuoteH($quote['quote_number']) . '</strong></a></span>'
+            . '<a class="uq-row-link" href="' . webQuoteH(webQuotePageUrl($quote['quote_number'])) . '"><strong>' . webQuoteH($quote['quote_number']) . '</strong></a>'
+            . '<span class="uq-badge uq-badge--' . webQuoteH($statusKey) . ' uq-row-badge">' . webQuoteH($statusLabel) . '</span></span>'
             . '<span class="uq-row-customer"><span class="uq-row-name">' . webQuoteH($customerName) . '</span>'
             . ($quote['customer_phone'] !== '' ? '<span class="uq-row-phone">' . webQuoteH($quote['customer_phone']) . '</span>' : '')
             . '</span>'
             . '<span class="uq-row-items" title="' . webQuoteH($itemsText) . '">' . webQuoteH($itemsText) . '</span>'
             . '<span class="uq-row-total uq-right">' . ($total > 0 ? webQuoteH(webQuoteMoney($total)) : '&mdash;') . '</span>'
             . '<span class="uq-row-date">' . webQuoteH(webQuoteDate((string) $quote['created_at'])) . '</span>'
-            . '<span><span class="uq-badge uq-badge--' . webQuoteH($statusKey) . '">' . webQuoteH($statusLabel) . '</span></span>'
+            . '<span class="uq-row-status"><span class="uq-badge uq-badge--' . webQuoteH($statusKey) . '">' . webQuoteH($statusLabel) . '</span></span>'
             . '<span class="uq-row-go"><button type="button" class="uq-delete" title="Delete request" aria-label="Delete ' . webQuoteH($quote['quote_number']) . '"'
             . ' data-quote="' . webQuoteH($quote['quote_number']) . '" data-customer="' . webQuoteH($customerName) . '">' . webQuoteIcon('trash') . '</button></span>'
             . '</div>';
@@ -593,6 +643,11 @@ function webQuoteRequestsPanel(bool $withHeading = true): string
 
     $html .= '</div>'
         . '<div class="uq-empty" id="uq-no-match" hidden>No requests match these filters.</div>'
+        . '<div class="uq-bulk" id="uq-bulk" role="region" aria-label="Selected requests" hidden>'
+        . '<label class="uq-bulk-all"><input type="checkbox" id="uq-bulk-all" aria-label="Select all shown requests"><span id="uq-bulk-count"></span></label>'
+        . '<button type="button" class="uq-bulk-clear" id="uq-bulk-clear">Clear</button>'
+        . '<button type="button" class="uq-btn uq-btn--danger uq-bulk-delete" id="uq-bulk-delete">' . webQuoteIcon('trash') . '<span>Delete selected</span></button>'
+        . '</div>'
         . webQuoteDeleteDialog()
         . '</section>' . webQuoteRequestsCss() . webQuoteRequestsScript();
 
@@ -817,30 +872,98 @@ function webQuoteRequestsScript(): string
     var none = document.getElementById("uq-no-match");
     var rows = Array.prototype.slice.call(document.querySelectorAll(".uq-row"));
     if (!rows.length) return;
+    var page = document.querySelector(".uq-page");
     var list = document.querySelector(".uq-list");
     var modal = document.getElementById("uq-delete-modal");
     var confirmBtn = document.getElementById("uq-delete-confirm");
     var errorBox = document.getElementById("uq-delete-error");
-    var pending = null;
+    var checkAll = document.getElementById("uq-check-all");
+    var bar = document.getElementById("uq-bulk");
+    var barAll = document.getElementById("uq-bulk-all");
+    var barCount = document.getElementById("uq-bulk-count");
+    var pending = [];
+    function box(row) {
+        return row.querySelector(".uq-check");
+    }
+    function selected() {
+        return rows.filter(function (row) { return box(row).checked; });
+    }
+    function sync() {
+        var picked = selected();
+        var visible = rows.filter(function (row) { return !row.hidden; });
+        var allOn = visible.length > 0 && visible.every(function (row) { return box(row).checked; });
+        rows.forEach(function (row) { row.classList.toggle("is-selected", box(row).checked); });
+        [checkAll, barAll].forEach(function (input) {
+            input.checked = allOn;
+            input.indeterminate = picked.length > 0 && !allOn;
+        });
+        barCount.textContent = picked.length + " selected";
+        bar.hidden = picked.length === 0;
+        page.classList.toggle("has-selection", picked.length > 0);
+    }
+    function setAll(on) {
+        rows.forEach(function (row) { box(row).checked = on && !row.hidden; });
+        sync();
+    }
+    function refreshKpis() {
+        var weekAgo = Date.now() / 1000 - 7 * 86400;
+        var k = { total: rows.length, week: 0, open: 0, quoted: 0, accepted: 0, value: 0 };
+        rows.forEach(function (row) {
+            var st = row.getAttribute("data-status");
+            if (parseInt(row.getAttribute("data-ts"), 10) >= weekAgo) k.week++;
+            if (st === "open") k.open++;
+            if (st === "quoted" || st === "accepted") k.quoted++;
+            if (st === "accepted") k.accepted++;
+            k.value += parseFloat(row.getAttribute("data-total")) || 0;
+        });
+        k.value = "TZS " + k.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        Object.keys(k).forEach(function (name) {
+            var el = page.querySelector('[data-kpi="' + name + '"]');
+            if (el) el.textContent = k[name];
+        });
+    }
     function closeModal() {
         modal.hidden = true;
-        pending = null;
+        pending = [];
     }
+    function openModal(targets) {
+        pending = targets;
+        var title = document.getElementById("uq-delete-title");
+        var text = document.getElementById("uq-delete-text");
+        if (targets.length === 1) {
+            var button = targets[0].querySelector(".uq-delete");
+            title.textContent = "Delete quote request?";
+            text.textContent = button.getAttribute("data-quote") + " from " + button.getAttribute("data-customer") + " will be removed from this list.";
+            confirmBtn.textContent = "Delete";
+        } else {
+            title.textContent = "Delete " + targets.length + " quote requests?";
+            text.textContent = "The selected requests will be removed from this list.";
+            confirmBtn.textContent = "Delete " + targets.length;
+        }
+        errorBox.hidden = true;
+        confirmBtn.disabled = false;
+        modal.hidden = false;
+        confirmBtn.focus();
+    }
+    checkAll.addEventListener("change", function () { setAll(checkAll.checked); });
+    barAll.addEventListener("change", function () { setAll(barAll.checked); });
+    document.getElementById("uq-bulk-clear").addEventListener("click", function () { setAll(false); });
+    document.getElementById("uq-bulk-delete").addEventListener("click", function () {
+        var picked = selected();
+        if (picked.length) openModal(picked);
+    });
+    list.addEventListener("change", function (event) {
+        if (event.target.classList.contains("uq-check")) sync();
+    });
     list.addEventListener("click", function (event) {
         var button = event.target.closest(".uq-delete");
         if (button) {
             event.preventDefault();
-            pending = button.closest(".uq-row");
-            document.getElementById("uq-delete-text").textContent = button.getAttribute("data-quote") + " from " + button.getAttribute("data-customer") + " will be removed from this list.";
-            errorBox.hidden = true;
-            confirmBtn.disabled = false;
-            confirmBtn.setAttribute("data-quote", button.getAttribute("data-quote"));
-            modal.hidden = false;
-            confirmBtn.focus();
+            openModal([button.closest(".uq-row")]);
             return;
         }
         var row = event.target.closest(".uq-row");
-        if (row && !event.target.closest("a")) row.querySelector(".uq-row-link").click();
+        if (row && !event.target.closest("a, .uq-pick")) row.querySelector(".uq-row-link").click();
     });
     modal.addEventListener("click", function (event) {
         if (event.target === modal || event.target.closest("[data-close]")) closeModal();
@@ -851,18 +974,22 @@ function webQuoteRequestsScript(): string
     confirmBtn.addEventListener("click", function () {
         var body = new URLSearchParams();
         body.append("action", "delete");
-        body.append("quote_number", confirmBtn.getAttribute("data-quote"));
+        pending.forEach(function (row) {
+            body.append("quote_numbers[]", row.querySelector(".uq-delete").getAttribute("data-quote"));
+        });
         body.append("csrf_token", modal.getAttribute("data-csrf"));
         confirmBtn.disabled = true;
         fetch(modal.getAttribute("data-api"), { method: "POST", credentials: "same-origin", headers: { "Accept": "application/json" }, body: body })
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 if (!data || !data.success) throw new Error((data && data.message) || "The request could not be deleted.");
-                if (pending) {
-                    rows.splice(rows.indexOf(pending), 1);
-                    pending.parentNode.removeChild(pending);
-                }
+                pending.forEach(function (row) {
+                    rows.splice(rows.indexOf(row), 1);
+                    row.parentNode.removeChild(row);
+                });
                 closeModal();
+                sync();
+                refreshKpis();
                 if (!rows.length) {
                     list.hidden = true;
                     none.textContent = "No quotation requests yet.";
@@ -895,8 +1022,10 @@ function webQuoteRequestsScript(): string
                 && (!st || row.getAttribute("data-status") === st);
             row.hidden = !ok;
             if (ok) shown++;
+            else box(row).checked = false;
         });
         none.hidden = shown > 0;
+        sync();
     }
     search.addEventListener("input", apply);
     date.addEventListener("change", apply);
@@ -913,11 +1042,24 @@ function webQuoteRequestsCss(): string
 .uq-page{font-family:"DM Sans",system-ui,sans-serif;color:#0f172a;padding:8px 0 24px;container:uq/inline-size}
 .uq-page svg{width:16px;height:16px;flex:0 0 auto}
 .uq-top{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:flex-start;justify-content:space-between;margin:0 0 18px}
-.uq-title{flex:1 1 100%}
+.uq-title{flex:1 1 auto;min-width:0}
 .uq-title-row{display:flex;align-items:center;gap:12px}
 .uq-page h1{margin:0;font-size:1.75rem;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
 .uq-sub{display:flex;align-items:center;gap:8px;margin:8px 0 0;color:#475569;font-size:.9rem}
 .uq-sub svg{color:#64748b}
+.uq-kpis{flex:1 1 100%;display:flex;gap:.75rem;width:100%}
+.uq-kpi{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:.65rem;padding:.65rem .85rem;background:#fff;border:1px solid #e8edf3;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.04);overflow:hidden}
+.uq-kpi-body{min-width:0;flex:1 1 auto}
+.uq-kpi-icon{width:2.15rem;height:2.15rem;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.uq-page .uq-kpi-icon svg{width:1.05rem;height:1.05rem}
+.uq-kpi-icon--violet{background:#f5f3ff;color:#7c3aed}
+.uq-kpi-icon--indigo{background:#eef2ff;color:#4f46e5}
+.uq-kpi-icon--amber{background:#fffbeb;color:#d97706}
+.uq-kpi-icon--teal{background:#ecfdf5;color:#059669}
+.uq-kpi-label{font-size:.75rem;font-weight:500;color:#94a3b8;line-height:1.2}
+.uq-kpi-value{font-size:clamp(1.05rem,1.6vw,1.35rem);font-weight:800;line-height:1.1;margin-top:.1rem;color:#0f172a}
+.uq-kpi-value--money{font-size:clamp(.875rem,1.35vw,1.05rem)}
+.uq-kpi-helper{font-size:.6875rem;color:#94a3b8;margin-top:.1rem;line-height:1.25}
 .uq-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%}
 .uq-search,.uq-select{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;color:#64748b;margin:0}
 .uq-search{width:min(380px,100%)}
@@ -925,7 +1067,7 @@ function webQuoteRequestsCss(): string
 .uq-select select{border:0;outline:0;background:transparent;font-size:.85rem;color:#334155;min-width:110px;cursor:pointer}
 .uq-new{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:8px;background:#2563eb;color:#fff!important;font-weight:700;font-size:.85rem;text-decoration:none!important;box-shadow:0 6px 16px rgba(37,99,235,.25);margin-left:auto}
 .uq-new:hover{background:#1d4ed8}
-.uq-list{display:grid;grid-template-columns:max-content minmax(130px,1.5fr) minmax(90px,1fr) max-content max-content max-content 34px;column-gap:20px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.uq-list{display:grid;grid-template-columns:18px max-content minmax(130px,1.5fr) minmax(90px,1fr) max-content max-content max-content 34px;column-gap:20px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .uq-list-head,.uq-row{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:center;padding:0 18px}
 .uq-list-head > span,.uq-row > span{min-width:0}
 .uq-list-head{background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em;height:40px}
@@ -934,6 +1076,16 @@ function webQuoteRequestsCss(): string
 .uq-row-link::after{content:"";position:absolute;inset:0}
 .uq-delete{position:relative;z-index:1;width:34px;height:34px;border:0;border-radius:8px;background:transparent;color:#94a3b8;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .12s,color .12s}
 .uq-delete:hover,.uq-delete:focus-visible{background:#fee2e2;color:#b91c1c;outline:0}
+.uq-pick{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;margin:0;padding:10px 0;cursor:pointer}
+.uq-pick input,.uq-bulk-all input{width:16px;height:16px;margin:0;accent-color:#2563eb;cursor:pointer}
+.uq-row.is-selected,.uq-row.is-selected:hover{background:#eff6ff}
+.uq-page.has-selection{padding-bottom:96px}
+.uq-bulk{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1070;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 32px);padding:8px 8px 8px 18px;background:#0f172a;color:#fff;border-radius:12px;box-shadow:0 16px 40px rgba(15,23,42,.35);font-size:.875rem}
+.uq-bulk[hidden]{display:none}
+.uq-bulk-all{display:inline-flex;align-items:center;gap:10px;margin:0;font-weight:600;white-space:nowrap;cursor:pointer}
+.uq-bulk-clear{border:0;border-radius:6px;background:transparent;color:#cbd5e1;font-weight:600;padding:8px 10px;cursor:pointer}
+.uq-bulk-clear:hover{background:rgba(255,255,255,.1);color:#fff}
+.uq-bulk-delete{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;white-space:nowrap}
 .uq-modal{position:fixed;inset:0;z-index:1080;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px}
 .uq-modal[hidden]{display:none}
 .uq-modal-box{width:min(420px,100%);background:#fff;border-radius:14px;box-shadow:0 20px 50px rgba(15,23,42,.25);padding:24px;text-align:center}
@@ -953,10 +1105,11 @@ function webQuoteRequestsCss(): string
 .uq-row[hidden]{display:none}
 .uq-row-quote{display:flex;align-items:center;gap:10px;min-width:0}
 .uq-row-quote strong{color:#0f172a;font-weight:700;white-space:nowrap}
+.uq-row-quote .uq-row-badge{display:none}
 .uq-row-icon{width:30px;height:30px;border-radius:8px;background:#eff4ff;color:#2563eb;display:inline-flex;align-items:center;justify-content:center;flex:0 0 30px}
 .uq-row-customer{display:flex;flex-direction:column;min-width:0}
 .uq-row-name{font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.uq-row-phone{font-size:.8rem;color:#64748b}
+.uq-row-phone{font-size:.8rem;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .uq-row-items{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#475569}
 .uq-row-total{font-weight:700;color:#0f172a}
 .uq-row-date{color:#475569;white-space:nowrap}
@@ -971,15 +1124,25 @@ function webQuoteRequestsCss(): string
 .uq-right{text-align:right!important;white-space:nowrap}
 .uq-empty{background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;color:#64748b}
 @container uq (max-width:1040px){
-  .uq-list{grid-template-columns:max-content minmax(130px,1fr) max-content max-content max-content 34px;column-gap:16px}
-  .uq-list-head > span:nth-child(3),.uq-row-items{display:none}
+  .uq-list{grid-template-columns:18px max-content minmax(130px,1fr) max-content max-content max-content 34px;column-gap:16px}
+  .uq-list-head > span:nth-child(4),.uq-row-items{display:none}
 }
 @container uq (max-width:820px){
+  .uq-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+  .uq-kpi{flex-direction:column;align-items:flex-start;gap:.45rem;padding:.65rem .7rem}
+  .uq-kpi-icon{width:2rem;height:2rem;border-radius:8px}
+  .uq-page .uq-kpi-icon svg{width:1rem;height:1rem}
+  .uq-kpi-label{font-size:.65rem}
+  .uq-kpi-value{font-size:1rem;margin-top:.05rem}
+  .uq-kpi-value--money{font-size:.78rem;line-height:1.15}
+  .uq-kpi-helper{font-size:.62rem;line-height:1.2}
   .uq-list{display:block}
   .uq-list-head{display:none}
-  .uq-row{grid-template-columns:1fr auto auto;grid-template-areas:"quote status del" "customer total del" "items date del";gap:4px 12px;padding:12px 16px}
-  .uq-row-quote{grid-area:quote}
-  .uq-row > span:nth-child(6){grid-area:status;justify-self:end}
+  .uq-row{grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-areas:"pick quote quote del" "pick customer total del" "pick items date del";gap:4px 12px;padding:12px 16px}
+  .uq-row .uq-pick{grid-area:pick;align-self:center}
+  .uq-row-icon,.uq-row-status{display:none}
+  .uq-row-quote{grid-area:quote;flex-wrap:wrap;gap:4px 10px}
+  .uq-row-quote .uq-row-badge{display:inline-block;margin-left:auto}
   .uq-row-customer{grid-area:customer}
   .uq-row-total{grid-area:total}
   .uq-row-items{display:block;grid-area:items;font-size:.8rem}
@@ -989,8 +1152,16 @@ function webQuoteRequestsCss(): string
 @media (max-width:767.98px){
   .uq-search{width:100%}
   .uq-new{margin-left:0}
+  .uq-bulk{left:12px;right:12px;bottom:12px;transform:none;max-width:none;justify-content:space-between;gap:8px;padding-left:14px}
 }
 html[data-theme="dark"] .uq-page{color:#e2e8f0}
+html[data-theme="dark"] .uq-kpi{background:#1e293b;border-color:#334155;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+html[data-theme="dark"] .uq-kpi-value{color:#f8fafc}
+html[data-theme="dark"] .uq-kpi-label,html[data-theme="dark"] .uq-kpi-helper{color:#94a3b8}
+html[data-theme="dark"] .uq-kpi-icon--violet{background:rgba(124,58,237,.2);color:#c4b5fd}
+html[data-theme="dark"] .uq-kpi-icon--indigo{background:rgba(79,70,229,.2);color:#a5b4fc}
+html[data-theme="dark"] .uq-kpi-icon--amber{background:rgba(217,119,6,.2);color:#fbbf24}
+html[data-theme="dark"] .uq-kpi-icon--teal{background:rgba(5,150,105,.2);color:#6ee7b7}
 html[data-theme="dark"] .uq-modal-box{background:#1e293b}
 html[data-theme="dark"] .uq-modal-box h2{color:#f1f5f9}
 html[data-theme="dark"] .uq-modal-box p{color:#cbd5e1}
@@ -1000,6 +1171,8 @@ html[data-theme="dark"] .uq-list,html[data-theme="dark"] .uq-search,html[data-th
 html[data-theme="dark"] .uq-list-head{background:#0f172a;color:#94a3b8;border-color:#334155}
 html[data-theme="dark"] .uq-row{border-color:#334155;color:#cbd5e1!important}
 html[data-theme="dark"] .uq-row:hover{background:#243248}
+html[data-theme="dark"] .uq-row.is-selected,html[data-theme="dark"] .uq-row.is-selected:hover{background:#1e3a5f}
+html[data-theme="dark"] .uq-bulk{background:#334155;box-shadow:0 16px 40px rgba(0,0,0,.5)}
 html[data-theme="dark"] .uq-row-icon{background:#1e3a8a;color:#bfdbfe}
 html[data-theme="dark"] .uq-row-quote strong,html[data-theme="dark"] .uq-row-name,html[data-theme="dark"] .uq-row-total{color:#f1f5f9!important}
 html[data-theme="dark"] .uq-search input,html[data-theme="dark"] .uq-select select{color:#e2e8f0}

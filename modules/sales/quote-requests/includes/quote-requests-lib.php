@@ -225,11 +225,16 @@ function salesQuoteRequestsStorefrontPdo(): ?PDO
 /**
  * Deleted requests keep their rows so the storefront sync does not import them again.
  */
-function salesQuoteRequestsDelete(PDO $pdo, string $quoteNumber): int
+function salesQuoteRequestsDelete(PDO $pdo, array $quoteNumbers): int
 {
+    $quoteNumbers = array_values(array_unique(array_filter(array_map('strval', $quoteNumbers), 'strlen')));
+    if ($quoteNumbers === []) {
+        return 0;
+    }
     salesQuoteRequestsEnsureSchema($pdo);
-    $stmt = $pdo->prepare('UPDATE website_quote_requests SET status = \'deleted\' WHERE quote_number = ? AND COALESCE(status, \'\') <> \'deleted\'');
-    $stmt->execute([$quoteNumber]);
+    $marks = implode(', ', array_fill(0, count($quoteNumbers), '?'));
+    $stmt = $pdo->prepare('UPDATE website_quote_requests SET status = \'deleted\' WHERE quote_number IN (' . $marks . ') AND COALESCE(status, \'\') <> \'deleted\'');
+    $stmt->execute($quoteNumbers);
 
     return $stmt->rowCount();
 }

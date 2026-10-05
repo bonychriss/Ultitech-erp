@@ -96,6 +96,14 @@ function ultitechEnsureQuoteSchema(PDO $pdo): void
     } catch (Throwable $e) {
         // Older shops still save the quote without a photo column.
     }
+    try {
+        $col = $pdo->query("SHOW COLUMNS FROM quotes LIKE 'user_id'");
+        if ($col && !$col->fetch()) {
+            $pdo->exec('ALTER TABLE quotes ADD COLUMN user_id INT NULL AFTER id, ADD KEY idx_quotes_user (user_id)');
+        }
+    } catch (Throwable $e) {
+        // Without the column the quote is saved but not listed under the customer's account.
+    }
     $pdo->exec("CREATE TABLE IF NOT EXISTS sync_queue (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
         entity_type VARCHAR(32) NOT NULL,
@@ -157,6 +165,14 @@ function ultitechSaveQuote(PDO $pdo, array $input): array
         ) VALUES (?, ?, ?, ?, ?, \'pending\', \'pending\', ?, ?)');
         $ins->execute([$number, $name, $phone, $email !== '' ? $email : null, $notes !== '' ? $notes : null, $now, $now]);
         $quoteId = (int) $pdo->lastInsertId();
+        $userId = (int) ($input['user_id'] ?? 0);
+        if ($userId > 0) {
+            try {
+                $pdo->prepare('UPDATE quotes SET user_id = ? WHERE id = ?')->execute([$userId, $quoteId]);
+            } catch (Throwable $e) {
+                // The quote stays saved for the sales team.
+            }
+        }
         $hasImage = false;
         try {
             $col = $pdo->query("SHOW COLUMNS FROM quote_items LIKE 'image_url'");

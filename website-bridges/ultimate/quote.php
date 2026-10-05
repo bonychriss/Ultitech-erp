@@ -176,6 +176,93 @@ function ultitechQuoteJson(array $payload, int $status = 200): void
     exit;
 }
 
+/**
+ * The shop layout signs "expiry.userId" with APP_KEY for logged-in customers.
+ *
+ * @return array{id:int,name:string,email:string,phone:string}|null
+ */
+function ultitechQuoteUser(PDO $pdo): ?array
+{
+    $token = trim((string) ($_SERVER['HTTP_X_ULTITECH_TOKEN'] ?? ''));
+    if (!preg_match('/^(\d{10})\.(\d+)\.([a-f0-9]{64})$/', $token, $m)) {
+        return null;
+    }
+    $expires = (int) $m[1];
+    $userId = (int) $m[2];
+    if ($expires < time() || $userId <= 0) {
+        return null;
+    }
+    $key = (string) (ultitechQuoteEnv(ultitechQuoteRoot() . '/.env')['APP_KEY'] ?? '');
+    if ($key === '') {
+        return null;
+    }
+    $expected = hash_hmac('sha256', 'ultitech-quotes|' . $userId . '|' . $expires, $key);
+    if (!hash_equals($expected, $m[3])) {
+        return null;
+    }
+    $st = $pdo->prepare('SELECT id, name, email, phone FROM users WHERE id = ? AND banned = 0 LIMIT 1');
+    $st->execute([$userId]);
+    $row = $st->fetch();
+    if (!is_array($row)) {
+        return null;
+    }
+    return [
+        'id' => (int) $row['id'],
+        'name' => trim((string) $row['name']),
+        'email' => trim((string) ($row['email'] ?? '')),
+        'phone' => trim((string) ($row['phone'] ?? '')),
+    ];
+}
+
+function ultitechQuoteStatusLabel(string $status): string
+{
+    $labels = [
+        'pending' => 'Received',
+        'contacted' => 'Contacted',
+        'quoted' => 'Quoted',
+        'accepted' => 'Accepted',
+        'rejected' => 'Closed',
+    ];
+    return $labels[$status] ?? ucfirst($status);
+}
+
+function ultitechQuoteMine(PDO $pdo): void
+{
+    $user = ultitechQuoteUser($pdo);
+    if ($user === null) {
+        ultitechQuoteJson(['success' => false, 'login' => true, 'message' => 'Please log in to see your requests.'], 401);
+    }
+    ultitechEnsureQuoteSchema($pdo);
+    $st = $pdo->prepare('SELECT id, quote_number, status, created_at FROM quotes WHERE user_id = ? ORDER BY id DESC LIMIT 30');
+    $st->execute([$user['id']]);
+    $quotes = $st->fetchAll();
+    $items = [];
+    if ($quotes !== []) {
+        $ids = array_map(static fn ($q) => (int) $q['id'], $quotes);
+        $cols = ultitechQuoteColumns($pdo, 'quote_items');
+        $image = isset($cols['image_url']) ? ', image_url' : '';
+        $rows = $pdo->query('SELECT quote_id, product_id, product_name, quantity' . $image . ' FROM quote_items WHERE quote_id IN (' . implode(',', $ids) . ') ORDER BY id ASC')->fetchAll();
+        foreach ($rows as $row) {
+            $items[(int) $row['quote_id']][] = [
+                'product_id' => (int) ($row['product_id'] ?? 0),
+                'name' => (string) $row['product_name'],
+                'quantity' => (float) $row['quantity'],
+                'image' => ultitechSafeImage((string) ($row['image_url'] ?? '')),
+            ];
+        }
+    }
+    ultitechQuoteJson([
+        'success' => true,
+        'quotes' => array_map(static fn ($q) => [
+            'number' => (string) $q['quote_number'],
+            'status' => (string) $q['status'],
+            'status_label' => ultitechQuoteStatusLabel((string) $q['status']),
+            'created_at' => (string) $q['created_at'],
+            'items' => $items[(int) $q['id']] ?? [],
+        ], $quotes),
+    ]);
+}
+
 function ultitechQuoteSubmit(PDO $pdo): void
 {
     $raw = file_get_contents('php://input');
@@ -185,6 +272,10 @@ function ultitechQuoteSubmit(PDO $pdo): void
     }
     if (trim((string) ($body['company_website'] ?? '')) !== '') {
         ultitechQuoteJson(['success' => true, 'message' => ultitechCustomerMessage()]);
+    }
+    $user = ultitechQuoteUser($pdo);
+    if ($user === null) {
+        ultitechQuoteJson(['success' => false, 'login' => true, 'message' => 'Please log in to send your request.'], 401);
     }
     $items = $body['items'] ?? [];
     if (!is_array($items) || $items === []) {
@@ -196,9 +287,10 @@ function ultitechQuoteSubmit(PDO $pdo): void
     }
     try {
         $saved = ultitechSaveQuote($pdo, [
-            'customer_name' => $body['customer_name'] ?? '',
-            'customer_phone' => $body['customer_phone'] ?? '',
-            'customer_email' => $body['customer_email'] ?? '',
+            'user_id' => $user['id'],
+            'customer_name' => $user['name'] !== '' ? $user['name'] : ($body['customer_name'] ?? ''),
+            'customer_phone' => $user['phone'] !== '' ? $user['phone'] : ($body['customer_phone'] ?? ''),
+            'customer_email' => $user['email'] !== '' ? $user['email'] : ($body['customer_email'] ?? ''),
             'notes' => $body['notes'] ?? '',
             'items' => $items,
         ]);
@@ -225,6 +317,9 @@ if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
         if ($method === 'POST') {
             ultitechQuoteSubmit(ultitechQuotePdo());
         }
+        if (($_GET['mine'] ?? '') === '1') {
+            ultitechQuoteMine(ultitechQuotePdo());
+        }
         $given = (string) ($_GET['key'] ?? '');
         $install = (string) ($_GET['install'] ?? '');
         if ($install === '1' && $given !== '' && hash_equals(QUOTE_WEB_KEY, $given)) {
@@ -240,7 +335,7 @@ if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
         header('Content-Type: text/plain; charset=utf-8');
         echo 'POST required';
     } catch (Throwable $e) {
-        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST' || ($_GET['mine'] ?? '') === '1') {
             ultitechQuoteJson(['success' => false, 'message' => 'Please try again in a moment.'], 500);
         }
         http_response_code(500);

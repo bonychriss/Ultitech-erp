@@ -14,6 +14,7 @@ if (!empty($GLOBALS['_ugt_quote_header'])) {
 $GLOBALS['_ugt_quote_header'] = true;
 
 $quoteApi = function_exists('app_url') ? app_url('/api/website_quotes.php') : '/api/website_quotes.php';
+$quotePage = function_exists('company_url') ? company_url('website/quotes') : '/ultimate/website/quotes';
 ?>
 <style>
 .ugt-quote-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:0;background:transparent;border-radius:10px;cursor:pointer;color:#111827;padding:0}
@@ -22,7 +23,9 @@ $quoteApi = function_exists('app_url') ? app_url('/api/website_quotes.php') : '/
 .ugt-quote-badge{position:absolute;top:4px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#0f766e;color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;box-shadow:0 0 0 2px #fff}
 .ugt-quote-panel{position:fixed;z-index:1075;width:min(420px,calc(100vw - 16px));max-height:min(72vh,680px);overflow:auto;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 18px 48px rgba(15,23,42,.18);padding:12px 12px 8px;font-family:DM Sans,system-ui,sans-serif}
 .ugt-quote-panel[hidden]{display:none}
-.ugt-quote-panel h2{margin:0 0 8px;font-size:1rem}
+.ugt-quote-panel h2{margin:0;font-size:1rem}
+.ugt-quote-top{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
+.ugt-quote-top a{font-size:.85rem;font-weight:600;color:#0f766e;text-decoration:none}
 .ugt-quote-card{border-top:1px solid #e2e8f0;padding:10px 2px}
 .ugt-quote-card header{display:flex;justify-content:space-between;gap:8px}
 .ugt-quote-card strong{display:block;font-size:.9rem}
@@ -59,6 +62,7 @@ html[data-theme="dark"] .ugt-quote-card time,html[data-theme="dark"] .ugt-quote-
 <script>
 (function () {
     var API = <?= json_encode($quoteApi, JSON_UNESCAPED_SLASHES) ?>;
+    var PAGE = <?= json_encode($quotePage, JSON_UNESCAPED_SLASHES) ?>;
     var REVIEWED = "ugtQuoteReviewed";
     var DISMISSED = "ugtQuoteToastDismissed";
     var quotes = [];
@@ -97,9 +101,16 @@ html[data-theme="dark"] .ugt-quote-card time,html[data-theme="dark"] .ugt-quote-
         var panel = document.getElementById("ugt-quote-panel");
         if (!panel) return;
         panel.textContent = "";
+        var top = document.createElement("div");
+        top.className = "ugt-quote-top";
         var title = document.createElement("h2");
         text(title, "Quote requests");
-        panel.appendChild(title);
+        var all = document.createElement("a");
+        all.href = PAGE;
+        text(all, "View all");
+        top.appendChild(title);
+        top.appendChild(all);
+        panel.appendChild(top);
         if (!quotes.length) {
             var empty = document.createElement("p");
             text(empty, "No quotation requests yet.");
@@ -122,7 +133,7 @@ html[data-theme="dark"] .ugt-quote-card time,html[data-theme="dark"] .ugt-quote-
             head.appendChild(who);
             head.appendChild(time);
             card.appendChild(head);
-            var meta = [quote.customer_phone, quote.customer_email].filter(Boolean).join(" ∑ ");
+            var meta = [quote.customer_phone, quote.customer_email].filter(Boolean).join(" ù ");
             if (meta) {
                 var p = document.createElement("p");
                 text(p, meta);
@@ -151,7 +162,7 @@ html[data-theme="dark"] .ugt-quote-card time,html[data-theme="dark"] .ugt-quote-
                 text(label, item.name || "Product");
                 var qty = document.createElement("b");
                 var q = Number(item.quantity) || 0;
-                text(qty, (q % 1 === 0 ? String(q) : String(q)) + "◊");
+                text(qty, (q % 1 === 0 ? String(q) : String(q)) + "ù");
                 line.appendChild(label);
                 line.appendChild(qty);
                 card.appendChild(line);

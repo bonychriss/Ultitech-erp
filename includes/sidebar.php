@@ -223,6 +223,7 @@ switch ($active_module) {
 
     case 'website':
         addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'website');
+        addItem($menuItems, 'website-quotes', 'Quote requests', 'file-text', $prefix . 'website/quotes');
         break;
 
     case 'crm':

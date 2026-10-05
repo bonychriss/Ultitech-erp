@@ -38,6 +38,20 @@ class WebsitePageController extends Controller
             )->header('Content-Type', 'text/html; charset=UTF-8');
         }
 
+        if ((string) ($_GET['view'] ?? request()->query('view', '')) === 'quotes') {
+            $viewData['pageTitle'] = 'Quote requests';
+            $viewData['employeeHeaderTitle'] = 'Quote requests';
+            $viewData['footerScripts'] = '';
+            $viewData['beforeRoot'] = '';
+            $quoteLib = rtrim((string) config('erp.app_root'), '\\/') . '/stock/includes/web-services-lib.php';
+            if (is_file($quoteLib)) {
+                require_once $quoteLib;
+                if (function_exists('webQuoteRequestsPanel')) {
+                    $viewData['beforeRoot'] = webQuoteRequestsPanel(false);
+                }
+            }
+        }
+
         $GLOBALS['page_title'] = $viewData['pageTitle'];
         $page_title = $viewData['pageTitle'];
         $employeeHeaderTitle = $viewData['employeeHeaderTitle'];

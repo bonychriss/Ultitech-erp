@@ -397,7 +397,7 @@ function webQuoteRequestGroups(?PDO $pdo = null): array
     return $list;
 }
 
-function webQuoteRequestsPanel(): string
+function webQuoteRequestsPanel(bool $withHeading = true): string
 {
     $order = [];
     $groups = [];
@@ -419,7 +419,7 @@ function webQuoteRequestsPanel(): string
     };
 
     $html = '<section class="ugt-web-quotes">'
-        . '<div class="ugt-web-quotes-head"><h2>Quote requests</h2>'
+        . '<div class="ugt-web-quotes-head">' . ($withHeading ? '<h2>Quote requests</h2>' : '')
         . '<p>Submitted from ultimate.co.tz. A sales person can follow up from the name and phone on each request.</p></div>';
     if ($order === []) {
         $html .= '<div class="ugt-web-quotes-empty">No quotation requests yet.</div></section>';
@@ -446,10 +446,15 @@ function webQuoteRequestsPanel(): string
         }
         $meta = [];
         if ($quote['customer_phone'] !== '') {
-            $meta[] = $h($quote['customer_phone']);
+            $tel = preg_replace('/[^0-9+]/', '', $quote['customer_phone']) ?? '';
+            $meta[] = $tel !== ''
+                ? '<a href="tel:' . $h($tel) . '">' . $h($quote['customer_phone']) . '</a>'
+                : $h($quote['customer_phone']);
         }
         if ($quote['customer_email'] !== '') {
-            $meta[] = $h($quote['customer_email']);
+            $meta[] = filter_var($quote['customer_email'], FILTER_VALIDATE_EMAIL)
+                ? '<a href="mailto:' . $h($quote['customer_email']) . '">' . $h($quote['customer_email']) . '</a>'
+                : $h($quote['customer_email']);
         }
         $html .= '<article class="ugt-web-quote">'
             . '<header><div><strong>' . $h($quote['quote_number']) . '</strong>'

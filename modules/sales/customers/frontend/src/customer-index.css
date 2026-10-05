@@ -31,6 +31,14 @@ body.page-customer-index-desk .exp-desk-btn-create {
   min-width: 720px;
 }
 
+.ci-customers-table .exp-desk-table tbody tr.is-selected td {
+  background: rgba(124, 58, 237, 0.08) !important;
+}
+
+html[data-theme="dark"] .ci-customers-table .exp-desk-table tbody tr.is-selected td {
+  background: rgba(167, 139, 250, 0.16) !important;
+}
+
 .ci-customers-table .exp-desk-table th.ci-col-avatar,
 .ci-customers-table .exp-desk-table td.ci-col-avatar {
   width: 3.5rem;

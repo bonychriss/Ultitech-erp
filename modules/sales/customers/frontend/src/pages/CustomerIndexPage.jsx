@@ -60,6 +60,8 @@ function buildUrl(base, params) {
   return `${base}${sep}${qs}`;
 }
 
+const OPENED_KEY = 'ci-last-opened-customer';
+
 function syncBrowserUrl(params) {
   const url = new URL(window.location.href);
   url.searchParams.delete('msg');
@@ -67,7 +69,27 @@ function syncBrowserUrl(params) {
   if (params.module) url.searchParams.set('module', params.module);
   if (params.search) url.searchParams.set('search', params.search);
   else url.searchParams.delete('search');
-  window.history.replaceState({}, '', url.toString());
+  if (params.selected) url.searchParams.set('sel', String(params.selected));
+  else url.searchParams.delete('sel');
+  window.history.replaceState(window.history.state, '', url.toString());
+}
+
+function readOpenedCustomer() {
+  const fromUrl = Number(new URLSearchParams(window.location.search).get('sel') || 0);
+  if (fromUrl) return fromUrl;
+  try {
+    return Number(window.sessionStorage.getItem(OPENED_KEY) || 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function rememberOpenedCustomer(id) {
+  try {
+    window.sessionStorage.setItem(OPENED_KEY, String(id));
+  } catch {
+    /* private mode can block storage */
+  }
 }
 
 function filterCustomers(customers, searchTerm) {
@@ -91,6 +113,7 @@ export default function CustomerIndexPage() {
   const [toast, setToast] = useState('');
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(0);
+  const [openedId, setOpenedId] = useState(() => readOpenedCustomer());
 
   const loadData = useCallback(async (module) => {
     setLoading(true);
@@ -132,8 +155,20 @@ export default function CustomerIndexPage() {
     syncBrowserUrl({
       module,
       search: searchTerm.trim(),
+      selected: openedId,
     });
-  }, [data, deskCfg.module, searchTerm]);
+  }, [data, deskCfg.module, searchTerm, openedId]);
+
+  useEffect(() => {
+    if (!data || !openedId) return undefined;
+    const timer = window.setTimeout(() => {
+      const row = document.querySelector(`[data-customer-id="${openedId}"]`);
+      if (row && typeof row.scrollIntoView === 'function') {
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [data, openedId]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -159,6 +194,19 @@ export default function CustomerIndexPage() {
 
   function buildEditUrl(id) {
     return buildUrl(urls.edit || 'edit.php', { id, module });
+  }
+
+  function markOpened(id) {
+    const nextId = Number(id || 0);
+    if (!nextId) return;
+    setOpenedId(nextId);
+    rememberOpenedCustomer(nextId);
+    syncBrowserUrl({ module, search: searchTerm.trim(), selected: nextId });
+  }
+
+  function openCustomer(id, href) {
+    markOpened(id);
+    window.location.href = href;
   }
 
   function handleAddSuccess() {
@@ -316,13 +364,15 @@ export default function CustomerIndexPage() {
                   return (
                     <tr
                       key={customer.id}
-                      className="exp-desk-row-clickable"
+                      data-customer-id={customer.id}
+                      className={`exp-desk-row-clickable${openedId === Number(customer.id) ? ' is-selected' : ''}`}
+                      aria-current={openedId === Number(customer.id) ? 'true' : undefined}
                       tabIndex={0}
-                      onClick={() => { window.location.href = viewUrl; }}
+                      onClick={() => openCustomer(customer.id, viewUrl)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault();
-                          window.location.href = viewUrl;
+                          openCustomer(customer.id, viewUrl);
                         }
                       }}
                     >
@@ -357,6 +407,7 @@ export default function CustomerIndexPage() {
                         <div className="exp-desk-row-actions-inner">
                           <a
                             href={editUrl}
+                            onClick={() => markOpened(customer.id)}
                             className="exp-desk-row-action"
                             title="Edit customer"
                             aria-label="Edit customer"

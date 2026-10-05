@@ -439,6 +439,8 @@ function webQuoteIcon(string $name): string
         'chat' => '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.8-.9L3 21l2-5.2a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.4-8.5 8.4 8.4 0 0 1 8.5 8z"/>',
         'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
         'box' => '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
+        'sliders' => '<path d="M3 6h2.5M10.5 6H21M3 12h10.5M18.5 12H21M3 18h5.5M13.5 18H21"/><circle cx="8" cy="6" r="2.5"/><circle cx="16" cy="12" r="2.5"/><circle cx="11" cy="18" r="2.5"/>',
+        'x' => '<path d="M18 6 6 18M6 6l12 12"/>',
         'clock' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
         'cash' => '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
         'trash' => '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>',
@@ -513,9 +515,13 @@ function webQuoteDeleteDialog(): string
 {
     return '<div class="uq-modal" id="uq-delete-modal" data-api="' . webQuoteH(webQuoteApiUrl()) . '" data-csrf="' . webQuoteH(webQuoteCsrf()) . '" hidden>'
         . '<div class="uq-modal-box" role="dialog" aria-modal="true" aria-labelledby="uq-delete-title">'
+        . '<div class="uq-modal-main">'
         . '<span class="uq-modal-icon">' . webQuoteIcon('trash') . '</span>'
+        . '<div class="uq-modal-copy">'
         . '<h2 id="uq-delete-title">Delete quote request?</h2>'
         . '<p id="uq-delete-text"></p>'
+        . '<ul class="uq-modal-items" id="uq-delete-items"></ul>'
+        . '</div></div>'
         . '<p class="uq-modal-error" id="uq-delete-error" hidden></p>'
         . '<div class="uq-modal-actions">'
         . '<button type="button" class="uq-btn" data-close>Cancel</button>'
@@ -584,24 +590,41 @@ function webQuoteRequestsPanel(bool $withHeading = true): string
     }
 
     $html = '<section class="uq-page">'
-        . '<div class="uq-top">'
-        . '<div class="uq-title">'
-        . ($withHeading ? '<div class="uq-title-row"><h1>Quote requests</h1></div>' : '')
-        . '<p class="uq-sub">' . webQuoteIcon('mail') . '<span>Submitted from ultimate.co.tz. Open a request to see the customer and products.</span></p>'
-        . '</div>'
-        . '<a class="uq-new" href="' . webQuoteH($newUrl) . '">' . webQuoteIcon('plus') . '<span>New Quote Request</span></a>'
-        . webQuoteKpiCards($quotes)
-        . '<div class="uq-tools">'
-        . '<label class="uq-search">' . webQuoteIcon('search') . '<input type="search" id="uq-search" placeholder="Search by quote ID, customer or product..." autocomplete="off"></label>'
-        . '<label class="uq-select">' . webQuoteIcon('calendar') . '<select id="uq-date" aria-label="Date range">'
-        . '<option value="">Date range</option><option value="today">Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="month">This month</option>'
-        . '</select></label>'
-        . '<label class="uq-select uq-select--plain"><select id="uq-status" aria-label="Status"><option value="">Status</option>';
-    foreach ($statuses as $key => $label) {
-        $html .= '<option value="' . webQuoteH($key) . '">' . webQuoteH($label) . '</option>';
+        . ($withHeading ? '<div class="uq-top"><div class="uq-title"><div class="uq-title-row"><h1>Quote requests</h1></div></div></div>' : '')
+        . '<div class="uq-toolbar">';
+    if ($quotes !== []) {
+        $html .= '<div class="uq-toolbar-search"><label class="uq-search">' . webQuoteIcon('search')
+            . '<input type="search" id="uq-search" placeholder="Search quote #, customer or product" aria-label="Search quote requests" autocomplete="off"></label></div>';
     }
-    $html .= '</select></label>'
-        . '</div></div>';
+    $html .= '<div class="uq-toolbar-actions">';
+    if ($quotes !== []) {
+        $html .= '<div class="uq-filter-wrap">'
+            . '<button type="button" class="uq-filter-btn" id="uq-filter-btn" aria-expanded="false" aria-controls="uq-filters" title="Filters">'
+            . webQuoteIcon('sliders') . '<span class="uq-filter-dot" id="uq-filter-dot" hidden></span></button>'
+            . '<div class="uq-filters" id="uq-filters" role="dialog" aria-label="Filter options" hidden>'
+            . '<div class="uq-filters-head"><div><h2>Filters</h2><p>Narrow the list by date and status.</p></div>'
+            . '<button type="button" class="uq-filters-close" data-filters-close aria-label="Close filters">' . webQuoteIcon('x') . '</button></div>'
+            . '<div class="uq-filters-section"><div class="uq-filters-label">Date range</div><div class="uq-presets" role="group" aria-label="Date range">'
+            . '<button type="button" class="uq-preset" data-date="today">Today</button>'
+            . '<button type="button" class="uq-preset" data-date="7">Last 7 days</button>'
+            . '<button type="button" class="uq-preset" data-date="30">Last 30 days</button>'
+            . '<button type="button" class="uq-preset" data-date="month">This month</button>'
+            . '</div></div>'
+            . '<div class="uq-filters-section"><div class="uq-filters-label">Details</div><div class="uq-field"><label for="uq-status">Status</label>'
+            . '<select id="uq-status"><option value="">All statuses</option>';
+        foreach ($statuses as $key => $label) {
+            $html .= '<option value="' . webQuoteH($key) . '">' . webQuoteH($label) . '</option>';
+        }
+        $html .= '</select></div></div>'
+            . '<div class="uq-filters-footer"><button type="button" class="uq-tbtn uq-tbtn--ghost" id="uq-filters-clear">Clear</button>'
+            . '<button type="button" class="uq-tbtn uq-tbtn--primary" id="uq-filters-apply">Apply filters</button></div>'
+            . '</div></div>';
+    }
+    $html .= '<a class="uq-tbtn uq-tbtn--primary uq-new" href="' . webQuoteH($newUrl) . '" aria-label="New Quote Request">' . webQuoteIcon('plus')
+        . '<span class="uq-new-full">New Quote Request</span><span class="uq-new-short">New</span></a>'
+        . '</div></div>'
+        . '<div class="uq-chips" id="uq-chips" aria-label="Active filters" hidden></div>'
+        . webQuoteKpiCards($quotes);
 
     if ($quotes === []) {
         return $html . '<div class="uq-empty">No quotation requests yet.</div></section>' . webQuoteRequestsCss();
@@ -867,8 +890,8 @@ function webQuoteRequestsScript(): string
 <script>
 (function () {
     var search = document.getElementById("uq-search");
-    var date = document.getElementById("uq-date");
     var status = document.getElementById("uq-status");
+    var filters = { date: "", status: "" };
     var none = document.getElementById("uq-no-match");
     var rows = Array.prototype.slice.call(document.querySelectorAll(".uq-row"));
     if (!rows.length) return;
@@ -928,17 +951,22 @@ function webQuoteRequestsScript(): string
     }
     function openModal(targets) {
         pending = targets;
-        var title = document.getElementById("uq-delete-title");
-        var text = document.getElementById("uq-delete-text");
-        if (targets.length === 1) {
-            var button = targets[0].querySelector(".uq-delete");
-            title.textContent = "Delete quote request?";
-            text.textContent = button.getAttribute("data-quote") + " from " + button.getAttribute("data-customer") + " will be removed from this list.";
-            confirmBtn.textContent = "Delete";
-        } else {
-            title.textContent = "Delete " + targets.length + " quote requests?";
-            text.textContent = "The selected requests will be removed from this list.";
-            confirmBtn.textContent = "Delete " + targets.length;
+        var single = targets.length === 1;
+        var items = document.getElementById("uq-delete-items");
+        document.getElementById("uq-delete-title").textContent = single ? "Delete quote request?" : "Delete " + targets.length + " quote requests?";
+        document.getElementById("uq-delete-text").textContent = single ? "This request will be removed from the list:" : "These requests will be removed from the list:";
+        confirmBtn.textContent = single ? "Delete request" : "Delete " + targets.length + " requests";
+        items.innerHTML = "";
+        targets.slice(0, 5).forEach(function (row) {
+            var button = row.querySelector(".uq-delete");
+            var li = document.createElement("li");
+            li.textContent = button.getAttribute("data-quote") + " \u00b7 " + button.getAttribute("data-customer");
+            items.appendChild(li);
+        });
+        if (targets.length > 5) {
+            var more = document.createElement("li");
+            more.textContent = "and " + (targets.length - 5) + " more";
+            items.appendChild(more);
         }
         errorBox.hidden = true;
         confirmBtn.disabled = false;
@@ -1013,8 +1041,8 @@ function webQuoteRequestsScript(): string
     }
     function apply() {
         var q = (search.value || "").trim().toLowerCase();
-        var from = since(date.value);
-        var st = status.value;
+        var from = since(filters.date);
+        var st = filters.status;
         var shown = 0;
         rows.forEach(function (row) {
             var ok = (!q || row.getAttribute("data-search").indexOf(q) !== -1)
@@ -1027,9 +1055,81 @@ function webQuoteRequestsScript(): string
         none.hidden = shown > 0;
         sync();
     }
+    var filterBtn = document.getElementById("uq-filter-btn");
+    var panel = document.getElementById("uq-filters");
+    var presets = Array.prototype.slice.call(panel.querySelectorAll(".uq-preset"));
+    var chips = document.getElementById("uq-chips");
+    var dateLabels = { today: "Today", "7": "Last 7 days", "30": "Last 30 days", month: "This month" };
+    function openPanel(open) {
+        panel.hidden = !open;
+        filterBtn.classList.toggle("is-active", open);
+        filterBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        if (!open) return;
+        presets.forEach(function (b) { b.classList.toggle("is-active", b.getAttribute("data-date") === filters.date); });
+        status.value = filters.status;
+    }
+    function renderChips() {
+        var items = [];
+        if (filters.date) items.push(["date", dateLabels[filters.date]]);
+        if (filters.status) items.push(["status", "Status: " + status.querySelector('option[value="' + filters.status + '"]').textContent]);
+        chips.innerHTML = "";
+        items.forEach(function (item) {
+            var chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "uq-chip";
+            chip.title = "Remove filter";
+            chip.setAttribute("data-key", item[0]);
+            chip.innerHTML = '<span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+            chip.firstChild.textContent = item[1];
+            chips.appendChild(chip);
+        });
+        if (items.length) {
+            var clear = document.createElement("button");
+            clear.type = "button";
+            clear.className = "uq-chip uq-chip--clear";
+            clear.setAttribute("data-key", "all");
+            clear.textContent = "Clear all";
+            chips.appendChild(clear);
+        }
+        chips.hidden = !items.length;
+        document.getElementById("uq-filter-dot").hidden = !items.length;
+    }
+    function setFilters(next) {
+        filters = next;
+        renderChips();
+        apply();
+    }
+    filterBtn.addEventListener("click", function () { openPanel(panel.hidden); });
+    presets.forEach(function (b) {
+        b.addEventListener("click", function () {
+            var on = !b.classList.contains("is-active");
+            presets.forEach(function (o) { o.classList.remove("is-active"); });
+            b.classList.toggle("is-active", on);
+        });
+    });
+    panel.querySelector("[data-filters-close]").addEventListener("click", function () { openPanel(false); });
+    document.getElementById("uq-filters-apply").addEventListener("click", function () {
+        var active = presets.filter(function (b) { return b.classList.contains("is-active"); })[0];
+        setFilters({ date: active ? active.getAttribute("data-date") : "", status: status.value });
+        openPanel(false);
+    });
+    document.getElementById("uq-filters-clear").addEventListener("click", function () {
+        setFilters({ date: "", status: "" });
+        openPanel(false);
+    });
+    chips.addEventListener("click", function (event) {
+        var chip = event.target.closest(".uq-chip");
+        if (!chip) return;
+        var key = chip.getAttribute("data-key");
+        setFilters({ date: key === "date" || key === "all" ? "" : filters.date, status: key === "status" || key === "all" ? "" : filters.status });
+    });
+    document.addEventListener("click", function (event) {
+        if (!panel.hidden && !event.target.closest(".uq-filter-wrap")) openPanel(false);
+    });
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !panel.hidden) openPanel(false);
+    });
     search.addEventListener("input", apply);
-    date.addEventListener("change", apply);
-    status.addEventListener("change", apply);
 })();
 </script>
 HTML;
@@ -1041,13 +1141,12 @@ function webQuoteRequestsCss(): string
 <style>
 .uq-page{font-family:"DM Sans",system-ui,sans-serif;color:#0f172a;padding:8px 0 24px;container:uq/inline-size}
 .uq-page svg{width:16px;height:16px;flex:0 0 auto}
-.uq-top{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:flex-start;justify-content:space-between;margin:0 0 18px}
+.uq-page *,.uq-page *::before,.uq-page *::after{box-sizing:border-box}
+.uq-top{margin:0 0 16px}
 .uq-title{flex:1 1 auto;min-width:0}
 .uq-title-row{display:flex;align-items:center;gap:12px}
 .uq-page h1{margin:0;font-size:1.75rem;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
-.uq-sub{display:flex;align-items:center;gap:8px;margin:8px 0 0;color:#475569;font-size:.9rem}
-.uq-sub svg{color:#64748b}
-.uq-kpis{flex:1 1 100%;display:flex;gap:.75rem;width:100%}
+.uq-kpis{display:flex;gap:.75rem;width:100%;margin:0 0 18px}
 .uq-kpi{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:.65rem;padding:.65rem .85rem;background:#fff;border:1px solid #e8edf3;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.04);overflow:hidden}
 .uq-kpi-body{min-width:0;flex:1 1 auto}
 .uq-kpi-icon{width:2.15rem;height:2.15rem;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -1060,13 +1159,50 @@ function webQuoteRequestsCss(): string
 .uq-kpi-value{font-size:clamp(1.05rem,1.6vw,1.35rem);font-weight:800;line-height:1.1;margin-top:.1rem;color:#0f172a}
 .uq-kpi-value--money{font-size:clamp(.875rem,1.35vw,1.05rem)}
 .uq-kpi-helper{font-size:.6875rem;color:#94a3b8;margin-top:.1rem;line-height:1.25}
-.uq-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%}
-.uq-search,.uq-select{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;color:#64748b;margin:0}
-.uq-search{width:min(380px,100%)}
-.uq-search input{border:0;outline:0;background:transparent;width:100%;font-size:.85rem;color:#0f172a}
-.uq-select select{border:0;outline:0;background:transparent;font-size:.85rem;color:#334155;min-width:110px;cursor:pointer}
-.uq-new{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:8px;background:#2563eb;color:#fff!important;font-weight:700;font-size:.85rem;text-decoration:none!important;box-shadow:0 6px 16px rgba(37,99,235,.25);margin-left:auto}
-.uq-new:hover{background:#1d4ed8}
+.uq-toolbar{display:grid;grid-template-columns:1fr minmax(16rem,36rem) 1fr;align-items:center;gap:1rem 1.25rem;margin:0 0 14px}
+.uq-toolbar-search{grid-column:2;width:100%;min-width:0}
+.uq-toolbar-actions{grid-column:3;display:flex;align-items:center;justify-content:flex-end;gap:.5rem}
+.uq-search{position:relative;display:block;margin:0;border-radius:9999px;background:#fff;border:1px solid #e2e8f0;overflow:hidden}
+.uq-page .uq-search svg{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);width:1rem;height:1rem;color:#94a3b8;pointer-events:none}
+.uq-search input{display:block;width:100%;padding:.55rem 1rem .55rem 2.35rem;font-size:.875rem;font-family:inherit;color:#0f172a;border:0!important;background:transparent!important;outline:0!important;box-shadow:none!important}
+.uq-search:focus-within{border-color:#a5b4fc;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.uq-filter-wrap{position:relative}
+.uq-filter-btn{position:relative;width:2.35rem;height:2.35rem;border:0;border-radius:10px;background:transparent;color:#475569;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.uq-page .uq-filter-btn svg{width:20px;height:20px}
+.uq-filter-btn:hover,.uq-filter-btn.is-active{color:#4f46e5}
+.uq-filter-btn:focus-visible{outline:2px solid #6366f1;outline-offset:2px}
+.uq-filter-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#4f46e5}
+.uq-filter-dot[hidden]{display:none}
+.uq-filters{position:absolute;right:0;top:calc(100% + 8px);z-index:1060;width:min(340px,calc(100vw - 24px));border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 16px 40px rgba(15,23,42,.14);overflow:hidden;text-align:left}
+.uq-filters[hidden]{display:none}
+.uq-filters-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;padding:.95rem 1rem .75rem;border-bottom:1px solid #f1f5f9;background:linear-gradient(180deg,#fafbff 0%,#fff 100%)}
+.uq-filters-head h2{margin:0;font-size:.95rem;font-weight:700;color:#0f172a}
+.uq-filters-head p{margin:.2rem 0 0;font-size:.75rem;color:#64748b;line-height:1.35}
+.uq-filters-close{flex-shrink:0;width:1.85rem;height:1.85rem;border:1px solid #e2e8f0;border-radius:9999px;background:#fff;color:#64748b;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.uq-filters-close:hover{border-color:#cbd5e1;color:#334155}
+.uq-page .uq-filters-close svg{width:16px;height:16px}
+.uq-filters-section{padding:.8rem 1rem 0}
+.uq-filters-label{font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.55rem}
+.uq-presets{display:flex;flex-wrap:wrap;gap:.4rem}
+.uq-preset{border:1px solid #e2e8f0;border-radius:9999px;background:#f8fafc;color:#475569;font-size:.72rem;font-weight:600;padding:.28rem .65rem;cursor:pointer}
+.uq-preset:hover,.uq-preset.is-active{border-color:#c7d2fe;color:#4f46e5;background:#eef2ff}
+.uq-field{display:flex;flex-direction:column;gap:.35rem}
+.uq-field label{margin:0;font-size:.72rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
+.uq-field select{width:100%;padding:.45rem 2.25rem .45rem .65rem;border:1px solid #e2e8f0;border-radius:8px;font-size:.8125rem;font-family:inherit;color:#0f172a;background:#fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E") no-repeat right .65rem center/1.1rem;appearance:none;-webkit-appearance:none;cursor:pointer}
+.uq-filters-footer{display:flex;justify-content:flex-end;gap:.5rem;margin-top:.85rem;padding:.85rem 1rem 1rem;border-top:1px solid #f1f5f9;background:#fafbfc}
+.uq-filters-footer .uq-tbtn{border-radius:9999px;min-height:2.25rem;padding:.45rem 1.05rem}
+.uq-tbtn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.45rem .9rem;min-height:2.35rem;border-radius:10px;font-size:.8125rem;font-weight:600;text-decoration:none!important;border:1px solid transparent;cursor:pointer;white-space:nowrap;font-family:inherit}
+.uq-tbtn--primary{background:#4f46e5;border-color:#4f46e5;color:#fff!important}
+.uq-tbtn--primary:hover{background:#4338ca;border-color:#4338ca}
+.uq-tbtn--ghost{background:transparent;color:#475569}
+.uq-tbtn--ghost:hover{background:#f1f5f9}
+.uq-page .uq-new svg{width:15px;height:15px}
+.uq-new-short{display:none}
+.uq-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:-4px 0 14px}
+.uq-chips[hidden]{display:none}
+.uq-chip{display:inline-flex;align-items:center;gap:.35rem;border:1px solid #c7d2fe;border-radius:9999px;background:#eef2ff;color:#4338ca;font-size:.75rem;font-weight:600;padding:.25rem .6rem;cursor:pointer}
+.uq-page .uq-chip svg{width:12px;height:12px}
+.uq-chip--clear{border-color:#e2e8f0;background:#fff;color:#64748b}
 .uq-list{display:grid;grid-template-columns:18px max-content minmax(130px,1.5fr) minmax(90px,1fr) max-content max-content max-content 34px;column-gap:20px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .uq-list-head,.uq-row{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:center;padding:0 18px}
 .uq-list-head > span,.uq-row > span{min-width:0}
@@ -1088,13 +1224,21 @@ function webQuoteRequestsCss(): string
 .uq-bulk-delete{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;white-space:nowrap}
 .uq-modal{position:fixed;inset:0;z-index:1080;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px}
 .uq-modal[hidden]{display:none}
-.uq-modal-box{width:min(420px,100%);background:#fff;border-radius:14px;box-shadow:0 20px 50px rgba(15,23,42,.25);padding:24px;text-align:center}
-.uq-modal-icon{width:48px;height:48px;border-radius:50%;background:#fee2e2;color:#b91c1c;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
-.uq-page .uq-modal-icon svg{width:22px;height:22px}
-.uq-modal-box h2{margin:0 0 6px;font-size:1.1rem;font-weight:800;color:#0f172a}
-.uq-modal-box p{margin:0;color:#475569;font-size:.9rem}
-.uq-modal-box .uq-modal-error{margin-top:10px;color:#b91c1c}
-.uq-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.uq-modal-box{width:min(420px,100%);background:#fff;border-top:6px solid #e5384f;border-radius:10px;box-shadow:0 20px 50px rgba(15,23,42,.25);padding:22px 20px 20px;text-align:left}
+.uq-modal-main{display:flex;align-items:flex-start;gap:16px}
+.uq-modal-icon{width:52px;height:52px;flex:0 0 52px;border-radius:50%;background:#e5384f;color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.uq-page .uq-modal-icon svg{width:24px;height:24px}
+.uq-modal-copy{min-width:0;flex:1 1 auto;padding-top:2px}
+.uq-modal-box h2{margin:0 0 4px;font-size:1.05rem;font-weight:800;color:#0f172a}
+.uq-modal-box p{margin:0;color:#475569;font-size:.875rem}
+.uq-modal-items{margin:6px 0 0;padding:0;list-style:none;color:#475569;font-size:.85rem;line-height:1.55}
+.uq-modal-items li{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uq-modal-items li::before{content:"- "}
+.uq-modal-box .uq-modal-error{margin-top:12px;color:#b91c1c}
+.uq-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+.uq-modal-actions .uq-btn{border-radius:8px;border-color:#94a3b8;font-weight:600}
+.uq-modal-actions .uq-btn--danger{background:#e5384f;border-color:#e5384f}
+.uq-modal-actions .uq-btn--danger:hover{background:#cc2a40;border-color:#cc2a40}
 .uq-btn{height:42px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#334155;font-weight:700;font-size:.875rem;cursor:pointer}
 .uq-btn:hover{background:#f8fafc}
 .uq-btn--danger{background:#dc2626;border-color:#dc2626;color:#fff}
@@ -1150,8 +1294,12 @@ function webQuoteRequestsCss(): string
   .uq-row-go{grid-area:del;align-self:center}
 }
 @media (max-width:767.98px){
-  .uq-search{width:100%}
-  .uq-new{margin-left:0}
+  .uq-toolbar{display:flex;gap:.5rem;position:relative}
+  .uq-toolbar-search{flex:1 1 auto}
+  .uq-filter-wrap{position:static}
+  .uq-filters{left:0;right:0;width:auto}
+  .uq-new-full{display:none}
+  .uq-new-short{display:inline}
   .uq-bulk{left:12px;right:12px;bottom:12px;transform:none;max-width:none;justify-content:space-between;gap:8px;padding-left:14px}
 }
 html[data-theme="dark"] .uq-page{color:#e2e8f0}
@@ -1164,10 +1312,21 @@ html[data-theme="dark"] .uq-kpi-icon--amber{background:rgba(217,119,6,.2);color:
 html[data-theme="dark"] .uq-kpi-icon--teal{background:rgba(5,150,105,.2);color:#6ee7b7}
 html[data-theme="dark"] .uq-modal-box{background:#1e293b}
 html[data-theme="dark"] .uq-modal-box h2{color:#f1f5f9}
-html[data-theme="dark"] .uq-modal-box p{color:#cbd5e1}
+html[data-theme="dark"] .uq-modal-box p,html[data-theme="dark"] .uq-modal-items{color:#cbd5e1}
+html[data-theme="dark"] .uq-modal-actions .uq-btn:not(.uq-btn--danger){border-color:#475569}
 html[data-theme="dark"] .uq-modal-box .uq-modal-error{color:#fca5a5}
 html[data-theme="dark"] .uq-btn:not(.uq-btn--danger){background:#0f172a;border-color:#334155;color:#e2e8f0}
-html[data-theme="dark"] .uq-list,html[data-theme="dark"] .uq-search,html[data-theme="dark"] .uq-select,html[data-theme="dark"] .uq-empty{background:#1e293b;border-color:#334155}
+html[data-theme="dark"] .uq-list,html[data-theme="dark"] .uq-search,html[data-theme="dark"] .uq-filters,html[data-theme="dark"] .uq-empty{background:#1e293b;border-color:#334155}
+html[data-theme="dark"] .uq-filter-btn{color:#cbd5e1}
+html[data-theme="dark"] .uq-filter-btn:hover,html[data-theme="dark"] .uq-filter-btn.is-active{color:#a5b4fc}
+html[data-theme="dark"] .uq-filters-head{background:#1e293b;border-color:#334155}
+html[data-theme="dark"] .uq-filters-head h2{color:#f1f5f9}
+html[data-theme="dark"] .uq-filters-footer{background:#172033;border-color:#334155}
+html[data-theme="dark"] .uq-filters-close,html[data-theme="dark"] .uq-field select,html[data-theme="dark"] .uq-chip--clear{background:#0f172a;border-color:#334155;color:#e2e8f0}
+html[data-theme="dark"] .uq-preset{background:#0f172a;border-color:#334155;color:#cbd5e1}
+html[data-theme="dark"] .uq-preset:hover,html[data-theme="dark"] .uq-preset.is-active,html[data-theme="dark"] .uq-chip:not(.uq-chip--clear){background:rgba(79,70,229,.2);border-color:#4f46e5;color:#c7d2fe}
+html[data-theme="dark"] .uq-tbtn--ghost{color:#cbd5e1}
+html[data-theme="dark"] .uq-tbtn--ghost:hover{background:#334155}
 html[data-theme="dark"] .uq-list-head{background:#0f172a;color:#94a3b8;border-color:#334155}
 html[data-theme="dark"] .uq-row{border-color:#334155;color:#cbd5e1!important}
 html[data-theme="dark"] .uq-row:hover{background:#243248}
@@ -1175,9 +1334,9 @@ html[data-theme="dark"] .uq-row.is-selected,html[data-theme="dark"] .uq-row.is-s
 html[data-theme="dark"] .uq-bulk{background:#334155;box-shadow:0 16px 40px rgba(0,0,0,.5)}
 html[data-theme="dark"] .uq-row-icon{background:#1e3a8a;color:#bfdbfe}
 html[data-theme="dark"] .uq-row-quote strong,html[data-theme="dark"] .uq-row-name,html[data-theme="dark"] .uq-row-total{color:#f1f5f9!important}
-html[data-theme="dark"] .uq-search input,html[data-theme="dark"] .uq-select select{color:#e2e8f0}
-html[data-theme="dark"] .uq-select select option{background:#1e293b}
-html[data-theme="dark"] .uq-sub,html[data-theme="dark"] .uq-row-date,html[data-theme="dark"] .uq-row-items,html[data-theme="dark"] .uq-row-phone{color:#94a3b8}
+html[data-theme="dark"] .uq-search input{color:#e2e8f0}
+html[data-theme="dark"] .uq-field select option{background:#1e293b}
+html[data-theme="dark"] .uq-row-date,html[data-theme="dark"] .uq-row-items,html[data-theme="dark"] .uq-row-phone{color:#94a3b8}
 </style>
 HTML;
 }

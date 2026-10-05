@@ -40,14 +40,14 @@ class WebsitePageController extends Controller
 
         if ((string) ($_GET['view'] ?? request()->query('view', '')) === 'quotes') {
             $viewData['pageTitle'] = 'Quote requests';
-            $viewData['employeeHeaderTitle'] = 'Quote requests';
+            $viewData['employeeHeaderTitle'] = '';
             $viewData['footerScripts'] = '';
             $viewData['beforeRoot'] = '';
             $quoteLib = rtrim((string) config('erp.app_root'), '\\/') . '/stock/includes/web-services-lib.php';
             if (is_file($quoteLib)) {
                 require_once $quoteLib;
                 if (function_exists('webQuoteRequestsPanel')) {
-                    $viewData['beforeRoot'] = webQuoteRequestsPanel(false);
+                    $viewData['beforeRoot'] = webQuoteRequestsPanel(true);
                 }
             }
         }

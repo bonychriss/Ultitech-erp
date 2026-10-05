@@ -398,15 +398,45 @@ function webQuoteRequestGroups(?PDO $pdo = null): array
     return $list;
 }
 
+/**
+ * @return array{0:string,1:string}
+ */
+function webQuoteStatusInfo(string $status): array
+{
+    $status = strtolower(trim($status));
+    $map = [
+        'new' => ['Open', 'open'],
+        'open' => ['Open', 'open'],
+        'pending' => ['Open', 'open'],
+        'contacted' => ['Contacted', 'contacted'],
+        'quoted' => ['Quoted', 'quoted'],
+        'accepted' => ['Accepted', 'accepted'],
+        'closed' => ['Closed', 'closed'],
+        'rejected' => ['Rejected', 'rejected'],
+    ];
+
+    return $map[$status] ?? [ucfirst($status !== '' ? $status : 'open'), 'closed'];
+}
+
+function webQuoteIcon(string $name): string
+{
+    $paths = [
+        'doc' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>',
+        'list' => '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+        'mail' => '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+        'phone' => '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+        'calendar' => '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+        'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+        'plus' => '<path d="M12 5v14M5 12h14"/>',
+    ];
+
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        . ($paths[$name] ?? '') . '</svg>';
+}
+
 function webQuoteRequestsPanel(bool $withHeading = true): string
 {
-    $order = [];
-    $groups = [];
-    foreach (webQuoteRequestGroups() as $quote) {
-        $key = (string) ($quote['quote_number'] ?? '');
-        $order[] = $key;
-        $groups[$key] = $quote;
-    }
+    $quotes = webQuoteRequestGroups();
 
     $h = static function (string $value): string {
         return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -414,84 +444,215 @@ function webQuoteRequestsPanel(bool $withHeading = true): string
     $money = static function (float $amount): string {
         return 'TZS ' . number_format($amount, 2);
     };
-    $when = static function (string $value) use ($h): string {
-        $ts = strtotime($value);
-        return $ts ? $h(date('d M Y, H:i', $ts)) : $h($value);
-    };
+    $newUrl = function_exists('company_url') ? company_url('sales/quote-create') : '/ultimate/sales/quote-create';
 
-    $html = '<section class="ugt-web-quotes">'
-        . '<div class="ugt-web-quotes-head">' . ($withHeading ? '<h2>Quote requests</h2>' : '')
-        . '<p>Submitted from ultimate.co.tz. A sales person can follow up from the name and phone on each request.</p></div>';
-    if ($order === []) {
-        $html .= '<div class="ugt-web-quotes-empty">No quotation requests yet.</div></section>';
-        return $html . webQuoteRequestsCss();
+    $statuses = [];
+    foreach ($quotes as $quote) {
+        [$label, $key] = webQuoteStatusInfo((string) ($quote['status'] ?? 'new'));
+        $statuses[$key] = $label;
     }
-    foreach ($order as $key) {
-        $quote = $groups[$key];
+
+    $html = '<section class="uq-page">'
+        . '<div class="uq-top">'
+        . '<div class="uq-title">'
+        . ($withHeading ? '<div class="uq-title-row"><span class="uq-title-icon">' . webQuoteIcon('list') . '</span><h1>Quote requests</h1></div>' : '')
+        . '<p class="uq-sub">' . webQuoteIcon('mail') . '<span>Submitted from ultimate.co.tz. A sales person can follow up from the name and phone on each request.</span></p>'
+        . '</div>'
+        . '<div class="uq-tools">'
+        . '<label class="uq-search">' . webQuoteIcon('search') . '<input type="search" id="uq-search" placeholder="Search by quote ID, customer or product..." autocomplete="off"></label>'
+        . '<label class="uq-select">' . webQuoteIcon('calendar') . '<select id="uq-date" aria-label="Date range">'
+        . '<option value="">Date range</option><option value="today">Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="month">This month</option>'
+        . '</select></label>'
+        . '<label class="uq-select uq-select--plain"><select id="uq-status" aria-label="Status"><option value="">Status</option>';
+    foreach ($statuses as $key => $label) {
+        $html .= '<option value="' . $h($key) . '">' . $h($label) . '</option>';
+    }
+    $html .= '</select></label>'
+        . '<a class="uq-new" href="' . $h($newUrl) . '">' . webQuoteIcon('plus') . '<span>New Quote Request</span></a>'
+        . '</div></div>';
+
+    if ($quotes === []) {
+        return $html . '<div class="uq-empty">No quotation requests yet.</div></section>' . webQuoteRequestsCss();
+    }
+
+    foreach ($quotes as $quote) {
+        [$statusLabel, $statusKey] = webQuoteStatusInfo((string) ($quote['status'] ?? 'new'));
+        $ts = strtotime((string) $quote['created_at']) ?: 0;
+        $search = [$quote['quote_number'], $quote['customer_name'], $quote['customer_phone'], $quote['customer_email']];
+        $rows = '';
         $subtotal = 0.0;
-        $lines = '';
+        $n = 0;
         foreach ($quote['items'] as $item) {
+            $n++;
+            $search[] = $item['name'];
             $line = $item['unit_price'] > 0 ? $item['unit_price'] * $item['quantity'] : 0.0;
             $subtotal += $line;
-            $qtyLabel = abs($item['quantity'] - round($item['quantity'])) < 0.001
+            $qty = abs($item['quantity'] - round($item['quantity'])) < 0.001
                 ? (string) (int) round($item['quantity'])
                 : rtrim(rtrim(number_format($item['quantity'], 2, '.', ''), '0'), '.');
             $thumb = $item['image'] !== ''
-                ? '<img src="' . $h($item['image']) . '" alt="">'
-                : '<span class="ugt-web-quote-thumb"></span>';
-            $lines .= '<div class="ugt-web-quote-line">' . $thumb
-                . '<div class="ugt-web-quote-name">' . $h($item['name'] !== '' ? $item['name'] : 'Product') . '</div>'
-                . '<div class="ugt-web-quote-qty">' . $h($qtyLabel) . '×</div>'
-                . '<div class="ugt-web-quote-price">' . ($line > 0 ? $h($money($line)) : '') . '</div>'
-                . '</div>';
+                ? '<img src="' . $h($item['image']) . '" alt="" loading="lazy">'
+                : '<span class="uq-thumb-empty"></span>';
+            $rows .= '<tr>'
+                . '<td class="uq-num">' . $n . '</td>'
+                . '<td><div class="uq-product">' . $thumb . '<span>' . $h($item['name'] !== '' ? $item['name'] : 'Product') . '</span></div></td>'
+                . '<td>' . $h($qty) . ' &times;</td>'
+                . '<td>' . ($item['unit_price'] > 0 ? $h($money($item['unit_price'])) : '&mdash;') . '</td>'
+                . '<td class="uq-right">' . ($line > 0 ? $h($money($line)) : '&mdash;') . '</td>'
+                . '</tr>';
         }
-        $meta = [];
+
+        $contact = '';
         if ($quote['customer_phone'] !== '') {
             $tel = preg_replace('/[^0-9+]/', '', $quote['customer_phone']) ?? '';
-            $meta[] = $tel !== ''
-                ? '<a href="tel:' . $h($tel) . '">' . $h($quote['customer_phone']) . '</a>'
-                : $h($quote['customer_phone']);
+            $contact .= '<a href="tel:' . $h($tel) . '">' . webQuoteIcon('phone') . '<span>' . $h($quote['customer_phone']) . '</span></a>';
         }
-        if ($quote['customer_email'] !== '') {
-            $meta[] = filter_var($quote['customer_email'], FILTER_VALIDATE_EMAIL)
-                ? '<a href="mailto:' . $h($quote['customer_email']) . '">' . $h($quote['customer_email']) . '</a>'
-                : $h($quote['customer_email']);
+        if ($quote['customer_email'] !== '' && filter_var($quote['customer_email'], FILTER_VALIDATE_EMAIL)) {
+            $contact .= '<a href="mailto:' . $h($quote['customer_email']) . '">' . webQuoteIcon('mail') . '<span>' . $h($quote['customer_email']) . '</span></a>';
         }
-        $html .= '<article class="ugt-web-quote">'
-            . '<header><div><strong>' . $h($quote['quote_number']) . '</strong>'
-            . '<span>' . $h($quote['customer_name']) . '</span></div>'
-            . '<time>' . $when($quote['created_at']) . '</time></header>'
-            . ($meta !== [] ? '<p class="ugt-web-quote-meta">' . implode(' · ', $meta) . '</p>' : '')
-            . ($quote['notes'] !== '' ? '<p class="ugt-web-quote-notes">' . $h($quote['notes']) . '</p>' : '')
-            . $lines
-            . ($subtotal > 0 ? '<footer>Subtotal <strong>' . $h($money($subtotal)) . '</strong></footer>' : '')
+
+        $html .= '<article class="uq-card" data-ts="' . $ts . '" data-status="' . $h($statusKey) . '" data-search="' . $h(strtolower(implode(' ', $search))) . '">'
+            . '<header class="uq-card-head">'
+            . '<span class="uq-card-icon">' . webQuoteIcon('doc') . '</span>'
+            . '<div class="uq-card-who"><strong>' . $h($quote['quote_number']) . '</strong>'
+            . '<span class="uq-card-name">' . $h(strtoupper($quote['customer_name'])) . '</span>'
+            . ($contact !== '' ? '<div class="uq-contact">' . $contact . '</div>' : '')
+            . '</div>'
+            . '<div class="uq-card-meta"><span class="uq-date">' . webQuoteIcon('calendar')
+            . '<span>' . ($ts ? $h(date('d M Y, H:i', $ts)) : $h((string) $quote['created_at'])) . '</span></span>'
+            . '<span class="uq-badge uq-badge--' . $h($statusKey) . '">' . $h($statusLabel) . '</span></div>'
+            . '</header>'
+            . ($quote['notes'] !== '' ? '<p class="uq-notes">' . $h($quote['notes']) . '</p>' : '')
+            . '<div class="uq-table-wrap"><table class="uq-table">'
+            . '<thead><tr><th class="uq-num">#</th><th>Product</th><th>Quantity</th><th>Unit Price</th><th class="uq-right">Total</th></tr></thead>'
+            . '<tbody>' . $rows . '</tbody>'
+            . '<tfoot><tr><td colspan="3"></td><td class="uq-sub-label">Subtotal</td><td class="uq-right uq-sub-total">'
+            . ($subtotal > 0 ? $h($money($subtotal)) : '&mdash;') . '</td></tr></tfoot>'
+            . '</table></div>'
             . '</article>';
     }
-    $html .= '</section>' . webQuoteRequestsCss();
+
+    $html .= '<div class="uq-empty" id="uq-no-match" hidden>No requests match these filters.</div>'
+        . '</section>' . webQuoteRequestsCss() . webQuoteRequestsScript();
 
     return $html;
 }
 
+function webQuoteRequestsScript(): string
+{
+    return <<<'HTML'
+<script>
+(function () {
+    var search = document.getElementById("uq-search");
+    var date = document.getElementById("uq-date");
+    var status = document.getElementById("uq-status");
+    var none = document.getElementById("uq-no-match");
+    var cards = Array.prototype.slice.call(document.querySelectorAll(".uq-card"));
+    if (!cards.length) return;
+    function since(value) {
+        var now = new Date();
+        if (value === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+        if (value === "month") return new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
+        if (value === "7" || value === "30") return now.getTime() / 1000 - parseInt(value, 10) * 86400;
+        return 0;
+    }
+    function apply() {
+        var q = (search.value || "").trim().toLowerCase();
+        var from = since(date.value);
+        var st = status.value;
+        var shown = 0;
+        cards.forEach(function (card) {
+            var ok = (!q || card.getAttribute("data-search").indexOf(q) !== -1)
+                && (!from || parseInt(card.getAttribute("data-ts"), 10) >= from)
+                && (!st || card.getAttribute("data-status") === st);
+            card.hidden = !ok;
+            if (ok) shown++;
+        });
+        none.hidden = shown > 0;
+    }
+    search.addEventListener("input", apply);
+    date.addEventListener("change", apply);
+    status.addEventListener("change", apply);
+})();
+</script>
+HTML;
+}
+
 function webQuoteRequestsCss(): string
 {
-    return '<style>
-.ugt-web-quotes{margin:0 0 1.25rem;font-family:DM Sans,system-ui,sans-serif;color:#0f172a}
-.ugt-web-quotes-head h2{margin:0 0 .25rem;font-size:1.15rem}
-.ugt-web-quotes-head p,.ugt-web-quotes-empty{margin:0 0 .75rem;color:#64748b;font-size:.925rem}
-.ugt-web-quote{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin:0 0 12px}
-.ugt-web-quote header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-.ugt-web-quote header strong{display:block;font-size:.95rem}
-.ugt-web-quote header span{color:#334155}
-.ugt-web-quote time{color:#64748b;font-size:.8rem;white-space:nowrap}
-.ugt-web-quote-meta,.ugt-web-quote-notes{margin:.35rem 0 0;color:#475569;font-size:.875rem}
-.ugt-web-quote-line{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #f1f5f9}
-.ugt-web-quote-line img,.ugt-web-quote-thumb{width:42px;height:42px;object-fit:cover;border-radius:6px;background:#f1f5f9;flex:0 0 42px}
-.ugt-web-quote-name{flex:1;font-weight:600;font-size:.9rem}
-.ugt-web-quote-qty,.ugt-web-quote-price{color:#475569;font-size:.875rem;white-space:nowrap}
-.ugt-web-quote footer{display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px}
-html[data-theme="dark"] .ugt-web-quotes{color:#e2e8f0}
-html[data-theme="dark"] .ugt-web-quote{background:#1e293b;border-color:#334155}
-html[data-theme="dark"] .ugt-web-quotes-head p,html[data-theme="dark"] .ugt-web-quote time,html[data-theme="dark"] .ugt-web-quote-meta,html[data-theme="dark"] .ugt-web-quote-notes,html[data-theme="dark"] .ugt-web-quote-qty,html[data-theme="dark"] .ugt-web-quote-price{color:#94a3b8}
-html[data-theme="dark"] .ugt-web-quote header span{color:#e2e8f0}
-</style>';
+    return <<<'HTML'
+<style>
+.uq-page{font-family:"DM Sans",system-ui,sans-serif;color:#0f172a;padding:8px 0 24px}
+.uq-page svg{width:16px;height:16px;flex:0 0 auto}
+.uq-top{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:flex-start;justify-content:space-between;margin:0 0 18px}
+.uq-title-row{display:flex;align-items:center;gap:12px}
+.uq-title-icon{width:40px;height:40px;border-radius:10px;background:#1e3a8a;color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.uq-title-icon svg{width:22px;height:22px}
+.uq-title h1{margin:0;font-size:1.75rem;font-weight:800;letter-spacing:-.01em}
+.uq-sub{display:flex;align-items:center;gap:8px;margin:8px 0 0;color:#475569;font-size:.9rem}
+.uq-sub svg{color:#64748b}
+.uq-title{flex:1 1 100%}
+.uq-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%}
+.uq-search,.uq-select{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;color:#64748b;margin:0}
+.uq-search{width:min(380px,100%)}
+.uq-search input{border:0;outline:0;background:transparent;width:100%;font-size:.85rem;color:#0f172a}
+.uq-select select{border:0;outline:0;background:transparent;font-size:.85rem;color:#334155;min-width:110px;cursor:pointer}
+.uq-new{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:8px;background:#2563eb;color:#fff!important;font-weight:700;font-size:.85rem;text-decoration:none;box-shadow:0 6px 16px rgba(37,99,235,.25);margin-left:auto}
+.uq-new:hover{background:#1d4ed8}
+.uq-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 16px 14px;margin:0 0 16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.uq-card[hidden]{display:none}
+.uq-card-head{display:flex;gap:14px;align-items:flex-start}
+.uq-card-icon{width:34px;height:34px;border-radius:8px;background:#2563eb;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;margin-top:2px}
+.uq-card-icon svg{width:18px;height:18px}
+.uq-card-who{flex:1;min-width:0}
+.uq-card-who strong{display:block;font-size:1.05rem;font-weight:800;letter-spacing:.01em}
+.uq-card-name{display:block;color:#334155;font-size:.9rem;margin-top:2px}
+.uq-contact{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:6px}
+.uq-contact a{display:inline-flex;align-items:center;gap:6px;color:#2563eb;font-size:.85rem;text-decoration:underline}
+.uq-contact svg{width:14px;height:14px}
+.uq-card-meta{display:flex;align-items:center;gap:18px;white-space:nowrap}
+.uq-date{display:inline-flex;align-items:center;gap:6px;color:#475569;font-size:.85rem}
+.uq-badge{display:inline-block;padding:4px 12px;border-radius:999px;font-size:.78rem;font-weight:600}
+.uq-badge--open{background:#dcfce7;color:#15803d}
+.uq-badge--contacted{background:#dbeafe;color:#1d4ed8}
+.uq-badge--quoted{background:#ede9fe;color:#6d28d9}
+.uq-badge--accepted{background:#ccfbf1;color:#0f766e}
+.uq-badge--rejected{background:#fee2e2;color:#b91c1c}
+.uq-badge--closed{background:#f1f5f9;color:#475569}
+.uq-notes{margin:10px 0 0 48px;color:#475569;font-size:.85rem}
+.uq-table-wrap{margin-top:14px;border:1px solid #e2e8f0;border-radius:10px;overflow-x:auto}
+.uq-table{width:100%;min-width:640px;border-collapse:collapse;font-size:.85rem;table-layout:fixed}
+.uq-table th:nth-child(3){width:14%}
+.uq-table th:nth-child(4),.uq-table th:nth-child(5){width:18%}
+.uq-table th{background:#f8fafc;color:#475569;font-weight:600;text-align:left;padding:10px 14px;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+.uq-table td{padding:10px 14px;border-bottom:1px solid #eef2f7;vertical-align:middle;color:#334155}
+.uq-table tbody tr:last-child td{border-bottom:0}
+.uq-num{width:44px;color:#64748b}
+.uq-right{text-align:right!important;white-space:nowrap}
+.uq-product{display:flex;align-items:center;gap:14px}
+.uq-product img,.uq-thumb-empty{width:40px;height:40px;object-fit:contain;border-radius:6px;background:#fff;flex:0 0 40px}
+.uq-thumb-empty{background:#f1f5f9}
+.uq-product span{font-weight:600;color:#0f172a}
+.uq-table tfoot td{background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:0;padding:14px}
+.uq-sub-label{font-weight:600;color:#334155}
+.uq-sub-total{font-size:1rem;font-weight:800;color:#0f172a}
+.uq-empty{background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;color:#64748b}
+@media (max-width:767.98px){
+  .uq-tools{width:100%}
+  .uq-search{width:100%}
+  .uq-card-head{flex-wrap:wrap}
+  .uq-card-meta{width:100%;justify-content:space-between;padding-left:48px}
+}
+html[data-theme="dark"] .uq-page{color:#e2e8f0}
+html[data-theme="dark"] .uq-card,html[data-theme="dark"] .uq-search,html[data-theme="dark"] .uq-select,html[data-theme="dark"] .uq-empty{background:#1e293b;border-color:#334155}
+html[data-theme="dark"] .uq-search input,html[data-theme="dark"] .uq-select select{color:#e2e8f0}
+html[data-theme="dark"] .uq-select select option{background:#1e293b}
+html[data-theme="dark"] .uq-table-wrap{border-color:#334155}
+html[data-theme="dark"] .uq-table th,html[data-theme="dark"] .uq-table tfoot td{background:#0f172a;color:#94a3b8;border-color:#334155}
+html[data-theme="dark"] .uq-table td{color:#cbd5e1;border-color:#334155}
+html[data-theme="dark"] .uq-product span,html[data-theme="dark"] .uq-sub-total,html[data-theme="dark"] .uq-sub-label{color:#f1f5f9}
+html[data-theme="dark"] .uq-card-name,html[data-theme="dark"] .uq-sub,html[data-theme="dark"] .uq-date,html[data-theme="dark"] .uq-notes{color:#94a3b8}
+html[data-theme="dark"] .uq-contact a{color:#60a5fa}
+</style>
+HTML;
 }

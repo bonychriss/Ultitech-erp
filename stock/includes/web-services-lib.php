@@ -515,14 +515,19 @@ function webQuoteDeleteDialog(): string
 {
     return '<div class="uq-modal" id="uq-delete-modal" data-api="' . webQuoteH(webQuoteApiUrl()) . '" data-csrf="' . webQuoteH(webQuoteCsrf()) . '" hidden>'
         . '<div class="uq-modal-box" role="dialog" aria-modal="true" aria-labelledby="uq-delete-title">'
+        . '<div class="uq-modal-body">'
         . '<div class="uq-modal-main">'
-        . '<span class="uq-modal-icon">' . webQuoteIcon('trash') . '</span>'
+        . '<span class="uq-modal-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+        . '<path fill-rule="evenodd" d="M9 2h6a1.5 1.5 0 0 1 1.5 1.5V5H20a1 1 0 1 1 0 2H4a1 1 0 0 1 0-2h3.5V3.5A1.5 1.5 0 0 1 9 2zm.5 2v1h5V4z"/>'
+        . '<path fill-rule="evenodd" d="M5.2 8.5h13.6l-.95 11.66A2 2 0 0 1 15.86 22H8.14a2 2 0 0 1-1.99-1.84zM10 11a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1zm4 0a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1z"/>'
+        . '</svg></span>'
         . '<div class="uq-modal-copy">'
         . '<h2 id="uq-delete-title">Delete quote request?</h2>'
         . '<p id="uq-delete-text"></p>'
         . '<ul class="uq-modal-items" id="uq-delete-items"></ul>'
         . '</div></div>'
         . '<p class="uq-modal-error" id="uq-delete-error" hidden></p>'
+        . '</div>'
         . '<div class="uq-modal-actions">'
         . '<button type="button" class="uq-btn" data-close>Cancel</button>'
         . '<button type="button" class="uq-btn uq-btn--danger" id="uq-delete-confirm">Delete</button>'
@@ -627,7 +632,7 @@ function webQuoteRequestsPanel(bool $withHeading = true): string
         . webQuoteKpiCards($quotes);
 
     if ($quotes === []) {
-        return $html . '<div class="uq-empty">No quotation requests yet.</div></section>' . webQuoteRequestsCss();
+        return $html . '<div class="uq-empty">No quotation requests yet.</div></section>' . webQuoteRequestsCss() . webQuoteRequestsScript();
     }
 
     $html .= '<div class="uq-list" role="list">'
@@ -893,9 +898,38 @@ function webQuoteRequestsScript(): string
     var status = document.getElementById("uq-status");
     var filters = { date: "", status: "" };
     var none = document.getElementById("uq-no-match");
+    var page = document.querySelector(".uq-page");
+    var toastTimer = null;
+    function toast(text) {
+        var el = document.getElementById("uq-toast");
+        if (!el) {
+            el = document.createElement("div");
+            el.id = "uq-toast";
+            el.className = "uq-toast";
+            el.setAttribute("role", "status");
+            el.setAttribute("aria-live", "polite");
+            el.innerHTML = '<span class="uq-toast-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="uq-toast-text"></span>';
+            (page || document.body).appendChild(el);
+        }
+        el.querySelector(".uq-toast-text").textContent = text;
+        el.classList.remove("is-open");
+        void el.offsetWidth;
+        el.classList.add("is-open");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { el.classList.remove("is-open"); }, 3500);
+    }
+    function deletedText(count) {
+        return count === 1 ? "Quote request deleted successfully" : count + " quote requests deleted successfully";
+    }
+    if (/[?&]deleted=1(&|$)/.test(window.location.search)) {
+        toast(deletedText(1));
+        if (window.history && window.history.replaceState) {
+            var cleanSearch = window.location.search.replace(/([?&])deleted=1(&|$)/, function (m, lead, tail) { return tail ? lead : ""; });
+            window.history.replaceState(null, "", window.location.pathname + cleanSearch + window.location.hash);
+        }
+    }
     var rows = Array.prototype.slice.call(document.querySelectorAll(".uq-row"));
     if (!rows.length) return;
-    var page = document.querySelector(".uq-page");
     var list = document.querySelector(".uq-list");
     var modal = document.getElementById("uq-delete-modal");
     var confirmBtn = document.getElementById("uq-delete-confirm");
@@ -1011,6 +1045,7 @@ function webQuoteRequestsScript(): string
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 if (!data || !data.success) throw new Error((data && data.message) || "The request could not be deleted.");
+                toast(deletedText(pending.length));
                 pending.forEach(function (row) {
                     rows.splice(rows.indexOf(row), 1);
                     row.parentNode.removeChild(row);
@@ -1216,28 +1251,36 @@ function webQuoteRequestsCss(): string
 .uq-pick input,.uq-bulk-all input{width:16px;height:16px;margin:0;accent-color:#2563eb;cursor:pointer}
 .uq-row.is-selected,.uq-row.is-selected:hover{background:#eff6ff}
 .uq-page.has-selection{padding-bottom:96px}
-.uq-bulk{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1070;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 32px);padding:8px 8px 8px 18px;background:#0f172a;color:#fff;border-radius:12px;box-shadow:0 16px 40px rgba(15,23,42,.35);font-size:.875rem}
+.uq-bulk{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1070;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);padding:8px 8px 8px 16px;background:#fff;color:#1f2937;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.14),0 2px 6px rgba(15,23,42,.06);font-size:.875rem}
 .uq-bulk[hidden]{display:none}
+.uq-toast{position:fixed;left:50%;bottom:24px;z-index:1090;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);padding:10px 18px 10px 10px;background:#fff;color:#1f2937;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.14),0 2px 6px rgba(15,23,42,.06);font-size:.875rem;font-weight:600;opacity:0;visibility:hidden;transform:translate(-50%,12px);transition:opacity .2s ease,transform .2s ease,visibility 0s linear .2s;pointer-events:none}
+.uq-toast.is-open{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .2s ease,transform .2s ease}
+.uq-toast-icon{width:26px;height:26px;flex:0 0 26px;border-radius:50%;background:#16a34a;color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.uq-page .uq-toast-icon svg{width:14px;height:14px}
 .uq-bulk-all{display:inline-flex;align-items:center;gap:10px;margin:0;font-weight:600;white-space:nowrap;cursor:pointer}
-.uq-bulk-clear{border:0;border-radius:6px;background:transparent;color:#cbd5e1;font-weight:600;padding:8px 10px;cursor:pointer}
-.uq-bulk-clear:hover{background:rgba(255,255,255,.1);color:#fff}
-.uq-bulk-delete{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;white-space:nowrap}
+.uq-bulk button{font-family:inherit}
+.uq-bulk-clear{border:0;border-radius:6px;background:transparent;color:#6b7280;font-weight:500;padding:8px 10px;cursor:pointer}
+.uq-bulk-clear:hover{background:#f3f4f6;color:#1f2937}
+.uq-bulk .uq-bulk-delete{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border:1px solid #f5a3ae;border-radius:8px;background:#fff;color:#e5384f;font-weight:600;white-space:nowrap}
+.uq-bulk .uq-bulk-delete:hover{background:#fef2f3;border-color:#e5384f}
+.uq-page .uq-bulk-delete svg{width:16px;height:16px}
 .uq-modal{position:fixed;inset:0;z-index:1080;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px}
 .uq-modal[hidden]{display:none}
-.uq-modal-box{width:min(420px,100%);background:#fff;border-top:6px solid #e5384f;border-radius:10px;box-shadow:0 20px 50px rgba(15,23,42,.25);padding:22px 20px 20px;text-align:left}
+.uq-modal-box{width:min(400px,100%);background:#fff;border-top:4px solid #e5384f;border-radius:8px;box-shadow:0 20px 50px rgba(15,23,42,.25);overflow:hidden;text-align:left}
+.uq-modal-body{padding:20px 20px 22px}
 .uq-modal-main{display:flex;align-items:flex-start;gap:16px}
-.uq-modal-icon{width:52px;height:52px;flex:0 0 52px;border-radius:50%;background:#e5384f;color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.uq-modal-icon{width:48px;height:48px;flex:0 0 48px;border-radius:50%;background:#e5384f;color:#fff;display:inline-flex;align-items:center;justify-content:center}
 .uq-page .uq-modal-icon svg{width:24px;height:24px}
 .uq-modal-copy{min-width:0;flex:1 1 auto;padding-top:2px}
-.uq-modal-box h2{margin:0 0 4px;font-size:1.05rem;font-weight:800;color:#0f172a}
-.uq-modal-box p{margin:0;color:#475569;font-size:.875rem}
-.uq-modal-items{margin:6px 0 0;padding:0;list-style:none;color:#475569;font-size:.85rem;line-height:1.55}
+.uq-modal-box h2{margin:0 0 6px;font-size:1rem;font-weight:700;color:#1f2937}
+.uq-modal-box p{margin:0;color:#4b5563;font-size:.8125rem}
+.uq-modal-items{margin:8px 0 0;padding:0;list-style:none;color:#4b5563;font-size:.8125rem;line-height:1.6}
 .uq-modal-items li{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .uq-modal-items li::before{content:"- "}
 .uq-modal-box .uq-modal-error{margin-top:12px;color:#b91c1c}
-.uq-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
-.uq-modal-actions .uq-btn{border-radius:8px;border-color:#94a3b8;font-weight:600}
-.uq-modal-actions .uq-btn--danger{background:#e5384f;border-color:#e5384f}
+.uq-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 20px;background:#f3f4f6;border-top:1px solid #e5e7eb}
+.uq-modal-actions .uq-btn{height:40px;border-radius:6px;border-color:#9ca3af;color:#374151;font-weight:500}
+.uq-modal-actions .uq-btn--danger{background:#e5384f;border-color:#e5384f;color:#fff}
 .uq-modal-actions .uq-btn--danger:hover{background:#cc2a40;border-color:#cc2a40}
 .uq-btn{height:42px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#334155;font-weight:700;font-size:.875rem;cursor:pointer}
 .uq-btn:hover{background:#f8fafc}
@@ -1313,7 +1356,8 @@ html[data-theme="dark"] .uq-kpi-icon--teal{background:rgba(5,150,105,.2);color:#
 html[data-theme="dark"] .uq-modal-box{background:#1e293b}
 html[data-theme="dark"] .uq-modal-box h2{color:#f1f5f9}
 html[data-theme="dark"] .uq-modal-box p,html[data-theme="dark"] .uq-modal-items{color:#cbd5e1}
-html[data-theme="dark"] .uq-modal-actions .uq-btn:not(.uq-btn--danger){border-color:#475569}
+html[data-theme="dark"] .uq-modal-actions{background:#172033;border-top-color:#334155}
+html[data-theme="dark"] .uq-modal-actions .uq-btn:not(.uq-btn--danger){border-color:#475569;color:#e2e8f0}
 html[data-theme="dark"] .uq-modal-box .uq-modal-error{color:#fca5a5}
 html[data-theme="dark"] .uq-btn:not(.uq-btn--danger){background:#0f172a;border-color:#334155;color:#e2e8f0}
 html[data-theme="dark"] .uq-list,html[data-theme="dark"] .uq-search,html[data-theme="dark"] .uq-filters,html[data-theme="dark"] .uq-empty{background:#1e293b;border-color:#334155}
@@ -1331,7 +1375,12 @@ html[data-theme="dark"] .uq-list-head{background:#0f172a;color:#94a3b8;border-co
 html[data-theme="dark"] .uq-row{border-color:#334155;color:#cbd5e1!important}
 html[data-theme="dark"] .uq-row:hover{background:#243248}
 html[data-theme="dark"] .uq-row.is-selected,html[data-theme="dark"] .uq-row.is-selected:hover{background:#1e3a5f}
-html[data-theme="dark"] .uq-bulk{background:#334155;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+html[data-theme="dark"] .uq-bulk{background:#1e293b;border-color:#334155;color:#e2e8f0;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+html[data-theme="dark"] .uq-toast{background:#1e293b;border-color:#334155;color:#e2e8f0;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+html[data-theme="dark"] .uq-bulk-clear{color:#94a3b8}
+html[data-theme="dark"] .uq-bulk-clear:hover{background:#334155;color:#f1f5f9}
+html[data-theme="dark"] .uq-bulk .uq-bulk-delete{background:transparent;border-color:rgba(248,113,113,.5);color:#fca5a5}
+html[data-theme="dark"] .uq-bulk .uq-bulk-delete:hover{background:rgba(229,56,79,.15);border-color:#f87171}
 html[data-theme="dark"] .uq-row-icon{background:#1e3a8a;color:#bfdbfe}
 html[data-theme="dark"] .uq-row-quote strong,html[data-theme="dark"] .uq-row-name,html[data-theme="dark"] .uq-row-total{color:#f1f5f9!important}
 html[data-theme="dark"] .uq-search input{color:#e2e8f0}

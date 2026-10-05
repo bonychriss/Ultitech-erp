@@ -6,6 +6,7 @@ import {
   HiOutlinePhone,
   HiOutlinePlus,
   HiOutlineTrash,
+  HiTrash,
 } from 'react-icons/hi2';
 import './quote-request-detail.css';
 
@@ -56,7 +57,7 @@ function DeleteDialog({ quote, customerName, api, csrf, backUrl, onClose }) {
       if (!json || !json.success) {
         throw new Error((json && json.message) || 'The request could not be deleted.');
       }
-      window.location.href = backUrl;
+      window.location.href = `${backUrl}${backUrl.includes('?') ? '&' : '?'}deleted=1`;
     } catch (err) {
       setError(err.message || 'The request could not be deleted.');
       setBusy(false);
@@ -71,20 +72,29 @@ function DeleteDialog({ quote, customerName, api, csrf, backUrl, onClose }) {
       }}
     >
       <div className="qrd-modal-box" role="dialog" aria-modal="true" aria-labelledby="qrd-delete-title">
-        <span className="qrd-modal-icon">
-          <HiOutlineTrash aria-hidden="true" />
-        </span>
-        <h2 id="qrd-delete-title">Delete quote request?</h2>
-        <p>
-          {quote} from {customerName} will be removed from the quote requests list.
-        </p>
-        {error && <p className="qrd-modal-error">{error}</p>}
+        <div className="qrd-modal-body">
+          <div className="qrd-modal-main">
+            <span className="qrd-modal-icon">
+              <HiTrash aria-hidden="true" />
+            </span>
+            <div className="qrd-modal-copy">
+              <h2 id="qrd-delete-title">Delete quote request?</h2>
+              <p>This request will be removed from the list:</p>
+              <ul className="qrd-modal-items">
+                <li>
+                  {quote} {'\u00b7'} {customerName}
+                </li>
+              </ul>
+            </div>
+          </div>
+          {error && <p className="qrd-modal-error">{error}</p>}
+        </div>
         <div className="qrd-modal-actions">
           <button type="button" className="qrd-btn" onClick={onClose} disabled={busy}>
             Cancel
           </button>
           <button type="button" className="qrd-btn qrd-btn--danger" onClick={remove} disabled={busy} autoFocus>
-            {busy ? 'Deleting...' : 'Delete'}
+            {busy ? 'Deleting...' : 'Delete request'}
           </button>
         </div>
       </div>

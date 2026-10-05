@@ -26,7 +26,8 @@ $quotePage = function_exists('company_url') ? company_url('website/quotes') : '/
 .ugt-quote-panel h2{margin:0;font-size:1rem}
 .ugt-quote-top{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
 .ugt-quote-top a{font-size:.85rem;font-weight:600;color:#0f766e;text-decoration:none}
-.ugt-quote-card{border-top:1px solid #e2e8f0;padding:10px 2px}
+.ugt-quote-card{display:block;border-top:1px solid #e2e8f0;padding:10px 6px;margin:0 -4px;border-radius:8px;color:inherit!important;text-decoration:none!important}
+.ugt-quote-card:hover{background:#f5f8ff}
 .ugt-quote-card header{display:flex;justify-content:space-between;gap:8px}
 .ugt-quote-card strong{display:block;font-size:.9rem}
 .ugt-quote-card time,.ugt-quote-card p{color:#64748b;font-size:.78rem;margin:2px 0 0}
@@ -118,7 +119,8 @@ html[data-theme="dark"] .ugt-quote-card time,html[data-theme="dark"] .ugt-quote-
             return;
         }
         quotes.forEach(function (quote) {
-            var card = document.createElement("article");
+            var card = document.createElement("a");
+            card.href = PAGE + (PAGE.indexOf("?") === -1 ? "?" : "&") + "quote=" + encodeURIComponent(quote.quote_number || "");
             card.className = "ugt-quote-card";
             var head = document.createElement("header");
             var who = document.createElement("div");
@@ -133,7 +135,7 @@ html[data-theme="dark"] .ugt-quote-card time,html[data-theme="dark"] .ugt-quote-
             head.appendChild(who);
             head.appendChild(time);
             card.appendChild(head);
-            var meta = [quote.customer_phone, quote.customer_email].filter(Boolean).join(" ù ");
+            var meta = [quote.customer_phone, quote.customer_email].filter(Boolean).join(" \u00b7 ");
             if (meta) {
                 var p = document.createElement("p");
                 text(p, meta);
@@ -162,7 +164,7 @@ html[data-theme="dark"] .ugt-quote-card time,html[data-theme="dark"] .ugt-quote-
                 text(label, item.name || "Product");
                 var qty = document.createElement("b");
                 var q = Number(item.quantity) || 0;
-                text(qty, (q % 1 === 0 ? String(q) : String(q)) + "ù");
+                text(qty, (q % 1 === 0 ? String(q) : String(q)) + " \u00d7");
                 line.appendChild(label);
                 line.appendChild(qty);
                 card.appendChild(line);

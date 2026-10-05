@@ -46,7 +46,18 @@ class WebsitePageController extends Controller
             $quoteLib = rtrim((string) config('erp.app_root'), '\\/') . '/stock/includes/web-services-lib.php';
             if (is_file($quoteLib)) {
                 require_once $quoteLib;
-                if (function_exists('webQuoteRequestsPanel')) {
+                $quoteNumber = trim((string) ($_GET['quote'] ?? request()->query('quote', '')));
+                if ($quoteNumber !== '' && function_exists('webQuoteRequestDetailData')) {
+                    $detailView = (new DeskShell())->reactPage(
+                        $quoteNumber,
+                        'quote-request-detail',
+                        webQuoteRequestDetailData(substr($quoteNumber, 0, 64)),
+                        ['employeeHeaderTitle' => '']
+                    );
+                    if ($detailView !== null) {
+                        $viewData = $detailView;
+                    }
+                } elseif (function_exists('webQuoteRequestsPanel')) {
                     $viewData['beforeRoot'] = webQuoteRequestsPanel(true);
                 }
             }

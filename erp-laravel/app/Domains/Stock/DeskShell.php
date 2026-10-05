@@ -201,6 +201,23 @@ final class DeskShell
         };
     }
 
+    /**
+     * Render a stock-ui React page with data prepared by the caller.
+     *
+     * @param array<string,mixed> $pageData
+     * @param array{employeeHeaderTitle?:string|null,mainRootClass?:string,extraHead?:string} $opts
+     * @return array<string,mixed>|null
+     */
+    public function reactPage(string $title, string $reactPage, array $pageData, array $opts = []): ?array
+    {
+        $assets = (new StockShell())->loadAssets();
+        if ($assets === null) {
+            return null;
+        }
+
+        return $this->pack($title, 'page-products-desk', $reactPage, $pageData, $assets, $opts);
+    }
+
     private function requireDataLib(): void
     {
         $lib = rtrim((string) config('erp.app_root'), '\\/') . '/stock/includes/blade-desk-data.php';

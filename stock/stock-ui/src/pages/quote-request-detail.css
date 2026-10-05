@@ -72,6 +72,7 @@
 .qrd-status--quoted { background: #ede9fe; color: #6d28d9; }
 .qrd-status--accepted { background: #ccfbf1; color: #0f766e; }
 .qrd-status--rejected { background: #fee2e2; color: #b91c1c; }
+.qrd-status--closed { background: #f1f5f9; color: #475569; }
 
 .qrd-actions {
   display: flex;
@@ -467,6 +468,13 @@ html[data-theme='dark'] .qrd-action:hover { color: #60a5fa; }
 html[data-theme='dark'] .qrd-action--primary { border-color: #2563eb; background: #2563eb; color: #fff; }
 html[data-theme='dark'] .qrd-action--danger:hover { color: #fca5a5; }
 html[data-theme='dark'] .qrd-modal-box { background: #1e293b; }
+html[data-theme='dark'] .qrd-status { color: #fff; }
+html[data-theme='dark'] .qrd-status--open { background: #16a34a; }
+html[data-theme='dark'] .qrd-status--contacted { background: #2563eb; }
+html[data-theme='dark'] .qrd-status--quoted { background: #7c3aed; }
+html[data-theme='dark'] .qrd-status--accepted { background: #059669; }
+html[data-theme='dark'] .qrd-status--rejected { background: #e5384f; }
+html[data-theme='dark'] .qrd-status--closed { background: #475569; color: #e2e8f0; }
 html[data-theme='dark'] .qrd-modal-box h2 { color: #f1f5f9; }
 html[data-theme='dark'] .qrd-modal-box p,
 html[data-theme='dark'] .qrd-modal-items { color: #cbd5e1; }

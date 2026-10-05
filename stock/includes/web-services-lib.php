@@ -566,7 +566,7 @@ function webQuoteKpiCards(array $quotes): string
     }
 
     $card = static function (string $tone, string $label, string $icon, string $value, string $foot, bool $money = false): string {
-        return '<article class="uq-kpi">'
+        return '<article class="uq-kpi uq-kpi--' . $tone . '">'
             . '<span class="uq-kpi-icon uq-kpi-icon--' . $tone . '">' . webQuoteIcon($icon) . '</span>'
             . '<div class="uq-kpi-body">'
             . '<div class="uq-kpi-label">' . $label . '</div>'
@@ -1349,10 +1349,19 @@ html[data-theme="dark"] .uq-page{color:#e2e8f0}
 html[data-theme="dark"] .uq-kpi{background:#1e293b;border-color:#334155;box-shadow:0 1px 2px rgba(0,0,0,.2)}
 html[data-theme="dark"] .uq-kpi-value{color:#f8fafc}
 html[data-theme="dark"] .uq-kpi-label,html[data-theme="dark"] .uq-kpi-helper{color:#94a3b8}
-html[data-theme="dark"] .uq-kpi-icon--violet{background:rgba(124,58,237,.2);color:#c4b5fd}
-html[data-theme="dark"] .uq-kpi-icon--indigo{background:rgba(79,70,229,.2);color:#a5b4fc}
-html[data-theme="dark"] .uq-kpi-icon--amber{background:rgba(217,119,6,.2);color:#fbbf24}
-html[data-theme="dark"] .uq-kpi-icon--teal{background:rgba(5,150,105,.2);color:#6ee7b7}
+html[data-theme="dark"] .uq-kpi-icon{color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+html[data-theme="dark"] .uq-kpi--indigo{background:linear-gradient(135deg,rgba(37,99,235,.24),rgba(37,99,235,.08));border-color:rgba(59,130,246,.35)}
+html[data-theme="dark"] .uq-kpi-icon--indigo{background:#2563eb}
+html[data-theme="dark"] .uq-kpi--indigo .uq-kpi-label{color:#93c5fd}
+html[data-theme="dark"] .uq-kpi--amber{background:linear-gradient(135deg,rgba(22,163,74,.24),rgba(22,163,74,.08));border-color:rgba(34,197,94,.32)}
+html[data-theme="dark"] .uq-kpi-icon--amber{background:#16a34a}
+html[data-theme="dark"] .uq-kpi--amber .uq-kpi-label{color:#86efac}
+html[data-theme="dark"] .uq-kpi--violet{background:linear-gradient(135deg,rgba(124,58,237,.26),rgba(124,58,237,.08));border-color:rgba(139,92,246,.35)}
+html[data-theme="dark"] .uq-kpi-icon--violet{background:#7c3aed}
+html[data-theme="dark"] .uq-kpi--violet .uq-kpi-label{color:#c4b5fd}
+html[data-theme="dark"] .uq-kpi--teal{background:linear-gradient(135deg,rgba(13,148,136,.26),rgba(13,148,136,.08));border-color:rgba(20,184,166,.35)}
+html[data-theme="dark"] .uq-kpi-icon--teal{background:#0d9488}
+html[data-theme="dark"] .uq-kpi--teal .uq-kpi-label{color:#5eead4}
 html[data-theme="dark"] .uq-modal-box{background:#1e293b}
 html[data-theme="dark"] .uq-modal-box h2{color:#f1f5f9}
 html[data-theme="dark"] .uq-modal-box p,html[data-theme="dark"] .uq-modal-items{color:#cbd5e1}
@@ -1381,7 +1390,14 @@ html[data-theme="dark"] .uq-bulk-clear{color:#94a3b8}
 html[data-theme="dark"] .uq-bulk-clear:hover{background:#334155;color:#f1f5f9}
 html[data-theme="dark"] .uq-bulk .uq-bulk-delete{background:transparent;border-color:rgba(248,113,113,.5);color:#fca5a5}
 html[data-theme="dark"] .uq-bulk .uq-bulk-delete:hover{background:rgba(229,56,79,.15);border-color:#f87171}
-html[data-theme="dark"] .uq-row-icon{background:#1e3a8a;color:#bfdbfe}
+html[data-theme="dark"] .uq-badge{color:#fff}
+html[data-theme="dark"] .uq-badge--open{background:#16a34a}
+html[data-theme="dark"] .uq-badge--contacted{background:#2563eb}
+html[data-theme="dark"] .uq-badge--quoted{background:#7c3aed}
+html[data-theme="dark"] .uq-badge--accepted{background:#059669}
+html[data-theme="dark"] .uq-badge--rejected{background:#e5384f}
+html[data-theme="dark"] .uq-badge--closed{background:#475569;color:#e2e8f0}
+html[data-theme="dark"] .uq-row-icon{background:#2563eb;color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.35)}
 html[data-theme="dark"] .uq-row-quote strong,html[data-theme="dark"] .uq-row-name,html[data-theme="dark"] .uq-row-total{color:#f1f5f9!important}
 html[data-theme="dark"] .uq-search input{color:#e2e8f0}
 html[data-theme="dark"] .uq-field select option{background:#1e293b}

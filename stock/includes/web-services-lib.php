@@ -502,7 +502,7 @@ function webQuoteRequestsPanel(bool $withHeading = true): string
     $html = '<section class="uq-page">'
         . '<div class="uq-top">'
         . '<div class="uq-title">'
-        . ($withHeading ? '<div class="uq-title-row"><span class="uq-title-icon">' . webQuoteIcon('list') . '</span><h1>Quote requests</h1></div>' : '')
+        . ($withHeading ? '<div class="uq-title-row"><h1>Quote requests</h1></div>' : '')
         . '<p class="uq-sub">' . webQuoteIcon('mail') . '<span>Submitted from ultimate.co.tz. Open a request to see the customer and products.</span></p>'
         . '</div>'
         . '<div class="uq-tools">'
@@ -568,7 +568,7 @@ function webQuoteRequestDetailData(string $quoteNumber): array
     $data = [
         'found' => $quote !== null,
         'backUrl' => webQuotePageUrl(),
-        'createUrl' => function_exists('company_url') ? company_url('sales/quote-create') : '/ultimate/sales/quote-create',
+        'createUrl' => webQuoteCreateQuotationUrl($quoteNumber),
         'quote' => null,
     ];
     if ($quote === null) {
@@ -623,6 +623,146 @@ function webQuoteRequestDetailData(string $quoteNumber): array
     return $data;
 }
 
+function webQuoteCreateQuotationUrl(string $quoteNumber): string
+{
+    $base = function_exists('app_url') ? app_url('/api/website_quote_prefill.php') : '/api/website_quote_prefill.php';
+
+    return $base . '?quote=' . rawurlencode($quoteNumber);
+}
+
+function webQuoteFindOrCreateCustomer(PDO $salesDb, array $quote, int $companyId, int $userId): int
+{
+    $email = strtolower(trim((string) $quote['customer_email']));
+    $digits = preg_replace('/\D/', '', (string) $quote['customer_phone']) ?? '';
+    $phoneTail = strlen($digits) >= 9 ? substr($digits, -9) : '';
+    $cols = $salesDb->query('SHOW COLUMNS FROM customers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    $scoped = $companyId > 0 && in_array('company_id', $cols, true);
+
+    $where = [];
+    $params = [];
+    if ($phoneTail !== '') {
+        $where[] = "REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(phone, ''), ' ', ''), '+', ''), '-', ''), '/', '') LIKE ?";
+        $params[] = '%' . $phoneTail;
+    }
+    if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $where[] = 'LOWER(TRIM(COALESCE(email, \'\'))) = ?';
+        $params[] = $email;
+    }
+    if ($where !== []) {
+        $sql = 'SELECT id FROM customers WHERE status = \'active\' AND (' . implode(' OR ', $where) . ')'
+            . ($scoped ? ' AND company_id = ?' : '') . ' ORDER BY id ASC LIMIT 1';
+        if ($scoped) {
+            $params[] = $companyId;
+        }
+        $stmt = $salesDb->prepare($sql);
+        $stmt->execute($params);
+        $found = (int) ($stmt->fetchColumn() ?: 0);
+        if ($found > 0) {
+            return $found;
+        }
+    }
+
+    if (!function_exists('customerAddGenerateNextCode')) {
+        return 0;
+    }
+    $name = trim((string) $quote['customer_name']) !== '' ? trim((string) $quote['customer_name']) : 'Website customer';
+    $row = [
+        'customer_code' => customerAddGenerateNextCode($salesDb),
+        'company_name' => mb_substr($name, 0, 200),
+        'contact_person' => mb_substr($name, 0, 100),
+        'email' => $email !== '' ? mb_substr($email, 0, 100) : null,
+        'phone' => trim((string) $quote['customer_phone']) !== '' ? mb_substr(trim((string) $quote['customer_phone']), 0, 20) : null,
+        'customer_type' => 'retail',
+        'notes' => 'Source: Website quote request ' . $quote['quote_number'],
+        'created_by' => $userId > 0 ? $userId : null,
+    ];
+    if ($scoped) {
+        $row['company_id'] = $companyId;
+    }
+    $row = array_intersect_key($row, array_flip($cols));
+    $names = array_keys($row);
+    $salesDb->prepare('INSERT INTO customers (`' . implode('`, `', $names) . '`) VALUES (' . implode(', ', array_fill(0, count($names), '?')) . ')')
+        ->execute(array_values($row));
+
+    return (int) $salesDb->lastInsertId();
+}
+
+/**
+ * @return array{lines:list<string>,missing:int}
+ */
+function webQuoteMatchProducts(PDO $salesDb, string $quoteNumber, int $companyId): array
+{
+    $stmt = ($GLOBALS['pdo'] ?? null) instanceof PDO
+        ? $GLOBALS['pdo']->prepare('SELECT product_id, product_sku, product_name, quantity FROM website_quote_requests WHERE quote_number = ? ORDER BY id ASC')
+        : null;
+    if ($stmt === null) {
+        return ['lines' => [], 'missing' => 0];
+    }
+    $stmt->execute([$quoteNumber]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $cols = $salesDb->query('SHOW COLUMNS FROM products')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    $scope = ($companyId > 0 && in_array('company_id', $cols, true)) ? ' AND company_id = ' . $companyId : '';
+    $skuCols = array_values(array_intersect(['product_code', 'sku'], $cols));
+
+    $lines = [];
+    $missing = 0;
+    foreach ($rows as $row) {
+        $productId = 0;
+        $id = (int) ($row['product_id'] ?? 0);
+        if ($id > 0) {
+            $q = $salesDb->prepare('SELECT id FROM products WHERE id = ?' . $scope . ' LIMIT 1');
+            $q->execute([$id]);
+            $productId = (int) ($q->fetchColumn() ?: 0);
+        }
+        $sku = trim((string) ($row['product_sku'] ?? ''));
+        if ($productId === 0 && $sku !== '' && $skuCols !== []) {
+            $q = $salesDb->prepare('SELECT id FROM products WHERE (' . implode(' = ? OR ', $skuCols) . ' = ?)' . $scope . ' LIMIT 1');
+            $q->execute(array_fill(0, count($skuCols), $sku));
+            $productId = (int) ($q->fetchColumn() ?: 0);
+        }
+        $name = trim((string) ($row['product_name'] ?? ''));
+        if ($productId === 0 && $name !== '') {
+            $q = $salesDb->prepare('SELECT id FROM products WHERE LOWER(TRIM(name)) = LOWER(?)' . $scope . ' LIMIT 1');
+            $q->execute([$name]);
+            $productId = (int) ($q->fetchColumn() ?: 0);
+        }
+        if ($productId === 0) {
+            $missing++;
+            continue;
+        }
+        $lines[] = $productId . ':' . webQuoteQty(max(1.0, (float) ($row['quantity'] ?? 1)));
+    }
+
+    return ['lines' => $lines, 'missing' => $missing];
+}
+
+function webQuotePrepareQuotation(string $quoteNumber, PDO $salesDb, int $companyId, int $userId): string
+{
+    $groups = webQuoteRequestGroups(null, $quoteNumber);
+    $quote = $groups[0] ?? null;
+    $form = function_exists('company_url') ? company_url('sales/quote-create') : '/ultimate/sales/quote-create';
+    if ($quote === null) {
+        return $form;
+    }
+
+    $customerId = webQuoteFindOrCreateCustomer($salesDb, $quote, $companyId, $userId);
+    $products = webQuoteMatchProducts($salesDb, $quoteNumber, $companyId);
+
+    $query = ['website_quote' => $quoteNumber];
+    if ($customerId > 0) {
+        $query['customer_id'] = $customerId;
+    }
+    if ($products['lines'] !== []) {
+        $query['catalogue_product_ids'] = implode(',', $products['lines']);
+    }
+    if ($products['missing'] > 0) {
+        $query['website_missing'] = $products['missing'];
+    }
+
+    return $form . (str_contains($form, '?') ? '&' : '?') . http_build_query($query);
+}
+
 function webQuoteRequestsScript(): string
 {
     return <<<'HTML'
@@ -672,8 +812,6 @@ function webQuoteRequestsCss(): string
 .uq-top{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:flex-start;justify-content:space-between;margin:0 0 18px}
 .uq-title{flex:1 1 100%}
 .uq-title-row{display:flex;align-items:center;gap:12px}
-.uq-title-icon{width:40px;height:40px;border-radius:10px;background:#1e3a8a;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex:0 0 40px}
-.uq-title-icon svg{width:22px;height:22px}
 .uq-page h1{margin:0;font-size:1.75rem;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
 .uq-sub{display:flex;align-items:center;gap:8px;margin:8px 0 0;color:#475569;font-size:.9rem}
 .uq-sub svg{color:#64748b}

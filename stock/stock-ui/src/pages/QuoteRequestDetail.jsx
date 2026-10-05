@@ -114,10 +114,11 @@ export default function QuoteRequestDetail({ data }) {
           ))}
         </ul>
         <div className="qrd-total">
-          <span>Estimated total</span>
+          <span>
+            Estimated total <span className="qrd-hint">at website prices</span>
+          </span>
           <strong>{quote.total || '\u2014'}</strong>
         </div>
-        <p className="qrd-hint">Website prices at the time of the request.</p>
       </section>
     </div>
   );

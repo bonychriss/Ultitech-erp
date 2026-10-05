@@ -36,13 +36,11 @@
       name = named ? named.value : document.title;
     }
     var qtyInput = form.querySelector('input[name="quantity"]');
-    var priceNode = document.querySelector(".product-price, strong.fs-16, .fw-600.fs-16");
-    var price = priceNode ? priceNode.textContent.replace(/[^0-9.]/g, "") : "";
     return {
       website_product_id: id,
       product_name: name || "Product",
       quantity: qty(qtyInput ? qtyInput.value : 1),
-      unit_price: price ? parseFloat(price) : null,
+      unit_price: null,
       image: pageImage()
     };
   }

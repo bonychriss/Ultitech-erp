@@ -1,0 +1,16 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/ultimate/public_html
+    - /bin/mkdir -p $DEPLOYPATH/ultitech $DEPLOYPATH/app/Http/Controllers/Admin $DEPLOYPATH/app/Models $DEPLOYPATH/database/migrations $DEPLOYPATH/resources/views/backend/quotes $DEPLOYPATH/resources/views/frontend/product_details $DEPLOYPATH/resources/views/frontend/partials/cart $DEPLOYPATH/resources/views/frontend/layouts $DEPLOYPATH/resources/views/frontend/inc $DEPLOYPATH/routes
+    - /bin/cp -f ultitech/quote.php ultitech/quote-button.js ultitech/bridge-lib.php ultitech/cron.php ultitech/sync.php $DEPLOYPATH/ultitech/
+    - /bin/cp -f app/Http/Controllers/Admin/QuoteAdminController.php $DEPLOYPATH/app/Http/Controllers/Admin/
+    - /bin/cp -f app/Http/Controllers/HomeController.php app/Http/Controllers/CartController.php app/Http/Controllers/OrderController.php $DEPLOYPATH/app/Http/Controllers/
+    - /bin/cp -f app/Models/Quote.php app/Models/QuoteItem.php $DEPLOYPATH/app/Models/
+    - /bin/cp -f database/migrations/2026_10_02_000001_create_ultitech_quote_tables.php $DEPLOYPATH/database/migrations/
+    - /bin/cp -f resources/views/backend/quotes/index.blade.php resources/views/backend/quotes/show.blade.php resources/views/backend/quotes/print.blade.php $DEPLOYPATH/resources/views/backend/quotes/
+    - /bin/cp -f routes/ultitech_quotes.php $DEPLOYPATH/routes/
+    - /bin/cp -f resources/views/frontend/product_details/details.blade.php $DEPLOYPATH/resources/views/frontend/product_details/
+    - /bin/cp -f resources/views/frontend/partials/cart/addedToCart.blade.php resources/views/frontend/partials/cart/addToCart.blade.php resources/views/frontend/partials/cart/cart.blade.php $DEPLOYPATH/resources/views/frontend/partials/cart/
+    - /bin/cp -f resources/views/frontend/inc/nav.blade.php resources/views/frontend/inc/footer.blade.php $DEPLOYPATH/resources/views/frontend/inc/
+    - /bin/cp -f resources/views/frontend/layouts/app.blade.php $DEPLOYPATH/resources/views/frontend/layouts/

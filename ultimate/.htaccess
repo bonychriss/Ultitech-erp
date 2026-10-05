@@ -44,6 +44,7 @@ RewriteRule ^modules/payroll/edit_payslip\.php$ payroll.php?desk=edit-payslip [L
 RewriteRule ^modules/payroll/settings\.php$ payroll.php?desk=settings [L,QSA,NC]
 RewriteRule ^modules/payroll/my_payslips\.php$ payroll.php?desk=my-payslips [L,QSA,NC]
 # Website module
+RewriteRule ^website/quotes/?$ website.php?module=website&view=quotes [L,QSA,NC]
 RewriteRule ^website/?$ website.php?module=website [L,QSA,NC]
 RewriteRule ^modules/website/?$ website.php?module=website [L,QSA,NC]
 RewriteRule ^modules/website/index(\.php)?/?$ website.php?module=website [L,QSA,NC]

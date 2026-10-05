@@ -284,6 +284,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState([]);
+  const [websiteQuoteNote, setWebsiteQuoteNote] = useState('');
   const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
   const [rateHint, setRateHint] = useState('Select one or more currencies. BOT rates load automatically for non-TZS codes.');
   const [rateLoadingCodes, setRateLoadingCodes] = useState([]);
@@ -398,7 +399,23 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
       }
 
       const docIsQuote = (data.document_type || 'invoice') === 'quote';
-      const draft = readFormDraft(docIsQuote);
+      const pageParams = new URLSearchParams(window.location.search);
+      const websiteQuote = pageParams.get('website_quote') || '';
+      const draft = websiteQuote ? null : readFormDraft(docIsQuote);
+      if (websiteQuote) {
+        const missing = Number(pageParams.get('website_missing')) || 0;
+        setWebsiteQuoteNote(missing > 0
+          ? `Filled in from website request ${websiteQuote}. ${missing} requested ${missing === 1 ? 'product is' : 'products are'} not in UltiTech yet; add ${missing === 1 ? 'it' : 'them'} manually.`
+          : `Filled in from website request ${websiteQuote}.`);
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('website_quote');
+          url.searchParams.delete('website_missing');
+          window.history.replaceState({}, '', url.toString());
+        } catch {
+          // ignore URL cleanup errors
+        }
+      }
       if (draft) {
         if (draft.customerId) setCustomerId(String(draft.customerId));
         if (draft.invoiceDate) setInvoiceDate(String(draft.invoiceDate));
@@ -471,9 +488,11 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
       if (!catalogueMapped.length) {
         const idsParam = new URLSearchParams(window.location.search).get('catalogue_product_ids');
         if (idsParam) {
-          const ids = idsParam.split(',').map((s) => Number(s.trim())).filter((id) => id > 0);
-          if (ids.length > 0) {
-            const catItems = ids.map((id) => ({ product_id: id, quantity: 1 }));
+          const catItems = idsParam.split(',').map((part) => {
+            const [id, qty] = part.split(':');
+            return { product_id: Number(String(id).trim()), quantity: Math.max(1, parseFloat(qty) || 1) };
+          }).filter((row) => row.product_id > 0);
+          if (catItems.length > 0) {
             catalogueMapped = mapCatalogueItems(catItems);
             if (catalogueMapped.length) writeCatalogueSelectionDraft(catItems);
           }
@@ -922,6 +941,10 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
         <div className="exp-create-alert exp-create-alert--error" role="alert">
           {errors.map((msg) => <div key={msg}>{msg}</div>)}
         </div>
+      )}
+
+      {websiteQuoteNote && (
+        <div className="exp-create-alert exp-create-alert--info" role="status">{websiteQuoteNote}</div>
       )}
 
       <form onSubmit={handleSubmit}>

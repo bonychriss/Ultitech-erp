@@ -38,6 +38,31 @@ class WebsitePageController extends Controller
             )->header('Content-Type', 'text/html; charset=UTF-8');
         }
 
+        if ((string) ($_GET['view'] ?? request()->query('view', '')) === 'quotes') {
+            $viewData['pageTitle'] = 'Quote requests';
+            $viewData['employeeHeaderTitle'] = '';
+            $viewData['footerScripts'] = '';
+            $viewData['beforeRoot'] = '';
+            $quoteLib = rtrim((string) config('erp.app_root'), '\\/') . '/stock/includes/web-services-lib.php';
+            if (is_file($quoteLib)) {
+                require_once $quoteLib;
+                $quoteNumber = trim((string) ($_GET['quote'] ?? request()->query('quote', '')));
+                if ($quoteNumber !== '' && function_exists('webQuoteRequestDetailData')) {
+                    $detailView = (new DeskShell())->reactPage(
+                        $quoteNumber,
+                        'quote-request-detail',
+                        webQuoteRequestDetailData(substr($quoteNumber, 0, 64)),
+                        ['employeeHeaderTitle' => '']
+                    );
+                    if ($detailView !== null) {
+                        $viewData = $detailView;
+                    }
+                } elseif (function_exists('webQuoteRequestsPanel')) {
+                    $viewData['beforeRoot'] = webQuoteRequestsPanel(true);
+                }
+            }
+        }
+
         $GLOBALS['page_title'] = $viewData['pageTitle'];
         $page_title = $viewData['pageTitle'];
         $employeeHeaderTitle = $viewData['employeeHeaderTitle'];

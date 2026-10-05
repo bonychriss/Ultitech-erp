@@ -156,6 +156,9 @@ main.main-content.cashbook-react-root #root {
             <p style="margin:0.35rem 0 0;">Enable JavaScript to use this page.</p>
         </div>
     </noscript>
+    @if (!empty($beforeRoot))
+        {!! $beforeRoot !!}
+    @endif
     <div id="root"></div>
 </main>
 @if (!empty($footerScripts))

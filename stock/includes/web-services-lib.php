@@ -565,8 +565,8 @@ function webQuoteKpiCards(array $quotes): string
         $k['value'] += webQuoteTotal($quote);
     }
 
-    $card = static function (string $tone, string $label, string $icon, string $value, string $foot, bool $money = false): string {
-        return '<article class="uq-kpi uq-kpi--' . $tone . '">'
+    $card = static function (string $tone, string $label, string $icon, string $value, string $foot, bool $money = false, string $filter = ''): string {
+        return '<article class="uq-kpi uq-kpi--' . $tone . '" data-card="' . $filter . '" role="button" tabindex="0" aria-pressed="false" title="Show ' . $label . ' in the list">'
             . '<span class="uq-kpi-icon uq-kpi-icon--' . $tone . '">' . webQuoteIcon($icon) . '</span>'
             . '<div class="uq-kpi-body">'
             . '<div class="uq-kpi-label">' . $label . '</div>'
@@ -576,10 +576,10 @@ function webQuoteKpiCards(array $quotes): string
     };
 
     return '<section class="uq-kpis" aria-label="Quote request summary">'
-        . $card('indigo', 'total requests', 'list', '<span data-kpi="total">' . $k['total'] . '</span>', '<span data-kpi="week">' . $k['week'] . '</span> in the last 7 days')
-        . $card('amber', 'open', 'clock', '<span data-kpi="open">' . $k['open'] . '</span>', 'not yet contacted')
-        . $card('violet', 'quoted', 'doc', '<span data-kpi="quoted">' . $k['quoted'] . '</span>', '<span data-kpi="accepted">' . $k['accepted'] . '</span> accepted')
-        . $card('teal', 'estimated value', 'cash', '<span data-kpi="value">' . webQuoteH(webQuoteMoney($k['value'])) . '</span>', 'at website prices', true)
+        . $card('indigo', 'total requests', 'list', '<span data-kpi="total">' . $k['total'] . '</span>', '<span data-kpi="week">' . $k['week'] . '</span> in the last 7 days', false, 'all')
+        . $card('amber', 'open', 'clock', '<span data-kpi="open">' . $k['open'] . '</span>', 'not yet contacted', false, 'open')
+        . $card('violet', 'quoted', 'doc', '<span data-kpi="quoted">' . $k['quoted'] . '</span>', '<span data-kpi="accepted">' . $k['accepted'] . '</span> accepted', false, 'quoted')
+        . $card('teal', 'estimated value', 'cash', '<span data-kpi="value">' . webQuoteH(webQuoteMoney($k['value'])) . '</span>', 'at website prices', true, 'value')
         . '</section>';
 }
 
@@ -896,7 +896,7 @@ function webQuoteRequestsScript(): string
 (function () {
     var search = document.getElementById("uq-search");
     var status = document.getElementById("uq-status");
-    var filters = { date: "", status: "" };
+    var filters = { date: "", status: "", card: "" };
     var none = document.getElementById("uq-no-match");
     var page = document.querySelector(".uq-page");
     var toastTimer = null;
@@ -1074,6 +1074,13 @@ function webQuoteRequestsScript(): string
         if (value === "7" || value === "30") return now.getTime() / 1000 - parseInt(value, 10) * 86400;
         return 0;
     }
+    function cardMatch(row) {
+        var rowStatus = row.getAttribute("data-status");
+        if (filters.card === "open") return rowStatus === "open";
+        if (filters.card === "quoted") return rowStatus === "quoted" || rowStatus === "accepted";
+        if (filters.card === "value") return parseFloat(row.getAttribute("data-total") || "0") > 0;
+        return true;
+    }
     function apply() {
         var q = (search.value || "").trim().toLowerCase();
         var from = since(filters.date);
@@ -1082,12 +1089,14 @@ function webQuoteRequestsScript(): string
         rows.forEach(function (row) {
             var ok = (!q || row.getAttribute("data-search").indexOf(q) !== -1)
                 && (!from || parseInt(row.getAttribute("data-ts"), 10) >= from)
-                && (!st || row.getAttribute("data-status") === st);
+                && (!st || row.getAttribute("data-status") === st)
+                && cardMatch(row);
             row.hidden = !ok;
             if (ok) shown++;
             else box(row).checked = false;
         });
         none.hidden = shown > 0;
+        list.hidden = shown === 0;
         sync();
     }
     var filterBtn = document.getElementById("uq-filter-btn");
@@ -1095,6 +1104,8 @@ function webQuoteRequestsScript(): string
     var presets = Array.prototype.slice.call(panel.querySelectorAll(".uq-preset"));
     var chips = document.getElementById("uq-chips");
     var dateLabels = { today: "Today", "7": "Last 7 days", "30": "Last 30 days", month: "This month" };
+    var cardLabels = { open: "Open requests", quoted: "Quoted or accepted", value: "With estimated value" };
+    var cards = Array.prototype.slice.call(document.querySelectorAll(".uq-kpi[data-card]"));
     function openPanel(open) {
         panel.hidden = !open;
         filterBtn.classList.toggle("is-active", open);
@@ -1107,6 +1118,12 @@ function webQuoteRequestsScript(): string
         var items = [];
         if (filters.date) items.push(["date", dateLabels[filters.date]]);
         if (filters.status) items.push(["status", "Status: " + status.querySelector('option[value="' + filters.status + '"]').textContent]);
+        if (filters.card) items.push(["card", cardLabels[filters.card]]);
+        cards.forEach(function (card) {
+            var on = card.getAttribute("data-card") === (filters.card || (items.length ? "" : "all"));
+            card.classList.toggle("is-active", on && card.getAttribute("data-card") !== "all");
+            card.setAttribute("aria-pressed", on ? "true" : "false");
+        });
         chips.innerHTML = "";
         items.forEach(function (item) {
             var chip = document.createElement("button");
@@ -1145,19 +1162,42 @@ function webQuoteRequestsScript(): string
     panel.querySelector("[data-filters-close]").addEventListener("click", function () { openPanel(false); });
     document.getElementById("uq-filters-apply").addEventListener("click", function () {
         var active = presets.filter(function (b) { return b.classList.contains("is-active"); })[0];
-        setFilters({ date: active ? active.getAttribute("data-date") : "", status: status.value });
+        setFilters({ date: active ? active.getAttribute("data-date") : "", status: status.value, card: status.value ? "" : filters.card });
         openPanel(false);
     });
     document.getElementById("uq-filters-clear").addEventListener("click", function () {
-        setFilters({ date: "", status: "" });
+        setFilters({ date: "", status: "", card: "" });
         openPanel(false);
     });
     chips.addEventListener("click", function (event) {
         var chip = event.target.closest(".uq-chip");
         if (!chip) return;
         var key = chip.getAttribute("data-key");
-        setFilters({ date: key === "date" || key === "all" ? "" : filters.date, status: key === "status" || key === "all" ? "" : filters.status });
+        setFilters({
+            date: key === "date" || key === "all" ? "" : filters.date,
+            status: key === "status" || key === "all" ? "" : filters.status,
+            card: key === "card" || key === "all" ? "" : filters.card
+        });
     });
+    function pickCard(card) {
+        var key = card.getAttribute("data-card");
+        if (key === "all") {
+            search.value = "";
+            setFilters({ date: "", status: "", card: "" });
+            return;
+        }
+        setFilters({ date: filters.date, status: "", card: filters.card === key ? "" : key });
+    }
+    cards.forEach(function (card) {
+        card.addEventListener("click", function () { pickCard(card); });
+        card.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                pickCard(card);
+            }
+        });
+    });
+    renderChips();
     document.addEventListener("click", function (event) {
         if (!panel.hidden && !event.target.closest(".uq-filter-wrap")) openPanel(false);
     });
@@ -1184,12 +1224,19 @@ function webQuoteRequestsCss(): string
 .uq-kpis{display:flex;gap:.75rem;width:100%;margin:0 0 18px}
 .uq-kpi{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:.65rem;padding:.65rem .85rem;background:#fff;border:1px solid #e8edf3;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.04);overflow:hidden}
 .uq-kpi-body{min-width:0;flex:1 1 auto}
-.uq-kpi-icon{width:2.15rem;height:2.15rem;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.uq-page .uq-kpi-icon svg{width:1.05rem;height:1.05rem}
-.uq-kpi-icon--violet{background:#f5f3ff;color:#7c3aed}
-.uq-kpi-icon--indigo{background:#eef2ff;color:#4f46e5}
-.uq-kpi-icon--amber{background:#fffbeb;color:#d97706}
-.uq-kpi-icon--teal{background:#ecfdf5;color:#059669}
+.uq-kpi[data-card]{cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+.uq-kpi[data-card]:not(.is-active):hover{border-color:#cbd5e1;box-shadow:0 4px 14px rgba(15,23,42,.08);transform:translateY(-1px)}
+.uq-kpi[data-card]:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
+.uq-kpi--indigo.is-active{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.15)}
+.uq-kpi--amber.is-active{border-color:#d97706;box-shadow:0 0 0 3px rgba(217,119,6,.15)}
+.uq-kpi--violet.is-active{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+.uq-kpi--teal.is-active{border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,.15)}
+.uq-kpi-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0;background:none}
+.uq-page .uq-kpi-icon svg{width:1.5rem;height:1.5rem}
+.uq-kpi-icon--violet{color:#7c3aed}
+.uq-kpi-icon--indigo{color:#4f46e5}
+.uq-kpi-icon--amber{color:#d97706}
+.uq-kpi-icon--teal{color:#059669}
 .uq-kpi-label{font-size:.75rem;font-weight:500;color:#94a3b8;line-height:1.2}
 .uq-kpi-value{font-size:clamp(1.05rem,1.6vw,1.35rem);font-weight:800;line-height:1.1;margin-top:.1rem;color:#0f172a}
 .uq-kpi-value--money{font-size:clamp(.875rem,1.35vw,1.05rem)}
@@ -1239,6 +1286,7 @@ function webQuoteRequestsCss(): string
 .uq-page .uq-chip svg{width:12px;height:12px}
 .uq-chip--clear{border-color:#e2e8f0;background:#fff;color:#64748b}
 .uq-list{display:grid;grid-template-columns:18px max-content minmax(130px,1.5fr) minmax(90px,1fr) max-content max-content max-content 34px;column-gap:20px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.uq-list[hidden]{display:none}
 .uq-list-head,.uq-row{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:center;padding:0 18px}
 .uq-list-head > span,.uq-row > span{min-width:0}
 .uq-list-head{background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em;height:40px}
@@ -1317,8 +1365,7 @@ function webQuoteRequestsCss(): string
 @container uq (max-width:820px){
   .uq-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
   .uq-kpi{flex-direction:column;align-items:flex-start;gap:.45rem;padding:.65rem .7rem}
-  .uq-kpi-icon{width:2rem;height:2rem;border-radius:8px}
-  .uq-page .uq-kpi-icon svg{width:1rem;height:1rem}
+  .uq-page .uq-kpi-icon svg{width:1.35rem;height:1.35rem}
   .uq-kpi-label{font-size:.65rem}
   .uq-kpi-value{font-size:1rem;margin-top:.05rem}
   .uq-kpi-value--money{font-size:.78rem;line-height:1.15}
@@ -1349,19 +1396,23 @@ html[data-theme="dark"] .uq-page{color:#e2e8f0}
 html[data-theme="dark"] .uq-kpi{background:#1e293b;border-color:#334155;box-shadow:0 1px 2px rgba(0,0,0,.2)}
 html[data-theme="dark"] .uq-kpi-value{color:#f8fafc}
 html[data-theme="dark"] .uq-kpi-label,html[data-theme="dark"] .uq-kpi-helper{color:#94a3b8}
-html[data-theme="dark"] .uq-kpi-icon{color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.25)}
 html[data-theme="dark"] .uq-kpi--indigo{background:linear-gradient(135deg,rgba(37,99,235,.24),rgba(37,99,235,.08));border-color:rgba(59,130,246,.35)}
-html[data-theme="dark"] .uq-kpi-icon--indigo{background:#2563eb}
+html[data-theme="dark"] .uq-kpi-icon--indigo{color:#60a5fa}
 html[data-theme="dark"] .uq-kpi--indigo .uq-kpi-label{color:#93c5fd}
 html[data-theme="dark"] .uq-kpi--amber{background:linear-gradient(135deg,rgba(22,163,74,.24),rgba(22,163,74,.08));border-color:rgba(34,197,94,.32)}
-html[data-theme="dark"] .uq-kpi-icon--amber{background:#16a34a}
+html[data-theme="dark"] .uq-kpi-icon--amber{color:#4ade80}
 html[data-theme="dark"] .uq-kpi--amber .uq-kpi-label{color:#86efac}
 html[data-theme="dark"] .uq-kpi--violet{background:linear-gradient(135deg,rgba(124,58,237,.26),rgba(124,58,237,.08));border-color:rgba(139,92,246,.35)}
-html[data-theme="dark"] .uq-kpi-icon--violet{background:#7c3aed}
+html[data-theme="dark"] .uq-kpi-icon--violet{color:#a78bfa}
 html[data-theme="dark"] .uq-kpi--violet .uq-kpi-label{color:#c4b5fd}
 html[data-theme="dark"] .uq-kpi--teal{background:linear-gradient(135deg,rgba(13,148,136,.26),rgba(13,148,136,.08));border-color:rgba(20,184,166,.35)}
-html[data-theme="dark"] .uq-kpi-icon--teal{background:#0d9488}
+html[data-theme="dark"] .uq-kpi-icon--teal{color:#2dd4bf}
 html[data-theme="dark"] .uq-kpi--teal .uq-kpi-label{color:#5eead4}
+html[data-theme="dark"] .uq-kpi[data-card]:not(.is-active):hover{border-color:rgba(148,163,184,.5);box-shadow:0 6px 18px rgba(0,0,0,.35)}
+html[data-theme="dark"] .uq-kpi--indigo.is-active{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.3)}
+html[data-theme="dark"] .uq-kpi--amber.is-active{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.3)}
+html[data-theme="dark"] .uq-kpi--violet.is-active{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.3)}
+html[data-theme="dark"] .uq-kpi--teal.is-active{border-color:#14b8a6;box-shadow:0 0 0 3px rgba(20,184,166,.3)}
 html[data-theme="dark"] .uq-modal-box{background:#1e293b}
 html[data-theme="dark"] .uq-modal-box h2{color:#f1f5f9}
 html[data-theme="dark"] .uq-modal-box p,html[data-theme="dark"] .uq-modal-items{color:#cbd5e1}

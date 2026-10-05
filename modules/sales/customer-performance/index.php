@@ -806,20 +806,25 @@ html body main.cp-page { padding-left: 52px !important; padding-right: 52px !imp
 .cp-field label { font-size: 0.72rem; font-weight: 650; color: #64748b; }
 html body main.cp-page .cp-field select { height: 2.45rem; border: 1px solid #d7dee7; border-radius: 12px !important; background-color: #fff; color: #0f172a; padding: 0 2rem 0 0.85rem; font-weight: 650; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%2364748b' stroke-width='1.6' stroke-linecap='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; }
 .cp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 1.15rem; }
-.cp-kpi { border-radius: 16px; padding: 16px 16px 14px; min-width: 0; border: 1px solid transparent; }
-.cp-kpi--customers { background: #eef3ff; }
-.cp-kpi--active { background: #e8f8ee; }
-.cp-kpi--sales { background: #f3f0ff; }
-.cp-kpi--average { background: #e7f8ef; }
+.cp-kpi { border-radius: 14px; padding: 0.7rem 0.9rem; min-height: 4.75rem; min-width: 0; border: 1px solid transparent; }
+.cp-kpi--customers { background: linear-gradient(135deg, #eef4ff 0%, #dbe7ff 100%); border-color: #c7d7fe; }
+.cp-kpi--active { background: linear-gradient(135deg, #ecfbf3 0%, #d3f3e2 100%); border-color: #b4e8cb; }
+.cp-kpi--sales { background: linear-gradient(135deg, #f5f1ff 0%, #e6dcff 100%); border-color: #d8c9fd; }
+.cp-kpi--average { background: linear-gradient(135deg, #fff7eb 0%, #ffe6c2 100%); border-color: #fbd49a; }
 .cp-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.cp-kpi-label { color: #334155; font-size: 0.92rem; font-weight: 650; }
-.cp-kpi-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.72); }
-.cp-kpi-icon svg { width: 18px; height: 18px; }
-.cp-kpi--customers .cp-kpi-icon { color: #2563eb; }
-.cp-kpi--active .cp-kpi-icon, .cp-kpi--average .cp-kpi-icon { color: #16a34a; }
-.cp-kpi--sales .cp-kpi-icon { color: #7c3aed; }
-.cp-kpi strong { display: block; margin: 12px 0 12px; font-size: 1.7rem; font-weight: 780; letter-spacing: -0.03em; color: #111827; line-height: 1; }
-.cp-kpi-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.78rem; color: #64748b; font-weight: 550; }
+.cp-kpi-label { font-size: 0.8rem; font-weight: 650; }
+.cp-kpi--customers .cp-kpi-label { color: #1e3a8a; }
+.cp-kpi--active .cp-kpi-label { color: #14532d; }
+.cp-kpi--sales .cp-kpi-label { color: #4c1d95; }
+.cp-kpi--average .cp-kpi-label { color: #7c2d12; }
+.cp-kpi-icon { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12); }
+.cp-kpi-icon svg { width: 16px; height: 16px; }
+.cp-kpi--customers .cp-kpi-icon { background: #2563eb; }
+.cp-kpi--active .cp-kpi-icon { background: #16a34a; }
+.cp-kpi--sales .cp-kpi-icon { background: #7c3aed; }
+.cp-kpi--average .cp-kpi-icon { background: #ea8a0c; }
+.cp-kpi strong { display: block; margin: 0.45rem 0 0.35rem; font-size: 1.2rem; font-weight: 780; letter-spacing: -0.02em; color: #111827; line-height: 1.15; white-space: nowrap; }
+.cp-kpi-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.74rem; color: #475569; font-weight: 550; }
 .cp-kpi-up { color: #16a34a; font-weight: 700; white-space: nowrap; }
 .cp-kpi-down { color: #dc2626; font-weight: 700; white-space: nowrap; }
 .cp-kpi-flat { color: #94a3b8; font-weight: 700; white-space: nowrap; }
@@ -973,9 +978,12 @@ html[data-theme="dark"] .cp-mbar b { color: #f8fafc; }
 html[data-theme="dark"] .cp-rate-track,
 html[data-theme="dark"] .cp-age-track { background: #334155; }
 html[data-theme="dark"] .cp-field select { background-color: #1e293b; color: #f8fafc; border-color: #334155; }
-html[data-theme="dark"] .cp-kpi--customers { background: #1c2a44; }
-html[data-theme="dark"] .cp-kpi--active, html[data-theme="dark"] .cp-kpi--average { background: #163226; }
-html[data-theme="dark"] .cp-kpi--sales { background: #2a2144; }
+html[data-theme="dark"] .cp-kpi--customers { background: linear-gradient(135deg, #1c2a44 0%, #1e3a6e 100%); border-color: #2c4a80; }
+html[data-theme="dark"] .cp-kpi--active { background: linear-gradient(135deg, #163226 0%, #1b4a33 100%); border-color: #25603f; }
+html[data-theme="dark"] .cp-kpi--sales { background: linear-gradient(135deg, #2a2150 0%, #3b2a75 100%); border-color: #4c3a8f; }
+html[data-theme="dark"] .cp-kpi--average { background: linear-gradient(135deg, #3a2a14 0%, #5a3a12 100%); border-color: #6e4a1a; }
+html[data-theme="dark"] .cp-kpi-label { color: #e2e8f0 !important; }
+html[data-theme="dark"] .cp-kpi-foot { color: #cbd5e1; }
 html[data-theme="dark"] .cp-table thead th { background: #0f172a; }
 html[data-theme="dark"] .cp-table tbody td,
 html[data-theme="dark"] .cp-table tbody tr:nth-child(even) td { background: #1e293b; color: #e2e8f0; border-color: #334155; }
@@ -1148,8 +1156,8 @@ html[data-theme="dark"] .cp-table tbody tr.cp-row:hover td { background: #334155
             $share = $totalSales > 0 ? ($salesAmount / $totalSales) * 100 : 0.0;
             $rankOf = $totalCustomers ?? count($rows);
             $periodChip = $periodType === 'yearly'
-                ? $year . ' ù Yearly'
-                : ($periodType === 'quarterly' ? 'Q' . $quarter . ' ' . $year . ' ù Quarterly' : $periodLabel);
+                ? $year . ' ¬∑ Yearly'
+                : ($periodType === 'quarterly' ? 'Q' . $quarter . ' ' . $year . ' ¬∑ Quarterly' : $periodLabel);
             $priorNoun = $periodType === 'yearly' ? 'year' : ($periodType === 'quarterly' ? 'quarter' : 'month');
             $chartMax = 0.0;
             foreach ($detailMonths as $monthBar) {
@@ -1212,7 +1220,7 @@ html[data-theme="dark"] .cp-table tbody tr.cp-row:hover td { background: #334155
                 <span class="cp-avatar"><?= cp_h($initials) ?></span>
                 <div>
                     <h2><?= cp_h($custName) ?></h2>
-                    <p>Rank <?= (int) $selected['rank'] ?> of <?= number_format((int) $rankOf) ?> ù first purchase <?= cp_h(cp_date_label((string) ($selected['first_purchase'] ?? ''))) ?> ù last <?= cp_h(cp_date_label((string) ($selected['last_purchase'] ?? ''))) ?></p>
+                    <p>Rank <?= (int) $selected['rank'] ?> of <?= number_format((int) $rankOf) ?> ¬∑ first purchase <?= cp_h(cp_date_label((string) ($selected['first_purchase'] ?? ''))) ?> ¬∑ last <?= cp_h(cp_date_label((string) ($selected['last_purchase'] ?? ''))) ?></p>
                 </div>
             </div>
             <div class="cp-cust-actions">
@@ -1350,7 +1358,7 @@ html[data-theme="dark"] .cp-table tbody tr.cp-row:hover td { background: #334155
                     <span>
                         Total outstanding <?= cp_h(cp_money($openAmount, $currency)) ?>
                         <?php if ($invPageCount > 1): ?>
-                            ù Page
+                            ¬∑ Page
                             <?php for ($i = 1; $i <= $invPageCount; $i++): ?>
                                 <?php if ($i === $invPage): ?><strong><?= $i ?></strong><?php else: ?><a href="<?= cp_h(cp_url(['inv_p' => $i === 1 ? null : $i, 'export' => null])) ?>"><?= $i ?></a><?php endif; ?>
                             <?php endfor; ?>
@@ -1426,7 +1434,7 @@ html[data-theme="dark"] .cp-table tbody tr.cp-row:hover td { background: #334155
                             <tr>
                                 <?php
                                 $heads = [
-                                    'rank' => ['#', ''],
+                                    'rank' => ['No.', ''],
                                     'customer' => ['Customer', ''],
                                     'sales' => ['Total sales', 'cp-num'],
                                     'invoices' => ['Invoices', 'cp-num'],

@@ -140,6 +140,58 @@ function buildUrl(base, id) {
   return `${base}${sep}id=${id}`;
 }
 
+const LIST_STATE_KEY = 'so-list-state';
+
+function readListState() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = {
+    search: params.get('q') || '',
+    status: params.get('status') || '',
+    mine: params.get('mine') === '1',
+    opened: Number(params.get('sel') || 0) || 0,
+  };
+  if (fromUrl.search || fromUrl.status || fromUrl.mine || fromUrl.opened) return fromUrl;
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(LIST_STATE_KEY) || 'null');
+    window.sessionStorage.removeItem(LIST_STATE_KEY);
+    if (saved && typeof saved === 'object') {
+      return {
+        search: String(saved.search || ''),
+        status: String(saved.status || ''),
+        mine: Boolean(saved.mine),
+        opened: Number(saved.opened || 0) || 0,
+      };
+    }
+  } catch {
+    /* storage can be blocked */
+  }
+  return fromUrl;
+}
+
+function writeListStateToUrl(state) {
+  const url = new URL(window.location.href);
+  const setOrDel = (key, value) => {
+    const v = String(value || '').trim();
+    if (v) url.searchParams.set(key, v);
+    else url.searchParams.delete(key);
+  };
+  setOrDel('q', state.search);
+  setOrDel('status', state.status);
+  setOrDel('mine', state.mine ? '1' : '');
+  setOrDel('sel', state.opened ? String(state.opened) : '');
+  const next = url.pathname + url.search + url.hash;
+  const cur = window.location.pathname + window.location.search + window.location.hash;
+  if (next !== cur) window.history.replaceState(window.history.state, '', next);
+}
+
+function saveListStateForReturn(state) {
+  try {
+    window.sessionStorage.setItem(LIST_STATE_KEY, JSON.stringify(state));
+  } catch {
+    /* storage can be blocked */
+  }
+}
+
 function TypeBadge({ type }) {
   const t = (type || 'spare').toLowerCase();
   if (t === 'truck') {
@@ -156,14 +208,17 @@ export default function SalesOrdersListPage() {
   const [init, setInit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [myOrdersOnly, setMyOrdersOnly] = useState(false);
+  const [restored] = useState(() => readListState());
+  const [search, setSearch] = useState(restored.search);
+  const [statusFilter, setStatusFilter] = useState(restored.status);
+  const [myOrdersOnly, setMyOrdersOnly] = useState(restored.mine);
+  const [openedId, setOpenedId] = useState(restored.opened);
   const [draftStatusFilter, setDraftStatusFilter] = useState('');
   const [draftMyOrdersOnly, setDraftMyOrdersOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const selectionAnchorRef = useRef(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [filterPanelStyle, setFilterPanelStyle] = useState(null);
 
@@ -188,6 +243,26 @@ export default function SalesOrdersListPage() {
   }, []);
 
   useEffect(() => { loadInit(); }, [loadInit]);
+
+  useEffect(() => {
+    writeListStateToUrl({
+      search,
+      status: statusFilter,
+      mine: myOrdersOnly,
+      opened: openedId,
+    });
+  }, [search, statusFilter, myOrdersOnly, openedId]);
+
+  useEffect(() => {
+    if (!init || !openedId) return undefined;
+    const timer = window.setTimeout(() => {
+      const row = document.querySelector(`[data-order-id="${openedId}"]`);
+      if (row && typeof row.scrollIntoView === 'function') {
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [init, openedId]);
 
   useEffect(() => {
     if (openMenuId == null) return undefined;
@@ -325,8 +400,8 @@ export default function SalesOrdersListPage() {
     return chips;
   }, [statusFilter, myOrdersOnly]);
 
-  function toggleSelection(id, e) {
-    e.stopPropagation();
+  function toggleSelection(id) {
+    selectionAnchorRef.current = id;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -335,12 +410,37 @@ export default function SalesOrdersListPage() {
     });
   }
 
-  function handleSelectAll(e) {
-    if (e.target.checked) {
-      setSelectedIds(new Set(filteredOrders.map((o) => o.id)));
-    } else {
-      setSelectedIds(new Set());
+  function selectRange(id) {
+    const ids = filteredOrders.map((o) => o.id);
+    const end = ids.indexOf(id);
+    const anchor = selectionAnchorRef.current;
+    const start = anchor == null ? end : ids.indexOf(anchor);
+    if (start < 0 || end < 0) {
+      toggleSelection(id);
+      return;
     }
+    const from = Math.min(start, end);
+    const to = Math.max(start, end);
+    selectionAnchorRef.current = id;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (let i = from; i <= to; i += 1) next.add(ids[i]);
+      return next;
+    });
+  }
+
+  function handleRowClick(event, order) {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      toggleSelection(order.id);
+      return;
+    }
+    if (event.shiftKey) {
+      event.preventDefault();
+      selectRange(order.id);
+      return;
+    }
+    goView(order.id);
   }
 
   function handleNewClick() {
@@ -369,7 +469,22 @@ export default function SalesOrdersListPage() {
     });
   }
 
+  function markOpened(id) {
+    const nextId = Number(id || 0);
+    if (!nextId) return;
+    const state = {
+      search,
+      status: statusFilter,
+      mine: myOrdersOnly,
+      opened: nextId,
+    };
+    setOpenedId(nextId);
+    writeListStateToUrl(state);
+    saveListStateForReturn(state);
+  }
+
   function goView(id) {
+    markOpened(id);
     window.location.href = buildUrl(urls.view || 'view.php', id);
   }
 
@@ -608,49 +723,40 @@ export default function SalesOrdersListPage() {
         </div>
       )}
 
-      <section className="exp-desk-kpi-grid qt-kpi-grid" aria-label="Summary">
-        <div className="exp-desk-kpi exp-desk-kpi-card">
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--violet">
-            <FileText size={20} aria-hidden="true" />
+      <section className="exp-desk-kpi-grid so-kpi-grid so-kpi-grid--slim" aria-label="Summary">
+        <article className="so-kpi so-kpi--orders" title="All sales orders on record">
+          <div className="so-kpi-top">
+            <span className="so-kpi-label">Total orders</span>
+            <span className="so-kpi-icon"><FileText size={16} aria-hidden="true" /></span>
           </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">total orders</div>
-            <div className="exp-desk-kpi-value">{fmtBig(orderStats.total)}</div>
+          <strong className="so-kpi-value">{fmtBig(orderStats.total)}</strong>
+        </article>
+        <article className="so-kpi so-kpi--value" title="Sum of order totals">
+          <div className="so-kpi-top">
+            <span className="so-kpi-label">Total value</span>
+            <span className="so-kpi-icon"><Wallet size={16} aria-hidden="true" /></span>
           </div>
-        </div>
-        <div className="exp-desk-kpi exp-desk-kpi-card">
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--indigo">
-            <Wallet size={20} aria-hidden="true" />
+          <strong className="so-kpi-value so-kpi-value--money">
+            {defaultCurrency} {formatCurrency(orderStats.totalVal)}
+          </strong>
+        </article>
+        <article className="so-kpi so-kpi--pipeline" title="Not yet completed, paid or cancelled">
+          <div className="so-kpi-top">
+            <span className="so-kpi-label">Pipeline</span>
+            <span className="so-kpi-icon"><Clock size={16} aria-hidden="true" /></span>
           </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">total value</div>
-            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
-              {defaultCurrency} {formatCurrency(orderStats.totalVal)}
-            </div>
+          <strong className="so-kpi-value">{fmtBig(orderStats.pipeline)}</strong>
+        </article>
+        <article className="so-kpi so-kpi--listed" title="Matching current filters">
+          <div className="so-kpi-top">
+            <span className="so-kpi-label">Listed now</span>
+            <span className="so-kpi-icon"><CheckCircle2 size={16} aria-hidden="true" /></span>
           </div>
-        </div>
-        <div className="exp-desk-kpi exp-desk-kpi-card">
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--amber">
-            <Clock size={20} aria-hidden="true" />
-          </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">pipeline</div>
-            <div className="exp-desk-kpi-value">{fmtBig(orderStats.pipeline)}</div>
-          </div>
-        </div>
-        <div className="exp-desk-kpi exp-desk-kpi-card">
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--teal">
-            <CheckCircle2 size={20} aria-hidden="true" />
-          </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">listed now</div>
-            <div className="exp-desk-kpi-value">{filteredOrders.length}</div>
-            <div className="exp-desk-kpi-helper">matching current filters</div>
-          </div>
-        </div>
+          <strong className="so-kpi-value">{filteredOrders.length}</strong>
+        </article>
       </section>
 
-      <section className="exp-desk-results qt-quotations-table">
+      <section className="exp-desk-results qt-quotations-table so-orders-table">
         <div className="exp-desk-results-head">
           <span className="exp-desk-results-count">
             {filteredOrders.length} {filteredOrders.length === 1 ? 'result' : 'results'}
@@ -688,13 +794,8 @@ export default function SalesOrdersListPage() {
             <table className="exp-desk-table">
               <thead>
                 <tr>
-                  <th className="qt-col-check">
-                    <input
-                      type="checkbox"
-                      className="qt-checkbox"
-                      onChange={handleSelectAll}
-                      checked={filteredOrders.length > 0 && filteredOrders.every((o) => selectedIds.has(o.id))}
-                    />
+                  <th className="qt-col-check qt-col-serial" title={`${filteredOrders.length} sales orders in this list`}>
+                    No.
                   </th>
                   <th>Number</th>
                   <th>Customer</th>
@@ -706,12 +807,14 @@ export default function SalesOrdersListPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((o) => (
+                {filteredOrders.map((o, index) => (
                   <tr
                     key={o.id}
-                    className="exp-desk-row-clickable"
+                    data-order-id={o.id}
+                    aria-current={openedId === Number(o.id) ? 'true' : undefined}
+                    className={`exp-desk-row-clickable${selectedIds.has(o.id) ? ' qt-row-selected' : ''}${openedId === Number(o.id) ? ' is-opened' : ''}`}
                     tabIndex={0}
-                    onClick={() => goView(o.id)}
+                    onClick={(event) => handleRowClick(event, o)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
@@ -719,14 +822,7 @@ export default function SalesOrdersListPage() {
                       }
                     }}
                   >
-                    <td className="qt-col-check" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        className="qt-checkbox"
-                        checked={selectedIds.has(o.id)}
-                        onChange={(e) => toggleSelection(o.id, e)}
-                      />
-                    </td>
+                    <td className="qt-col-check qt-col-serial">{index + 1}</td>
                     <td>
                       <span className="exp-desk-ref">{o.order_number}</span>
                       {supportsOrderTypeSplit && o.order_type && (
@@ -766,8 +862,8 @@ export default function SalesOrdersListPage() {
                         </button>
                         {openMenuId === o.id && (
                           <div className="qt-actions-dropdown">
-                            <a href={buildUrl(urls.view, o.id)}><i className="fas fa-eye" style={{ width: 20, color: '#94a3b8' }} /> View</a>
-                            <a href={buildUrl(urls.print, o.id)} target="_blank" rel="noopener noreferrer"><i className="fas fa-print" style={{ width: 20, color: '#94a3b8' }} /> Print</a>
+                            <a href={buildUrl(urls.view, o.id)} onClick={() => markOpened(o.id)}><i className="fas fa-eye" style={{ width: 20, color: '#94a3b8' }} /> View</a>
+                            <a href={buildUrl(urls.print, o.id)} target="_blank" rel="noopener noreferrer" onClick={() => markOpened(o.id)}><i className="fas fa-print" style={{ width: 20, color: '#94a3b8' }} /> Print</a>
                             {orderCanDirectInvoice(o.status) && !rowHasInvoice(o) ? (
                               <a
                                 href={buildInvoiceCreateHref(urls, o.id)}

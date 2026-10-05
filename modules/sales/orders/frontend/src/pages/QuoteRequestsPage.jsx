@@ -10,6 +10,52 @@ function formatWhen(value) {
   return d.toLocaleString();
 }
 
+const LIST_STATE_KEY = 'qr-list-state';
+
+function readListState() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = {
+    search: params.get('q') || '',
+    opened: params.get('sel') || '',
+  };
+  if (fromUrl.search || fromUrl.opened) return fromUrl;
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(LIST_STATE_KEY) || 'null');
+    window.sessionStorage.removeItem(LIST_STATE_KEY);
+    if (saved && typeof saved === 'object') {
+      return {
+        search: String(saved.search || ''),
+        opened: String(saved.opened || ''),
+      };
+    }
+  } catch {
+    /* storage can be blocked */
+  }
+  return fromUrl;
+}
+
+function writeListStateToUrl(state) {
+  const url = new URL(window.location.href);
+  const setOrDel = (key, value) => {
+    const v = String(value || '').trim();
+    if (v) url.searchParams.set(key, v);
+    else url.searchParams.delete(key);
+  };
+  setOrDel('q', state.search);
+  setOrDel('sel', state.opened);
+  const next = url.pathname + url.search + url.hash;
+  const cur = window.location.pathname + window.location.search + window.location.hash;
+  if (next !== cur) window.history.replaceState(window.history.state, '', next);
+}
+
+function saveListStateForReturn(state) {
+  try {
+    window.sessionStorage.setItem(LIST_STATE_KEY, JSON.stringify(state));
+  } catch {
+    /* storage can be blocked */
+  }
+}
+
 function ensureDotLottiePlayer() {
   if (typeof document === 'undefined') return;
   if (document.getElementById('qr-dotlottie-wc')) return;
@@ -48,7 +94,31 @@ export default function QuoteRequestsPage() {
   const [init, setInit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
+  const [restored] = useState(() => readListState());
+  const [search, setSearch] = useState(restored.search);
+  const [openedKey, setOpenedKey] = useState(restored.opened);
+
+  useEffect(() => {
+    writeListStateToUrl({ search, opened: openedKey });
+  }, [search, openedKey]);
+
+  useEffect(() => {
+    const save = () => saveListStateForReturn({ search, opened: openedKey });
+    window.addEventListener('pagehide', save);
+    return () => window.removeEventListener('pagehide', save);
+  }, [search, openedKey]);
+
+  useEffect(() => {
+    if (!init || !openedKey) return undefined;
+    const timer = window.setTimeout(() => {
+      const card = Array.from(document.querySelectorAll('[data-quote-request]'))
+        .find((el) => el.getAttribute('data-quote-request') === openedKey);
+      if (card && typeof card.scrollIntoView === 'function') {
+        card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [init, openedKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -149,26 +219,21 @@ export default function QuoteRequestsPage() {
         </div>
       </div>
 
-      <section className="exp-desk-kpi-grid qt-kpi-grid" aria-label="Quote request summary">
-        <div className="exp-desk-kpi exp-desk-kpi-card">
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--violet">
-            <Inbox size={20} aria-hidden="true" />
+      <section className="exp-desk-kpi-grid so-kpi-grid so-kpi-grid--compact so-kpi-grid--slim" aria-label="Quote request summary">
+        <article className="so-kpi so-kpi--value" title="Quote requests sent from the website">
+          <div className="so-kpi-top">
+            <span className="so-kpi-label">Website requests</span>
+            <span className="so-kpi-icon"><Inbox size={16} aria-hidden="true" /></span>
           </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">website requests</div>
-            <div className="exp-desk-kpi-value">{requests.length}</div>
+          <strong className="so-kpi-value">{requests.length}</strong>
+        </article>
+        <article className="so-kpi so-kpi--listed" title="Matching current search">
+          <div className="so-kpi-top">
+            <span className="so-kpi-label">Listed now</span>
+            <span className="so-kpi-icon"><Search size={16} aria-hidden="true" /></span>
           </div>
-        </div>
-        <div className="exp-desk-kpi exp-desk-kpi-card">
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--teal">
-            <Search size={20} aria-hidden="true" />
-          </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">listed now</div>
-            <div className="exp-desk-kpi-value">{filtered.length}</div>
-            <div className="exp-desk-kpi-helper">matching current search</div>
-          </div>
-        </div>
+          <strong className="so-kpi-value">{filtered.length}</strong>
+        </article>
       </section>
 
       <section className="exp-desk-results">
@@ -181,7 +246,13 @@ export default function QuoteRequestsPage() {
         ) : (
           <div className="qr-desk-list">
             {filtered.map((row) => (
-              <article key={row.quote_number} className="qr-desk-card">
+              <article
+                key={row.quote_number}
+                data-quote-request={row.quote_number}
+                aria-current={openedKey === row.quote_number ? 'true' : undefined}
+                className={`qr-desk-card${openedKey === row.quote_number ? ' is-opened' : ''}`}
+                onClick={() => setOpenedKey(row.quote_number)}
+              >
                 <header className="qr-desk-card-head">
                   <div>
                     <strong>{row.quote_number}</strong>

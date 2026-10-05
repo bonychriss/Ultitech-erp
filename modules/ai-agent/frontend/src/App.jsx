@@ -355,7 +355,7 @@ export default function App() {
         <>
           <section className="ai-metrics" id="ai-receivables">
             {(data.metrics || []).map((metric) => (
-              <article key={metric.key} className={`ai-metric${metric.tone ? ` ai-metric-${metric.tone}` : ''}`}>
+              <article key={metric.key} className={`ai-metric ai-metric-key-${metric.key}${metric.tone ? ` ai-metric-${metric.tone}` : ''}`}>
                 <span className="ai-metric-label">
                   <span className="ai-metric-icon"><MetricIcon name={metric.key} /></span>
                   {metric.label}

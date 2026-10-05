@@ -55,7 +55,7 @@ function KpiCard({
 }) {
   return (
     <div
-      className="kpi-card kpi-card--clickable"
+      className={`kpi-card kpi-card--clickable kpi-card--tone-${iconClass}`}
       role="button"
       tabIndex={0}
       onClick={onClick}

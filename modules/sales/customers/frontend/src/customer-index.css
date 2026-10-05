@@ -39,6 +39,73 @@ html[data-theme="dark"] .ci-customers-table .exp-desk-table tbody tr.is-selected
   background: rgba(167, 139, 250, 0.16) !important;
 }
 
+/* Ledger table look (matches quotations) */
+.ci-customers-table .exp-desk-table-wrap {
+  border: 1px solid #e7edf3;
+  border-radius: 16px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+  background: #fff;
+}
+
+.ci-customers-table .exp-desk-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.ci-customers-table .exp-desk-table thead th {
+  background: #1e293b;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-top: 0.72rem;
+  padding-bottom: 0.72rem;
+  border-bottom: 0;
+}
+
+.ci-customers-table .exp-desk-table thead th:first-child { border-top-left-radius: 15px; }
+.ci-customers-table .exp-desk-table thead th:last-child { border-top-right-radius: 15px; }
+.ci-customers-table .exp-desk-table tbody tr:last-child td:first-child { border-bottom-left-radius: 15px; }
+.ci-customers-table .exp-desk-table tbody tr:last-child td:last-child { border-bottom-right-radius: 15px; }
+
+.ci-customers-table .exp-desk-table tbody td {
+  padding-top: 0.62rem;
+  padding-bottom: 0.62rem;
+  border-bottom: 1px solid #eef2f6;
+  font-size: 0.875rem;
+  background: #fff;
+}
+
+.ci-customers-table .exp-desk-table tbody tr:last-child td { border-bottom: 0; }
+.ci-customers-table .exp-desk-table tbody tr:nth-child(even) td { background: #f8fafc; }
+.ci-customers-table .exp-desk-table tbody tr:hover td { background: #eef4ff; }
+
+.ci-customers-table .exp-desk-table th.ci-col-serial,
+.ci-customers-table .exp-desk-table td.ci-col-serial {
+  width: 3.5rem;
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+.ci-customers-table .exp-desk-table td.ci-col-serial {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.ci-customers-table .exp-desk-table td .exp-desk-cell-main {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+html[data-theme="dark"] .ci-customers-table .exp-desk-table-wrap { background: #1e293b; border-color: #334155; }
+html[data-theme="dark"] .ci-customers-table .exp-desk-table thead th { background: #0f172a; }
+html[data-theme="dark"] .ci-customers-table .exp-desk-table tbody td,
+html[data-theme="dark"] .ci-customers-table .exp-desk-table tbody tr:nth-child(even) td { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+html[data-theme="dark"] .ci-customers-table .exp-desk-table tbody tr:hover td { background: #334155; }
+html[data-theme="dark"] .ci-customers-table .exp-desk-table td .exp-desk-cell-main { color: #f8fafc; }
+
 .ci-customers-table .exp-desk-table th.ci-col-avatar,
 .ci-customers-table .exp-desk-table td.ci-col-avatar {
   width: 3.5rem;

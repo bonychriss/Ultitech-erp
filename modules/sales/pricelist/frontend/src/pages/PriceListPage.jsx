@@ -522,33 +522,33 @@ export default function PriceListPage() {
 
       {!selectMode && (
         <div className="pl-kpi-grid pl-no-print">
-          <div className="pl-kpi-card">
-            <span className="pl-kpi-icon pl-kpi-icon--violet"><Package size={18} /></span>
-            <div>
-              <div className="pl-kpi-value">{dashboardStats.totalProducts}</div>
-              <div className="pl-kpi-label">Total Products</div>
+          <div className="pl-kpi-card pl-kpi-card--violet">
+            <div className="pl-kpi-top">
+              <span className="pl-kpi-label">Total Products</span>
+              <span className="pl-kpi-icon"><Package size={16} /></span>
             </div>
+            <div className="pl-kpi-value">{dashboardStats.totalProducts}</div>
           </div>
-          <div className="pl-kpi-card">
-            <span className="pl-kpi-icon pl-kpi-icon--blue"><Tag size={18} /></span>
-            <div>
-              <div className="pl-kpi-value">{dashboardStats.pricedItems}</div>
-              <div className="pl-kpi-label">Priced Items</div>
+          <div className="pl-kpi-card pl-kpi-card--blue">
+            <div className="pl-kpi-top">
+              <span className="pl-kpi-label">Priced Items</span>
+              <span className="pl-kpi-icon"><Tag size={16} /></span>
             </div>
+            <div className="pl-kpi-value">{dashboardStats.pricedItems}</div>
           </div>
-          <div className="pl-kpi-card">
-            <span className="pl-kpi-icon pl-kpi-icon--green"><Coins size={18} /></span>
-            <div>
-              <div className="pl-kpi-value pl-kpi-value--money">{formatMoneyDashboard(dashboardStats.totalValue, currency)}</div>
-              <div className="pl-kpi-label">Total Value (Approx.)</div>
+          <div className="pl-kpi-card pl-kpi-card--green" title="Sum of the unit prices shown in the list">
+            <div className="pl-kpi-top">
+              <span className="pl-kpi-label">Total Value (Approx.)</span>
+              <span className="pl-kpi-icon"><Coins size={16} /></span>
             </div>
+            <div className="pl-kpi-value pl-kpi-value--money">{formatMoneyDashboard(dashboardStats.totalValue, currency)}</div>
           </div>
-          <div className="pl-kpi-card">
-            <span className="pl-kpi-icon pl-kpi-icon--amber"><CalendarDays size={18} /></span>
-            <div>
-              <div className="pl-kpi-value">{dashboardStats.lastLabel}</div>
-              <div className="pl-kpi-label">Last Updated</div>
+          <div className="pl-kpi-card pl-kpi-card--amber">
+            <div className="pl-kpi-top">
+              <span className="pl-kpi-label">Last Updated</span>
+              <span className="pl-kpi-icon"><CalendarDays size={16} /></span>
             </div>
+            <div className="pl-kpi-value">{dashboardStats.lastLabel}</div>
           </div>
         </div>
       )}
@@ -573,7 +573,7 @@ export default function PriceListPage() {
                         />
                       </th>
                     )}
-                    <th className="pl-col-num">#</th>
+                    <th className="pl-col-num" title={`${filteredProducts.length} products in this list`}>No.</th>
                     <th className="pl-col-image">Image</th>
                     <th>Product Details</th>
                     <th>Code</th>

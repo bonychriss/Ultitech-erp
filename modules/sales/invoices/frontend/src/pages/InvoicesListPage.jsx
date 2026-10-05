@@ -163,6 +163,58 @@ function buildUrl(base, id) {
   return `${base}${sep}id=${id}`;
 }
 
+const LIST_STATE_KEY = 'inv-list-state';
+
+function readListState() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = {
+    search: params.get('q') || '',
+    status: params.get('status') || '',
+    mine: params.get('mine') === '1',
+    opened: Number(params.get('sel') || 0) || 0,
+  };
+  if (fromUrl.search || fromUrl.status || fromUrl.mine || fromUrl.opened) return fromUrl;
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(LIST_STATE_KEY) || 'null');
+    window.sessionStorage.removeItem(LIST_STATE_KEY);
+    if (saved && typeof saved === 'object') {
+      return {
+        search: String(saved.search || ''),
+        status: String(saved.status || ''),
+        mine: Boolean(saved.mine),
+        opened: Number(saved.opened || 0) || 0,
+      };
+    }
+  } catch {
+    /* storage can be blocked */
+  }
+  return fromUrl;
+}
+
+function writeListStateToUrl(state) {
+  const url = new URL(window.location.href);
+  const setOrDel = (key, value) => {
+    const v = String(value || '').trim();
+    if (v) url.searchParams.set(key, v);
+    else url.searchParams.delete(key);
+  };
+  setOrDel('q', state.search);
+  setOrDel('status', state.status);
+  setOrDel('mine', state.mine ? '1' : '');
+  setOrDel('sel', state.opened ? String(state.opened) : '');
+  const next = url.pathname + url.search + url.hash;
+  const cur = window.location.pathname + window.location.search + window.location.hash;
+  if (next !== cur) window.history.replaceState(window.history.state, '', next);
+}
+
+function saveListStateForReturn(state) {
+  try {
+    window.sessionStorage.setItem(LIST_STATE_KEY, JSON.stringify(state));
+  } catch {
+    /* storage can be blocked */
+  }
+}
+
 function TypeBadge({ type }) {
   const t = (type || 'spare').toLowerCase();
   if (t === 'truck') {
@@ -221,9 +273,11 @@ export default function InvoicesListPage() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [myInvoicesOnly, setMyInvoicesOnly] = useState(false);
+  const [restored] = useState(() => readListState());
+  const [search, setSearch] = useState(restored.search);
+  const [statusFilter, setStatusFilter] = useState(restored.status);
+  const [myInvoicesOnly, setMyInvoicesOnly] = useState(restored.mine);
+  const [openedId, setOpenedId] = useState(restored.opened);
   const [draftStatusFilter, setDraftStatusFilter] = useState('');
   const [draftMyInvoicesOnly, setDraftMyInvoicesOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -259,6 +313,26 @@ export default function InvoicesListPage() {
   }, []);
 
   useEffect(() => { loadInit(); }, [loadInit]);
+
+  useEffect(() => {
+    writeListStateToUrl({
+      search,
+      status: statusFilter,
+      mine: myInvoicesOnly,
+      opened: openedId,
+    });
+  }, [search, statusFilter, myInvoicesOnly, openedId]);
+
+  useEffect(() => {
+    if (!init || !openedId) return undefined;
+    const timer = window.setTimeout(() => {
+      const row = document.querySelector(`[data-invoice-id="${openedId}"]`);
+      if (row && typeof row.scrollIntoView === 'function') {
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [init, openedId]);
 
   useEffect(() => {
     if (openMenuId == null) return undefined;
@@ -584,7 +658,22 @@ export default function InvoicesListPage() {
     });
   }
 
+  function markOpened(id) {
+    const nextId = Number(id || 0);
+    if (!nextId) return;
+    const state = {
+      search,
+      status: statusFilter,
+      mine: myInvoicesOnly,
+      opened: nextId,
+    };
+    setOpenedId(nextId);
+    writeListStateToUrl(state);
+    saveListStateForReturn(state);
+  }
+
   function goView(id) {
+    markOpened(id);
     window.location.href = buildUrl(urls.view || 'view.php', id);
   }
 
@@ -684,10 +773,10 @@ export default function InvoicesListPage() {
     }
   }
 
-  function kpiCardProps(key, label) {
+  function kpiCardProps(key, label, tone) {
     return {
       type: 'button',
-      className: 'exp-desk-kpi exp-desk-kpi-card exp-desk-kpi-card--clickable',
+      className: `inv-kpi inv-kpi--${tone}`,
       onClick: () => openKpiTrace(key),
       'aria-label': `View summary for ${label}`,
       title: 'Click to see breakdown',
@@ -908,44 +997,35 @@ export default function InvoicesListPage() {
       )}
 
       <section className="exp-desk-kpi-grid inv-kpi-grid" aria-label="Summary">
-        <button {...kpiCardProps('totalInvoices', 'total invoices')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--violet">
-            <FileText size={20} aria-hidden="true" />
+        <button {...kpiCardProps('totalInvoices', 'total invoices', 'invoices')} title="All invoices on record. Click to see breakdown">
+          <div className="inv-kpi-top">
+            <span className="inv-kpi-label">Total invoices</span>
+            <span className="inv-kpi-icon"><FileText size={16} aria-hidden="true" /></span>
           </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">total invoices</div>
-            <div className="exp-desk-kpi-value">{fmtBig(invoiceStats.total)}</div>
-          </div>
+          <strong className="inv-kpi-value">{fmtBig(invoiceStats.total)}</strong>
         </button>
-        <button {...kpiCardProps('totalValue', 'total value')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--indigo">
-            <Wallet size={20} aria-hidden="true" />
+        <button {...kpiCardProps('totalValue', 'total value', 'value')} title="Sum of invoice totals. Click to see breakdown">
+          <div className="inv-kpi-top">
+            <span className="inv-kpi-label">Total value</span>
+            <span className="inv-kpi-icon"><Wallet size={16} aria-hidden="true" /></span>
           </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">total value</div>
-            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
-              {defaultCurrency} {formatCurrency(invoiceStats.totalVal)}
-            </div>
-          </div>
+          <strong className="inv-kpi-value inv-kpi-value--money">
+            {defaultCurrency} {formatCurrency(invoiceStats.totalVal)}
+          </strong>
         </button>
-        <button {...kpiCardProps('outstanding', 'outstanding')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--amber">
-            <AlertCircle size={20} aria-hidden="true" />
+        <button {...kpiCardProps('outstanding', 'outstanding', 'outstanding')} title="Invoices with a balance due. Click to see breakdown">
+          <div className="inv-kpi-top">
+            <span className="inv-kpi-label">Outstanding</span>
+            <span className="inv-kpi-icon"><AlertCircle size={16} aria-hidden="true" /></span>
           </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">outstanding</div>
-            <div className="exp-desk-kpi-value">{fmtBig(invoiceStats.outstanding)}</div>
-          </div>
+          <strong className="inv-kpi-value">{fmtBig(invoiceStats.outstanding)}</strong>
         </button>
-        <button {...kpiCardProps('listedNow', 'listed now')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--teal">
-            <CheckCircle2 size={20} aria-hidden="true" />
+        <button {...kpiCardProps('listedNow', 'listed now', 'listed')} title="Matching current filters. Click to see breakdown">
+          <div className="inv-kpi-top">
+            <span className="inv-kpi-label">Listed now</span>
+            <span className="inv-kpi-icon"><CheckCircle2 size={16} aria-hidden="true" /></span>
           </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">listed now</div>
-            <div className="exp-desk-kpi-value">{filteredInvoices.length}</div>
-            <div className="exp-desk-kpi-helper">matching current filters</div>
-          </div>
+          <strong className="inv-kpi-value">{filteredInvoices.length}</strong>
         </button>
       </section>
 
@@ -988,8 +1068,8 @@ export default function InvoicesListPage() {
               </colgroup>
               <thead>
                 <tr>
-                  <th className="qt-col-check qt-col-serial inv-col-check" title="Invoices in this list">
-                    {filteredInvoices.length}
+                  <th className="qt-col-check qt-col-serial inv-col-check" title={`${filteredInvoices.length} invoices in this list`}>
+                    No.
                   </th>
                   <th className="inv-col-number">Number</th>
                   <th className="inv-col-customer">Customer</th>
@@ -1005,7 +1085,9 @@ export default function InvoicesListPage() {
                 {filteredInvoices.map((inv, index) => (
                   <tr
                     key={inv.id}
-                    className={`exp-desk-row-clickable${selectedIds.has(inv.id) ? ' qt-row-selected' : ''}`}
+                    data-invoice-id={inv.id}
+                    aria-current={openedId === Number(inv.id) ? 'true' : undefined}
+                    className={`exp-desk-row-clickable${selectedIds.has(inv.id) ? ' qt-row-selected' : ''}${openedId === Number(inv.id) ? ' is-opened' : ''}`}
                     tabIndex={0}
                     onClick={(event) => handleRowClick(event, inv)}
                     onKeyDown={(event) => {
@@ -1059,8 +1141,8 @@ export default function InvoicesListPage() {
                         </button>
                         {openMenuId === inv.id && (
                           <div className="qt-actions-dropdown">
-                            <a href={buildUrl(urls.view, inv.id)}><i className="fas fa-eye" style={{ width: 20, color: '#94a3b8' }} /> View</a>
-                            <a href={buildUrl(urls.print, inv.id)} target="_blank" rel="noopener noreferrer"><i className="fas fa-print" style={{ width: 20, color: '#94a3b8' }} /> Print</a>
+                            <a href={buildUrl(urls.view, inv.id)} onClick={() => markOpened(inv.id)}><i className="fas fa-eye" style={{ width: 20, color: '#94a3b8' }} /> View</a>
+                            <a href={buildUrl(urls.print, inv.id)} target="_blank" rel="noopener noreferrer" onClick={() => markOpened(inv.id)}><i className="fas fa-print" style={{ width: 20, color: '#94a3b8' }} /> Print</a>
                             {canRegisterPayment && canPayInvoice(inv) ? (
                               <button
                                 type="button"

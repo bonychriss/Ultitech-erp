@@ -348,6 +348,7 @@ export default function CustomerIndexPage() {
             <table className="exp-desk-table">
               <thead>
                 <tr>
+                  <th className="ci-col-serial" title={`${filteredCustomers.length} customers in this list`}>No.</th>
                   <th className="ci-col-avatar" aria-label="Profile" />
                   <th>Code</th>
                   <th>Company</th>
@@ -357,7 +358,7 @@ export default function CustomerIndexPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.map((customer) => {
+                {filteredCustomers.map((customer, index) => {
                   const style = avatarStyle(customer.id);
                   const viewUrl = buildViewUrl(customer.id);
                   const editUrl = buildEditUrl(customer.id);
@@ -376,6 +377,7 @@ export default function CustomerIndexPage() {
                         }
                       }}
                     >
+                      <td className="ci-col-serial">{index + 1}</td>
                       <td className="ci-col-avatar">
                         <span className="ci-avatar" style={style}>
                           {getInitials(customer.company_name)}

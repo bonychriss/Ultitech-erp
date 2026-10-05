@@ -303,6 +303,43 @@ $reassignPageUrl = function_exists('sales_module_url')
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+
+        .rs-kpi { min-width: 0; min-height: 4.75rem; padding: 0.7rem 0.9rem; border: 1px solid transparent; border-radius: 14px; }
+        .rs-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .rs-kpi-label { font-size: 0.8rem; font-weight: 650; }
+        .rs-kpi-icon { width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12); }
+        .rs-kpi-value { display: block; margin: 0.45rem 0 0.3rem; font-size: 1.2rem; font-weight: 780; letter-spacing: -0.02em; line-height: 1.15; color: #111827; }
+        .rs-kpi-foot { font-size: 0.74rem; color: #475569; font-weight: 550; }
+        .rs-kpi--blue { background: linear-gradient(135deg, #eef4ff 0%, #dbe7ff 100%); border-color: #c7d7fe; }
+        .rs-kpi--orange { background: linear-gradient(135deg, #fff7eb 0%, #ffe6c2 100%); border-color: #fbd49a; }
+        .rs-kpi--green { background: linear-gradient(135deg, #ecfbf3 0%, #d3f3e2 100%); border-color: #b4e8cb; }
+        .rs-kpi--blue .rs-kpi-icon { background: #2563eb; }
+        .rs-kpi--orange .rs-kpi-icon { background: #ea8a0c; }
+        .rs-kpi--green .rs-kpi-icon { background: #16a34a; }
+        .rs-kpi--blue .rs-kpi-label { color: #1e3a8a; }
+        .rs-kpi--orange .rs-kpi-label { color: #7c2d12; }
+        .rs-kpi--green .rs-kpi-label { color: #14532d; }
+
+        .rs-table { border-collapse: separate; border-spacing: 0; }
+        .rs-table thead th { background: #1e293b; color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; text-align: left; white-space: nowrap; padding: 0.72rem 0.75rem; border: 0; }
+        .rs-table tbody td { background: #fff; border-bottom: 1px solid #eef2f6; vertical-align: middle; }
+        .rs-table tbody tr:nth-child(even) td { background: #f8fafc; }
+        .rs-table tbody tr:hover td { background: #eef4ff; }
+        .rs-table tbody tr:last-child td { border-bottom: 0; }
+        .rs-table .rs-col-check { width: 2.75rem; text-align: center; }
+        .rs-table .rs-amt { text-align: right; font-weight: 650; color: #0f172a; font-variant-numeric: tabular-nums; }
+        .rs-table input[type="checkbox"] { accent-color: #2563eb; width: 1rem; height: 1rem; cursor: pointer; }
+
+        html[data-theme="dark"] .rs-kpi--blue { background: linear-gradient(135deg, #1c2a44 0%, #1e3a6e 100%); border-color: #2c4a80; }
+        html[data-theme="dark"] .rs-kpi--orange { background: linear-gradient(135deg, #3a2a14 0%, #5a3a12 100%); border-color: #6e4a1a; }
+        html[data-theme="dark"] .rs-kpi--green { background: linear-gradient(135deg, #163226 0%, #1b4a33 100%); border-color: #25603f; }
+        html[data-theme="dark"] .rs-kpi-label, html[data-theme="dark"] .rs-kpi-foot { color: #e2e8f0; }
+        html[data-theme="dark"] .rs-kpi-value { color: #f8fafc; }
+        html[data-theme="dark"] .rs-table thead th { background: #0f172a; }
+        html[data-theme="dark"] .rs-table tbody td,
+        html[data-theme="dark"] .rs-table tbody tr:nth-child(even) td { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+        html[data-theme="dark"] .rs-table tbody tr:hover td { background: #334155; }
+        html[data-theme="dark"] .rs-table .rs-amt { color: #f8fafc; }
     </style>
 </head>
 <body>
@@ -505,35 +542,35 @@ $reassignPageUrl = function_exists('sales_module_url')
             const renderTableRows = () => {
                 if (activeTab === 'invoices') {
                     return activeRows.invoices.map(inv => (
-                        <tr key={`inv-${inv.id}`} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="px-3 py-2"><input type="checkbox" checked={selectedInvoices.includes(parseInt(inv.id))} onChange={() => toggleSelection(parseInt(inv.id), 'invoices')} /></td>
+                        <tr key={`inv-${inv.id}`}>
+                            <td className="px-3 py-2 rs-col-check"><input type="checkbox" checked={selectedInvoices.includes(parseInt(inv.id))} onChange={() => toggleSelection(parseInt(inv.id), 'invoices')} /></td>
                             <td className="px-3 py-2 text-xs font-semibold text-slate-500">Invoice</td>
                             <td className="px-3 py-2 text-xs font-bold text-blue-600">{inv.invoice_number}</td>
                             <td className="px-3 py-2 text-xs text-slate-700">{inv.customer_name || '-'}</td>
-                            <td className="px-3 py-2 text-xs font-semibold">{formatCurrency(inv.total_amount)}</td>
+                            <td className="px-3 py-2 text-xs rs-amt">{formatCurrency(inv.total_amount)}</td>
                             <td className="px-3 py-2 text-xs text-slate-500">{inv.invoice_date}</td>
                         </tr>
                     ));
                 }
                 if (activeTab === 'orders') {
                     return activeRows.orders.map(ord => (
-                        <tr key={`ord-${ord.id}`} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="px-3 py-2"><input type="checkbox" checked={selectedOrders.includes(parseInt(ord.id))} onChange={() => toggleSelection(parseInt(ord.id), 'orders')} /></td>
+                        <tr key={`ord-${ord.id}`}>
+                            <td className="px-3 py-2 rs-col-check"><input type="checkbox" checked={selectedOrders.includes(parseInt(ord.id))} onChange={() => toggleSelection(parseInt(ord.id), 'orders')} /></td>
                             <td className="px-3 py-2 text-xs font-semibold text-slate-500">Order</td>
                             <td className="px-3 py-2 text-xs font-bold text-amber-600">{ord.order_number}</td>
                             <td className="px-3 py-2 text-xs text-slate-700">{ord.customer_name || '-'}</td>
-                            <td className="px-3 py-2 text-xs font-semibold">{formatCurrency(ord.total_amount)}</td>
+                            <td className="px-3 py-2 text-xs rs-amt">{formatCurrency(ord.total_amount)}</td>
                             <td className="px-3 py-2 text-xs text-slate-500">{ord.quote_date}</td>
                         </tr>
                     ));
                 }
                 return activeRows.commissions.map(comm => (
-                    <tr key={`com-${comm.id}`} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="px-3 py-2"><input type="checkbox" checked={selectedCommissions.includes(parseInt(comm.id))} onChange={() => toggleSelection(parseInt(comm.id), 'commissions')} /></td>
+                    <tr key={`com-${comm.id}`}>
+                        <td className="px-3 py-2 rs-col-check"><input type="checkbox" checked={selectedCommissions.includes(parseInt(comm.id))} onChange={() => toggleSelection(parseInt(comm.id), 'commissions')} /></td>
                         <td className="px-3 py-2 text-xs font-semibold text-slate-500">Commission</td>
                         <td className="px-3 py-2 text-xs font-bold text-emerald-600">COM-{comm.id}</td>
                         <td className="px-3 py-2 text-xs text-slate-700">Commission row</td>
-                        <td className="px-3 py-2 text-xs font-semibold">{formatCurrency(comm.commission_amount)}</td>
+                        <td className="px-3 py-2 text-xs rs-amt">{formatCurrency(comm.commission_amount)}</td>
                         <td className="px-3 py-2 text-xs text-slate-500">{comm.created_at}</td>
                     </tr>
                 ));
@@ -545,9 +582,20 @@ $reassignPageUrl = function_exists('sales_module_url')
                     {data.result?.mode === 'applied' && <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700">Moved {data.result.moved.invoices} invoices, {data.result.moved.orders} orders and {data.result.moved.commissions} commissions.</div>}
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div className="bg-white border border-slate-200 rounded-xl p-4"><div className="text-xs text-slate-500">Invoices Ready</div><div className="text-2xl font-bold text-blue-600">{(data.available.invoices || []).length}</div><div className="text-xs text-slate-500">Total amount {formatCurrency(totals.invoices)}</div></div>
-                        <div className="bg-white border border-slate-200 rounded-xl p-4"><div className="text-xs text-slate-500">Orders Ready</div><div className="text-2xl font-bold text-amber-600">{(data.available.orders || []).length}</div><div className="text-xs text-slate-500">Total amount {formatCurrency(totals.orders)}</div></div>
-                        <div className="bg-white border border-slate-200 rounded-xl p-4"><div className="text-xs text-slate-500">Commission Rows</div><div className="text-2xl font-bold text-emerald-600">{(data.available.commissions || []).length}</div><div className="text-xs text-slate-500">Total amount {formatCurrency(totals.commissions)}</div></div>
+                        {[
+                            { tone: 'blue', label: 'Invoices Ready', icon: 'fa-file-invoice', count: (data.available.invoices || []).length, total: totals.invoices },
+                            { tone: 'orange', label: 'Orders Ready', icon: 'fa-file-signature', count: (data.available.orders || []).length, total: totals.orders },
+                            { tone: 'green', label: 'Commission Rows', icon: 'fa-hand-holding-dollar', count: (data.available.commissions || []).length, total: totals.commissions },
+                        ].map(card => (
+                            <div key={card.label} className={`rs-kpi rs-kpi--${card.tone}`}>
+                                <div className="rs-kpi-top">
+                                    <span className="rs-kpi-label">{card.label}</span>
+                                    <span className="rs-kpi-icon" aria-hidden="true"><i className={`fas ${card.icon}`}></i></span>
+                                </div>
+                                <strong className="rs-kpi-value">{card.count}</strong>
+                                <div className="rs-kpi-foot">Total amount {formatCurrency(card.total)}</div>
+                            </div>
+                        ))}
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -602,15 +650,15 @@ $reassignPageUrl = function_exists('sales_module_url')
                                 <div className="ml-auto text-xs text-slate-500 self-center">{selectedCount} items selected</div>
                             </div>
                             <div className="overflow-auto">
-                                <table className="w-full">
-                                    <thead className="bg-slate-50 border-b border-slate-100">
+                                <table className="w-full rs-table">
+                                    <thead>
                                         <tr>
-                                            <th className="px-3 py-2 text-left text-[11px] font-semibold text-slate-500"></th>
-                                            <th className="px-3 py-2 text-left text-[11px] font-semibold text-slate-500">Type</th>
-                                            <th className="px-3 py-2 text-left text-[11px] font-semibold text-slate-500">Reference No.</th>
-                                            <th className="px-3 py-2 text-left text-[11px] font-semibold text-slate-500">Customer</th>
-                                            <th className="px-3 py-2 text-left text-[11px] font-semibold text-slate-500">Amount</th>
-                                            <th className="px-3 py-2 text-left text-[11px] font-semibold text-slate-500">Date</th>
+                                            <th className="rs-col-check" aria-label="Select"></th>
+                                            <th>Type</th>
+                                            <th>Reference No.</th>
+                                            <th>Customer</th>
+                                            <th className="rs-amt">Amount</th>
+                                            <th>Date</th>
                                         </tr>
                                     </thead>
                                     <tbody>

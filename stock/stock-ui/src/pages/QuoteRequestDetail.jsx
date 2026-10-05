@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   HiOutlineArrowLeft,
   HiOutlineChatBubbleLeftRight,
   HiOutlineEnvelope,
   HiOutlinePhone,
   HiOutlinePlus,
+  HiOutlineTrash,
 } from 'react-icons/hi2';
 import './quote-request-detail.css';
 
@@ -28,8 +29,72 @@ function Action({ href, icon: Icon, label, primary = false, external = false }) 
   );
 }
 
+function DeleteDialog({ quote, customerName, api, csrf, backUrl, onClose }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape' && !busy) onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [busy, onClose]);
+
+  const remove = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const body = new URLSearchParams({ action: 'delete', quote_number: quote, csrf_token: csrf });
+      const res = await fetch(api, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+        body,
+      });
+      const json = await res.json().catch(() => null);
+      if (!json || !json.success) {
+        throw new Error((json && json.message) || 'The request could not be deleted.');
+      }
+      window.location.href = backUrl;
+    } catch (err) {
+      setError(err.message || 'The request could not be deleted.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="qrd-modal"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose();
+      }}
+    >
+      <div className="qrd-modal-box" role="dialog" aria-modal="true" aria-labelledby="qrd-delete-title">
+        <span className="qrd-modal-icon">
+          <HiOutlineTrash aria-hidden="true" />
+        </span>
+        <h2 id="qrd-delete-title">Delete quote request?</h2>
+        <p>
+          {quote} from {customerName} will be removed from the quote requests list.
+        </p>
+        {error && <p className="qrd-modal-error">{error}</p>}
+        <div className="qrd-modal-actions">
+          <button type="button" className="qrd-btn" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button type="button" className="qrd-btn qrd-btn--danger" onClick={remove} disabled={busy} autoFocus>
+            {busy ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function QuoteRequestDetail({ data }) {
-  const { found = false, backUrl = '', createUrl = '', quote = null } = data;
+  const { found = false, backUrl = '', createUrl = '', deleteApi = '', csrf = '', quote = null } = data;
+  const [confirming, setConfirming] = useState(false);
 
   const back = (
     <a className="qrd-back" href={backUrl}>
@@ -66,9 +131,26 @@ export default function QuoteRequestDetail({ data }) {
           <Action href={links.call} icon={HiOutlinePhone} label="Call" />
           <Action href={links.whatsapp} icon={HiOutlineChatBubbleLeftRight} label="WhatsApp" external />
           <Action href={links.email} icon={HiOutlineEnvelope} label="Email" />
+          {deleteApi && (
+            <button type="button" className="qrd-action qrd-action--danger" onClick={() => setConfirming(true)}>
+              <HiOutlineTrash aria-hidden="true" />
+              <span>Delete</span>
+            </button>
+          )}
           <Action href={createUrl} icon={HiOutlinePlus} label="Create quotation" primary />
         </div>
       </header>
+
+      {confirming && (
+        <DeleteDialog
+          quote={quote.number}
+          customerName={customer.name}
+          api={deleteApi}
+          csrf={csrf}
+          backUrl={backUrl}
+          onClose={() => setConfirming(false)}
+        />
+      )}
 
       <section className="qrd-card">
         <h2 className="qrd-label">Customer</h2>

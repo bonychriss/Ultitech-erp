@@ -24,6 +24,32 @@ if (!is_file($lib)) {
 }
 require_once $lib;
 
+if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+    if ((string) ($_POST['action'] ?? '') !== 'delete') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Unknown action.']);
+        exit;
+    }
+    if (!function_exists('verify_csrf') || !verify_csrf($_POST['csrf_token'] ?? '')) {
+        http_response_code(419);
+        echo json_encode(['success' => false, 'message' => 'Your session has expired. Refresh the page and try again.']);
+        exit;
+    }
+    $quoteNumber = substr(trim((string) ($_POST['quote_number'] ?? '')), 0, 64);
+    try {
+        $deleted = $quoteNumber !== '' && function_exists('webQuoteDeleteRequest') && webQuoteDeleteRequest($quoteNumber);
+    } catch (Throwable $e) {
+        $deleted = false;
+    }
+    if (!$deleted) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'This request was not found. It may already be deleted.']);
+        exit;
+    }
+    echo json_encode(['success' => true]);
+    exit;
+}
+
 $pdo = $GLOBALS['pdo'] ?? null;
 $quotes = [];
 try {

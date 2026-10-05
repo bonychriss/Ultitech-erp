@@ -344,11 +344,11 @@ function webQuoteRequestGroups(?PDO $pdo = null, string $quoteNumber = ''): arra
     }
     try {
         if ($quoteNumber !== '') {
-            $stmt = $pdo->prepare('SELECT * FROM website_quote_requests WHERE quote_number = ? ORDER BY id DESC LIMIT 200');
+            $stmt = $pdo->prepare('SELECT * FROM website_quote_requests WHERE quote_number = ? AND COALESCE(status, \'\') <> \'deleted\' ORDER BY id DESC LIMIT 200');
             $stmt->execute([$quoteNumber]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } else {
-            $rows = $pdo->query('SELECT * FROM website_quote_requests ORDER BY id DESC LIMIT 400')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $rows = $pdo->query('SELECT * FROM website_quote_requests WHERE COALESCE(status, \'\') <> \'deleted\' ORDER BY id DESC LIMIT 400')->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
     } catch (Throwable $e) {
         return [];
@@ -439,6 +439,7 @@ function webQuoteIcon(string $name): string
         'chat' => '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.8-.9L3 21l2-5.2a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.4-8.5 8.4 8.4 0 0 1 8.5 8z"/>',
         'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
         'box' => '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
+        'trash' => '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>',
     ];
 
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
@@ -479,6 +480,42 @@ function webQuotePageUrl(string $quoteNumber = ''): string
     $base = function_exists('company_url') ? company_url('website/quotes') : '/ultimate/website/quotes';
 
     return $quoteNumber === '' ? $base : $base . '?quote=' . rawurlencode($quoteNumber);
+}
+
+function webQuoteApiUrl(): string
+{
+    return function_exists('app_url') ? app_url('/api/website_quotes.php') : '/api/website_quotes.php';
+}
+
+function webQuoteCsrf(): string
+{
+    return function_exists('csrf_token') ? (string) csrf_token() : '';
+}
+
+function webQuoteDeleteRequest(string $quoteNumber): bool
+{
+    $pdo = $GLOBALS['pdo'] ?? null;
+    $lib = dirname(__DIR__, 2) . '/modules/sales/quote-requests/includes/quote-requests-lib.php';
+    if (!($pdo instanceof PDO) || $quoteNumber === '' || !is_file($lib)) {
+        return false;
+    }
+    require_once $lib;
+
+    return salesQuoteRequestsDelete($pdo, $quoteNumber) > 0;
+}
+
+function webQuoteDeleteDialog(): string
+{
+    return '<div class="uq-modal" id="uq-delete-modal" data-api="' . webQuoteH(webQuoteApiUrl()) . '" data-csrf="' . webQuoteH(webQuoteCsrf()) . '" hidden>'
+        . '<div class="uq-modal-box" role="dialog" aria-modal="true" aria-labelledby="uq-delete-title">'
+        . '<span class="uq-modal-icon">' . webQuoteIcon('trash') . '</span>'
+        . '<h2 id="uq-delete-title">Delete quote request?</h2>'
+        . '<p id="uq-delete-text"></p>'
+        . '<p class="uq-modal-error" id="uq-delete-error" hidden></p>'
+        . '<div class="uq-modal-actions">'
+        . '<button type="button" class="uq-btn" data-close>Cancel</button>'
+        . '<button type="button" class="uq-btn uq-btn--danger" id="uq-delete-confirm">Delete</button>'
+        . '</div></div></div>';
 }
 
 function webQuoteDate(string $createdAt): string
@@ -537,22 +574,26 @@ function webQuoteRequestsPanel(bool $withHeading = true): string
         $first = $quote['items'][0]['name'] ?? '';
         $itemsText = $count === 1 ? $first : $count . ' products';
 
-        $html .= '<a class="uq-row" role="listitem" href="' . webQuoteH(webQuotePageUrl($quote['quote_number'])) . '"'
+        $customerName = $quote['customer_name'] !== '' ? $quote['customer_name'] : 'Website customer';
+        $html .= '<div class="uq-row" role="listitem"'
             . ' data-ts="' . $ts . '" data-status="' . webQuoteH($statusKey) . '" data-search="' . webQuoteH(strtolower(implode(' ', $search))) . '">'
-            . '<span class="uq-row-quote"><span class="uq-row-icon">' . webQuoteIcon('doc') . '</span><strong>' . webQuoteH($quote['quote_number']) . '</strong></span>'
-            . '<span class="uq-row-customer"><span class="uq-row-name">' . webQuoteH($quote['customer_name'] !== '' ? $quote['customer_name'] : 'Website customer') . '</span>'
+            . '<span class="uq-row-quote"><span class="uq-row-icon">' . webQuoteIcon('doc') . '</span>'
+            . '<a class="uq-row-link" href="' . webQuoteH(webQuotePageUrl($quote['quote_number'])) . '"><strong>' . webQuoteH($quote['quote_number']) . '</strong></a></span>'
+            . '<span class="uq-row-customer"><span class="uq-row-name">' . webQuoteH($customerName) . '</span>'
             . ($quote['customer_phone'] !== '' ? '<span class="uq-row-phone">' . webQuoteH($quote['customer_phone']) . '</span>' : '')
             . '</span>'
             . '<span class="uq-row-items" title="' . webQuoteH($itemsText) . '">' . webQuoteH($itemsText) . '</span>'
             . '<span class="uq-row-total uq-right">' . ($total > 0 ? webQuoteH(webQuoteMoney($total)) : '&mdash;') . '</span>'
             . '<span class="uq-row-date">' . webQuoteH(webQuoteDate((string) $quote['created_at'])) . '</span>'
             . '<span><span class="uq-badge uq-badge--' . webQuoteH($statusKey) . '">' . webQuoteH($statusLabel) . '</span></span>'
-            . '<span class="uq-row-go">' . webQuoteIcon('chevron') . '</span>'
-            . '</a>';
+            . '<span class="uq-row-go"><button type="button" class="uq-delete" title="Delete request" aria-label="Delete ' . webQuoteH($quote['quote_number']) . '"'
+            . ' data-quote="' . webQuoteH($quote['quote_number']) . '" data-customer="' . webQuoteH($customerName) . '">' . webQuoteIcon('trash') . '</button></span>'
+            . '</div>';
     }
 
     $html .= '</div>'
         . '<div class="uq-empty" id="uq-no-match" hidden>No requests match these filters.</div>'
+        . webQuoteDeleteDialog()
         . '</section>' . webQuoteRequestsCss() . webQuoteRequestsScript();
 
     return $html;
@@ -569,6 +610,8 @@ function webQuoteRequestDetailData(string $quoteNumber): array
         'found' => $quote !== null,
         'backUrl' => webQuotePageUrl(),
         'createUrl' => webQuoteCreateQuotationUrl($quoteNumber),
+        'deleteApi' => webQuoteApiUrl(),
+        'csrf' => webQuoteCsrf(),
         'quote' => null,
     ];
     if ($quote === null) {
@@ -774,6 +817,66 @@ function webQuoteRequestsScript(): string
     var none = document.getElementById("uq-no-match");
     var rows = Array.prototype.slice.call(document.querySelectorAll(".uq-row"));
     if (!rows.length) return;
+    var list = document.querySelector(".uq-list");
+    var modal = document.getElementById("uq-delete-modal");
+    var confirmBtn = document.getElementById("uq-delete-confirm");
+    var errorBox = document.getElementById("uq-delete-error");
+    var pending = null;
+    function closeModal() {
+        modal.hidden = true;
+        pending = null;
+    }
+    list.addEventListener("click", function (event) {
+        var button = event.target.closest(".uq-delete");
+        if (button) {
+            event.preventDefault();
+            pending = button.closest(".uq-row");
+            document.getElementById("uq-delete-text").textContent = button.getAttribute("data-quote") + " from " + button.getAttribute("data-customer") + " will be removed from this list.";
+            errorBox.hidden = true;
+            confirmBtn.disabled = false;
+            confirmBtn.setAttribute("data-quote", button.getAttribute("data-quote"));
+            modal.hidden = false;
+            confirmBtn.focus();
+            return;
+        }
+        var row = event.target.closest(".uq-row");
+        if (row && !event.target.closest("a")) row.querySelector(".uq-row-link").click();
+    });
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal || event.target.closest("[data-close]")) closeModal();
+    });
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !modal.hidden) closeModal();
+    });
+    confirmBtn.addEventListener("click", function () {
+        var body = new URLSearchParams();
+        body.append("action", "delete");
+        body.append("quote_number", confirmBtn.getAttribute("data-quote"));
+        body.append("csrf_token", modal.getAttribute("data-csrf"));
+        confirmBtn.disabled = true;
+        fetch(modal.getAttribute("data-api"), { method: "POST", credentials: "same-origin", headers: { "Accept": "application/json" }, body: body })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (!data || !data.success) throw new Error((data && data.message) || "The request could not be deleted.");
+                if (pending) {
+                    rows.splice(rows.indexOf(pending), 1);
+                    pending.parentNode.removeChild(pending);
+                }
+                closeModal();
+                if (!rows.length) {
+                    list.hidden = true;
+                    none.textContent = "No quotation requests yet.";
+                    none.hidden = false;
+                    return;
+                }
+                apply();
+            })
+            .catch(function (err) {
+                errorBox.textContent = err && err.name !== "SyntaxError" && err.message ? err.message : "The request could not be deleted.";
+                errorBox.hidden = false;
+                confirmBtn.disabled = false;
+            });
+    });
     function since(value) {
         var now = new Date();
         if (value === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
@@ -822,11 +925,29 @@ function webQuoteRequestsCss(): string
 .uq-select select{border:0;outline:0;background:transparent;font-size:.85rem;color:#334155;min-width:110px;cursor:pointer}
 .uq-new{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:8px;background:#2563eb;color:#fff!important;font-weight:700;font-size:.85rem;text-decoration:none!important;box-shadow:0 6px 16px rgba(37,99,235,.25);margin-left:auto}
 .uq-new:hover{background:#1d4ed8}
-.uq-list{display:grid;grid-template-columns:max-content minmax(130px,1.5fr) minmax(90px,1fr) max-content max-content max-content 16px;column-gap:20px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.uq-list{display:grid;grid-template-columns:max-content minmax(130px,1.5fr) minmax(90px,1fr) max-content max-content max-content 34px;column-gap:20px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .uq-list-head,.uq-row{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:center;padding:0 18px}
 .uq-list-head > span,.uq-row > span{min-width:0}
 .uq-list-head{background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em;height:40px}
-.uq-row{min-height:60px;border-bottom:1px solid #eef2f7;color:#334155!important;text-decoration:none!important;font-size:.875rem;transition:background .12s}
+.uq-row{position:relative;min-height:60px;border-bottom:1px solid #eef2f7;color:#334155!important;text-decoration:none!important;font-size:.875rem;transition:background .12s;cursor:pointer}
+.uq-row-link{color:inherit!important;text-decoration:none!important}
+.uq-row-link::after{content:"";position:absolute;inset:0}
+.uq-delete{position:relative;z-index:1;width:34px;height:34px;border:0;border-radius:8px;background:transparent;color:#94a3b8;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .12s,color .12s}
+.uq-delete:hover,.uq-delete:focus-visible{background:#fee2e2;color:#b91c1c;outline:0}
+.uq-modal{position:fixed;inset:0;z-index:1080;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.uq-modal[hidden]{display:none}
+.uq-modal-box{width:min(420px,100%);background:#fff;border-radius:14px;box-shadow:0 20px 50px rgba(15,23,42,.25);padding:24px;text-align:center}
+.uq-modal-icon{width:48px;height:48px;border-radius:50%;background:#fee2e2;color:#b91c1c;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
+.uq-page .uq-modal-icon svg{width:22px;height:22px}
+.uq-modal-box h2{margin:0 0 6px;font-size:1.1rem;font-weight:800;color:#0f172a}
+.uq-modal-box p{margin:0;color:#475569;font-size:.9rem}
+.uq-modal-box .uq-modal-error{margin-top:10px;color:#b91c1c}
+.uq-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.uq-btn{height:42px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#334155;font-weight:700;font-size:.875rem;cursor:pointer}
+.uq-btn:hover{background:#f8fafc}
+.uq-btn--danger{background:#dc2626;border-color:#dc2626;color:#fff}
+.uq-btn--danger:hover{background:#b91c1c}
+.uq-btn[disabled]{opacity:.6;cursor:wait}
 .uq-row:last-child{border-bottom:0}
 .uq-row:hover{background:#f5f8ff}
 .uq-row[hidden]{display:none}
@@ -839,8 +960,7 @@ function webQuoteRequestsCss(): string
 .uq-row-items{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#475569}
 .uq-row-total{font-weight:700;color:#0f172a}
 .uq-row-date{color:#475569;white-space:nowrap}
-.uq-row-go{color:#94a3b8;display:inline-flex}
-.uq-row:hover .uq-row-go{color:#2563eb}
+.uq-row-go{display:inline-flex;justify-content:center}
 .uq-badge{display:inline-block;padding:4px 12px;border-radius:999px;font-size:.78rem;font-weight:600;white-space:nowrap;letter-spacing:0}
 .uq-badge--open{background:#dcfce7;color:#15803d}
 .uq-badge--contacted{background:#dbeafe;color:#1d4ed8}
@@ -851,26 +971,31 @@ function webQuoteRequestsCss(): string
 .uq-right{text-align:right!important;white-space:nowrap}
 .uq-empty{background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;color:#64748b}
 @container uq (max-width:1040px){
-  .uq-list{grid-template-columns:max-content minmax(130px,1fr) max-content max-content max-content 16px;column-gap:16px}
+  .uq-list{grid-template-columns:max-content minmax(130px,1fr) max-content max-content max-content 34px;column-gap:16px}
   .uq-list-head > span:nth-child(3),.uq-row-items{display:none}
 }
 @container uq (max-width:820px){
   .uq-list{display:block}
   .uq-list-head{display:none}
-  .uq-row{grid-template-columns:1fr auto;grid-template-areas:"quote status" "customer total" "items date";gap:4px 12px;padding:12px 16px}
+  .uq-row{grid-template-columns:1fr auto auto;grid-template-areas:"quote status del" "customer total del" "items date del";gap:4px 12px;padding:12px 16px}
   .uq-row-quote{grid-area:quote}
   .uq-row > span:nth-child(6){grid-area:status;justify-self:end}
   .uq-row-customer{grid-area:customer}
   .uq-row-total{grid-area:total}
   .uq-row-items{display:block;grid-area:items;font-size:.8rem}
   .uq-row-date{grid-area:date;font-size:.8rem;text-align:right}
-  .uq-row-go{display:none}
+  .uq-row-go{grid-area:del;align-self:center}
 }
 @media (max-width:767.98px){
   .uq-search{width:100%}
   .uq-new{margin-left:0}
 }
 html[data-theme="dark"] .uq-page{color:#e2e8f0}
+html[data-theme="dark"] .uq-modal-box{background:#1e293b}
+html[data-theme="dark"] .uq-modal-box h2{color:#f1f5f9}
+html[data-theme="dark"] .uq-modal-box p{color:#cbd5e1}
+html[data-theme="dark"] .uq-modal-box .uq-modal-error{color:#fca5a5}
+html[data-theme="dark"] .uq-btn:not(.uq-btn--danger){background:#0f172a;border-color:#334155;color:#e2e8f0}
 html[data-theme="dark"] .uq-list,html[data-theme="dark"] .uq-search,html[data-theme="dark"] .uq-select,html[data-theme="dark"] .uq-empty{background:#1e293b;border-color:#334155}
 html[data-theme="dark"] .uq-list-head{background:#0f172a;color:#94a3b8;border-color:#334155}
 html[data-theme="dark"] .uq-row{border-color:#334155;color:#cbd5e1!important}

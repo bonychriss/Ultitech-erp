@@ -223,6 +223,18 @@ function salesQuoteRequestsStorefrontPdo(): ?PDO
 }
 
 /**
+ * Deleted requests keep their rows so the storefront sync does not import them again.
+ */
+function salesQuoteRequestsDelete(PDO $pdo, string $quoteNumber): int
+{
+    salesQuoteRequestsEnsureSchema($pdo);
+    $stmt = $pdo->prepare('UPDATE website_quote_requests SET status = \'deleted\' WHERE quote_number = ? AND COALESCE(status, \'\') <> \'deleted\'');
+    $stmt->execute([$quoteNumber]);
+
+    return $stmt->rowCount();
+}
+
+/**
  * @return list<array<string,mixed>>
  */
 function salesQuoteRequestsFetchAll(?PDO $pdo = null): array
@@ -241,6 +253,7 @@ function salesQuoteRequestsFetchAll(?PDO $pdo = null): array
     $rows = $db->query('
         SELECT *
         FROM website_quote_requests
+        WHERE COALESCE(status, \'\') <> \'deleted\'
         ORDER BY id DESC
         LIMIT 500
     ')->fetchAll(PDO::FETCH_ASSOC) ?: [];

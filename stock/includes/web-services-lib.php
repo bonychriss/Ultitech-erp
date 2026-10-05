@@ -371,6 +371,7 @@ function webQuoteRequestGroups(?PDO $pdo = null): array
                 'customer_email' => (string) ($row['customer_email'] ?? ''),
                 'customer_phone' => (string) ($row['customer_phone'] ?? ''),
                 'notes' => (string) ($row['notes'] ?? ''),
+                'status' => strtolower(trim((string) ($row['status'] ?? 'new'))) ?: 'new',
                 'created_at' => (string) ($row['created_at'] ?? ''),
                 'items' => [],
             ];

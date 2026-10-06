@@ -136,22 +136,22 @@ html[data-theme="dark"] main.ai-agent-react-root {
     min-height: 4.75rem;
     padding: 0.7rem 0.9rem;
     border-radius: 14px;
-    box-shadow: none;
-    background: linear-gradient(135deg, #eef4ff 0%, #dbe7ff 100%);
-    border-color: #c7d7fe;
+    background: #fff;
+    border-color: #e7edf3;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     --ai-metric-solid: #2563eb;
-    --ai-metric-ink: #1e3a8a;
+    --ai-metric-tint: #eef4ff;
 }
-.ai-metric-key-count { background: linear-gradient(135deg, #f5f1ff 0%, #e6dcff 100%); border-color: #d8c9fd; --ai-metric-solid: #7c3aed; --ai-metric-ink: #4c1d95; }
+.ai-metric-key-count { --ai-metric-solid: #7c3aed; --ai-metric-tint: #f5f1ff; }
 .ai-metric-key-due_soon,
-.ai-metric-soon { background: linear-gradient(135deg, #fff7eb 0%, #ffe6c2 100%); border-color: #fbd49a; --ai-metric-solid: #ea8a0c; --ai-metric-ink: #7c2d12; }
+.ai-metric-soon { --ai-metric-solid: #d97706; --ai-metric-tint: #fff7eb; }
 .ai-metric-key-overdue,
-.ai-metric-urgent { background: linear-gradient(135deg, #fff1f1 0%, #ffdcdc 100%); border-color: #fbc4c4; --ai-metric-solid: #dc2626; --ai-metric-ink: #7f1d1d; }
+.ai-metric-urgent { --ai-metric-solid: #dc2626; --ai-metric-tint: #fef2f2; }
 .ai-metric .ai-metric-label {
     flex-direction: row-reverse;
     justify-content: space-between;
     gap: 8px;
-    color: var(--ai-metric-ink);
+    color: #64748b;
     font-size: 0.8rem;
     font-weight: 650;
     letter-spacing: 0;
@@ -163,9 +163,8 @@ html[data-theme="dark"] main.ai-agent-react-root {
     border-radius: 8px;
     align-items: center;
     justify-content: center;
-    background: var(--ai-metric-solid);
-    color: #fff;
-    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+    background: var(--ai-metric-tint);
+    color: var(--ai-metric-solid);
 }
 .ai-metric strong {
     margin-top: 0.45rem;
@@ -330,6 +329,7 @@ html[data-theme="dark"] .ai-metric-soon { background: linear-gradient(135deg, #3
 html[data-theme="dark"] .ai-metric-key-overdue,
 html[data-theme="dark"] .ai-metric-urgent { background: linear-gradient(135deg, #3f1d24 0%, #5c1f28 100%); border-color: #7f2a35; }
 html[data-theme="dark"] .ai-metric .ai-metric-label { color: #e2e8f0; }
-html[data-theme="dark"] .ai-metric .ai-metric-icon { color: #fff; }
+html[data-theme="dark"] .ai-metric { box-shadow: none; }
+html[data-theme="dark"] .ai-metric .ai-metric-icon { background: var(--ai-metric-solid); color: #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); }
 html[data-theme="dark"] .ai-metric strong { color: #f8fafc; }
 html[data-theme="dark"] .ai-metric small { color: #cbd5e1; }

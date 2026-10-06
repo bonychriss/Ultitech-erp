@@ -117,6 +117,10 @@ $push([
     'href' => $voucherModuleUrl,
     'icon' => 'voucher',
     'color' => '#0f766e',
+    // Vouchers where it is this user's turn to sign (Applicant -> Dept Manager -> Checked By -> final approval).
+    'count' => $pvTaskCount > 0 ? $pvTaskCount : null,
+    'countTitle' => $pvTaskCount === 1 ? '1 voucher waiting for your signature' : $pvTaskCount . ' vouchers waiting for your signature',
+    'countHref' => $pvTaskCount > 0 ? $pvTasksListUrl : null,
 ]);
 $push([
     'id' => 'attendance',

@@ -57,8 +57,10 @@
   min-width: 0;
   min-height: 4.75rem;
   padding: 0.7rem 0.9rem;
-  border: 1px solid transparent;
+  background: #fff;
+  border: 1px solid #e7edf3;
   border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .pl-kpi-top {
@@ -72,6 +74,7 @@
   font-size: 0.8rem;
   font-weight: 650;
   min-width: 0;
+  color: #64748b;
 }
 
 .pl-kpi-icon {
@@ -82,8 +85,6 @@
   height: 28px;
   border-radius: 8px;
   flex-shrink: 0;
-  color: #fff;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
 }
 
 .pl-kpi-value {
@@ -101,20 +102,10 @@
   font-size: clamp(0.85rem, 1.15vw, 1.05rem);
 }
 
-.pl-kpi-card--violet { background: linear-gradient(135deg, #f5f1ff 0%, #e6dcff 100%); border-color: #d8c9fd; }
-.pl-kpi-card--blue { background: linear-gradient(135deg, #eef4ff 0%, #dbe7ff 100%); border-color: #c7d7fe; }
-.pl-kpi-card--green { background: linear-gradient(135deg, #ecfbf3 0%, #d3f3e2 100%); border-color: #b4e8cb; }
-.pl-kpi-card--amber { background: linear-gradient(135deg, #fff7eb 0%, #ffe6c2 100%); border-color: #fbd49a; }
-
-.pl-kpi-card--violet .pl-kpi-icon { background: #7c3aed; }
-.pl-kpi-card--blue .pl-kpi-icon { background: #2563eb; }
-.pl-kpi-card--green .pl-kpi-icon { background: #16a34a; }
-.pl-kpi-card--amber .pl-kpi-icon { background: #ea8a0c; }
-
-.pl-kpi-card--violet .pl-kpi-label { color: #4c1d95; }
-.pl-kpi-card--blue .pl-kpi-label { color: #1e3a8a; }
-.pl-kpi-card--green .pl-kpi-label { color: #14532d; }
-.pl-kpi-card--amber .pl-kpi-label { color: #7c2d12; }
+.pl-kpi-card--violet .pl-kpi-icon { background: #f5f1ff; color: #7c3aed; }
+.pl-kpi-card--blue .pl-kpi-icon { background: #eef4ff; color: #2563eb; }
+.pl-kpi-card--green .pl-kpi-icon { background: #ecfbf3; color: #16a34a; }
+.pl-kpi-card--amber .pl-kpi-icon { background: #fff7eb; color: #d97706; }
 
 .pl-table-section {
   background: #fff;
@@ -914,7 +905,13 @@ html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--violet { backgrou
 html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--blue { background: linear-gradient(135deg, #1c2a44 0%, #1e3a6e 100%); border-color: #2c4a80; }
 html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--green { background: linear-gradient(135deg, #163226 0%, #1b4a33 100%); border-color: #25603f; }
 html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--amber { background: linear-gradient(135deg, #3a2a14 0%, #5a3a12 100%); border-color: #6e4a1a; }
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card { box-shadow: none; }
 html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-label { color: #e2e8f0; }
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-icon { color: #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); }
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--violet .pl-kpi-icon { background: #7c3aed; }
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--blue .pl-kpi-icon { background: #2563eb; }
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--green .pl-kpi-icon { background: #16a34a; }
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--amber .pl-kpi-icon { background: #ea8a0c; }
 
 html[data-theme="dark"] body.page-pricelist-desk .pl-table-section,
 html[data-theme="dark"] body.page-pricelist-desk .pl-modal {

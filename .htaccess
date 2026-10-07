@@ -79,6 +79,7 @@ RewriteRule ^([A-Za-z0-9-]+)/modules/payroll/my_payslips\.php$ payroll.php?compa
 # /{company_slug}/website → Website module
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/website/quotes/?$ website.php?company_slug=$1&module=website&view=quotes [QSA,L,NC]
+RewriteRule ^([A-Za-z0-9-]+)/website/dashboard/?$ website.php?company_slug=$1&module=website&view=dashboard [QSA,L,NC]
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/website/?$ website.php?company_slug=$1&module=website [QSA,L,NC]
 RewriteCond %{REQUEST_URI} !^/home/ [NC]

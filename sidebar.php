@@ -473,6 +473,7 @@ switch ($active_module) {
         break;
 
     case 'website':
+        addItem($menuItems, 'website-dashboard', 'Dashboard', 'bar-chart', $prefix . 'website/dashboard');
         addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'website');
         addItem($menuItems, 'website-quotes', 'Quote requests', 'file-text', $prefix . 'website/quotes');
         break;

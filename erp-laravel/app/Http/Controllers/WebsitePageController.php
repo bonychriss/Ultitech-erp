@@ -38,6 +38,11 @@ class WebsitePageController extends Controller
             )->header('Content-Type', 'text/html; charset=UTF-8');
         }
 
+        if ((string) ($_GET['view'] ?? request()->query('view', '')) === 'dashboard') {
+            $viewData['pageTitle'] = 'Website dashboard';
+            $viewData['employeeHeaderTitle'] = 'Dashboard';
+        }
+
         if ((string) ($_GET['view'] ?? request()->query('view', '')) === 'quotes') {
             $viewData['pageTitle'] = 'Quote requests';
             $viewData['employeeHeaderTitle'] = '';

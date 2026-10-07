@@ -939,10 +939,24 @@ if (!function_exists('stock_blade_web_services_data')) {
         $syncUrl = $joinQuery($websiteUrl, 'ajax=sync');
         $cancelUrl = $joinQuery($websiteUrl, 'ajax=cancel');
 
+        $view = (string) ($_GET['view'] ?? '') === 'dashboard' ? 'dashboard' : 'sync';
+        $dashboard = null;
+        if ($view === 'dashboard') {
+            try {
+                require_once dirname(__DIR__) . '/includes/web-dashboard-lib.php';
+                $dashboard = webDashboardData($pdo, (int) ($_GET['range'] ?? 30));
+            } catch (Throwable $e) {
+                error_log('website dashboard: ' . $e->getMessage());
+            }
+        }
+
         return [
+            'view' => $view,
             'pending' => $pending,
             'syncUrl' => $syncUrl,
             'cancelUrl' => $cancelUrl,
+            'dashboardUrl' => function_exists('company_url') ? company_url('website/dashboard') : '/website/dashboard',
+            'dashboard' => $dashboard,
         ];
     }
 }

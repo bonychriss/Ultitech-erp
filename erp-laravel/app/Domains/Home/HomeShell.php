@@ -38,14 +38,30 @@ final class HomeShell
         ];
 
         $pageKey = strtolower((string) $bootCfg['page']);
-        $pageTitle = $pageKey === 'pricing'
-            ? 'UltiTech ERP | Pricing'
-            : 'UltiTech ERP | Welcome';
+        $seo = $pageKey === 'pricing'
+            ? [
+                'title' => 'Pricing and Free Trial | UltiTech ERP',
+                'description' => 'See UltiTech ERP pricing and try the full suite free for 14 days: sales, inventory, payroll, expenses and reports in one cloud system. No card needed.',
+                'path' => '/pricing.php',
+            ]
+            : [
+                'title' => 'UltiTech ERP | Cloud ERP for Sales, Stock, Payroll and Accounting',
+                'description' => 'UltiTech ERP connects sales, stock, payroll, expenses and accounting in one secure cloud system, with live reports for every department. Start a free 14-day trial.',
+                'path' => '/',
+                'schema' => true,
+            ];
+        $pageTitle = $seo['title'];
 
         $cssUrl = $assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'];
         $jsUrl = $assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'];
 
-        $headMarkup = '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n"
+        $seoPartial = rtrim((string) config('erp.app_root'), '\\/') . '/includes/partials/seo.php';
+        $headMarkup = '';
+        if (is_file($seoPartial)) {
+            require_once $seoPartial;
+            $headMarkup .= erp_seo_tags($seo);
+        }
+        $headMarkup .= '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n"
             . '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n"
             . '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">' . "\n"
             . '<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css">' . "\n";

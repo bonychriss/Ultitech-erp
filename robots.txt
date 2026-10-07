@@ -4,3 +4,5 @@ Disallow: /scripts/
 Disallow: /tasks/
 Disallow: /admin/
 Disallow: /employee/
+
+Sitemap: https://ultitech.io/sitemap.xml

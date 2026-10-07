@@ -391,6 +391,8 @@ function webDashboardData(PDO $pdo, string $range, string $fromInput = '', strin
         'ranges' => array_map(static fn ($key, $label) => ['key' => (string) $key, 'label' => $label], array_keys($ranges), $ranges),
         'from' => $fromStr,
         'to' => $toStr,
+        'prev_from' => $prevFromStr,
+        'prev_to' => $prevToStr,
         'today' => (new DateTimeImmutable('today', new DateTimeZone(WEB_DASH_TZ)))->format('Y-m-d'),
         'length' => $p['length'],
         'max_custom_days' => WEB_DASH_MAX_CUSTOM_DAYS,

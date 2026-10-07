@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  HiOutlineArrowDownTray,
   HiOutlineBanknotes,
   HiOutlineChatBubbleLeftRight,
+  HiOutlineCheckCircle,
   HiOutlineCursorArrowRays,
   HiOutlineDocumentText,
   HiOutlineExclamationTriangle,
@@ -229,6 +231,196 @@ function TopList({ title, icon: Icon, rows, unit, empty }) {
   );
 }
 
+function fileSize(bytes) {
+  const n = Number(bytes) || 0;
+  if (n >= 1048576) return `${(n / 1048576).toFixed(1)} MB`;
+  if (n >= 1024) return `${Math.round(n / 1024)} KB`;
+  return `${n} B`;
+}
+
+function daySpan(from, to) {
+  const a = Date.parse(`${from}T00:00:00Z`);
+  const b = Date.parse(`${to}T00:00:00Z`);
+  return Number.isNaN(a) || Number.isNaN(b) ? 0 : Math.round((b - a) / 86400000) + 1;
+}
+
+function PdfDialog({ websiteUrl, from, to, today, maxDays, onClose }) {
+  const [start, setStart] = useState(from || '');
+  const [end, setEnd] = useState(to || '');
+  const span = daySpan(start, end);
+  const limit = Number(maxDays) || 400;
+  let error = '';
+  if (!start || !end) error = 'Choose both dates.';
+  else if (span < 1) error = 'The From date must be on or before the To date.';
+  else if (today && end > today) error = 'The To date cannot be in the future.';
+  else if (span > limit) error = `Choose a range of ${number(limit)} days or fewer.`;
+
+  const [job, setJob] = useState({ stage: 'idle', loaded: 0, total: 0, message: '' });
+  const abortRef = useRef(null);
+  const busy = job.stage === 'preparing' || job.stage === 'downloading';
+
+  const close = () => {
+    abortRef.current?.abort();
+    onClose();
+  };
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  useEffect(() => {
+    if (job.stage !== 'done') return undefined;
+    const timer = window.setTimeout(onClose, 1800);
+    return () => window.clearTimeout(timer);
+  }, [job.stage, onClose]);
+
+  const download = async () => {
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setJob({ stage: 'preparing', loaded: 0, total: 0, message: '' });
+    const sep = websiteUrl.includes('?') ? '&' : '?';
+    const url = `${websiteUrl}${sep}ajax=dashboard-pdf&from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}`;
+    try {
+      const res = await fetch(url, { credentials: 'same-origin', signal: controller.signal });
+      const type = res.headers.get('Content-Type') || '';
+      if (!res.ok || !type.includes('application/pdf')) {
+        const text = type.includes('text/plain') ? (await res.text()).trim() : '';
+        throw new Error(text || (res.redirected || type.includes('text/html')
+          ? 'Your session has ended. Sign in again, then retry.'
+          : 'The report could not be created. Please try again.'));
+      }
+      const total = Number(res.headers.get('X-Report-Size') || res.headers.get('Content-Length')) || 0;
+      const name = (res.headers.get('Content-Disposition') || '').match(/filename="?([^";]+)"?/)?.[1]
+        || `website-dashboard-${start}-to-${end}.pdf`;
+      setJob({ stage: 'downloading', loaded: 0, total, message: '' });
+
+      const chunks = [];
+      let loaded = 0;
+      if (res.body && res.body.getReader) {
+        const reader = res.body.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          loaded += value.length;
+          setJob({ stage: 'downloading', loaded, total, message: '' });
+        }
+      } else {
+        const buf = await res.arrayBuffer();
+        chunks.push(buf);
+        loaded = buf.byteLength;
+      }
+
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob(chunks, { type: 'application/pdf' }));
+      link.download = name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+      setJob({ stage: 'done', loaded, total: total || loaded, message: name });
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      setJob({ stage: 'error', loaded: 0, total: 0, message: err.message || 'The download failed. Please try again.' });
+    } finally {
+      if (abortRef.current === controller) abortRef.current = null;
+    }
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (error || busy) return;
+    download();
+  };
+
+  const cancelDownload = () => {
+    abortRef.current?.abort();
+    setJob({ stage: 'idle', loaded: 0, total: 0, message: '' });
+  };
+
+  const pct = job.total ? Math.min(100, Math.round((job.loaded / job.total) * 100)) : 0;
+  const showProgress = job.stage !== 'idle' && job.stage !== 'error';
+  const indeterminate = job.stage === 'preparing' || (job.stage === 'downloading' && !job.total);
+
+  return (
+    <div className="wdash-modal" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) close(); }}>
+      <form className="wdash-modal-card" role="dialog" aria-modal="true" aria-labelledby="wdash-pdf-title" onSubmit={submit}>
+        <div className="wdash-modal-head">
+          <span className="wdash-modal-icon"><HiOutlineArrowDownTray aria-hidden="true" /></span>
+          <div>
+            <strong id="wdash-pdf-title">Download PDF report</strong>
+            <p>Choose the dates to include in the report.</p>
+          </div>
+          <button type="button" className="wdash-notify-close" onClick={close} aria-label="Close">
+            <HiXMark aria-hidden="true" />
+          </button>
+        </div>
+        <div className="wdash-modal-fields">
+          <label>
+            <span>From</span>
+            <input type="date" value={start} max={today} onChange={(e) => setStart(e.target.value)} required autoFocus disabled={busy} />
+          </label>
+          <label>
+            <span>To</span>
+            <input type="date" value={end} max={today} onChange={(e) => setEnd(e.target.value)} required disabled={busy} />
+          </label>
+        </div>
+        <p className={`wdash-modal-hint${error ? ' is-error' : ''}`}>
+          {error || `${number(span)} ${span === 1 ? 'day' : 'days'}: ${dayLabel(start, true)} to ${dayLabel(end, true)}`}
+        </p>
+
+        {showProgress && (
+          <div className={`wdash-progress is-${job.stage}`} role="status" aria-live="polite">
+            <div className="wdash-progress-top">
+              <span className="wdash-progress-label">
+                {job.stage === 'done' && <HiOutlineCheckCircle aria-hidden="true" />}
+                {job.stage === 'preparing' && 'Preparing report\u2026'}
+                {job.stage === 'downloading' && 'Downloading\u2026'}
+                {job.stage === 'done' && 'Downloaded'}
+              </span>
+              <span className="wdash-progress-value">
+                {job.stage === 'downloading' && (job.total ? `${pct}%` : fileSize(job.loaded))}
+                {job.stage === 'done' && '100%'}
+              </span>
+            </div>
+            <div
+              className={`wdash-progress-track${indeterminate ? ' is-indeterminate' : ''}`}
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={indeterminate ? undefined : (job.stage === 'done' ? 100 : pct)}
+            >
+              <span style={indeterminate ? undefined : { width: `${job.stage === 'done' ? 100 : pct}%` }} />
+            </div>
+            <p className="wdash-progress-meta">
+              {job.stage === 'preparing' && 'Collecting the figures and building the PDF.'}
+              {job.stage === 'downloading' && (job.total ? `${fileSize(job.loaded)} of ${fileSize(job.total)}` : 'Receiving the file.')}
+              {job.stage === 'done' && `${job.message} \u00b7 ${fileSize(job.total)}`}
+            </p>
+          </div>
+        )}
+        {job.stage === 'error' && <p className="wdash-progress-error" role="alert">{job.message}</p>}
+
+        <div className="wdash-modal-actions">
+          {busy ? (
+            <button type="button" className="wdash-modal-cancel" onClick={cancelDownload}>Stop</button>
+          ) : (
+            <button type="button" className="wdash-modal-cancel" onClick={close}>{job.stage === 'done' ? 'Close' : 'Cancel'}</button>
+          )}
+          <button type="submit" className="wdash-modal-go" disabled={Boolean(error) || busy}>
+            <HiOutlineArrowDownTray aria-hidden="true" />
+            {busy ? 'Downloading\u2026' : job.stage === 'error' ? 'Try again' : 'Download'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export default function WebsiteDashboard({ dashboard, websiteUrl }) {
   const d = dashboard || {};
   const totals = d.totals || {};
@@ -239,6 +431,7 @@ export default function WebsiteDashboard({ dashboard, websiteUrl }) {
   const series = (key) => rows.map((r) => Number(r[key]) || 0);
   const trackingStartedLate = d.tracking_since && d.tracking_since > d.from;
   const [offlineOpen, setOfflineOpen] = useState(Boolean(dashboard) && !d.shop_connected);
+  const [pdfOpen, setPdfOpen] = useState(false);
 
   useEffect(() => {
     if (!offlineOpen) return undefined;
@@ -260,7 +453,22 @@ export default function WebsiteDashboard({ dashboard, websiteUrl }) {
           </label>
           <button type="submit">Apply</button>
         </form>
+        <button type="button" className="wdash-pdf" onClick={() => setPdfOpen(true)}>
+          <HiOutlineArrowDownTray aria-hidden="true" />
+          Download PDF
+        </button>
       </header>
+
+      {pdfOpen && (
+        <PdfDialog
+          websiteUrl={websiteUrl}
+          from={d.from}
+          to={d.to}
+          today={d.today}
+          maxDays={d.max_custom_days}
+          onClose={() => setPdfOpen(false)}
+        />
+      )}
 
       {offlineOpen && (
         <div className="wdash-notify" role="status">

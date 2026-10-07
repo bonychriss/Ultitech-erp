@@ -337,6 +337,14 @@ $push([
     'icon' => 'letter',
     'color' => '#E6B800',
 ]);
+$push([
+    'id' => 'cover_page',
+    'label' => 'Cover Page',
+    'desc' => 'Ready cover pages for your files & documents',
+    'href' => $companyRoute('modules/cover-page/index') . '?module=cover_page',
+    'icon' => 'cover_page',
+    'color' => '#b8860b',
+]);
 
 if ($isAdmin) {
     $push([

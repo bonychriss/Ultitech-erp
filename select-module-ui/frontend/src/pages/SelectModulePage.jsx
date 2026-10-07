@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bell,
+  BookOpen,
   Compass,
   Coins,
   Globe,
@@ -410,6 +411,7 @@ const ICONS = {
   backup: BackupIcon,
   inbox: Inbox,
   letter: LetterIcon,
+  cover_page: BookOpen,
   layout: Palette,
   website: Globe,
 }

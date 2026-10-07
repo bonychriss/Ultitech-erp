@@ -66,16 +66,19 @@ function Change({ value, points = false }) {
   );
 }
 
-function Spark({ values, color }) {
-  const max = Math.max(1, ...values);
-  if (values.length < 2) return null;
-  const pts = values.map((v, i) => [(i / (values.length - 1)) * 100, 28 - (v / max) * 26]);
-  const d = pts.reduce((acc, [x, y], i) => {
+function smoothPath(pts) {
+  return pts.reduce((acc, [x, y], i) => {
     if (i === 0) return `M${x},${y}`;
     const [px, py] = pts[i - 1];
     const mx = (px + x) / 2;
     return `${acc} C${mx},${py} ${mx},${y} ${x},${y}`;
   }, '');
+}
+
+function Spark({ values, color }) {
+  const max = Math.max(1, ...values);
+  if (values.length < 2) return null;
+  const d = smoothPath(values.map((v, i) => [(i / (values.length - 1)) * 100, 28 - (v / max) * 26]));
   return (
     <svg className="wdash-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
       <path d={d} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
@@ -106,8 +109,8 @@ function TrafficChart({ rows }) {
   const step = rows.length > 1 ? (W - pad.l - pad.r) / (rows.length - 1) : 0;
   const x = (i) => pad.l + i * step;
   const y = (v) => pad.t + (H - pad.t - pad.b) * (1 - v / max);
-  const line = (key) => rows.map((r, i) => `${x(i)},${y(r[key])}`).join(' ');
-  const area = (key) => `${pad.l},${y(0)} ${line(key)} ${x(rows.length - 1)},${y(0)}`;
+  const line = (key) => smoothPath(rows.map((r, i) => [x(i), y(r[key])]));
+  const area = (key) => `${line(key)} L${x(rows.length - 1)},${y(0)} L${pad.l},${y(0)} Z`;
   const ticks = [0, Math.round(max / 2), max];
   const labelEvery = Math.max(1, Math.ceil(rows.length / 8));
   const active = hover !== null ? rows[hover] : null;
@@ -121,10 +124,10 @@ function TrafficChart({ rows }) {
             <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" className="wdash-axis">{number(t)}</text>
           </g>
         ))}
-        <polygon points={area('product_views')} className="wdash-area-views" />
-        <polygon points={area('visitors')} className="wdash-area-visitors" />
-        <polyline points={line('product_views')} className="wdash-line-views" />
-        <polyline points={line('visitors')} className="wdash-line-visitors" />
+        <path d={area('product_views')} className="wdash-area-views" />
+        <path d={area('visitors')} className="wdash-area-visitors" />
+        <path d={line('product_views')} className="wdash-line-views" />
+        <path d={line('visitors')} className="wdash-line-visitors" />
         {rows.map((r, i) => (
           <g key={r.date}>
             {i % labelEvery === 0 ? <text x={x(i)} y={H - 6} textAnchor="middle" className="wdash-axis">{r.label}</text> : null}

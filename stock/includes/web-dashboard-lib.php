@@ -14,12 +14,69 @@ const WEB_DASH_STATS_KEY = 'd2d3ce729fa2d206fd283b336673d7d640f4f029';
 const WEB_DASH_TZ = 'Africa/Dar_es_Salaam';
 const WEB_DASH_QUOTED = ['quoted', 'accepted'];
 
+const WEB_DASH_MAX_CUSTOM_DAYS = 400;
+
 /**
- * @return array<int,string>
+ * @return array<string,string>
  */
 function webDashRanges(): array
 {
-    return [7 => 'Last 7 days', 30 => 'Last 30 days', 90 => 'Last 90 days', 365 => 'Last 12 months'];
+    return ['week' => 'This week', '7' => 'Last 7 days', '30' => 'Last 30 days', '90' => 'Last 90 days', '365' => 'Last 12 months'];
+}
+
+/**
+ * Resolves the selected period plus the equally long period it is compared with
+ * (the same weekdays last week for "This week", otherwise the days just before).
+ * A valid from/to pair wins over the preset; the default is this week (Monday to today).
+ *
+ * @return array{key:string,from:DateTimeImmutable,to:DateTimeImmutable,prevFrom:DateTimeImmutable,prevTo:DateTimeImmutable,length:int}
+ */
+function webDashPeriod(string $range, string $fromInput = '', string $toInput = ''): array
+{
+    $tz = new DateTimeZone(WEB_DASH_TZ);
+    $today = new DateTimeImmutable('today', $tz);
+    $parse = static function (string $value) use ($tz): ?DateTimeImmutable {
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value, $tz);
+
+        return ($date && $date->format('Y-m-d') === $value) ? $date : null;
+    };
+
+    $from = $parse($fromInput);
+    $to = $parse($toInput);
+    if ($from !== null && $to !== null) {
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        if ($to > $today) {
+            $to = $today;
+        }
+        if ($from > $to) {
+            $from = $to;
+        }
+        $maxFrom = $to->modify('-' . (WEB_DASH_MAX_CUSTOM_DAYS - 1) . ' days');
+        if ($from < $maxFrom) {
+            $from = $maxFrom;
+        }
+        $key = 'custom';
+    } else {
+        $key = array_key_exists($range, webDashRanges()) ? $range : 'week';
+        $to = $today;
+        $from = $key === 'week'
+            ? $today->modify('-' . ((int) $today->format('N') - 1) . ' days')
+            : $today->modify('-' . ((int) $key - 1) . ' days');
+    }
+
+    $length = (int) $from->diff($to)->days + 1;
+    $shift = $key === 'week' ? 7 : $length;
+
+    return [
+        'key' => $key,
+        'from' => $from,
+        'to' => $to,
+        'prevFrom' => $from->modify('-' . $shift . ' days'),
+        'prevTo' => $to->modify('-' . $shift . ' days'),
+        'length' => $length,
+    ];
 }
 
 function webDashStatsUrl(): string
@@ -242,19 +299,16 @@ function webDashRate(float $part, float $whole): ?float
 /**
  * @return array<string,mixed>
  */
-function webDashboardData(PDO $pdo, int $rangeDays): array
+function webDashboardData(PDO $pdo, string $range, string $fromInput = '', string $toInput = ''): array
 {
     $ranges = webDashRanges();
-    if (!isset($ranges[$rangeDays])) {
-        $rangeDays = 30;
-    }
-    $tz = new DateTimeZone(WEB_DASH_TZ);
-    $today = new DateTimeImmutable('today', $tz);
-    $from = $today->modify('-' . ($rangeDays - 1) . ' days');
+    $p = webDashPeriod($range, $fromInput, $toInput);
+    $from = $p['from'];
+    $to = $p['to'];
     $fromStr = $from->format('Y-m-d');
-    $toStr = $today->format('Y-m-d');
-    $prevFromStr = $from->modify('-' . $rangeDays . ' days')->format('Y-m-d');
-    $prevToStr = $from->modify('-1 day')->format('Y-m-d');
+    $toStr = $to->format('Y-m-d');
+    $prevFromStr = $p['prevFrom']->format('Y-m-d');
+    $prevToStr = $p['prevTo']->format('Y-m-d');
 
     $period = static function (string $date) use ($fromStr, $toStr, $prevFromStr, $prevToStr): ?string {
         if ($date >= $fromStr && $date <= $toStr) {
@@ -265,7 +319,7 @@ function webDashboardData(PDO $pdo, int $rangeDays): array
     };
 
     $days = [];
-    for ($d = $from; $d <= $today; $d = $d->modify('+1 day')) {
+    for ($d = $from; $d <= $to; $d = $d->modify('+1 day')) {
         $days[$d->format('Y-m-d')] = [
             'date' => $d->format('Y-m-d'),
             'visitors' => 0, 'product_views' => 0, 'likes' => 0,
@@ -333,10 +387,13 @@ function webDashboardData(PDO $pdo, int $rangeDays): array
     $prevConversion = webDashRate($prev['enquiries'], $prev['visitors']);
 
     return [
-        'range' => $rangeDays,
-        'ranges' => array_map(static fn ($days, $label) => ['days' => $days, 'label' => $label], array_keys($ranges), $ranges),
+        'range' => $p['key'],
+        'ranges' => array_map(static fn ($key, $label) => ['key' => (string) $key, 'label' => $label], array_keys($ranges), $ranges),
         'from' => $fromStr,
         'to' => $toStr,
+        'today' => (new DateTimeImmutable('today', new DateTimeZone(WEB_DASH_TZ)))->format('Y-m-d'),
+        'length' => $p['length'],
+        'max_custom_days' => WEB_DASH_MAX_CUSTOM_DAYS,
         'shop_connected' => $shop !== null,
         'tracking_since' => $shop['tracking_since'] ?? null,
         'likes_total' => (int) ($shop['likes_total'] ?? 0),

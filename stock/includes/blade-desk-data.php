@@ -944,7 +944,8 @@ if (!function_exists('stock_blade_web_services_data')) {
         if ($view === 'dashboard') {
             try {
                 require_once dirname(__DIR__) . '/includes/web-dashboard-lib.php';
-                $dashboard = webDashboardData($pdo, (int) ($_GET['range'] ?? 30));
+                $query = static fn (string $key): string => is_string($_GET[$key] ?? null) ? trim($_GET[$key]) : '';
+                $dashboard = webDashboardData($pdo, $query('range'), $query('from'), $query('to'));
             } catch (Throwable $e) {
                 error_log('website dashboard: ' . $e->getMessage());
             }

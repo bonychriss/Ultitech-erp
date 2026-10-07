@@ -234,11 +234,9 @@ export default function WebsiteDashboard({ dashboard, websiteUrl }) {
   const totals = d.totals || {};
   const changes = d.changes || {};
   const rates = d.rates || {};
-  const range = Number(d.range) || 30;
   const days = d.days || [];
-  const rows = useMemo(() => bucketDays(days, range), [days, range]);
+  const rows = useMemo(() => bucketDays(days, days.length), [days]);
   const series = (key) => rows.map((r) => Number(r[key]) || 0);
-  const rangeHref = (n) => `${websiteUrl}${websiteUrl.includes('?') ? '&' : '?'}range=${n}`;
   const trackingStartedLate = d.tracking_since && d.tracking_since > d.from;
   const [offlineOpen, setOfflineOpen] = useState(Boolean(dashboard) && !d.shop_connected);
 
@@ -251,13 +249,17 @@ export default function WebsiteDashboard({ dashboard, websiteUrl }) {
   return (
     <section className="wdash" aria-label="Website dashboard">
       <header className="wdash-head">
-        <nav className="wdash-ranges" aria-label="Date range">
-          {(d.ranges || []).map((r) => (
-            <a key={r.days} href={rangeHref(r.days)} className={Number(r.days) === range ? 'is-active' : ''}>
-              {r.label}
-            </a>
-          ))}
-        </nav>
+        <form className="wdash-custom" method="get" action={websiteUrl} aria-label="Date range">
+          <label>
+            <span>From</span>
+            <input type="date" name="from" defaultValue={d.from} max={d.today} required />
+          </label>
+          <label>
+            <span>To</span>
+            <input type="date" name="to" defaultValue={d.to} max={d.today} required />
+          </label>
+          <button type="submit">Apply</button>
+        </form>
       </header>
 
       {offlineOpen && (

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { HiOutlineArrowPath } from 'react-icons/hi2';
 import './products-desk.css';
+import WebsiteDashboard from './WebsiteDashboard';
 
 function money(value) {
   const n = Number(value);
@@ -9,7 +10,7 @@ function money(value) {
 }
 
 export default function WebServices({ data }) {
-  const { pending = [], syncUrl = '', cancelUrl = '' } = data;
+  const { view = 'sync', pending = [], syncUrl = '', cancelUrl = '', dashboard = null, dashboardUrl = '' } = data;
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -68,6 +69,18 @@ export default function WebServices({ data }) {
       setSyncing(false);
     }
   };
+
+  if (view === 'dashboard') {
+    return (
+      <div className="prod-desk-page">
+        {dashboard ? (
+          <WebsiteDashboard dashboard={dashboard} websiteUrl={dashboardUrl} />
+        ) : (
+          <div className="alert alert-warning mb-0">The website dashboard could not be loaded. Refresh the page to try again.</div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="prod-desk-page">

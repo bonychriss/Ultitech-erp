@@ -321,7 +321,7 @@ body {
 }
 
 .sm-card:hover {
-  border-color: color-mix(in srgb, var(--module-glow-color) 82%, white 18%);
+  border-color: var(--module-glow-color);
   background: #fff;
   color: #111;
 }
@@ -356,15 +356,19 @@ body {
   letter-spacing: 0;
   text-transform: none;
   text-decoration: none;
-  background: #dc2626;
-  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.35);
+  background: var(--module-glow-color);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--module-glow-color) 35%, transparent);
   pointer-events: auto;
   cursor: pointer;
   z-index: 2;
 }
 .sm-badge--count:hover {
-  background: #b91c1c;
+  background: color-mix(in srgb, var(--module-glow-color) 85%, black 15%);
   color: #fff;
+}
+
+html[data-theme="dark"] .sm-badge--count {
+  background: color-mix(in srgb, var(--module-glow-color) 70%, white 30%);
 }
 
 .sm-icon-wrap {
@@ -372,28 +376,39 @@ body {
   display: inline-flex;
 }
 
+/* Notification count: corner tab in the card's top-right, over the card border. Its lower-left edge
+   is an S-wave running from the card's top edge down to its right edge; the number sits top-right. */
 .sm-count {
   position: absolute;
-  top: -9px;
-  right: -14px;
+  top: -1px;
+  right: -1px;
   z-index: 2;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 9999px;
-  border: 2px solid #fff;
-  background: #ef4444;
+  align-items: flex-start;
+  justify-content: flex-end;
+  width: 64px;
+  height: 56px;
+  padding: 7px 11px 0 0;
+  clip-path: path('M0 0 C7.7 0 12.8 5.6 17.9 15.7 C24.3 28 32 38.1 46.1 42 C57.6 44.8 64 48.2 64 56 L64 0 Z');
+  background: var(--module-glow-color);
   color: #fff;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   line-height: 1;
   letter-spacing: 0;
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
   box-sizing: border-box;
   pointer-events: none;
+}
+
+.sm-count--wide {
+  padding-top: 10px;
+  padding-right: 8px;
+  font-size: 15px;
+}
+
+.sm-card--has-count .sm-badge {
+  right: auto;
+  left: 10px;
 }
 
 .sm-count--link {
@@ -402,15 +417,11 @@ body {
 }
 
 .sm-count--link:hover {
-  background: #dc2626;
+  background: color-mix(in srgb, var(--module-glow-color) 85%, black 15%);
 }
 
 html[data-theme="dark"] .sm-count {
-  border-color: #1e293b;
-}
-
-html[data-theme="dark"] .sm-card:hover .sm-count {
-  border-color: #334155;
+  background: color-mix(in srgb, var(--module-glow-color) 70%, white 30%);
 }
 
 .sm-icon-box {

@@ -962,7 +962,7 @@ export default function SelectModulePage() {
             <a
               key={mod.id}
               href={mod.href}
-              className="sm-card"
+              className={`sm-card${Number(mod.count) > 0 ? ' sm-card--has-count' : ''}`}
               style={{ '--module-glow-color': mod.color || '#111' }}
               {...(mod.external || /^https?:\/\//i.test(String(mod.href || ''))
                 ? { target: '_blank', rel: 'noopener noreferrer' }
@@ -1004,11 +1004,9 @@ export default function SelectModulePage() {
                   </span>
                 )
               ) : null}
-              <span className="sm-icon-wrap">
-                <ModuleIcon name={mod.icon} color={mod.color || '#111'} />
-                {Number(mod.count) > 0 ? (
+              {Number(mod.count) > 0 ? (
                   <span
-                    className={`sm-count${mod.countHref ? ' sm-count--link' : ''}`}
+                    className={`sm-count${Number(mod.count) > 99 ? ' sm-count--wide' : ''}${mod.countHref ? ' sm-count--link' : ''}`}
                     title={mod.countTitle || ''}
                     aria-label={mod.countTitle || `${mod.count} new`}
                     {...(mod.countHref
@@ -1033,6 +1031,8 @@ export default function SelectModulePage() {
                     {Number(mod.count) > 99 ? '99+' : mod.count}
                   </span>
                 ) : null}
+              <span className="sm-icon-wrap">
+                <ModuleIcon name={mod.icon} color={mod.color || '#111'} />
               </span>
               <span className="sm-label">{mod.label}</span>
               <span className="sm-desc">{mod.desc}</span>

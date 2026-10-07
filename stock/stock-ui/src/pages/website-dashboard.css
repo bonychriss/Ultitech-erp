@@ -21,19 +21,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.75rem 1rem;
-}
-.wdash-title {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-.wdash-sub {
-  margin: 0.2rem 0 0;
-  font-size: 0.85rem;
-  color: var(--wd-muted);
 }
 
 .wdash-ranges {
@@ -80,7 +69,6 @@
   padding: 0.8rem 0.8rem 0.85rem 0.9rem;
   background: #fff;
   border: 1px solid var(--wd-line);
-  border-left: 4px solid #f59e0b;
   border-radius: var(--wd-radius);
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
   animation: wdash-notify-in 0.28s ease-out;
@@ -247,8 +235,8 @@ i.is-quotes { background: var(--wd-quotes); }
 .wdash-funnel { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.8rem; }
 .wdash-funnel-row { display: flex; justify-content: space-between; font-size: 0.85rem; }
 .wdash-funnel-row span { color: var(--wd-muted); font-weight: 600; }
-.wdash-funnel-track { margin-top: 0.3rem; height: 10px; background: #f1f5f9; border-radius: 999px; overflow: hidden; }
-.wdash-funnel-fill { height: 100%; background: linear-gradient(90deg, #0f766e, #14b8a6); border-radius: 999px; }
+.wdash-funnel-track { margin-top: 0.3rem; height: 5px; background: #f1f5f9; border-radius: 999px; overflow: hidden; }
+.wdash-funnel-fill { height: 100%; background: linear-gradient(90deg, var(--bar), color-mix(in srgb, var(--bar) 65%, #fff)); border-radius: 999px; }
 .wdash-funnel-rate { margin-top: 0.25rem; font-size: 0.74rem; color: var(--wd-muted); }
 
 .wdash-bars { display: flex; align-items: stretch; gap: 3px; height: 180px; }

@@ -176,6 +176,8 @@ function EnquiryBars({ rows }) {
   );
 }
 
+const FUNNEL_COLORS = ['#2563eb', '#0f766e', '#d97706', '#4f46e5'];
+
 function Funnel({ steps }) {
   const top = Math.max(1, steps[0].value);
   return (
@@ -187,7 +189,7 @@ function Funnel({ steps }) {
             <strong>{number(s.value)}</strong>
           </div>
           <div className="wdash-funnel-track">
-            <div className="wdash-funnel-fill" style={{ width: `${Math.max(s.value ? 2 : 0, (s.value / top) * 100)}%`, opacity: 1 - i * 0.12 }} />
+            <div className="wdash-funnel-fill" style={{ width: `${Math.max(s.value ? 2 : 0, (s.value / top) * 100)}%`, '--bar': FUNNEL_COLORS[i % FUNNEL_COLORS.length] }} />
           </div>
           {s.rate !== undefined ? <div className="wdash-funnel-rate">{pct(s.rate)} {s.rateLabel}</div> : null}
         </li>
@@ -239,12 +241,6 @@ export default function WebsiteDashboard({ dashboard, websiteUrl }) {
   return (
     <section className="wdash" aria-label="Website dashboard">
       <header className="wdash-head">
-        <div>
-          <h2 className="wdash-title">Website performance</h2>
-          <p className="wdash-sub">
-            {`ultimate.co.tz \u00B7 ${dayLabel(d.from, true)} to ${dayLabel(d.to, true)}`}
-          </p>
-        </div>
         <nav className="wdash-ranges" aria-label="Date range">
           {(d.ranges || []).map((r) => (
             <a key={r.days} href={rangeHref(r.days)} className={Number(r.days) === range ? 'is-active' : ''}>

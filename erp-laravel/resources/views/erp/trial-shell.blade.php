@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $pageTitle ?? 'Start Free Trial | UltiTech ERP' }}</title>
+    @php
+        $faviconPartial = rtrim((string) config('erp.app_root'), '\\/') . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'favicon.php';
+        if (is_file($faviconPartial)) {
+            require_once $faviconPartial;
+            echo erp_favicon_tags();
+        }
+    @endphp
     @if (!empty($headMarkup))
         {!! $headMarkup !!}
     @endif

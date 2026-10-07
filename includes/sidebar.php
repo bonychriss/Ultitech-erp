@@ -1071,3 +1071,4 @@ if (!function_exists('sidebar_link_is_current')) {
         unset($_SESSION['flash']);
     } ?>
 </script>
+<?php require_once __DIR__ . '/partials/favicon.php'; echo erp_favicon_script(); ?>

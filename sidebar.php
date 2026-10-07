@@ -2423,3 +2423,4 @@ if (!isset($_GET['print'])) {
     }
 </script>
 
+<?php require_once __DIR__ . '/includes/partials/favicon.php'; echo erp_favicon_script(); ?>

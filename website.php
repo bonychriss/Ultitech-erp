@@ -32,6 +32,10 @@ if (in_array($ajax, ['sync', 'cancel'], true)) {
     require __DIR__ . '/stock/web-services.php';
     exit;
 }
+if ($ajax === 'dashboard-pdf') {
+    require __DIR__ . '/stock/web-dashboard-pdf.php';
+    exit;
+}
 
 $requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '');
 if (stripos($requestUri, '/stock/web-services') !== false) {

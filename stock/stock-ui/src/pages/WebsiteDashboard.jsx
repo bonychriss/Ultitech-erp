@@ -212,8 +212,15 @@ function TopList({ title, icon: Icon, rows, unit, empty }) {
           {rows.map((r, i) => (
             <li key={`${r.url}-${i}`}>
               <span className="wdash-top-rank">{i + 1}</span>
-              <a href={r.url} target="_blank" rel="noopener noreferrer">{r.name}</a>
-              <span className="wdash-top-count">{number(r.count)} {unit}</span>
+              <a href={r.url} target="_blank" rel="noopener noreferrer" className="wdash-top-product">
+                <span className="wdash-top-thumb">
+                  {r.image ? (
+                    <img src={r.image} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                  ) : null}
+                </span>
+                <span className="wdash-top-name">{r.name}</span>
+              </a>
+              <span className="wdash-top-count">{number(r.count)} {Number(r.count) === 1 ? unit.replace(/s$/, '') : unit}</span>
             </li>
           ))}
         </ol>

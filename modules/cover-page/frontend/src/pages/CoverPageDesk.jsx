@@ -22,7 +22,42 @@ import {
 import { deleteCover, getBootData, saveCover } from '../api.js';
 import { documentNameWithoutFile } from '../utils/title.js';
 
-const loadCoverPdf = () => import('../utils/coverPdf.js');
+const RELOAD_GUARD_KEY = 'cover-page-stale-reload';
+
+function readUrlParam(key) {
+  if (typeof window === 'undefined') return '';
+  return new URL(window.location.href).searchParams.get(key) || '';
+}
+
+function writeUrlParams(values) {
+  if (typeof window === 'undefined' || !window.history?.replaceState) return;
+  const url = new URL(window.location.href);
+  Object.entries(values).forEach(([key, value]) => {
+    if (value) url.searchParams.set(key, String(value));
+    else url.searchParams.delete(key);
+  });
+  const next = url.pathname + url.search + url.hash;
+  if (next !== window.location.pathname + window.location.search + window.location.hash) {
+    window.history.replaceState(window.history.state, '', next);
+  }
+}
+
+/**
+ * A page opened before an update still points at the old PDF chunk, which the new build deleted.
+ * Reload once (reopening the requested preview) instead of failing; the guard prevents a loop.
+ */
+function loadCoverPdf(reopenPreviewId = 0) {
+  return import('../utils/coverPdf.js').catch((err) => {
+    const last = Number(window.sessionStorage?.getItem(RELOAD_GUARD_KEY) || 0);
+    if (Date.now() - last > 30000) {
+      window.sessionStorage?.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+      writeUrlParams({ tab: 'saved', view: reopenPreviewId || '' });
+      window.location.reload();
+      return new Promise(() => {});
+    }
+    throw new Error('The page is out of date. Refresh the page and try again.', { cause: err });
+  });
+}
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -222,7 +257,7 @@ export default function CoverPageDesk() {
   const boot = useMemo(() => getBootData(), []);
   const user = boot.user || {};
   const documentNames = Array.isArray(boot.documentNames) ? boot.documentNames : [];
-  const [tab, setTab] = useState('new');
+  const [tab, setTab] = useState(() => (readUrlParam('tab') === 'saved' ? 'saved' : 'new'));
   const [form, setForm] = useState(blankForm);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -252,6 +287,10 @@ export default function CoverPageDesk() {
     const t = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(t);
   }, [toast]);
+
+  useEffect(() => {
+    writeUrlParams({ tab: tab === 'saved' ? 'saved' : '' });
+  }, [tab]);
 
   const editing = form.id > 0;
   const editingCover = editing ? covers.find((c) => c.id === form.id) : null;
@@ -341,7 +380,7 @@ export default function CoverPageDesk() {
     const token = ++previewTokenRef.current;
     setPreview({ cover, url: null });
     try {
-      const url = await (await loadCoverPdf()).coverPreviewUrl(cover);
+      const url = await (await loadCoverPdf(cover.id)).coverPreviewUrl(cover);
       if (token !== previewTokenRef.current) {
         URL.revokeObjectURL(url);
         return;
@@ -358,6 +397,17 @@ export default function CoverPageDesk() {
     previewTokenRef.current += 1;
     setPreview(null);
   }, []);
+
+  const reopenedRef = useRef(false);
+  useEffect(() => {
+    if (reopenedRef.current) return;
+    reopenedRef.current = true;
+    const id = Number(readUrlParam('view'));
+    if (!id) return;
+    writeUrlParams({ view: '' });
+    const cover = covers.find((c) => c.id === id);
+    if (cover) openPreview(cover);
+  });
 
   const pickDocument = (cover) => {
     attachTargetRef.current = cover;

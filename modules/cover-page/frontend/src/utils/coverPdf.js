@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRawStream, StandardFonts, decodePDFRawStream, rgb } from 'pdf-lib';
 import templateUrl from '../assets/cover-template.pdf?url';
 import { coverTitle, documentNameWithoutFile } from './title.js';
 
@@ -23,11 +23,19 @@ const DETAILS = { x: 123.8, maxWidth: 144, size: 19, fileBaseline: 579.6, docsBa
 const CORNER_TAB_PATH = 'M 663.886 1053.649 L 742 1053.649 L 742 1110 L 612.785 1110 L 612.785 1104.75 '
   + 'C 612.785 1076.528 635.664 1053.649 663.886 1053.649 Z';
 
-const CORNER_COLORS = {
+const ACCENT_COLORS = {
   revenue: rgb(34 / 255, 160 / 255, 90 / 255),
   expenses: rgb(242 / 255, 129 / 255, 29 / 255),
   logs: rgb(30 / 255, 111 / 255, 217 / 255),
 };
+
+// The template sets its gold as "<origin> cm .851 .6471 .0784 rg .851 .6471 .0784 RG".
+// The logo square (form Fm1 plus its outline at 252.91562 258.91563) and the "GENERAL TRADING."
+// wordmark (text at 753 354 / 753 467.99998) keep the brand gold.
+const TEMPLATE_GOLD = /\.851 \.6471 \.0784 rg \.851 \.6471 \.0784 RG/g;
+const TEMPLATE_GOLD_AT = /(-?[\d.]+ -?[\d.]+) cm \.851 \.6471 \.0784 rg \.851 \.6471 \.0784 RG/g;
+const LOGO_GOLD_ORIGINS = new Set(['252.91562 258.91563', '753 354', '753 467.99998']);
+const LOGO_XOBJECTS = new Set(['/Fm1']);
 
 const SIGN_LINES = {
   preparedName: { x0: 95.3, x1: 231.4, y: 969.0 },
@@ -96,8 +104,8 @@ function splitTwoLines(words, font) {
   return best;
 }
 
-function drawTitle(page, name, bold) {
-  draw(page, 'FILE', { x: TITLE.x, baseline: TITLE.goldBaseline, size: 74, font: bold, color: GOLD });
+function drawTitle(page, name, bold, accent) {
+  draw(page, 'FILE', { x: TITLE.x, baseline: TITLE.goldBaseline, size: 74, font: bold, color: accent });
 
   const words = safeText(documentNameWithoutFile(name), bold).toUpperCase().split(/\s+/).filter(Boolean);
   if (words.length === 0) return;
@@ -116,17 +124,59 @@ function drawTitle(page, name, bold) {
   draw(page, lineB, { x: TITLE.x, baseline: firstBaseline + size * 1.12, size, font: bold, color: NAVY });
 }
 
-function cornerColorFor(name) {
+function accentColorFor(name) {
   const key = documentNameWithoutFile(name).toLowerCase();
-  if (key.includes('revenue')) return CORNER_COLORS.revenue;
-  if (key.includes('expense')) return CORNER_COLORS.expenses;
-  if (key.includes('log') || key.includes('bank')) return CORNER_COLORS.logs;
+  if (key.includes('revenue')) return ACCENT_COLORS.revenue;
+  if (key.includes('expense')) return ACCENT_COLORS.expenses;
+  if (key.includes('log') || key.includes('bank')) return ACCENT_COLORS.logs;
   return null;
 }
 
-function drawCornerTab(page, name) {
-  const color = cornerColorFor(name);
-  if (!color) return;
+function bytesToLatin1(bytes) {
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 8192) {
+    out += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  return out;
+}
+
+function rewriteStream(context, ref, transform) {
+  const stream = context.lookup(ref);
+  if (!(stream instanceof PDFRawStream)) return;
+  const text = bytesToLatin1(decodePDFRawStream(stream).decode());
+  const next = transform(text);
+  if (next === text) return;
+  const out = context.flateStream(Uint8Array.from(next, (ch) => ch.charCodeAt(0)));
+  const skip = new Set(['/Filter', '/DecodeParms', '/Length']);
+  for (const [key, value] of stream.dict.entries()) {
+    if (!skip.has(key.asString())) out.dict.set(key, value);
+  }
+  context.assign(ref, out);
+}
+
+/** Repaint the template's gold (except the logo and its wordmark) in the file type's colour. */
+function recolorTemplateGold(doc, page, color) {
+  const ops = [color.red, color.green, color.blue].map((v) => v.toFixed(4)).join(' ');
+  const replaceAll = (text) => text.replace(TEMPLATE_GOLD, `${ops} rg ${ops} RG`);
+  const replaceOutsideLogo = (text) => text.replace(TEMPLATE_GOLD_AT, (match, origin) => (
+    LOGO_GOLD_ORIGINS.has(origin) ? match : `${origin} cm ${ops} rg ${ops} RG`
+  ));
+
+  const contents = page.node.get(PDFName.of('Contents'));
+  const contentRefs = contents instanceof PDFArray ? contents.asArray() : [contents];
+  contentRefs.forEach((ref) => rewriteStream(doc.context, ref, replaceOutsideLogo));
+
+  const xObjects = page.node.Resources()?.lookupMaybe(PDFName.of('XObject'), PDFDict);
+  if (!xObjects) return;
+  const done = new Set();
+  for (const [name, ref] of xObjects.entries()) {
+    if (LOGO_XOBJECTS.has(name.asString()) || done.has(String(ref))) continue;
+    done.add(String(ref));
+    rewriteStream(doc.context, ref, replaceAll);
+  }
+}
+
+function drawCornerTab(page, color) {
   const box = page.getCropBox();
   page.drawSvgPath(CORNER_TAB_PATH, {
     x: box.x,
@@ -172,8 +222,12 @@ async function buildCoverDocument(cover) {
   const page = doc.getPage(0);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  drawCornerTab(page, cover.document_name);
-  drawTitle(page, cover.document_name, bold);
+  const accent = accentColorFor(cover.document_name);
+  if (accent) {
+    recolorTemplateGold(doc, page, accent);
+    drawCornerTab(page, accent);
+  }
+  drawTitle(page, cover.document_name, bold, accent || GOLD);
   drawDetail(page, `${pad2(cover.file_no)} / ${pad2(cover.file_total)}`, DETAILS.fileBaseline, bold);
   drawDetail(page, `${pad2(cover.doc_from)} \u2013 ${pad2(cover.doc_to)}`, DETAILS.docsBaseline, bold);
   drawDetail(page, `${(MONTHS[cover.period_month - 1] || '').toUpperCase()} ${cover.period_year}`, DETAILS.periodBaseline, bold);

@@ -1,17 +1,20 @@
 import { useState } from 'react'
-
-function getCfg() {
-  return window.__HOME_CFG__ || {}
-}
+import { ClockIcon, InstagramIcon, MailIcon, PhoneIcon } from './Icons.jsx'
+import { formatPhone, getCfg, getContact, getTexts } from '../siteConfig.js'
 
 export default function SiteChrome({ active = 'home', children }) {
   const cfg = getCfg()
+  const contact = getContact()
   const homeUrl = cfg.homeUrl || './'
   const pricingUrl = cfg.pricingUrl || 'pricing.php'
+  const aboutUrl = cfg.aboutUrl || 'about.php'
+  const contactUrl = cfg.contactUrl || 'contact.php'
   const loginUrl = cfg.loginUrl || 'login.php'
   const trialUrl = cfg.trialUrl || 'free-trial.php'
   const year = cfg.year || new Date().getFullYear()
   const [navOpen, setNavOpen] = useState(false)
+  const navLink = (key) =>
+    `px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900 erp-nav-link${active === key ? ' font-semibold text-gray-900' : ''}`
 
   return (
     <div className="sk-page antialiased text-gray-700">
@@ -52,23 +55,23 @@ export default function SiteChrome({ active = 'home', children }) {
               navOpen ? 'h-full scale-y-100' : 'scale-y-0 md:scale-y-100'
             }`}
           >
-            <a
-              className={`px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900${active === 'home' ? ' font-semibold text-gray-900' : ''}`}
-              href={homeUrl}
-            >
+            <a className={navLink('home')} href={homeUrl}>
               Home
             </a>
-            <a className="px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900" href={`${homeUrl}#modules`}>
+            <a className={navLink('modules')} href={`${homeUrl}#modules`}>
               Modules
             </a>
-            <a className="px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900" href={`${homeUrl}#product`}>
+            <a className={navLink('product')} href={`${homeUrl}#product`}>
               Product
             </a>
-            <a
-              className={`px-4 py-2 mt-2 text-sm md:mt-8 md:ml-4 hover:text-gray-900${active === 'pricing' ? ' font-semibold text-gray-900' : ''}`}
-              href={pricingUrl}
-            >
+            <a className={navLink('pricing')} href={pricingUrl}>
               Pricing
+            </a>
+            <a className={navLink('about')} href={aboutUrl}>
+              About
+            </a>
+            <a className={navLink('contact')} href={contactUrl}>
+              Contact
             </a>
             <a
               className="px-4 py-1.5 mt-2 text-xs text-center bg-white text-gray-800 rounded-full md:mt-8 md:ml-4 erp-btn-ghost erp-nav-btn"
@@ -94,11 +97,9 @@ export default function SiteChrome({ active = 'home', children }) {
             <a href={homeUrl} className="font-bold text-darken text-lg">
               UltiTech
             </a>
-            <p className="text-gray-500 mt-3 max-w-sm">
-              One platform for finance, sales, stock, people, and delivery.
-            </p>
+            <p className="text-gray-500 mt-3 max-w-sm">{getTexts().footer_tagline}</p>
           </div>
-          <div className="flex gap-12 text-sm">
+          <div className="erp-footer-cols text-sm">
             <div className="flex flex-col gap-2">
               <strong className="text-darken">Product</strong>
               <a href={`${homeUrl}#modules`} className="text-gray-500 hover:text-gray-900">
@@ -112,6 +113,15 @@ export default function SiteChrome({ active = 'home', children }) {
               </a>
             </div>
             <div className="flex flex-col gap-2">
+              <strong className="text-darken">Company</strong>
+              <a href={aboutUrl} className="text-gray-500 hover:text-gray-900">
+                About us
+              </a>
+              <a href={contactUrl} className="text-gray-500 hover:text-gray-900">
+                Contact us
+              </a>
+            </div>
+            <div className="flex flex-col gap-2">
               <strong className="text-darken">Get started</strong>
               <a href={trialUrl} className="text-gray-500 hover:text-gray-900">
                 Free trial
@@ -119,6 +129,37 @@ export default function SiteChrome({ active = 'home', children }) {
               <a href={loginUrl} className="text-gray-500 hover:text-gray-900">
                 Login
               </a>
+            </div>
+            <div className="flex flex-col gap-2 erp-footer-contact">
+              <strong className="text-darken">Contact</strong>
+              {contact.phone_tel ? (
+                <a href={`tel:${contact.phone_tel}`} className="text-gray-500 hover:text-gray-900">
+                  <PhoneIcon className="erp-footer-icon" />
+                  {formatPhone(contact.phone)}
+                </a>
+              ) : null}
+              {contact.email ? (
+                <a href={`mailto:${contact.email}`} className="text-gray-500 hover:text-gray-900">
+                  <MailIcon className="erp-footer-icon" />
+                  {contact.email}
+                </a>
+              ) : null}
+              {contact.hours ? (
+                <span className="text-gray-500">
+                  <ClockIcon className="erp-footer-icon" />
+                  {contact.hours}
+                </span>
+              ) : null}
+              {contact.instagram_url ? (
+                <a
+                  href={contact.instagram_url}
+                  className="text-gray-500 hover:text-gray-900"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <InstagramIcon className="erp-footer-icon" />@{contact.instagram_handle}
+                </a>
+              ) : null}
             </div>
           </div>
         </div>

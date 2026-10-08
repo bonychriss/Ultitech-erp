@@ -10,6 +10,15 @@
             require_once $faviconPartial;
             echo erp_favicon_tags();
         }
+        $seoPartial = rtrim((string) config('erp.app_root'), '\\/') . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'seo.php';
+        if (is_file($seoPartial)) {
+            require_once $seoPartial;
+            echo erp_seo_tags([
+                'title' => 'Start a Free Trial | UltiTech ERP',
+                'description' => 'Create your company account and try UltiTech ERP free for 14 days: sales, inventory, payroll, expenses and reports in one cloud system. No card needed.',
+                'path' => '/free-trial.php',
+            ]);
+        }
     @endphp
     @if (!empty($headMarkup))
         {!! $headMarkup !!}

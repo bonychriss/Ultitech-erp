@@ -15,12 +15,14 @@ import {
   Trash2,
   MessageCircle,
   Type,
+  Globe,
 } from 'lucide-react'
-import { executeFactoryReset, getSettingsCfg, saveSystemFont } from '../api/settingsHub.js'
+import { executeFactoryReset, getSettingsCfg, saveSiteContact, saveSystemFont } from '../api/settingsHub.js'
 
 const ICON_MAP = {
   building: Building2,
   type: Type,
+  globe: Globe,
   'plus-square': PlusSquare,
   sitemap: Network,
   users: Users,
@@ -35,6 +37,66 @@ const ICON_MAP = {
   mail: Mail,
   trash: Trash2,
 }
+
+const SITE_TEXT_SECTIONS = [
+  {
+    title: 'Page heading',
+    fields: [
+      { name: 'contact_eyebrow', label: 'Small label above the title' },
+      { name: 'contact_title', label: 'Title' },
+      { name: 'contact_lead', label: 'Introduction', long: true },
+    ],
+  },
+  {
+    title: 'Call card',
+    fields: [
+      { name: 'call_label', label: 'Card label' },
+      { name: 'call_action', label: 'Button text' },
+    ],
+  },
+  {
+    title: 'WhatsApp card',
+    fields: [
+      { name: 'whatsapp_label', label: 'Card label' },
+      { name: 'whatsapp_action', label: 'Button text' },
+      { name: 'whatsapp_greeting', label: 'Message typed for the visitor when the chat opens', long: true },
+    ],
+  },
+  {
+    title: 'Email card',
+    fields: [
+      { name: 'email_label', label: 'Card label' },
+      { name: 'email_action', label: 'Button text' },
+      { name: 'email_subject', label: 'Email subject line', wide: true },
+    ],
+  },
+  {
+    title: 'Instagram card',
+    fields: [
+      { name: 'instagram_label', label: 'Card label' },
+      { name: 'instagram_action', label: 'Button text' },
+    ],
+  },
+  {
+    title: 'Location and hours boxes',
+    fields: [
+      { name: 'location_label', label: 'Location label' },
+      { name: 'hours_label', label: 'Opening hours label' },
+    ],
+  },
+  {
+    title: 'Free trial banner',
+    fields: [
+      { name: 'cta_title', label: 'Title' },
+      { name: 'cta_button', label: 'Button text' },
+      { name: 'cta_text', label: 'Text', long: true },
+    ],
+  },
+  {
+    title: 'Site footer',
+    fields: [{ name: 'footer_tagline', label: 'Line under the UltiTech name (all public pages)', long: true }],
+  },
+]
 
 function loadGoogleFont(google) {
   if (!google || typeof document === 'undefined') return
@@ -66,6 +128,14 @@ export default function SettingsHubPage() {
   const [resetPhase, setResetPhase] = useState('confirm') // confirm | cleaning | done
   const [resetMessage, setResetMessage] = useState('')
   const [registerOpen, setRegisterOpen] = useState(false)
+  const [siteContact, setSiteContact] = useState(cfg.siteContact || {})
+  const [contactForm, setContactForm] = useState(cfg.siteContact || {})
+  const [contactOpen, setContactOpen] = useState(false)
+  const [contactBusy, setContactBusy] = useState(false)
+  const [contactError, setContactError] = useState('')
+  const [contactTab, setContactTab] = useState('details')
+  const [siteTexts, setSiteTexts] = useState(cfg.siteTexts?.values || {})
+  const [textForm, setTextForm] = useState(cfg.siteTexts?.values || {})
 
   const catalog = cfg.font?.catalog || []
   const selectedFont = catalog.find((f) => f.id === fontKey) || {
@@ -138,6 +208,46 @@ export default function SettingsHubPage() {
     }
   }
 
+  const openContact = () => {
+    setContactForm(siteContact)
+    setTextForm(siteTexts)
+    setContactTab('details')
+    setContactError('')
+    setContactOpen(true)
+  }
+
+  const onSaveContact = async (e) => {
+    e.preventDefault()
+    setContactBusy(true)
+    setContactError('')
+    try {
+      const data = await saveSiteContact(cfg.api?.saveSiteContact, { ...contactForm, texts: textForm })
+      setSiteContact(data.contact || contactForm)
+      setSiteTexts(data.texts || textForm)
+      setFlash({ type: 'success', message: data.message || 'Contact page updated.' })
+      setContactOpen(false)
+    } catch (err) {
+      setContactError(err.message || 'Could not save contact details.')
+    } finally {
+      setContactBusy(false)
+    }
+  }
+
+  const contactField = (name) => ({
+    name,
+    value: contactForm[name] ?? '',
+    onChange: (e) => setContactForm((f) => ({ ...f, [name]: e.target.value })),
+  })
+
+  const textField = (name) => ({
+    id: `ash-text-${name}`,
+    name,
+    value: textForm[name] ?? '',
+    placeholder: cfg.siteTexts?.defaults?.[name] || '',
+    maxLength: cfg.siteTexts?.max?.[name] || undefined,
+    onChange: (e) => setTextForm((f) => ({ ...f, [name]: e.target.value })),
+  })
+
   const closeReset = () => {
     if (resetBusy) return
     setResetOpen(false)
@@ -174,6 +284,7 @@ export default function SettingsHubPage() {
             const isReset = card.action === 'factory_reset'
             const isRegister = card.action === 'register_company'
             const isFont = card.action === 'system_font'
+            const isContact = card.action === 'site_contact'
             const content = (
               <article
                 className={`ash-card${card.danger ? ' ash-card--danger' : ''}`}
@@ -199,6 +310,14 @@ export default function SettingsHubPage() {
                   className="ash-card-link"
                   onClick={() => setFontOpen(true)}
                 >
+                  {content}
+                </button>
+              )
+            }
+
+            if (isContact) {
+              return (
+                <button key={card.id} type="button" className="ash-card-link" onClick={openContact}>
                   {content}
                 </button>
               )
@@ -307,6 +426,189 @@ export default function SettingsHubPage() {
                   disabled={fontBusy}
                 >
                   {fontBusy ? 'Saving…' : 'Apply font'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {contactOpen ? (
+        <div
+          className="ash-modal-backdrop"
+          role="presentation"
+          onClick={() => !contactBusy && setContactOpen(false)}
+        >
+          <div
+            className="ash-modal ash-modal--contact"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ash-contact-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="ash-contact-title">Website contact page</h2>
+            <p className="ash-reset-lead">
+              Edit the ultitech.io Contact page. Contact details also appear on the About page, the site footer and in
+              Google search details.
+            </p>
+            <div className="ash-contact-tabs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={contactTab === 'details'}
+                className={`ash-contact-tab${contactTab === 'details' ? ' is-active' : ''}`}
+                onClick={() => setContactTab('details')}
+              >
+                Contact details
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={contactTab === 'text'}
+                className={`ash-contact-tab${contactTab === 'text' ? ' is-active' : ''}`}
+                onClick={() => setContactTab('text')}
+              >
+                Page text
+              </button>
+            </div>
+            <form onSubmit={onSaveContact}>
+              {contactTab === 'text' ? (
+                <div className="ash-text-sections">
+                  {SITE_TEXT_SECTIONS.map((section) => (
+                    <fieldset key={section.title} className="ash-text-section">
+                      <legend>{section.title}</legend>
+                      <div className="ash-contact-grid">
+                        {section.fields.map((field) => (
+                          <div
+                            key={field.name}
+                            className={field.long || field.wide ? 'ash-contact-field--wide' : undefined}
+                          >
+                            <label className="ash-label" htmlFor={`ash-text-${field.name}`}>
+                              {field.label}
+                            </label>
+                            {field.long ? (
+                              <textarea className="ash-input ash-textarea" rows={2} {...textField(field.name)} />
+                            ) : (
+                              <input className="ash-input" {...textField(field.name)} />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </fieldset>
+                  ))}
+                  <p className="ash-contact-hint">An empty field goes back to the default wording when you save.</p>
+                </div>
+              ) : (
+              <div className="ash-contact-grid">
+                <div>
+                  <label className="ash-label" htmlFor="ash-contact-phone">
+                    Phone number
+                  </label>
+                  <input
+                    id="ash-contact-phone"
+                    className="ash-input"
+                    type="tel"
+                    placeholder="0785653817"
+                    required
+                    autoFocus
+                    {...contactField('phone')}
+                  />
+                </div>
+                <div>
+                  <label className="ash-label" htmlFor="ash-contact-whatsapp">
+                    WhatsApp number
+                  </label>
+                  <input
+                    id="ash-contact-whatsapp"
+                    className="ash-input"
+                    type="tel"
+                    placeholder="Same as phone"
+                    {...contactField('whatsapp')}
+                  />
+                  <p className="ash-contact-hint">Leave empty to use the phone number.</p>
+                </div>
+                <div className="ash-contact-field--wide">
+                  <label className="ash-label" htmlFor="ash-contact-email">
+                    Email
+                  </label>
+                  <input
+                    id="ash-contact-email"
+                    className="ash-input"
+                    type="email"
+                    placeholder="name@example.com"
+                    required
+                    {...contactField('email')}
+                  />
+                </div>
+                <div>
+                  <label className="ash-label" htmlFor="ash-contact-hours">
+                    Opening hours
+                  </label>
+                  <input
+                    id="ash-contact-hours"
+                    className="ash-input"
+                    maxLength={120}
+                    placeholder="8:00 AM - 5:00 PM"
+                    {...contactField('hours')}
+                  />
+                </div>
+                <div>
+                  <label className="ash-label" htmlFor="ash-contact-address">
+                    Location
+                  </label>
+                  <input
+                    id="ash-contact-address"
+                    className="ash-input"
+                    maxLength={120}
+                    placeholder="Dar es Salaam, Tanzania"
+                    {...contactField('address')}
+                  />
+                </div>
+                <div className="ash-contact-field--wide">
+                  <label className="ash-label" htmlFor="ash-contact-instagram">
+                    Instagram
+                  </label>
+                  <input
+                    id="ash-contact-instagram"
+                    className="ash-input"
+                    placeholder="official_ace84 or profile link"
+                    {...contactField('instagram')}
+                  />
+                  <p className="ash-contact-hint">Leave a field empty to hide it on the website.</p>
+                </div>
+              </div>
+              )}
+              {contactError ? (
+                <p className="ash-contact-error" role="alert">
+                  {contactError}
+                </p>
+              ) : null}
+              <div className="ash-modal-actions">
+                {contactTab === 'text' ? (
+                  <button
+                    type="button"
+                    className="ash-btn-ghost ash-btn-left"
+                    onClick={() => setTextForm(cfg.siteTexts?.defaults || {})}
+                    disabled={contactBusy}
+                  >
+                    Restore default text
+                  </button>
+                ) : null}
+                {cfg.siteContactPageUrl ? (
+                  <a className="ash-btn-ghost" href={cfg.siteContactPageUrl} target="_blank" rel="noopener noreferrer">
+                    View page
+                  </a>
+                ) : null}
+                <button
+                  type="button"
+                  className="ash-btn-ghost"
+                  onClick={() => setContactOpen(false)}
+                  disabled={contactBusy}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="ash-btn-primary" disabled={contactBusy}>
+                  {contactBusy ? 'Saving\u2026' : 'Save changes'}
                 </button>
               </div>
             </form>

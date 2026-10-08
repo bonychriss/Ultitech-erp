@@ -155,7 +155,7 @@ if (isset($_GET['next']) && trim((string) $_GET['next']) !== '') {
         . 'next=' . rawurlencode(trim((string) $_GET['next']));
 }
 
-$loginTitle = $selectedCompanyName !== '' ? $selectedCompanyName : 'Sign up';
+$loginTitle = $selectedCompanyName !== '' ? $selectedCompanyName : 'Sign in | UltiTech ERP';
 
 $assets = loginUiLoadReactAssets();
 if ($assets === null) {
@@ -192,6 +192,12 @@ $loginConfig = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title><?= h($loginTitle) ?></title>
     <?php require_once __DIR__ . '/includes/partials/favicon.php'; echo erp_favicon_tags(); ?>
+    <?php require_once __DIR__ . '/includes/partials/seo.php'; echo erp_seo_tags([
+        'title' => 'Sign in | UltiTech ERP',
+        'description' => 'Sign in to your company\'s UltiTech ERP workspace to manage sales, stock, payroll, expenses and reports.',
+        'path' => '/login.php',
+        'robots' => $selectedCompanyName !== '' ? 'noindex, follow' : 'index, follow',
+    ]); ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" crossorigin href="<?= htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') ?>">

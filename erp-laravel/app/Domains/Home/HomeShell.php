@@ -33,19 +33,60 @@ final class HomeShell
             'imgBase' => (string) ($cfg['imgBase'] ?? (function_exists('app_url')
                 ? rtrim((string) app_url('/home-ui/frontend/dist/skilline/img'), '/') . '/'
                 : '/home-ui/frontend/dist/skilline/img/')),
+            'contactUrl' => (string) ($cfg['contactUrl'] ?? (function_exists('app_url') ? app_url('/contact.php') : '/contact.php')),
+            'aboutUrl' => (string) ($cfg['aboutUrl'] ?? (function_exists('app_url') ? app_url('/about.php') : '/about.php')),
             'year' => (int) ($cfg['year'] ?? date('Y')),
             'engine' => 'erp-laravel Domains/Home',
         ];
 
+        $root = rtrim((string) config('erp.app_root'), '\\/');
+        $contact = [];
+        $texts = [];
+        if (is_file($root . '/includes/site-contact.php')) {
+            require_once $root . '/includes/site-contact.php';
+            $contact = erp_site_contact();
+            $texts = erp_site_texts();
+        }
+        $bootCfg['contact'] = $contact;
+        $bootCfg['texts'] = $texts;
+
         $pageKey = strtolower((string) $bootCfg['page']);
-        $pageTitle = $pageKey === 'pricing'
-            ? 'UltiTech ERP | Pricing'
-            : 'UltiTech ERP | Welcome';
+        $seo = match ($pageKey) {
+            'pricing' => [
+                'title' => 'Pricing and Free Trial | UltiTech ERP',
+                'description' => 'See UltiTech ERP pricing and try the full suite free for 14 days: sales, inventory, payroll, expenses and reports in one cloud system. No card needed.',
+                'path' => '/pricing.php',
+            ],
+            'contact' => [
+                'title' => 'Contact Us | UltiTech ERP',
+                'description' => 'Call, WhatsApp or email the UltiTech ERP team in Dar es Salaam, Tanzania for demos, pricing questions and support.',
+                'path' => '/contact.php',
+            ],
+            'about' => [
+                'title' => 'About Us | UltiTech ERP',
+                'description' => 'UltiTech builds a cloud ERP that brings sales, stock, payroll, expenses and accounting into one system for growing businesses in Tanzania.',
+                'path' => '/about.php',
+            ],
+            default => [
+                'title' => 'UltiTech ERP | Cloud ERP for Sales, Stock, Payroll and Accounting',
+                'description' => 'UltiTech ERP connects sales, stock, payroll, expenses and accounting in one secure cloud system, with live reports for every department. Start a free 14-day trial.',
+                'path' => '/',
+                'schema' => true,
+            ],
+        };
+        $seo['contact'] = $contact;
+        $pageTitle = $seo['title'];
 
         $cssUrl = $assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'];
         $jsUrl = $assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'];
 
-        $headMarkup = '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n"
+        $seoPartial = $root . '/includes/partials/seo.php';
+        $headMarkup = '';
+        if (is_file($seoPartial)) {
+            require_once $seoPartial;
+            $headMarkup .= erp_seo_tags($seo);
+        }
+        $headMarkup .= '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n"
             . '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n"
             . '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">' . "\n"
             . '<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css">' . "\n";
@@ -54,7 +95,7 @@ final class HomeShell
                 . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n";
         }
         $headMarkup .= '<script>window.__HOME_CFG__ = '
-            . json_encode($bootCfg, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            . json_encode($bootCfg, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP)
             . ';</script>';
 
         $footerScripts = '<script type="module" crossorigin src="'

@@ -189,6 +189,16 @@ function adminSettingsUiHubCards(): array
             'superAdminOnly' => true,
         ],
         [
+            'id' => 'site_contact',
+            'title' => 'Website contact page',
+            'description' => 'Contact details and all wording on the ultitech.io Contact page and site footer.',
+            'href' => '#site-contact',
+            'accent' => '#8b5cf6',
+            'icon' => 'globe',
+            'action' => 'site_contact',
+            'systemAdminOnly' => true,
+        ],
+        [
             'id' => 'register_employee',
             'title' => 'Register employee',
             'description' => 'Add team members with roles and departments.',
@@ -309,12 +319,28 @@ function adminSettingsUiInitPayload(): array
     }
     $mgmtQs = $mgmtQsParams === [] ? '' : ('?' . http_build_query($mgmtQsParams));
 
+    $isSystemAdmin = function_exists('isUltimateSystemAdmin') && isUltimateSystemAdmin();
+    $siteContact = null;
+    $siteTexts = null;
+    if ($isSystemAdmin) {
+        require_once dirname(__DIR__, 2) . '/includes/site-contact.php';
+        $siteContact = array_intersect_key(erp_site_contact(), erp_site_contact_defaults());
+        $siteTexts = [
+            'values' => erp_site_texts(),
+            'defaults' => erp_site_text_defaults(),
+            'max' => array_map(static fn (array $field): int => $field[1], erp_site_text_schema()),
+        ];
+    }
+
     return [
         'companyName' => $companyName,
         'todayLabel' => date('l, d M Y'),
         'isSuperAdmin' => function_exists('isSuperAdmin') && isSuperAdmin(),
-        'isSystemAdmin' => function_exists('isUltimateSystemAdmin') && isUltimateSystemAdmin(),
+        'isSystemAdmin' => $isSystemAdmin,
         'flash' => $flash,
+        'siteContact' => $siteContact,
+        'siteTexts' => $siteTexts,
+        'siteContactPageUrl' => $isSystemAdmin && function_exists('app_url') ? app_url('/contact.php') : '',
         'font' => [
             'current' => $systemFontKey,
             'label' => (string) ($systemFontDef['label'] ?? 'Poppins'),
@@ -330,6 +356,7 @@ function adminSettingsUiInitPayload(): array
         'api' => [
             'saveFont' => adminSettingsUiPublicUrl('api/save-font.php'),
             'factoryReset' => adminSettingsUiPublicUrl('api/factory-reset.php'),
+            'saveSiteContact' => adminSettingsUiPublicUrl('api/save-site-contact.php'),
         ],
     ];
 }
@@ -452,7 +479,7 @@ function adminSettingsRenderReactShell(): void
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
     $init = adminSettingsUiInitPayload();
-    $cfgJson = json_encode($init, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $cfgJson = json_encode($init, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
     if ($cfgJson === false) {
         $cfgJson = '{}';
     }

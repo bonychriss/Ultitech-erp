@@ -13,7 +13,7 @@ if (!defined('ERP_PUBLIC_SITE_URL')) {
 
 if (!function_exists('erp_seo_tags')) {
     /**
-     * @param array{title:string,description:string,path:string,image?:string,robots?:string,schema?:bool} $page
+     * @param array{title:string,description:string,path:string,image?:string,robots?:string,schema?:bool,contact?:array<string,string>} $page
      */
     function erp_seo_tags(array $page): string
     {
@@ -48,22 +48,46 @@ if (!function_exists('erp_seo_tags')) {
         ]);
 
         if (!empty($page['schema'])) {
+            $organization = [
+                '@type' => 'Organization',
+                '@id' => $site . '/#organization',
+                'name' => 'UltiTech',
+                'alternateName' => ['UltiTech ERP', 'ultitech.io'],
+                'url' => $site . '/',
+                'logo' => [
+                    '@type' => 'ImageObject',
+                    'url' => $site . '/assets/brand/ultitech-logo-512.png',
+                    'width' => 512,
+                    'height' => 512,
+                ],
+            ];
+            $contact = is_array($page['contact'] ?? null) ? $page['contact'] : [];
+            if (($contact['phone_tel'] ?? '') !== '') {
+                $organization['telephone'] = $contact['phone_tel'];
+            }
+            if (($contact['email'] ?? '') !== '') {
+                $organization['email'] = $contact['email'];
+            }
+            if (($contact['address'] ?? '') !== '') {
+                $organization['address'] = ['@type' => 'PostalAddress', 'addressLocality' => $contact['address']];
+            }
+            if (($contact['phone_tel'] ?? '') !== '' || ($contact['email'] ?? '') !== '') {
+                $organization['contactPoint'] = array_filter([
+                    '@type' => 'ContactPoint',
+                    'contactType' => 'customer support',
+                    'telephone' => $contact['phone_tel'] ?? '',
+                    'email' => $contact['email'] ?? '',
+                    'areaServed' => 'TZ',
+                ]);
+            }
+            if (($contact['instagram_url'] ?? '') !== '') {
+                $organization['sameAs'] = [$contact['instagram_url']];
+            }
+
             $graph = [
                 '@context' => 'https://schema.org',
                 '@graph' => [
-                    [
-                        '@type' => 'Organization',
-                        '@id' => $site . '/#organization',
-                        'name' => 'UltiTech',
-                        'alternateName' => ['UltiTech ERP', 'ultitech.io'],
-                        'url' => $site . '/',
-                        'logo' => [
-                            '@type' => 'ImageObject',
-                            'url' => $site . '/assets/brand/ultitech-logo-512.png',
-                            'width' => 512,
-                            'height' => 512,
-                        ],
-                    ],
+                    $organization,
                     [
                         '@type' => 'WebSite',
                         '@id' => $site . '/#website',

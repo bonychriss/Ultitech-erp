@@ -304,21 +304,15 @@ $reassignPageUrl = function_exists('sales_module_url')
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
 
-        .rs-kpi { min-width: 0; min-height: 4.75rem; padding: 0.7rem 0.9rem; border: 1px solid transparent; border-radius: 14px; }
+        .rs-kpi { min-width: 0; min-height: 4.75rem; padding: 0.7rem 0.9rem; background: #fff; border: 1px solid #e7edf3; border-radius: 14px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
         .rs-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .rs-kpi-label { font-size: 0.8rem; font-weight: 650; }
-        .rs-kpi-icon { width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12); }
+        .rs-kpi-label { font-size: 0.8rem; font-weight: 650; color: #64748b; }
+        .rs-kpi-icon { width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; }
         .rs-kpi-value { display: block; margin: 0.45rem 0 0.3rem; font-size: 1.2rem; font-weight: 780; letter-spacing: -0.02em; line-height: 1.15; color: #111827; }
         .rs-kpi-foot { font-size: 0.74rem; color: #475569; font-weight: 550; }
-        .rs-kpi--blue { background: linear-gradient(135deg, #eef4ff 0%, #dbe7ff 100%); border-color: #c7d7fe; }
-        .rs-kpi--orange { background: linear-gradient(135deg, #fff7eb 0%, #ffe6c2 100%); border-color: #fbd49a; }
-        .rs-kpi--green { background: linear-gradient(135deg, #ecfbf3 0%, #d3f3e2 100%); border-color: #b4e8cb; }
-        .rs-kpi--blue .rs-kpi-icon { background: #2563eb; }
-        .rs-kpi--orange .rs-kpi-icon { background: #ea8a0c; }
-        .rs-kpi--green .rs-kpi-icon { background: #16a34a; }
-        .rs-kpi--blue .rs-kpi-label { color: #1e3a8a; }
-        .rs-kpi--orange .rs-kpi-label { color: #7c2d12; }
-        .rs-kpi--green .rs-kpi-label { color: #14532d; }
+        .rs-kpi--blue .rs-kpi-icon { background: #eef4ff; color: #2563eb; }
+        .rs-kpi--orange .rs-kpi-icon { background: #fff7eb; color: #d97706; }
+        .rs-kpi--green .rs-kpi-icon { background: #ecfbf3; color: #16a34a; }
 
         .rs-table { border-collapse: separate; border-spacing: 0; }
         .rs-table thead th { background: #1e293b; color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; text-align: left; white-space: nowrap; padding: 0.72rem 0.75rem; border: 0; }
@@ -333,7 +327,12 @@ $reassignPageUrl = function_exists('sales_module_url')
         html[data-theme="dark"] .rs-kpi--blue { background: linear-gradient(135deg, #1c2a44 0%, #1e3a6e 100%); border-color: #2c4a80; }
         html[data-theme="dark"] .rs-kpi--orange { background: linear-gradient(135deg, #3a2a14 0%, #5a3a12 100%); border-color: #6e4a1a; }
         html[data-theme="dark"] .rs-kpi--green { background: linear-gradient(135deg, #163226 0%, #1b4a33 100%); border-color: #25603f; }
+        html[data-theme="dark"] .rs-kpi { box-shadow: none; }
         html[data-theme="dark"] .rs-kpi-label, html[data-theme="dark"] .rs-kpi-foot { color: #e2e8f0; }
+        html[data-theme="dark"] .rs-kpi-icon { color: #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); }
+        html[data-theme="dark"] .rs-kpi--blue .rs-kpi-icon { background: #2563eb; }
+        html[data-theme="dark"] .rs-kpi--orange .rs-kpi-icon { background: #ea8a0c; }
+        html[data-theme="dark"] .rs-kpi--green .rs-kpi-icon { background: #16a34a; }
         html[data-theme="dark"] .rs-kpi-value { color: #f8fafc; }
         html[data-theme="dark"] .rs-table thead th { background: #0f172a; }
         html[data-theme="dark"] .rs-table tbody td,

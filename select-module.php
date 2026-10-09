@@ -117,6 +117,10 @@ $push([
     'href' => $voucherModuleUrl,
     'icon' => 'voucher',
     'color' => '#0f766e',
+    // Vouchers where it is this user's turn to sign (Applicant -> Dept Manager -> Checked By -> final approval).
+    'count' => $pvTaskCount > 0 ? $pvTaskCount : null,
+    'countTitle' => $pvTaskCount === 1 ? '1 voucher waiting for your signature' : $pvTaskCount . ' vouchers waiting for your signature',
+    'countHref' => $pvTaskCount > 0 ? $pvTasksListUrl : null,
 ]);
 $push([
     'id' => 'attendance',
@@ -332,6 +336,14 @@ $push([
     'href' => $companyRoute('modules/letter/index') . '?module=letter',
     'icon' => 'letter',
     'color' => '#E6B800',
+]);
+$push([
+    'id' => 'cover_page',
+    'label' => 'Cover Page',
+    'desc' => 'Ready cover pages for your files & documents',
+    'href' => $companyRoute('modules/cover-page/index') . '?module=cover_page',
+    'icon' => 'cover_page',
+    'color' => '#b8860b',
 ]);
 
 if ($isAdmin) {

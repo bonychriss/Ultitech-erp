@@ -122,6 +122,28 @@ function writeSelectedIdToUrl(selectedId) {
   }
 }
 
+function writeFiltersToUrl(f) {
+  if (typeof window === 'undefined' || !window.history?.replaceState) return
+  const url = new URL(window.location.href)
+  const setOrDelete = (key, value) => {
+    if (value) url.searchParams.set(key, String(value))
+    else url.searchParams.delete(key)
+  }
+  url.searchParams.delete('q')
+  setOrDelete('search', String(f.search || '').trim())
+  setOrDelete('status', f.status)
+  setOrDelete('from_date', f.from_date)
+  setOrDelete('to_date', f.to_date)
+  setOrDelete('prefix', f.prefix && f.prefix !== 'all' ? f.prefix : '')
+  setOrDelete('sort', f.sort && f.sort !== 'newest' ? f.sort : '')
+  setOrDelete('page', Number(f.page) > 1 ? Math.floor(Number(f.page)) : '')
+  const next = url.pathname + url.search + url.hash
+  const cur = window.location.pathname + window.location.search + window.location.hash
+  if (next !== cur) {
+    window.history.replaceState(window.history.state, '', next)
+  }
+}
+
 let consumedRestore = undefined
 function takeRestoredListState() {
   if (consumedRestore !== undefined) return consumedRestore
@@ -544,6 +566,7 @@ export default function VouchersDeskPage() {
   }, [])
 
   useEffect(() => {
+    writeFiltersToUrl(filters)
     loadData(filters)
   }, [filters, loadData])
 

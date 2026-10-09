@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bell,
+  BookOpen,
   Compass,
   Coins,
   Globe,
@@ -410,6 +411,7 @@ const ICONS = {
   backup: BackupIcon,
   inbox: Inbox,
   letter: LetterIcon,
+  cover_page: BookOpen,
   layout: Palette,
   website: Globe,
 }
@@ -960,7 +962,7 @@ export default function SelectModulePage() {
             <a
               key={mod.id}
               href={mod.href}
-              className="sm-card"
+              className={`sm-card${Number(mod.count) > 0 ? ' sm-card--has-count' : ''}`}
               style={{ '--module-glow-color': mod.color || '#111' }}
               {...(mod.external || /^https?:\/\//i.test(String(mod.href || ''))
                 ? { target: '_blank', rel: 'noopener noreferrer' }
@@ -1002,7 +1004,36 @@ export default function SelectModulePage() {
                   </span>
                 )
               ) : null}
-              <ModuleIcon name={mod.icon} color={mod.color || '#111'} />
+              {Number(mod.count) > 0 ? (
+                  <span
+                    className={`sm-count${Number(mod.count) > 99 ? ' sm-count--wide' : ''}${mod.countHref ? ' sm-count--link' : ''}`}
+                    title={mod.countTitle || ''}
+                    aria-label={mod.countTitle || `${mod.count} new`}
+                    {...(mod.countHref
+                      ? {
+                          role: 'link',
+                          tabIndex: 0,
+                          onClick: (e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            window.location.href = mod.countHref
+                          },
+                          onKeyDown: (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              window.location.href = mod.countHref
+                            }
+                          },
+                        }
+                      : {})}
+                  >
+                    {Number(mod.count) > 99 ? '99+' : mod.count}
+                  </span>
+                ) : null}
+              <span className="sm-icon-wrap">
+                <ModuleIcon name={mod.icon} color={mod.color || '#111'} />
+              </span>
               <span className="sm-label">{mod.label}</span>
               <span className="sm-desc">{mod.desc}</span>
             </a>

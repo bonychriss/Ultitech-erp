@@ -26,7 +26,7 @@ import {
 
 function KpiCard({ icon, iconClass, title, value, subtext, trend, trendClass }) {
   return (
-    <div className="kpi-card">
+    <div className={`kpi-card kpi-card--tone-${iconClass}`}>
       <div className="kpi-card-header">
         <div className={`kpi-card-icon ${iconClass}`}>{icon}</div>
         <div className="kpi-card-title">{title}</div>

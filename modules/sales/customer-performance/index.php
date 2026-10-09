@@ -806,23 +806,15 @@ html body main.cp-page { padding-left: 52px !important; padding-right: 52px !imp
 .cp-field label { font-size: 0.72rem; font-weight: 650; color: #64748b; }
 html body main.cp-page .cp-field select { height: 2.45rem; border: 1px solid #d7dee7; border-radius: 12px !important; background-color: #fff; color: #0f172a; padding: 0 2rem 0 0.85rem; font-weight: 650; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%2364748b' stroke-width='1.6' stroke-linecap='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; }
 .cp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 1.15rem; }
-.cp-kpi { border-radius: 14px; padding: 0.7rem 0.9rem; min-height: 4.75rem; min-width: 0; border: 1px solid transparent; }
-.cp-kpi--customers { background: linear-gradient(135deg, #eef4ff 0%, #dbe7ff 100%); border-color: #c7d7fe; }
-.cp-kpi--active { background: linear-gradient(135deg, #ecfbf3 0%, #d3f3e2 100%); border-color: #b4e8cb; }
-.cp-kpi--sales { background: linear-gradient(135deg, #f5f1ff 0%, #e6dcff 100%); border-color: #d8c9fd; }
-.cp-kpi--average { background: linear-gradient(135deg, #fff7eb 0%, #ffe6c2 100%); border-color: #fbd49a; }
+.cp-kpi { border-radius: 14px; padding: 0.7rem 0.9rem; min-height: 4.75rem; min-width: 0; background: #fff; border: 1px solid #e7edf3; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
 .cp-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.cp-kpi-label { font-size: 0.8rem; font-weight: 650; }
-.cp-kpi--customers .cp-kpi-label { color: #1e3a8a; }
-.cp-kpi--active .cp-kpi-label { color: #14532d; }
-.cp-kpi--sales .cp-kpi-label { color: #4c1d95; }
-.cp-kpi--average .cp-kpi-label { color: #7c2d12; }
-.cp-kpi-icon { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12); }
+.cp-kpi-label { font-size: 0.8rem; font-weight: 650; color: #64748b; }
+.cp-kpi-icon { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .cp-kpi-icon svg { width: 16px; height: 16px; }
-.cp-kpi--customers .cp-kpi-icon { background: #2563eb; }
-.cp-kpi--active .cp-kpi-icon { background: #16a34a; }
-.cp-kpi--sales .cp-kpi-icon { background: #7c3aed; }
-.cp-kpi--average .cp-kpi-icon { background: #ea8a0c; }
+.cp-kpi--customers .cp-kpi-icon { background: #eef4ff; color: #2563eb; }
+.cp-kpi--active .cp-kpi-icon { background: #ecfbf3; color: #16a34a; }
+.cp-kpi--sales .cp-kpi-icon { background: #f5f1ff; color: #7c3aed; }
+.cp-kpi--average .cp-kpi-icon { background: #fff7eb; color: #d97706; }
 .cp-kpi strong { display: block; margin: 0.45rem 0 0.35rem; font-size: 1.2rem; font-weight: 780; letter-spacing: -0.02em; color: #111827; line-height: 1.15; white-space: nowrap; }
 .cp-kpi-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.74rem; color: #475569; font-weight: 550; }
 .cp-kpi-up { color: #16a34a; font-weight: 700; white-space: nowrap; }
@@ -982,7 +974,13 @@ html[data-theme="dark"] .cp-kpi--customers { background: linear-gradient(135deg,
 html[data-theme="dark"] .cp-kpi--active { background: linear-gradient(135deg, #163226 0%, #1b4a33 100%); border-color: #25603f; }
 html[data-theme="dark"] .cp-kpi--sales { background: linear-gradient(135deg, #2a2150 0%, #3b2a75 100%); border-color: #4c3a8f; }
 html[data-theme="dark"] .cp-kpi--average { background: linear-gradient(135deg, #3a2a14 0%, #5a3a12 100%); border-color: #6e4a1a; }
+html[data-theme="dark"] .cp-kpi { box-shadow: none; }
 html[data-theme="dark"] .cp-kpi-label { color: #e2e8f0 !important; }
+html[data-theme="dark"] .cp-kpi-icon { color: #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); }
+html[data-theme="dark"] .cp-kpi--customers .cp-kpi-icon { background: #2563eb; }
+html[data-theme="dark"] .cp-kpi--active .cp-kpi-icon { background: #16a34a; }
+html[data-theme="dark"] .cp-kpi--sales .cp-kpi-icon { background: #7c3aed; }
+html[data-theme="dark"] .cp-kpi--average .cp-kpi-icon { background: #ea8a0c; }
 html[data-theme="dark"] .cp-kpi-foot { color: #cbd5e1; }
 html[data-theme="dark"] .cp-table thead th { background: #0f172a; }
 html[data-theme="dark"] .cp-table tbody td,

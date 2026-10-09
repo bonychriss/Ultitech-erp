@@ -72,6 +72,9 @@ if (strpos($script_name, '/modules/company-profile/') !== false) {
 if (strpos($script_name, '/modules/backup/') !== false) {
     $active_module = 'backup';
 }
+if (strpos($script_name, '/modules/cover-page/') !== false) {
+    $active_module = 'cover_page';
+}
 if (strpos($script_name, '/dispatch/') !== false) {
     $active_module = 'dispatch';
 }
@@ -501,6 +504,10 @@ switch ($active_module) {
         addItem($menuItems, 'cp-edit', 'Edit Profile', 'pencil-square', $prefix . 'modules/company-profile/create.php?module=company-profile');
         addItem($menuItems, 'cp-generate', 'Print Profile', 'file-earmark-text', $prefix . 'modules/company-profile/generate.php?module=company-profile');
         addItem($menuItems, 'cp-book', 'Profile Book PDF', 'book', $prefix . 'modules/company-profile/generate_book.php?module=company-profile');
+        break;
+
+    case 'cover_page':
+        addItem($menuItems, 'cover-pages', 'Cover Pages', 'book', $prefix . 'modules/cover-page/index.php?module=cover_page');
         break;
 
     default:

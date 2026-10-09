@@ -33,7 +33,8 @@ try {
     if (session_status() === PHP_SESSION_ACTIVE) {
         session_write_close();
     }
-    $before = array_map(static fn ($row) => (int) $row['id'], webSyncActiveProducts($pdo));
+    $before = webSyncActiveProducts($pdo);
+    $removed = array_map(static fn ($row) => (int) $row['id'], webSyncChanges($pdo)['deleted']);
     $result = webSyncRun($userId, $run);
     if (!empty($result['cancelled'])) {
         echo json_encode([
@@ -44,7 +45,11 @@ try {
         exit;
     }
     webSyncMarkSent($pdo, $before);
-    $result['pending'] = count(webSyncPending($pdo));
+    webSyncForget($pdo, $removed);
+    $changes = webSyncChanges($pdo);
+    $result['pending'] = count($changes['pending']);
+    $result['edited'] = count($changes['edited']);
+    $result['deleted'] = count($changes['deleted']);
     echo json_encode($result, JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     http_response_code(500);

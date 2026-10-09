@@ -9,12 +9,43 @@ function money(value) {
   return n.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function syncedDate(value) {
+  if (!value) return '';
+  const d = new Date(String(value).replace(' ', 'T'));
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function changeText(change) {
+  if (change.field === 'description' || change.field === 'image') return `${change.label} changed`;
+  const show = (v) => (change.field === 'unit_price' ? money(v) : v || '(empty)');
+  return `${change.label}: ${show(change.from)} → ${show(change.to)}`;
+}
+
+const TABS = [
+  { key: 'pending', label: 'New' },
+  { key: 'edited', label: 'Edited' },
+  { key: 'deleted', label: 'Deleted' },
+];
+
 export default function WebServices({ data }) {
-  const { view = 'sync', pending = [], syncUrl = '', cancelUrl = '', dashboard = null, dashboardUrl = '' } = data;
+  const {
+    view = 'sync',
+    pending = [],
+    edited = [],
+    deleted = [],
+    syncUrl = '',
+    cancelUrl = '',
+    dashboard = null,
+    dashboardUrl = '',
+  } = data;
+  const lists = { pending, edited, deleted };
+  const [tab, setTab] = useState(() => TABS.find((t) => lists[t.key].length > 0)?.key || 'pending');
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const abortRef = useRef(null);
+  const total = pending.length + edited.length + deleted.length;
 
   const withRun = (url, runId) => {
     if (!url || !runId) return url;
@@ -82,11 +113,19 @@ export default function WebServices({ data }) {
     );
   }
 
+  const rows = lists[tab];
+  const empty = {
+    pending: 'No new products waiting. Every active product is already on the website.',
+    edited: 'No edited products. Names, prices, categories, and photos on the website match UltiTech.',
+    deleted: 'No deleted products. Everything on the website still exists in UltiTech.',
+  };
+
   return (
     <div className="prod-desk-page">
       <div className="prod-desk-page-header" style={{ gridTemplateColumns: '1fr auto' }}>
         <p style={{ margin: 0, color: '#64748b', fontSize: '0.925rem' }}>
-          Send Ultimate products to ultimate.co.tz. New products that are not on the website yet are listed here.
+          Products that changed in UltiTech since the last sync to ultimate.co.tz. Syncing adds new products, updates edited
+          ones, and hides deleted ones on the website.
         </p>
         <div className="prod-desk-page-header-actions" style={{ gridColumn: 'auto' }}>
           {syncing ? (
@@ -104,35 +143,99 @@ export default function WebServices({ data }) {
       {message ? <div className="alert alert-info mb-0">{message}</div> : null}
       {error ? <div className="alert alert-danger mb-0">{error}</div> : null}
 
-      {pending.length === 0 ? (
-        <div className="alert alert-success mb-0">
-          No new products waiting. Everything active in UltiTech has been sent, or nothing has been added since the last sync.
-        </div>
+      {total === 0 ? (
+        <div className="alert alert-success mb-0">Everything is in sync. No new, edited, or deleted products since the last sync.</div>
       ) : (
-        <div className="prod-desk-table-wrap">
-          <table className="prod-desk-table">
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Name</th>
-                <th>Category</th>
-                <th style={{ textAlign: 'right' }}>Price</th>
-                <th style={{ textAlign: 'right' }}>Stock</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pending.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.product_code}</td>
-                  <td>{row.name}</td>
-                  <td>{row.category_name}</td>
-                  <td style={{ textAlign: 'right' }}>{money(row.unit_price)}</td>
-                  <td style={{ textAlign: 'right' }}>{row.stock_qty}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="web-sync-tabs" role="tablist" aria-label="Product changes">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.key}
+                className={`web-sync-tab web-sync-tab--${t.key}${tab === t.key ? ' is-active' : ''}`}
+                onClick={() => setTab(t.key)}
+              >
+                <span>{t.label}</span>
+                <span className="web-sync-count">{lists[t.key].length}</span>
+              </button>
+            ))}
+          </div>
+
+          {rows.length === 0 ? (
+            <div className="alert alert-success mb-0">{empty[tab]}</div>
+          ) : (
+            <div className="prod-desk-table-wrap">
+              <table className="prod-desk-table">
+                <thead>
+                  {tab === 'pending' ? (
+                    <tr>
+                      <th>Code</th>
+                      <th>Name</th>
+                      <th>Category</th>
+                      <th style={{ textAlign: 'right' }}>Price</th>
+                      <th style={{ textAlign: 'right' }}>Stock</th>
+                    </tr>
+                  ) : tab === 'edited' ? (
+                    <tr>
+                      <th>Code</th>
+                      <th>Name</th>
+                      <th>What changed</th>
+                      <th>Last synced</th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th>Code</th>
+                      <th>Name</th>
+                      <th>Status in UltiTech</th>
+                      <th>Last synced</th>
+                    </tr>
+                  )}
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.product_code}</td>
+                      <td>{row.name || `Product #${row.id}`}</td>
+                      {tab === 'pending' ? (
+                        <>
+                          <td>{row.category_name}</td>
+                          <td style={{ textAlign: 'right' }}>{money(row.unit_price)}</td>
+                          <td style={{ textAlign: 'right' }}>{row.stock_qty}</td>
+                        </>
+                      ) : tab === 'edited' ? (
+                        <>
+                          <td>
+                            {row.changes?.length ? (
+                              <ul className="web-sync-changes">
+                                {row.changes.map((c) => (
+                                  <li key={c.field}>{changeText(c)}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <span className="web-sync-muted">Edited after the last sync</span>
+                            )}
+                          </td>
+                          <td className="web-sync-muted">{syncedDate(row.synced_at)}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td>
+                            <span className={`web-sync-status web-sync-status--${row.status}`}>
+                              {row.status === 'inactive' ? 'Deactivated' : 'Deleted'}
+                            </span>
+                          </td>
+                          <td className="web-sync-muted">{syncedDate(row.synced_at)}</td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

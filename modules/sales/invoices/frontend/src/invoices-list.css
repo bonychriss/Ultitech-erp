@@ -860,7 +860,7 @@ body.page-invoices-desk .exp-desk-btn-create {
 }
 
 .inv-invoices-table .exp-desk-table-wrap {
-  overflow-x: hidden;
+  overflow-x: auto !important;
   overflow-y: visible;
   width: 100%;
   max-width: 100%;
@@ -868,10 +868,10 @@ body.page-invoices-desk .exp-desk-btn-create {
 }
 
 .inv-invoices-table .exp-desk-table.inv-desk-table {
-  table-layout: fixed;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
+  table-layout: auto;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
   border-collapse: collapse;
   font-size: 0.8125rem;
 }
@@ -883,13 +883,13 @@ body.page-invoices-desk .exp-desk-btn-create {
 }
 
 .inv-invoices-table .inv-desk-table col.inv-col-check { width: 3.5rem; }
-.inv-invoices-table .inv-desk-table col.inv-col-number { width: 11%; }
-.inv-invoices-table .inv-desk-table col.inv-col-customer { width: 24%; }
-.inv-invoices-table .inv-desk-table col.inv-col-salesperson { width: 16%; }
-.inv-invoices-table .inv-desk-table col.inv-col-invoice-date { width: 9%; }
-.inv-invoices-table .inv-desk-table col.inv-col-due-date { width: 9%; }
-.inv-invoices-table .inv-desk-table col.inv-col-total { width: 11%; }
-.inv-invoices-table .inv-desk-table col.inv-col-status { width: 8%; }
+.inv-invoices-table .inv-desk-table col.inv-col-number { width: 9rem; }
+.inv-invoices-table .inv-desk-table col.inv-col-customer { width: 16rem; }
+.inv-invoices-table .inv-desk-table col.inv-col-salesperson { width: 11rem; }
+.inv-invoices-table .inv-desk-table col.inv-col-invoice-date { width: 8.5rem; }
+.inv-invoices-table .inv-desk-table col.inv-col-due-date { width: 8.5rem; }
+.inv-invoices-table .inv-desk-table col.inv-col-total { width: 8rem; }
+.inv-invoices-table .inv-desk-table col.inv-col-status { width: 6.5rem; }
 .inv-invoices-table .inv-desk-table col.inv-col-actions { width: 3.25rem; }
 
 .inv-invoices-table .inv-desk-table thead th,
@@ -1016,27 +1016,27 @@ html[data-theme="dark"] .inv-invoices-table .exp-desk-table tbody tr.is-opened t
   min-width: 0;
 }
 
-.inv-invoices-table .inv-desk-table .inv-col-invoice-date,
-.inv-invoices-table .inv-desk-table .inv-col-due-date {
-  color: #334155;
+.inv-invoices-table .inv-desk-table td.inv-col-invoice-date,
+.inv-invoices-table .inv-desk-table td.inv-col-due-date {
   white-space: nowrap;
 }
 
-.inv-invoices-table .inv-desk-table .inv-col-invoice-date .exp-desk-subdate,
-.inv-invoices-table .inv-desk-table .inv-col-due-date .exp-desk-subdate {
+/* Date values were too faint (#64748b) — match customer/total contrast */
+.inv-invoices-table .inv-desk-table td.inv-col-invoice-date .exp-desk-subdate,
+.inv-invoices-table .inv-desk-table td.inv-col-due-date .exp-desk-subdate,
+.inv-invoices-table .inv-desk-table td.inv-col-invoice-date .inv-date-value,
+.inv-invoices-table .inv-desk-table td.inv-col-due-date .inv-date-value {
   display: inline;
   margin-top: 0;
-  font-size: 0.8125rem;
-  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a !important;
+  white-space: nowrap;
 }
 
-.inv-invoices-table .inv-desk-table .inv-col-due-date .exp-desk-subdate.inv-due-date-label {
-  color: #1f2937;
-}
-
-.inv-invoices-table .inv-desk-table .inv-col-due-date .exp-desk-subdate.inv-due-date--overdue {
-  color: #dc2626;
-  font-weight: 400;
+.inv-invoices-table .inv-desk-table td.inv-col-due-date .exp-desk-subdate.inv-due-date--overdue {
+  color: #dc2626 !important;
+  font-weight: 700;
 }
 
 .inv-invoices-table .inv-desk-table th.inv-col-total {
@@ -1178,7 +1178,17 @@ html[data-theme="dark"] .inv-invoices-table .inv-desk-table tbody tr:hover td { 
 html[data-theme="dark"] .inv-invoices-table .inv-desk-table tbody tr.qt-row-selected td { background: #312e81; }
 html[data-theme="dark"] .inv-invoices-table .inv-desk-table .inv-col-customer .inv-cell-customer,
 html[data-theme="dark"] .inv-invoices-table .inv-desk-table .inv-col-total.exp-desk-amt,
-html[data-theme="dark"] .inv-invoices-table .inv-desk-table .inv-col-number .exp-desk-ref { color: #f8fafc; }
+html[data-theme="dark"] .inv-invoices-table .inv-desk-table .inv-col-number .exp-desk-ref,
+html[data-theme="dark"] .inv-invoices-table .inv-desk-table td.inv-col-invoice-date .exp-desk-subdate,
+html[data-theme="dark"] .inv-invoices-table .inv-desk-table td.inv-col-due-date .exp-desk-subdate,
+html[data-theme="dark"] .inv-invoices-table .inv-desk-table td.inv-col-invoice-date .inv-date-value,
+html[data-theme="dark"] .inv-invoices-table .inv-desk-table td.inv-col-due-date .inv-date-value {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .inv-invoices-table .inv-desk-table td.inv-col-due-date .exp-desk-subdate.inv-due-date--overdue {
+  color: #f87171 !important;
+}
 
 .qt-settings-btn {
   width: 2.35rem;

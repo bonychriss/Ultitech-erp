@@ -459,6 +459,181 @@ function salesInvoiceViewRenderCatalogHtml(
 }
 
 /**
+ * @return array{name:string,proxyLink:?string,isImage:bool,typeLabel:string,fileSizeLabel:string,missing:bool,id:int,sub:string}
+ */
+function salesInvoiceViewFormatAttachmentRow(string $relPath, int $id = 0, string $sub = ''): array
+{
+    $rel = ltrim(str_replace('\\', '/', $relPath), '/');
+    $name = basename($rel) ?: 'Attachment';
+    $isImg = (bool) preg_match('/\.(jpg|jpeg|png|gif|webp|bmp)$/i', $rel);
+    $ext = strtoupper((string) pathinfo($name, PATHINFO_EXTENSION));
+    if ($ext === '') {
+        $ext = $isImg ? 'IMG' : 'FILE';
+    }
+
+    $diskPath = '';
+    $companyId = (int) ($_SESSION['company_id'] ?? 0);
+    if (function_exists('resolveStoredMediaFilePath')) {
+        $diskPath = (string) resolveStoredMediaFilePath($rel, $companyId);
+    }
+    if ($diskPath === '' || !is_file($diskPath)) {
+        $root = dirname(__DIR__, 4);
+        $candidates = [
+            $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel),
+            $root . DIRECTORY_SEPARATOR . 'public_html' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel),
+        ];
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                $diskPath = $candidate;
+                break;
+            }
+        }
+    }
+
+    $missing = ($diskPath === '' || !is_file($diskPath));
+    $fileSizeLabel = '';
+    if (!$missing) {
+        $bytes = (int) filesize($diskPath);
+        if ($bytes > 0) {
+            $fileSizeLabel = $bytes < 1024
+                ? ($bytes . ' B')
+                : ($bytes < 1048576
+                    ? ((int) round($bytes / 1024) . ' KB')
+                    : (number_format($bytes / 1048576, 1) . ' MB'));
+        }
+    } else {
+        $fileSizeLabel = 'File missing on this server';
+    }
+
+    $proxyBase = function_exists('app_url') ? app_url('/proxy_pdf.php') : '/proxy_pdf.php';
+
+    return [
+        'id' => $id,
+        'name' => $name,
+        'proxyLink' => $missing ? null : ($proxyBase . '?file=' . urlencode($rel)),
+        'isImage' => $isImg,
+        'typeLabel' => $isImg ? 'Image' : ($ext === 'PDF' ? 'PDF' : $ext),
+        'fileSizeLabel' => $fileSizeLabel !== '' ? $fileSizeLabel : ($sub !== '' ? $sub : ($isImg ? 'Image' : 'File')),
+        'sub' => $sub !== '' ? $sub : ($isImg ? 'Image' : 'Payment proof'),
+        'missing' => $missing,
+    ];
+}
+
+/**
+ * Collect payment / revenue attachments for an invoice-linked revenue entry.
+ *
+ * @return array{attachments:list<array<string,mixed>>,documents:array{hasSupporting:bool,headerCount:int}}
+ */
+function salesInvoiceViewCollectSupportingDocuments(PDO $salesDb, int $revEntryId): array
+{
+    $empty = [
+        'attachments' => [],
+        'documents' => [
+            'hasSupporting' => false,
+            'headerCount' => 0,
+        ],
+    ];
+    if ($revEntryId <= 0) {
+        return $empty;
+    }
+
+    if (!function_exists('resolveStoredMediaFilePath')) {
+        $resolver = dirname(__DIR__, 4) . '/includes/media_path_resolver.php';
+        if (is_file($resolver)) {
+            require_once $resolver;
+        }
+    }
+
+    $seen = [];
+    $rows = [];
+
+    $addPath = static function (string $rel, int $id = 0, string $sub = 'Payment proof') use (&$seen, &$rows): void {
+        $rel = ltrim(str_replace('\\', '/', $rel), '/');
+        if ($rel === '' || isset($seen[$rel])) {
+            return;
+        }
+        $seen[$rel] = true;
+        $rows[] = salesInvoiceViewFormatAttachmentRow($rel, $id, $sub);
+    };
+
+    $detailLib = dirname(__DIR__, 3) . '/revenue/includes/revenue-detail-lib.php';
+    if (is_file($detailLib)) {
+        require_once $detailLib;
+    }
+
+    $entry = [];
+    try {
+        $st = $salesDb->prepare('SELECT id, attachment, created_at FROM revenue_entries WHERE id = ? LIMIT 1');
+        $st->execute([$revEntryId]);
+        $entry = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        $entry = [];
+    }
+
+    if (function_exists('revenue_detail_fetch_attachments') && $entry !== []) {
+        foreach (revenue_detail_fetch_attachments($salesDb, $revEntryId, $entry) as $att) {
+            $path = (string) ($att['file_path'] ?? '');
+            if ($path !== '') {
+                $addPath($path, (int) ($att['id'] ?? 0), 'Supporting document');
+            }
+        }
+    } elseif (!empty($entry['attachment'])) {
+        $addPath((string) $entry['attachment'], 0, 'Supporting document');
+    }
+
+    $payDir = dirname(__DIR__, 4) . '/uploads/revenue/payments';
+    if (is_dir($payDir)) {
+        foreach (glob($payDir . '/pay_' . $revEntryId . '_*') ?: [] as $abs) {
+            if (!is_file($abs)) {
+                continue;
+            }
+            $addPath('uploads/revenue/payments/' . basename($abs), 0, 'Payment proof');
+        }
+    }
+
+    $txnPdbs = [];
+    if (isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+        $txnPdbs[] = $GLOBALS['pdo'];
+    }
+    $txnPdbs[] = $salesDb;
+    foreach ($txnPdbs as $txnPdo) {
+        try {
+            $st = $txnPdo->prepare(
+                "SELECT description FROM account_transactions
+                 WHERE reference_type IN ('revenue_collection', 'revenue_entry', 'invoice_payment')
+                   AND reference_id = ?
+                 ORDER BY id DESC
+                 LIMIT 50"
+            );
+            $st->execute([$revEntryId]);
+            foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $desc) {
+                if (!is_string($desc) || $desc === '') {
+                    continue;
+                }
+                if (preg_match_all('/\[Attachment:\s*([^\]]+)\]/i', $desc, $m)) {
+                    foreach ($m[1] as $path) {
+                        $addPath(trim((string) $path), 0, 'Payment proof');
+                    }
+                }
+            }
+            break;
+        } catch (Throwable $e) {
+            continue;
+        }
+    }
+
+    $count = count($rows);
+
+    return [
+        'attachments' => $rows,
+        'documents' => [
+            'hasSupporting' => $count > 0,
+            'headerCount' => $count,
+        ],
+    ];
+}
+
+/**
  * @return array<string, mixed>
  */
 function salesInvoiceViewLoadContext(int $id): array
@@ -529,15 +704,24 @@ function salesInvoiceViewLoadContext(int $id): array
 
     $paymentUrl = '';
     $revEntryId = 0;
-    if (!in_array($status, ['paid', 'draft'], true)) {
-        require_once dirname(__DIR__, 4) . '/includes/revenue_sync.php';
-        $revEntryId = (int) syncInvoiceToRevenue($salesDb, $id);
-        if ($revEntryId > 0) {
-            $paymentUrl = function_exists('app_url')
-                ? app_url('/revenue_record_payment.php?id=' . $revEntryId)
-                : '/revenue_record_payment.php?id=' . $revEntryId;
-        }
+    require_once dirname(__DIR__, 4) . '/includes/revenue_sync.php';
+    try {
+        $stRev = $salesDb->prepare('SELECT id FROM revenue_entries WHERE source_invoice_id = ? LIMIT 1');
+        $stRev->execute([$id]);
+        $revEntryId = (int) $stRev->fetchColumn();
+    } catch (Throwable $e) {
+        $revEntryId = 0;
     }
+    if ($revEntryId <= 0 && !in_array($status, ['paid', 'draft'], true)) {
+        $revEntryId = (int) syncInvoiceToRevenue($salesDb, $id);
+    }
+    if ($revEntryId > 0 && !in_array($status, ['paid', 'draft'], true)) {
+        $paymentUrl = function_exists('app_url')
+            ? app_url('/revenue_record_payment.php?id=' . $revEntryId)
+            : '/revenue_record_payment.php?id=' . $revEntryId;
+    }
+
+    $supportingDocs = salesInvoiceViewCollectSupportingDocuments($salesDb, $revEntryId);
 
     $createFlash = null;
     if (session_status() === PHP_SESSION_NONE) {
@@ -604,6 +788,8 @@ function salesInvoiceViewLoadContext(int $id): array
             'show_catalogue' => (bool) $share['show_catalogue'],
         ],
         'revenue_entry_id' => $revEntryId,
+        'attachments' => $supportingDocs['attachments'],
+        'documents' => $supportingDocs['documents'],
         'document_html' => salesInvoiceViewRenderDocumentHtml(
             $invoice,
             $items,

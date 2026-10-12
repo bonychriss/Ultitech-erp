@@ -140,15 +140,17 @@ function formatDueDateRelative(dateStr) {
 }
 
 function DueDateCell({ invoice }) {
-  const { label, title } = formatDueDateRelative(invoice?.due_date);
+  const dateLabel = formatDate(invoice?.due_date);
+  const { label: relativeLabel } = formatDueDateRelative(invoice?.due_date);
   const overdue = isInvoiceDueDateOverdue(invoice);
+  const title = relativeLabel && relativeLabel !== '-' ? relativeLabel : undefined;
 
   return (
     <span
       className={`exp-desk-subdate inv-due-date-label${overdue ? ' inv-due-date--overdue' : ''}`}
-      title={title || undefined}
+      title={title}
     >
-      {label}
+      {dateLabel}
     </span>
   );
 }
@@ -1120,7 +1122,11 @@ export default function InvoicesListPage() {
                         <span className="qt-salesperson-name" title={inv.salesperson || ''}>{inv.salesperson || '-'}</span>
                       </div>
                     </td>
-                    <td className="inv-col-invoice-date"><span className="exp-desk-subdate">{formatDate(inv.invoice_date)}</span></td>
+                    <td className="inv-col-invoice-date">
+                      <span className="exp-desk-subdate inv-date-value">
+                        {formatDate(inv.invoice_date || inv.created_at)}
+                      </span>
+                    </td>
                     <td className="inv-col-due-date">
                       <DueDateCell invoice={inv} />
                     </td>

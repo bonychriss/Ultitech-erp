@@ -21,6 +21,7 @@ import { downloadDeliveryNotePdfFromHtml } from '../utils/deliveryNoteOffscreenP
 import InvoiceViewToolbar from '../components/InvoiceViewToolbar.jsx';
 import InvoiceDownloadModal from '../components/InvoiceDownloadModal.jsx';
 import InvoiceDocumentPane from '../components/InvoiceDocumentPane.jsx';
+import InvoiceDocumentsCard from '../components/InvoiceDocumentsCard.jsx';
 import InvoiceRegisterPaymentModal from '../components/InvoiceRegisterPaymentModal.jsx';
 
 function getDeskCfg() {
@@ -417,6 +418,11 @@ export default function InvoiceViewPage() {
       <InvoiceDocumentPane
         html={documentHtml}
         fontFamily={documentFontFamily}
+      />
+
+      <InvoiceDocumentsCard
+        attachments={data?.attachments}
+        documents={data?.documents}
       />
 
       {payEntryId ? createPortal(

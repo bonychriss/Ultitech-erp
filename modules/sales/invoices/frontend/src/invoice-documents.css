@@ -1,0 +1,252 @@
+/* Supporting documents under invoice view — Gmail-style cards (matches voucher view) */
+
+.ov-page-root .inv-docs-card {
+  width: 100%;
+  max-width: 210mm;
+  margin: 1.25rem auto 0;
+  padding: 0 0 1.5rem;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.ov-page-root .inv-docs-head {
+  margin-bottom: 0.5rem;
+}
+
+.ov-page-root .inv-docs-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #202124;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.ov-page-root .inv-docs-count {
+  color: #5f6368;
+  font-weight: 400;
+}
+
+.ov-page-root .inv-docs-body {
+  padding: 0;
+}
+
+.ov-page-root .inv-gmail-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.ov-page-root .inv-gmail-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 168px;
+  max-width: calc(50% - 6px);
+  flex: 0 0 168px;
+  margin: 0;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.ov-page-root .inv-gmail-card:hover {
+  border-color: #c4c7c5;
+  box-shadow: 0 2px 8px rgba(60, 64, 67, 0.16);
+}
+
+.ov-page-root .inv-gmail-card--missing {
+  opacity: 0.75;
+}
+
+.ov-page-root .inv-gmail-card-hit {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: #f8f9fa;
+  cursor: pointer;
+  text-align: left;
+  line-height: 0;
+}
+
+.ov-page-root .inv-gmail-card-hit:disabled {
+  cursor: default;
+}
+
+.ov-page-root .inv-gmail-thumb {
+  position: relative;
+  width: 100%;
+  height: 118px;
+  max-height: 118px;
+  overflow: hidden;
+  background: #f1f3f4;
+}
+
+.ov-page-root .inv-gmail-thumb--image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.ov-page-root .inv-gmail-thumb--pdf {
+  background: #525659;
+  overflow: hidden;
+}
+
+.ov-page-root .inv-gmail-thumb--pdf iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 840px;
+  height: 1100px;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  transform: scale(0.2);
+  transform-origin: top left;
+  pointer-events: none;
+  background: #525659;
+}
+
+.ov-page-root .inv-gmail-thumb--placeholder,
+.ov-page-root .inv-gmail-thumb--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  color: #80868b;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.ov-page-root .inv-gmail-thumb-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 52px;
+  padding: 0 6px;
+  border-radius: 2px;
+  background: #ea4335;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ov-page-root .inv-gmail-card-foot {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border-top: 1px solid #e8eaed;
+  overflow: hidden;
+}
+
+.ov-page-root .inv-gmail-type {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 24px;
+  border-radius: 3px;
+  background: #ea4335;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ov-page-root .inv-gmail-type--pdf { background: #ea4335; }
+.ov-page-root .inv-gmail-type--image { background: #4285f4; }
+.ov-page-root .inv-gmail-type--sheet { background: #0f9d58; }
+.ov-page-root .inv-gmail-type--doc { background: #4285f4; }
+.ov-page-root .inv-gmail-type--file { background: #5f6368; }
+
+.ov-page-root .inv-gmail-fname {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: #3c4043;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.ov-page-root .inv-gmail-foot-action {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #1a73e8;
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ov-page-root .inv-gmail-foot-action:hover {
+  background: #e8f0fe;
+  color: #174ea6;
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .ov-page-root .inv-docs-card {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .ov-page-root .inv-gmail-card {
+    width: calc(50% - 6px);
+    max-width: calc(50% - 6px);
+    flex-basis: calc(50% - 6px);
+  }
+}
+
+html[data-theme="dark"] .ov-page-root .inv-docs-title {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .ov-page-root .inv-docs-count {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .ov-page-root .inv-gmail-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .ov-page-root .inv-gmail-card-foot {
+  background: #0f172a;
+  border-top-color: #334155;
+}
+
+html[data-theme="dark"] .ov-page-root .inv-gmail-fname {
+  color: #e2e8f0;
+}

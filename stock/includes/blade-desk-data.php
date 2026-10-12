@@ -930,7 +930,7 @@ if (!function_exists('stock_blade_web_services_data')) {
     {
         $pdo = stock_blade_bootstrap();
         require_once dirname(__DIR__) . '/includes/web-services-lib.php';
-        $pending = webSyncPending($pdo);
+        $changes = webSyncChanges($pdo);
 
         $websiteUrl = function_exists('company_url') ? company_url('website') : '/website';
         $joinQuery = static function (string $url, string $query): string {
@@ -953,7 +953,9 @@ if (!function_exists('stock_blade_web_services_data')) {
 
         return [
             'view' => $view,
-            'pending' => $pending,
+            'pending' => $changes['pending'],
+            'edited' => $changes['edited'],
+            'deleted' => $changes['deleted'],
             'syncUrl' => $syncUrl,
             'cancelUrl' => $cancelUrl,
             'dashboardUrl' => function_exists('company_url') ? company_url('website/dashboard') : '/website/dashboard',

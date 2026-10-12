@@ -41,28 +41,68 @@ function webSyncIsCancelled(int $userId, string $run): bool
 
 function webSyncEnsureTable(PDO $pdo): void
 {
+    static $ready = false;
+    if ($ready) {
+        return;
+    }
     $pdo->exec('CREATE TABLE IF NOT EXISTS website_sync_sent (
         product_id INT NOT NULL PRIMARY KEY,
-        synced_at DATETIME NULL
+        synced_at DATETIME NULL,
+        snapshot TEXT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $cols = $pdo->query('SHOW COLUMNS FROM website_sync_sent')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    if (!in_array('snapshot', $cols, true)) {
+        $pdo->exec('ALTER TABLE website_sync_sent ADD COLUMN snapshot TEXT NULL');
+    }
+    $ready = true;
+}
+
+function webSyncProductColumns(PDO $pdo): array
+{
+    try {
+        return $pdo->query('SHOW COLUMNS FROM products')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+function webSyncHasProductImages(PDO $pdo): bool
+{
+    try {
+        $pdo->query('SELECT 1 FROM product_images LIMIT 1');
+
+        return true;
+    } catch (Throwable $e) {
+        return false;
+    }
 }
 
 function webSyncActiveProducts(PDO $pdo): array
 {
-    $cols = [];
-    try {
-        $cols = $pdo->query('SHOW COLUMNS FROM products')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-    } catch (Throwable $e) {
-        $cols = [];
-    }
+    $cols = webSyncProductColumns($pdo);
     $where = '1=1';
     if (in_array('is_active', $cols, true)) {
         $where = 'COALESCE(p.is_active, 1) = 1';
     } elseif (in_array('status', $cols, true)) {
         $where = "LOWER(TRIM(COALESCE(p.status, 'active'))) IN ('active', '1', '')";
     }
+    $optional = static fn (string $col): string => in_array($col, $cols, true) ? 'p.' . $col : "''";
+    $image = [];
+    foreach (['main_image', 'image'] as $col) {
+        if (in_array($col, $cols, true)) {
+            $image[] = "NULLIF(TRIM(p.$col), '')";
+        }
+    }
+    if (webSyncHasProductImages($pdo)) {
+        $image[] = '(SELECT image_name FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC, id ASC LIMIT 1)';
+    }
     $hasCat = in_array('category_id', $cols, true);
     $sql = 'SELECT p.id, p.product_code, p.name, p.unit_price';
+    $sql .= ', ' . $optional('description') . ' AS description';
+    $sql .= ', ' . $optional('currency') . ' AS currency';
+    $sql .= ', ' . $optional('brand') . ' AS brand';
+    $sql .= ', ' . (in_array('updated_at', $cols, true) ? 'p.updated_at' : 'NULL') . ' AS updated_at';
+    $sql .= ', ' . ($image !== [] ? 'COALESCE(' . implode(', ', $image) . ", '')" : "''") . ' AS image';
     $sql .= $hasCat ? ", COALESCE(c.name, '') AS category_name" : ", '' AS category_name";
     $sql .= ', COALESCE((SELECT SUM(quantity) FROM stock WHERE product_id = p.id), 0) AS stock_qty';
     $sql .= ' FROM products p';
@@ -74,53 +114,219 @@ function webSyncActiveProducts(PDO $pdo): array
     return $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
 
-function webSyncSentIds(PDO $pdo): array
+/**
+ * The fields the website copies from UltiTech. Stock is left out on purpose:
+ * it moves with every sale and the shop refreshes it on each run anyway.
+ *
+ * @return array<string,string>
+ */
+function webSyncSnapshot(array $row): array
+{
+    $text = static fn (string $key): string => trim(preg_replace('/\s+/', ' ', (string) ($row[$key] ?? '')) ?? '');
+
+    return [
+        'product_code' => $text('product_code'),
+        'name' => $text('name'),
+        'description' => $text('description'),
+        'unit_price' => number_format((float) ($row['unit_price'] ?? 0), 2, '.', ''),
+        'currency' => strtoupper($text('currency')) ?: 'TZS',
+        'category_name' => $text('category_name'),
+        'brand' => $text('brand'),
+        'image' => $text('image'),
+    ];
+}
+
+/**
+ * @return list<array{field:string,label:string,from:string,to:string}>
+ */
+function webSyncDiff(array $old, array $new): array
+{
+    $labels = [
+        'product_code' => 'Code',
+        'name' => 'Name',
+        'description' => 'Description',
+        'unit_price' => 'Price',
+        'currency' => 'Currency',
+        'category_name' => 'Category',
+        'brand' => 'Brand',
+        'image' => 'Photo',
+    ];
+    $changes = [];
+    foreach ($labels as $field => $label) {
+        if (!array_key_exists($field, $old)) {
+            continue;
+        }
+        $from = (string) $old[$field];
+        $to = (string) ($new[$field] ?? '');
+        if ($from === $to) {
+            continue;
+        }
+        $long = in_array($field, ['description', 'image'], true);
+        $changes[] = [
+            'field' => $field,
+            'label' => $label,
+            'from' => $long ? '' : $from,
+            'to' => $long ? '' : $to,
+        ];
+    }
+
+    return $changes;
+}
+
+/**
+ * @return array<int,array{synced_at:string,snapshot:?array}>
+ */
+function webSyncSentRows(PDO $pdo): array
 {
     webSyncEnsureTable($pdo);
     $count = (int) $pdo->query('SELECT COUNT(*) FROM website_sync_sent')->fetchColumn();
     if ($count === 0) {
-        $now = date('Y-m-d H:i:s');
-        $ins = $pdo->prepare('INSERT IGNORE INTO website_sync_sent (product_id, synced_at) VALUES (?, ?)');
-        foreach (webSyncActiveProducts($pdo) as $row) {
-            $ins->execute([(int) $row['id'], $now]);
-        }
+        webSyncMarkSent($pdo, webSyncActiveProducts($pdo));
+    }
+    $rows = [];
+    foreach ($pdo->query('SELECT product_id, synced_at, snapshot FROM website_sync_sent') as $row) {
+        $snapshot = json_decode((string) ($row['snapshot'] ?? ''), true);
+        $rows[(int) $row['product_id']] = [
+            'synced_at' => (string) ($row['synced_at'] ?? ''),
+            'snapshot' => is_array($snapshot) ? $snapshot : null,
+        ];
     }
 
-    return array_map('intval', $pdo->query('SELECT product_id FROM website_sync_sent')->fetchAll(PDO::FETCH_COLUMN) ?: []);
+    return $rows;
 }
 
-function webSyncMarkSent(PDO $pdo, array $ids): void
+/**
+ * @param list<array<string,mixed>> $rows Product rows as returned by webSyncActiveProducts().
+ */
+function webSyncMarkSent(PDO $pdo, array $rows, ?string $syncedAt = null): void
 {
     webSyncEnsureTable($pdo);
-    $now = date('Y-m-d H:i:s');
-    $ins = $pdo->prepare('INSERT INTO website_sync_sent (product_id, synced_at) VALUES (?, ?)
-        ON DUPLICATE KEY UPDATE synced_at = VALUES(synced_at)');
-    foreach ($ids as $id) {
-        $id = (int) $id;
+    $now = $syncedAt ?? date('Y-m-d H:i:s');
+    $ins = $pdo->prepare('INSERT INTO website_sync_sent (product_id, synced_at, snapshot) VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE synced_at = VALUES(synced_at), snapshot = VALUES(snapshot)');
+    foreach ($rows as $row) {
+        $id = (int) ($row['id'] ?? 0);
         if ($id > 0) {
-            $ins->execute([$id, $now]);
+            $ins->execute([$id, $now, json_encode(webSyncSnapshot($row), JSON_UNESCAPED_UNICODE)]);
         }
     }
+}
+
+/**
+ * @param list<int> $ids
+ */
+function webSyncForget(PDO $pdo, array $ids): void
+{
+    webSyncEnsureTable($pdo);
+    $del = $pdo->prepare('DELETE FROM website_sync_sent WHERE product_id = ?');
+    foreach ($ids as $id) {
+        if ((int) $id > 0) {
+            $del->execute([(int) $id]);
+        }
+    }
+}
+
+/**
+ * @param list<int> $ids
+ * @return array<int,array<string,string>>
+ */
+function webSyncInactiveProducts(PDO $pdo, array $ids): array
+{
+    $ids = array_values(array_filter(array_map('intval', $ids)));
+    if ($ids === []) {
+        return [];
+    }
+    $map = [];
+    try {
+        $sql = 'SELECT id, product_code, name FROM products WHERE id IN (' . implode(',', $ids) . ')';
+        foreach ($pdo->query($sql) as $row) {
+            $map[(int) $row['id']] = [
+                'product_code' => (string) ($row['product_code'] ?? ''),
+                'name' => (string) ($row['name'] ?? ''),
+            ];
+        }
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    return $map;
+}
+
+/**
+ * Products that differ from what the website last received.
+ *
+ * @return array{pending:list<array<string,mixed>>,edited:list<array<string,mixed>>,deleted:list<array<string,mixed>>}
+ */
+function webSyncChanges(PDO $pdo): array
+{
+    $sent = webSyncSentRows($pdo);
+    $active = webSyncActiveProducts($pdo);
+    $pending = [];
+    $edited = [];
+    $baseline = [];
+    $activeIds = [];
+    foreach ($active as $row) {
+        $id = (int) ($row['id'] ?? 0);
+        $activeIds[$id] = true;
+        $item = [
+            'id' => $id,
+            'product_code' => (string) ($row['product_code'] ?? ''),
+            'name' => (string) ($row['name'] ?? ''),
+            'category_name' => (string) ($row['category_name'] ?? ''),
+            'unit_price' => (float) ($row['unit_price'] ?? 0),
+            'stock_qty' => (float) ($row['stock_qty'] ?? 0),
+        ];
+        if (!isset($sent[$id])) {
+            $pending[] = $item;
+            continue;
+        }
+        $syncedAt = $sent[$id]['synced_at'];
+        $snapshot = $sent[$id]['snapshot'];
+        if ($snapshot === null) {
+            // Sent before snapshots were kept: fall back to the product's edit time once, then track it exactly.
+            $updated = strtotime((string) ($row['updated_at'] ?? '')) ?: 0;
+            if ($updated > 0 && $updated > (strtotime($syncedAt) ?: 0)) {
+                $edited[] = $item + ['synced_at' => $syncedAt, 'changes' => []];
+            } else {
+                $baseline[] = $row;
+            }
+            continue;
+        }
+        $changes = webSyncDiff($snapshot, webSyncSnapshot($row));
+        if ($changes !== []) {
+            $edited[] = $item + ['synced_at' => $syncedAt, 'changes' => $changes];
+        }
+    }
+    if ($baseline !== []) {
+        foreach ($baseline as $row) {
+            webSyncMarkSent($pdo, [$row], $sent[(int) $row['id']]['synced_at'] ?: null);
+        }
+    }
+
+    $goneIds = array_values(array_diff(array_keys($sent), array_keys($activeIds)));
+    $stillInDb = webSyncInactiveProducts($pdo, $goneIds);
+    $deleted = [];
+    foreach ($goneIds as $id) {
+        $snapshot = $sent[$id]['snapshot'] ?? [];
+        $row = $stillInDb[$id] ?? [];
+        $deleted[] = [
+            'id' => $id,
+            'product_code' => (string) ($row['product_code'] ?? $snapshot['product_code'] ?? ''),
+            'name' => (string) ($row['name'] ?? $snapshot['name'] ?? ''),
+            'category_name' => (string) ($snapshot['category_name'] ?? ''),
+            'unit_price' => (float) ($snapshot['unit_price'] ?? 0),
+            'status' => isset($stillInDb[$id]) ? 'inactive' : 'deleted',
+            'synced_at' => $sent[$id]['synced_at'],
+        ];
+    }
+    usort($deleted, static fn (array $a, array $b): int => $b['id'] <=> $a['id']);
+
+    return ['pending' => $pending, 'edited' => $edited, 'deleted' => $deleted];
 }
 
 function webSyncPending(PDO $pdo): array
 {
-    $sent = array_fill_keys(webSyncSentIds($pdo), true);
-    $pending = [];
-    foreach (webSyncActiveProducts($pdo) as $row) {
-        if (!isset($sent[(int) $row['id']])) {
-            $pending[] = [
-                'id' => (int) ($row['id'] ?? 0),
-                'product_code' => (string) ($row['product_code'] ?? ''),
-                'name' => (string) ($row['name'] ?? ''),
-                'category_name' => (string) ($row['category_name'] ?? ''),
-                'unit_price' => (float) ($row['unit_price'] ?? 0),
-                'stock_qty' => (float) ($row['stock_qty'] ?? 0),
-            ];
-        }
-    }
-
-    return $pending;
+    return webSyncChanges($pdo)['pending'];
 }
 
 /**
@@ -257,7 +463,7 @@ function webSyncRun(int $userId = 0, string $run = ''): array
         if (str_contains($text, 'Connection stopped')) {
             throw new RuntimeException('The website sync stopped.');
         }
-        if (preg_match('/Created \d+, updated \d+\./', $text, $m)) {
+        if (preg_match('/Created \d+, updated \d+(, removed \d+)?\./', $text, $m)) {
             $summary = $m[0];
         }
         $next = webSyncNextUrl($html, $url);

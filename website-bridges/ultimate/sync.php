@@ -9,8 +9,9 @@
  *   https://ultimate.co.tz/ultitech/sync.php?key=ugt7k-sync-4m2p
  *
  * It reads the shop's Laravel .env, creates missing categories, creates or
- * updates products (price, details, photo, stock), and sends later website
- * orders back to UltiTech. The existing product cards, cart, and checkout stay.
+ * updates products (price, details, photo, stock), hides products that were
+ * deleted or deactivated in UltiTech, and sends later website orders back to
+ * UltiTech. The existing product cards, cart, and checkout stay.
  *
  * Cron, every 15 minutes:
  *   php /home/ultimate/public_html/ultitech/sync.php
@@ -787,6 +788,41 @@ function syncProduct(PDO $pdo, array $product, int $categoryId, int $adminId, ar
     return $created ? 'created' : 'updated';
 }
 
+/**
+ * Hide shop products whose UltiTech product was deleted or deactivated.
+ * The link is dropped so the product is matched again if it comes back.
+ */
+function unpublishMissing(PDO $pdo, array $products): int
+{
+    $keep = [];
+    foreach ($products as $product) {
+        $id = is_array($product) ? (int) ($product['id'] ?? 0) : 0;
+        if ($id > 0) {
+            $keep[$id] = true;
+        }
+    }
+    if ($keep === []) {
+        return 0;
+    }
+    $links = $pdo->query('SELECT ultitech_product_id, website_product_id FROM ultitech_links')->fetchAll();
+    $gone = array_values(array_filter($links, static fn (array $link): bool => !isset($keep[(int) $link['ultitech_product_id']])));
+    if ($gone === []) {
+        return 0;
+    }
+    if (count($gone) > max(20, intdiv(count($links), 2))) {
+        note(count($gone) . ' linked products are missing from the UltiTech catalog. Nothing was hidden; check the catalog before the next run.');
+        return 0;
+    }
+    $unlink = $pdo->prepare('DELETE FROM ultitech_links WHERE ultitech_product_id = ?');
+    $now = date('Y-m-d H:i:s');
+    foreach ($gone as $link) {
+        updateRow($pdo, 'products', ['published' => 0, 'updated_at' => $now], 'id', (int) $link['website_product_id']);
+        $unlink->execute([(int) $link['ultitech_product_id']]);
+    }
+    note('Hidden on the website (removed in UltiTech): ' . count($gone) . '.');
+    return count($gone);
+}
+
 function orderMarker(): int
 {
     $file = cacheDir() . '/orders-after-id.txt';
@@ -976,7 +1012,7 @@ function loadStats(): array
     if (!is_array($data)) {
         $data = [];
     }
-    return $data + ['created' => 0, 'updated' => 0, 'images' => 0, 'errors' => []];
+    return $data + ['created' => 0, 'updated' => 0, 'removed' => 0, 'images' => 0, 'errors' => []];
 }
 
 function saveStats(array $stats): void
@@ -997,7 +1033,7 @@ function runBatch(PDO $pdo, array $catalog, int $offset): array
     $names = loadNameMap($pdo);
     $root = laravelRoot();
     $publicDir = $root . '/public/uploads/all';
-    $stats = $offset === 0 ? ['created' => 0, 'updated' => 0, 'images' => 0, 'errors' => []] : loadStats();
+    $stats = $offset === 0 ? ['created' => 0, 'updated' => 0, 'removed' => 0, 'images' => 0, 'errors' => []] : loadStats();
     if ($offset === 0) {
         rememberOrderMarker($pdo);
     }
@@ -1025,9 +1061,16 @@ function runBatch(PDO $pdo, array $catalog, int $offset): array
             note('Failed ' . $label . ': ' . $e->getMessage());
         }
     }
+    $next = $offset + count($slice);
+    if ($next >= $total) {
+        try {
+            $stats['removed'] = unpublishMissing($pdo, $products);
+        } catch (Throwable $e) {
+            $stats['errors'][] = 'Hiding removed products: ' . $e->getMessage();
+        }
+    }
     $stats['errors'] = array_slice($stats['errors'], -30);
     saveStats($stats);
-    $next = $offset + count($slice);
     return [
         'total' => $total,
         'next' => $next,
@@ -1085,7 +1128,7 @@ try {
             $queued = ultitechProcessQueue($pdo);
             note('Quote queue synced ' . $queued . '.');
         }
-        note('Finished. Created ' . $last['stats']['created'] . ', updated ' . $last['stats']['updated'] . '.');
+        note('Finished. Created ' . $last['stats']['created'] . ', updated ' . $last['stats']['updated'] . ', removed ' . (int) ($last['stats']['removed'] ?? 0) . '.');
         exit(empty($last['stats']['errors']) ? 0 : 1);
     }
 
@@ -1150,7 +1193,7 @@ $self = htmlspecialchars((string) ($_SERVER['PHP_SELF'] ?? 'sync.php'), ENT_QUOT
       <?php foreach ($log as $line): ?>
         <li><?= htmlspecialchars($line, ENT_QUOTES, 'UTF-8') ?></li>
       <?php endforeach; ?>
-      <li>Created <?= (int) ($stats['created'] ?? 0) ?>, updated <?= (int) ($stats['updated'] ?? 0) ?>.</li>
+      <li>Created <?= (int) ($stats['created'] ?? 0) ?>, updated <?= (int) ($stats['updated'] ?? 0) ?>, removed <?= (int) ($stats['removed'] ?? 0) ?>.</li>
     </ul>
     <?php if (!empty($stats['errors'])): ?>
       <p><strong>Needs a look</strong></p>
@@ -1161,7 +1204,7 @@ $self = htmlspecialchars((string) ($_SERVER['PHP_SELF'] ?? 'sync.php'), ENT_QUOT
       </ul>
     <?php endif; ?>
     <?php if ($done && $phase === 'orders'): ?>
-      <p>Active Ultimate products now use the shopùs normal pages. A customer can open a product and place an order when its UltiTech stock is above zero. Orders placed from now on are sent to UltiTech the next time this file runs.</p>
+      <p>Active Ultimate products now use the shop¬ùs normal pages. A customer can open a product and place an order when its UltiTech stock is above zero. Orders placed from now on are sent to UltiTech the next time this file runs.</p>
       <p>In cPanel ? Cron Jobs, run this every 15 minutes so prices and stock stay current:</p>
       <p><code>php <?= htmlspecialchars(str_replace('\\', '/', __FILE__), ENT_QUOTES, 'UTF-8') ?></code></p>
       <p><a href="https://ultimate.co.tz/search">Open the shop catalog</a></p>

@@ -5,6 +5,15 @@ html[data-theme="dark"] body.page-rev-desk .rev-desk-kpi-value {
   color: #f8fafc !important;
 }
 
+html[data-theme="dark"] body.page-rev-desk .rev-desk-page-header {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-table thead th,
+html[data-theme="dark"] body.page-rev-desk .rev-desk-table thead th.col-voucher {
+  background: #1e293b;
+}
+
 html[data-theme="dark"] body.page-rev-desk .rev-desk-filters-panel {
   background: #1e293b !important;
   border-color: #334155 !important;
@@ -181,4 +190,32 @@ html[data-theme="dark"] .rev-desk-delete-error {
   background: rgba(248, 113, 113, 0.12);
   border-color: rgba(248, 113, 113, 0.35);
   color: #fca5a5;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-export-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-export-btn:hover:not(:disabled),
+html[data-theme="dark"] body.page-rev-desk .rev-desk-export-menu.is-open .rev-desk-export-btn {
+  background: #334155;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-export-menu-panel {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-export-menu-item {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] body.page-rev-desk .rev-desk-export-menu-item:hover:not(:disabled) {
+  background: rgba(251, 146, 60, 0.16);
+  color: #fdba74;
 }

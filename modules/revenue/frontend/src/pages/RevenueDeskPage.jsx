@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { deleteRevenueEntry, deskPageUrl, fetchDeskEntries, fetchDeskInit } from '../api/revenueDesk';
 import RevenueDeleteModal from '../components/RevenueDeleteModal';
+import RevenueExportMenu from '../components/RevenueExportMenu';
 import RevenueExportModal from '../components/RevenueExportModal';
 import RevenuePayModal from '../components/RevenuePayModal';
 import RevenueQuickViewModal from '../components/RevenueQuickViewModal';
@@ -319,6 +320,7 @@ export default function RevenueDeskPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState('csv');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -1055,6 +1057,55 @@ export default function RevenueDeskPage() {
   );
   const suggestions = useMemo(() => visibleEntries.slice(0, 6), [visibleEntries]);
 
+  /** Summary cards always match the rows currently shown in the table. */
+  const viewSummary = useMemo(() => {
+    let sumNet = 0;
+    let sumVat = 0;
+    let invoiceTotal = 0;
+    let invoiceCount = 0;
+    let outstanding = 0;
+    let overdue = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    visibleEntries.forEach((row) => {
+      sumNet += Number(row.amount_exclusive) || 0;
+      sumVat += Number(row.vat_amount) || 0;
+      const bal = Number(row.balance_due) || 0;
+      const isInvoice = Boolean(
+        Number(row.source_invoice_id) > 0 || String(row.linked_invoice_number || '').trim(),
+      );
+      if (isInvoice) {
+        invoiceTotal += Number(row.amount_total) || 0;
+        invoiceCount += 1;
+        if (bal > 0.009) {
+          outstanding += bal;
+          const due = String(row.due_date || '').trim();
+          if (due) {
+            const dueDate = new Date(due.includes('T') ? due : `${due}T12:00:00`);
+            dueDate.setHours(0, 0, 0, 0);
+            if (dueDate < today) overdue += bal;
+          }
+        }
+      } else if (bal > 0.009) {
+        // Manual ("Other") entries still count toward outstanding when unpaid.
+        outstanding += bal;
+      }
+    });
+
+    const pctBase = invoiceTotal > 0.009 ? invoiceTotal : (sumNet + sumVat);
+    return {
+      sum_net: sumNet,
+      sum_vat: sumVat,
+      invoice_total: invoiceTotal,
+      invoice_count: invoiceCount,
+      outstanding,
+      overdue,
+      pct_outstanding: pctBase > 0.009 ? (outstanding / pctBase) * 100 : 0,
+      pct_overdue: pctBase > 0.009 ? (overdue / pctBase) * 100 : 0,
+    };
+  }, [visibleEntries]);
+
   useEffect(() => {
     const wanted = pendingPreviewRef.current;
     if (!wanted || !desk) return;
@@ -1072,8 +1123,20 @@ export default function RevenueDeskPage() {
     else url.searchParams.delete('preview');
     window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
   }, [previewEntry, desk]);
-  const kpi = desk?.kpi ?? {};
-  const invoiceKpi = desk?.invoice_kpi ?? {};
+  const kpi = {
+    ...(desk?.kpi ?? {}),
+    sum_net: viewSummary.sum_net,
+    sum_vat: viewSummary.sum_vat,
+  };
+  const invoiceKpi = {
+    ...(desk?.invoice_kpi ?? {}),
+    total: viewSummary.invoice_total,
+    count: viewSummary.invoice_count,
+    outstanding: viewSummary.outstanding,
+    overdue: viewSummary.overdue,
+    pct_outstanding: viewSummary.pct_outstanding,
+    pct_overdue: viewSummary.pct_overdue,
+  };
   const customers = init?.customers ?? [];
   const paymentModes = init?.payment_modes ?? [];
   const statusOptions = init?.status_options ?? [];
@@ -1228,8 +1291,18 @@ export default function RevenueDeskPage() {
       <section className="rev-desk-results" aria-label="Revenue entries">
         <div className="rev-desk-results-head">
           <span className="rev-desk-results-count">
-            {desk?.total ?? visibleEntries.length} {(desk?.total ?? visibleEntries.length) === 1 ? 'entry' : 'entries'}
+            {visibleEntries.length} {visibleEntries.length === 1 ? 'entry' : 'entries'}
           </span>
+          <RevenueExportMenu
+            onExportCsv={() => {
+              setExportFormat('csv');
+              setExportOpen(true);
+            }}
+            onExportPdf={() => {
+              setExportFormat('pdf');
+              setExportOpen(true);
+            }}
+          />
         </div>
 
         <div className="rev-desk-table-wrap">
@@ -1399,11 +1472,17 @@ export default function RevenueDeskPage() {
 
       <RevenueExportModal
         open={exportOpen}
+        format={exportFormat}
         onClose={() => setExportOpen(false)}
         defaults={{
           status: filters.status || '',
           date_from: filters.date_from || '',
           date_to: filters.date_to || '',
+          type: filters.type || '',
+          payment: filters.payment || '',
+          customer_id: filters.customer_id || '',
+          search: filters.search || '',
+          tab: filters.tab || 'all',
         }}
       />
 

@@ -9,9 +9,14 @@
   gap: 1.25rem;
   color: #0f172a;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  min-height: 320px;
+  flex: 1 1 auto;
+  min-height: 0;
   min-width: 0;
   width: 100%;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden !important;
+  overscroll-behavior: none;
   box-sizing: border-box;
 }
 
@@ -38,6 +43,11 @@
   align-items: center;
   gap: 1rem 1.25rem;
   min-height: 40px;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 35;
+  background: #f8fafc;
+  padding: 0.15rem 0 0.25rem;
 }
 
 .rev-desk-page-header-search {
@@ -487,6 +497,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
+  flex: 0 0 auto;
 }
 
 .rev-desk-filter-chip {
@@ -533,6 +544,7 @@
   align-items: stretch;
   gap: 0.75rem;
   width: 100%;
+  flex: 0 0 auto;
 }
 
 .rev-desk-kpi-grid > .rev-desk-kpi-card {
@@ -748,6 +760,13 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
   color: #9a3412;
 }
 
+.rev-desk-results {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .rev-desk-table-wrap {
   overflow: auto;
   overflow-x: auto;
@@ -758,6 +777,24 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
   background: #fff;
   width: 100%;
   max-width: 100%;
+  /* Inner table scroll only — page/outer surface stays still and blank (no outer bar). */
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  -ms-overflow-style: auto;
+}
+
+.rev-desk-table-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.rev-desk-table-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+
+.rev-desk-table-wrap::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .rev-desk-table-wrap table.rev-desk-table {
@@ -788,12 +825,83 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
   align-items: center;
   justify-content: space-between;
   padding: 0 0 0.65rem;
+  flex: 0 0 auto;
 }
 
 .rev-desk-results-count {
   font-size: 0.9rem;
   font-weight: 700;
   color: #64748b;
+}
+
+.rev-desk-export-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.rev-desk-export-btn {
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  background: #fff;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.rev-desk-export-btn:hover:not(:disabled),
+.rev-desk-export-menu.is-open .rev-desk-export-btn {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.rev-desk-export-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rev-desk-export-menu-panel {
+  position: fixed;
+  z-index: 1400;
+  min-width: 10.5rem;
+  padding: 0.3rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.7rem;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+.rev-desk-export-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: none;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.45rem 0.55rem;
+  cursor: pointer;
+}
+
+.rev-desk-export-menu-item:hover:not(:disabled) {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.rev-desk-export-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .rev-desk-table {
@@ -904,7 +1012,7 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
 .rev-desk-table thead th {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 4;
   background: #f8fafc;
   box-shadow: inset 0 -1px 0 #e2e8f0;
 }
@@ -1274,6 +1382,7 @@ body.page-rev-desk .rev-desk-page button.rev-desk-row-menu-btn {
   color: #047857;
   font-size: 0.9rem;
   font-weight: 600;
+  flex: 0 0 auto;
 }
 
 .rev-pay-overlay {
@@ -2477,6 +2586,45 @@ body.page-rev-desk .rev-desk-page button.rev-desk-row-menu-btn {
 
 .rev-export-option input {
   accent-color: #d97706;
+}
+
+.rev-export-range-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.55rem;
+}
+
+.rev-export-range-head .rev-export-label {
+  margin-bottom: 0;
+}
+
+.rev-export-all-time {
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.28rem 0.7rem;
+  cursor: pointer;
+}
+
+.rev-export-all-time:hover {
+  border-color: #fdba74;
+  color: #c2410c;
+}
+
+.rev-export-all-time.is-active {
+  border-color: #fdba74;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.rev-export-all-time:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .rev-export-dates {

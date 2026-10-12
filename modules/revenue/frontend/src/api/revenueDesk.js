@@ -149,13 +149,15 @@ export function goRevenueList(href) {
 }
 
 export function exportUrl(filters = {}) {
-  const params = new URLSearchParams({ module: 'revenue', export: 'csv' });
+  const params = new URLSearchParams({ module: 'revenue' });
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== '' && value !== null && value !== undefined && key !== 'page' && key !== 'per_page') {
       params.set(key, String(value));
     }
   });
-  return `./revenue_entries.php?${params.toString()}`;
+  const qs = params.toString();
+  // Use the same API base as desk list/init so company pretty-URLs don't return HTML.
+  return `${getApiBase()}/export-csv.php${qs ? `?${qs}` : ''}`;
 }
 
 function parseDownloadFilename(contentDisposition, fallback = 'revenue_entries.csv') {
@@ -192,31 +194,58 @@ export function triggerBrowserDownload(blob, filename) {
  * @param {Record<string, string>} filters
  * @param {(percent: number) => void} [onProgress]
  */
+function looksLikeCsvText(text) {
+  const sample = String(text || '').replace(/^\uFEFF/, '').trimStart();
+  if (!sample || sample.startsWith('<!') || sample.startsWith('<html')) return false;
+  if (/^\s*\{/.test(sample)) return false;
+  return /voucher|date|customer|net|total/i.test(sample.split(/\r?\n/, 1)[0] || '');
+}
+
 export async function downloadRevenueCsv(filters = {}, onProgress) {
   const url = exportUrl(filters);
-  const res = await fetch(url, { credentials: 'same-origin' });
+  const res = await fetch(url, {
+    credentials: 'same-origin',
+    headers: { Accept: 'text/csv, application/json;q=0.8, */*;q=0.5' },
+    redirect: 'follow',
+  });
 
-  if (!res.ok) {
+  const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+  const disposition = String(res.headers.get('content-disposition') || '');
+  const looksAttached = /attachment/i.test(disposition) || /\.csv/i.test(disposition);
+  const typeOk = contentType.includes('csv')
+    || contentType.includes('text/plain')
+    || contentType.includes('octet-stream')
+    || contentType === ''
+    || looksAttached;
+
+  if (!res.ok || !typeOk) {
     const text = await res.text();
-    let message = `Export failed (${res.status})`;
+    let message = `Export failed (${res.status || 200})`;
     try {
       const data = JSON.parse(text);
       if (data?.error) message = String(data.error);
     } catch {
+      if (looksLikeCsvText(text) && res.ok) {
+        const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+        onProgress?.(100);
+        return {
+          blob,
+          filename: parseDownloadFilename(
+            disposition,
+            `revenue_entries_${new Date().toISOString().slice(0, 10)}.csv`,
+          ),
+        };
+      }
       const snippet = text.replace(/\s+/g, ' ').trim().slice(0, 160);
-      if (snippet && !snippet.startsWith('<!')) message = snippet;
+      if (snippet.startsWith('<!') || /login/i.test(snippet)) {
+        message = 'Export returned a login page. Refresh and sign in again, then retry.';
+      } else if (snippet) {
+        message = snippet;
+      } else if (!typeOk) {
+        message = 'Server did not return a CSV file. Please try again.';
+      }
     }
     throw new Error(message);
-  }
-
-  const contentType = String(res.headers.get('content-type') || '').toLowerCase();
-  if (
-    !contentType.includes('csv')
-    && !contentType.includes('text/plain')
-    && !contentType.includes('octet-stream')
-    && contentType !== ''
-  ) {
-    throw new Error('Server did not return a CSV file. Please try again.');
   }
 
   const total = Number(res.headers.get('content-length')) || 0;
@@ -256,7 +285,7 @@ export async function downloadRevenueCsv(filters = {}, onProgress) {
   return {
     blob,
     filename: parseDownloadFilename(
-      res.headers.get('content-disposition'),
+      disposition,
       `revenue_entries_${new Date().toISOString().slice(0, 10)}.csv`,
     ),
   };

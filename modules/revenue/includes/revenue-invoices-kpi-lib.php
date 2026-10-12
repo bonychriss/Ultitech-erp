@@ -101,12 +101,11 @@ function revenue_invoice_kpi_build_where(array $filters, PDO $pdo, array $meta):
 }
 
 /**
- * @param array<string, mixed> $deskFilters
  * @return array<string, mixed>
  */
-function revenue_invoice_kpi_fetch(PDO $pdo, array $deskFilters): array
+function revenue_invoice_kpi_empty(): array
 {
-    $empty = [
+    return [
         'total' => 0.0,
         'paid' => 0.0,
         'outstanding' => 0.0,
@@ -118,6 +117,57 @@ function revenue_invoice_kpi_fetch(PDO $pdo, array $deskFilters): array
         'trace_rows' => [],
         'available' => false,
     ];
+}
+
+/**
+ * Invoice KPIs for an explicit set of invoice ids (used when the desk is filtered).
+ *
+ * @param list<int> $invoiceIds
+ * @return array<string, mixed>
+ */
+function revenue_invoice_kpi_fetch_by_ids(PDO $pdo, array $invoiceIds): array
+{
+    $empty = revenue_invoice_kpi_empty();
+    $invoiceIds = array_values(array_unique(array_filter(array_map(
+        static fn ($id) => (int) $id,
+        $invoiceIds
+    ), static fn ($id) => $id > 0)));
+
+    if ($invoiceIds === []) {
+        return $empty;
+    }
+    if (!function_exists('tableExists') || !tableExists('invoices', $pdo)) {
+        return $empty;
+    }
+
+    $meta = revenue_invoice_kpi_column_meta($pdo);
+    if (!($meta['inv_cols'] ?? [])) {
+        return $empty;
+    }
+
+    $placeholders = [];
+    $params = [];
+    foreach ($invoiceIds as $i => $id) {
+        $key = ':iid' . $i;
+        $placeholders[] = $key;
+        $params[$key] = $id;
+    }
+    $where = ['i.id IN (' . implode(',', $placeholders) . ')'];
+    if ($meta['has_status'] ?? false) {
+        $where[] = "LOWER(COALESCE(i.status,'')) NOT IN ('cancelled','canceled')";
+    }
+    $whereSql = implode(' AND ', $where);
+
+    return revenue_invoice_kpi_run($pdo, $meta, $whereSql, $params);
+}
+
+/**
+ * @param array<string, mixed> $deskFilters
+ * @return array<string, mixed>
+ */
+function revenue_invoice_kpi_fetch(PDO $pdo, array $deskFilters): array
+{
+    $empty = revenue_invoice_kpi_empty();
 
     if (!function_exists('tableExists') || !tableExists('invoices', $pdo)) {
         return $empty;
@@ -137,6 +187,18 @@ function revenue_invoice_kpi_fetch(PDO $pdo, array $deskFilters): array
 
     [$where, $params] = revenue_invoice_kpi_build_where($filters, $pdo, $meta);
     $whereSql = implode(' AND ', $where);
+
+    return revenue_invoice_kpi_run($pdo, $meta, $whereSql, $params);
+}
+
+/**
+ * @param array<string, mixed> $meta
+ * @param array<string, mixed> $params
+ * @return array<string, mixed>
+ */
+function revenue_invoice_kpi_run(PDO $pdo, array $meta, string $whereSql, array $params): array
+{
+    $empty = revenue_invoice_kpi_empty();
 
     $custJoin = ($meta['has_customer_id'] ?? false)
         ? ' LEFT JOIN customers c ON c.id = i.customer_id'

@@ -1,6 +1,7 @@
 import { Check, Download, Loader2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { downloadRevenueCsv, triggerBrowserDownload } from '../api/revenueDesk';
+import { downloadRevenueCsv, fetchDeskEntries, triggerBrowserDownload } from '../api/revenueDesk';
+import { exportRevenuePdf } from '../utils/exportRevenue';
 
 const INCLUDE_OPTIONS = [
   { value: '', label: 'All entries' },
@@ -8,13 +9,6 @@ const INCLUDE_OPTIONS = [
   { value: 'unpaid', label: 'Unpaid only' },
   { value: 'partial', label: 'Partial only' },
 ];
-
-function monthStartIso() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}-01`;
-}
 
 function todayIso() {
   const now = new Date();
@@ -24,14 +18,29 @@ function todayIso() {
   return `${y}-${m}-${d}`;
 }
 
+function monthStartIso() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}-01`;
+}
+
+function formatRangeLabel(allTime, from, to) {
+  if (allTime) return 'All time';
+  return `${from || '…'} to ${to || '…'}`;
+}
+
 export default function RevenueExportModal({
   open,
   onClose,
   defaults,
+  format = 'csv',
 }) {
+  const isPdf = format === 'pdf';
   const [status, setStatus] = useState(defaults?.status || '');
-  const [dateFrom, setDateFrom] = useState(defaults?.date_from || monthStartIso());
-  const [dateTo, setDateTo] = useState(defaults?.date_to || todayIso());
+  const [allTime, setAllTime] = useState(true);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [error, setError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [downloadPhase, setDownloadPhase] = useState('idle');
@@ -40,9 +49,15 @@ export default function RevenueExportModal({
 
   useEffect(() => {
     if (!open) return undefined;
+
+    const from = String(defaults?.date_from || '').trim();
+    const to = String(defaults?.date_to || '').trim();
+    const hasDeskDates = Boolean(from || to);
+
     setStatus(defaults?.status || '');
-    setDateFrom(defaults?.date_from || monthStartIso());
-    setDateTo(defaults?.date_to || todayIso());
+    setAllTime(!hasDeskDates);
+    setDateFrom(from || (hasDeskDates ? '' : monthStartIso()));
+    setDateTo(to || (hasDeskDates ? '' : todayIso()));
     setError('');
     setInfoMessage('');
     setDownloadPhase('idle');
@@ -54,7 +69,7 @@ export default function RevenueExportModal({
         closeTimerRef.current = null;
       }
     };
-  }, [open, defaults]);
+  }, [open, defaults, format]);
 
   useEffect(() => {
     if (!open || downloadPhase !== 'idle') return undefined;
@@ -68,17 +83,28 @@ export default function RevenueExportModal({
   if (!open) return null;
 
   const isBusy = downloadPhase === 'downloading' || downloadPhase === 'success';
+  const formatLabel = isPdf ? 'PDF' : 'CSV';
+
+  const handleAllTime = () => {
+    setAllTime(true);
+    setDateFrom('');
+    setDateTo('');
+    setError('');
+    setInfoMessage('');
+  };
 
   const handleDownload = async () => {
     if (isBusy) return;
 
-    if (!dateFrom || !dateTo) {
-      setError('Please select both start and end dates.');
-      return;
-    }
-    if (dateFrom > dateTo) {
-      setError('Start date cannot be after end date.');
-      return;
+    if (!allTime) {
+      if (!dateFrom || !dateTo) {
+        setError('Please select both start and end dates, or choose All time.');
+        return;
+      }
+      if (dateFrom > dateTo) {
+        setError('Start date cannot be after end date.');
+        return;
+      }
     }
 
     setError('');
@@ -86,23 +112,55 @@ export default function RevenueExportModal({
     setDownloadPhase('downloading');
     setProgress(6);
 
-    try {
-      const { blob, filename } = await downloadRevenueCsv(
-        {
-          date_from: dateFrom,
-          date_to: dateTo,
-          status: status || '',
-        },
-        setProgress,
-      );
+    const filters = {
+      status: status || '',
+      type: defaults?.type || '',
+      payment: defaults?.payment || '',
+      customer_id: defaults?.customer_id || '',
+      search: defaults?.search || '',
+      tab: defaults?.tab || 'all',
+    };
+    if (!allTime) {
+      filters.date_from = dateFrom;
+      filters.date_to = dateTo;
+    }
 
-      if (!blob || blob.size === 0) {
-        throw new Error('Nothing to export for these dates. Try choosing different dates.');
+    try {
+      if (isPdf) {
+        setProgress(25);
+        const desk = await fetchDeskEntries(filters);
+        const entries = Array.isArray(desk?.data) ? desk.data : [];
+        if (!entries.length) {
+          throw new Error(
+            allTime
+              ? 'Nothing to export for the selected filters.'
+              : 'Nothing to export for these dates. Try All time or a wider range.',
+          );
+        }
+        setProgress(70);
+        const statusLabel = INCLUDE_OPTIONS.find((opt) => opt.value === status)?.label || 'All entries';
+        await exportRevenuePdf(entries, {
+          title: 'Revenue report',
+          subtitle: `${statusLabel} · ${formatRangeLabel(allTime, dateFrom, dateTo)} · ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`,
+        });
+        setProgress(100);
+      } else {
+        const { blob, filename } = await downloadRevenueCsv(filters, setProgress);
+        // Header-only CSV still has a non-zero size — peek for data rows.
+        const text = await blob.text();
+        const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim() !== '');
+        if (lines.length <= 1) {
+          throw new Error(
+            allTime
+              ? 'Nothing to export for the selected filters.'
+              : 'Nothing to export for these dates. Try All time or a wider range.',
+          );
+        }
+        triggerBrowserDownload(new Blob([text], { type: 'text/csv;charset=utf-8' }), filename);
+        setProgress(100);
       }
 
-      triggerBrowserDownload(blob, filename);
       setDownloadPhase('success');
-      setProgress(100);
 
       closeTimerRef.current = window.setTimeout(() => {
         onClose();
@@ -110,8 +168,8 @@ export default function RevenueExportModal({
     } catch (err) {
       setDownloadPhase('idle');
       setProgress(0);
-      const message = err instanceof Error ? err.message : 'Failed to export CSV.';
-      const isEmpty = /nothing to export|no entries|empty/i.test(message);
+      const message = err instanceof Error ? err.message : `Failed to export ${formatLabel}.`;
+      const isEmpty = /nothing to export|no entries|empty|no revenue/i.test(message);
       if (isEmpty) {
         setInfoMessage(message);
         setError('');
@@ -125,7 +183,7 @@ export default function RevenueExportModal({
   const statusText = downloadPhase === 'success'
     ? 'Download complete'
     : progress >= 85
-      ? 'Saving CSV...'
+      ? `Saving ${formatLabel}...`
       : progress >= 35
         ? 'Building your export...'
         : 'Preparing download...';
@@ -140,7 +198,9 @@ export default function RevenueExportModal({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="rev-export-header">
-          <h2 id="rev-export-title" className="rev-export-title">Export revenues</h2>
+          <h2 id="rev-export-title" className="rev-export-title">
+            {isPdf ? 'Export revenues as PDF' : 'Export revenues as CSV'}
+          </h2>
           <button
             type="button"
             className="rev-export-close"
@@ -176,6 +236,18 @@ export default function RevenueExportModal({
             </div>
           </fieldset>
 
+          <div className="rev-export-range-head">
+            <span className="rev-export-label">Date range</span>
+            <button
+              type="button"
+              className={`rev-export-all-time${allTime ? ' is-active' : ''}`}
+              onClick={handleAllTime}
+              disabled={isBusy}
+            >
+              All time
+            </button>
+          </div>
+
           <div className="rev-export-dates">
             <label className="rev-export-date-field">
               <span className="rev-export-label">From</span>
@@ -184,6 +256,7 @@ export default function RevenueExportModal({
                 className="rev-export-input"
                 value={dateFrom}
                 onChange={(event) => {
+                  setAllTime(false);
                   setDateFrom(event.target.value);
                   setInfoMessage('');
                   setError('');
@@ -198,6 +271,7 @@ export default function RevenueExportModal({
                 className="rev-export-input"
                 value={dateTo}
                 onChange={(event) => {
+                  setAllTime(false);
                   setDateTo(event.target.value);
                   setInfoMessage('');
                   setError('');
@@ -222,7 +296,7 @@ export default function RevenueExportModal({
                 Exporting...
               </>
             ) : (
-              'Export CSV'
+              `Export ${formatLabel}`
             )}
           </button>
         </div>

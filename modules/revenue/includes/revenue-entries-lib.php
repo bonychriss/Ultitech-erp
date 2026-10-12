@@ -275,6 +275,7 @@ function revenue_entries_enrich_row(array $row): array
         'invoice_view_url' => ren_invoice_view_url((int) ($row['source_invoice_id'] ?? 0)),
         'amount_paid' => ren_row_amount_paid($row),
         'balance_due' => ren_row_balance_due($row),
+        'due_date' => (string) ($row['linked_due_date'] ?? $row['due_date'] ?? ''),
     ]);
 }
 
@@ -541,7 +542,17 @@ function revenue_entries_fetch(PDO $revPdo, array $get): array
     $sort = $filters['sort'];
     $dir = $filters['dir'];
     $orderSql = $sort === 'amount' ? "re.amount_total $dir, re.id DESC" : "re.entry_date $dir, re.id DESC";
-    $listSelect = 'SELECT re.*, i.invoice_number AS linked_invoice_number, cust.id AS resolved_customer_id, cust.customer_code AS resolved_customer_code, cust.company_name AS resolved_company_name';
+    $dueDateSelect = 'NULL AS linked_due_date';
+    if ($hasInvoices) {
+        try {
+            $invCols = $revPdo->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if (in_array('due_date', $invCols, true)) {
+                $dueDateSelect = 'i.due_date AS linked_due_date';
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    $listSelect = "SELECT re.*, i.invoice_number AS linked_invoice_number, {$dueDateSelect}, cust.id AS resolved_customer_id, cust.customer_code AS resolved_customer_code, cust.company_name AS resolved_company_name";
 
     $countStmt = $revPdo->prepare("SELECT COUNT(*) $sqlJoin WHERE $whereSql");
     $countStmt->execute($params);
@@ -554,10 +565,23 @@ function revenue_entries_fetch(PDO $revPdo, array $get): array
     $enriched = revenue_entries_dedupe_pairs($enriched);
     $visibleTotal = count($enriched);
 
-    if (!function_exists('revenue_invoice_kpi_fetch')) {
+    if (!function_exists('revenue_invoice_kpi_fetch_by_ids')) {
         require_once __DIR__ . '/revenue-invoices-kpi-lib.php';
     }
-    $invoiceKpi = revenue_invoice_kpi_fetch($revPdo, $filters);
+    // Invoice cards follow the same filtered revenue rows (not the whole invoices book).
+    $invoiceIds = [];
+    if ($hasSourceInvoiceCol) {
+        $idStmt = $revPdo->prepare(
+            "SELECT DISTINCT re.source_invoice_id $sqlJoin WHERE $whereSql
+             AND re.source_invoice_id IS NOT NULL AND re.source_invoice_id > 0"
+        );
+        $idStmt->execute($params);
+        $invoiceIds = array_values(array_filter(array_map(
+            static fn ($id) => (int) $id,
+            $idStmt->fetchAll(PDO::FETCH_COLUMN) ?: []
+        )));
+    }
+    $invoiceKpi = revenue_invoice_kpi_fetch_by_ids($revPdo, $invoiceIds);
 
     return [
         'entries' => $enriched,

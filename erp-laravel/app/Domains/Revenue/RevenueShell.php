@@ -157,11 +157,46 @@ final class RevenueShell
     {
         return <<<'CSS'
 <style>
-body.page-rev-desk.dashboard .layout-main-wrapper { align-items: stretch; }
-body.page-rev-desk.dashboard .layout-main-wrapper > .flex-grow-1 {
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+/* Outer page locked — only .rev-desk-table-wrap scrolls. */
+html.page-rev-desk-lock,
+html:has(body.page-rev-desk),
+html:has(body.page-rev-desk) body,
+body.page-rev-desk,
+body.page-rev-desk.dashboard {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+html.page-rev-desk-lock::-webkit-scrollbar,
+html:has(body.page-rev-desk)::-webkit-scrollbar,
+body.page-rev-desk::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+}
+body.page-rev-desk .layout-main-wrapper,
+body.page-rev-desk .layout-main-wrapper.min-vh-100 {
+    align-items: stretch !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    scrollbar-width: none !important;
+}
+body.page-rev-desk .layout-main-wrapper > .flex-grow-1,
+body.page-rev-desk .flex-grow-1.d-flex.flex-column {
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    scrollbar-width: none !important;
 }
 body.page-rev-desk,
 body.page-rev-desk.dashboard,
@@ -174,11 +209,11 @@ body.page-rev-desk .employee-header.employee-header--rev-desk {
     border: none !important;
     box-shadow: none !important;
     padding: 0 1.25rem !important;
-    margin-bottom: 0;
+    margin-bottom: 0 !important;
     height: auto !important;
-    min-height: 0;
-    position: sticky !important;
-    top: 0 !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    position: relative !important;
     z-index: 1020 !important;
     align-items: stretch !important;
 }
@@ -214,16 +249,33 @@ body.page-rev-desk .employee-header--rev-desk .header-right.header-actions-tray 
     gap: 0.5rem !important;
 }
 main.main-content.rev-desk-react-root {
-    flex: 1 1 auto;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
     width: 100% !important;
     max-width: none !important;
-    padding: 0 1.25rem 2rem !important;
-    overflow: auto !important;
+    padding: 0 1.25rem 1rem !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
     background: #f8fafc !important;
+    display: flex !important;
+    flex-direction: column !important;
+    scrollbar-width: none !important;
 }
-main.main-content.rev-desk-react-root #root {
+main.main-content.rev-desk-react-root::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+}
+main.main-content.rev-desk-react-root #root,
+main.main-content.rev-desk-react-root .rev-desk-page {
     width: 100%;
-    min-height: 320px;
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
 }
 @media (max-width: 767.98px) {
     main.main-content.rev-desk-react-root { padding: 0 0.75rem 1.5rem !important; }
@@ -232,9 +284,7 @@ html[data-theme="dark"] body.page-rev-desk,
 html[data-theme="dark"] body.page-rev-desk.dashboard,
 html[data-theme="dark"] body.page-rev-desk .layout-main-wrapper,
 html[data-theme="dark"] body.page-rev-desk .layout-main-wrapper > .flex-grow-1,
-html[data-theme="dark"] body.page-rev-desk main.main-content.rev-desk-react-root {
-    background: #0f172a !important;
-}
+html[data-theme="dark"] body.page-rev-desk main.main-content.rev-desk-react-root,
 html[data-theme="dark"] body.page-rev-desk .employee-header.employee-header--rev-desk {
     background: #0f172a !important;
 }
@@ -242,6 +292,7 @@ html[data-theme="dark"] body.page-rev-desk .employee-header--rev-desk .employee-
     color: #f8fafc !important;
 }
 </style>
+<script>document.documentElement.classList.add('page-rev-desk-lock');</script>
 CSS;
     }
 }

@@ -396,7 +396,7 @@ export function resolveKpiTrace(key, init, desk, filters) {
 
         key,
 
-        'Total Revenue (Net)',
+        'Total Exclusive',
 
         kpi.sum_net ?? 0,
 
@@ -430,7 +430,7 @@ export function resolveKpiTrace(key, init, desk, filters) {
 
         key,
 
-        'Total Tax (VAT)',
+        'VAT',
 
         kpi.sum_vat ?? 0,
 

@@ -121,6 +121,20 @@ export async function submitPayment(formData) {
   return data;
 }
 
+export async function deleteRevenueEntry(entryId, csrfToken) {
+  const res = await fetch(`${getApiBase()}/delete-entry.php`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ id: entryId, csrf_token: csrfToken || '' }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 export function deskPageUrl(file, extraParams = {}) {
   const params = new URLSearchParams({ module: 'revenue', ...extraParams });
   return `./${file}?${params.toString()}`;

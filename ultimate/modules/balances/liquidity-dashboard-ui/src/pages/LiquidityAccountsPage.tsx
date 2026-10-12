@@ -115,8 +115,8 @@ export default function LiquidityAccountsPage({ bucket = null }: { bucket?: Liqu
         filteredGroups.map((group) => {
           const Icon = bucketIcon[group.key as keyof typeof bucketIcon] || Wallet;
           return (
-            <section key={group.key} className="ld-card ld-drill-section">
-              <div className="ld-card-h ld-drill-section-h">
+            <section key={group.key} className="ld-drill-section">
+              <div className="ld-drill-section-h">
                 <div className="ld-drill-section-title">
                   <span className={`ld-drill-bucket-icon ld-drill-bucket-icon--${group.key}`}>
                     <Icon className="w-4 h-4" aria-hidden="true" />
@@ -125,30 +125,59 @@ export default function LiquidityAccountsPage({ bucket = null }: { bucket?: Liqu
                 </div>
                 <div className="ld-drill-section-total">{group.totalDisplay}</div>
               </div>
-              <div className="ld-card-b ld-account-list">
-                {group.accounts.map((account) => (
-                  <button
-                    key={account.id}
-                    type="button"
-                    className="ld-account-row"
-                    onClick={() => navigateLdView({ name: 'account', accountId: account.id })}
-                  >
-                    <div className="ld-account-row-main">
-                      <div className="ld-account-row-name">{account.name}</div>
-                      <div className="ld-account-row-meta">
-                        {account.code ? `${account.code} - ` : ''}
-                        {account.typeLabel}
-                        {account.parentId > 0 ? ' - Sub-account' : ''}
-                      </div>
-                    </div>
-                    <div className="ld-account-row-side">
-                      <div className={`ld-account-row-bal${account.balance < 0 ? ' is-neg' : ''}`}>
-                        {account.balanceDisplay}
-                      </div>
-                      <ChevronRight className="w-4 h-4 ld-account-row-chevron" aria-hidden="true" />
-                    </div>
-                  </button>
-                ))}
+              <div className="ld-ledger-wrap">
+                <table className="ld-ledger">
+                  <colgroup>
+                    <col className="ld-ledger-col-no" />
+                    <col />
+                    <col className="ld-ledger-col-code" />
+                    <col className="ld-ledger-col-type" />
+                    <col className="ld-ledger-col-bal" />
+                    <col className="ld-ledger-col-go" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className="ld-ledger-no">No.</th>
+                      <th>Account</th>
+                      <th>Code</th>
+                      <th>Type</th>
+                      <th className="ld-ledger-num">Balance</th>
+                      <th aria-label="Open" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.accounts.map((account, index) => {
+                      const open = () => navigateLdView({ name: 'account', accountId: account.id });
+                      return (
+                        <tr
+                          key={account.id}
+                          tabIndex={0}
+                          onClick={open}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              open();
+                            }
+                          }}
+                        >
+                          <td className="ld-ledger-no">{index + 1}</td>
+                          <td className="ld-ledger-account">
+                            <span className="ld-ledger-name">{account.name}</span>
+                            {account.parentId > 0 ? <span className="ld-ledger-sub">Sub-account</span> : null}
+                          </td>
+                          <td className="ld-ledger-muted">{account.code || '-'}</td>
+                          <td className="ld-ledger-muted">{account.typeLabel}</td>
+                          <td className={`ld-ledger-num ld-ledger-bal${account.balance < 0 ? ' is-neg' : ''}`}>
+                            {account.balanceDisplay}
+                          </td>
+                          <td className="ld-ledger-go">
+                            <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </section>
           );

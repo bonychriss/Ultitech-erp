@@ -172,9 +172,13 @@ function deliveries_load_dashboard_payload(PDO $pdo, array $query = []): array
         $stmtOrders = $pdo->query("
             SELECT o.id, o.client_name, o.client_phone, o.delivery_address, o.invoice_ref,
                    o.sales_invoice_id, o.status, o.created_at, o.package_description, o.receipt_file,
-                   dn.note_number AS delivery_number
+                   dn.note_number AS delivery_number,
+                   COALESCE(NULLIF(TRIM(td.full_name), ''), NULLIF(TRIM(rd.full_name), '')) AS driver_name
             FROM delivery_orders o
             LEFT JOIN delivery_notes dn ON o.delivery_note_id = dn.id
+            LEFT JOIN delivery_trips t ON o.trip_id = t.id
+            LEFT JOIN users td ON t.driver_id = td.id
+            LEFT JOIN users rd ON o.requested_driver_id = rd.id
             ORDER BY o.created_at DESC
             LIMIT 200
         ");
@@ -193,6 +197,7 @@ function deliveries_load_dashboard_payload(PDO $pdo, array $query = []): array
                 'invoice_ref' => (string) ($row['invoice_ref'] ?? ''),
                 'delivery_type' => deliveries_order_delivery_type($row),
                 'delivery_number' => $deliveryNumber,
+                'driver_name' => (string) ($row['driver_name'] ?? ''),
                 'status' => (string) ($row['status'] ?? ''),
                 'created_at' => (string) ($row['created_at'] ?? ''),
                 'description' => (string) ($row['package_description'] ?? ''),

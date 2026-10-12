@@ -91,36 +91,68 @@ export default function AccountMonthsPage({ accountId }: { accountId: number }) 
         </div>
       )}
 
-      <section className="ld-card">
-        <div className="ld-card-h">
+      <section className="ld-drill-section">
+        <div className="ld-drill-section-h">
           <h3>Monthly Breakdown</h3>
         </div>
-        <div className="ld-card-b ld-month-list">
-          {months.map((month) => (
-            <button
-              key={month.ym}
-              type="button"
-              className="ld-month-row"
-              onClick={() => navigateLdView({ name: 'month', accountId, ym: month.ym })}
-            >
-              <div className="ld-month-row-main">
-                <div className="ld-month-row-name">{month.label}</div>
-                <div className="ld-month-row-meta">
-                  {month.transactionCount} transaction{month.transactionCount === 1 ? '' : 's'}
-                </div>
-                <div className="ld-month-row-flow">
-                  <span>Open {month.openingBalanceDisplay}</span>
-                  <span className="is-in">In {month.moneyInDisplay}</span>
-                  <span className="is-out">Out {month.moneyOutDisplay}</span>
-                </div>
-              </div>
-              <div className="ld-month-row-side">
-                <div className="ld-month-row-close">{month.closingBalanceDisplay}</div>
-                <div className="ld-month-row-close-label">Closing</div>
-                <ChevronRight className="w-4 h-4" aria-hidden="true" />
-              </div>
-            </button>
-          ))}
+        <div className="ld-ledger-wrap">
+          <table className="ld-ledger ld-ledger--months">
+            <colgroup>
+              <col className="ld-ledger-col-no" />
+              <col />
+              <col />
+              <col />
+              <col />
+              <col />
+              <col />
+              <col className="ld-ledger-col-go" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th className="ld-ledger-no">No.</th>
+                <th>Month</th>
+                <th className="ld-ledger-num">Transactions</th>
+                <th className="ld-ledger-num">Opening</th>
+                <th className="ld-ledger-num">Money In</th>
+                <th className="ld-ledger-num">Money Out</th>
+                <th className="ld-ledger-num">Closing</th>
+                <th aria-label="Open" />
+              </tr>
+            </thead>
+            <tbody>
+              {months.map((month, index) => {
+                const open = () => navigateLdView({ name: 'month', accountId, ym: month.ym });
+                return (
+                  <tr
+                    key={month.ym}
+                    tabIndex={0}
+                    onClick={open}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        open();
+                      }
+                    }}
+                  >
+                    <td className="ld-ledger-no">{index + 1}</td>
+                    <td>
+                      <span className="ld-ledger-name">{month.label}</span>
+                    </td>
+                    <td className="ld-ledger-num ld-ledger-muted">{month.transactionCount}</td>
+                    <td className="ld-ledger-num ld-ledger-muted">{month.openingBalanceDisplay}</td>
+                    <td className="ld-ledger-num ld-ledger-in">{month.moneyInDisplay}</td>
+                    <td className="ld-ledger-num ld-ledger-out">{month.moneyOutDisplay}</td>
+                    <td className={`ld-ledger-num ld-ledger-bal${month.closingBalance < 0 ? ' is-neg' : ''}`}>
+                      {month.closingBalanceDisplay}
+                    </td>
+                    <td className="ld-ledger-go">
+                      <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </section>
     </div>

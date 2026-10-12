@@ -103,8 +103,8 @@ export default function MonthTransactionsPage({
         </div>
       </div>
 
-      <section className="ld-card">
-        <div className="ld-card-h ld-card-h--filters">
+      <section className="ld-drill-section">
+        <div className="ld-drill-section-h ld-card-h--filters">
           <h3>Transactions ({transactions.length})</h3>
           <div className="ld-filters">
             <select
@@ -134,66 +134,87 @@ export default function MonthTransactionsPage({
             </form>
           </div>
         </div>
-        <div className="ld-card-b ld-table-wrap">
-          {loading && <div className="ld-inline-loading">Refreshing...</div>}
+        {loading && <div className="ld-inline-loading">Refreshing...</div>}
+        <div className="ld-ledger-wrap">
           {transactions.length === 0 ? (
-            <div className="ld-empty">No transactions for this month with the current filters.</div>
+            <div className="ld-empty ld-ledger-empty">No transactions for this month with the current filters.</div>
           ) : (
-            <table className="ld-table">
+            <table className="ld-ledger ld-ledger--tx">
+              <colgroup>
+                <col className="ld-ledger-col-no" />
+                <col />
+                <col />
+                <col />
+                <col />
+                <col />
+                <col />
+                <col />
+                <col />
+                <col />
+              </colgroup>
               <thead>
                 <tr>
+                  <th className="ld-ledger-no">No.</th>
                   <th>Date</th>
                   <th>Ref / Tx No.</th>
                   <th>Description</th>
                   <th>Type</th>
-                  <th className="is-num">Debit</th>
-                  <th className="is-num">Credit</th>
-                  <th className="is-num">Running Balance</th>
+                  <th className="ld-ledger-num">Debit</th>
+                  <th className="ld-ledger-num">Credit</th>
+                  <th className="ld-ledger-num">Running Balance</th>
                   <th>Source</th>
                   <th>Created By</th>
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((tx) => (
-                  <tr
-                    key={tx.id}
-                    className="is-clickable"
-                    onClick={() =>
-                      navigateLdView({
-                        name: 'transaction',
-                        accountId,
-                        ym,
-                        txId: tx.id,
-                      })
-                    }
-                  >
-                    <td>{tx.transactionDate}</td>
-                    <td>#{tx.id}</td>
-                    <td>{tx.description || '-'}</td>
-                    <td>
-                      <span className={`ld-pill ld-pill--${tx.type}`}>{tx.typeLabel}</span>
-                    </td>
-                    <td className="is-num is-out">{tx.debitDisplay}</td>
-                    <td className="is-num is-in">{tx.creditDisplay}</td>
-                    <td className="is-num">{tx.runningBalanceDisplay}</td>
-                    <td>
-                      {tx.sourceUrl ? (
-                        <a
-                          href={tx.sourceUrl}
-                          className="ld-source-link"
-                          onClick={(e) => e.stopPropagation()}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {tx.referenceLabel || 'Open'} <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                        </a>
-                      ) : (
-                        tx.referenceLabel || '-'
-                      )}
-                    </td>
-                    <td>{tx.createdBy}</td>
-                  </tr>
-                ))}
+                {transactions.map((tx, index) => {
+                  const open = () => navigateLdView({ name: 'transaction', accountId, ym, txId: tx.id });
+                  return (
+                    <tr
+                      key={tx.id}
+                      tabIndex={0}
+                      onClick={open}
+                      onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) return;
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          open();
+                        }
+                      }}
+                    >
+                      <td className="ld-ledger-no">{index + 1}</td>
+                      <td className="ld-ledger-muted">{tx.transactionDate}</td>
+                      <td>
+                        <span className="ld-ledger-name">#{tx.id}</span>
+                      </td>
+                      <td className="ld-ledger-desc">{tx.description || '-'}</td>
+                      <td>
+                        <span className={`ld-pill ld-pill--${tx.type}`}>{tx.typeLabel}</span>
+                      </td>
+                      <td className="ld-ledger-num ld-ledger-out">{tx.debitDisplay}</td>
+                      <td className="ld-ledger-num ld-ledger-in">{tx.creditDisplay}</td>
+                      <td className={`ld-ledger-num ld-ledger-bal${tx.runningBalance < 0 ? ' is-neg' : ''}`}>
+                        {tx.runningBalanceDisplay}
+                      </td>
+                      <td className="ld-ledger-wrap-cell">
+                        {tx.sourceUrl ? (
+                          <a
+                            href={tx.sourceUrl}
+                            className="ld-source-link"
+                            onClick={(e) => e.stopPropagation()}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {tx.referenceLabel || 'Open'} <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                          </a>
+                        ) : (
+                          tx.referenceLabel || '-'
+                        )}
+                      </td>
+                      <td className="ld-ledger-muted ld-ledger-wrap-cell">{tx.createdBy}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}

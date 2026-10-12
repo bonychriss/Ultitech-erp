@@ -108,10 +108,11 @@
   }
 }
 
+/* Beat assets/css/style.css `button { border-radius: 0 !important }`. */
 .ld-kpi-card {
   background: #fff;
   border: 1px solid var(--ld-border);
-  border-radius: 14px;
+  border-radius: 18px !important;
   padding: 0.875rem 1rem;
   min-height: 0;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -604,7 +605,7 @@
 }
 
 .ld-drill-section {
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .ld-drill-section-h {
@@ -612,6 +613,215 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+
+.ld-drill-section-h h3 {
+  margin: 0;
+}
+
+/* Accounts table: same ledger look as the Sales invoices list. */
+.ld-ledger-wrap {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #e7edf3;
+  border-radius: 16px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+}
+
+.ld-ledger {
+  width: 100%;
+  min-width: 640px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+.ld-ledger-col-no { width: 3.5rem; }
+.ld-ledger-col-code { width: 13%; }
+.ld-ledger-col-type { width: 13%; }
+.ld-ledger-col-bal { width: 26%; }
+.ld-ledger-col-go { width: 2.75rem; }
+
+.ld-ledger th,
+.ld-ledger td {
+  padding: 0.72rem 0.85rem;
+  text-align: left;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ld-ledger thead th {
+  background: #1e293b;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ld-ledger thead th:first-child { border-top-left-radius: 15px; }
+.ld-ledger thead th:last-child { border-top-right-radius: 15px; }
+.ld-ledger tbody tr:last-child td:first-child { border-bottom-left-radius: 15px; }
+.ld-ledger tbody tr:last-child td:last-child { border-bottom-right-radius: 15px; }
+
+.ld-ledger tbody td {
+  background: #fff;
+  border-bottom: 1px solid #eef2f6;
+  color: #334155;
+}
+
+.ld-ledger tbody tr:last-child td { border-bottom: 0; }
+.ld-ledger tbody tr:nth-child(even) td { background: #f8fafc; }
+
+.ld-ledger tbody tr {
+  cursor: pointer;
+}
+
+.ld-ledger tbody tr:hover td,
+.ld-ledger tbody tr:focus-visible td {
+  background: #eef4ff;
+}
+
+.ld-ledger tbody tr:focus-visible {
+  outline: none;
+}
+
+.ld-ledger .ld-ledger-no {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-ledger td.ld-ledger-no {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.ld-ledger-name {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.ld-ledger td.ld-ledger-account {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ld-ledger-sub {
+  display: inline-block;
+  margin-left: 0.45rem;
+  white-space: nowrap;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.ld-ledger td.ld-ledger-muted {
+  color: #475569;
+}
+
+.ld-ledger .ld-ledger-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.ld-ledger td.ld-ledger-bal {
+  color: #0f172a;
+  font-weight: 650;
+}
+
+.ld-ledger td.ld-ledger-bal.is-neg {
+  color: #dc2626;
+}
+
+.ld-ledger--months {
+  min-width: 760px;
+  table-layout: auto;
+  font-size: 0.8125rem;
+}
+
+.ld-ledger--months th,
+.ld-ledger--months td {
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+}
+
+.ld-ledger--tx {
+  min-width: 960px;
+  table-layout: auto;
+  font-size: 0.8125rem;
+}
+
+.ld-ledger--tx th,
+.ld-ledger--tx td {
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+}
+
+.ld-ledger td.ld-ledger-desc,
+.ld-ledger td.ld-ledger-wrap-cell {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ld-ledger td.ld-ledger-desc {
+  min-width: 12rem;
+}
+
+.ld-ledger td.ld-ledger-wrap-cell {
+  min-width: 9rem;
+}
+
+.ld-ledger-empty {
+  padding: 1.25rem 1rem;
+}
+
+.ld-ledger--kv {
+  min-width: 0;
+}
+
+.ld-ledger-col-label { width: 30%; }
+
+.ld-ledger--kv td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ld-ledger td.ld-ledger-label {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.ld-ledger--static tbody tr {
+  cursor: default;
+}
+
+.ld-ledger--static tbody tr:hover td {
+  background: #fff;
+}
+
+.ld-ledger--static tbody tr:nth-child(even):hover td {
+  background: #f8fafc;
+}
+
+.ld-ledger td.ld-ledger-in { color: #15803d; }
+.ld-ledger td.ld-ledger-out { color: #b91c1c; }
+
+.ld-ledger-go {
+  text-align: right;
+  color: #94a3b8;
+}
+
+.ld-ledger tbody tr:hover .ld-ledger-go {
+  color: #2563eb;
 }
 
 .ld-drill-section-title {
@@ -892,6 +1102,10 @@
   line-height: 1.5;
 }
 
+.ld-explain:last-child {
+  margin-bottom: 0;
+}
+
 .ld-detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -917,6 +1131,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
+}
+
+.ld-detail-actions--page {
+  margin-top: 1rem;
 }
 
 @media (max-width: 767.98px) {

@@ -87,7 +87,10 @@ export default function TransactionDetailPage({
             <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Back
           </button>
           <h1>Transaction #{tx.id}</h1>
-          <p className="ld-header-sub">{tx.accountName}</p>
+          <p className="ld-header-sub">
+            {tx.accountName}
+            {tx.monthLabel ? ` - ${tx.monthLabel}` : ''}
+          </p>
         </div>
         <div className="ld-header-hero">
           <div className="ld-header-hero-label">{tx.typeLabel}</div>
@@ -97,51 +100,102 @@ export default function TransactionDetailPage({
         </div>
       </div>
 
+      <div className="ld-summary-grid ld-summary-grid--4">
+        <div className="ld-summary-card">
+          <div className="ld-summary-label">Date</div>
+          <div className="ld-summary-value">{tx.transactionDate || '-'}</div>
+        </div>
+        <div className="ld-summary-card">
+          <div className="ld-summary-label">Type</div>
+          <div className="ld-summary-value">
+            <span className={`ld-pill ld-pill--${tx.type}`}>{tx.typeLabel}</span>
+          </div>
+        </div>
+        <div className="ld-summary-card">
+          <div className="ld-summary-label">Amount</div>
+          <div className={`ld-summary-value ${tx.type === 'debit' ? 'is-out' : 'is-in'}`}>{tx.amountDisplay}</div>
+        </div>
+        <div className="ld-summary-card">
+          <div className="ld-summary-label">Balance After</div>
+          <div className="ld-summary-value">{tx.runningBalanceDisplay}</div>
+        </div>
+      </div>
+
+      <section className="ld-drill-section">
+        <div className="ld-drill-section-h">
+          <h3>Transaction Details</h3>
+        </div>
+        <div className="ld-ledger-wrap">
+          <table className="ld-ledger ld-ledger--static ld-ledger--kv">
+            <colgroup>
+              <col className="ld-ledger-col-label" />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="ld-ledger-label">Transaction No.</td>
+                <td>
+                  <span className="ld-ledger-name">#{tx.id}</span>
+                </td>
+              </tr>
+              <tr>
+                <td className="ld-ledger-label">Account</td>
+                <td>{tx.accountName}</td>
+              </tr>
+              <tr>
+                <td className="ld-ledger-label">Month</td>
+                <td>{tx.monthLabel || '-'}</td>
+              </tr>
+              <tr>
+                <td className="ld-ledger-label">Description</td>
+                <td>{tx.description || '-'}</td>
+              </tr>
+              <tr>
+                <td className="ld-ledger-label">Reference</td>
+                <td>
+                  {tx.sourceUrl ? (
+                    <a href={tx.sourceUrl} className="ld-source-link" target="_blank" rel="noreferrer">
+                      {tx.referenceLabel || 'Open'} <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                    </a>
+                  ) : (
+                    tx.referenceLabel || '-'
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <td className="ld-ledger-label">Created By</td>
+                <td>{tx.createdBy || '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section className="ld-card">
         <div className="ld-card-h">
           <h3>Why this amount is included</h3>
         </div>
         <div className="ld-card-b">
           <p className="ld-explain">{tx.whyIncluded}</p>
-          <dl className="ld-detail-grid">
-            <div>
-              <dt>Date</dt>
-              <dd>{tx.transactionDate || '-'}</dd>
-            </div>
-            <div>
-              <dt>Description</dt>
-              <dd>{tx.description || '-'}</dd>
-            </div>
-            <div>
-              <dt>Account</dt>
-              <dd>{tx.accountName}</dd>
-            </div>
-            <div>
-              <dt>Running balance after this entry</dt>
-              <dd>{tx.runningBalanceDisplay}</dd>
-            </div>
-            <div>
-              <dt>Created by</dt>
-              <dd>{tx.createdBy}</dd>
-            </div>
-            <div>
-              <dt>Reference</dt>
-              <dd>{tx.referenceLabel || '-'}</dd>
-            </div>
-          </dl>
-
-          <div className="ld-detail-actions">
-            {tx.sourceUrl && (
-              <a className="ld-btn ld-btn--purple" href={tx.sourceUrl} target="_blank" rel="noreferrer">
-                Open source document <ExternalLink className="w-4 h-4" aria-hidden="true" />
-              </a>
-            )}
-            <a className="ld-btn ld-btn--outline" href={tx.viewUrl}>
-              Open classic transaction view
-            </a>
-          </div>
         </div>
       </section>
+
+      <div className="ld-detail-actions ld-detail-actions--page">
+        {tx.sourceUrl && (
+          <a className="ld-btn ld-btn--purple" href={tx.sourceUrl} target="_blank" rel="noreferrer">
+            Open source document <ExternalLink className="w-4 h-4" aria-hidden="true" />
+          </a>
+        )}
+        <a className="ld-btn ld-btn--outline" href={tx.viewUrl}>
+          Open classic transaction view
+        </a>
+      </div>
     </div>
   );
 }

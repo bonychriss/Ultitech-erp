@@ -4,16 +4,21 @@ import {
   AlertTriangle,
   Clock,
   Coins,
+  Eye,
   FileText,
   Loader2,
   MoreVertical,
+  Pencil,
+  Percent,
   Plus,
-  Receipt,
   Search,
   SlidersHorizontal,
+  Trash2,
+  Wallet,
   X,
 } from 'lucide-react';
-import { deskPageUrl, fetchDeskEntries, fetchDeskInit } from '../api/revenueDesk';
+import { deleteRevenueEntry, deskPageUrl, fetchDeskEntries, fetchDeskInit } from '../api/revenueDesk';
+import RevenueDeleteModal from '../components/RevenueDeleteModal';
 import RevenueExportModal from '../components/RevenueExportModal';
 import RevenuePayModal from '../components/RevenuePayModal';
 import RevenueQuickViewModal from '../components/RevenueQuickViewModal';
@@ -196,7 +201,7 @@ function isRowActionTarget(target) {
   );
 }
 
-function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember }) {
+function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember, onView, onDelete }) {
   if (!menu || typeof document === 'undefined') return null;
 
   const style = {
@@ -205,18 +210,34 @@ function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember }) {
     right: `${menu.right}px`,
     zIndex: 14000,
   };
+  const deleteBlocked = Boolean(menu.deleteBlockReason);
 
   return createPortal(
     <div className="rev-desk-row-menu rev-desk-row-menu--portal" role="menu" style={style} data-rev-row-menu>
+      <button
+        type="button"
+        role="menuitem"
+        className="rev-desk-row-menu-item"
+        onClick={(event) => {
+          event.stopPropagation();
+          onClose();
+          onView(menu.row);
+        }}
+      >
+        <Eye size={15} aria-hidden="true" />
+        View
+      </button>
       {menu.canEdit ? (
         <a
           role="menuitem"
+          className="rev-desk-row-menu-item"
           href={deskPageUrl('revenue_edit.php', { id: menu.id })}
           onClick={() => {
             onRemember?.(menu.id);
             onClose();
           }}
         >
+          <Pencil size={15} aria-hidden="true" />
           Edit
         </a>
       ) : null}
@@ -224,16 +245,36 @@ function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember }) {
         <button
           type="button"
           role="menuitem"
-          className="rev-desk-row-menu-pay"
+          className="rev-desk-row-menu-item rev-desk-row-menu-pay"
           onClick={(event) => {
             event.stopPropagation();
             onClose();
             onPay(menu.id);
           }}
         >
+          <Wallet size={15} aria-hidden="true" />
           Pay
         </button>
       ) : null}
+      <div className="rev-desk-row-menu-divider" role="separator" />
+      <button
+        type="button"
+        role="menuitem"
+        className="rev-desk-row-menu-item rev-desk-row-menu-delete"
+        disabled={deleteBlocked}
+        aria-disabled={deleteBlocked}
+        title={deleteBlocked ? menu.deleteBlockReason : undefined}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (deleteBlocked) return;
+          onClose();
+          onDelete(menu.row);
+        }}
+      >
+        <Trash2 size={15} aria-hidden="true" />
+        Delete
+      </button>
+      {deleteBlocked ? <div className="rev-desk-row-menu-note">{menu.deleteBlockReason}</div> : null}
     </div>,
     document.body,
   );
@@ -278,9 +319,58 @@ export default function RevenueDeskPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const pendingPreviewRef = useRef(null);
+  if (pendingPreviewRef.current === null) {
+    pendingPreviewRef.current = typeof window === 'undefined'
+      ? 0
+      : Number(new URLSearchParams(window.location.search).get('preview') || 0) || 0;
+  }
 
   function closeRowMenu() {
     setRowMenu(null);
+  }
+
+  function askDeleteEntry(row) {
+    setDeleteError('');
+    setDeleteTarget(row);
+  }
+
+  function cancelDeleteEntry() {
+    if (deleteBusy) return;
+    setDeleteTarget(null);
+    setDeleteError('');
+  }
+
+  async function confirmDeleteEntry() {
+    if (!deleteTarget || deleteBusy) return;
+    setDeleteBusy(true);
+    setDeleteError('');
+    try {
+      const result = await deleteRevenueEntry(deleteTarget.id, init?.csrf_token);
+      if (Number(highlightedId) === Number(deleteTarget.id)) {
+        setHighlightedId(0);
+        try {
+          sessionStorage.removeItem('rev.lastSelectedId');
+        } catch { /* ignore */ }
+      }
+      if (previewEntry && Number(previewEntry.id) === Number(deleteTarget.id)) {
+        setPreviewEntry(null);
+      }
+      setDeleteTarget(null);
+      setSuccessMessage(result.message || 'Revenue entry deleted.');
+      try {
+        await reloadDesk();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Entry deleted but the list could not refresh.');
+      }
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'The entry could not be deleted.');
+    } finally {
+      setDeleteBusy(false);
+    }
   }
 
   function openRowMenu(event, row) {
@@ -291,8 +381,10 @@ export default function RevenueDeskPage() {
       if (current?.id === row.id) return null;
       return {
         id: row.id,
+        row,
         canEdit: Boolean(row.can_edit),
         canPay: Boolean(row.can_pay),
+        deleteBlockReason: row.delete_block_reason || '',
         top: Math.round(rect.bottom + 4),
         right: Math.round(window.innerWidth - rect.right),
       };
@@ -962,6 +1054,24 @@ export default function RevenueDeskPage() {
     [entries, draftSearch],
   );
   const suggestions = useMemo(() => visibleEntries.slice(0, 6), [visibleEntries]);
+
+  useEffect(() => {
+    const wanted = pendingPreviewRef.current;
+    if (!wanted || !desk) return;
+    pendingPreviewRef.current = 0;
+    const row = (desk.data || []).find((r) => sameId(r.id, wanted));
+    if (row) setPreviewEntry(row);
+  }, [desk]);
+
+  useEffect(() => {
+    if (!desk || pendingPreviewRef.current || typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const id = previewEntry ? String(previewEntry.id) : '';
+    if ((url.searchParams.get('preview') || '') === id) return;
+    if (id) url.searchParams.set('preview', id);
+    else url.searchParams.delete('preview');
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+  }, [previewEntry, desk]);
   const kpi = desk?.kpi ?? {};
   const invoiceKpi = desk?.invoice_kpi ?? {};
   const customers = init?.customers ?? [];
@@ -1076,16 +1186,18 @@ export default function RevenueDeskPage() {
         <KpiCard
           icon={Coins}
           iconTone="purple"
-          label="Total (Incl. Tax)"
-          value={formatCurrency(kpi.sum_total)}
-          onClick={() => openKpiTrace('totalInclTax')}
+          label="Total Exclusive"
+          value={formatCurrency(kpi.sum_net)}
+          foot="Before VAT"
+          onClick={() => openKpiTrace('totalNet')}
         />
         <KpiCard
-          icon={Clock}
-          iconTone="orange"
-          label="Outstanding (AR)"
-          value={formatCurrency(kpi.outstanding)}
-          onClick={() => openKpiTrace('outstandingAr')}
+          icon={Percent}
+          iconTone="teal"
+          label="VAT"
+          value={formatCurrency(kpi.sum_vat)}
+          foot="Total VAT included"
+          onClick={() => openKpiTrace('totalVat')}
         />
         <KpiCard
           icon={FileText}
@@ -1096,9 +1208,9 @@ export default function RevenueDeskPage() {
           onClick={() => openKpiTrace('totalInvoices')}
         />
         <KpiCard
-          icon={Receipt}
-          iconTone="teal"
-          label="Outstanding Invoices"
+          icon={Clock}
+          iconTone="orange"
+          label="Outstanding"
           value={formatCurrency(invoiceKpi.outstanding)}
           foot={formatPctOfTotal(invoiceKpi.pct_outstanding)}
           onClick={() => openKpiTrace('outstandingInvoices')}
@@ -1106,7 +1218,7 @@ export default function RevenueDeskPage() {
         <KpiCard
           icon={AlertTriangle}
           iconTone="red"
-          label="Overdue Invoices"
+          label="Overdue"
           value={formatCurrency(invoiceKpi.overdue)}
           foot={formatPctOfTotal(invoiceKpi.pct_overdue)}
           onClick={() => openKpiTrace('overdueInvoices')}
@@ -1241,22 +1353,18 @@ export default function RevenueDeskPage() {
                   </span>
                 </td>
                 <td className="col-actions" data-rev-row-ignore data-rev-row-menu>
-                  {row.can_edit || row.can_pay ? (
-                    <div className={`rev-desk-row-menu-wrap${rowMenu?.id === row.id ? ' is-open' : ''}`}>
-                      <button
-                        type="button"
-                        className="rev-desk-row-menu-btn"
-                        aria-label="Row actions"
-                        aria-haspopup="menu"
-                        aria-expanded={rowMenu?.id === row.id}
-                        onClick={(event) => openRowMenu(event, row)}
-                      >
-                        <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="rev-desk-row-menu-empty" aria-hidden="true">—</span>
-                  )}
+                  <div className={`rev-desk-row-menu-wrap${rowMenu?.id === row.id ? ' is-open' : ''}`}>
+                    <button
+                      type="button"
+                      className="rev-desk-row-menu-btn"
+                      aria-label="Row actions"
+                      aria-haspopup="menu"
+                      aria-expanded={rowMenu?.id === row.id}
+                      onClick={(event) => openRowMenu(event, row)}
+                    >
+                      <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1271,6 +1379,21 @@ export default function RevenueDeskPage() {
           onClose={closeRowMenu}
           onPay={(entryId) => setPayEntryId(entryId)}
           onRemember={rememberList}
+          onView={(row) => {
+            markListSelection(row.id);
+            setPreviewEntry(row);
+          }}
+          onDelete={askDeleteEntry}
+        />
+      ) : null}
+
+      {deleteTarget ? (
+        <RevenueDeleteModal
+          entry={deleteTarget}
+          busy={deleteBusy}
+          error={deleteError}
+          onCancel={cancelDeleteEntry}
+          onConfirm={confirmDeleteEntry}
         />
       ) : null}
 

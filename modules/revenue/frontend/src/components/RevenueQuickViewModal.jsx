@@ -19,6 +19,30 @@ function formatDate(dateStr) {
   });
 }
 
+/** Invoice page URL that brings the user back to this list with the same entry reopened. */
+function invoiceHref(entry) {
+  const base = String(entry.invoice_view_url || '');
+  if (!base) return '';
+  const back = new URL(window.location.href);
+  back.searchParams.set('sel', String(entry.id));
+  back.searchParams.set('preview', String(entry.id));
+  const returnTo = back.pathname + back.search;
+  return `${base}${base.includes('?') ? '&' : '?'}return=${encodeURIComponent(returnTo)}`;
+}
+
+function withInvoiceLink(text, invoiceNumber, link) {
+  const value = String(text || '');
+  const at = invoiceNumber ? value.indexOf(invoiceNumber) : -1;
+  if (!link || at < 0) return value;
+  return (
+    <>
+      {value.slice(0, at)}
+      {link}
+      {value.slice(at + invoiceNumber.length)}
+    </>
+  );
+}
+
 function detailRow(label, value, { amount = false } = {}) {
   if (value === null || value === undefined || value === '' || value === '-') return null;
   return (
@@ -38,6 +62,13 @@ export default function RevenueQuickViewModal({
   const vatAmount = Number(entry.vat_amount) || 0;
   const balanceDue = Number(entry.balance_due) || 0;
   const showActions = entry.can_edit || entry.can_pay;
+  const invoiceNumber = String(entry.linked_invoice_number || '');
+  const invoiceUrl = invoiceNumber ? invoiceHref(entry) : '';
+  const invoiceLink = invoiceUrl ? (
+    <a href={invoiceUrl} className="rev-desk-quick-link" title={`Open invoice ${invoiceNumber}`}>
+      {invoiceNumber}
+    </a>
+  ) : null;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -85,12 +116,12 @@ export default function RevenueQuickViewModal({
             {detailRow('Total', formatCurrency(entry.amount_total), { amount: true })}
             {detailRow('Paid', formatCurrency(entry.amount_paid), { amount: true })}
             {balanceDue > 0.009 && detailRow('Balance', formatCurrency(balanceDue), { amount: true })}
-            {entry.linked_invoice_number && detailRow('Invoice', entry.linked_invoice_number)}
+            {invoiceNumber && detailRow('Invoice', invoiceLink || invoiceNumber)}
             {entry.customer_code_display && entry.customer_code_display !== '-'
               && detailRow('Customer code', entry.customer_code_display)}
             {entry.payment_mode && detailRow('Payment method', entry.payment_mode)}
             {vatAmount > 0 && detailRow('VAT', formatCurrency(vatAmount), { amount: true })}
-            {detailRow('Description', entry.description || entry.narration)}
+            {detailRow('Description', withInvoiceLink(entry.description || entry.narration, invoiceNumber, invoiceLink))}
           </dl>
         </div>
 

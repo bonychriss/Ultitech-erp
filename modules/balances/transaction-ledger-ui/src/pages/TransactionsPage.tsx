@@ -346,8 +346,8 @@ export default function TransactionsPage() {
         </button>
       </section>
 
-      <section className={`tl-card tl-entries-card${refreshing || aiSearching ? ' is-refreshing' : ''}`}>
-        <div className="tl-card-head">
+      <section className="tl-entries">
+        <div className="tl-entries-head">
           <div className="tl-card-head-main">
             <h2>Entries</h2>
             <span className="tl-entries-count">
@@ -365,149 +365,156 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        {transactions.length === 0 ? (
-          <div className="tl-empty">
-            <Inbox className="tl-empty-icon" aria-hidden="true" />
-            <p className="tl-empty-title">No transactions found</p>
-            <p className="tl-empty-text">
-              {searching ? 'Try different keywords or clear the search.' : 'No transactions recorded yet.'}
-            </p>
-          </div>
-        ) : (
-          <div className="tl-table-wrap">
-            <table className="tl-table">
-              <colgroup>
-                <col className="tl-col-date" />
-                <col className="tl-col-account" />
-                <col className="tl-col-description" />
-                <col className="tl-col-reference" />
-                <col className="tl-col-user" />
-                <col className="tl-col-amount" />
-                <col className="tl-col-type" />
-                <col className="tl-col-actions" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Account</th>
-                  <th>Description</th>
-                  <th>Reference</th>
-                  <th>User</th>
-                  <th className="tl-th-amount">Amount</th>
-                  <th>Type</th>
-                  <th className="tl-th-actions">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((tx) => (
-                  <tr
-                    key={tx.id}
-                    className="tl-table-row-clickable"
-                    onClick={(event) => handleRowClick(event, tx)}
-                    tabIndex={0}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        window.location.href = tx.viewUrl;
-                      }
-                    }}
-                  >
-                    <td className="tl-td-date">{formatDateTime(tx.transactionDate)}</td>
-                    <td className="tl-td-account">{tx.accountName}</td>
-                    <td className="tl-td-description">{tx.description || 'ù'}</td>
-                    <td className="tl-td-reference">{tx.referenceLabel || 'ù'}</td>
-                    <td className="tl-td-user">{tx.userName}</td>
-                    <td className={`tl-td-amount ${amountClass(tx.type)}`}>{tx.amountDisplay}</td>
-                    <td className="tl-td-type">
-                      <span className={typeBadgeClass(tx.typeClass)}>{tx.typeLabel}</span>
-                    </td>
-                    <td className="tl-td-actions">
-                      <RowActionsMenu transaction={tx} />
-                    </td>
+        <div className={`tl-card tl-entries-card${refreshing || aiSearching ? ' is-refreshing' : ''}`}>
+          {transactions.length === 0 ? (
+            <div className="tl-empty">
+              <Inbox className="tl-empty-icon" aria-hidden="true" />
+              <p className="tl-empty-title">No transactions found</p>
+              <p className="tl-empty-text">
+                {searching ? 'Try different keywords or clear the search.' : 'No transactions recorded yet.'}
+              </p>
+            </div>
+          ) : (
+            <div className="tl-table-wrap">
+              <table className="tl-table">
+                <colgroup>
+                  <col className="tl-col-no" />
+                  <col className="tl-col-date" />
+                  <col className="tl-col-account" />
+                  <col className="tl-col-description" />
+                  <col className="tl-col-reference" />
+                  <col className="tl-col-user" />
+                  <col className="tl-col-amount" />
+                  <col className="tl-col-type" />
+                  <col className="tl-col-actions" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th className="tl-th-no">No.</th>
+                    <th>Date</th>
+                    <th>Account</th>
+                    <th>Description</th>
+                    <th>Reference</th>
+                    <th>User</th>
+                    <th className="tl-th-amount">Amount</th>
+                    <th>Type</th>
+                    <th className="tl-th-actions">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {pagination && totalRows > 0 && (
-          <div className="tl-table-footer">
-            <span className="tl-footer-range">
-              {pagination.viewAll
-                ? `Showing all ${pagination.totalEntries} entries`
-                : `Showing ${pagination.showingFrom}ù${pagination.showingTo} of ${pagination.totalEntries}`}
-            </span>
-            {!pagination.viewAll && pagination.totalPages > 1 && (
-              <nav className="tl-pager" aria-label="Entries pagination">
-                <a
-                  href={preserveQueryParams({
-                    q: filters.q || null,
-                    date_from: filters.date_from || null,
-                    date_to: filters.date_to || null,
-                    type: filters.type || null,
-                    amount_min: filters.amount_min || null,
-                    amount_max: filters.amount_max || null,
-                    page: pagination.page > 1 ? pagination.page - 1 : null,
-                    per_page: filters.per_page === 'all' ? 'all' : null,
-                  })}
-                  className={pagination.page > 1 ? '' : 'is-disabled'}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (pagination.page > 1) goToPage(pagination.page - 1);
-                  }}
-                >
-                  &laquo;
-                </a>
-                {Array.from({ length: pagination.totalPages }, (_, index) => index + 1)
-                  .filter((page) => page >= pagination.page - 2 && page <= pagination.page + 2)
-                  .map((page) => (
-                    <a
-                      key={page}
-                      href={preserveQueryParams({
-                        q: filters.q || null,
-                        date_from: filters.date_from || null,
-                        date_to: filters.date_to || null,
-                        type: filters.type || null,
-                        amount_min: filters.amount_min || null,
-                        amount_max: filters.amount_max || null,
-                        page,
-                        per_page: filters.per_page === 'all' ? 'all' : null,
-                      })}
-                      className={page === pagination.page ? 'is-active' : ''}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        goToPage(page);
+                </thead>
+                <tbody>
+                  {transactions.map((tx, index) => (
+                    <tr
+                      key={tx.id}
+                      className="tl-table-row-clickable"
+                      onClick={(event) => handleRowClick(event, tx)}
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          window.location.href = tx.viewUrl;
+                        }
                       }}
                     >
-                      {page}
-                    </a>
+                      <td className="tl-td-no">
+                        {(pagination && !pagination.viewAll ? Math.max(pagination.showingFrom, 1) : 1) + index}
+                      </td>
+                      <td className="tl-td-date">{formatDateTime(tx.transactionDate)}</td>
+                      <td className="tl-td-account">{tx.accountName}</td>
+                      <td className="tl-td-description">{tx.description || '-'}</td>
+                      <td className="tl-td-reference">{tx.referenceLabel || '-'}</td>
+                      <td className="tl-td-user">{tx.userName}</td>
+                      <td className={`tl-td-amount ${amountClass(tx.type)}`}>{tx.amountDisplay}</td>
+                      <td className="tl-td-type">
+                        <span className={typeBadgeClass(tx.typeClass)}>{tx.typeLabel}</span>
+                      </td>
+                      <td className="tl-td-actions">
+                        <RowActionsMenu transaction={tx} />
+                      </td>
+                    </tr>
                   ))}
-                <a
-                  href={preserveQueryParams({
-                    q: filters.q || null,
-                    date_from: filters.date_from || null,
-                    date_to: filters.date_to || null,
-                    type: filters.type || null,
-                    amount_min: filters.amount_min || null,
-                    amount_max: filters.amount_max || null,
-                    page: pagination.page < pagination.totalPages ? pagination.page + 1 : null,
-                    per_page: filters.per_page === 'all' ? 'all' : null,
-                  })}
-                  className={pagination.page < pagination.totalPages ? '' : 'is-disabled'}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (pagination.page < pagination.totalPages) goToPage(pagination.page + 1);
-                  }}
-                >
-                  &raquo;
-                </a>
-              </nav>
-            )}
-          </div>
-        )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {pagination && totalRows > 0 && (
+            <div className="tl-table-footer">
+              <span className="tl-footer-range">
+                {pagination.viewAll
+                  ? `Showing all ${pagination.totalEntries} entries`
+                  : `Showing ${pagination.showingFrom}-${pagination.showingTo} of ${pagination.totalEntries}`}
+              </span>
+              {!pagination.viewAll && pagination.totalPages > 1 && (
+                <nav className="tl-pager" aria-label="Entries pagination">
+                  <a
+                    href={preserveQueryParams({
+                      q: filters.q || null,
+                      date_from: filters.date_from || null,
+                      date_to: filters.date_to || null,
+                      type: filters.type || null,
+                      amount_min: filters.amount_min || null,
+                      amount_max: filters.amount_max || null,
+                      page: pagination.page > 1 ? pagination.page - 1 : null,
+                      per_page: filters.per_page === 'all' ? 'all' : null,
+                    })}
+                    className={pagination.page > 1 ? '' : 'is-disabled'}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (pagination.page > 1) goToPage(pagination.page - 1);
+                    }}
+                  >
+                    &laquo;
+                  </a>
+                  {Array.from({ length: pagination.totalPages }, (_, index) => index + 1)
+                    .filter((page) => page >= pagination.page - 2 && page <= pagination.page + 2)
+                    .map((page) => (
+                      <a
+                        key={page}
+                        href={preserveQueryParams({
+                          q: filters.q || null,
+                          date_from: filters.date_from || null,
+                          date_to: filters.date_to || null,
+                          type: filters.type || null,
+                          amount_min: filters.amount_min || null,
+                          amount_max: filters.amount_max || null,
+                          page,
+                          per_page: filters.per_page === 'all' ? 'all' : null,
+                        })}
+                        className={page === pagination.page ? 'is-active' : ''}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          goToPage(page);
+                        }}
+                      >
+                        {page}
+                      </a>
+                    ))}
+                  <a
+                    href={preserveQueryParams({
+                      q: filters.q || null,
+                      date_from: filters.date_from || null,
+                      date_to: filters.date_to || null,
+                      type: filters.type || null,
+                      amount_min: filters.amount_min || null,
+                      amount_max: filters.amount_max || null,
+                      page: pagination.page < pagination.totalPages ? pagination.page + 1 : null,
+                      per_page: filters.per_page === 'all' ? 'all' : null,
+                    })}
+                    className={pagination.page < pagination.totalPages ? '' : 'is-disabled'}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (pagination.page < pagination.totalPages) goToPage(pagination.page + 1);
+                    }}
+                  >
+                    &raquo;
+                  </a>
+                </nav>
+              )}
+            </div>
+          )}
+        </div>
       </section>
 
       {activeKpiTrace && (

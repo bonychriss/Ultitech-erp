@@ -54,6 +54,30 @@ function formatDate(value) {
   return `${dd}/${mm}/${d.getFullYear()}`
 }
 
+const AVATAR_STYLES = [
+  { background: '#e0f2fe', color: '#0369a1' },
+  { background: '#ede9fe', color: '#6d28d9' },
+  { background: '#d1fae5', color: '#047857' },
+  { background: '#fef3c7', color: '#b45309' },
+  { background: '#ffe4e6', color: '#be123c' },
+  { background: '#cffafe', color: '#0e7490' },
+  { background: '#e0e7ff', color: '#4338ca' },
+  { background: '#ccfbf1', color: '#0f766e' },
+]
+
+function initials(name) {
+  if (!name || !String(name).trim()) return '?'
+  return String(name).trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function avatarStyle(name) {
+  const s = (name && String(name).trim()) || ''
+  if (!s) return { background: '#f3f4f6', color: '#6b7280' }
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
+  return AVATAR_STYLES[Math.abs(h) % AVATAR_STYLES.length]
+}
+
 function formatTime(value) {
   if (!value) return ''
   const d = new Date(value.replace(' ', 'T'))
@@ -77,6 +101,7 @@ function orderText(order) {
     order.invoice_ref,
     order.delivery_type,
     order.delivery_number,
+    order.driver_name,
     order.status,
     order.description,
     order.receipt_name,
@@ -1055,6 +1080,9 @@ function DeliveriesDashboardPageInner() {
                       <div className="dlv-mobile-card__phone">{order.client_phone}</div>
                     ) : null}
                     <div className="dlv-mobile-card__dest">{order.delivery_address || '-'}</div>
+                    {order.driver_name ? (
+                      <div className="dlv-mobile-card__driver">Driver: {order.driver_name}</div>
+                    ) : null}
                     {order.description ? (
                       <div className="dlv-mobile-card__desc">{order.description}</div>
                     ) : null}
@@ -1070,17 +1098,32 @@ function DeliveriesDashboardPageInner() {
               })}
             </div>
 
-            <div className="dlv-table-wrap dlv-table-wrap--desktop">
-              <table className="dlv-table dlv-table--full">
+            <div className="dlv-ledger-head dlv-table-wrap--desktop">
+              {filteredOrders.length} {filteredOrders.length === 1 ? 'result' : 'results'}
+            </div>
+            <div className="dlv-table-wrap dlv-table-wrap--desktop dlv-ledger-wrap">
+              <table className="dlv-table dlv-table--full dlv-ledger">
+                <colgroup>
+                  <col className="dlv-lcol-no" />
+                  <col className="dlv-lcol-number" />
+                  <col className="dlv-lcol-client" />
+                  <col className="dlv-lcol-dest" />
+                  <col className="dlv-lcol-driver" />
+                  <col className="dlv-lcol-desc" />
+                  <col className="dlv-lcol-status" />
+                  <col className="dlv-lcol-type" />
+                  <col className="dlv-lcol-date" />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th>S/N</th>
+                    <th className="dlv-lcol-no" title={`${filteredOrders.length} deliveries in this list`}>No.</th>
                     <th>Delivery</th>
                     <th>Client</th>
                     <th>Destination</th>
+                    <th>Driver</th>
                     <th>Description</th>
-                    <th>Status</th>
-                    <th>Type</th>
+                    <th className="dlv-lcol-status">Status</th>
+                    <th className="dlv-lcol-type">Type</th>
                     <th>Date</th>
                   </tr>
                 </thead>
@@ -1093,25 +1136,48 @@ function DeliveriesDashboardPageInner() {
                         key={order.id}
                         data-delivery-id={order.id}
                         className={`dlv-row${sameId(highlightedId, order.id) ? ' is-selected' : ''}`}
+                        tabIndex={0}
                         onClick={() => openOrder(order.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            openOrder(order.id)
+                          }
+                        }}
                       >
-                        <td className="dlv-sn">{idx + 1}</td>
-                        <td>
-                          <div className="dlv-cell-main">{order.delivery_number || '-'}</div>
+                        <td className="dlv-lcol-no">{idx + 1}</td>
+                        <td className="dlv-lcol-number">
+                          <span className="dlv-ledger-ref">{order.delivery_number || '-'}</span>
                         </td>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{order.client_name || '-'}</div>
+                        <td className="dlv-lcol-client">
+                          <span className="dlv-ledger-client" title={order.client_name || ''}>{order.client_name || '-'}</span>
                           {order.client_phone ? (
-                            <div className="dlv-cell-sub">{order.client_phone}</div>
+                            <span className="dlv-ledger-sub">{order.client_phone}</span>
                           ) : null}
                         </td>
-                        <td>{order.delivery_address || '-'}</td>
-                        <td>{order.description || '-'}</td>
-                        <td className="dlv-status-cell"><span className={pill.cls}>{pill.label}</span></td>
-                        <td className="dlv-type-cell"><span className={type.cls}>{type.label}</span></td>
-                        <td>
-                          <div>{formatDate(order.created_at)}</div>
-                          <div className="dlv-cell-sub">{formatTime(order.created_at)}</div>
+                        <td className="dlv-lcol-dest">
+                          <span className="dlv-ledger-clip" title={order.delivery_address || ''}>{order.delivery_address || '-'}</span>
+                        </td>
+                        <td className="dlv-lcol-driver">
+                          {order.driver_name ? (
+                            <span className="dlv-ledger-person">
+                              <span className="dlv-ledger-avatar" style={avatarStyle(order.driver_name)}>{initials(order.driver_name)}</span>
+                              <span className="dlv-ledger-clip" title={order.driver_name}>{order.driver_name}</span>
+                            </span>
+                          ) : (
+                            <span className="dlv-ledger-muted">Not assigned</span>
+                          )}
+                        </td>
+                        <td className="dlv-lcol-desc">
+                          <span className="dlv-ledger-clip" title={order.description || ''}>{order.description || '-'}</span>
+                        </td>
+                        <td className="dlv-lcol-status"><span className={pill.cls}>{pill.label}</span></td>
+                        <td className="dlv-lcol-type"><span className={type.cls}>{type.label}</span></td>
+                        <td className="dlv-lcol-date">
+                          <span className="dlv-ledger-date">{formatDate(order.created_at)}</span>
+                          {formatTime(order.created_at) ? (
+                            <span className="dlv-ledger-sub">{formatTime(order.created_at)}</span>
+                          ) : null}
                         </td>
                       </tr>
                     )

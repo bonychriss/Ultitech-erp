@@ -381,6 +381,27 @@ button.tl-kpi-card--clickable:focus-visible,
   position: relative;
 }
 
+.tl-entries-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.tl-entries-head h2 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.tl-card.tl-entries-card {
+  border-color: #e7edf3;
+  border-radius: 16px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+}
+
 .tl-entries-card.is-refreshing::after {
   content: '';
   position: absolute;
@@ -484,25 +505,27 @@ button.tl-kpi-card--clickable:focus-visible,
 
 .tl-table {
   width: 100%;
-  min-width: 880px;
+  min-width: 980px;
   table-layout: fixed;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.8125rem;
 }
 
-.tl-col-date { width: 12%; }
-.tl-col-account { width: 14%; }
-.tl-col-description { width: 24%; }
-.tl-col-reference { width: 14%; }
+.tl-col-no { width: 3.5rem; }
+.tl-col-date { width: 10.5rem; }
+.tl-col-account { width: 15%; }
+.tl-col-description { width: 26%; }
+.tl-col-reference { width: 15%; }
 .tl-col-user { width: 11%; }
-.tl-col-amount { width: 13%; }
-.tl-col-type { width: 8%; }
-.tl-col-actions { width: 4%; }
+.tl-col-amount { width: 17%; }
+.tl-col-type { width: 10%; }
+.tl-col-actions { width: 3rem; }
 
 .tl-table th,
 .tl-table td {
-  padding: 0.75rem 0.85rem;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 0.72rem 0.85rem;
+  border-bottom: 1px solid #eef2f6;
   vertical-align: middle;
   line-height: 1.35;
 }
@@ -511,23 +534,47 @@ button.tl-kpi-card--clickable:focus-visible,
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #f8fafc;
-  color: #64748b;
-  font-size: 0.6875rem;
+  background: #1e293b;
+  color: #fff;
+  text-align: left;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
-  border-bottom-color: #e2e8f0;
+  border-bottom: 0;
 }
 
-.tl-th-amount,
+.tl-table tbody td {
+  background: #fff;
+}
+
+.tl-table tbody tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+.tl-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tl-table .tl-th-no,
+.tl-td-no {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tl-td-no {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.tl-table .tl-th-amount,
 .tl-td-amount {
   text-align: right;
   white-space: nowrap;
 }
 
-.tl-th-actions,
+.tl-table .tl-th-actions,
 .tl-td-actions {
   text-align: center;
   overflow: visible;
@@ -537,6 +584,8 @@ button.tl-kpi-card--clickable:focus-visible,
 
 .tl-td-date {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: #475569;
   font-variant-numeric: tabular-nums;
   font-size: 0.78rem;
@@ -568,13 +617,13 @@ button.tl-kpi-card--clickable:focus-visible,
   transition: background-color 0.12s ease;
 }
 
-.tl-table-row-clickable:hover {
-  background: #f8fafc;
+.tl-table tbody tr.tl-table-row-clickable:hover td,
+.tl-table tbody tr.tl-table-row-clickable:focus-visible td {
+  background: #eef4ff;
 }
 
 .tl-table-row-clickable:focus-visible {
-  outline: 2px solid #93c5fd;
-  outline-offset: -2px;
+  outline: none;
 }
 
 .tl-amt {

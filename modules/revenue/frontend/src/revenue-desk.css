@@ -1111,6 +1111,140 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
   color: #15803d;
 }
 
+.rev-desk-row-menu .rev-desk-row-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.rev-desk-row-menu .rev-desk-row-menu-item svg {
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+.rev-desk-row-menu .rev-desk-row-menu-pay svg {
+  color: currentColor;
+}
+
+.rev-desk-row-menu-divider {
+  height: 1px;
+  margin: 0.25rem 0.35rem;
+  background: #eef2f6;
+}
+
+.rev-desk-row-menu .rev-desk-row-menu-delete,
+.rev-desk-row-menu .rev-desk-row-menu-delete svg {
+  color: #dc2626;
+}
+
+.rev-desk-row-menu .rev-desk-row-menu-delete:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.rev-desk-row-menu .rev-desk-row-menu-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  background: transparent;
+}
+
+.rev-desk-row-menu-note {
+  max-width: 14rem;
+  padding: 0 0.75rem 0.45rem 2.4rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #94a3b8;
+}
+
+.rev-desk-delete-modal {
+  width: min(27rem, calc(100vw - 1.5rem));
+}
+
+.rev-desk-delete-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1rem 1.15rem 0.5rem;
+}
+
+.rev-desk-delete-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  background: #fef2f2;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.rev-desk-delete-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.rev-desk-delete-body {
+  padding: 0.25rem 1.15rem 0.9rem 4.1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.rev-desk-delete-body p {
+  margin: 0;
+}
+
+.rev-desk-delete-error {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.8125rem;
+}
+
+.rev-desk-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.85rem 1.15rem 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.rev-desk-btn.rev-desk-delete-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.rev-desk-btn.rev-desk-delete-confirm:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.rev-desk-btn.rev-desk-delete-confirm:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.rev-desk-spin {
+  animation: rev-desk-spin 0.8s linear infinite;
+}
+
+@keyframes rev-desk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .rev-desk-row-menu-empty {
   display: inline-block;
   width: 100%;
@@ -2187,6 +2321,23 @@ body.page-rev-desk .rev-desk-page button.rev-desk-row-menu-btn {
   color: #16a34a;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.rev-desk-quick-row dd a.rev-desk-quick-link {
+  color: #2563eb !important;
+  font-weight: 700;
+  text-decoration: underline !important;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.rev-desk-quick-row dd a.rev-desk-quick-link:hover {
+  color: #1d4ed8 !important;
+}
+
+.rev-desk-quick-row dd a.rev-desk-quick-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .rev-desk-quick-actions {

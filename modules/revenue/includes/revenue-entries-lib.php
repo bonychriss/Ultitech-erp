@@ -215,6 +215,44 @@ function ren_can_edit(array $row): bool
     return (function_exists('isAdmin') && isAdmin()) || (($row['approval_status'] ?? '') === 'Pending');
 }
 
+/** Empty string when the entry may be deleted, otherwise the reason it cannot. */
+function ren_delete_block_reason(array $row): string
+{
+    $invoiceNo = trim((string) ($row['linked_invoice_number'] ?? ''));
+    if ((!empty($row['source_invoice_id']) && (int) $row['source_invoice_id'] > 0) || $invoiceNo !== '') {
+        return 'Created from sales invoice ' . ($invoiceNo !== '' ? $invoiceNo . ' ' : '') . '- delete or cancel the invoice in Sales instead.';
+    }
+    if (!ren_can_edit($row)) {
+        return 'Only an admin can delete a ratified entry.';
+    }
+    if (ren_row_amount_paid($row) > 0.009) {
+        return 'Payments have been received on this entry, so it cannot be deleted.';
+    }
+
+    return '';
+}
+
+function ren_invoice_view_url(int $invoiceId): string
+{
+    if ($invoiceId <= 0) {
+        return '';
+    }
+    if (function_exists('sales_module_url')) {
+        return sales_module_url('invoices/view.php', ['id' => $invoiceId, 'module' => 'sales']);
+    }
+    $slug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+    if ($slug === '' && function_exists('getRequestedCompanySlug')) {
+        $slug = strtolower(trim((string) getRequestedCompanySlug()));
+    }
+    if ($slug !== '' && function_exists('company_url')) {
+        return company_url('sales/invoice/' . $invoiceId, $slug) . '?module=sales';
+    }
+    $path = '/modules/sales/invoices/view.php';
+    $url = function_exists('app_url') ? app_url($path) : $path;
+
+    return $url . '?id=' . $invoiceId . '&module=sales';
+}
+
 function revenue_entries_enrich_row(array $row): array
 {
     $meta = ren_status_meta($row);
@@ -233,6 +271,8 @@ function revenue_entries_enrich_row(array $row): array
         'journal_display' => (string) ($row['journal_entry_id'] ?? '') !== '' ? 'Journal #' . (int) $row['journal_entry_id'] : '-',
         'can_edit' => ren_can_edit($row),
         'can_pay' => ren_can_pay($row),
+        'delete_block_reason' => ren_delete_block_reason($row),
+        'invoice_view_url' => ren_invoice_view_url((int) ($row['source_invoice_id'] ?? 0)),
         'amount_paid' => ren_row_amount_paid($row),
         'balance_due' => ren_row_balance_due($row),
     ]);
@@ -592,6 +632,126 @@ function revenue_entries_init_meta(PDO $pdo): array
         'is_admin' => function_exists('isAdmin') && isAdmin(),
         'csrf_token' => function_exists('csrf_token') ? csrf_token() : '',
     ];
+}
+
+/**
+ * Delete a manual revenue entry that has no money received, together with its
+ * ledger journals (recognition and ratification) and notes.
+ *
+ * @return array{ok:bool,message:string}
+ */
+function revenue_entries_delete(PDO $pdo, int $entryId): array
+{
+    if ($entryId <= 0) {
+        return ['ok' => false, 'message' => 'Invalid revenue entry.'];
+    }
+
+    $hasTable = static fn (string $t): bool => function_exists('tableExists') && tableExists($t, $pdo);
+
+    $st = $pdo->prepare(
+        'SELECT re.*, i.invoice_number AS linked_invoice_number
+         FROM revenue_entries re
+         LEFT JOIN invoices i ON i.id = re.source_invoice_id
+         WHERE re.id = ? LIMIT 1'
+    );
+    try {
+        $st->execute([$entryId]);
+    } catch (Throwable $e) {
+        $st = $pdo->prepare('SELECT * FROM revenue_entries WHERE id = ? LIMIT 1');
+        $st->execute([$entryId]);
+    }
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$row) {
+        return ['ok' => false, 'message' => 'Revenue entry not found. It may already have been deleted.'];
+    }
+
+    $reason = ren_delete_block_reason($row);
+    if ($reason !== '') {
+        return ['ok' => false, 'message' => $reason];
+    }
+
+    if ($hasTable('revenue_collections')) {
+        $c = $pdo->prepare('SELECT COUNT(*) FROM revenue_collections WHERE entry_id = ?');
+        $c->execute([$entryId]);
+        if ((int) $c->fetchColumn() > 0) {
+            return ['ok' => false, 'message' => 'Payments have been received on this entry, so it cannot be deleted.'];
+        }
+    }
+    if ($hasTable('account_transactions')) {
+        $c = $pdo->prepare("SELECT COUNT(*) FROM account_transactions WHERE reference_type IN ('revenue_entry', 'revenue_collection') AND reference_id = ?");
+        $c->execute([$entryId]);
+        if ((int) $c->fetchColumn() > 0) {
+            return ['ok' => false, 'message' => 'This entry has bank or cash transactions recorded, so it cannot be deleted.'];
+        }
+    }
+
+    $voucher = trim((string) ($row['voucher_number'] ?? ''));
+    $journalIds = [];
+    if ($hasTable('erp_journal_entries')) {
+        $jeCols = $pdo->query('SHOW COLUMNS FROM erp_journal_entries')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        if (in_array('reference', $jeCols, true)) {
+            $q = $pdo->prepare("SELECT id FROM erp_journal_entries WHERE reference LIKE ? LIMIT 1");
+            $q->execute(['REV-PAY-' . $entryId . '-%']);
+            if ($q->fetchColumn() !== false) {
+                return ['ok' => false, 'message' => 'Payments have been posted to the ledger for this entry, so it cannot be deleted.'];
+            }
+
+            $q = $pdo->prepare('SELECT id FROM erp_journal_entries WHERE reference = ?');
+            $q->execute(['REV-REC-' . $entryId]);
+            $journalIds = array_merge($journalIds, $q->fetchAll(PDO::FETCH_COLUMN) ?: []);
+
+            if ($voucher !== '') {
+                $q = $pdo->prepare("SELECT id FROM erp_journal_entries WHERE reference = ? AND description LIKE 'Revenue Ratification:%'");
+                $q->execute([$voucher]);
+                $journalIds = array_merge($journalIds, $q->fetchAll(PDO::FETCH_COLUMN) ?: []);
+            }
+        }
+        $linkedJe = (int) ($row['journal_entry_id'] ?? 0);
+        if ($linkedJe > 0) {
+            $journalIds[] = $linkedJe;
+        }
+    }
+    $journalIds = array_values(array_unique(array_map('intval', $journalIds)));
+
+    try {
+        $pdo->beginTransaction();
+
+        if ($journalIds !== []) {
+            $in = implode(',', array_fill(0, count($journalIds), '?'));
+            if ($hasTable('erp_journal_items')) {
+                $pdo->prepare("DELETE FROM erp_journal_items WHERE journal_id IN ($in)")->execute($journalIds);
+            }
+            $pdo->prepare("DELETE FROM erp_journal_entries WHERE id IN ($in)")->execute($journalIds);
+        }
+        if ($hasTable('revenue_notes')) {
+            $pdo->prepare('DELETE FROM revenue_notes WHERE entry_id = ?')->execute([$entryId]);
+        }
+        if ($hasTable('notes') && function_exists('columnExists') && columnExists('notes', 'related_type', $pdo) && columnExists('notes', 'related_id', $pdo)) {
+            $pdo->prepare("DELETE FROM notes WHERE related_type = 'revenue_entry' AND related_id = ?")->execute([$entryId]);
+        }
+        $pdo->prepare('DELETE FROM revenue_entries WHERE id = ?')->execute([$entryId]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('revenue_entries_delete #' . $entryId . ': ' . $e->getMessage());
+
+        return ['ok' => false, 'message' => 'The entry could not be deleted. Please try again.'];
+    }
+
+    error_log(sprintf(
+        'Revenue entry #%d (%s, total %.2f) deleted by user #%d',
+        $entryId,
+        $voucher !== '' ? $voucher : 'no voucher',
+        (float) ($row['amount_total'] ?? 0),
+        (int) ($_SESSION['user_id'] ?? 0)
+    ));
+
+    $label = $voucher !== '' ? $voucher : ('#' . $entryId);
+
+    return ['ok' => true, 'message' => 'Revenue entry ' . $label . ' deleted.'];
 }
 
 function revenue_entries_export_csv(PDO $revPdo, array $get): void

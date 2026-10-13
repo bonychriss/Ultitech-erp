@@ -3,49 +3,109 @@
 declare(strict_types=1);
 
 /**
+ * RULE — Supporting Documents allowlist (never auto-pull):
+ * Only show linked POs / SOs that are explicitly stored on the voucher row
+ * (linked_stock_po_ids / linked_stock_po_id, linked_sales_order_ids / linked_sales_order_id)
+ * or real uploaded attachments for this voucher_id.
+ *
+ * NEVER reverse-query other tables (e.g. stocks_purchase_orders.payment_voucher_id = voucher)
+ * to invent documents the preparer did not link on create/edit.
+ */
+
+/**
+ * Allowed stock PO ids for Supporting Documents — voucher columns only.
+ *
+ * @return list<int>
+ */
+function vv_allowed_stock_po_ids(array $voucher): array
+{
+    if (function_exists('parseLinkedStockPoIdsFromVoucher')) {
+        $out = [];
+        foreach (parseLinkedStockPoIdsFromVoucher($voucher) as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $out[] = $id;
+            }
+        }
+
+        return $out;
+    }
+
+    $ids = [];
+    $idsRaw = trim((string) ($voucher['linked_stock_po_ids'] ?? ''));
+    if ($idsRaw !== '') {
+        $decoded = json_decode($idsRaw, true);
+        $parts = is_array($decoded) ? $decoded : preg_split('/\s*,\s*/', $idsRaw);
+        foreach ($parts ?: [] as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+    }
+    if ($ids === [] && !empty($voucher['linked_stock_po_id'])) {
+        $id = (int) $voucher['linked_stock_po_id'];
+        if ($id > 0) {
+            $ids[$id] = $id;
+        }
+    }
+
+    return array_values($ids);
+}
+
+/**
+ * Allowed sales order ids for Supporting Documents — voucher columns only.
+ *
+ * @return list<int>
+ */
+function vv_allowed_sales_order_ids(array $voucher): array
+{
+    if (function_exists('parseLinkedSalesOrderIdsFromVoucher')) {
+        $out = [];
+        foreach (parseLinkedSalesOrderIdsFromVoucher($voucher) as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $out[] = $id;
+            }
+        }
+
+        return $out;
+    }
+
+    $ids = [];
+    $idsRaw = trim((string) ($voucher['linked_sales_order_ids'] ?? ''));
+    if ($idsRaw !== '') {
+        $decoded = json_decode($idsRaw, true);
+        $parts = is_array($decoded) ? $decoded : preg_split('/\s*,\s*/', $idsRaw);
+        foreach ($parts ?: [] as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+    }
+    if ($ids === [] && !empty($voucher['linked_sales_order_id'])) {
+        $id = (int) $voucher['linked_sales_order_id'];
+        if ($id > 0) {
+            $ids[$id] = $id;
+        }
+    }
+
+    return array_values($ids);
+}
+
+/**
  * Linked purchase orders for the supporting-documents row.
  * Uses the same connection that loaded the voucher. The shared helper reads the
  * global connection, which can be a different database and then returns nothing.
  *
- * @return list<array{id:int,poNumber:string,supplierName:string,status:string,viewLink:string}>
+ * @return list<array{id:int,poNumber:string,supplierName:string,status:string,createdBy:string,createdAt:string,viewLink:string}>
  */
 function vv_purchase_order_docs(PDO $pdo, array $voucher, int $voucherId): array
 {
-    $ids = [];
-    $remember = static function (int $id) use (&$ids): void {
-        if ($id > 0) {
-            $ids[$id] = $id;
-        }
-    };
-
-    if (function_exists('parseLinkedStockPoIdsFromVoucher')) {
-        foreach (parseLinkedStockPoIdsFromVoucher($voucher) as $id) {
-            $remember((int) $id);
-        }
-    } else {
-        $idsRaw = trim((string) ($voucher['linked_stock_po_ids'] ?? ''));
-        if ($idsRaw !== '') {
-            $decoded = json_decode($idsRaw, true);
-            $parts = is_array($decoded) ? $decoded : preg_split('/\s*,\s*/', $idsRaw);
-            foreach ($parts ?: [] as $id) {
-                $remember((int) $id);
-            }
-        }
-        if ($ids === [] && !empty($voucher['linked_stock_po_id'])) {
-            $remember((int) $voucher['linked_stock_po_id']);
-        }
-    }
-
-    if (function_exists('columnExists') && columnExists('stocks_purchase_orders', 'payment_voucher_id', $pdo)) {
-        try {
-            $st = $pdo->prepare('SELECT id FROM stocks_purchase_orders WHERE payment_voucher_id = ?');
-            $st->execute([$voucherId]);
-            foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $pid) {
-                $remember((int) $pid);
-            }
-        } catch (Throwable $e) {
-        }
-    }
+    // Allowlist only — never auto-pull via payment_voucher_id reverse lookup.
+    // $voucherId is intentionally unused for document discovery.
+    $ids = vv_allowed_stock_po_ids($voucher);
 
     $poDocBase = function_exists('company_url')
         ? company_url('employee/create-voucher-ui/po-document.php')
@@ -75,11 +135,32 @@ function vv_purchase_order_docs(PDO $pdo, array $voucher, int $voucherId): array
         if ($poNo === '') {
             $poNo = 'PO-' . $poId;
         }
+        $createdByName = '';
+        $createdById = (int) ($row['created_by'] ?? 0);
+        if ($createdById > 0) {
+            try {
+                $stUser = $pdo->prepare('SELECT full_name, username FROM users WHERE id = ? LIMIT 1');
+                $stUser->execute([$createdById]);
+                $user = $stUser->fetch(PDO::FETCH_ASSOC) ?: null;
+                if ($user) {
+                    $createdByName = trim((string) ($user['full_name'] ?? ''));
+                    if ($createdByName === '') {
+                        $createdByName = trim((string) ($user['username'] ?? ''));
+                    }
+                }
+            } catch (Throwable $e) {
+            }
+            if ($createdByName === '') {
+                $createdByName = 'User #' . $createdById;
+            }
+        }
         $docs[] = [
             'id' => $poId,
             'poNumber' => $poNo,
             'supplierName' => (string) ($row['supplier_name'] ?? ''),
             'status' => (string) ($row['status'] ?? ''),
+            'createdBy' => $createdByName,
+            'createdAt' => (string) ($row['created_at'] ?? ''),
             'viewLink' => $poDocBase . (str_contains($poDocBase, '?') ? '&' : '?') . 'id=' . $poId,
         ];
     }
@@ -96,30 +177,8 @@ function vv_purchase_order_docs(PDO $pdo, array $voucher, int $voucherId): array
  */
 function vv_sales_order_docs(PDO $pdo, array $voucher): array
 {
-    $ids = [];
-    $remember = static function (int $id) use (&$ids): void {
-        if ($id > 0) {
-            $ids[$id] = $id;
-        }
-    };
-
-    if (function_exists('parseLinkedSalesOrderIdsFromVoucher')) {
-        foreach (parseLinkedSalesOrderIdsFromVoucher($voucher) as $id) {
-            $remember((int) $id);
-        }
-    } else {
-        $idsRaw = trim((string) ($voucher['linked_sales_order_ids'] ?? ''));
-        if ($idsRaw !== '') {
-            $decoded = json_decode($idsRaw, true);
-            $parts = is_array($decoded) ? $decoded : preg_split('/\s*,\s*/', $idsRaw);
-            foreach ($parts ?: [] as $id) {
-                $remember((int) $id);
-            }
-        }
-        if ($ids === [] && !empty($voucher['linked_sales_order_id'])) {
-            $remember((int) $voucher['linked_sales_order_id']);
-        }
-    }
+    // Allowlist only — never invent SOs from other tables.
+    $ids = vv_allowed_sales_order_ids($voucher);
     if ($ids === []) {
         return [];
     }

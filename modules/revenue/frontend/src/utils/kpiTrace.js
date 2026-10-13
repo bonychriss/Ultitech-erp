@@ -46,6 +46,31 @@ function isOverdueInvoice(row) {
 
 
 
+/** Whole days past due_date; null when not overdue. */
+function daysOverdueFromDueDate(dueDateStr) {
+  if (!dueDateStr) return null;
+  const normalized = dueDateStr.includes('T') ? dueDateStr : `${dueDateStr}T12:00:00`;
+  const dueDate = new Date(normalized);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+  const diff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+  return diff > 0 ? diff : null;
+}
+
+/** Whole days until due_date (0 today, negative if past due); null when no due date. */
+function daysRemainingFromDueDate(dueDateStr) {
+  if (!dueDateStr) return null;
+  const normalized = dueDateStr.includes('T') ? dueDateStr : `${dueDateStr}T12:00:00`;
+  const dueDate = new Date(normalized);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+  return Math.floor((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+
+
 function filterCriteria(filters, init) {
 
   const lines = [
@@ -239,6 +264,12 @@ function mapInvoiceToTraceItem(row, contribution, note) {
     customer: row.customer_name || '',
 
     date: row.invoice_date || '',
+
+    dueDate: row.due_date || '',
+
+    daysOverdue: daysOverdueFromDueDate(row.due_date),
+
+    daysRemaining: daysRemainingFromDueDate(row.due_date),
 
     type: 'Invoice',
 
@@ -464,11 +495,11 @@ export function resolveKpiTrace(key, init, desk, filters) {
 
         key,
 
-        'Total (Incl. Tax)',
+        'Gross Total',
 
         kpi.sum_total ?? 0,
 
-        'SUM(amount_total) on revenue entries matching your current filters',
+        'SUM(amount_total) on revenue entries matching your current filters (exclusive + VAT)',
 
         desk,
 
@@ -480,7 +511,7 @@ export function resolveKpiTrace(key, init, desk, filters) {
 
       ),
 
-      confirmation: `Gross revenue is ${formatMoney(kpi.sum_total)} across ${entries.length} matching entries.`,
+      confirmation: `Gross total is ${formatMoney(kpi.sum_total)} across ${entries.length} matching entries.`,
 
       context,
 
@@ -576,6 +607,8 @@ export function resolveKpiTrace(key, init, desk, filters) {
 
   if (key === 'totalInvoices') {
 
+    const entryTotal = entries.reduce((sum, row) => sum + (Number(row.amount_total) || 0), 0);
+
     return {
 
       ...baseTrace(
@@ -584,9 +617,9 @@ export function resolveKpiTrace(key, init, desk, filters) {
 
         'Total Invoices',
 
-        invoiceKpi.total ?? 0,
+        entryTotal,
 
-        'SUM(total_amount) on sales invoices matching date, customer, and search filters',
+        'SUM(amount_total) on all revenue entries in view (Sales and Other)',
 
         desk,
 
@@ -594,19 +627,19 @@ export function resolveKpiTrace(key, init, desk, filters) {
 
         init,
 
-        invoiceRows.map((row) => mapInvoiceToTraceItem(row, row.total_amount, 'Invoice total')),
+        entries.map((row) => mapEntryToTraceItem(row, row.amount_total, 'Entry total')),
 
-        invoiceKpi.count
+        entries.length
 
-          ? `${invoiceKpi.count} invoice${invoiceKpi.count === 1 ? '' : 's'} in scope.`
+          ? `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} in scope (Sales and Other).`
 
           : '',
 
-        'invoices',
+        'entries',
 
       ),
 
-      confirmation: `Total invoice value is ${formatMoney(invoiceKpi.total)} across ${invoiceKpi.count ?? 0} invoices.`,
+      confirmation: `Total is ${formatMoney(entryTotal)} across ${entries.length} revenue entr${entries.length === 1 ? 'y' : 'ies'} (Sales and Other).`,
 
       context,
 

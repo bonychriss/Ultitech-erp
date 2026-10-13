@@ -237,7 +237,9 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
               key={`po-${po.id}`}
               iconClass="fa-file-invoice"
               name={`${po.poNumber}.pdf`}
-              sub="Purchase Order"
+              sub={po.createdBy
+                ? `Purchase Order · Created by ${po.createdBy}`
+                : 'Purchase Order'}
               viewHref={po.viewLink}
               downloadHref={po.viewLink}
               previewUrl={po.viewLink}

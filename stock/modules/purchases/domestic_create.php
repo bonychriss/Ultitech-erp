@@ -1089,18 +1089,24 @@ if (!$isPoClassificationEdit && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!empty($payment_voucher_ids)) {
-                $pvCols2 = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-                if (in_array('linked_stock_po_id', $pvCols2, true)) {
-                    $linkStmt = $pdo->prepare('
-                        UPDATE payment_vouchers
-                        SET linked_stock_po_id = ?
-                        WHERE id = ?
-                          AND (linked_stock_po_id IS NULL OR linked_stock_po_id = 0)
-                    ');
+                if (function_exists('appendStockPoIdToPaymentVoucherLinks')) {
                     foreach ($payment_voucher_ids as $pvLinkId) {
-                        $linkStmt->execute([$purchase_id, $pvLinkId]);
-                        if ($linkStmt->rowCount() !== 1) {
-                            throw new RuntimeException(stockPurchasePoPaymentVoucherLinkErrorMessage());
+                        appendStockPoIdToPaymentVoucherLinks($pdo, (int) $pvLinkId, (int) $purchase_id);
+                    }
+                } else {
+                    $pvCols2 = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                    if (in_array('linked_stock_po_id', $pvCols2, true)) {
+                        $linkStmt = $pdo->prepare('
+                            UPDATE payment_vouchers
+                            SET linked_stock_po_id = ?
+                            WHERE id = ?
+                              AND (linked_stock_po_id IS NULL OR linked_stock_po_id = 0)
+                        ');
+                        foreach ($payment_voucher_ids as $pvLinkId) {
+                            $linkStmt->execute([$purchase_id, $pvLinkId]);
+                            if ($linkStmt->rowCount() !== 1) {
+                                throw new RuntimeException(stockPurchasePoPaymentVoucherLinkErrorMessage());
+                            }
                         }
                     }
                 }

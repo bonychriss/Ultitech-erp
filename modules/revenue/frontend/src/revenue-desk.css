@@ -1,7 +1,14 @@
-.rev-desk-page {
+/* Also on body + portaled panels — filter modal is rendered outside .rev-desk-page. */
+body.page-rev-desk,
+.rev-desk-page,
+.rev-desk-filters-panel,
+.rev-desk-filters-backdrop {
   --rev-accent: #d97706;
   --rev-accent-soft: #fff7ed;
   --rev-desk-radius-kpi: 14px;
+}
+
+.rev-desk-page {
   container-type: inline-size;
   container-name: rev-desk;
   display: flex;
@@ -251,15 +258,30 @@
 }
 
 .rev-desk-btn-primary {
-  background: var(--rev-accent);
+  background: #d97706 !important;
   color: #fff !important;
-  border-color: var(--rev-accent);
+  border-color: #d97706 !important;
+  border-radius: 10px !important;
 }
 
 .rev-desk-btn-primary:hover {
-  background: #b45309;
-  border-color: #b45309;
+  background: #b45309 !important;
+  border-color: #b45309 !important;
   color: #fff !important;
+}
+
+/* Portaled filter panel — beat host button/input resets that square corners */
+.rev-desk-filters-panel .rev-desk-btn {
+  border-radius: 10px !important;
+}
+
+.rev-desk-filters-panel .rev-desk-field select,
+.rev-desk-filters-panel .rev-desk-field input[type="date"] {
+  border-radius: 8px !important;
+}
+
+.rev-desk-filters-panel .rev-desk-date-preset {
+  border-radius: 9999px !important;
 }
 
 .rev-desk-btn-secondary {
@@ -2260,6 +2282,24 @@ body.page-rev-desk .rev-desk-page button.rev-desk-row-menu-btn {
 .rev-kpi-trace-date {
   font-size: 0.72rem;
   color: #64748b;
+}
+
+.rev-kpi-trace-days-overdue {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #b45309;
+}
+
+.rev-kpi-trace-days-remaining {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #0f766e;
+}
+
+.rev-kpi-trace-days-remaining.is-overdue {
+  color: #b45309;
 }
 
 .rev-kpi-trace-amt {

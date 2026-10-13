@@ -77,6 +77,17 @@ export default function RevenueKpiTraceModal({ trace, traceKey, onClose }) {
   }, [onClose]);
 
   const contributionTotal = items.reduce((sum, item) => sum + (Number(item.contribution) || 0), 0);
+  const showDaysOverdue = traceKey === 'overdueInvoices';
+  const showDaysRemaining = traceKey === 'outstandingInvoices';
+  const labelColSpan = (showDaysOverdue || showDaysRemaining) ? 5 : 4;
+
+  function formatDaysRemaining(value) {
+    if (value == null || Number.isNaN(Number(value))) return '-';
+    const days = Number(value);
+    if (days < 0) return `Overdue ${Math.abs(days)}`;
+    if (days === 0) return 'Due today';
+    return `${days}`;
+  }
 
   return createPortal(
     <div className="rev-kpi-trace-backdrop" onClick={onClose} role="presentation">
@@ -136,6 +147,8 @@ export default function RevenueKpiTraceModal({ trace, traceKey, onClose }) {
                       <th>Customer</th>
                       <th>Type</th>
                       <th>Status</th>
+                      {showDaysOverdue ? <th>Days Overdue</th> : null}
+                      {showDaysRemaining ? <th>Days Remaining</th> : null}
                       <th>Contribution</th>
                     </tr>
                   </thead>
@@ -153,13 +166,23 @@ export default function RevenueKpiTraceModal({ trace, traceKey, onClose }) {
                         <td>{cellText(item.customer)}</td>
                         <td>{cellText(item.type)}</td>
                         <td>{cellText(item.status)}</td>
+                        {showDaysOverdue ? (
+                          <td className="rev-kpi-trace-days-overdue">
+                            {item.daysOverdue != null ? `${item.daysOverdue}` : '-'}
+                          </td>
+                        ) : null}
+                        {showDaysRemaining ? (
+                          <td className={`rev-kpi-trace-days-remaining${item.daysRemaining != null && item.daysRemaining < 0 ? ' is-overdue' : ''}`}>
+                            {formatDaysRemaining(item.daysRemaining)}
+                          </td>
+                        ) : null}
                         <td className="rev-kpi-trace-amt">{formatCurrency(item.contribution)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr className="rev-kpi-trace-total-row">
-                      <td colSpan={4} className="rev-kpi-trace-total-label">
+                      <td colSpan={labelColSpan} className="rev-kpi-trace-total-label">
                         Total{items.length > 100 ? ` (first 100 of ${items.length})` : ''}
                       </td>
                       <td className="rev-kpi-trace-amt rev-kpi-trace-total-amt">

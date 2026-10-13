@@ -560,6 +560,28 @@ function poViewLoadContext(int $id): array
     } catch (Throwable $e) {
     }
 
+    // Real PO creator (not the person currently viewing / signing the sheet).
+    $createdByName = '';
+    $createdById = (int) ($po['created_by'] ?? 0);
+    if ($createdById > 0) {
+        try {
+            $stmtCreator = $pdo->prepare('SELECT full_name, username FROM users WHERE id = ? LIMIT 1');
+            $stmtCreator->execute([$createdById]);
+            $creator = $stmtCreator->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($creator) {
+                $createdByName = trim((string) ($creator['full_name'] ?? ''));
+                if ($createdByName === '') {
+                    $createdByName = trim((string) ($creator['username'] ?? ''));
+                }
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    if ($createdByName === '' && $createdById > 0) {
+        $createdByName = 'User #' . $createdById;
+    }
+    $po['created_by_name'] = $createdByName;
+
     $companyLogoUrl = function_exists('getCompanyLogoUrl')
         ? (string) getCompanyLogoUrl($poCompanyId > 0 ? $poCompanyId : null)
         : '';
@@ -675,6 +697,9 @@ function poViewLoadContext(int $id): array
             'contact_person' => (string) ($po['contact_person'] ?? ''),
             'currency' => $poCurrencyCode,
             'total_amount' => (float) ($po['total_amount'] ?? 0),
+            'created_by' => $createdById,
+            'created_by_name' => $createdByName,
+            'created_at' => (string) ($po['created_at'] ?? ''),
         ],
         'pipeline' => poViewBuildPipeline($status, $workflow),
         'share' => $share,

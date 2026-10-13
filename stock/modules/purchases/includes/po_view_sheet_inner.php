@@ -90,6 +90,10 @@ $resolveImage = static function (array $item): string {
                     <div style="font-size: 0.78rem;"><?= date('d/m/Y', strtotime((string) ($po['created_at'] ?? 'now'))) ?></div>
                 </div>
                 <div style="flex: 1; padding: 4px 8px; border-right: 1px solid #ccc;">
+                    <div style="font-weight: bold; font-size: 0.72rem;">Created By</div>
+                    <div style="font-size: 0.78rem;"><?= htmlspecialchars(trim((string) ($po['created_by_name'] ?? '')) !== '' ? (string) $po['created_by_name'] : '—') ?></div>
+                </div>
+                <div style="flex: 1; padding: 4px 8px; border-right: 1px solid #ccc;">
                     <div style="font-weight: bold; font-size: 0.72rem;">Payment Terms</div>
                     <div style="font-size: 0.78rem;"><?= htmlspecialchars((string) ($company['default_payment_terms'] ?? 'Net 30')) ?></div>
                 </div>

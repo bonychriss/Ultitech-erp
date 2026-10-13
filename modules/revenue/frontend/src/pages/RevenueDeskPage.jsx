@@ -429,13 +429,6 @@ export default function RevenueDeskPage() {
     }
   }
 
-  function openKpiTrace(key) {
-    const trace = resolveKpiTrace(key, init, desk, filters);
-    if (trace) {
-      setActiveKpiTrace({ key, trace });
-    }
-  }
-
   async function reloadDesk(currentFilters = filters) {
     const listData = await fetchDeskEntries(currentFilters);
     setDesk(listData);
@@ -1061,6 +1054,7 @@ export default function RevenueDeskPage() {
   const viewSummary = useMemo(() => {
     let sumNet = 0;
     let sumVat = 0;
+    let sumTotal = 0;
     let invoiceTotal = 0;
     let invoiceCount = 0;
     let outstanding = 0;
@@ -1069,17 +1063,20 @@ export default function RevenueDeskPage() {
     today.setHours(0, 0, 0, 0);
 
     visibleEntries.forEach((row) => {
+      const amountTotal = Number(row.amount_total) || 0;
       sumNet += Number(row.amount_exclusive) || 0;
       sumVat += Number(row.vat_amount) || 0;
+      sumTotal += amountTotal;
+      // Total Invoices includes Sales and Other (and any other types in view).
+      invoiceTotal += amountTotal;
+      invoiceCount += 1;
       const bal = Number(row.balance_due) || 0;
       const isInvoice = Boolean(
         Number(row.source_invoice_id) > 0 || String(row.linked_invoice_number || '').trim(),
       );
-      if (isInvoice) {
-        invoiceTotal += Number(row.amount_total) || 0;
-        invoiceCount += 1;
-        if (bal > 0.009) {
-          outstanding += bal;
+      if (bal > 0.009) {
+        outstanding += bal;
+        if (isInvoice) {
           const due = String(row.due_date || '').trim();
           if (due) {
             const dueDate = new Date(due.includes('T') ? due : `${due}T12:00:00`);
@@ -1087,16 +1084,14 @@ export default function RevenueDeskPage() {
             if (dueDate < today) overdue += bal;
           }
         }
-      } else if (bal > 0.009) {
-        // Manual ("Other") entries still count toward outstanding when unpaid.
-        outstanding += bal;
       }
     });
 
-    const pctBase = invoiceTotal > 0.009 ? invoiceTotal : (sumNet + sumVat);
+    const pctBase = invoiceTotal > 0.009 ? invoiceTotal : sumTotal;
     return {
       sum_net: sumNet,
       sum_vat: sumVat,
+      sum_total: sumTotal,
       invoice_total: invoiceTotal,
       invoice_count: invoiceCount,
       outstanding,
@@ -1127,6 +1122,7 @@ export default function RevenueDeskPage() {
     ...(desk?.kpi ?? {}),
     sum_net: viewSummary.sum_net,
     sum_vat: viewSummary.sum_vat,
+    sum_total: viewSummary.sum_total,
   };
   const invoiceKpi = {
     ...(desk?.invoice_kpi ?? {}),
@@ -1137,6 +1133,14 @@ export default function RevenueDeskPage() {
     pct_outstanding: viewSummary.pct_outstanding,
     pct_overdue: viewSummary.pct_overdue,
   };
+
+  function openKpiTrace(key) {
+    const trace = resolveKpiTrace(key, init, desk, filters);
+    if (trace) {
+      setActiveKpiTrace({ key, trace });
+    }
+  }
+
   const customers = init?.customers ?? [];
   const paymentModes = init?.payment_modes ?? [];
   const statusOptions = init?.status_options ?? [];
@@ -1263,11 +1267,19 @@ export default function RevenueDeskPage() {
           onClick={() => openKpiTrace('totalVat')}
         />
         <KpiCard
+          icon={Wallet}
+          iconTone="green"
+          label="Gross Total"
+          value={formatCurrency(kpi.sum_total)}
+          foot="After tax"
+          onClick={() => openKpiTrace('totalInclTax')}
+        />
+        <KpiCard
           icon={FileText}
           iconTone="blue"
           label="Total Invoices"
           value={formatCurrency(invoiceKpi.total)}
-          foot={invoiceKpi.count ? `${invoiceKpi.count.toLocaleString('en-US')} in view` : 'All invoices in view'}
+          foot={invoiceKpi.count ? `${invoiceKpi.count.toLocaleString('en-US')} in view` : 'All entries in view'}
           onClick={() => openKpiTrace('totalInvoices')}
         />
         <KpiCard

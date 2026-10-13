@@ -66,21 +66,20 @@ $isEmbed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
         body {
             padding: 20px 16px 32px;
         }
-        html.po-embed,
-        html.po-embed body {
-            overflow: hidden !important;
+        /* Embed (create/edit voucher PO picker): allow vertical scroll inside the iframe */
+        html.po-embed {
+            height: 100%;
+            overflow: hidden;
             background: #fff;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-        html.po-embed::-webkit-scrollbar,
-        html.po-embed body::-webkit-scrollbar {
-            display: none;
-            width: 0;
-            height: 0;
         }
         html.po-embed body {
+            height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+            background: #fff;
             padding: 8px;
+            box-sizing: border-box;
         }
         html.po-embed .sheet-container {
             box-shadow: none;

@@ -150,6 +150,7 @@ function ensureRevenueSourceInvoiceSchema($pdo)
 
 /**
  * Next voucher number (shared with revenue_process.php).
+ * Format: REV-{year}-{Mon}-{n} — monthly sequence, no leading zeros (1, 2, …).
  */
 function generateRevenueVoucherNumber(PDO $pdo): string
 {
@@ -168,7 +169,7 @@ function generateRevenueVoucherNumber(PDO $pdo): string
         $num = 1;
     }
 
-    return $prefix . str_pad((string) $num, 3, '0', STR_PAD_LEFT);
+    return $prefix . (string) max(1, $num);
 }
 
 /**

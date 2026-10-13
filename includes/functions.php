@@ -12210,13 +12210,18 @@ function updateStockPurchasePoClassification(PDO $pdo, int $companyId, int $poId
             ? $pvPdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: []
             : [];
         if (in_array('linked_stock_po_id', $pvCols, true)) {
+            // Detach this PO from any voucher that still points at it as primary.
             $pvPdo->prepare('UPDATE payment_vouchers SET linked_stock_po_id = NULL WHERE linked_stock_po_id = ?')
                 ->execute([$poId]);
-            if (!empty($voucherIds)) {
-                $linkStmt = $pvPdo->prepare('UPDATE payment_vouchers SET linked_stock_po_id = ? WHERE id = ?');
-                foreach ($voucherIds as $pvLinkId) {
-                    $linkStmt->execute([$poId, $pvLinkId]);
-                }
+        }
+        if (!empty($voucherIds) && function_exists('appendStockPoIdToPaymentVoucherLinks')) {
+            foreach ($voucherIds as $pvLinkId) {
+                appendStockPoIdToPaymentVoucherLinks($pvPdo, (int) $pvLinkId, $poId);
+            }
+        } elseif (!empty($voucherIds) && in_array('linked_stock_po_id', $pvCols, true)) {
+            $linkStmt = $pvPdo->prepare('UPDATE payment_vouchers SET linked_stock_po_id = ? WHERE id = ?');
+            foreach ($voucherIds as $pvLinkId) {
+                $linkStmt->execute([$poId, $pvLinkId]);
             }
         }
 
@@ -13167,6 +13172,59 @@ function parseLinkedStockPoIdsFromVoucher(array $voucher): array
         }
     }
     return array_values($linkedIds);
+}
+
+/**
+ * Append a stock PO id onto payment_vouchers.linked_stock_po_id(s) without
+ * wiping other POs already linked on that voucher.
+ */
+function appendStockPoIdToPaymentVoucherLinks(PDO $pdo, int $voucherId, int $poId): void
+{
+    if ($voucherId <= 0 || $poId <= 0 || !tableExists('payment_vouchers', $pdo)) {
+        return;
+    }
+    $pvCols = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    if (!in_array('linked_stock_po_id', $pvCols, true) && !in_array('linked_stock_po_ids', $pvCols, true)) {
+        return;
+    }
+
+    $select = ['id'];
+    if (in_array('linked_stock_po_id', $pvCols, true)) {
+        $select[] = 'linked_stock_po_id';
+    }
+    if (in_array('linked_stock_po_ids', $pvCols, true)) {
+        $select[] = 'linked_stock_po_ids';
+    }
+    $st = $pdo->prepare('SELECT ' . implode(', ', $select) . ' FROM payment_vouchers WHERE id = ? LIMIT 1');
+    $st->execute([$voucherId]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$row) {
+        return;
+    }
+
+    $ids = parseLinkedStockPoIdsFromVoucher($row);
+    $map = [];
+    foreach ($ids as $existingId) {
+        $map[(int) $existingId] = (int) $existingId;
+    }
+    $map[$poId] = $poId;
+    $merged = array_values($map);
+
+    $sets = [];
+    $vals = [];
+    if (in_array('linked_stock_po_id', $pvCols, true)) {
+        $sets[] = 'linked_stock_po_id = ?';
+        $vals[] = (int) $merged[0];
+    }
+    if (in_array('linked_stock_po_ids', $pvCols, true)) {
+        $sets[] = 'linked_stock_po_ids = ?';
+        $vals[] = json_encode($merged);
+    }
+    if ($sets === []) {
+        return;
+    }
+    $vals[] = $voucherId;
+    $pdo->prepare('UPDATE payment_vouchers SET ' . implode(', ', $sets) . ' WHERE id = ?')->execute($vals);
 }
 
 /**

@@ -1,0 +1,27 @@
+---
+description: Voucher Supporting Documents must never auto-pull unlinked docs
+globs: view-voucher-ui/**/*.{php,jsx,js},employee/**/create-voucher*.{php,jsx},employee/**/edit-voucher.php,employee/**/view-voucher.php
+alwaysApply: false
+---
+
+# Voucher Supporting Documents — allowlist only
+
+Never auto-pull a document onto a payment voucher’s Supporting Documents unless it was explicitly allowed on that voucher.
+
+## Allowed sources only
+
+1. **Uploads** for `voucher_id` (real attachment rows / files)
+2. **Purchase orders** listed on the voucher: `linked_stock_po_ids` and/or `linked_stock_po_id`
+3. **Sales orders** listed on the voucher: `linked_sales_order_ids` and/or `linked_sales_order_id`
+4. **SWIFT / other proofs** only when stored on that voucher record
+
+## Forbidden
+
+- Reverse queries such as `stocks_purchase_orders.payment_voucher_id = :voucherId` (or JSON `payment_voucher_ids` scans) to invent PO cards the preparer did not link
+- Inferring docs from supplier, payee name, amount, date, or related SO/PO tables
+- Showing another voucher’s attachments
+
+## Implementation
+
+- Use `vv_allowed_stock_po_ids()` / `vv_allowed_sales_order_ids()` in [`view-voucher-ui/load-data.php`](view-voucher-ui/load-data.php)
+- Linking a PO to a voucher from procurement must update the voucher allowlist columns (e.g. `appendStockPoIdToPaymentVoucherLinks`) — display must still read only those columns

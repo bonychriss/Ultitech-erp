@@ -8,6 +8,8 @@ import { CFG } from '../config.js'
 import { aiSearchDeliveries } from '../api/myDeliveries.js'
 import DeliveryKpiTraceModal from '../components/DeliveryKpiTraceModal.jsx'
 import CreateDeliveryModal from '../components/CreateDeliveryModal.jsx'
+import ChooseTransportTaskModal from '../components/ChooseTransportTaskModal.jsx'
+import CreateGoodsCollectionModal from '../components/CreateGoodsCollectionModal.jsx'
 import { resolveKpiTrace } from '../utils/kpiTrace.js'
 import { resolveDeliveryType, typePill } from '../utils/deliveryType.js'
 
@@ -264,7 +266,9 @@ function DeliveriesDashboardPageInner() {
     return Number(fromRestore || fromUrl || fromStore || 0) || 0
   })
   const [searchOpen, setSearchOpen] = useState(false)
+  const [chooserOpen, setChooserOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+  const [collectionOpen, setCollectionOpen] = useState(false)
   const [headerSearchMount, setHeaderSearchMount] = useState(null)
   const [headerActionsMount, setHeaderActionsMount] = useState(null)
   const [wideLayout, setWideLayout] = useState(() => (
@@ -872,16 +876,16 @@ function DeliveriesDashboardPageInner() {
         <a
           href={urls.createDelivery || 'create_delivery.php'}
           className="dlv-btn dlv-btn--primary dlv-btn--create"
-          aria-label="New delivery"
+          aria-label="New transport task"
           onClick={(e) => {
             if (CFG.createInitUrl || CFG.createSubmitUrl) {
               e.preventDefault()
-              setCreateOpen(true)
+              setChooserOpen(true)
             }
           }}
         >
           <Plus size={22} aria-hidden="true" />
-          <span className="dlv-btn-label-desktop">New Delivery</span>
+          <span className="dlv-btn-label-desktop">New Transport Task</span>
           <span className="dlv-btn-label-mobile">New</span>
         </a>
       </>
@@ -959,7 +963,17 @@ function DeliveriesDashboardPageInner() {
 
   return (
     <div className="dlv-page">
+      <ChooseTransportTaskModal
+        open={chooserOpen}
+        onClose={() => setChooserOpen(false)}
+        onSelect={(kind) => {
+          setChooserOpen(false)
+          if (kind === 'goods_collection') setCollectionOpen(true)
+          else setCreateOpen(true)
+        }}
+      />
       <CreateDeliveryModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreateGoodsCollectionModal open={collectionOpen} onClose={() => setCollectionOpen(false)} />
       {activeKpiTrace && (
         <DeliveryKpiTraceModal
           trace={activeKpiTrace}

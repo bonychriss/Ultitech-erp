@@ -48,6 +48,7 @@ $dlvConfig = [
     'uploadEvidenceUrl' => $assets['uploadEvidenceUrl'],
     'checkSignatureUrl' => $assets['checkSignatureUrl'],
     'submitClientSignatureUrl' => $assets['submitClientSignatureUrl'],
+    'confirmCollectionReceiveUrl' => $assets['confirmCollectionReceiveUrl'],
     'orderId' => (int) ($initData['order']['id'] ?? 0),
     'data' => $initData,
 ];

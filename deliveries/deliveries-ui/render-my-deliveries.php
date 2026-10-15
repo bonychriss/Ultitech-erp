@@ -35,6 +35,8 @@ $dlvConfig = [
     'page' => 'my-deliveries',
     'myDeliveriesInitUrl' => $assets['myDeliveriesInitUrl'],
     'aiSearchUrl' => $assets['aiSearchUrl'],
+    'createInitUrl' => $assets['createInitUrl'],
+    'createSubmitUrl' => $assets['createSubmitUrl'],
     'data' => $initData,
 ];
 
@@ -47,7 +49,7 @@ $createDeliveryUrl = (string) ($initData['urls']['createDelivery'] ?? deliveries
 $employeeHeaderRightHtml = '<a href="' . htmlspecialchars($createDeliveryUrl, ENT_QUOTES, 'UTF-8') . '" class="dlv-header-create-btn">'
     . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">'
     . '<path d="M12 5v14M5 12h14"/></svg>'
-    . '<span>New Delivery</span></a>';
+    . '<span>New Transport Task</span></a>';
 $GLOBALS['_erp_header_style_linked'] = false;
 ?>
 <!DOCTYPE html>

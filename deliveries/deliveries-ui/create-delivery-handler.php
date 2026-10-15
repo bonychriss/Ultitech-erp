@@ -42,8 +42,16 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
     $packageWeight = trim((string) ($input['package_weight'] ?? ''));
     $description = trim((string) ($input['description'] ?? ''));
     $deliveryNoteId = !empty($input['delivery_note_id']) ? (int) $input['delivery_note_id'] : null;
+    $vehicleId = trim((string) ($input['vehicle_id'] ?? ''));
+    $expectedQtyRaw = trim((string) ($input['expected_quantity'] ?? ''));
     $requestKindRaw = strtolower(trim((string) ($input['request_kind'] ?? 'delivery')));
-    $requestKind = $requestKindRaw === 'client_visit' ? 'client_visit' : 'delivery';
+    if ($requestKindRaw === 'client_visit') {
+        $requestKind = 'client_visit';
+    } elseif ($requestKindRaw === 'goods_collection') {
+        $requestKind = 'goods_collection';
+    } else {
+        $requestKind = 'delivery';
+    }
 
     $visitEmployees = [];
     if ($requestKind === 'client_visit') {
@@ -80,16 +88,45 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
         }
     }
 
-    $driverId = $userId;
-    if ($driverId <= 0) {
+    if ($userId <= 0) {
         return ['ok' => false, 'error' => 'You must be logged in to create a delivery.'];
+    }
+
+    $driverId = (int) ($input['driver_id'] ?? 0);
+    if ($driverId <= 0) {
+        $driverId = $userId;
     }
 
     if ($requestKind === 'client_visit' && $visitEmployees === []) {
         return ['ok' => false, 'error' => 'Please select at least one employee who asked for this client visit.'];
     }
 
-    if ($clientName === '' || $destination === '') {
+    $expectedQty = null;
+    if ($requestKind === 'goods_collection') {
+        if ($clientName === '') {
+            return ['ok' => false, 'error' => 'Please enter the supplier / source name.'];
+        }
+        if ($pickup === '') {
+            return ['ok' => false, 'error' => 'Please enter the collection address.'];
+        }
+        if ($description === '') {
+            return ['ok' => false, 'error' => 'Please describe the goods to collect.'];
+        }
+        if ($expectedQtyRaw === '' || !is_numeric($expectedQtyRaw) || (float) $expectedQtyRaw <= 0) {
+            return ['ok' => false, 'error' => 'Please enter a valid expected quantity.'];
+        }
+        if ($deadline === '') {
+            return ['ok' => false, 'error' => 'Please set the collection date.'];
+        }
+        if ($destination === '') {
+            $destination = 'Office / Store';
+        }
+        $expectedQty = (float) $expectedQtyRaw;
+        // Store expected qty on package_weight for list/detail visibility (existing column).
+        if ($packageWeight === '') {
+            $packageWeight = rtrim(rtrim(number_format($expectedQty, 3, '.', ''), '0'), '.');
+        }
+    } elseif ($clientName === '' || $destination === '') {
         return ['ok' => false, 'error' => 'Please fill in all required fields (Client, Destination).'];
     }
 
@@ -147,9 +184,9 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
     try {
         $tripRef = 'TRIP-' . date('Ymd') . '-' . rand(100, 999);
         $stmtTrip = $pdo->prepare(
-            "INSERT INTO delivery_trips (trip_ref, driver_id, status, created_at) VALUES (?, ?, 'planned', NOW())"
+            "INSERT INTO delivery_trips (trip_ref, vehicle_id, driver_id, status, created_at) VALUES (?, ?, ?, 'planned', NOW())"
         );
-        $stmtTrip->execute([$tripRef, $driverId]);
+        $stmtTrip->execute([$tripRef, $vehicleId !== '' ? $vehicleId : null, $driverId]);
         $newTripId = (int) $pdo->lastInsertId();
 
         if ($deliveryNoteId) {
@@ -195,6 +232,16 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
 
         $orderId = (int) $pdo->lastInsertId();
 
+        if ($requestKind === 'goods_collection' && $expectedQty !== null) {
+            $qtyOrdered = (int) max(1, (int) round($expectedQty));
+            $itemName = $description !== '' ? substr($description, 0, 255) : 'Goods collection';
+            $stmtItem = $pdo->prepare(
+                'INSERT INTO delivery_items (delivery_order_id, item_name, quantity_ordered, quantity_delivered, status)
+                 VALUES (?, ?, ?, 0, \'pending\')'
+            );
+            $stmtItem->execute([$orderId, $itemName, $qtyOrdered]);
+        }
+
         if ($salesInvoiceId > 0 || $invoiceRef !== '') {
             $orderRow = $pdo->prepare('SELECT * FROM delivery_orders WHERE id = ?');
             $orderRow->execute([$orderId]);
@@ -205,7 +252,8 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
         }
 
         $dispatchResult = null;
-        $shouldCreateDispatch = $requestKind !== 'client_visit' && $salesInvoiceId <= 0 && $invoiceRef === '';
+        // Outbound dispatch notes only for customer deliveries (not visits or inbound collections).
+        $shouldCreateDispatch = $requestKind === 'delivery' && $salesInvoiceId <= 0 && $invoiceRef === '';
         if ($shouldCreateDispatch && function_exists('dispatch_create_note_from_delivery')) {
             $dispatchResult = dispatch_create_note_from_delivery($pdo, [
                 'pickup' => $pickup,
@@ -242,8 +290,20 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
         if (function_exists('app_url') && strpos($driverViewUrl, 'http') !== 0) {
             $driverViewUrl = app_url('/' . ltrim(str_replace('\\', '/', $driverViewUrl), '/'));
         }
-        $msg = "New Delivery Order #$orderId\nFrom: " . ($pickup !== '' ? $pickup : 'Not specified') . "\nTo: $clientName ($destination)\nDeadline: $deadline\n\nPlease accept or reject here: $driverViewUrl";
+        if ($requestKind === 'goods_collection') {
+            $msg = "New Goods Collection #$orderId\nCollect from: $clientName\nAddress: " . ($pickup !== '' ? $pickup : 'Not specified')
+                . "\nBring to: $destination\nDate: $deadline\n\nOpen task: $driverViewUrl";
+        } else {
+            $msg = "New Delivery Order #$orderId\nFrom: " . ($pickup !== '' ? $pickup : 'Not specified') . "\nTo: $clientName ($destination)\nDeadline: $deadline\n\nPlease accept or reject here: $driverViewUrl";
+        }
         $whatsappUrl = 'https://wa.me/' . $phone . '?text=' . rawurlencode($msg);
+    }
+
+    $successMsg = "Delivery request #$orderId sent successfully!";
+    if ($requestKind === 'goods_collection') {
+        $successMsg = "Goods collection #$orderId created successfully!";
+    } elseif ($dispatchResult) {
+        $successMsg = 'Delivery #' . $orderId . ' and dispatch ' . ($dispatchResult['dispatchNumber'] ?? '') . ' created successfully!';
     }
 
     return [
@@ -251,12 +311,11 @@ function deliveries_process_create_request(PDO $pdo, array $input, array $files,
         'data' => [
             'orderId' => $orderId,
             'tripRef' => $tripRef,
-            'message' => $dispatchResult
-                ? ('Delivery #' . $orderId . ' and dispatch ' . ($dispatchResult['dispatchNumber'] ?? '') . ' created successfully!')
-                : "Delivery request #$orderId sent successfully!",
+            'message' => $successMsg,
             'whatsappUrl' => $whatsappUrl,
             'dispatchId' => $dispatchResult['dispatchId'] ?? null,
             'dispatchNumber' => $dispatchResult['dispatchNumber'] ?? null,
+            'requestKind' => $requestKind,
         ],
     ];
 }

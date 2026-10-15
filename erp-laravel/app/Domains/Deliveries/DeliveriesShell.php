@@ -452,6 +452,7 @@ final class DeliveriesShell
                 'uploadEvidenceUrl' => $assets['uploadEvidenceUrl'] ?? '',
                 'checkSignatureUrl' => $assets['checkSignatureUrl'] ?? '',
                 'submitClientSignatureUrl' => $assets['submitClientSignatureUrl'] ?? '',
+                'confirmCollectionReceiveUrl' => $assets['confirmCollectionReceiveUrl'] ?? '',
                 'orderId' => $resolvedOrderId,
                 'data' => $data,
             ],
@@ -682,6 +683,9 @@ final class DeliveriesShell
             'submitClientSignatureUrl' => function_exists('app_url')
                 ? app_url('/deliveries/deliveries-ui/api/submit-client-signature.php')
                 : '/public_html/deliveries/deliveries-ui/api/submit-client-signature.php',
+            'confirmCollectionReceiveUrl' => function_exists('app_url')
+                ? app_url('/deliveries/deliveries-ui/api/confirm-collection-receive.php')
+                : '/public_html/deliveries/deliveries-ui/api/confirm-collection-receive.php',
             'deliveryNotesInitUrl' => function_exists('app_url')
                 ? app_url('/deliveries/deliveries-ui/api/delivery-notes-init.php')
                 : '/public_html/deliveries/deliveries-ui/api/delivery-notes-init.php',

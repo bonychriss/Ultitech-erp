@@ -5,17 +5,18 @@ import {
 } from 'lucide-react'
 import { CFG } from '../config.js'
 import ClientSignatureSection from '../components/ClientSignatureSection.jsx'
+import CollectionReceiveSection from '../components/CollectionReceiveSection.jsx'
 import OrderDocumentsSection from '../components/OrderDocumentsSection.jsx'
 
-const BASE_SECTIONS = [
-  { id: 'od-delivery', label: 'Delivery' },
-  { id: 'od-documents', label: 'Documents' },
-  { id: 'od-signature', label: 'Client signature' },
-]
-
-function statusLabel(status) {
+function statusLabel(status, isCollection = false) {
   const s = String(status || '').toLowerCase()
   if (!s) return 'Unknown'
+  if (isCollection) {
+    if (s === 'request_pending') return 'Pending assignment'
+    if (s === 'accepted' || s === 'pending') return 'Assigned'
+    if (s === 'loading' || s === 'in_transit') return 'Collecting'
+    if (s === 'delivered' || s === 'completed') return 'Received at office'
+  }
   return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
@@ -33,19 +34,25 @@ export default function OrderDetailsPage() {
   const [data, setData] = useState(initial)
   const [loading, setLoading] = useState(!initial.order)
   const [flash, setFlash] = useState(initial.flash || null)
-  const [activeSection, setActiveSection] = useState(BASE_SECTIONS[0].id)
+  const [activeSection, setActiveSection] = useState('od-delivery')
 
   const order = data.order || {}
   const documents = data.documents || {}
+  const collection = data.collection || null
   const urls = data.urls || {}
   const orderId = CFG.orderId || order.id
+  const isGoodsCollection = String(order.request_kind || '').toLowerCase() === 'goods_collection'
+    || String(order.delivery_type || '').toLowerCase() === 'goods collection'
 
   const showDocumentsSection = documents.hasDocuments
     || !!(order.invoice_ref || order.sales_invoice_id)
-  const sections = BASE_SECTIONS.filter((s) => {
-    if (s.id === 'od-documents' && !showDocumentsSection) return false
-    return true
-  })
+
+  const sections = [
+    { id: 'od-delivery', label: isGoodsCollection ? 'Collection' : 'Delivery' },
+    ...(isGoodsCollection ? [{ id: 'od-receive', label: 'Receive' }] : []),
+    ...(showDocumentsSection ? [{ id: 'od-documents', label: 'Documents' }] : []),
+    ...(!isGoodsCollection ? [{ id: 'od-signature', label: 'Client signature' }] : []),
+  ]
 
   useEffect(() => {
     if (initial.order) return undefined
@@ -102,6 +109,15 @@ export default function OrderDetailsPage() {
     setFlash({ type: 'success', message: 'Client signature received.' })
   }
 
+  function handleCollectionReceived(updatedOrder, updatedCollection, message) {
+    setData((prev) => ({
+      ...prev,
+      order: { ...prev.order, ...(updatedOrder || {}), isDriverAccomplished: true },
+      collection: updatedCollection || { ...prev.collection, received: true },
+    }))
+    setFlash({ type: 'success', message: message || 'Received quantity confirmed.' })
+  }
+
   if (loading && !data.order) {
     return (
       <div className="cv-shell">
@@ -134,7 +150,9 @@ export default function OrderDetailsPage() {
     )
   }
 
-  const title = order.invoice_ref ? `Order ${order.invoice_ref}` : `Order #${order.id}`
+  const title = order.invoice_ref
+    ? `Order ${order.invoice_ref}`
+    : (isGoodsCollection ? `Collection #${order.id}` : `Order #${order.id}`)
 
   return (
     <div className="cv-shell cv-shell--order-details">
@@ -178,39 +196,49 @@ export default function OrderDetailsPage() {
         <div className="cv-main">
           <section id="od-delivery" className="cv-section">
             <header className="cv-section-head">
-              <h2>Delivery information</h2>
+              <h2>{isGoodsCollection ? 'Collection information' : 'Delivery information'}</h2>
               <p>
-                Trip: {order.trip_ref || 'Unassigned'} &bull; {order.driver_name || 'No driver'} &bull; {statusLabel(order.status)}
+                Trip: {order.trip_ref || 'Unassigned'} &bull; {order.driver_name || 'No driver'} &bull;{' '}
+                {statusLabel(order.status, isGoodsCollection)}
               </p>
             </header>
 
             <div className="cv-info-grid">
               <div className="cv-info-item">
-                <span className="cv-label">Client name</span>
+                <span className="cv-label">{isGoodsCollection ? 'Supplier / source' : 'Client name'}</span>
                 <div className="cv-value">{order.client_name || '-'}</div>
               </div>
+              {!isGoodsCollection ? (
+                <div className="cv-info-item">
+                  <span className="cv-label">Client phone</span>
+                  <div className="cv-value">{order.client_phone || '-'}</div>
+                </div>
+              ) : (
+                <div className="cv-info-item">
+                  <span className="cv-label">Collection date</span>
+                  <div className="cv-value">{order.delivery_deadline || '-'}</div>
+                </div>
+              )}
               <div className="cv-info-item">
-                <span className="cv-label">Client phone</span>
-                <div className="cv-value">{order.client_phone || '-'}</div>
-              </div>
-              <div className="cv-info-item">
-                <span className="cv-label">From</span>
+                <span className="cv-label">{isGoodsCollection ? 'Collect from' : 'From'}</span>
                 <div className="cv-value">{order.pickup_location || '-'}</div>
               </div>
               <div className="cv-info-item">
-                <span className="cv-label">To</span>
+                <span className="cv-label">{isGoodsCollection ? 'Bring to' : 'To'}</span>
                 <div className="cv-value">{order.delivery_address || '-'}</div>
               </div>
-              <div className="cv-info-item">
-                <span className="cv-label">Route cost</span>
-                <div className="cv-value">
-                  {order.route_cost != null && order.route_cost !== ''
-                    ? Number(order.route_cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                    : '-'}
+              {!isGoodsCollection ? (
+                <div className="cv-info-item">
+                  <span className="cv-label">Route cost</span>
+                  <div className="cv-value">
+                    {order.route_cost != null && order.route_cost !== ''
+                      ? Number(order.route_cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : '-'}
+                  </div>
                 </div>
-              </div>
+              ) : null}
               <div className="cv-info-item cv-info-item--full">
-                <span className="cv-label">Package</span>
+                <span className="cv-label">{isGoodsCollection ? 'Goods' : 'Package'}</span>
                 <div className="cv-value">
                   {order.package_description || 'General goods'}
                   {order.package_weight ? ` (${order.package_weight})` : ''}
@@ -218,6 +246,21 @@ export default function OrderDetailsPage() {
               </div>
             </div>
           </section>
+
+          {isGoodsCollection && (
+            <section id="od-receive" className="cv-section">
+              <header className="cv-section-head">
+                <h2>Office / store receive</h2>
+                <p>Track collection progress and confirm the quantity that arrived.</p>
+              </header>
+              <CollectionReceiveSection
+                order={order}
+                collection={collection}
+                csrfToken={data.csrfToken}
+                onReceived={handleCollectionReceived}
+              />
+            </section>
+          )}
 
           {showDocumentsSection && (
             <section id="od-documents" className="cv-section">
@@ -233,17 +276,19 @@ export default function OrderDetailsPage() {
             </section>
           )}
 
-          <section id="od-signature" className="cv-section">
-            <header className="cv-section-head">
-              <h2>Client signature</h2>
-              <p>Hand the phone to the client or let them scan the QR code on their own device.</p>
-            </header>
-            <ClientSignatureSection
-              order={order}
-              csrfToken={data.csrfToken}
-              onSigned={handleClientSigned}
-            />
-          </section>
+          {!isGoodsCollection && (
+            <section id="od-signature" className="cv-section">
+              <header className="cv-section-head">
+                <h2>Client signature</h2>
+                <p>Hand the phone to the client or let them scan the QR code on their own device.</p>
+              </header>
+              <ClientSignatureSection
+                order={order}
+                csrfToken={data.csrfToken}
+                onSigned={handleClientSigned}
+              />
+            </section>
+          )}
 
           <div className="cv-actions">
             <a

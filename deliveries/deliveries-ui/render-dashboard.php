@@ -37,6 +37,8 @@ $dlvConfig = [
     'actionUrl' => $assets['actionUrl'],
     'aiSearchUrl' => $assets['aiSearchUrl'],
     'kpiAiAssistUrl' => $assets['kpiAiAssistUrl'],
+    'createInitUrl' => $assets['createInitUrl'],
+    'createSubmitUrl' => $assets['createSubmitUrl'],
     'data' => $initData,
 ];
 

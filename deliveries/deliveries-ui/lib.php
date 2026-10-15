@@ -51,6 +51,7 @@ function deliveriesUiLoadReactAssets(): ?array
         'uploadEvidenceUrl' => deliveriesUiPublicUrl('api/upload-evidence.php'),
         'checkSignatureUrl' => deliveriesUiPublicUrl('api/check-signature.php'),
         'submitClientSignatureUrl' => deliveriesUiPublicUrl('api/submit-client-signature.php'),
+        'confirmCollectionReceiveUrl' => deliveriesUiPublicUrl('api/confirm-collection-receive.php'),
         'submitFeedbackUrl' => deliveriesUiPublicUrl('api/submit-feedback.php'),
         'aiSearchUrl' => deliveriesUiPublicUrl('api/ai-search.php'),
         'aiSearchNotesUrl' => deliveriesUiPublicUrl('api/ai-search-notes.php'),

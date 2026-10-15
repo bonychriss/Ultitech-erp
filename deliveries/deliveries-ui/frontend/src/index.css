@@ -3220,6 +3220,7 @@ html[data-theme="dark"] .dlv-card-meta {
 .dlv-vbadge--dispatch { background: #f3e8ff; color: #7c3aed; }
 .dlv-vbadge--office-trip { background: #e0f2fe; color: #0369a1; }
 .dlv-vbadge--client-visit { background: #ecfdf5; color: #047857; }
+.dlv-vbadge--collection { background: #fff7ed; color: #c2410c; }
 .dlv-type-cell { white-space: nowrap; vertical-align: middle; }
 
 /* Deliveries dashboard table: same ledger look as the sales invoices list */
@@ -5123,6 +5124,142 @@ html[data-theme="dark"] .dlv-create-field .cv-select {
 }
 html[data-theme="dark"] .dlv-create-modal__actions {
   border-top-color: #334155;
+}
+
+/* Choose Transport Task */
+.dlv-task-chooser__panel {
+  max-width: 560px;
+  width: min(560px, 100%);
+}
+.dlv-task-chooser__sub {
+  margin: 0 1.25rem 1rem;
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+.dlv-task-chooser__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  padding: 0 1.25rem 1.35rem;
+}
+.dlv-task-chooser__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  text-align: left;
+  padding: 1.1rem 1rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  font-family: inherit;
+  color: inherit;
+}
+.dlv-task-chooser__card:hover {
+  border-color: #a5b4fc;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+.dlv-task-chooser__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 12px;
+  margin-bottom: 0.15rem;
+}
+.dlv-task-chooser__icon--delivery {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.dlv-task-chooser__icon--collection {
+  background: #fff7ed;
+  color: #ea580c;
+}
+.dlv-task-chooser__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.dlv-task-chooser__desc {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.4;
+  flex: 1;
+}
+.dlv-task-chooser__cta {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4f46e5;
+}
+.dlv-task-chooser__hint {
+  margin: 0.85rem 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+.dlv-collection-progress {
+  list-style: none;
+  margin: 0 0 1.1rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+.dlv-collection-progress__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+  position: relative;
+}
+.dlv-collection-progress__dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  border: 2px solid #cbd5e1;
+}
+.dlv-collection-progress__step.is-done .dlv-collection-progress__dot,
+.dlv-collection-progress__step.is-current .dlv-collection-progress__dot {
+  background: #ea580c;
+  border-color: #ea580c;
+}
+.dlv-collection-progress__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #94a3b8;
+  line-height: 1.25;
+}
+.dlv-collection-progress__step.is-done .dlv-collection-progress__label,
+.dlv-collection-progress__step.is-current .dlv-collection-progress__label {
+  color: #9a3412;
+}
+@media (max-width: 640px) {
+  .dlv-task-chooser__grid {
+    grid-template-columns: 1fr;
+  }
+  .dlv-collection-progress {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+html[data-theme="dark"] .dlv-task-chooser__card {
+  background: #0f172a;
+  border-color: #334155;
+}
+html[data-theme="dark"] .dlv-task-chooser__title {
+  color: #f8fafc;
+}
+html[data-theme="dark"] .dlv-task-chooser__sub,
+html[data-theme="dark"] .dlv-task-chooser__desc,
+html[data-theme="dark"] .dlv-task-chooser__hint {
+  color: #94a3b8;
 }
 .dlv-field { display: flex; flex-direction: column; gap: 6px; }
 .dlv-field--full { grid-column: 1 / -1; }

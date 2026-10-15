@@ -82,6 +82,14 @@ function deliveries_resolve_absolute_url(?string $path): string
  */
 function deliveries_order_delivery_type(array $row): string
 {
+    $kind = strtolower(trim((string) ($row['request_kind'] ?? '')));
+    if ($kind === 'client_visit') {
+        return 'Client Visit';
+    }
+    if ($kind === 'goods_collection') {
+        return 'Goods Collection';
+    }
+
     $invoiceId = (int) ($row['sales_invoice_id'] ?? 0);
     $invoiceRef = trim((string) ($row['invoice_ref'] ?? ''));
     if ($invoiceId > 0 || $invoiceRef !== '') {
@@ -172,6 +180,7 @@ function deliveries_load_dashboard_payload(PDO $pdo, array $query = []): array
         $stmtOrders = $pdo->query("
             SELECT o.id, o.client_name, o.client_phone, o.delivery_address, o.invoice_ref,
                    o.sales_invoice_id, o.status, o.created_at, o.package_description, o.receipt_file,
+                   o.request_kind,
                    dn.note_number AS delivery_number,
                    COALESCE(NULLIF(TRIM(td.full_name), ''), NULLIF(TRIM(rd.full_name), '')) AS driver_name
             FROM delivery_orders o
@@ -195,6 +204,7 @@ function deliveries_load_dashboard_payload(PDO $pdo, array $query = []): array
                 'client_phone' => (string) ($row['client_phone'] ?? ''),
                 'delivery_address' => (string) ($row['delivery_address'] ?? ''),
                 'invoice_ref' => (string) ($row['invoice_ref'] ?? ''),
+                'request_kind' => (string) ($row['request_kind'] ?? 'delivery'),
                 'delivery_type' => deliveries_order_delivery_type($row),
                 'delivery_number' => $deliveryNumber,
                 'driver_name' => (string) ($row['driver_name'] ?? ''),
@@ -611,6 +621,7 @@ function deliveries_load_my_deliveries_payload(PDO $pdo, array $query = []): arr
         $stmt = $pdo->prepare("
             SELECT o.id, o.client_name, o.client_phone, o.delivery_address, o.invoice_ref,
                    o.sales_invoice_id, o.status, o.created_at, o.package_description, o.receipt_file,
+                   o.request_kind,
                    dn.note_number AS delivery_number
             FROM delivery_orders o
             LEFT JOIN delivery_notes dn ON o.delivery_note_id = dn.id
@@ -632,6 +643,7 @@ function deliveries_load_my_deliveries_payload(PDO $pdo, array $query = []): arr
                 'client_phone' => (string) ($row['client_phone'] ?? ''),
                 'delivery_address' => (string) ($row['delivery_address'] ?? ''),
                 'invoice_ref' => (string) ($row['invoice_ref'] ?? ''),
+                'request_kind' => (string) ($row['request_kind'] ?? 'delivery'),
                 'delivery_type' => deliveries_order_delivery_type($row),
                 'delivery_number' => $deliveryNumber,
                 'status' => (string) ($row['status'] ?? ''),
@@ -669,7 +681,19 @@ function deliveries_load_my_deliveries_payload(PDO $pdo, array $query = []): arr
     $highlightId = isset($query['highlight']) ? (int) $query['highlight'] : 0;
     $flash = null;
     if (isset($query['created']) && (string) $query['created'] === '1' && $highlightId > 0) {
-        $flash = ['type' => 'success', 'message' => "Delivery #{$highlightId} created successfully."];
+        $createdKind = '';
+        foreach ($orders as $createdOrder) {
+            if ((int) ($createdOrder['id'] ?? 0) === $highlightId) {
+                $createdKind = strtolower(trim((string) ($createdOrder['request_kind'] ?? '')));
+                break;
+            }
+        }
+        $flash = [
+            'type' => 'success',
+            'message' => $createdKind === 'goods_collection'
+                ? "Goods collection #{$highlightId} created successfully."
+                : "Delivery #{$highlightId} created successfully.",
+        ];
     }
 
     return [

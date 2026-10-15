@@ -2,12 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   List, Search, Loader2, CheckCircle2, AlertCircle, Package,
-  Clock, Truck, AlertTriangle, Sparkles, X,
+  Clock, Truck, AlertTriangle, Sparkles, X, Plus,
 } from 'lucide-react'
 import { CFG } from '../config.js'
 import { aiSearchDeliveries } from '../api/myDeliveries.js'
 import DeliveryKpiTraceModal from '../components/DeliveryKpiTraceModal.jsx'
+import ChooseTransportTaskModal from '../components/ChooseTransportTaskModal.jsx'
+import CreateDeliveryModal from '../components/CreateDeliveryModal.jsx'
+import CreateGoodsCollectionModal from '../components/CreateGoodsCollectionModal.jsx'
 import { resolveKpiTrace } from '../utils/kpiTrace.js'
+import { resolveDeliveryType, typePill as sharedTypePill } from '../utils/deliveryType.js'
 
 const STATUS_GROUPS = {
   pending: ['request_pending', 'accepted', 'pending'],
@@ -63,15 +67,11 @@ function statusPill(status) {
   return { label: s ? s.replace(/_/g, ' ') : 'Unknown', cls: 'dlv-vbadge dlv-vbadge--default' }
 }
 
-function typePill(deliveryType) {
-  const type = String(deliveryType || '').toLowerCase()
-  if (type === 'client visit') {
-    return { label: 'Client Visit', cls: 'dlv-vbadge dlv-vbadge--client-visit' }
+function typePill(orderOrType) {
+  if (orderOrType && typeof orderOrType === 'object') {
+    return sharedTypePill(resolveDeliveryType(orderOrType))
   }
-  if (type === 'office trip') {
-    return { label: 'Office Trip', cls: 'dlv-vbadge dlv-vbadge--office-trip' }
-  }
-  return { label: 'Dispatch', cls: 'dlv-vbadge dlv-vbadge--dispatch' }
+  return sharedTypePill(orderOrType)
 }
 
 export default function MyDeliveriesPage() {
@@ -79,6 +79,9 @@ export default function MyDeliveriesPage() {
   const [data, setData] = useState(initial)
   const [loading, setLoading] = useState(!initial.orders)
   const [flash, setFlash] = useState(initial.flash || null)
+  const [chooserOpen, setChooserOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [collectionOpen, setCollectionOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [aiFilters, setAiFilters] = useState({ status: '', from_date: '', to_date: '' })
@@ -334,6 +337,17 @@ export default function MyDeliveriesPage() {
 
   return (
     <div className="dlv-page">
+      <ChooseTransportTaskModal
+        open={chooserOpen}
+        onClose={() => setChooserOpen(false)}
+        onSelect={(kind) => {
+          setChooserOpen(false)
+          if (kind === 'goods_collection') setCollectionOpen(true)
+          else setCreateOpen(true)
+        }}
+      />
+      <CreateDeliveryModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreateGoodsCollectionModal open={collectionOpen} onClose={() => setCollectionOpen(false)} />
       {activeKpiTrace && (
         <DeliveryKpiTraceModal
           trace={activeKpiTrace}
@@ -391,9 +405,16 @@ export default function MyDeliveriesPage() {
             <a
               href={urls.createDelivery || 'create_delivery.php'}
               className="dlv-btn dlv-btn--primary dlv-btn--create"
-              aria-label="New delivery"
+              aria-label="New transport task"
+              onClick={(e) => {
+                if (CFG.createInitUrl || CFG.createSubmitUrl) {
+                  e.preventDefault()
+                  setChooserOpen(true)
+                }
+              }}
             >
-              <span className="dlv-btn-label-desktop">New Delivery</span>
+              <Plus size={18} aria-hidden="true" />
+              <span className="dlv-btn-label-desktop">New Transport Task</span>
               <span className="dlv-btn-label-mobile">New</span>
             </a>
           </div>
@@ -435,7 +456,16 @@ export default function MyDeliveriesPage() {
           <div className="dlv-empty">
             <Package size={32} aria-hidden="true" />
             <p>No deliveries yet.</p>
-            <a href={urls.createDelivery || 'create_delivery.php'} className="dlv-btn dlv-btn--primary">Record a delivery</a>
+            <button
+              type="button"
+              className="dlv-btn dlv-btn--primary"
+              onClick={() => {
+                if (CFG.createInitUrl || CFG.createSubmitUrl) setChooserOpen(true)
+                else window.location.href = urls.createDelivery || 'create_delivery.php'
+              }}
+            >
+              New transport task
+            </button>
           </div>
         ) : (
           <div className="dlv-table-wrap">
@@ -455,7 +485,7 @@ export default function MyDeliveriesPage() {
               <tbody>
                 {filtered.map((order, idx) => {
                   const pill = statusPill(order.status)
-                  const type = typePill(order.delivery_type)
+                  const type = typePill(order)
                   const isHighlight = highlightId > 0 && Number(order.id) === highlightId
                   const detailsUrl = `${urls.orderDetails || 'order_details.php'}&order_id=${order.id}`
                   return (

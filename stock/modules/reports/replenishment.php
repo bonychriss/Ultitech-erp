@@ -582,6 +582,499 @@ function replenishment_map_sales_invoice_rows(array $rows): array
 }
 
 $replenishmentApiUrl = strtok((string) ($_SERVER['REQUEST_URI'] ?? 'replenishment.php'), '?') . '?action=invoices';
+$investigateApiUrl = strtok((string) ($_SERVER['REQUEST_URI'] ?? 'replenishment.php'), '?') . '?action=investigate';
+
+/**
+ * Purchase orders that include this product (stocks + legacy purchases).
+ *
+ * @return list<array<string,mixed>>
+ */
+function replenishment_fetch_product_purchase_orders(PDO $pdo, int $productId): array
+{
+    if ($productId <= 0) {
+        return [];
+    }
+
+    $out = [];
+    $seen = [];
+
+    $supplierTable = null;
+    foreach (['stocks_suppliers', 'suppliers'] as $candidate) {
+        try {
+            if ($pdo->query("SHOW TABLES LIKE " . $pdo->quote($candidate))->fetchColumn()) {
+                $supplierTable = $candidate;
+                break;
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    $supplierNameExpr = "CONCAT('Supplier #', po.supplier_id)";
+    $supplierJoin = '';
+    if ($supplierTable !== null) {
+        try {
+            $sCols = $pdo->query("SHOW COLUMNS FROM `{$supplierTable}`")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            $nameCol = in_array('name', $sCols, true)
+                ? 'name'
+                : (in_array('supplier_name', $sCols, true)
+                    ? 'supplier_name'
+                    : (in_array('company_name', $sCols, true) ? 'company_name' : ''));
+            if ($nameCol !== '') {
+                $supplierNameExpr = "COALESCE(NULLIF(TRIM(sup.`{$nameCol}`), ''), {$supplierNameExpr})";
+                $supplierJoin = "LEFT JOIN `{$supplierTable}` sup ON sup.id = po.supplier_id";
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    try {
+        $pdo->query('SELECT 1 FROM stocks_po_items LIMIT 1');
+        $pdo->query('SELECT 1 FROM stocks_purchase_orders LIMIT 1');
+        $sql = "
+            SELECT
+                po.id AS po_id,
+                po.po_number,
+                po.status,
+                po.purchase_type,
+                po.currency,
+                po.total_amount,
+                po.created_at,
+                po.expected_delivery_date,
+                pi.qty_ordered,
+                pi.qty_received,
+                pi.unit_cost,
+                {$supplierNameExpr} AS supplier_name
+            FROM stocks_po_items pi
+            INNER JOIN stocks_purchase_orders po ON po.id = pi.po_id
+            {$supplierJoin}
+            WHERE pi.item_id = ?
+            ORDER BY po.created_at DESC, po.id DESC
+            LIMIT 50
+        ";
+        $st = $pdo->prepare($sql);
+        $st->execute([$productId]);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $poId = (int) ($row['po_id'] ?? 0);
+            if ($poId <= 0 || isset($seen['stocks:' . $poId])) {
+                continue;
+            }
+            $seen['stocks:' . $poId] = true;
+            $out[] = [
+                'id' => $poId,
+                'source' => 'stocks',
+                'po_number' => (string) ($row['po_number'] ?? ('PO-' . $poId)),
+                'status' => (string) ($row['status'] ?? ''),
+                'purchase_type' => (string) ($row['purchase_type'] ?? 'domestic'),
+                'currency' => (string) ($row['currency'] ?? 'TZS'),
+                'total_amount' => $row['total_amount'] !== null && $row['total_amount'] !== ''
+                    ? (float) $row['total_amount']
+                    : null,
+                'created_at' => (string) ($row['created_at'] ?? ''),
+                'expected_delivery_date' => (string) ($row['expected_delivery_date'] ?? ''),
+                'qty_ordered' => (float) ($row['qty_ordered'] ?? 0),
+                'qty_received' => (float) ($row['qty_received'] ?? 0),
+                'unit_cost' => $row['unit_cost'] !== null && $row['unit_cost'] !== ''
+                    ? (float) $row['unit_cost']
+                    : null,
+                'supplier_name' => (string) ($row['supplier_name'] ?? ''),
+                'view_url' => '../purchases/view_po.php?id=' . $poId,
+                'preview_url' => '../purchases/view_po.php?id=' . $poId . '&embed=1',
+            ];
+        }
+    } catch (Throwable $e) {
+        error_log('replenishment_fetch_product_purchase_orders stocks: ' . $e->getMessage());
+    }
+
+    try {
+        $pdo->query('SELECT 1 FROM purchases LIMIT 1');
+        $pCols = $pdo->query('SHOW COLUMNS FROM purchases')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        if (in_array('product_id', $pCols, true)) {
+            $numExpr = in_array('purchase_no', $pCols, true)
+                ? 'p.purchase_no'
+                : "CONCAT('PO-', p.id)";
+            $statusExpr = in_array('status', $pCols, true) ? 'p.status' : "''";
+            $totalExpr = in_array('total_amount', $pCols, true) ? 'p.total_amount' : 'NULL';
+            $qtyExpr = in_array('quantity', $pCols, true) ? 'p.quantity' : '0';
+            $recvExpr = in_array('qty_received', $pCols, true) ? 'p.qty_received' : '0';
+            $dateExpr = in_array('created_at', $pCols, true) ? 'p.created_at' : 'NULL';
+            $currencyExpr = in_array('currency', $pCols, true) ? 'p.currency' : "'TZS'";
+
+            $sql = "
+                SELECT p.id, {$numExpr} AS po_number, {$statusExpr} AS status,
+                       {$totalExpr} AS total_amount, {$qtyExpr} AS qty_ordered,
+                       {$recvExpr} AS qty_received, {$dateExpr} AS created_at,
+                       {$currencyExpr} AS currency, p.supplier_id
+                FROM purchases p
+                WHERE p.product_id = ?
+                ORDER BY p.id DESC
+                LIMIT 50
+            ";
+            $st = $pdo->prepare($sql);
+            $st->execute([$productId]);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $poId = (int) ($row['id'] ?? 0);
+                if ($poId <= 0 || isset($seen['legacy:' . $poId])) {
+                    continue;
+                }
+                $seen['legacy:' . $poId] = true;
+                $out[] = [
+                    'id' => $poId,
+                    'source' => 'legacy',
+                    'po_number' => (string) ($row['po_number'] ?? ('PO-' . $poId)),
+                    'status' => (string) ($row['status'] ?? ''),
+                    'purchase_type' => 'legacy',
+                    'currency' => (string) ($row['currency'] ?? 'TZS'),
+                    'total_amount' => $row['total_amount'] !== null && $row['total_amount'] !== ''
+                        ? (float) $row['total_amount']
+                        : null,
+                    'created_at' => (string) ($row['created_at'] ?? ''),
+                    'expected_delivery_date' => '',
+                    'qty_ordered' => (float) ($row['qty_ordered'] ?? 0),
+                    'qty_received' => (float) ($row['qty_received'] ?? 0),
+                    'unit_cost' => null,
+                    'supplier_name' => '',
+                    'view_url' => '../purchases/view_po.php?id=' . $poId,
+                    'preview_url' => '../purchases/view_po.php?id=' . $poId . '&embed=1',
+                ];
+            }
+        }
+
+        // Also line items on purchases via purchase_items when present.
+        try {
+            $pdo->query('SELECT 1 FROM purchase_items LIMIT 1');
+            $sql = "
+                SELECT p.id, " . (in_array('purchase_no', $pCols, true) ? 'p.purchase_no' : "CONCAT('PO-', p.id)") . " AS po_number,
+                       " . (in_array('status', $pCols, true) ? 'p.status' : "''") . " AS status,
+                       " . (in_array('total_amount', $pCols, true) ? 'p.total_amount' : 'NULL') . " AS total_amount,
+                       pi.quantity AS qty_ordered,
+                       COALESCE(pi.qty_received, 0) AS qty_received,
+                       " . (in_array('created_at', $pCols, true) ? 'p.created_at' : 'NULL') . " AS created_at,
+                       " . (in_array('currency', $pCols, true) ? 'p.currency' : "'TZS'") . " AS currency
+                FROM purchase_items pi
+                INNER JOIN purchases p ON p.id = pi.purchase_id
+                WHERE pi.product_id = ?
+                ORDER BY p.id DESC
+                LIMIT 50
+            ";
+            $st = $pdo->prepare($sql);
+            $st->execute([$productId]);
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $poId = (int) ($row['id'] ?? 0);
+                if ($poId <= 0 || isset($seen['legacy:' . $poId]) || isset($seen['stocks:' . $poId])) {
+                    continue;
+                }
+                $seen['legacy:' . $poId] = true;
+                $out[] = [
+                    'id' => $poId,
+                    'source' => 'legacy',
+                    'po_number' => (string) ($row['po_number'] ?? ('PO-' . $poId)),
+                    'status' => (string) ($row['status'] ?? ''),
+                    'purchase_type' => 'legacy',
+                    'currency' => (string) ($row['currency'] ?? 'TZS'),
+                    'total_amount' => $row['total_amount'] !== null && $row['total_amount'] !== ''
+                        ? (float) $row['total_amount']
+                        : null,
+                    'created_at' => (string) ($row['created_at'] ?? ''),
+                    'expected_delivery_date' => '',
+                    'qty_ordered' => (float) ($row['qty_ordered'] ?? 0),
+                    'qty_received' => (float) ($row['qty_received'] ?? 0),
+                    'unit_cost' => null,
+                    'supplier_name' => '',
+                    'view_url' => '../purchases/view_po.php?id=' . $poId,
+                    'preview_url' => '../purchases/view_po.php?id=' . $poId . '&embed=1',
+                ];
+            }
+        } catch (Throwable $e) {
+        }
+    } catch (Throwable $e) {
+        error_log('replenishment_fetch_product_purchase_orders legacy: ' . $e->getMessage());
+    }
+
+    usort($out, static function ($a, $b) {
+        return strcmp((string) ($b['created_at'] ?? ''), (string) ($a['created_at'] ?? ''));
+    });
+
+    return $out;
+}
+
+/**
+ * Full investigation payload for the Product Sales Trace modal.
+ *
+ * @return array{ok:bool,error?:string,data?:array<string,mixed>}
+ */
+function replenishment_investigate_product(PDO $pdo, int $productId): array
+{
+    if ($productId <= 0) {
+        return ['ok' => false, 'error' => 'Invalid product id.'];
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT p.id, p.product_code, p.name, p.main_image, p.reorder_level, p.hide_replenishment,
+                    COALESCE(s.quantity, 0) AS current_stock
+             FROM products p
+             LEFT JOIN stock s ON s.product_id = p.id
+             WHERE p.id = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$productId]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => $e->getMessage()];
+    }
+
+    if (!$product) {
+        return ['ok' => false, 'error' => 'Product not found.'];
+    }
+
+    $stockQty = (float) ($product['current_stock'] ?? 0);
+    $threshold = (float) ($product['reorder_level'] ?? 0);
+    $needsReplenishment = $stockQty < 0
+        || ($threshold > 0 && $stockQty <= $threshold);
+
+    $img = '';
+    if (function_exists('stock_product_list_image_url')) {
+        global $stockBasePath;
+        $img = (string) stock_product_list_image_url(
+            $productId,
+            (string) ($product['main_image'] ?? ''),
+            'medium',
+            (string) ($stockBasePath ?? '')
+        );
+    }
+
+    $salesRaw = replenishment_map_sales_invoice_rows(replenishment_fetch_product_demand_sources($productId));
+    $salesHistory = [];
+    $totalSold = 0.0;
+    $totalInvoices = 0;
+    $invoiceIds = [];
+    foreach ($salesRaw as $row) {
+        $qty = (float) ($row['line_qty'] ?? 0);
+        $totalSold += $qty;
+        $invoiceId = (int) ($row['invoice_id'] ?? 0);
+        if ($invoiceId > 0 && !isset($invoiceIds[$invoiceId])) {
+            $invoiceIds[$invoiceId] = true;
+            $totalInvoices++;
+        }
+        $status = trim((string) ($row['order_status'] ?? $row['invoice_status'] ?? ''));
+        if ($status === '') {
+            $status = 'open';
+        }
+        $salesHistory[] = [
+            'date' => (string) ($row['invoice_date'] ?? $row['order_date'] ?? ''),
+            'invoice_id' => $invoiceId,
+            'invoice_number' => (string) ($row['invoice_number'] ?? ''),
+            'invoice_url' => (string) ($row['invoice_url'] ?? ''),
+            'order_id' => (int) ($row['order_id'] ?? 0),
+            'order_number' => (string) ($row['order_number'] ?? ''),
+            'order_url' => (string) ($row['order_url'] ?? ''),
+            'customer_name' => (string) ($row['customer_name'] ?? ''),
+            'quantity' => $qty,
+            'status' => $status,
+            'recorded_by' => '',
+            'line_value' => null,
+        ];
+    }
+
+    $movements = [];
+    $goodsReceived = 0.0;
+    $salesDeductions = 0.0;
+    $returnsIn = 0.0;
+    $adjustments = 0.0;
+    $transfersNet = 0.0;
+    $customers = [];
+    $warehouses = [];
+    $types = [];
+
+    try {
+        $hasWh = false;
+        $hasUser = false;
+        $cols = $pdo->query('SHOW COLUMNS FROM stock_movements')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $hasWh = in_array('warehouse_id', $cols, true);
+        $hasUser = in_array('user_id', $cols, true) || in_array('created_by', $cols, true);
+        $userCol = in_array('user_id', $cols, true) ? 'user_id' : (in_array('created_by', $cols, true) ? 'created_by' : '');
+
+        $userSelect = "'' AS user_name";
+        $userJoin = '';
+        if ($hasUser && $userCol !== '') {
+            $userSelect = 'u.full_name AS user_name';
+            $userJoin = "LEFT JOIN users u ON u.id = sm.{$userCol}";
+        }
+        $whSelect = $hasWh ? 'sm.warehouse_id' : 'NULL AS warehouse_id';
+
+        $sql = "SELECT sm.id, sm.movement_type, sm.quantity, sm.reference_type, sm.reference_id,
+                       sm.notes, sm.created_at, {$whSelect}, {$userSelect}
+                FROM stock_movements sm
+                {$userJoin}
+                WHERE sm.product_id = ?
+                ORDER BY sm.created_at ASC, sm.id ASC";
+        $st = $pdo->prepare($sql);
+        $st->execute([$productId]);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $running = 0.0;
+        // Infer opening so that after all movements we land on current stock.
+        $signedTotal = 0.0;
+        foreach ($rows as $row) {
+            $type = strtolower(trim((string) ($row['movement_type'] ?? '')));
+            $qty = abs((float) ($row['quantity'] ?? 0));
+            $signed = in_array($type, ['out', 'sale', 'transfer_out'], true) ? -$qty : $qty;
+            if ($type === 'transfer_in') {
+                $signed = $qty;
+            }
+            $signedTotal += $signed;
+        }
+        $opening = $stockQty - $signedTotal;
+        $running = $opening;
+
+        foreach ($rows as $row) {
+            $type = strtolower(trim((string) ($row['movement_type'] ?? '')));
+            $qty = abs((float) ($row['quantity'] ?? 0));
+            $isOut = in_array($type, ['out', 'sale', 'transfer_out'], true);
+            $signed = $isOut ? -$qty : $qty;
+            if ($type === 'in' || $type === 'receive' || $type === 'purchase' || $type === 'grn') {
+                $goodsReceived += $qty;
+                $typeLabel = 'Goods Received';
+            } elseif ($type === 'out' || $type === 'sale') {
+                $salesDeductions -= $qty;
+                $refType = strtolower(trim((string) ($row['reference_type'] ?? '')));
+                $typeLabel = $refType === 'sales_order' || $refType === 'sale' || $refType === 'invoice'
+                    ? 'Sales (Invoice)'
+                    : 'Stock Out';
+            } elseif ($type === 'return' || $type === 'return_in') {
+                $returnsIn += $qty;
+                $typeLabel = 'Returns In';
+            } elseif ($type === 'adjustment' || $type === 'adjust') {
+                $adjustments += $signed;
+                $typeLabel = 'Adjustment';
+            } elseif ($type === 'transfer_in') {
+                $transfersNet += $qty;
+                $typeLabel = 'Transfer In';
+            } elseif ($type === 'transfer_out') {
+                $transfersNet -= $qty;
+                $typeLabel = 'Transfer Out';
+            } else {
+                if ($isOut) {
+                    $salesDeductions -= $qty;
+                } else {
+                    $goodsReceived += $qty;
+                }
+                $typeLabel = $type !== '' ? ucwords(str_replace('_', ' ', $type)) : 'Movement';
+            }
+
+            $running += $signed;
+            $refId = trim((string) ($row['reference_id'] ?? ''));
+            $refType = trim((string) ($row['reference_type'] ?? ''));
+            $reference = trim((string) ($row['notes'] ?? ''));
+            if ($reference === '' && $refType !== '') {
+                $reference = ucwords(str_replace('_', ' ', $refType)) . ($refId !== '' ? ' #' . $refId : '');
+            }
+            if ($reference === '') {
+                $reference = 'Movement #' . (int) ($row['id'] ?? 0);
+            }
+
+            $whId = $row['warehouse_id'] !== null ? (int) $row['warehouse_id'] : null;
+            if ($whId) {
+                $warehouses[(string) $whId] = 'Warehouse ' . $whId;
+            }
+            $types[$typeLabel] = $typeLabel;
+
+            $movements[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'date' => (string) ($row['created_at'] ?? ''),
+                'reference' => $reference,
+                'reference_type' => $refType,
+                'reference_id' => $refId,
+                'type' => $typeLabel,
+                'movement_type' => $type,
+                'quantity' => $signed,
+                'balance' => $running,
+                'user_name' => trim((string) ($row['user_name'] ?? '')),
+                'warehouse_id' => $whId,
+            ];
+        }
+
+        // Newest first for the table (balances already computed chronologically).
+        $movements = array_reverse($movements);
+    } catch (Throwable $e) {
+        $opening = $stockQty;
+        $movements = [];
+    }
+
+    if (!isset($opening)) {
+        $opening = $stockQty;
+    }
+
+    $expected = $opening + $goodsReceived + $salesDeductions + $returnsIn + $adjustments + $transfersNet;
+    $discrepancy = abs($expected - $stockQty) > 0.0001;
+
+    foreach ($salesHistory as $row) {
+        $cust = trim((string) ($row['customer_name'] ?? ''));
+        if ($cust !== '') {
+            $customers[$cust] = $cust;
+        }
+    }
+
+    $why = '';
+    if ($stockQty < 0) {
+        $why = 'The current stock is below the set threshold'
+            . ($threshold > 0 ? ' (' . rtrim(rtrim(number_format($threshold, 2, '.', ''), '0'), '.') . ')' : '')
+            . '. This product has a negative stock balance of '
+            . rtrim(rtrim(number_format($stockQty, 2, '.', ''), '0'), '.') . '.';
+    } elseif ($threshold > 0 && $stockQty <= $threshold) {
+        $why = 'Current stock (' . rtrim(rtrim(number_format($stockQty, 2, '.', ''), '0'), '.')
+            . ') is at or below the replenishment threshold ('
+            . rtrim(rtrim(number_format($threshold, 2, '.', ''), '0'), '.') . ').';
+    } else {
+        $why = 'This product is not currently flagged by the negative-stock replenishment rule.';
+    }
+
+    return [
+        'ok' => true,
+        'data' => [
+            'product' => [
+                'id' => $productId,
+                'name' => (string) ($product['name'] ?? ''),
+                'product_code' => (string) ($product['product_code'] ?? ''),
+                'image_url' => $img,
+                'current_stock' => $stockQty,
+                'reorder_level' => $threshold,
+                'needs_replenishment' => $needsReplenishment,
+            ],
+            'sales_summary' => [
+                'total_qty_sold' => $totalSold,
+                'total_invoices' => $totalInvoices > 0 ? $totalInvoices : count($salesHistory),
+                'total_sales_value' => 0,
+                'currency' => 'TZS',
+            ],
+            'sales_history' => $salesHistory,
+            'stock_movements' => $movements,
+            'reconciliation' => [
+                'opening_stock' => $opening,
+                'goods_received' => $goodsReceived,
+                'sales_deductions' => $salesDeductions,
+                'returns_in' => $returnsIn,
+                'adjustments' => $adjustments,
+                'transfers_net' => $transfersNet,
+                'expected_stock' => $expected,
+                'current_stock' => $stockQty,
+                'has_discrepancy' => $discrepancy,
+            ],
+            'why_on_list' => $why,
+            'filters' => [
+                'customers' => array_values($customers),
+                'types' => array_values($types),
+                'warehouses' => array_map(
+                    static fn ($id, $label) => ['id' => (int) $id, 'label' => $label],
+                    array_keys($warehouses),
+                    array_values($warehouses)
+                ),
+            ],
+            'supplier_invoices' => replenishment_fetch_supplier_invoices($productId),
+            'purchase_orders' => replenishment_fetch_product_purchase_orders($pdo, $productId),
+        ],
+    ];
+}
 
 if (isset($_GET['action']) && $_GET['action'] === 'invoices') {
     header('Content-Type: application/json; charset=utf-8');
@@ -602,6 +1095,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'invoices') {
         'items' => $sales,
         'supplier_items' => $supplier,
     ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'investigate') {
+    header('Content-Type: application/json; charset=utf-8');
+    $productId = (int) ($_GET['product_id'] ?? 0);
+    $result = replenishment_investigate_product($pdo, $productId);
+    if (!($result['ok'] ?? false)) {
+        http_response_code(422);
+    }
+    echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
@@ -640,6 +1144,7 @@ if ($sales_tables_exist) {
             p.product_code, 
             p.name, 
             p.main_image,
+            p.reorder_level,
             COALESCE(s.quantity, 0) as current_stock,
             (
                 SELECT COALESCE(SUM({$pendingQtyExpr}), 0)
@@ -666,6 +1171,7 @@ if ($sales_tables_exist) {
             p.product_code, 
             p.name, 
             p.main_image,
+            p.reorder_level,
             COALESCE(s.quantity, 0) as current_stock,
             0 as pending_demand,
             p.hide_replenishment
@@ -748,6 +1254,7 @@ foreach ($items as $item) {
         'main_image' => $filename,
         'image_url' => (string) $img,
         'current_stock' => (int) ($item['current_stock'] ?? 0),
+        'reorder_level' => (int) ($item['reorder_level'] ?? 0),
         'pending_demand' => (int) ($item['pending_demand'] ?? 0),
         'references' => $references,
         'demand_sources' => $demandSources,
@@ -889,6 +1396,7 @@ html[data-theme="dark"] body.page-products-desk .employee-header--products-desk 
                 'initialSearch' => (string) $search,
                 'shortageCount' => (int) $shortageCount,
                 'invoicesApiUrl' => $replenishmentApiUrl,
+                'investigateApiUrl' => $investigateApiUrl,
                 'flashMessage' => $flashMessage,
                 'flashType' => $flashType,
                 'urls' => [

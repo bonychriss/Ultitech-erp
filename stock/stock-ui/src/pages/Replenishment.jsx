@@ -17,6 +17,7 @@ import {
   HiStar,
 } from 'react-icons/hi2';
 import './replenishment-desk.css';
+import ProductTraceModal from './ProductTraceModal.jsx';
 
 function formatDate(value) {
   if (!value) return '—';
@@ -680,6 +681,7 @@ export default function Replenishment({ data }) {
     items = [],
     initialSearch = '',
     invoicesApiUrl = 'replenishment.php?action=invoices',
+    investigateApiUrl = 'replenishment.php?action=investigate',
     flashMessage = '',
     flashType = '',
     urls = {},
@@ -693,23 +695,8 @@ export default function Replenishment({ data }) {
   };
 
   const [query, setQuery] = useState(initialSearch || '');
-  const [expandedId, setExpandedId] = useState(null);
-  const [loadingId, setLoadingId] = useState(null);
+  const [traceProduct, setTraceProduct] = useState(null);
   const [orderDraft, setOrderDraft] = useState(null);
-  const [pendingStarId, setPendingStarId] = useState(0);
-  const [invoiceCache, setInvoiceCache] = useState(() => {
-    const seeded = {};
-    (items || []).forEach((item) => {
-      if (Array.isArray(item.demand_sources) || Array.isArray(item.supplier_invoices)) {
-        seeded[String(item.id)] = {
-          error: '',
-          items: Array.isArray(item.demand_sources) ? item.demand_sources : [],
-          supplierItems: Array.isArray(item.supplier_invoices) ? item.supplier_invoices : [],
-        };
-      }
-    });
-    return seeded;
-  });
   const flashShown = useRef(false);
 
   useEffect(() => {
@@ -752,93 +739,8 @@ export default function Replenishment({ data }) {
     });
   }, [items, query]);
 
-  const loadInvoices = async (product) => {
-    const productId = String(product.id);
-    if (invoiceCache[productId] && Array.isArray(invoiceCache[productId].supplierItems)) return;
-    setLoadingId(productId);
-    try {
-      const sep = invoicesApiUrl.includes('?') ? '&' : '?';
-      const res = await fetch(
-        `${invoicesApiUrl}${sep}product_id=${encodeURIComponent(productId)}`,
-        { credentials: 'same-origin' },
-      );
-      const payload = await res.json().catch(() => null);
-      if (!payload?.ok) {
-        setInvoiceCache((prev) => ({
-          ...prev,
-          [productId]: { error: payload?.error || 'Could not load invoices.', items: [] },
-        }));
-        return;
-      }
-      setInvoiceCache((prev) => ({
-        ...prev,
-        [productId]: {
-          error: '',
-          items: Array.isArray(payload.items) ? payload.items : [],
-          supplierItems: Array.isArray(payload.supplier_items) ? payload.supplier_items : [],
-        },
-      }));
-    } catch {
-      setInvoiceCache((prev) => ({
-        ...prev,
-        [productId]: { error: 'Could not load invoices. Please try again.', items: [] },
-      }));
-    } finally {
-      setLoadingId(null);
-    }
-  };
-
-  const applyVoucherStar = (voucherId, marked) => {
-    setInvoiceCache((prev) => {
-      const next = { ...prev };
-      Object.keys(next).forEach((key) => {
-        const entry = next[key];
-        if (!Array.isArray(entry?.supplierItems)) return;
-        let changed = false;
-        const supplierItems = entry.supplierItems.map((row) => {
-          if (Number(row.invoice_id) !== Number(voucherId)) return row;
-          changed = true;
-          return { ...row, is_reference: marked };
-        });
-        if (changed) next[key] = { ...entry, supplierItems };
-      });
-      return next;
-    });
-  };
-
-  const toggleVoucherStar = async (row) => {
-    const voucherId = Number(row?.invoice_id || 0);
-    if (!voucherId || pendingStarId) return;
-    const previous = !!row.is_reference;
-    setPendingStarId(voucherId);
-    applyVoucherStar(voucherId, !previous);
-    try {
-      const res = await fetch(links.referenceToggle, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `voucher_id=${encodeURIComponent(voucherId)}`,
-      });
-      const payload = await res.json().catch(() => null);
-      if (!payload?.ok) {
-        throw new Error(payload?.error || 'Could not save the mark.');
-      }
-      applyVoucherStar(voucherId, parseInt(String(payload.is_reference ?? '0'), 10) === 1);
-    } catch {
-      applyVoucherStar(voucherId, previous);
-    } finally {
-      setPendingStarId(0);
-    }
-  };
-
-  const toggleRow = (product) => {
-    const id = Number(product.id);
-    if (expandedId === id) {
-      setExpandedId(null);
-      return;
-    }
-    setExpandedId(id);
-    loadInvoices(product);
+  const openTrace = (product) => {
+    setTraceProduct(product);
   };
 
   return (
@@ -925,84 +827,69 @@ export default function Replenishment({ data }) {
                   const pending = Number(item.pending_demand ?? 0);
                   const net = stock - pending;
                   const orderQty = net < 0 ? Math.abs(net) : 0;
-                  const isOpen = expandedId === Number(item.id);
-                  const cacheKey = String(item.id);
+                  const isOpen = Number(traceProduct?.id) === Number(item.id);
 
                   return (
-                    <React.Fragment key={item.id}>
-                      <tr
-                        className={`repl-desk-row${isOpen ? ' is-expanded' : ''}`}
-                        tabIndex={0}
-                        role="button"
-                        aria-expanded={isOpen}
-                        onClick={() => toggleRow(item)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            toggleRow(item);
-                          }
-                        }}
-                      >
-                        <td>
-                          <div className="repl-desk-product">
-                            <RowThumb src={item.image_url || ''} />
-                            <div className="min-w-0">
-                              <div className="repl-desk-name">{item.name || 'Unnamed'}</div>
-                              <div className="repl-desk-code">
-                                CODE:
-                                {' '}
-                                {item.product_code || '—'}
-                              </div>
+                    <tr
+                      key={item.id}
+                      className={`repl-desk-row${isOpen ? ' is-expanded' : ''}`}
+                      tabIndex={0}
+                      role="button"
+                      aria-expanded={isOpen}
+                      onClick={() => openTrace(item)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openTrace(item);
+                        }
+                      }}
+                    >
+                      <td>
+                        <div className="repl-desk-product">
+                          <RowThumb src={item.image_url || ''} />
+                          <div className="min-w-0">
+                            <div className="repl-desk-name">{item.name || 'Unnamed'}</div>
+                            <div className="repl-desk-code">
+                              CODE:
+                              {' '}
+                              {item.product_code || '—'}
                             </div>
                           </div>
-                        </td>
-                        <td onClick={(e) => e.stopPropagation()}>
-                          <ReferenceInvoices
-                            productName={item.name || ''}
-                            references={item.references || []}
-                            demandSources={item.demand_sources || []}
-                          />
-                        </td>
-                        <td>
-                          <div className="repl-desk-stock">{stock}</div>
-                        </td>
-                        <td
-                          onClick={(e) => e.stopPropagation()}
-                          onKeyDown={(e) => e.stopPropagation()}
-                        >
-                          <div className="repl-desk-options">
-                            {stock < 0 ? (
-                              <button
-                                type="button"
-                                className="repl-desk-order-btn"
-                                onClick={() => setOrderDraft({
-                                  productId: item.id,
-                                  qty: orderQty || Math.abs(stock) || 1,
-                                  productName: item.name,
-                                  productCode: item.product_code,
-                                })}
-                              >
-                                <HiOutlineShoppingCart style={{ width: 14, height: 14 }} />
-                                Order
-                              </button>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                      {isOpen ? (
-                        <tr className="repl-desk-detail">
-                          <td colSpan={4}>
-                            <DemandPanel
-                              product={item}
-                              cacheEntry={invoiceCache[cacheKey]}
-                              loading={loadingId === cacheKey && !invoiceCache[cacheKey]}
-                              onToggleStar={toggleVoucherStar}
-                              pendingStarId={pendingStarId}
-                            />
-                          </td>
-                        </tr>
-                      ) : null}
-                    </React.Fragment>
+                        </div>
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <ReferenceInvoices
+                          productName={item.name || ''}
+                          references={item.references || []}
+                          demandSources={item.demand_sources || []}
+                        />
+                      </td>
+                      <td>
+                        <div className="repl-desk-stock">{stock}</div>
+                      </td>
+                      <td
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
+                        <div className="repl-desk-options">
+                          {stock < 0 ? (
+                            <button
+                              type="button"
+                              className="repl-desk-order-btn"
+                              onClick={() => setOrderDraft({
+                                productId: item.id,
+                                qty: orderQty || Math.abs(stock) || 1,
+                                productName: item.name,
+                                productCode: item.product_code,
+                              })}
+                            >
+                              <HiOutlineShoppingCart style={{ width: 14, height: 14 }} />
+                              Order
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })
               )}
@@ -1012,6 +899,14 @@ export default function Replenishment({ data }) {
       </div>
     </div>
     <PoTypeModal order={orderDraft} urls={links} onClose={() => setOrderDraft(null)} />
+    {traceProduct ? (
+      <ProductTraceModal
+        product={traceProduct}
+        investigateApiUrl={investigateApiUrl}
+        referenceToggleUrl={links.referenceToggle}
+        onClose={() => setTraceProduct(null)}
+      />
+    ) : null}
     </>
   );
 }

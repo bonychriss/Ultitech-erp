@@ -272,7 +272,9 @@
     }
   }
 
-  function go(fallbackHref) {
+  function go(fallbackHref, options) {
+    var opts = options && typeof options === 'object' ? options : {};
+    var preferFallback = opts.preferFallback === true;
     var item = null;
     // Skip unsafe entries left in an old or corrupted stack.
     while (true) {
@@ -291,6 +293,24 @@
       }
       item = null;
     }
+
+    // Explicit return= from the opener (e.g. filtered Revenue list) wins over a
+    // stale stack href that may have lost query filters.
+    if (preferFallback && fallbackHref && isSafeReturnUrl(fallbackHref)) {
+      try {
+        var restorePrefer = {
+          href: toAbsolute(fallbackHref),
+          state: item && item.state ? item.state : null,
+          title: item && item.title ? item.title : '',
+          ts: Date.now(),
+        };
+        sessionStorage.setItem(KEY_RESTORE, JSON.stringify(restorePrefer));
+        sessionStorage.setItem(KEY_SKIP_PUSH, '1');
+      } catch (ePrefer) { /* ignore */ }
+      global.location.assign(toAbsolute(fallbackHref));
+      return true;
+    }
+
     if (item && item.href) {
       try {
         sessionStorage.setItem(KEY_RESTORE, JSON.stringify(item));
@@ -417,16 +437,20 @@
       if (backEl.classList.contains('erp-nav-back-ignore')) return;
       var rawAttr = backEl.getAttribute('data-erp-nav-back');
       if (rawAttr === 'off') return;
-      var backHref = backEl.getAttribute('href') || (rawAttr && rawAttr !== '1' && rawAttr !== 'true' ? rawAttr : '') || defaultFallback();
+      var hrefAttr = backEl.getAttribute('href') || '';
+      var attrTarget = rawAttr && rawAttr !== '1' && rawAttr !== 'true' ? rawAttr : '';
+      var backHref = hrefAttr || attrTarget || defaultFallback();
       e.preventDefault();
-      go(backHref);
+      // Explicit href/return= (e.g. filtered Revenue list) must win over a stale stack URL.
+      go(backHref, { preferFallback: !!(hrefAttr || attrTarget) && isSafeReturnUrl(backHref) });
       return;
     }
 
     var maybeBack = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (maybeBack && isBackAnchor(maybeBack) && !maybeBack.classList.contains('erp-nav-back-ignore')) {
       e.preventDefault();
-      go(maybeBack.getAttribute('href') || defaultFallback());
+      var maybeHref = maybeBack.getAttribute('href') || defaultFallback();
+      go(maybeHref, { preferFallback: !!maybeBack.getAttribute('href') && isSafeReturnUrl(maybeHref) });
       return;
     }
 

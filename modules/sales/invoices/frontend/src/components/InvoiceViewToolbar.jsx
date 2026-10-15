@@ -28,7 +28,21 @@ export default function InvoiceViewToolbar({
         <nav className="ov-breadcrumb" aria-label="Breadcrumb">
           {urls.return ? (
             <>
-              <a href={urls.return}>
+              <a
+                href={urls.return}
+                className="erp-nav-back-link"
+                data-erp-nav-back={urls.return}
+                title="Back to where you were"
+                onClick={(event) => {
+                  if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.go === 'function') {
+                    event.preventDefault();
+                    // preferFallback: keep date/filter query from return= instead of a stale stack URL
+                    if (!window.erpNavBack.go(urls.return, { preferFallback: true })) {
+                      window.location.href = urls.return;
+                    }
+                  }
+                }}
+              >
                 <i className="fas fa-arrow-left me-1" aria-hidden="true" />
                 Back
               </a>

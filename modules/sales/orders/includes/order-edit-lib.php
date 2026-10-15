@@ -586,16 +586,20 @@ function sales_process_invoice_update(array $input, int $invoiceId): array
         $salesDb->prepare($updateSql)->execute($values);
     }
 
-    if (function_exists('syncInvoiceToRevenue') || is_file(dirname(__DIR__, 4) . '/includes/revenue_sync.php')) {
-        $syncFile = dirname(__DIR__, 4) . '/includes/revenue_sync.php';
-        if (!function_exists('syncInvoiceToRevenue') && is_file($syncFile)) {
-            require_once $syncFile;
+    $ledgerFile = dirname(__DIR__, 4) . '/includes/revenue_ledger.php';
+    if (!function_exists('syncInvoiceToRevenueLedger') && is_file($ledgerFile)) {
+        require_once $ledgerFile;
+    }
+    if (function_exists('syncInvoiceToRevenueLedger')) {
+        try {
+            syncInvoiceToRevenueLedger($salesDb, $invoiceId, (int) ($_SESSION['user_id'] ?? 0) ?: null);
+        } catch (Throwable $e) {
+            error_log('sales_process_invoice_update revenue: ' . $e->getMessage());
         }
-        if (function_exists('syncInvoiceToRevenue')) {
-            try {
-                syncInvoiceToRevenue($salesDb, $invoiceId);
-            } catch (Throwable $e) {
-            }
+    } elseif (function_exists('syncInvoiceToRevenue')) {
+        try {
+            syncInvoiceToRevenue($salesDb, $invoiceId);
+        } catch (Throwable $e) {
         }
     }
 

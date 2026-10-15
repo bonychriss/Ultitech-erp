@@ -689,7 +689,18 @@ function salesInvoiceViewLoadContext(int $id): array
         && empty($invoice['shipped_at'])
         && !in_array($ordStatus, ['shipped', 'delivered', 'cancelled'], true);
 
-    $returnUrl = isset($_GET['return']) ? urldecode((string) $_GET['return']) : '';
+    $returnUrl = '';
+    if (isset($_GET['return'])) {
+        // GET is already decoded once; keep relative same-origin paths only.
+        $rawReturn = trim((string) $_GET['return']);
+        if ($rawReturn !== ''
+            && strpos($rawReturn, '://') === false
+            && strpos($rawReturn, '//') !== 0
+            && preg_match('#^[./a-zA-Z0-9_\\-?&=%#+]+$#', $rawReturn)
+        ) {
+            $returnUrl = $rawReturn;
+        }
+    }
     $invoiceReturnUrl = rawurlencode(sales_module_url('invoices/view.php', [
         'id' => $id,
         'module' => $module,

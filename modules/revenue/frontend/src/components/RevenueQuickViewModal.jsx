@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Pencil, Wallet, X } from 'lucide-react';
 import RevenueStatusBadge from './RevenueStatusBadge';
 import { deskPageUrl } from '../api/revenueDesk';
+import { revenueInvoiceHref } from '../utils/revenueNav';
 
 function formatCurrency(value) {
   const amount = Number(value) || 0;
@@ -17,17 +18,6 @@ function formatDate(dateStr) {
     day: 'numeric',
     year: 'numeric',
   });
-}
-
-/** Invoice page URL that brings the user back to this list with the same entry reopened. */
-function invoiceHref(entry) {
-  const base = String(entry.invoice_view_url || '');
-  if (!base) return '';
-  const back = new URL(window.location.href);
-  back.searchParams.set('sel', String(entry.id));
-  back.searchParams.set('preview', String(entry.id));
-  const returnTo = back.pathname + back.search;
-  return `${base}${base.includes('?') ? '&' : '?'}return=${encodeURIComponent(returnTo)}`;
 }
 
 function withInvoiceLink(text, invoiceNumber, link) {
@@ -63,9 +53,19 @@ export default function RevenueQuickViewModal({
   const balanceDue = Number(entry.balance_due) || 0;
   const showActions = entry.can_edit || entry.can_pay;
   const invoiceNumber = String(entry.linked_invoice_number || '');
-  const invoiceUrl = invoiceNumber ? invoiceHref(entry) : '';
+  const invoiceUrl = invoiceNumber ? revenueInvoiceHref(entry) : '';
   const invoiceLink = invoiceUrl ? (
-    <a href={invoiceUrl} className="rev-desk-quick-link" title={`Open invoice ${invoiceNumber}`}>
+    <a
+      href={invoiceUrl}
+      className="rev-desk-quick-link"
+      title={`Open invoice ${invoiceNumber}`}
+      onClick={(event) => {
+        event.preventDefault();
+        onRemember?.(entry.id);
+        const href = revenueInvoiceHref(entry);
+        if (href) window.location.href = href;
+      }}
+    >
       {invoiceNumber}
     </a>
   ) : null;

@@ -14,6 +14,9 @@ function sales_process_direct_invoice_create(array $input): array
 
     global $pdo;
     $salesDb = function_exists('sales_pdo') ? sales_pdo() : $pdo;
+    if ($salesDb instanceof PDO) {
+        $pdo = $salesDb;
+    }
     $company_id = (int) (currentCompanyId() ?? 0);
 
     ensureCustomerColumnsExist();
@@ -257,7 +260,20 @@ function sales_process_direct_invoice_create(array $input): array
 
         $pdo->commit();
 
-        syncInvoiceToRevenueLedger($pdo, $invoice_id, (int) ($_SESSION['user_id'] ?? 0) ?: null);
+        // Create the Revenue voucher immediately (same DB connection as the invoice).
+        $userId = (int) ($_SESSION['user_id'] ?? 0) ?: null;
+        $revenueEntryId = 0;
+        try {
+            $revenueEntryId = (int) syncInvoiceToRevenueLedger($pdo, $invoice_id, $userId);
+            if ($revenueEntryId <= 0) {
+                $revenueEntryId = (int) syncInvoiceToRevenueLedger($pdo, $invoice_id, $userId);
+            }
+        } catch (Throwable $e) {
+            error_log('invoice_direct_create revenue: ' . $e->getMessage());
+        }
+        if ($revenueEntryId <= 0) {
+            error_log('invoice_direct_create: revenue voucher missing after create for invoice #' . $invoice_id);
+        }
 
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -265,6 +281,7 @@ function sales_process_direct_invoice_create(array $input): array
         $_SESSION['sales_invoice_create_flash'] = [
             'invoice_id' => $invoice_id,
             'stock_deduction' => $stockDeduction,
+            'revenue_entry_id' => $revenueEntryId,
         ];
 
         $redirectQuery = [

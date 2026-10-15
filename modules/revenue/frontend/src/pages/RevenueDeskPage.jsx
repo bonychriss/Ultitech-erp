@@ -25,6 +25,7 @@ import RevenuePayModal from '../components/RevenuePayModal';
 import RevenueQuickViewModal from '../components/RevenueQuickViewModal';
 import RevenueKpiTraceModal from '../components/RevenueKpiTraceModal';
 import { resolveKpiTrace } from '../utils/kpiTrace';
+import { rememberRevenueList, revenueInvoiceHref } from '../utils/revenueNav';
 
 const emptyAdvancedFilters = {
   date_from: '',
@@ -281,16 +282,40 @@ function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember, onView, onDel
   );
 }
 
+function mergeListFilters(urlList, restoredList) {
+  const restoredFilters = restoredList && restoredList.filters ? restoredList.filters : {};
+  const urlFilters = urlList && urlList.filters ? urlList.filters : {};
+  return {
+    ...emptyFilters,
+    search: restoredList && typeof restoredList.search === 'string'
+      ? restoredList.search
+      : (urlList.search || ''),
+    date_from: urlFilters.date_from || restoredFilters.date_from || '',
+    date_to: urlFilters.date_to || restoredFilters.date_to || '',
+    customer_id: urlFilters.customer_id || restoredFilters.customer_id || '',
+    type: urlFilters.type || restoredFilters.type || '',
+    status: urlFilters.status || restoredFilters.status || '',
+    payment: urlFilters.payment || restoredFilters.payment || '',
+  };
+}
+
 export default function RevenueDeskPage() {
   const restoredList = takeRestoredListState();
   const urlList = readListStateFromUrl();
+  const bootFilters = mergeListFilters(urlList, restoredList);
   const [init, setInit] = useState(null);
   const [desk, setDesk] = useState(null);
-  const [filters, setFilters] = useState(emptyFilters);
-  const [draftFilters, setDraftFilters] = useState({ ...emptyAdvancedFilters });
-  const [draftSearch, setDraftSearch] = useState(() => (
-    restoredList && typeof restoredList.search === 'string' ? restoredList.search : urlList.search
-  ));
+  // Seed from URL/restore immediately so the URL sync effect cannot strip filters on mount.
+  const [filters, setFilters] = useState(() => bootFilters);
+  const [draftFilters, setDraftFilters] = useState(() => ({
+    date_from: bootFilters.date_from,
+    date_to: bootFilters.date_to,
+    customer_id: bootFilters.customer_id,
+    type: bootFilters.type,
+    status: bootFilters.status,
+    payment: bootFilters.payment,
+  }));
+  const [draftSearch, setDraftSearch] = useState(() => bootFilters.search || '');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [highlightedId, setHighlightedId] = useState(() => {
@@ -306,6 +331,7 @@ export default function RevenueDeskPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const skipFilterFetch = useRef(true);
+  const urlSyncReady = useRef(false);
   const appliedSearchRef = useRef('');
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef(null);
@@ -410,23 +436,7 @@ export default function RevenueDeskPage() {
 
   function rememberList(id) {
     markListSelection(id);
-    if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.push === 'function') {
-      window.erpNavBack.push({
-        href: window.location.href,
-        state: {
-          search: draftSearch || filters.search,
-          filters: {
-            date_from: filters.date_from,
-            date_to: filters.date_to,
-            customer_id: filters.customer_id,
-            type: filters.type,
-            status: filters.status,
-            payment: filters.payment,
-          },
-          selectedId: Number(id) || 0,
-        },
-      });
-    }
+    rememberRevenueList(id, filters, draftSearch || filters.search);
   }
 
   async function reloadDesk(currentFilters = filters) {
@@ -472,16 +482,16 @@ export default function RevenueDeskPage() {
         const urlStatus = urlParams?.get('status') || '';
         const urlPayment = urlParams?.get('payment') || '';
         const urlType = urlParams?.get('type') || '';
-        const urlQ = urlParams?.get('q') || (restoredList && typeof restoredList.search === 'string' ? restoredList.search : '') || '';
+        const urlQ = urlParams?.get('q') || (restoredList && typeof restoredList.search === 'string' ? restoredList.search : '') || bootFilters.search || '';
         const restoredFilters = restoredList && restoredList.filters ? restoredList.filters : {};
         const initial = {
           ...emptyFilters,
-          date_from: urlParams?.get('date_from') || restoredFilters.date_from || defaults.date_from || '',
-          date_to: urlParams?.get('date_to') || restoredFilters.date_to || defaults.date_to || '',
-          status: urlStatus || restoredFilters.status || '',
-          payment: urlPayment || restoredFilters.payment || '',
-          type: urlType || restoredFilters.type || '',
-          customer_id: urlParams?.get('customer_id') || restoredFilters.customer_id || '',
+          date_from: urlParams?.get('date_from') || restoredFilters.date_from || bootFilters.date_from || defaults.date_from || '',
+          date_to: urlParams?.get('date_to') || restoredFilters.date_to || bootFilters.date_to || defaults.date_to || '',
+          status: urlStatus || restoredFilters.status || bootFilters.status || '',
+          payment: urlPayment || restoredFilters.payment || bootFilters.payment || '',
+          type: urlType || restoredFilters.type || bootFilters.type || '',
+          customer_id: urlParams?.get('customer_id') || restoredFilters.customer_id || bootFilters.customer_id || '',
           search: urlQ,
         };
         setDraftSearch(urlQ);
@@ -495,6 +505,8 @@ export default function RevenueDeskPage() {
           status: initial.status,
           payment: initial.payment,
         });
+        urlSyncReady.current = true;
+        writeListStateToUrl(urlQ, initial, highlightedId);
         const listData = await fetchDeskEntries(initial);
         if (!cancelled) setDesk(listData);
       } catch (err) {
@@ -623,8 +635,11 @@ export default function RevenueDeskPage() {
   }, [searchOpen, draftSearch, filters.search]);
 
   useEffect(() => {
+    // Avoid wiping date/filter query params before init hydrates filters from the URL.
+    if (!urlSyncReady.current && !init) return;
+    urlSyncReady.current = true;
     writeListStateToUrl(draftSearch || filters.search, filters, highlightedId);
-  }, [draftSearch, filters, highlightedId]);
+  }, [draftSearch, filters, highlightedId, init]);
 
   useEffect(() => {
     if (!highlightedId) return undefined;
@@ -1406,7 +1421,23 @@ export default function RevenueDeskPage() {
                 <td className="col-type">
                   <div className="rev-type-cell">
                     <span className={`rev-type rev-type--${row.type_class || 'other'}`}>{row.type_label}</span>
-                    {row.linked_invoice_number ? (
+                    {row.linked_invoice_number && revenueInvoiceHref(row) ? (
+                      <a
+                        href={revenueInvoiceHref(row)}
+                        className="rev-type-meta rev-type-meta--link"
+                        title={`Open invoice ${row.linked_invoice_number}`}
+                        data-rev-row-ignore
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          rememberList(row.id);
+                          const href = revenueInvoiceHref(row);
+                          if (href) window.location.href = href;
+                        }}
+                      >
+                        {row.linked_invoice_number}
+                      </a>
+                    ) : row.linked_invoice_number ? (
                       <span className="rev-type-meta">{row.linked_invoice_number}</span>
                     ) : null}
                   </div>

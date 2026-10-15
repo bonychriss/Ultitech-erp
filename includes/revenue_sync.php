@@ -150,12 +150,13 @@ function ensureRevenueSourceInvoiceSchema($pdo)
 
 /**
  * Next voucher number (shared with revenue_process.php).
- * Format: REV-{year}-{Mon}-{n} — monthly sequence, no leading zeros (1, 2, …).
+ * Format: REV-{year}-{m}-{n} — monthly sequence, no leading zeros (1, 2, …).
+ * Year/month use the current date (when the voucher is created). Month is numeric (1–12).
  */
 function generateRevenueVoucherNumber(PDO $pdo): string
 {
     $year = date('Y');
-    $month = date('M');
+    $month = (string) (int) date('n');
     $prefix = "REV-$year-$month-";
 
     $stmt = $pdo->prepare('SELECT voucher_number FROM revenue_entries WHERE voucher_number LIKE ? ORDER BY id DESC LIMIT 1');

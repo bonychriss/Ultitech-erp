@@ -123,11 +123,14 @@ function backfillInvoicesMissingFromRevenueLedger($pdo, $limit = 1000)
 
 /**
  * Ensure an invoice is represented in revenue_ledger and kept up-to-date.
+ * Creates the revenue_entries voucher immediately when missing.
+ *
+ * @return int revenue_entries.id when linked/created, 0 on skip/failure
  */
-function syncInvoiceToRevenueLedger($pdo, $invoiceId, $userId = null)
+function syncInvoiceToRevenueLedger($pdo, $invoiceId, $userId = null): int
 {
-    if ($invoiceId <= 0) {
-        return;
+    if ($invoiceId <= 0 || !($pdo instanceof PDO)) {
+        return 0;
     }
 
     ensureRevenueLedgerSchema($pdo);
@@ -161,7 +164,7 @@ function syncInvoiceToRevenueLedger($pdo, $invoiceId, $userId = null)
         $stmt->execute([$invoiceId]);
         $inv = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$inv) {
-            return;
+            return 0;
         }
 
         $status = strtolower((string) ($inv['status'] ?? 'sent'));
@@ -200,10 +203,12 @@ function syncInvoiceToRevenueLedger($pdo, $invoiceId, $userId = null)
             $userId,
         ]);
 
-        $revenueEntryId = syncInvoiceToRevenue($pdo, $invoiceId);
+        $revenueEntryId = (int) syncInvoiceToRevenue($pdo, $invoiceId);
         if ($revenueEntryId > 0) {
             $pdo->prepare('UPDATE revenue_ledger SET revenue_entry_id = ? WHERE source_type = ? AND source_id = ? LIMIT 1')
                 ->execute([$revenueEntryId, 'invoice', $invoiceId]);
+        } else {
+            error_log('syncInvoiceToRevenueLedger: no revenue_entries row for invoice #' . (int) $invoiceId);
         }
 
         if (is_file(__DIR__ . '/invoice_gl_posting.php')) {
@@ -212,8 +217,12 @@ function syncInvoiceToRevenueLedger($pdo, $invoiceId, $userId = null)
                 invoice_gl_ensure_invoice_recognition($pdo, $invoiceId);
             }
         }
+
+        return $revenueEntryId;
     } catch (Throwable $e) {
-        // Do not block Sales flows.
+        // Do not block Sales flows, but keep a trail for missed syncs.
+        error_log('syncInvoiceToRevenueLedger invoice #' . (int) $invoiceId . ': ' . $e->getMessage());
+        return 0;
     }
 }
 

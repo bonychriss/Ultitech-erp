@@ -307,12 +307,26 @@ function sales_convert_order_to_invoice(int $orderId, string $module = 'sales', 
         error_log('sales_convert_order_to_invoice stock: ' . (string) $stockDeduction['error']);
     }
 
+    $revenueEntryId = 0;
     try {
+        if (!function_exists('syncInvoiceToRevenueLedger')) {
+            $ledgerPath = dirname(__DIR__, 3) . '/includes/revenue_ledger.php';
+            if (is_file($ledgerPath)) {
+                require_once $ledgerPath;
+            }
+        }
         if (function_exists('syncInvoiceToRevenueLedger')) {
-            syncInvoiceToRevenueLedger($salesDb, $invoiceId, (int) ($_SESSION['user_id'] ?? 0) ?: null);
+            $userId = (int) ($_SESSION['user_id'] ?? 0) ?: null;
+            $revenueEntryId = (int) syncInvoiceToRevenueLedger($salesDb, $invoiceId, $userId);
+            if ($revenueEntryId <= 0) {
+                $revenueEntryId = (int) syncInvoiceToRevenueLedger($salesDb, $invoiceId, $userId);
+            }
         }
     } catch (Throwable $e) {
         error_log('sales_convert_order_to_invoice revenue: ' . $e->getMessage());
+    }
+    if ($revenueEntryId <= 0) {
+        error_log('sales_convert_order_to_invoice: revenue voucher missing after create for invoice #' . $invoiceId);
     }
 
     if (session_status() === PHP_SESSION_NONE) {
@@ -321,6 +335,7 @@ function sales_convert_order_to_invoice(int $orderId, string $module = 'sales', 
     $_SESSION['sales_invoice_create_flash'] = [
         'invoice_id' => $invoiceId,
         'stock_deduction' => $stockDeduction,
+        'revenue_entry_id' => $revenueEntryId,
     ];
 
     $redirectQuery = [

@@ -1276,7 +1276,7 @@ if ($brandingLogoUrl === '' && !empty($company_settings['company_logo'])) {
                 if ($returnUrl): 
                     $decodedReturnUrl = urldecode($returnUrl);
                 ?>
-                    <a href="<?php echo htmlspecialchars($decodedReturnUrl); ?>" class="text-decoration-none" title="Back to Sales Report">
+                    <a href="<?php echo htmlspecialchars($decodedReturnUrl); ?>" class="text-decoration-none erp-nav-back-link" data-erp-nav-back="<?php echo htmlspecialchars($decodedReturnUrl); ?>" title="Back to where you were">
                         <i class="fas fa-arrow-left me-1"></i>Back
                     </a>
                     <span class="sep text-muted mx-2">/</span>

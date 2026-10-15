@@ -1721,6 +1721,17 @@ body.page-rev-desk .rev-desk-page button.rev-desk-row-menu-btn {
   white-space: nowrap;
 }
 
+a.rev-type-meta--link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+a.rev-type-meta--link:hover {
+  text-decoration: underline;
+  color: #1d4ed8;
+}
+
 .rev-status {
   display: inline-flex;
   padding: 0.12rem 0.4rem;

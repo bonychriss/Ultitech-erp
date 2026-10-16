@@ -1209,32 +1209,7 @@ function replenishment_investigate_product(PDO $pdo, int $productId): array
                 ),
             ],
             'supplier_invoices' => replenishment_fetch_supplier_invoices($productId),
-            'purchase_orders' => (static function () use ($pdo, $productId, $product): array {
-                $rows = replenishment_fetch_product_purchase_orders($pdo, $productId);
-                // Temporary diagnostic for empty-PO cases (e.g. RUNGU). Safe to remove later.
-                try {
-                    $code = trim((string) ($product['product_code'] ?? ''));
-                    $trace = [
-                        'at' => date('c'),
-                        'db' => (string) $pdo->query('SELECT DATABASE()')->fetchColumn(),
-                        'product_id' => $productId,
-                        'product_code' => $code,
-                        'product_name' => (string) ($product['name'] ?? ''),
-                        'item_ids' => replenishment_resolve_po_item_ids($pdo, $productId),
-                        'po_count' => count($rows),
-                        'po_numbers' => array_values(array_map(
-                            static fn ($r) => (string) ($r['po_number'] ?? ''),
-                            $rows
-                        )),
-                    ];
-                    @file_put_contents(
-                        __DIR__ . '/_po_trace_last.json',
-                        json_encode($trace, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-                    );
-                } catch (Throwable $e) {
-                }
-                return $rows;
-            })(),
+            'purchase_orders' => replenishment_fetch_product_purchase_orders($pdo, $productId),
         ],
     ];
 }

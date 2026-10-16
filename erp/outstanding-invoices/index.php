@@ -36,8 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Please provide a valid Name and Amount.';
         } elseif (!$dateObj || $dateObj->format('Y-m-d') !== $date) {
             $error = 'Please provide a valid date.';
-        } elseif ($date < date('Y-m-d')) {
-            $error = 'The date cannot be earlier than today.';
         } else {
             $stmt = $pdo->prepare("INSERT INTO erp_outstanding_invoices (type, invoice_date, entity_name, invoice_number, narration, amount, attachment) VALUES (?, ?, ?, ?, ?, ?, ?)");
             if ($stmt->execute([$type, $date, $name, $invoiceNo, $narration, $amount, $attachmentPath])) {
@@ -394,7 +392,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                 <div class="oi-form-grid">
                     <div class="oi-field oi-span-3">
                         <label for="oiDate">Date <em>*</em></label>
-                        <input type="date" id="oiDate" name="invoice_date" value="<?= date('Y-m-d') ?>" min="<?= date('Y-m-d') ?>" required>
+                        <input type="date" id="oiDate" name="invoice_date" value="<?= date('Y-m-d') ?>" required>
                     </div>
                     <div class="oi-field oi-span-5">
                         <label for="oiEntity"><?= $entityLabel ?> name <em>*</em></label>

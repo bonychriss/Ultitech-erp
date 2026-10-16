@@ -618,15 +618,14 @@ function replenishment_resolve_po_item_ids(PDO $pdo, int $productId): array
         if ($product) {
             $name = trim((string) ($product['name'] ?? ''));
             $code = trim((string) ($product['product_code'] ?? ''));
+            // Exact name or exact SKU only — never LIKE, or "RUNGU" matches "RUNGU HOLDER".
             if ($name !== '' || $code !== '') {
                 $find = $pdo->prepare(
                     'SELECT id FROM stocks_items
                      WHERE (LOWER(TRIM(name)) = LOWER(TRIM(?)) AND ? <> \'\')
-                        OR (sku IS NOT NULL AND sku <> \'\' AND LOWER(TRIM(sku)) = LOWER(TRIM(?)) AND ? <> \'\')
-                        OR (? <> \'\' AND LOWER(TRIM(name)) LIKE CONCAT(\'%\', LOWER(TRIM(?)), \'%\'))
-                        OR (? <> \'\' AND sku IS NOT NULL AND LOWER(TRIM(sku)) LIKE CONCAT(\'%\', LOWER(TRIM(?)), \'%\'))'
+                        OR (sku IS NOT NULL AND sku <> \'\' AND LOWER(TRIM(sku)) = LOWER(TRIM(?)) AND ? <> \'\')'
                 );
-                $find->execute([$name, $name, $code, $code, $name, $name, $code, $code]);
+                $find->execute([$name, $name, $code, $code]);
                 foreach ($find->fetchAll(PDO::FETCH_COLUMN) ?: [] as $sid) {
                     $sid = (int) $sid;
                     if ($sid > 0) {
@@ -726,10 +725,8 @@ function replenishment_fetch_product_purchase_orders(PDO $pdo, int $productId): 
                     SELECT si.id FROM stocks_items si
                     WHERE (LOWER(TRIM(si.name)) = LOWER(TRIM(?)) AND ? <> '')
                        OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(si.sku)) = LOWER(TRIM(?)) AND ? <> '')
-                       OR (? <> '' AND LOWER(TRIM(si.name)) LIKE CONCAT('%', LOWER(TRIM(?)), '%'))
-                       OR (? <> '' AND si.sku IS NOT NULL AND LOWER(TRIM(si.sku)) LIKE CONCAT('%', LOWER(TRIM(?)), '%'))
                 )";
-                array_push($params, $pName, $pName, $pCode, $pCode, $pName, $pName, $pCode, $pCode);
+                array_push($params, $pName, $pName, $pCode, $pCode);
             }
         } catch (Throwable $e) {
         }

@@ -40,12 +40,6 @@ function formatNum(value, digits = 0) {
   });
 }
 
-function money(value, currency = 'TZS') {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return `${currency} 0.00`;
-  return `${currency} ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
 function statusPill(status) {
   const s = String(status || '').toLowerCase();
   if (['confirmed', 'invoiced', 'paid', 'delivered', 'completed'].includes(s)) {
@@ -226,7 +220,11 @@ export default function ProductTraceModal({
   const salesInvoices = new Set(
     filteredSales.map((r) => r.invoice_id || r.invoice_number || r.order_id).filter(Boolean),
   ).size;
-  const currency = data?.sales_summary?.currency || 'TZS';
+  const totalBought = Number(
+    data?.sales_summary?.total_bought
+      ?? data?.reconciliation?.goods_received
+      ?? 0,
+  );
   const recon = data?.reconciliation || {};
   const stock = Number(productInfo.current_stock ?? 0);
   const threshold = Number(productInfo.reorder_level ?? 0);
@@ -449,8 +447,8 @@ export default function ProductTraceModal({
                           <strong>{formatNum(salesInvoices)}</strong>
                         </div>
                         <div>
-                          <span>Total Sales Value</span>
-                          <strong>{money(data?.sales_summary?.total_sales_value || 0, currency)}</strong>
+                          <span>Total Internal Purchases</span>
+                          <strong>{formatNum(totalBought)}</strong>
                         </div>
                       </div>
                     ) : null}

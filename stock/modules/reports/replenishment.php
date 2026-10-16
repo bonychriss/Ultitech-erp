@@ -1044,7 +1044,7 @@ function replenishment_investigate_product(PDO $pdo, int $productId): array
             'sales_summary' => [
                 'total_qty_sold' => $totalSold,
                 'total_invoices' => $totalInvoices > 0 ? $totalInvoices : count($salesHistory),
-                'total_sales_value' => 0,
+                'total_bought' => $goodsReceived,
                 'currency' => 'TZS',
             ],
             'sales_history' => $salesHistory,

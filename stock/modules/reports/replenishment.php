@@ -622,9 +622,11 @@ function replenishment_resolve_po_item_ids(PDO $pdo, int $productId): array
                 $find = $pdo->prepare(
                     'SELECT id FROM stocks_items
                      WHERE (LOWER(TRIM(name)) = LOWER(TRIM(?)) AND ? <> \'\')
-                        OR (sku IS NOT NULL AND sku <> \'\' AND LOWER(TRIM(sku)) = LOWER(TRIM(?)) AND ? <> \'\')'
+                        OR (sku IS NOT NULL AND sku <> \'\' AND LOWER(TRIM(sku)) = LOWER(TRIM(?)) AND ? <> \'\')
+                        OR (? <> \'\' AND LOWER(TRIM(name)) LIKE CONCAT(\'%\', LOWER(TRIM(?)), \'%\'))
+                        OR (? <> \'\' AND sku IS NOT NULL AND LOWER(TRIM(sku)) LIKE CONCAT(\'%\', LOWER(TRIM(?)), \'%\'))'
                 );
-                $find->execute([$name, $name, $code, $code]);
+                $find->execute([$name, $name, $code, $code, $name, $name, $code, $code]);
                 foreach ($find->fetchAll(PDO::FETCH_COLUMN) ?: [] as $sid) {
                     $sid = (int) $sid;
                     if ($sid > 0) {
@@ -689,30 +691,60 @@ function replenishment_fetch_product_purchase_orders(PDO $pdo, int $productId): 
     try {
         $pdo->query('SELECT 1 FROM stocks_po_items LIMIT 1');
         $pdo->query('SELECT 1 FROM stocks_purchase_orders LIMIT 1');
+        $poCols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $piCols = $pdo->query('SHOW COLUMNS FROM stocks_po_items')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+        $selectParts = [
+            'po.id AS po_id',
+            in_array('po_number', $poCols, true) ? 'po.po_number' : "CONCAT('PO-', po.id) AS po_number",
+            in_array('status', $poCols, true) ? 'po.status' : "'' AS status",
+            in_array('purchase_type', $poCols, true) ? 'po.purchase_type' : "'domestic' AS purchase_type",
+            in_array('currency', $poCols, true) ? 'po.currency' : "'TZS' AS currency",
+            in_array('total_amount', $poCols, true) ? 'po.total_amount' : 'NULL AS total_amount',
+            in_array('created_at', $poCols, true) ? 'po.created_at' : 'NULL AS created_at',
+            in_array('expected_delivery_date', $poCols, true)
+                ? 'po.expected_delivery_date'
+                : 'NULL AS expected_delivery_date',
+            in_array('qty_ordered', $piCols, true) ? 'pi.qty_ordered' : '0 AS qty_ordered',
+            in_array('qty_received', $piCols, true) ? 'pi.qty_received' : '0 AS qty_received',
+            in_array('unit_cost', $piCols, true) ? 'pi.unit_cost' : 'NULL AS unit_cost',
+            "{$supplierNameExpr} AS supplier_name",
+        ];
+
         $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
-        $sql = "
-            SELECT
-                po.id AS po_id,
-                po.po_number,
-                po.status,
-                po.purchase_type,
-                po.currency,
-                po.total_amount,
-                po.created_at,
-                po.expected_delivery_date,
-                pi.qty_ordered,
-                pi.qty_received,
-                pi.unit_cost,
-                {$supplierNameExpr} AS supplier_name
+        $params = $itemIds;
+        $where = "pi.item_id IN ({$placeholders})";
+
+        try {
+            $stProd = $pdo->prepare('SELECT name, product_code FROM products WHERE id = ? LIMIT 1');
+            $stProd->execute([$productId]);
+            $prodRow = $stProd->fetch(PDO::FETCH_ASSOC) ?: null;
+            $pName = trim((string) ($prodRow['name'] ?? ''));
+            $pCode = trim((string) ($prodRow['product_code'] ?? ''));
+            if ($pName !== '' || $pCode !== '') {
+                $where .= " OR pi.item_id IN (
+                    SELECT si.id FROM stocks_items si
+                    WHERE (LOWER(TRIM(si.name)) = LOWER(TRIM(?)) AND ? <> '')
+                       OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(si.sku)) = LOWER(TRIM(?)) AND ? <> '')
+                       OR (? <> '' AND LOWER(TRIM(si.name)) LIKE CONCAT('%', LOWER(TRIM(?)), '%'))
+                       OR (? <> '' AND si.sku IS NOT NULL AND LOWER(TRIM(si.sku)) LIKE CONCAT('%', LOWER(TRIM(?)), '%'))
+                )";
+                array_push($params, $pName, $pName, $pCode, $pCode, $pName, $pName, $pCode, $pCode);
+            }
+        } catch (Throwable $e) {
+        }
+
+        $orderBy = in_array('created_at', $poCols, true) ? 'po.created_at DESC, po.id DESC' : 'po.id DESC';
+        $sql = 'SELECT ' . implode(', ', $selectParts) . "
             FROM stocks_po_items pi
             INNER JOIN stocks_purchase_orders po ON po.id = pi.po_id
             {$supplierJoin}
-            WHERE pi.item_id IN ({$placeholders})
-            ORDER BY po.created_at DESC, po.id DESC
+            WHERE {$where}
+            ORDER BY {$orderBy}
             LIMIT 50
         ";
         $st = $pdo->prepare($sql);
-        $st->execute($itemIds);
+        $st->execute($params);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
             $poId = (int) ($row['po_id'] ?? 0);
             if ($poId <= 0 || isset($seen['stocks:' . $poId])) {
@@ -743,6 +775,55 @@ function replenishment_fetch_product_purchase_orders(PDO $pdo, int $productId): 
         }
     } catch (Throwable $e) {
         error_log('replenishment_fetch_product_purchase_orders stocks: ' . $e->getMessage());
+    }
+
+    try {
+        $pdo->query('SELECT 1 FROM erp_purchase_order_items LIMIT 1');
+        $pdo->query('SELECT 1 FROM erp_purchase_orders LIMIT 1');
+        $erpPoCols = $pdo->query('SHOW COLUMNS FROM erp_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $dateExpr = in_array('created_at', $erpPoCols, true)
+            ? 'po.created_at'
+            : (in_array('order_date', $erpPoCols, true) ? 'po.order_date' : 'NULL');
+        $totalExpr = in_array('total_amount', $erpPoCols, true) ? 'po.total_amount' : 'NULL';
+        $sql = "
+            SELECT po.id AS po_id, po.po_number, po.status, {$totalExpr} AS total_amount,
+                   {$dateExpr} AS created_at, poi.quantity AS qty_ordered
+            FROM erp_purchase_order_items poi
+            INNER JOIN erp_purchase_orders po ON po.id = poi.po_id
+            WHERE poi.product_id = ?
+            ORDER BY po.id DESC
+            LIMIT 50
+        ";
+        $st = $pdo->prepare($sql);
+        $st->execute([$productId]);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $poId = (int) ($row['po_id'] ?? 0);
+            if ($poId <= 0 || isset($seen['erp:' . $poId]) || isset($seen['stocks:' . $poId])) {
+                continue;
+            }
+            $seen['erp:' . $poId] = true;
+            $out[] = [
+                'id' => $poId,
+                'source' => 'erp',
+                'po_number' => (string) ($row['po_number'] ?? ('PO-' . $poId)),
+                'status' => (string) ($row['status'] ?? ''),
+                'purchase_type' => 'erp',
+                'currency' => 'TZS',
+                'total_amount' => $row['total_amount'] !== null && $row['total_amount'] !== ''
+                    ? (float) $row['total_amount']
+                    : null,
+                'created_at' => (string) ($row['created_at'] ?? ''),
+                'expected_delivery_date' => '',
+                'qty_ordered' => (float) ($row['qty_ordered'] ?? 0),
+                'qty_received' => 0.0,
+                'unit_cost' => null,
+                'supplier_name' => '',
+                'view_url' => '../../erp/purchasing/view-po.php?id=' . $poId,
+                'preview_url' => '../../erp/purchasing/view-po.php?id=' . $poId,
+            ];
+        }
+    } catch (Throwable $e) {
+        error_log('replenishment_fetch_product_purchase_orders erp: ' . $e->getMessage());
     }
 
     try {
@@ -1131,7 +1212,32 @@ function replenishment_investigate_product(PDO $pdo, int $productId): array
                 ),
             ],
             'supplier_invoices' => replenishment_fetch_supplier_invoices($productId),
-            'purchase_orders' => replenishment_fetch_product_purchase_orders($pdo, $productId),
+            'purchase_orders' => (static function () use ($pdo, $productId, $product): array {
+                $rows = replenishment_fetch_product_purchase_orders($pdo, $productId);
+                // Temporary diagnostic for empty-PO cases (e.g. RUNGU). Safe to remove later.
+                try {
+                    $code = trim((string) ($product['product_code'] ?? ''));
+                    $trace = [
+                        'at' => date('c'),
+                        'db' => (string) $pdo->query('SELECT DATABASE()')->fetchColumn(),
+                        'product_id' => $productId,
+                        'product_code' => $code,
+                        'product_name' => (string) ($product['name'] ?? ''),
+                        'item_ids' => replenishment_resolve_po_item_ids($pdo, $productId),
+                        'po_count' => count($rows),
+                        'po_numbers' => array_values(array_map(
+                            static fn ($r) => (string) ($r['po_number'] ?? ''),
+                            $rows
+                        )),
+                    ];
+                    @file_put_contents(
+                        __DIR__ . '/_po_trace_last.json',
+                        json_encode($trace, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                    );
+                } catch (Throwable $e) {
+                }
+                return $rows;
+            })(),
         ],
     ];
 }

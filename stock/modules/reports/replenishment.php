@@ -49,12 +49,6 @@ function replenishment_committed_status_filter(): string
     return "so.status IN ('confirmed', 'invoiced', 'paid', 'processing', 'on_hold')";
 }
 
-/** Statuses included when building full sales history for the product trace modal. */
-function replenishment_history_status_filter(): string
-{
-    return "so.status NOT IN ('cancelled', 'canceled')";
-}
-
 /**
  * @return array<int, PDO>
  */
@@ -94,11 +88,9 @@ function replenishment_resolve_sales_pdos(): array
 }
 
 /**
- * @param bool $forHistory When true, return full sold qty including shipped/delivered
- *                         orders (for Product Trace). When false, return open demand only.
  * @return array<int, array<string, mixed>>
  */
-function replenishment_query_product_sources(PDO $db, int $productId, bool $forHistory = false): array
+function replenishment_query_product_sources(PDO $db, int $productId): array
 {
     if ($productId <= 0) {
         return [];
@@ -153,11 +145,7 @@ function replenishment_query_product_sources(PDO $db, int $productId, bool $forH
         $orderNumberExpr = "CONCAT('SO-', so.id)";
     }
 
-    [$demandQtyExpr, $hasShippedQty] = replenishment_schema_hints($db);
-    // History must use ordered qty, not remaining-to-ship — stock was already reduced.
-    $lineQtyExpr = $forHistory
-        ? (in_array('quantity', $soiCols, true) ? 'soi.quantity' : '1')
-        : $demandQtyExpr;
+    [$lineQtyExpr, $hasShippedQty] = replenishment_schema_hints($db);
 
     $customerSelect = $hasCustomers ? 'c.company_name AS customer_name' : "'' AS customer_name";
     $customerJoin = $hasCustomers ? 'LEFT JOIN customers c ON so.customer_id = c.id' : '';
@@ -182,10 +170,8 @@ function replenishment_query_product_sources(PDO $db, int $productId, bool $forH
         $params = [$productId, $productId, $productId];
     }
 
-    $openOrderFilter = $forHistory ? '1=1' : replenishment_open_order_filter($soCols, $hasShippedQty);
-    $detailStatusFilter = $forHistory
-        ? replenishment_history_status_filter()
-        : replenishment_committed_status_filter();
+    $openOrderFilter = replenishment_open_order_filter($soCols, $hasShippedQty);
+    $detailStatusFilter = replenishment_committed_status_filter();
 
     $queries = [];
 
@@ -334,13 +320,13 @@ function replenishment_query_product_sources(PDO $db, int $productId, bool $forH
 /**
  * @return array<int, array<string, mixed>>
  */
-function replenishment_fetch_product_demand_sources(int $productId, bool $forHistory = false): array
+function replenishment_fetch_product_demand_sources(int $productId): array
 {
     $merged = [];
     $seenKeys = [];
 
     foreach (replenishment_resolve_sales_pdos() as $db) {
-        foreach (replenishment_query_product_sources($db, $productId, $forHistory) as $row) {
+        foreach (replenishment_query_product_sources($db, $productId) as $row) {
             $orderId = (int) ($row['order_id'] ?? 0);
             $invoiceId = (int) ($row['invoice_id'] ?? 0);
             $dedupeKey = $orderId . ':' . $invoiceId . ':' . ($row['invoice_number'] ?? '');
@@ -360,28 +346,18 @@ function replenishment_fetch_product_demand_sources(int $productId, bool $forHis
 }
 
 /**
- * Full sales / invoice history for Product Trace (includes shipped orders).
- *
- * @return array<int, array<string, mixed>>
- */
-function replenishment_fetch_product_sales_history(int $productId): array
-{
-    return replenishment_fetch_product_demand_sources($productId, true);
-}
-
-/**
  * Payment voucher attached to our sales invoice for this product.
  * The supplier invoice stays on the voucher; this only links the voucher.
  *
  * @return array<int, array<string, mixed>>
  */
-function replenishment_fetch_supplier_invoices(int $productId, bool $forHistory = false): array
+function replenishment_fetch_supplier_invoices(int $productId): array
 {
     if ($productId <= 0) {
         return [];
     }
 
-    $salesRows = replenishment_fetch_product_demand_sources($productId, $forHistory);
+    $salesRows = replenishment_fetch_product_demand_sources($productId);
     $needleMeta = [];
     foreach ($salesRows as $row) {
         $pairs = [
@@ -1005,8 +981,8 @@ function replenishment_investigate_product(PDO $pdo, int $productId): array
         );
     }
 
-    // Full history (not open-demand only) so shipped/invoiced RUNGU sales still appear.
-    $salesRaw = replenishment_map_sales_invoice_rows(replenishment_fetch_product_sales_history($productId));
+    // Invoice/order demand view (same basis as before). Stock outs stay on Reconciliation.
+    $salesRaw = replenishment_map_sales_invoice_rows(replenishment_fetch_product_demand_sources($productId));
     $salesHistory = [];
     $totalSold = 0.0;
     $totalInvoices = 0;
@@ -1233,7 +1209,7 @@ function replenishment_investigate_product(PDO $pdo, int $productId): array
                     array_values($warehouses)
                 ),
             ],
-            'supplier_invoices' => replenishment_fetch_supplier_invoices($productId, true),
+            'supplier_invoices' => replenishment_fetch_supplier_invoices($productId),
             'purchase_orders' => replenishment_fetch_product_purchase_orders($pdo, $productId),
         ],
     ];

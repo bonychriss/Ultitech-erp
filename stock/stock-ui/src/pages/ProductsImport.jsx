@@ -225,7 +225,7 @@ export default function ProductsImport({ data }) {
   if (loading) {
     return (
       <div className="prod-imp" aria-busy="true">
-        <p className="prod-imp-subtitle">Loading import�</p>
+        <p className="prod-imp-subtitle">Loading import...</p>
       </div>
     );
   }
@@ -262,7 +262,7 @@ export default function ProductsImport({ data }) {
         <div className="prod-imp-alert prod-imp-alert--ok prod-imp-alert--cta" role="status">
           <div className="prod-imp-alert-cta-body">
             <p className="prod-imp-alert-cta-msg">{success.message}</p>
-            <p className="prod-imp-alert-cta-sub">Opening products list�</p>
+            <p className="prod-imp-alert-cta-sub">Opening products list...</p>
           </div>
           <a className="prod-imp-btn-primary prod-imp-btn-primary--pill" href={success.deskUrl}>
             View products
@@ -454,9 +454,9 @@ export default function ProductsImport({ data }) {
                 {rows.map((row) => (
                   <tr key={row.row_no} className={!row.ok ? 'is-invalid' : ''}>
                     <td>{row.row_no}</td>
-                    <td>{row.name || '�'}</td>
+                    <td>{row.name || '-'}</td>
                     <td className="prod-imp-cell-muted">{row.product_code || 'auto'}</td>
-                    <td>{row.category || '�'}</td>
+                    <td>{row.category || '-'}</td>
                     <td>
                       {!row.ok ? (
                         <span className="prod-imp-status prod-imp-status--error" title={(row.issues || []).map((i) => i.issue).join('; ')}>

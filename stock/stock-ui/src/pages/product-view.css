@@ -1,4 +1,4 @@
-/* Product detail � simple desk layout */
+/* Product detail - simple desk layout */
 
 .pv-page {
   display: flex;
@@ -70,7 +70,7 @@
   background: #fff1f2;
 }
 
-/* Edit / Duplicate / Delete � no background boxes */
+/* Edit / Duplicate / Delete - no background boxes */
 .pv-toolbar-actions .pv-btn {
   background: transparent !important;
   border-color: transparent !important;
@@ -362,7 +362,7 @@
   max-width: 42rem;
 }
 
-/* Info rows � colorful icons only */
+/* Info rows - colorful icons only */
 .pv-info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));

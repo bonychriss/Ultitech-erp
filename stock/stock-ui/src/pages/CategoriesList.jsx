@@ -474,7 +474,7 @@ export default function CategoriesList({ data }) {
       window.location.href = `${formAction}?delete=${id}`;
     };
     if (window.StockAlert?.confirm) {
-      window.StockAlert.confirm(`Delete “${name}”?`, 'Delete category', go);
+      window.StockAlert.confirm(`Delete "${name}"?`, 'Delete category', go);
       return;
     }
     if (window.Swal) {
@@ -491,7 +491,7 @@ export default function CategoriesList({ data }) {
       });
       return;
     }
-    if (window.confirm(`Delete “${name}”?`)) go();
+    if (window.confirm(`Delete "${name}"?`)) go();
   };
 
   const toggleFeatured = async (cat) => {

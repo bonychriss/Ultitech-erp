@@ -156,7 +156,7 @@ function BrandLogoField({ id, existingUrl = '', existingFile = '' }) {
             <button type="button" className="brand-desk-dropzone-empty" onClick={() => inputRef.current?.click()}>
               <HiOutlinePhoto size={22} aria-hidden="true" />
               <span className="brand-desk-dropzone-title">
-                {imgFailed ? 'Could not load logo � choose another' : 'Drop logo or click to browse'}
+                {imgFailed ? 'Could not load logo - choose another' : 'Drop logo or click to browse'}
               </span>
               <span className="brand-desk-dropzone-hint">PNG or WebP recommended</span>
             </button>
@@ -396,7 +396,7 @@ export default function BrandsList({ data }) {
       });
       return;
     }
-    if (window.confirm(`Delete �${name}�?`)) go();
+    if (window.confirm(`Delete "${name}"?`)) go();
   };
 
   if (booting) {

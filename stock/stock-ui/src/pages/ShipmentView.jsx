@@ -82,7 +82,7 @@ function formatDate(d) {
 function StatusBadge({ status }) {
   const key = String(status || '').toLowerCase();
   const meta = STATUS_META[key] || {
-    label: key ? key.replace(/_/g, ' ') : '�',
+    label: key ? key.replace(/_/g, ' ') : '-',
     className: 'ship-desk-status--default',
   };
   return <span className={`ship-desk-status ${meta.className}`}>{meta.label}</span>;
@@ -198,7 +198,7 @@ export default function ShipmentView({ data }) {
             ) : null}
             <div className="ship-view-title-wrap">
               <h1 className="ship-view-title">Shipment</h1>
-              <code className="ship-view-invoice">{shipment.invoice_number || '�'}</code>
+              <code className="ship-view-invoice">{shipment.invoice_number || '-'}</code>
             </div>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function ShipmentView({ data }) {
           <StatusBadge status={status} />
           <span className="ship-view-meta-item">
             <HiOutlineTruck size={14} aria-hidden="true" />
-            {shipment.supplier_name || '�'}
+            {shipment.supplier_name || '-'}
           </span>
           {shipment.shipper_name ? (
             <span className="ship-view-meta-item">{shipment.shipper_name}</span>
@@ -318,7 +318,7 @@ export default function ShipmentView({ data }) {
                         <td colSpan={4}>
                           <div className="ship-view-desc-label">Description / cargo manifest</div>
                           <div className="ship-view-desc-body">
-                            {shipment.description || '�'}
+                            {shipment.description || '-'}
                           </div>
                         </td>
                       </tr>
@@ -332,7 +332,7 @@ export default function ShipmentView({ data }) {
                 <ul className="ship-view-summary">
                   <li>
                     <span>Invoice #</span>
-                    <strong>{shipment.invoice_number || '�'}</strong>
+                    <strong>{shipment.invoice_number || '-'}</strong>
                   </li>
                   <li>
                     <span>Contact</span>
@@ -341,7 +341,7 @@ export default function ShipmentView({ data }) {
                   <li>
                     <span>Tracking #</span>
                     <strong className="ship-view-clip" title={shipment.tracking_number || ''}>
-                      {shipment.tracking_number || '�'}
+                      {shipment.tracking_number || '-'}
                     </strong>
                   </li>
                   <li>
@@ -354,7 +354,7 @@ export default function ShipmentView({ data }) {
                   </li>
                   <li>
                     <span>CBM</span>
-                    <strong>{shipment.cbm != null ? `${shipment.cbm} m3` : '�'}</strong>
+                    <strong>{shipment.cbm != null ? `${shipment.cbm} m3` : '-'}</strong>
                   </li>
                 </ul>
               </aside>
@@ -394,13 +394,13 @@ export default function ShipmentView({ data }) {
                     ) : (
                       packages.map((pkg) => (
                         <tr key={pkg.id}>
-                          <td>{pkg.package_number || '�'}</td>
-                          <td>{pkg.tracking_number || '�'}</td>
-                          <td>{pkg.dimensions || '�'}</td>
-                          <td>{pkg.weight_kg != null ? `${pkg.weight_kg} kg` : '�'}</td>
-                          <td>{pkg.cbm != null ? pkg.cbm : '�'}</td>
+                          <td>{pkg.package_number || '-'}</td>
+                          <td>{pkg.tracking_number || '-'}</td>
+                          <td>{pkg.dimensions || '-'}</td>
+                          <td>{pkg.weight_kg != null ? `${pkg.weight_kg} kg` : '-'}</td>
+                          <td>{pkg.cbm != null ? pkg.cbm : '-'}</td>
                           <td>
-                            <span className="ship-view-pkg-status">{pkg.status || '�'}</span>
+                            <span className="ship-view-pkg-status">{pkg.status || '-'}</span>
                           </td>
                         </tr>
                       ))
@@ -447,10 +447,10 @@ export default function ShipmentView({ data }) {
                     ) : (
                       eccDocs.map((doc) => (
                         <tr key={doc.id}>
-                          <td>{doc.doc_type || doc.type || '�'}</td>
-                          <td>{doc.authority || '�'}</td>
-                          <td>{formatDate(doc.doc_date || doc.created_at) || '�'}</td>
-                          <td>{doc.status || '�'}</td>
+                          <td>{doc.doc_type || doc.type || '-'}</td>
+                          <td>{doc.authority || '-'}</td>
+                          <td>{formatDate(doc.doc_date || doc.created_at) || '-'}</td>
+                          <td>{doc.status || '-'}</td>
                         </tr>
                       ))
                     )}
@@ -479,17 +479,17 @@ export default function ShipmentView({ data }) {
                             {shipment.shipper_website}
                           </a>
                         ) : (
-                          '�'
+                          '-'
                         )}
                       </dd>
                     </div>
                     <div>
                       <dt>Phone</dt>
-                      <dd>{shipment.shipper_phone || '�'}</dd>
+                      <dd>{shipment.shipper_phone || '-'}</dd>
                     </div>
                     <div>
                       <dt>Email</dt>
-                      <dd>{shipment.shipper_email || '�'}</dd>
+                      <dd>{shipment.shipper_email || '-'}</dd>
                     </div>
                   </dl>
                 </div>

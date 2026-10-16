@@ -25,7 +25,7 @@ const TABS = [
 ];
 
 function formatDate(value) {
-  if (!value) return 'ï¿½';
+  if (!value) return '-';
   const d = new Date(String(value).replace(' ', 'T'));
   if (Number.isNaN(d.getTime())) return String(value);
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
@@ -33,7 +33,7 @@ function formatDate(value) {
 
 function formatNum(value, digits = 0) {
   const n = Number(value);
-  if (!Number.isFinite(n)) return 'ï¿½';
+  if (!Number.isFinite(n)) return '-';
   return n.toLocaleString(undefined, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits > 0 ? digits : 2,
@@ -354,7 +354,7 @@ export default function ProductTraceModal({
             <RowThumb src={productInfo.image_url || ''} />
             <div className="repl-trace__product-meta">
               <div className="repl-trace__pname">{productInfo.name || 'Unnamed'}</div>
-              <div className="repl-trace__pcode">{productInfo.product_code || 'ï¿½'}</div>
+              <div className="repl-trace__pcode">{productInfo.product_code || '-'}</div>
             </div>
             <div
               className={`repl-trace__status-flag${productInfo.needs_replenishment ? ' is-need' : ' is-ok'}`}
@@ -423,7 +423,7 @@ export default function ProductTraceModal({
 
         <div className="repl-trace__body">
           {loading ? (
-            <div className="repl-trace__loading">Loading investigationï¿½</div>
+            <div className="repl-trace__loading">Loading investigation...</div>
           ) : error ? (
             <div className="repl-trace__error">
               <HiOutlineExclamationTriangle />
@@ -476,7 +476,7 @@ export default function ProductTraceModal({
                             filteredSales.map((row, idx) => {
                               const pill = statusPill(row.status);
                               const href = row.invoice_url || row.order_url || '';
-                              const label = row.invoice_number || row.order_number || 'ï¿½';
+                              const label = row.invoice_number || row.order_number || '-';
                               return (
                                 <tr key={`${row.invoice_id}-${row.order_id}-${idx}`}>
                                   <td>{formatDate(row.date)}</td>
@@ -485,16 +485,16 @@ export default function ProductTraceModal({
                                       <a href={href} target="_blank" rel="noopener noreferrer">{label}</a>
                                     ) : label}
                                   </td>
-                                  <td>{row.customer_name || 'ï¿½'}</td>
+                                  <td>{row.customer_name || '-'}</td>
                                   <td className="is-right">{formatNum(row.quantity)}</td>
                                   <td><span className={`repl-trace-pill ${pill.cls}`}>{pill.label}</span></td>
-                                  <td>{row.recorded_by || 'ï¿½'}</td>
+                                  <td>{row.recorded_by || '-'}</td>
                                   <td>
                                     {href ? (
                                       <a className="repl-trace-view" href={href} target="_blank" rel="noopener noreferrer">
                                         <HiOutlineEye /> View
                                       </a>
-                                    ) : 'ï¿½'}
+                                    ) : null}
                                   </td>
                                 </tr>
                               );
@@ -562,7 +562,7 @@ export default function ProductTraceModal({
                                       </a>
                                     ) : (row.po_number || `PO-${row.id}`)}
                                   </td>
-                                  <td>{row.supplier_name || '—'}</td>
+                                  <td>{row.supplier_name || '-'}</td>
                                   <td>{typeLabel}</td>
                                   <td className="is-right">{formatNum(row.qty_ordered)}</td>
                                   <td className="is-right">{formatNum(row.qty_received)}</td>
@@ -603,8 +603,8 @@ export default function ProductTraceModal({
                           <div>
                             <strong>{previewPo.po_number || `PO-${previewPo.id}`}</strong>
                             <span>
-                              {previewPo.supplier_name ? ` · ${previewPo.supplier_name}` : ''}
-                              {previewPo.status ? ` · ${String(previewPo.status).replace(/_/g, ' ')}` : ''}
+                              {previewPo.supplier_name ? ` Â· ${previewPo.supplier_name}` : ''}
+                              {previewPo.status ? ` Â· ${String(previewPo.status).replace(/_/g, ' ')}` : ''}
                             </span>
                           </div>
                           <div className="repl-trace-po-preview__bar-actions">
@@ -627,7 +627,7 @@ export default function ProductTraceModal({
                         </div>
                         <div className={`repl-trace-po-preview__frame-wrap${previewLoading ? ' is-loading' : ''}`}>
                           {previewLoading ? (
-                            <div className="repl-trace-po-preview__loading">Loading purchase order…</div>
+                            <div className="repl-trace-po-preview__loading">Loading purchase order...</div>
                           ) : null}
                           <iframe
                             title={`Purchase order ${previewPo.po_number || previewPo.id}`}
@@ -703,9 +703,9 @@ export default function ProductTraceModal({
                                     <span className="repl-trace__muted">No voucher</span>
                                   )}
                                 </td>
-                                <td>{row.our_invoice || row.order_number || 'ï¿½'}</td>
-                                <td>{row.customer_name || 'ï¿½'}</td>
-                                <td>{row.order_status || row.invoice_status || 'ï¿½'}</td>
+                                <td>{row.our_invoice || row.order_number || '-'}</td>
+                                <td>{row.customer_name || '-'}</td>
+                                <td>{row.order_status || row.invoice_status || '-'}</td>
                                 <td>{formatDate(row.invoice_date || row.order_date)}</td>
                               </tr>
                             ))
@@ -732,7 +732,7 @@ export default function ProductTraceModal({
                       <HiOutlineQuestionMarkCircle aria-hidden="true" />
                       <h3>Replenishment Info</h3>
                     </header>
-                    <p className="repl-trace__why-text">{data?.why_on_list || 'ï¿½'}</p>
+                    <p className="repl-trace__why-text">{data?.why_on_list || '-'}</p>
                     <p className="repl-trace__hint">
                       Creating a purchase order does not remove this product from the list until warehouse stock is
                       received or adjusted to zero or above.
@@ -746,8 +746,8 @@ export default function ProductTraceModal({
                   <section className="repl-trace__side-card">
                     <h4>Key Information</h4>
                     <dl>
-                      <div><dt>Product</dt><dd>{productInfo.name || 'ï¿½'}</dd></div>
-                      <div><dt>Code</dt><dd>{productInfo.product_code || 'ï¿½'}</dd></div>
+                      <div><dt>Product</dt><dd>{productInfo.name || '-'}</dd></div>
+                      <div><dt>Code</dt><dd>{productInfo.product_code || '-'}</dd></div>
                       <div>
                         <dt>Current Stock</dt>
                         <dd className={stock < 0 ? 'is-neg' : ''}>{formatNum(stock)}</dd>
@@ -761,7 +761,7 @@ export default function ProductTraceModal({
                       <HiOutlineQuestionMarkCircle aria-hidden="true" />
                       Why this product is on the list?
                     </h4>
-                    <p>{data?.why_on_list || 'ï¿½'}</p>
+                    <p>{data?.why_on_list || '-'}</p>
                   </section>
 
                   {showRecon ? (

@@ -243,7 +243,7 @@ export default function ShipmentEdit({ data }) {
               {invoiceNumber || 'No invoice yet'}
               {linkedPoId ? (
                 <>
-                  {' � '}
+                  {' - '}
                   Linked stock PO{' '}
                   <a className="ship-desk-cell-link" href={`${poViewUrl}?id=${linkedPoId}`}>
                     {linkedPoNumber}

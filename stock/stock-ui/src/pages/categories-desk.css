@@ -1,4 +1,4 @@
-/* Categories desk � extends products-desk patterns */
+/* Categories desk - extends products-desk patterns */
 
 .cat-desk-modal {
   width: min(36rem, calc(100vw - 2rem));

@@ -108,7 +108,9 @@ function revenue_entries_enrich_row(array $row): array
         'journal_display' => $je ? ($jnShow . ' (#' . (int) $je . ')') : $jnShow,
         'payment_icon' => ren_pay_icon((string) ($row['payment_mode'] ?? '')),
         'payment_icon_class' => ren_pay_icon_class((string) ($row['payment_mode'] ?? '')),
-        'can_edit' => (function_exists('isAdmin') && isAdmin()) || (($row['approval_status'] ?? '') === 'Pending'),
+        'can_edit' => (function_exists('ren_can_edit')
+            ? ren_can_edit($row)
+            : ((function_exists('isAdmin') && isAdmin()) || (($row['approval_status'] ?? '') === 'Pending'))),
         'is_admin' => function_exists('isAdmin') && isAdmin(),
     ]);
 }

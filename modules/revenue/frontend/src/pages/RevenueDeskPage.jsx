@@ -1064,6 +1064,12 @@ export default function RevenueDeskPage() {
     [entries, draftSearch],
   );
   const suggestions = useMemo(() => visibleEntries.slice(0, 6), [visibleEntries]);
+  const selectedEntry = useMemo(
+    () => entries.find((row) => sameId(row.id, highlightedId)) || null,
+    [entries, highlightedId],
+  );
+  // All entries can be edited when allowed (admin for ratified; finance for pending/open).
+  const canEditSelected = Boolean(selectedEntry?.can_edit);
 
   /** Summary cards always match the rows currently shown in the table. */
   const viewSummary = useMemo(() => {
@@ -1224,6 +1230,19 @@ export default function RevenueDeskPage() {
                 )}
               </button>
             </div>
+            {canEditSelected && selectedEntry ? (
+              <a
+                href={deskPageUrl('revenue_edit.php', { id: selectedEntry.id })}
+                className="rev-desk-btn rev-desk-btn-secondary rev-desk-btn-edit"
+                aria-label={`Edit ${selectedEntry.voucher_number || `revenue #${selectedEntry.id}`}`}
+                title="Edit selected revenue"
+                onClick={() => rememberList(selectedEntry.id)}
+              >
+                <Pencil size={16} aria-hidden="true" />
+                <span className="rev-desk-btn-label-desktop">Edit</span>
+                <span className="rev-desk-btn-label-mobile">Edit</span>
+              </a>
+            ) : null}
             <a
               href={deskPageUrl('revenue_create.php')}
               className="rev-desk-btn rev-desk-btn-primary rev-desk-btn-create"

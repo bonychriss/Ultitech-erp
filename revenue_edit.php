@@ -28,13 +28,9 @@ try {
         exit;
     }
 
-    if (!empty($entry['source_invoice_id']) && (int) $entry['source_invoice_id'] > 0) {
-        header('Location: ' . $revenueListUrl . '&error=' . urlencode('Sales invoices cannot be edited here. Update them from Sales.'));
-        exit;
-    }
-
     // Check Access: If Ratified, only Admin can edit. If Pending, both Finance and Admin.
     $isRatified = ($entry['approval_status'] === 'Ratified' || $entry['approval_status'] === 'Approved');
+    $linkedInvoiceId = (int) ($entry['source_invoice_id'] ?? 0);
     
     if ($isRatified && !isAdmin()) {
         header("Location: " . $revenueListUrl . "&error=" . urlencode('This entry is locked and can only be edited by an Admin.'));
@@ -250,14 +246,22 @@ $pageTitle = "Edit Revenue Entry";
                 <input type="hidden" name="action" value="update_entry">
                 <input type="hidden" name="id" value="<?= $entry['id'] ?>">
 
+                <?php if ($linkedInvoiceId > 0): ?>
+                    <div style="background:#eff6ff; color:#1e40af; padding:0.85rem 1rem; border-radius:10px; margin-bottom:1.5rem; border:1px solid #bfdbfe; font-size:0.85rem;">
+                        <i class="fas fa-info-circle"></i>
+                        Linked to sales invoice #<?= (int) $linkedInvoiceId ?>. You can edit the fields below; the voucher number must stay unique.
+                    </div>
+                <?php endif; ?>
+
                 <div class="rev-grid-row">
                     <div class="rev-form-group">
                         <label>Transaction Date</label>
-                        <input type="date" name="entry_date" value="<?= $entry['entry_date'] ?>" class="rev-input" required>
+                        <input type="date" name="entry_date" value="<?= htmlspecialchars((string) $entry['entry_date']) ?>" class="rev-input" required>
                     </div>
                     <div class="rev-form-group">
                         <label>Voucher Number</label>
-                        <input type="text" name="voucher_number" value="<?= htmlspecialchars($entry['voucher_number']) ?>" class="rev-input" required>
+                        <input type="text" name="voucher_number" value="<?= htmlspecialchars((string) $entry['voucher_number']) ?>" class="rev-input" required autocomplete="off" spellcheck="false">
+                        <p style="margin:0.4rem 0 0; font-size:0.75rem; color:#64748b;">Must be unique — cannot match another revenue voucher.</p>
                     </div>
                 </div>
 

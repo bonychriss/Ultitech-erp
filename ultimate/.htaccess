@@ -26,6 +26,14 @@ RewriteRule ^attendance/(.+)$ ../attendance/$1?company_slug=ultimate&module=atte
 # Notifications centre → Laravel + React (physical notifications.php stub)
 RewriteRule ^notifications/?$ notifications.php [L,QSA,NC]
 
+# To Do List → physical stubs under ultimate/todo/ (extensionless index)
+RewriteRule ^todo/?$ todo/index.php?module=todo&company_slug=ultimate [L,QSA,NC]
+RewriteRule ^todo/index(\.php)?/?$ todo/index.php?module=todo&company_slug=ultimate [L,QSA,NC]
+RewriteRule ^todo/weekly_mission(\.php)?/?$ todo/weekly_mission.php?module=todo&company_slug=ultimate [L,QSA,NC]
+# Missing todo/* under ultimate/todo/ → parent todo/ (APIs, assets)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^todo/(.+)$ ../todo/$1?company_slug=ultimate&module=todo [L,QSA]
+
 # Deliveries → hub (module launcher) + React logistics desk
 RewriteRule ^deliveries/?$ deliveries/hub.php?module=deliveries [L,QSA,NC]
 RewriteRule ^deliveries/hub(\.php)?/?$ deliveries/hub.php?module=deliveries [L,QSA,NC]

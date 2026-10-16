@@ -88,8 +88,13 @@ body.page-rev-desk,
   z-index: 50;
 }
 
-.rev-desk-btn-create {
+.rev-desk-btn-edit {
   order: 2;
+  min-width: 0;
+}
+
+.rev-desk-btn-create {
+  order: 3;
   min-width: 0;
 }
 
@@ -1972,11 +1977,13 @@ a.rev-type-meta--link:hover {
   }
 
   .rev-desk-toolbar-secondary .rev-desk-filter-dropdown,
+  .rev-desk-toolbar-secondary .rev-desk-btn-edit,
   .rev-desk-toolbar-secondary .rev-desk-btn-create {
     flex: 0 0 auto;
     min-width: 0;
   }
 
+  .rev-desk-btn-edit,
   .rev-desk-btn-create {
     padding: 0.45rem 0.7rem;
     font-size: 0.75rem;
@@ -2498,6 +2505,66 @@ a.rev-type-meta--link:hover {
 .rev-desk-quick-row dd a.rev-desk-quick-link:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
+}
+
+.rev-desk-quick-docs {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rev-desk-quick-docs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rev-desk-quick-docs-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.rev-desk-quick-docs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.rev-desk-quick-doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.25;
+}
+
+.rev-desk-quick-doc-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rev-desk-quick-doc-link:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
 }
 
 .rev-desk-quick-actions {

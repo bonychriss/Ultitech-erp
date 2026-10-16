@@ -205,14 +205,19 @@ function ren_row_balance_due(array $row): float
 
 function ren_can_edit(array $row): bool
 {
-    if (!empty($row['source_invoice_id']) && (int) $row['source_invoice_id'] > 0) {
-        return false;
-    }
-    if (!empty($row['linked_invoice_number'])) {
-        return false;
+    // All revenue rows are editable from Revenue (including invoice-linked).
+    // Ratified/approved entries stay admin-only; Pending is open to finance.
+    $status = (string) ($row['approval_status'] ?? '');
+    $isLocked = in_array($status, ['Ratified', 'Approved'], true);
+
+    if ($isLocked) {
+        return function_exists('isAdmin') && isAdmin();
     }
 
-    return (function_exists('isAdmin') && isAdmin()) || (($row['approval_status'] ?? '') === 'Pending');
+    return (function_exists('isFinance') && isFinance())
+        || (function_exists('isAdmin') && isAdmin())
+        || $status === 'Pending'
+        || $status === '';
 }
 
 /** Empty string when the entry may be deleted, otherwise the reason it cannot. */
@@ -253,7 +258,127 @@ function ren_invoice_view_url(int $invoiceId): string
     return $url . '?id=' . $invoiceId . '&module=sales';
 }
 
-function revenue_entries_enrich_row(array $row): array
+function ren_delivery_note_url(int $orderId): string
+{
+    if ($orderId <= 0) {
+        return '';
+    }
+    if (function_exists('sales_module_url')) {
+        return sales_module_url('orders/delivery_note.php', ['id' => $orderId, 'module' => 'sales']);
+    }
+    $path = '/modules/sales/orders/delivery_note.php';
+    $url = function_exists('app_url') ? app_url($path) : $path;
+
+    return $url . '?id=' . $orderId . '&module=sales';
+}
+
+function ren_media_proxy_url(string $relPath): string
+{
+    $rel = ltrim(str_replace('\\', '/', $relPath), '/');
+    if ($rel === '') {
+        return '';
+    }
+    $proxyBase = function_exists('app_url') ? app_url('/proxy_pdf.php') : '/proxy_pdf.php';
+
+    return $proxyBase . '?file=' . rawurlencode($rel);
+}
+
+/**
+ * Delivery note + proof-of-payment links for quick view / list rows.
+ *
+ * @return list<array{kind:string,label:string,name:string,url:string,is_image:bool}>
+ */
+function revenue_entries_quick_documents(array $row, ?PDO $pdo = null): array
+{
+    $docs = [];
+    $seen = [];
+    $entryId = (int) ($row['id'] ?? 0);
+    $orderId = (int) ($row['linked_order_id'] ?? $row['order_id'] ?? 0);
+
+    $push = static function (string $kind, string $label, string $name, string $url, bool $isImage = false) use (&$docs, &$seen): void {
+        $key = $kind . '|' . $url;
+        if ($url === '' || isset($seen[$key])) {
+            return;
+        }
+        $seen[$key] = true;
+        $docs[] = [
+            'kind' => $kind,
+            'label' => $label,
+            'name' => $name !== '' ? $name : $label,
+            'url' => $url,
+            'is_image' => $isImage,
+        ];
+    };
+
+    if ($orderId > 0) {
+        $dnUrl = ren_delivery_note_url($orderId);
+        if ($dnUrl !== '') {
+            $push('delivery_note', 'Delivery note', 'Delivery note', $dnUrl, false);
+        }
+    }
+
+    $addFile = static function (string $rel, string $kind, string $label) use ($push): void {
+        $rel = ltrim(str_replace('\\', '/', $rel), '/');
+        if ($rel === '') {
+            return;
+        }
+        $name = basename($rel) ?: $label;
+        $isImage = (bool) preg_match('/\.(jpg|jpeg|png|gif|webp|bmp)$/i', $rel);
+        $url = ren_media_proxy_url($rel);
+        if ($url === '') {
+            $url = function_exists('app_url') ? app_url('/' . $rel) : ('/' . $rel);
+        }
+        $push($kind, $label, $name, $url, $isImage);
+    };
+
+    if ($entryId > 0) {
+        $payDir = dirname(__DIR__, 3) . '/uploads/revenue/payments';
+        if (is_dir($payDir)) {
+            foreach (glob($payDir . '/pay_' . $entryId . '_*') ?: [] as $abs) {
+                if (!is_file($abs)) {
+                    continue;
+                }
+                $addFile('uploads/revenue/payments/' . basename($abs), 'payment_proof', 'Proof of payment');
+            }
+        }
+    }
+
+    if ($pdo instanceof PDO && $entryId > 0) {
+        try {
+            $st = $pdo->prepare(
+                "SELECT description FROM account_transactions
+                 WHERE reference_type IN ('revenue_collection', 'revenue_entry', 'invoice_payment')
+                   AND reference_id = ?
+                 ORDER BY id DESC
+                 LIMIT 50"
+            );
+            $st->execute([$entryId]);
+            foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $desc) {
+                if (!is_string($desc) || $desc === '') {
+                    continue;
+                }
+                if (preg_match_all('/\[Attachment:\s*([^\]]+)\]/i', $desc, $m)) {
+                    foreach ($m[1] as $path) {
+                        $addFile(trim((string) $path), 'payment_proof', 'Proof of payment');
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            // ignore — optional source
+        }
+    }
+
+    $legacyAttachment = trim((string) ($row['attachment'] ?? ''));
+    if ($legacyAttachment !== '') {
+        $kind = (stripos($legacyAttachment, '/payments/') !== false) ? 'payment_proof' : 'attachment';
+        $label = $kind === 'payment_proof' ? 'Proof of payment' : 'Attachment';
+        $addFile($legacyAttachment, $kind, $label);
+    }
+
+    return $docs;
+}
+
+function revenue_entries_enrich_row(array $row, ?PDO $pdo = null): array
 {
     $meta = ren_status_meta($row);
     $customerDisplay = ren_cust_name($row);
@@ -276,6 +401,7 @@ function revenue_entries_enrich_row(array $row): array
         'amount_paid' => ren_row_amount_paid($row),
         'balance_due' => ren_row_balance_due($row),
         'due_date' => (string) ($row['linked_due_date'] ?? $row['due_date'] ?? ''),
+        'documents' => revenue_entries_quick_documents($row, $pdo),
     ]);
 }
 
@@ -479,7 +605,7 @@ function revenue_entries_fetch(PDO $revPdo, array $get): array
             : " LEFT JOIN (SELECT CAST(NULL AS UNSIGNED) AS id, CAST(NULL AS CHAR(64)) AS customer_code, CAST(NULL AS CHAR(255)) AS company_name) cust ON 1=0";
     } else {
         $sqlJoin = "FROM revenue_entries re
-            LEFT JOIN (SELECT CAST(0 AS UNSIGNED) AS id, CAST(NULL AS CHAR(64)) AS invoice_number, CAST(0 AS UNSIGNED) AS customer_id) i ON 1=0
+            LEFT JOIN (SELECT CAST(0 AS UNSIGNED) AS id, CAST(NULL AS CHAR(64)) AS invoice_number, CAST(0 AS UNSIGNED) AS customer_id, CAST(0 AS UNSIGNED) AS order_id) i ON 1=0
             LEFT JOIN (SELECT CAST(0 AS UNSIGNED) AS id, CAST(NULL AS CHAR(64)) AS customer_code, CAST(NULL AS CHAR(255)) AS company_name) cust ON 1=0";
     }
 
@@ -552,7 +678,17 @@ function revenue_entries_fetch(PDO $revPdo, array $get): array
         } catch (Throwable $e) {
         }
     }
-    $listSelect = "SELECT re.*, i.invoice_number AS linked_invoice_number, {$dueDateSelect}, cust.id AS resolved_customer_id, cust.customer_code AS resolved_customer_code, cust.company_name AS resolved_company_name";
+    $orderIdSelect = 'NULL AS linked_order_id';
+    if ($hasInvoices) {
+        try {
+            $invCols = $invCols ?? ($revPdo->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: []);
+            if (in_array('order_id', $invCols, true)) {
+                $orderIdSelect = 'i.order_id AS linked_order_id';
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    $listSelect = "SELECT re.*, i.invoice_number AS linked_invoice_number, {$dueDateSelect}, {$orderIdSelect}, cust.id AS resolved_customer_id, cust.customer_code AS resolved_customer_code, cust.company_name AS resolved_company_name";
 
     $countStmt = $revPdo->prepare("SELECT COUNT(*) $sqlJoin WHERE $whereSql");
     $countStmt->execute($params);
@@ -561,7 +697,7 @@ function revenue_entries_fetch(PDO $revPdo, array $get): array
     $listStmt = $revPdo->prepare($listSelect . " $sqlJoin WHERE $whereSql ORDER BY $orderSql LIMIT 5000");
     $listStmt->execute($params);
     $entries = $listStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    $enriched = array_map('revenue_entries_enrich_row', $entries);
+    $enriched = array_map(static fn (array $row): array => revenue_entries_enrich_row($row, $revPdo), $entries);
     $enriched = revenue_entries_dedupe_pairs($enriched);
     $visibleTotal = count($enriched);
 

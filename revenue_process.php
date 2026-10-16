@@ -523,6 +523,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'collect_payment') {
 // 5. UPDATE ENTRY
 if (isset($_POST['action']) && $_POST['action'] === 'update_entry') {
     $id = intval($_POST['id']);
+    $editReturn = 'revenue_edit.php?id=' . $id;
     
     // Check Status first
     $stmt = $pdo->prepare('SELECT approval_status, attachment, source_invoice_id FROM revenue_entries WHERE id = ?');
@@ -534,18 +535,31 @@ if (isset($_POST['action']) && $_POST['action'] === 'update_entry') {
         exit;
     }
 
-    if (!empty($entry['source_invoice_id']) && (int) $entry['source_invoice_id'] > 0) {
-        header('Location: revenue_entries.php?module=revenue&error=' . urlencode('Sales invoices cannot be edited here. Update them from Sales.'));
+    $entry_date = trim((string) ($_POST['entry_date'] ?? ''));
+    $voucher_number = trim((string) ($_POST['voucher_number'] ?? ''));
+    $customer_name = trim((string) ($_POST['customer_name'] ?? ''));
+    $narration = trim((string) ($_POST['narration'] ?? ''));
+    $amount_exclusive = floatval($_POST['amount_exclusive'] ?? 0);
+    $vat_amount = $amount_exclusive * 0.18;
+    $amount_total = $amount_exclusive + $vat_amount;
+
+    if ($voucher_number === '') {
+        header('Location: ' . $editReturn . '&error=' . urlencode('Voucher number is required.'));
         exit;
     }
 
-    $entry_date = $_POST['entry_date'];
-    $voucher_number = $_POST['voucher_number'];
-    $customer_name = $_POST['customer_name'];
-    $narration = $_POST['narration'];
-    $amount_exclusive = floatval($_POST['amount_exclusive']);
-    $vat_amount = $amount_exclusive * 0.18;
-    $amount_total = $amount_exclusive + $vat_amount;
+    // Voucher names must be unique across revenue entries.
+    try {
+        $dup = $pdo->prepare('SELECT id FROM revenue_entries WHERE voucher_number = ? AND id <> ? LIMIT 1');
+        $dup->execute([$voucher_number, $id]);
+        if ($dup->fetch(PDO::FETCH_ASSOC)) {
+            header('Location: ' . $editReturn . '&error=' . urlencode('Voucher number "' . $voucher_number . '" is already used. Choose a different name.'));
+            exit;
+        }
+    } catch (PDOException $eDup) {
+        header('Location: ' . $editReturn . '&error=' . urlencode('Could not verify voucher uniqueness.'));
+        exit;
+    }
     
     // Handle File Upload
     $attachmentPath = $entry['attachment'];
@@ -563,7 +577,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'update_entry') {
     
     try {
         // Check if ratified - only Admin can update ratified entries
-        if ($entry['approval_status'] === 'Ratified' && !isAdmin()) {
+        $status = (string) ($entry['approval_status'] ?? '');
+        if (in_array($status, ['Ratified', 'Approved'], true) && !isAdmin()) {
             header("Location: revenue_entries.php?module=revenue&error=Access Denied: Entry is locked.");
             exit;
         }
@@ -581,7 +596,11 @@ if (isset($_POST['action']) && $_POST['action'] === 'update_entry') {
         header("Location: revenue_entries.php?module=revenue&success=Entry updated successfully");
         exit;
     } catch (PDOException $e) {
-        header("Location: revenue_edit.php?id=$id&error=" . urlencode($e->getMessage()));
+        $msg = $e->getMessage();
+        if (stripos($msg, 'duplicate') !== false || (int) $e->getCode() === 23000) {
+            $msg = 'Voucher number "' . $voucher_number . '" is already used. Choose a different name.';
+        }
+        header('Location: ' . $editReturn . '&error=' . urlencode($msg));
         exit;
     }
 }

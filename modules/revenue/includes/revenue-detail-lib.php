@@ -15,11 +15,33 @@ function revenue_detail_load_entry(PDO $pdo, int $entryId): ?array
         return null;
     }
 
-    $stmt = $pdo->prepare('
+    $orderIdSelect = 'NULL AS linked_order_id';
+    $dueDateSelect = 'NULL AS invoice_due_date';
+    $invoiceDateSelect = 'NULL AS invoice_date';
+    $hasInvoices = function_exists('tableExists') && tableExists('invoices', $pdo);
+    if ($hasInvoices) {
+        try {
+            $invCols = $pdo->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if (in_array('order_id', $invCols, true)) {
+                $orderIdSelect = 'i.order_id AS linked_order_id';
+            }
+            if (in_array('due_date', $invCols, true)) {
+                $dueDateSelect = 'i.due_date AS invoice_due_date';
+            }
+            if (in_array('invoice_date', $invCols, true)) {
+                $invoiceDateSelect = 'i.invoice_date';
+            }
+        } catch (Throwable $e) {
+            // keep null selects
+        }
+    }
+
+    $stmt = $pdo->prepare("
         SELECT re.*,
                i.invoice_number AS linked_invoice_number,
-               i.invoice_date,
-               i.due_date AS invoice_due_date,
+               {$invoiceDateSelect},
+               {$dueDateSelect},
+               {$orderIdSelect},
                cust.company_name AS resolved_company_name,
                cust.customer_code AS resolved_customer_code,
                cust.id AS resolved_customer_id,
@@ -32,7 +54,7 @@ function revenue_detail_load_entry(PDO $pdo, int $entryId): ?array
         LEFT JOIN users app ON app.id = re.approved_by
         WHERE re.id = ?
         LIMIT 1
-    ');
+    ");
     $stmt->execute([$entryId]);
     $entry = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -224,7 +246,7 @@ function revenue_detail_build_init(PDO $pdo, int $entryId): array
         return ['ok' => false, 'error' => 'Revenue entry not found.'];
     }
 
-    $enriched = revenue_entries_enrich_row($row);
+    $enriched = revenue_entries_enrich_row($row, $pdo);
     $voucherId = (string) ($row['voucher_number'] ?? ('REV-' . $entryId));
 
     $amountNet = (float) ($row['amount_exclusive'] ?? 0);
@@ -302,6 +324,7 @@ function revenue_detail_build_init(PDO $pdo, int $entryId): array
         'timeline' => revenue_detail_build_timeline($row, $amountPaid),
         'ledger' => revenue_detail_fetch_ledger($pdo, $voucherId),
         'attachments' => revenue_detail_fetch_attachments($pdo, $entryId, $row),
+        'documents' => revenue_entries_quick_documents($row, $pdo),
         'notes' => revenue_detail_fetch_notes($pdo, $entryId),
         'can_edit' => ren_can_edit($row),
         'can_pay' => ren_can_pay($row) && $balance > 0.009,

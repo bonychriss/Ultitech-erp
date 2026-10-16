@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Pencil, Wallet, X } from 'lucide-react';
+import { FileText, Paperclip, Pencil, Wallet, X } from 'lucide-react';
 import RevenueStatusBadge from './RevenueStatusBadge';
 import { deskPageUrl } from '../api/revenueDesk';
 import { revenueInvoiceHref } from '../utils/revenueNav';
@@ -39,6 +39,64 @@ function detailRow(label, value, { amount = false } = {}) {
     <div className="rev-desk-quick-row">
       <dt>{label}</dt>
       <dd className={amount ? 'rev-desk-quick-amt' : undefined}>{value}</dd>
+    </div>
+  );
+}
+
+function documentKindMeta(kind) {
+  if (kind === 'delivery_note') {
+    return { label: 'Delivery note', Icon: FileText };
+  }
+  if (kind === 'payment_proof') {
+    return { label: 'Proof of payment', Icon: Paperclip };
+  }
+  return { label: 'Attachment', Icon: Paperclip };
+}
+
+function DocumentsBlock({ documents }) {
+  const list = Array.isArray(documents) ? documents : [];
+  if (list.length === 0) return null;
+
+  const deliveryNotes = list.filter((doc) => doc.kind === 'delivery_note');
+  const paymentProofs = list.filter((doc) => doc.kind === 'payment_proof');
+  const other = list.filter((doc) => doc.kind !== 'delivery_note' && doc.kind !== 'payment_proof');
+
+  const sections = [
+    { key: 'delivery', title: 'Delivery note', items: deliveryNotes },
+    { key: 'payment', title: 'Proof of payment', items: paymentProofs },
+    { key: 'other', title: 'Attachments', items: other },
+  ].filter((section) => section.items.length > 0);
+
+  return (
+    <div className="rev-desk-quick-docs">
+      {sections.map((section) => (
+        <div key={section.key} className="rev-desk-quick-docs-section">
+          <div className="rev-desk-quick-docs-label">{section.title}</div>
+          <ul className="rev-desk-quick-docs-list">
+            {section.items.map((doc, index) => {
+              const meta = documentKindMeta(doc.kind);
+              const Icon = meta.Icon;
+              const href = String(doc.url || '').trim();
+              const name = String(doc.name || meta.label);
+              if (!href) return null;
+              return (
+                <li key={`${doc.kind}-${index}-${name}`}>
+                  <a
+                    href={href}
+                    className="rev-desk-quick-doc-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Open ${meta.label}`}
+                  >
+                    <Icon size={14} aria-hidden="true" />
+                    <span>{name}</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
     </div>
   );
 }
@@ -123,6 +181,7 @@ export default function RevenueQuickViewModal({
             {vatAmount > 0 && detailRow('VAT', formatCurrency(vatAmount), { amount: true })}
             {detailRow('Description', withInvoiceLink(entry.description || entry.narration, invoiceNumber, invoiceLink))}
           </dl>
+          <DocumentsBlock documents={entry.documents} />
         </div>
 
         {showActions ? (

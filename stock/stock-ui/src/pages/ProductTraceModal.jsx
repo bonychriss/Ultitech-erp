@@ -219,6 +219,14 @@ export default function ProductTraceModal({
   const salesInvoices = new Set(
     filteredSales.map((r) => r.invoice_id || r.invoice_number || r.order_id).filter(Boolean),
   ).size;
+  const poOrderedQty = filteredPurchaseOrders.reduce(
+    (sum, row) => sum + Number(row.qty_ordered || 0),
+    0,
+  );
+  const poReceivedQty = filteredPurchaseOrders.reduce(
+    (sum, row) => sum + Number(row.qty_received || 0),
+    0,
+  );
   const totalBought = Number(
     data?.sales_summary?.total_bought
       ?? data?.reconciliation?.goods_received
@@ -591,6 +599,16 @@ export default function ProductTraceModal({
                             })
                           )}
                         </tbody>
+                        {filteredPurchaseOrders.length > 0 ? (
+                          <tfoot>
+                            <tr>
+                              <td colSpan={4}>Total Ordered (Selected Period)</td>
+                              <td className="is-right">{formatNum(poOrderedQty)}</td>
+                              <td className="is-right">{formatNum(poReceivedQty)}</td>
+                              <td colSpan={2} />
+                            </tr>
+                          </tfoot>
+                        ) : null}
                       </table>
                     </div>
 

@@ -585,6 +585,61 @@ $replenishmentApiUrl = strtok((string) ($_SERVER['REQUEST_URI'] ?? 'replenishmen
 $investigateApiUrl = strtok((string) ($_SERVER['REQUEST_URI'] ?? 'replenishment.php'), '?') . '?action=investigate';
 
 /**
+ * Resolve stocks_po_items.item_id candidates for a sales products.id.
+ * PO lines store stocks_items.id (not products.id); ids often differ.
+ *
+ * @return list<int>
+ */
+function replenishment_resolve_po_item_ids(PDO $pdo, int $productId): array
+{
+    $ids = [];
+    if ($productId <= 0) {
+        return [];
+    }
+
+    // Keep products.id in case some older rows stored it directly.
+    $ids[$productId] = true;
+
+    if (function_exists('ensureStockItemForSalesProductId')) {
+        try {
+            $stockItemId = (int) ensureStockItemForSalesProductId($pdo, $productId);
+            if ($stockItemId > 0) {
+                $ids[$stockItemId] = true;
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    try {
+        $pdo->query('SELECT 1 FROM stocks_items LIMIT 1');
+        $st = $pdo->prepare('SELECT name, product_code FROM products WHERE id = ? LIMIT 1');
+        $st->execute([$productId]);
+        $product = $st->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($product) {
+            $name = trim((string) ($product['name'] ?? ''));
+            $code = trim((string) ($product['product_code'] ?? ''));
+            if ($name !== '' || $code !== '') {
+                $find = $pdo->prepare(
+                    'SELECT id FROM stocks_items
+                     WHERE (LOWER(TRIM(name)) = LOWER(TRIM(?)) AND ? <> \'\')
+                        OR (sku IS NOT NULL AND sku <> \'\' AND LOWER(TRIM(sku)) = LOWER(TRIM(?)) AND ? <> \'\')'
+                );
+                $find->execute([$name, $name, $code, $code]);
+                foreach ($find->fetchAll(PDO::FETCH_COLUMN) ?: [] as $sid) {
+                    $sid = (int) $sid;
+                    if ($sid > 0) {
+                        $ids[$sid] = true;
+                    }
+                }
+            }
+        }
+    } catch (Throwable $e) {
+    }
+
+    return array_values(array_map('intval', array_keys($ids)));
+}
+
+/**
  * Purchase orders that include this product (stocks + legacy purchases).
  *
  * @return list<array<string,mixed>>
@@ -597,6 +652,10 @@ function replenishment_fetch_product_purchase_orders(PDO $pdo, int $productId): 
 
     $out = [];
     $seen = [];
+    $itemIds = replenishment_resolve_po_item_ids($pdo, $productId);
+    if ($itemIds === []) {
+        $itemIds = [$productId];
+    }
 
     $supplierTable = null;
     foreach (['stocks_suppliers', 'suppliers'] as $candidate) {
@@ -630,6 +689,7 @@ function replenishment_fetch_product_purchase_orders(PDO $pdo, int $productId): 
     try {
         $pdo->query('SELECT 1 FROM stocks_po_items LIMIT 1');
         $pdo->query('SELECT 1 FROM stocks_purchase_orders LIMIT 1');
+        $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
         $sql = "
             SELECT
                 po.id AS po_id,
@@ -647,12 +707,12 @@ function replenishment_fetch_product_purchase_orders(PDO $pdo, int $productId): 
             FROM stocks_po_items pi
             INNER JOIN stocks_purchase_orders po ON po.id = pi.po_id
             {$supplierJoin}
-            WHERE pi.item_id = ?
+            WHERE pi.item_id IN ({$placeholders})
             ORDER BY po.created_at DESC, po.id DESC
             LIMIT 50
         ";
         $st = $pdo->prepare($sql);
-        $st->execute([$productId]);
+        $st->execute($itemIds);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
             $poId = (int) ($row['po_id'] ?? 0);
             if ($poId <= 0 || isset($seen['stocks:' . $poId])) {

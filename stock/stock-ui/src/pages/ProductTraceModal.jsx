@@ -198,10 +198,9 @@ export default function ProductTraceModal({
 
   const filteredPurchaseOrders = useMemo(() => {
     const rows = data?.purchase_orders || [];
+    // Do not apply sales-history date filters to POs — officers often create
+    // catch-up POs outside the invoice date window, and those must still show.
     return rows.filter((row) => {
-      const key = dateKey(row.created_at);
-      if (filters.from && key && key < filters.from) return false;
-      if (filters.to && key && key > filters.to) return false;
       if (filters.customer && String(row.supplier_name || '') !== filters.customer) return false;
       if (filters.type) {
         const typeLabel = String(row.purchase_type || '').toLowerCase();

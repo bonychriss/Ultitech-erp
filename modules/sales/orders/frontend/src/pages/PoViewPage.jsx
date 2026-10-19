@@ -316,9 +316,24 @@ Procurement Team`;
     return (
       <div className="ov-page-root">
         <div className="ov-flash ov-flash-error" role="alert">{error}</div>
-        {urls.index ? (
+        {(urls.return || urls.index) ? (
           <div style={{ padding: '1rem 1.25rem' }}>
-            <a href={urls.index} className="ov-btn ov-btn-secondary">Back to purchases</a>
+            <a
+              href={urls.return || urls.index}
+              className="ov-btn ov-btn-secondary erp-nav-back-link"
+              data-erp-nav-back={urls.return || urls.index}
+              onClick={(event) => {
+                const dest = urls.return || urls.index;
+                if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.go === 'function') {
+                  event.preventDefault();
+                  if (!window.erpNavBack.go(dest, { preferFallback: Boolean(urls.return) })) {
+                    window.location.href = dest;
+                  }
+                }
+              }}
+            >
+              Back to purchases
+            </a>
           </div>
         ) : null}
       </div>

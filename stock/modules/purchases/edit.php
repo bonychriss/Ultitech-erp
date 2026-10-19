@@ -74,7 +74,10 @@ $poWhereParams = [$id];
 
 $rowWf = $po['procurement_workflow'] ?? PURCHASE_PROC_STANDARD;
 $editableStatuses = purchaseOrderAllEditAccessStatuses($rowWf);
-$pricesLocked = arePurchaseOrderPricesLocked($po['status'] ?? '');
+$adminCanCorrectLines = function_exists('isAdmin') && isAdmin();
+$pricesLockedByStatus = arePurchaseOrderPricesLocked($po['status'] ?? '');
+// Admins may correct product/price on Approved/Received POs after officer mistakes.
+$pricesLocked = $pricesLockedByStatus && !$adminCanCorrectLines;
 
 if (!in_array($po['status'] ?? '', $editableStatuses, true)) {
     flash('success', 'This order can no longer be edited from this screen.', 'error');
@@ -370,7 +373,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$poRow || !in_array($poRow['status'] ?? '', purchaseOrderAllEditAccessStatuses($poRow['procurement_workflow'] ?? PURCHASE_PROC_STANDARD), true)) {
                 throw new Exception('This order is no longer editable.');
             }
-            $pricesLockedPost = arePurchaseOrderPricesLocked($poRow['status'] ?? '');
+            $adminCanCorrectLinesPost = function_exists('isAdmin') && isAdmin();
+            $pricesLockedPost = arePurchaseOrderPricesLocked($poRow['status'] ?? '') && !$adminCanCorrectLinesPost;
             // Allow currency and exchange rate changes even when unit prices are locked.
             $postedRate = $postedCurrencyCode === 'TZS' ? 1.0 : $postedRate;
 
@@ -425,8 +429,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($r['qty'] < $received) {
                         throw new Exception('Ordered quantity cannot be less than quantity already received.');
                     }
-                    if ($received > 0 && (int) $ex['item_id'] !== $r['item_id']) {
-                        throw new Exception('Cannot change the product on a line that already has receipts.');
+                    if ($received > 0 && (int) $ex['item_id'] !== $r['item_id'] && !$adminCanCorrectLinesPost) {
+                        throw new Exception('Cannot change the product on a line that already has receipts. Ask an admin to correct it.');
                     }
                     $updSql = 'UPDATE stocks_po_items SET item_id = ?, qty_ordered = ?, unit_cost = ?, landed_cost = ? WHERE id = ? AND po_id = ?';
                     $updParams = [$r['item_id'], $r['qty'], $unitStored, $unitStored, $r['line_id'], $id];
@@ -572,6 +576,8 @@ if (!empty($_SERVER['QUERY_STRING'])) {
                 'products' => $products,
                 'poCurrencyOptions' => $poCurrencyOptions,
                 'pricesLocked' => $pricesLocked,
+                'pricesLockedByStatus' => $pricesLockedByStatus,
+                'adminCanCorrectLines' => $adminCanCorrectLines,
                 'displayBotRate' => $displayBotRate,
                 'storageRate' => $storageRate,
                 'productImagePlaceholder' => $productImagePlaceholder,

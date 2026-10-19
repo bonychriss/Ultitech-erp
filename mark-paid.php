@@ -177,7 +177,8 @@ try {
         $acc = $aStmt->fetch();
         if ($acc) {
             $newBal = (float)$acc['current_balance'];
-     lo-            }
+            $currency = $acc['currency'];
+        }
     }
 
     // Optional: create a notification for the creator

@@ -440,6 +440,12 @@ switch ($active_module) {
                 'badge' => 'Soon',
             ],
             [
+                'id' => 'products-stock-adjust',
+                'label' => 'Stock Adjustment',
+                'icon' => 'sliders',
+                'path' => $prefix . 'stock/modules/stock/adjust.php',
+            ],
+            [
                 'id' => 'products-categories',
                 'label' => 'Categories',
                 'icon' => 'tags',

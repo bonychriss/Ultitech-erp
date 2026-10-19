@@ -354,31 +354,72 @@ try {
 
 // Start session if not already started
 if (session_status() == PHP_SESSION_NONE) {
-    // Set session cookie parameters before starting the session
+    // Keep staff logged in through a full workday. Default PHP GC (~24 min) plus a
+    // shared host session folder (other sites' shorter GC) was logging people out mid-task.
+    $sessionLifeSeconds = 12 * 60 * 60; // 12 hours
+    @ini_set('session.gc_maxlifetime', (string) $sessionLifeSeconds);
+    @ini_set('session.cookie_lifetime', (string) $sessionLifeSeconds);
+    @ini_set('session.gc_probability', '1');
+    @ini_set('session.gc_divisor', '100');
+    @ini_set('session.use_strict_mode', '1');
+    @ini_set('session.use_only_cookies', '1');
+    @ini_set('session.cookie_httponly', '1');
+    @ini_set('session.cookie_samesite', 'Lax');
+
+    $sessionSaveDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'sessions';
+    if (!is_dir($sessionSaveDir)) {
+        @mkdir($sessionSaveDir, 0700, true);
+    }
+    if (is_dir($sessionSaveDir) && is_writable($sessionSaveDir)) {
+        @session_save_path($sessionSaveDir);
+        $denyHtaccess = $sessionSaveDir . DIRECTORY_SEPARATOR . '.htaccess';
+        if (!is_file($denyHtaccess)) {
+            @file_put_contents($denyHtaccess, "Require all denied\nDeny from all\n");
+        }
+    }
+
     $sessionCookiePath = '/';
     if (defined('APP_BASE_PATH') && APP_BASE_PATH !== '' && APP_BASE_PATH !== '/') {
         $sessionCookiePath = rtrim((string) APP_BASE_PATH, '/') . '/';
     }
-    if (PHP_VERSION_ID >= 70300) {
-        @session_set_cookie_params([
-            'lifetime' => 0,
-            'path'     => $sessionCookiePath,
-            'domain'   => '', // let PHP decide
-            'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ]);
-    } else {
-        @ini_set('session.cookie_httponly', '1');
-        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') { @ini_set('session.cookie_secure', '1'); }
+    $sessionSecure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    if ($sessionSecure) {
+        @ini_set('session.cookie_secure', '1');
     }
+
     if (!defined('PVS_SESSION_NAMED')) {
         @session_name('PVSSESSID');
         define('PVS_SESSION_NAMED', true);
     }
-    session_start();
-}
 
+    // Pass cookie options directly to session_start so the host cannot ignore
+    // session_set_cookie_params and later emit Max-Age=0 (which deletes the cookie).
+    session_start([
+        'cookie_lifetime' => $sessionLifeSeconds,
+        'cookie_path' => $sessionCookiePath,
+        'cookie_secure' => $sessionSecure,
+        'cookie_httponly' => true,
+        'cookie_samesite' => 'Lax',
+        'use_strict_mode' => true,
+        'use_only_cookies' => true,
+        'gc_maxlifetime' => $sessionLifeSeconds,
+    ]);
+
+    // Renew cookie on activity with an explicit future Max-Age.
+    // A previous helper emitted Max-Age=0 and logged users out on the next click.
+    if (!headers_sent() && session_status() === PHP_SESSION_ACTIVE && session_id() !== '') {
+        $cookieExpires = time() + $sessionLifeSeconds;
+        $cookie = rawurlencode(session_name()) . '=' . rawurlencode(session_id())
+            . '; Expires=' . gmdate('D, d M Y H:i:s', $cookieExpires) . ' GMT'
+            . '; Max-Age=' . $sessionLifeSeconds
+            . '; Path=' . $sessionCookiePath
+            . '; HttpOnly; SameSite=Lax';
+        if ($sessionSecure) {
+            $cookie .= '; Secure';
+        }
+        header('Set-Cookie: ' . $cookie, false);
+    }
+}
 /**
  * Multi-Database Tenant Switching
  * If a company is identified, re-connect $pdo to the tenant database.
@@ -386,11 +427,12 @@ if (session_status() == PHP_SESSION_NONE) {
 require_once __DIR__ . '/error_page_helpers.php';
 require_once __DIR__ . '/functions.php';
 
+// Restore login from remember-me on any method (including POST/update).
+// Skipping POST previously logged people out exactly when they submitted a form.
 if (
     session_status() === PHP_SESSION_ACTIVE
     && empty($_SESSION['user_id'])
     && function_exists('attemptRememberMeLogin')
-    && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST'
     && !defined('ERP_REMEMBER_ME_ATTEMPTED')
 ) {
     define('ERP_REMEMBER_ME_ATTEMPTED', true);

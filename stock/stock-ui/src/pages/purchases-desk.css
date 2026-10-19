@@ -1,4 +1,4 @@
-/* Purchases desk ù expenses/products desk parity */
+/* Purchases desk ÔøΩ expenses/products desk parity */
 
 .po-desk-search-clear {
   position: absolute;
@@ -232,6 +232,9 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
+.po-desk-table tbody tr.is-selected td {
+  background: rgba(99, 102, 241, 0.08) !important;
+}
 .po-desk-table tbody tr {
   cursor: pointer;
 }

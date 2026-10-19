@@ -57,6 +57,8 @@ export default function PurchaseEdit({ data }) {
     products = [],
     poCurrencyOptions = {},
     pricesLocked = false,
+    pricesLockedByStatus = false,
+    adminCanCorrectLines = false,
     displayBotRate = null,
     baseUrl = '/staff/stock/',
     apiUrl = 'edit.php',
@@ -260,7 +262,11 @@ export default function PurchaseEdit({ data }) {
           </h1>
           <p>
             Status: <strong style={{ color: '#1e293b' }}>{po?.status || '—'}</strong>
-            {pricesLocked ? ' · Unit prices are locked for this status.' : ' · Update supplier, lines, currency, and terms.'}
+            {pricesLocked
+              ? ' · Unit prices are locked for this status.'
+              : adminCanCorrectLines && pricesLockedByStatus
+                ? ' · Admin correction mode: product and unit prices can be changed.'
+                : ' · Update supplier, lines, currency, and terms.'}
           </p>
         </div>
         <a href={indexUrl} className="pe-btn pe-btn--ghost">
@@ -285,7 +291,17 @@ export default function PurchaseEdit({ data }) {
           <HiOutlineExclamationCircle style={{ width: 18, height: 18, flexShrink: 0 }} />
           <div>
             This order is <strong>{po?.status}</strong>. You can update supplier, quantities, and references, but unit
-            prices stay locked.
+            prices stay locked. Ask an admin if the wrong product was selected.
+          </div>
+        </div>
+      )}
+      {adminCanCorrectLines && pricesLockedByStatus && (
+        <div className="pe-alert pe-alert--warn">
+          <HiOutlineExclamationCircle style={{ width: 18, height: 18, flexShrink: 0 }} />
+          <div>
+            Admin correction mode: you can change products and unit prices on this{' '}
+            <strong>{po?.status}</strong> order. Changing a received line does not auto-fix past stock movements —
+            adjust stock separately if needed.
           </div>
         </div>
       )}
@@ -454,7 +470,7 @@ export default function PurchaseEdit({ data }) {
                 const prod = products.find((p) => String(p.id) === String(row.product_id));
                 const total = (Number(row.quantity) || 0) * (Number(row.unit_price) || 0);
                 const imgSrc = productImageSrc(prod, row.product_id, baseUrl, productImagePlaceholder);
-                const isRowLocked = row.qty_received > 0;
+                const isRowLocked = row.qty_received > 0 && !adminCanCorrectLines;
 
                 return (
                   <div className="pe-item" key={row.id}>

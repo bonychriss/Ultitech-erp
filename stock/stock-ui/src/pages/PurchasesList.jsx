@@ -38,6 +38,96 @@ function normalizeSearchQuery(q) {
     .replace(/\s+/g, ' ');
 }
 
+function readListStateFromUrl() {
+  if (typeof window === 'undefined') {
+    return { search: '', type: 'all', status: '', selectedId: 0 };
+  }
+  const p = new URLSearchParams(window.location.search);
+  const typeRaw = String(p.get('type') || '').toLowerCase();
+  const type = ['all', 'domestic', 'import'].includes(typeRaw) ? typeRaw : 'all';
+  return {
+    search: p.get('search') || p.get('q') || '',
+    type,
+    status: p.get('status') || '',
+    selectedId: Number(p.get('sel') || 0) || 0,
+  };
+}
+
+let consumedRestore;
+function takeRestoredListState() {
+  if (consumedRestore !== undefined) return consumedRestore;
+  consumedRestore = null;
+  if (typeof window === 'undefined' || !window.erpNavBack || typeof window.erpNavBack.consumeRestore !== 'function') {
+    return null;
+  }
+  const restored = window.erpNavBack.consumeRestore();
+  consumedRestore = restored && restored.state ? restored.state : null;
+  return consumedRestore;
+}
+
+function writeListStateToUrl(search, typeFilter, statusFilter, selectedId) {
+  if (typeof window === 'undefined' || !window.history?.replaceState) return;
+  const url = new URL(window.location.href);
+  const setOrDel = (key, value) => {
+    const v = String(value || '').trim();
+    if (v) url.searchParams.set(key, v);
+    else url.searchParams.delete(key);
+  };
+  setOrDel('search', search);
+  url.searchParams.delete('q');
+  if (typeFilter && typeFilter !== 'all') url.searchParams.set('type', typeFilter);
+  else url.searchParams.delete('type');
+  setOrDel('status', statusFilter);
+  if (selectedId) url.searchParams.set('sel', String(selectedId));
+  else url.searchParams.delete('sel');
+
+  // Keep PHP tab loaders aligned when the page is hard-reloaded.
+  if (typeFilter === 'domestic') {
+    url.searchParams.set('domestic', '1');
+    url.searchParams.set('import', '0');
+  } else if (typeFilter === 'import') {
+    url.searchParams.set('domestic', '0');
+    url.searchParams.set('import', '1');
+  } else {
+    url.searchParams.delete('domestic');
+    url.searchParams.delete('import');
+  }
+
+  const next = `${url.pathname}${url.search}${url.hash}`;
+  const cur = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (next !== cur) {
+    window.history.replaceState(window.history.state, '', next);
+  }
+}
+
+function buildListHref(search, typeFilter, statusFilter, selectedId) {
+  if (typeof window === 'undefined') return '';
+  const url = new URL(window.location.href);
+  const setOrDel = (key, value) => {
+    const v = String(value || '').trim();
+    if (v) url.searchParams.set(key, v);
+    else url.searchParams.delete(key);
+  };
+  setOrDel('search', search);
+  url.searchParams.delete('q');
+  if (typeFilter && typeFilter !== 'all') url.searchParams.set('type', typeFilter);
+  else url.searchParams.delete('type');
+  setOrDel('status', statusFilter);
+  if (selectedId) url.searchParams.set('sel', String(selectedId));
+  else url.searchParams.delete('sel');
+  if (typeFilter === 'domestic') {
+    url.searchParams.set('domestic', '1');
+    url.searchParams.set('import', '0');
+  } else if (typeFilter === 'import') {
+    url.searchParams.set('domestic', '0');
+    url.searchParams.set('import', '1');
+  } else {
+    url.searchParams.delete('domestic');
+    url.searchParams.delete('import');
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 function poMatchesQuery(q, po) {
   const tokens = normalizeSearchQuery(q)
     .toLowerCase()
@@ -114,16 +204,28 @@ export default function PurchasesList({ data }) {
   const shipmentViewUrl = urls.shipmentView || '../shipments/view.php';
   const invoiceUrl = urls.invoice || 'download_invoice.php';
 
+  const restored = takeRestoredListState();
+  const urlList = readListStateFromUrl();
+  const bootSearch = restored?.search != null
+    ? String(restored.search)
+    : (urlList.search || initialSearch || '');
+  const bootType = ['all', 'domestic', 'import'].includes(restored?.typeFilter)
+    ? restored.typeFilter
+    : (['all', 'domestic', 'import'].includes(urlList.type)
+      ? urlList.type
+      : (['all', 'domestic', 'import'].includes(initialTab) ? initialTab : 'all'));
+  const bootStatus = restored?.statusFilter != null
+    ? String(restored.statusFilter)
+    : (urlList.status || '');
+  const bootSelectedId = Number(restored?.selectedId || urlList.selectedId || 0) || 0;
+
   const [purchases] = useState(initialPurchases);
-  const [search, setSearch] = useState(initialSearch);
-  const [typeFilter, setTypeFilter] = useState(
-    ['all', 'domestic', 'import'].includes(initialTab) ? initialTab : 'all'
-  );
-  const [statusFilter, setStatusFilter] = useState('');
-  const [draftType, setDraftType] = useState(
-    ['all', 'domestic', 'import'].includes(initialTab) ? initialTab : 'all'
-  );
-  const [draftStatus, setDraftStatus] = useState('');
+  const [search, setSearch] = useState(bootSearch);
+  const [typeFilter, setTypeFilter] = useState(bootType);
+  const [statusFilter, setStatusFilter] = useState(bootStatus);
+  const [draftType, setDraftType] = useState(bootType);
+  const [draftStatus, setDraftStatus] = useState(bootStatus);
+  const [selectedId, setSelectedId] = useState(bootSelectedId);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [booting, setBooting] = useState(true);
@@ -135,6 +237,10 @@ export default function PurchasesList({ data }) {
     const t = window.setTimeout(() => setBooting(false), 200);
     return () => window.clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    writeListStateToUrl(search, typeFilter, statusFilter, selectedId);
+  }, [search, typeFilter, statusFilter, selectedId]);
 
   useEffect(() => {
     if (createSuccess && window.Swal) {
@@ -210,6 +316,17 @@ export default function PurchasesList({ data }) {
       return poMatchesQuery(search, po);
     });
   }, [purchases, search, typeFilter, statusFilter]);
+
+  useEffect(() => {
+    if (!selectedId) return undefined;
+    const t = window.setTimeout(() => {
+      const row = document.querySelector(`[data-po-id="${selectedId}"]`);
+      if (row && typeof row.scrollIntoView === 'function') {
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 120);
+    return () => window.clearTimeout(t);
+  }, [selectedId, filtered.length]);
 
   const liveStats = useMemo(() => {
     let approved = 0;
@@ -381,6 +498,29 @@ export default function PurchasesList({ data }) {
   const rowKey = (po) => `${po.source || 'stock'}-${po.id}`;
   const withSource = (base, po) =>
     `${base}?id=${po.id}&source=${encodeURIComponent(po.source || 'stock')}`;
+
+  const listState = () => ({
+    search: search || '',
+    typeFilter: typeFilter || 'all',
+    statusFilter: statusFilter || '',
+  });
+
+  const rememberAndOpen = (base, po) => {
+    const id = Number(po?.id) || 0;
+    setSelectedId(id);
+    writeListStateToUrl(search, typeFilter, statusFilter, id);
+    const returnTo = buildListHref(search, typeFilter, statusFilter, id);
+    if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.push === 'function') {
+      window.erpNavBack.push({
+        href: returnTo || window.location.href,
+        state: { ...listState(), selectedId: id },
+        force: true,
+      });
+    }
+    const dest = new URL(withSource(base, po), window.location.href);
+    if (returnTo) dest.searchParams.set('return', returnTo);
+    window.location.href = dest.href;
+  };
 
   if (booting) {
     return (
@@ -645,16 +785,22 @@ export default function PurchasesList({ data }) {
                 {filtered.map((po) => (
                   <tr
                     key={rowKey(po)}
+                    data-po-id={po.id}
+                    className={Number(selectedId) === Number(po.id) ? 'is-selected' : ''}
                     onClick={(e) => {
                       if (e.target.closest('a, button')) return;
-                      window.location.href = withSource(viewUrl, po);
+                      rememberAndOpen(viewUrl, po);
                     }}
                   >
                     <td>
                       <a
                         className="po-desk-ref"
                         href={withSource(viewUrl, po)}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          rememberAndOpen(viewUrl, po);
+                        }}
                       >
                         {po.purchase_no || `PO #${po.id}`}
                       </a>
@@ -704,16 +850,37 @@ export default function PurchasesList({ data }) {
                         </button>
                         {openId === rowKey(po) ? (
                           <div className="po-desk-menu" role="menu">
-                            <a href={withSource(viewUrl, po)} role="menuitem">
+                            <a
+                              href={withSource(viewUrl, po)}
+                              role="menuitem"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                rememberAndOpen(viewUrl, po);
+                              }}
+                            >
                               <HiOutlineDocumentText size={15} /> View PO
                             </a>
                             {po.can_edit ? (
-                              <a href={withSource(editUrl, po)} role="menuitem">
+                              <a
+                                href={withSource(editUrl, po)}
+                                role="menuitem"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  rememberAndOpen(editUrl, po);
+                                }}
+                              >
                                 <HiOutlinePencilSquare size={15} /> Edit
                               </a>
                             ) : null}
                             {po.can_receive ? (
-                              <a href={withSource(receiveUrl, po)} role="menuitem">
+                              <a
+                                href={withSource(receiveUrl, po)}
+                                role="menuitem"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  rememberAndOpen(receiveUrl, po);
+                                }}
+                              >
                                 <HiOutlineCheckBadge size={15} /> Receive stock
                               </a>
                             ) : null}

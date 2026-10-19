@@ -7276,7 +7276,21 @@ function requireLogin()
             }
             $requestedCompanyId = (int) ($requestedCompany['id'] ?? 0);
             $sessionCompanyId = (int) ($_SESSION['company_id'] ?? 0);
-            if ($requestedCompanyId <= 0 || $sessionCompanyId <= 0 || $requestedCompanyId !== $sessionCompanyId) {
+            if ($requestedCompanyId <= 0 || $sessionCompanyId <= 0) {
+                clearAuthSession();
+                header('Location: ' . company_login_url($requestedCompanySlug));
+                exit;
+            }
+            // Wrong company URL while already logged in elsewhere: bounce home, do not wipe session.
+            if ($requestedCompanyId !== $sessionCompanyId) {
+                $ownSlug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+                if ($ownSlug === '') {
+                    $ownSlug = resolveCompanySlugById($sessionCompanyId);
+                }
+                if ($ownSlug !== '') {
+                    header('Location: ' . company_url('select-module.php', $ownSlug));
+                    exit;
+                }
                 clearAuthSession();
                 header('Location: ' . company_login_url($requestedCompanySlug));
                 exit;

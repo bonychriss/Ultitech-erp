@@ -25,12 +25,34 @@ export default function PoViewToolbar({
     <header className="ov-chrome ov-no-print">
       <div className="ov-control-panel">
         <nav className="ov-breadcrumb" aria-label="Breadcrumb">
+          {urls.return || urls.index ? (
+            <>
+              <a
+                href={urls.return || urls.index}
+                className="erp-nav-back-link"
+                data-erp-nav-back={urls.return || urls.index}
+                title="Back to where you were"
+                onClick={(event) => {
+                  const dest = urls.return || urls.index;
+                  if (!dest) return;
+                  if (typeof window !== 'undefined' && window.erpNavBack && typeof window.erpNavBack.go === 'function') {
+                    event.preventDefault();
+                    // preferFallback keeps search/filter query from return= instead of a stale stack URL
+                    if (!window.erpNavBack.go(dest, { preferFallback: Boolean(urls.return) })) {
+                      window.location.href = dest;
+                    }
+                  }
+                }}
+              >
+                <i className="fas fa-arrow-left me-1" aria-hidden="true" />
+                Back
+              </a>
+              <span className="ov-breadcrumb-sep">/</span>
+            </>
+          ) : null}
           {urls.index ? (
             <>
-              <a href={urls.index}>
-                <i className="fas fa-arrow-left me-1" aria-hidden="true" />
-                Purchases
-              </a>
+              <a href={urls.index}>Purchases</a>
               <span className="ov-breadcrumb-sep">/</span>
             </>
           ) : null}

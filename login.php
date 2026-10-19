@@ -93,18 +93,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $winningSlug = function_exists('resolvePostLoginCompanySlug') ? resolvePostLoginCompanySlug(null) : '';
 
     if ($authOk) {
-        $remember = !empty($_POST['remember']);
-        if ($remember && function_exists('issueRememberMeToken')) {
+        // Always issue a remember token so updates/navigation do not force re-login
+        // when the browser drops a short-lived session cookie.
+        if (function_exists('issueRememberMeToken')) {
             issueRememberMeToken(
                 (int) ($_SESSION['user_id'] ?? 0),
                 (string) ($_SESSION['company_slug'] ?? $submittedCompanySlug),
                 $user
             );
-        } elseif (function_exists('clearRememberMeToken')) {
-            clearRememberMeToken();
-            if (function_exists('clearRememberMeLoginHint')) {
-                clearRememberMeLoginHint();
-            }
         }
         $resolvedSlug = $winningSlug !== '' ? $winningSlug : '';
         $nextAfterLogin = trim((string) ($_POST['next'] ?? $_GET['next'] ?? ''));

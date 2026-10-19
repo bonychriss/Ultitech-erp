@@ -79,6 +79,14 @@ $hasHeaderTax = in_array('tax_amount', $poCols, true);
 
 $showDomestic = isset($_GET['domestic']) ? (int) $_GET['domestic'] : 1;
 $showImport = isset($_GET['import']) ? (int) $_GET['import'] : 1;
+$typeParam = strtolower(trim((string) ($_GET['type'] ?? '')));
+if ($typeParam === 'domestic') {
+    $showDomestic = 1;
+    $showImport = 0;
+} elseif ($typeParam === 'import') {
+    $showDomestic = 0;
+    $showImport = 1;
+}
 $showDomestic = $showDomestic ? 1 : 0;
 $showImport = $showImport ? 1 : 0;
 if ($showDomestic === 0 && $showImport === 0) {

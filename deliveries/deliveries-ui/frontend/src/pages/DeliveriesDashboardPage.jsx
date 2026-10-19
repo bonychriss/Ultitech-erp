@@ -137,6 +137,13 @@ function matchesDate(order, from, to, month) {
   return true
 }
 
+function matchesDriver(order, driver) {
+  if (!driver || driver === 'all') return true
+  const name = String(order.driver_name || '').trim()
+  if (driver === '__unassigned__') return name === ''
+  return name.toLowerCase() === String(driver).trim().toLowerCase()
+}
+
 function statusPill(status) {
   const s = String(status || '').toLowerCase()
   if (s === 'delivered' || s === 'completed') return { label: 'Delivered', cls: 'dlv-vbadge dlv-vbadge--completed' }
@@ -147,7 +154,7 @@ function statusPill(status) {
   return { label: s ? s.replace(/_/g, ' ') : 'Unknown', cls: 'dlv-vbadge dlv-vbadge--default' }
 }
 
-const EMPTY_FILTERS = { status: 'all', from_date: '', to_date: '', month: 'all' }
+const EMPTY_FILTERS = { status: 'all', from_date: '', to_date: '', month: 'all', driver: 'all' }
 
 const MONTH_LABELS = {
   '01': 'January', '02': 'February', '03': 'March', '04': 'April',
@@ -164,6 +171,7 @@ function hasAdvancedFilters(f) {
   if (f.from_date) return true
   if (f.to_date) return true
   if (f.month && f.month !== 'all') return true
+  if (f.driver && f.driver !== 'all') return true
   return false
 }
 
@@ -180,6 +188,7 @@ function readListStateFromUrl() {
       from_date: p.get('from_date') || '',
       to_date: p.get('to_date') || '',
       month: p.get('month') || 'all',
+      driver: p.get('driver') || 'all',
     },
   }
 }
@@ -197,6 +206,7 @@ function writeListStateToUrl(search, filters, selectedId) {
   setOrDel('from_date', filters && filters.from_date)
   setOrDel('to_date', filters && filters.to_date)
   setOrDel('month', filters && filters.month)
+  setOrDel('driver', filters && filters.driver)
   setOrDel('sel', selectedId ? String(selectedId) : '')
   const next = url.pathname + url.search + url.hash
   const cur = window.location.pathname + window.location.search + window.location.hash
@@ -529,11 +539,26 @@ function DeliveriesDashboardPageInner() {
   )
   const urls = data.urls || URLS
 
+  const driverOptions = useMemo(() => {
+    const names = new Set()
+    let hasUnassigned = false
+    allOrders.forEach((o) => {
+      const name = String(o.driver_name || '').trim()
+      if (name) names.add(name)
+      else hasUnassigned = true
+    })
+    return {
+      names: Array.from(names).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+      hasUnassigned,
+    }
+  }, [allOrders])
+
   const filteredOrders = useMemo(
     () => allOrders.filter(
       (o) => matchesSearch(o, searchInput)
         && matchesStatus(o, filters.status)
-        && matchesDate(o, filters.from_date, filters.to_date, filters.month),
+        && matchesDate(o, filters.from_date, filters.to_date, filters.month)
+        && matchesDriver(o, filters.driver),
     ),
     [allOrders, searchInput, filters],
   )
@@ -544,6 +569,10 @@ function DeliveriesDashboardPageInner() {
     const chips = []
     if (filters.status && filters.status !== 'all') {
       chips.push({ key: 'status', label: `Status: ${statusPill(filters.status).label}` })
+    }
+    if (filters.driver && filters.driver !== 'all') {
+      const driverLabel = filters.driver === '__unassigned__' ? 'Unassigned' : filters.driver
+      chips.push({ key: 'driver', label: `Driver: ${driverLabel}` })
     }
     if (filters.month && filters.month !== 'all') {
       chips.push({ key: 'month', label: `Month: ${MONTH_LABELS[filters.month] || filters.month}` })
@@ -583,7 +612,7 @@ function DeliveriesDashboardPageInner() {
         <div className="dlv-filters-head">
           <div>
             <h2 className="dlv-filters-title">Filters</h2>
-            <p className="dlv-filters-sub">Narrow deliveries by status, month, and date range.</p>
+            <p className="dlv-filters-sub">Narrow deliveries by status, driver, month, and date range.</p>
           </div>
           <button type="button" className="dlv-filters-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
             <X size={16} aria-hidden="true" />
@@ -608,6 +637,22 @@ function DeliveriesDashboardPageInner() {
                 <option value="loading">Loading</option>
                 <option value="returned">Returned</option>
                 <option value="failed">Failed</option>
+              </select>
+            </div>
+            <div className="dlv-field">
+              <label htmlFor="dlv-filter-driver">Driver name</label>
+              <select
+                id="dlv-filter-driver"
+                value={draftFilters.driver || 'all'}
+                onChange={(e) => setDraftFilters((f) => ({ ...f, driver: e.target.value }))}
+              >
+                <option value="all">All drivers</option>
+                {driverOptions.hasUnassigned ? (
+                  <option value="__unassigned__">Unassigned</option>
+                ) : null}
+                {driverOptions.names.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
               </select>
             </div>
             <div className="dlv-field">
@@ -771,16 +816,19 @@ function DeliveriesDashboardPageInner() {
       const data = await aiSearchDeliveries(query)
       const f = data.filters || {}
       const nextStatus = f.status ? f.status : 'all'
+      const nextDriver = f.driver ? f.driver : 'all'
       setSearchInput(f.search || query)
       setFilters((cur) => ({
         ...cur,
         status: nextStatus,
+        driver: nextDriver,
         from_date: f.from_date || '',
         to_date: f.to_date || '',
       }))
       setDraftFilters((cur) => ({
         ...cur,
         status: nextStatus,
+        driver: nextDriver,
         from_date: f.from_date || '',
         to_date: f.to_date || '',
       }))

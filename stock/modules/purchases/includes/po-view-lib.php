@@ -726,6 +726,7 @@ function poViewLoadContext(int $id): array
         'urls' => [
             'view' => poViewModuleUrl('view_po.php', ['id' => $id]),
             'index' => poViewModuleUrl('index.php'),
+            'return' => isset($_GET['return']) ? urldecode((string) $_GET['return']) : '',
             'edit' => poViewModuleUrl('edit.php', ['id' => $id]),
             'approve' => poViewModuleUrl('approve.php', ['id' => $id]),
             'receipt_audit' => poViewModuleUrl('receipt_audit.php', ['po_id' => $id]),

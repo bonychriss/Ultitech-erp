@@ -57,11 +57,12 @@ try {
         . 'Return ONLY a compact JSON object (no markdown, no prose) with EXACTLY these keys: '
         . '"search" (string: free-text keywords such as client name, phone, destination, delivery note number like DN-1234, description; empty if not applicable), '
         . '"status" (one of "", "pending", "in_transit", "delivered", "exception", or a specific status: request_pending, accepted, pending, loading, in_transit, delivered, completed, returned, failed, rejected), '
+        . '"driver" (exact driver full name when the user asks for a specific driver; empty otherwise; use "__unassigned__" only when they ask for unassigned / no driver), '
         . '"from_date" (YYYY-MM-DD or ""), "to_date" (YYYY-MM-DD or ""), '
         . '"note" (a short human sentence describing what will be shown). '
         . 'Status groups: pending = awaiting dispatch; in_transit = loading or on the way; delivered = completed successfully; exception = failed or returned. '
         . 'Interpret relative dates (e.g. "last month", "this week", "March 2026") into concrete from_date/to_date based on created date. '
-        . 'If the user names a client or destination, put it in "search". Never invent data.';
+        . 'If the user names a client or destination, put it in "search". If they name a driver, put the driver name in "driver" (not search). Never invent data.';
 
     $result = ai_openai_request([
         ['role' => 'system', 'content' => $system],
@@ -104,9 +105,18 @@ try {
         $toDate = '';
     }
 
+    $driver = trim((string) ($parsed['driver'] ?? ''));
+    if ($driver !== '' && $driver !== '__unassigned__') {
+        $driver = preg_replace('/\s+/', ' ', $driver) ?? $driver;
+        if (mb_strlen($driver) > 120) {
+            $driver = '';
+        }
+    }
+
     $filters = [
         'search' => trim((string) ($parsed['search'] ?? '')),
         'status' => $status,
+        'driver' => $driver,
         'from_date' => $fromDate,
         'to_date' => $toDate,
     ];

@@ -2430,20 +2430,62 @@ function voucher_bootstrap_operational_pdo()
         return;
     }
     $op = voucher_operational_pdo();
-    if (!($op instanceof PDO) || $op === $pdo) {
+    if (!($op instanceof PDO)) {
         return;
     }
-    if (erp_connection_has_table($pdo, 'payees')) {
+    if ($op === $pdo) {
+        if (function_exists('ensurePaymentVouchersCoreSchema')) {
+            ensurePaymentVouchersCoreSchema($pdo);
+        }
+        if (function_exists('ensurePayeesTableSchema')) {
+            ensurePayeesTableSchema($pdo);
+        }
+        if (function_exists('ensureApprovalsTableSchema')) {
+            ensureApprovalsTableSchema();
+        }
         return;
     }
     if (!erp_connection_has_table($op, 'payees')) {
         return;
     }
+
+    // Prefer the operational DB even when the current connection has an empty
+    // payees shell table (created by ensurePayeesTableSchema on the wrong DB).
+    $shouldSwitch = !erp_connection_has_table($pdo, 'payees');
+    if (!$shouldSwitch) {
+        $opHasPv = erp_connection_has_table($op, 'payment_vouchers');
+        $pdoHasPv = erp_connection_has_table($pdo, 'payment_vouchers');
+        if ($opHasPv && !$pdoHasPv) {
+            $shouldSwitch = true;
+        } else {
+            try {
+                $cPdo = (int) $pdo->query('SELECT COUNT(*) FROM payees')->fetchColumn();
+                $cOp = (int) $op->query('SELECT COUNT(*) FROM payees')->fetchColumn();
+                if ($cOp > $cPdo) {
+                    $shouldSwitch = true;
+                }
+            } catch (Throwable $e) {
+            }
+        }
+    }
+    if (!$shouldSwitch) {
+        return;
+    }
+
     if (!isset($GLOBALS['tenant_pdo']) || !($GLOBALS['tenant_pdo'] instanceof PDO)) {
         $GLOBALS['tenant_pdo'] = $pdo;
     }
     $pdo = $op;
     $GLOBALS['pdo'] = $op;
+    if (function_exists('ensurePaymentVouchersCoreSchema')) {
+        ensurePaymentVouchersCoreSchema($pdo);
+    }
+    if (function_exists('ensurePayeesTableSchema')) {
+        ensurePayeesTableSchema($pdo);
+    }
+    if (function_exists('ensureApprovalsTableSchema')) {
+        ensureApprovalsTableSchema();
+    }
 }
 
 /**
@@ -2690,6 +2732,64 @@ function syncVoucherApprovalAssignees(PDO $pdo, $voucherId, array $roleNames)
     } catch (Throwable $e) {
         error_log('syncVoucherApprovalAssignees voucher ' . $voucherId . ': ' . $e->getMessage());
     }
+}
+
+/**
+ * Create a payee or reactivate a soft-deleted row with the same unique name.
+ *
+ * @return array{id:int,name:string,type:string,tin:string,contact_details:string,reactivated:bool}
+ */
+function createOrReactivatePayee(PDO $pdo, string $name, string $type = 'Other', string $tin = '', string $contact = ''): array
+{
+    $name = trim($name);
+    if ($name === '') {
+        throw new InvalidArgumentException('Payee name is required.');
+    }
+    $type = trim($type) !== '' ? trim($type) : 'Other';
+    $tin = trim($tin);
+    $contact = trim($contact);
+
+    if (function_exists('ensurePayeesTableSchema')) {
+        ensurePayeesTableSchema($pdo);
+    }
+
+    $chk = $pdo->prepare('SELECT id, is_active FROM payees WHERE name = ? LIMIT 1');
+    $chk->execute([$name]);
+    $existing = $chk->fetch(PDO::FETCH_ASSOC);
+    if ($existing) {
+        $id = (int) ($existing['id'] ?? 0);
+        if ((int) ($existing['is_active'] ?? 1) === 1) {
+            throw new RuntimeException('A payee with this name already exists.');
+        }
+        $pdo->prepare('UPDATE payees SET type = ?, tin = ?, contact_details = ?, is_active = 1 WHERE id = ?')
+            ->execute([$type, $tin, $contact, $id]);
+        return [
+            'id' => $id,
+            'name' => $name,
+            'type' => $type,
+            'tin' => $tin,
+            'contact_details' => $contact,
+            'reactivated' => true,
+        ];
+    }
+
+    try {
+        $pdo->prepare('INSERT INTO payees (name, type, tin, contact_details, is_active, created_at) VALUES (?, ?, ?, ?, 1, NOW())')
+            ->execute([$name, $type, $tin, $contact]);
+    } catch (Throwable $e) {
+        $pdo->prepare('INSERT INTO payees (name, type, tin, contact_details) VALUES (?, ?, ?, ?)')
+            ->execute([$name, $type, $tin, $contact]);
+    }
+    $id = (int) $pdo->lastInsertId();
+
+    return [
+        'id' => $id,
+        'name' => $name,
+        'type' => $type,
+        'tin' => $tin,
+        'contact_details' => $contact,
+        'reactivated' => false,
+    ];
 }
 
 /**

@@ -41,7 +41,7 @@ try {
     if ($method === 'GET') {
         $rows = [];
         try {
-            $stmt = $pdo->query('SELECT id, name, type, tin, contact_details FROM payees WHERE is_active = 1 ORDER BY name ASC');
+            $stmt = $pdo->query('SELECT id, name, type, tin, contact_details FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Throwable $e) {
             $rows = [];
@@ -94,14 +94,14 @@ try {
         }
 
         if ($action === 'create') {
-            $chk = $pdo->prepare('SELECT id FROM payees WHERE name = ? AND is_active = 1');
-            $chk->execute([$name]);
-            if ($chk->fetch()) {
-                payees_json(['ok' => false, 'error' => 'A payee with this name already exists.'], 409);
+            try {
+                $created = createOrReactivatePayee($pdo, $name, $type, $tin, $contact);
+            } catch (RuntimeException $e) {
+                payees_json(['ok' => false, 'error' => $e->getMessage()], 409);
+            } catch (InvalidArgumentException $e) {
+                payees_json(['ok' => false, 'error' => $e->getMessage()], 422);
             }
-            $stmt = $pdo->prepare('INSERT INTO payees (name, type, tin, contact_details) VALUES (?, ?, ?, ?)');
-            $stmt->execute([$name, $type, $tin, $contact]);
-            $id = (int) $pdo->lastInsertId();
+            $id = (int) ($created['id'] ?? 0);
 
             if ($type === 'Supplier') {
                 try {
@@ -116,8 +116,16 @@ try {
 
             payees_json([
                 'ok' => true,
-                'message' => 'Payee added successfully.',
-                'payee' => ['id' => $id, 'name' => $name, 'type' => $type, 'tin' => $tin, 'contact_details' => $contact],
+                'message' => !empty($created['reactivated'])
+                    ? 'Payee restored and updated successfully.'
+                    : 'Payee added successfully.',
+                'payee' => [
+                    'id' => $id,
+                    'name' => $name,
+                    'type' => $type,
+                    'tin' => $tin,
+                    'contact_details' => $contact,
+                ],
             ]);
         }
 

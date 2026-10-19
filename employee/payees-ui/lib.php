@@ -9,6 +9,10 @@ declare(strict_types=1);
 
 function payeesUiWebBasePath(): string
 {
+    // Prefer company-scoped /{slug}/employee so create/list hit the same tenant DB as vouchers.
+    if (function_exists('company_url')) {
+        return rtrim((string) company_url('employee'), '/');
+    }
     if (function_exists('app_url')) {
         return rtrim((string) app_url('/employee'), '/');
     }

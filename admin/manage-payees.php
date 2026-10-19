@@ -1,6 +1,9 @@
 <?php
 require_once '../includes/functions.php';
 requireAdmin();
+if (function_exists('voucher_bootstrap_operational_pdo')) {
+    voucher_bootstrap_operational_pdo();
+}
 
 $success = '';
 $error = '';
@@ -19,10 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception("Payee Name is required");
 
                 if ($_POST['action'] === 'create') {
-                    $stmt = $pdo->prepare("INSERT INTO payees (name, type, tin, contact_details) VALUES (?, ?, ?, ?)");
-                    $stmt->execute([$name, $type, $tin, $contact]);
-                    $success = "Payee added successfully.";
-                    
+                    $created = createOrReactivatePayee($pdo, $name, $type, $tin, $contact);
+                    $success = !empty($created['reactivated'])
+                        ? 'Payee restored and updated successfully.'
+                        : 'Payee added successfully.';
+
                     // Auto-link to Stocks Suppliers if type is Supplier
                     if ($type === 'Supplier') {
                         // Check if exists in stocks_suppliers
@@ -76,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch Payees
-$stmt = $pdo->query("SELECT * FROM payees WHERE is_active = 1 ORDER BY name ASC");
+$stmt = $pdo->query('SELECT * FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
 $payees = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>

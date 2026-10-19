@@ -84,7 +84,7 @@ $financeUsers = $approvalUserLists['finance'] ?? array();
 // Prepare Payees
 $payees = [];
 try {
-    $stmt = $pdo->query("SELECT id, name, type FROM payees WHERE is_active = 1 ORDER BY name ASC");
+    $stmt = $pdo->query('SELECT id, name, type FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
     $payees = $stmt->fetchAll();
 } catch (Exception $e) { /* silent */
 }
@@ -158,17 +158,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     try {
-        // Check duplicate
-        $chk = $pdo->prepare("SELECT id FROM payees WHERE name = ?");
-        $chk->execute([$name]);
-        if ($chk->fetch()) {
-            echo json_encode(['success' => false, 'message' => 'Payee already exists']);
-            exit;
-        }
-
-        $stmt = $pdo->prepare("INSERT INTO payees (name, type, tin, contact_details, created_at) VALUES (?, ?, ?, ?, NOW())");
-        $stmt->execute([$name, $type, $tin, $contact]);
-        $newId = $pdo->lastInsertId();
+        $created = createOrReactivatePayee($pdo, $name, $type, $tin, $contact);
+        $newId = (int) ($created['id'] ?? 0);
 
         // Auto-link to Stocks Suppliers if type is Supplier
         if ($type === 'Supplier') {

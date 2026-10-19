@@ -21,7 +21,7 @@ if ($assets === null) {
 // Server-render the initial payee list so the page is populated instantly.
 $initialPayees = [];
 try {
-    $stmt = $pdo->query('SELECT id, name, type, tin, contact_details FROM payees WHERE is_active = 1 ORDER BY name ASC');
+    $stmt = $pdo->query('SELECT id, name, type, tin, contact_details FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
     foreach (($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) as $r) {
         $initialPayees[] = [
             'id' => (int) $r['id'],

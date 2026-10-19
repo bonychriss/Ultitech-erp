@@ -34,6 +34,19 @@ if (function_exists('stock_company_pdo')) {
         $GLOBALS['pdo'] = $erpPdo;
     }
 }
+
+// Ultimate: stock suppliers share the same DB as voucher payees (DATA_DB_NAME).
+if (
+    function_exists('isUltimatePrimaryCompanyId')
+    && isUltimatePrimaryCompanyId()
+    && function_exists('payeesAndSuppliersPdo')
+) {
+    $partyPdo = payeesAndSuppliersPdo($pdo instanceof PDO ? $pdo : null);
+    if ($partyPdo instanceof PDO) {
+        $pdo = $partyPdo;
+        $GLOBALS['pdo'] = $partyPdo;
+    }
+}
 ensureStockMovementsTable($pdo);
 ensureStoreWarehouseReceiptsTable($pdo);
 ensureStoreReleaseDocumentsTable($pdo);

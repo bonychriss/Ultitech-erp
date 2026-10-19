@@ -2409,8 +2409,31 @@ function erp_bootstrap_active_pdo()
 }
 
 /**
- * Choose the PDO that holds the real payees list (max active rows).
- * Explicitly considers DATA_DB_NAME for Ultimate so empty tenant shells lose.
+ * Canonical DB for Ultimate payees + stock suppliers + payment vouchers.
+ * This is the single "link" those modules should use (DATA_DB_NAME).
+ */
+function masterPartyDatabaseName(): string
+{
+    if (defined('DATA_DB_NAME') && trim((string) DATA_DB_NAME) !== '') {
+        return trim((string) DATA_DB_NAME);
+    }
+    if (defined('SALES_DB_NAME') && trim((string) SALES_DB_NAME) !== '') {
+        return trim((string) SALES_DB_NAME);
+    }
+    return '';
+}
+
+/**
+ * Alias: one connection for payees and suppliers used by payment vouchers.
+ */
+function payeesAndSuppliersPdo(?PDO $fallback = null): ?PDO
+{
+    return payeesOperationalPdo($fallback);
+}
+
+/**
+ * Choose the PDO for payees / suppliers / voucher party lists.
+ * Ultimate always links to DATA_DB_NAME (one database). Other tenants keep their own DB.
  */
 function payeesOperationalPdo(?PDO $fallback = null): ?PDO
 {
@@ -2420,23 +2443,31 @@ function payeesOperationalPdo(?PDO $fallback = null): ?PDO
     global $pdo, $control_pdo;
 
     $primary = ($fallback instanceof PDO) ? $fallback : (($pdo instanceof PDO) ? $pdo : null);
-    $keyParts = [];
-    foreach ([$primary, $pdo, $control_pdo] as $conn) {
-        if (!($conn instanceof PDO)) {
-            continue;
-        }
+    $dataDb = masterPartyDatabaseName();
+    $isUltimate = function_exists('isUltimatePrimaryCompanyId') ? isUltimatePrimaryCompanyId() : false;
+    $key = ($isUltimate ? 'ultimate|' : 'tenant|') . $dataDb;
+    if ($primary instanceof PDO) {
         try {
-            $keyParts[] = (string) $conn->query('SELECT DATABASE()')->fetchColumn();
+            $key .= '|' . (string) $primary->query('SELECT DATABASE()')->fetchColumn();
         } catch (Throwable $e) {
-            $keyParts[] = 'pdo';
+            $key .= '|pdo';
         }
     }
-    if (defined('DATA_DB_NAME')) {
-        $keyParts[] = trim((string) DATA_DB_NAME);
-    }
-    $key = implode('|', $keyParts);
     if ($cache instanceof PDO && $cacheKey === $key) {
         return $cache;
+    }
+
+    // Ultimate: hard-link to the single operational database.
+    if ($isUltimate && $dataDb !== '' && function_exists('connectToTenantDatabase')) {
+        if (!(function_exists('isSharedTrialDatabaseName') && isSharedTrialDatabaseName($dataDb))) {
+            $linked = connectToTenantDatabase($dataDb);
+            if ($linked instanceof PDO) {
+                $cache = $linked;
+                $cacheKey = $key;
+                $GLOBALS['payees_operational_database'] = $dataDb;
+                return $linked;
+            }
+        }
     }
 
     $candidates = [];
@@ -2460,11 +2491,10 @@ function payeesOperationalPdo(?PDO $fallback = null): ?PDO
     $addCandidate($pdo instanceof PDO ? $pdo : null);
     $addCandidate(($control_pdo ?? null) instanceof PDO ? $control_pdo : null);
 
-    $dataDb = defined('DATA_DB_NAME') ? trim((string) DATA_DB_NAME) : '';
     if ($dataDb !== '' && function_exists('connectToTenantDatabase')) {
         $skipShared = function_exists('isSharedTrialDatabaseName') && isSharedTrialDatabaseName($dataDb);
         $useDataDb = !$skipShared;
-        if ($useDataDb && function_exists('isUltimatePrimaryCompanyId') && !isUltimatePrimaryCompanyId()) {
+        if ($useDataDb && !$isUltimate) {
             $curDb = '';
             if ($primary instanceof PDO) {
                 try {
@@ -2472,7 +2502,6 @@ function payeesOperationalPdo(?PDO $fallback = null): ?PDO
                 } catch (Throwable $e) {
                 }
             }
-            // Dedicated non-Ultimate tenants must keep their own DB.
             if ($curDb !== '' && strcasecmp($curDb, $dataDb) !== 0) {
                 $useDataDb = false;
             }
@@ -2524,7 +2553,39 @@ function payeesOperationalPdo(?PDO $fallback = null): ?PDO
 
     $cache = $best;
     $cacheKey = $key;
+    if ($best instanceof PDO) {
+        try {
+            $GLOBALS['payees_operational_database'] = (string) $best->query('SELECT DATABASE()')->fetchColumn();
+        } catch (Throwable $e) {
+        }
+    }
     return $best;
+}
+
+/**
+ * Keep stocks_suppliers in the same DB when a payee is type Supplier.
+ */
+function syncPayeeToStocksSupplier(PDO $pdo, string $name, string $contact = ''): void
+{
+    $name = trim($name);
+    if ($name === '' || !function_exists('erp_connection_has_table') || !erp_connection_has_table($pdo, 'stocks_suppliers')) {
+        return;
+    }
+    try {
+        $chk = $pdo->prepare('SELECT id FROM stocks_suppliers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1');
+        $chk->execute([$name]);
+        $sid = $chk->fetchColumn();
+        if ($sid) {
+            $pdo->prepare('UPDATE stocks_suppliers SET contact_details = ? WHERE id = ?')
+                ->execute([$contact !== '' ? $contact : null, (int) $sid]);
+            return;
+        }
+        $pdo->prepare('INSERT INTO stocks_suppliers (name, contact_details) VALUES (?, ?)')
+            ->execute([$name, $contact !== '' ? $contact : null]);
+    } catch (Throwable $e) {
+        // Non-fatal: payee save should still succeed.
+        error_log('syncPayeeToStocksSupplier: ' . $e->getMessage());
+    }
 }
 
 /**
@@ -2564,13 +2625,13 @@ function fetchActivePayees(?PDO $explicitPdo = null): array
 }
 
 /**
- * Ensure voucher pages use the DB that has payees (tenant/data), not control-only schema.
+ * Point voucher/payee pages at the single parties DB (Ultimate → DATA_DB_NAME).
  */
 function voucher_bootstrap_operational_pdo()
 {
     global $pdo;
 
-    $best = payeesOperationalPdo($pdo instanceof PDO ? $pdo : null);
+    $best = payeesAndSuppliersPdo($pdo instanceof PDO ? $pdo : null);
     if ($best instanceof PDO && $best !== $pdo) {
         if (!isset($GLOBALS['tenant_pdo']) || !($GLOBALS['tenant_pdo'] instanceof PDO)) {
             $GLOBALS['tenant_pdo'] = $pdo;
@@ -2858,7 +2919,7 @@ function createOrReactivatePayee(PDO $pdo, string $name, string $type = 'Other',
     $tin = trim($tin);
     $contact = trim($contact);
 
-    $best = payeesOperationalPdo($pdo);
+    $best = payeesAndSuppliersPdo($pdo);
     if ($best instanceof PDO) {
         $pdo = $best;
     }
@@ -2877,6 +2938,9 @@ function createOrReactivatePayee(PDO $pdo, string $name, string $type = 'Other',
         }
         $pdo->prepare('UPDATE payees SET type = ?, tin = ?, contact_details = ?, is_active = 1 WHERE id = ?')
             ->execute([$type, $tin, $contact, $id]);
+        if (strcasecmp($type, 'Supplier') === 0) {
+            syncPayeeToStocksSupplier($pdo, $name, $contact);
+        }
         return [
             'id' => $id,
             'name' => $name,
@@ -2895,6 +2959,9 @@ function createOrReactivatePayee(PDO $pdo, string $name, string $type = 'Other',
             ->execute([$name, $type, $tin, $contact]);
     }
     $id = (int) $pdo->lastInsertId();
+    if (strcasecmp($type, 'Supplier') === 0) {
+        syncPayeeToStocksSupplier($pdo, $name, $contact);
+    }
 
     return [
         'id' => $id,

@@ -18,6 +18,9 @@ if (function_exists('voucher_bootstrap_operational_pdo')) {
 if (function_exists('ensurePaymentVouchersCoreSchema')) {
     ensurePaymentVouchersCoreSchema();
 }
+if (function_exists('ensurePaymentVoucherIsDraftColumn')) {
+    ensurePaymentVoucherIsDraftColumn();
+}
 if (function_exists('ensureSwiftDocumentColumn')) {
     ensureSwiftDocumentColumn();
 }
@@ -51,6 +54,13 @@ try {
         $companyParams = getCompanyParam();
     }
 
+    $privateDraftSql = '';
+    $privateDraftParams = [];
+    if (function_exists('paymentVoucherHideOthersPrivateDraftsSql')) {
+        $privateDraftSql = paymentVoucherHideOthersPrivateDraftsSql('pv', $privateDraftParams);
+    }
+    $statsWhere = ($companySql !== '' ? $companySql : ' WHERE 1=1') . $privateDraftSql;
+
     $stmt = $pdo->prepare("SELECT
             COUNT(*) AS total,
             SUM(CASE WHEN pv.status IN ('pending', 'confirming') AND NOT (
@@ -61,15 +71,15 @@ try {
             SUM(CASE WHEN pv.status='rejected' THEN 1 ELSE 0 END) AS rejected,
             SUM(CASE WHEN IFNULL(pv.is_paid,0) = 1 AND IFNULL(pv.is_posted,0) = 0 THEN 1 ELSE 0 END) AS paid,
             SUM(CASE WHEN IFNULL(pv.is_posted,0) = 1 THEN 1 ELSE 0 END) AS posted,
-            SUM(CASE WHEN LOWER(pv.status) IN ('pending', 'confirming') AND (
+            SUM(CASE WHEN LOWER(pv.status) = 'draft' OR IFNULL(pv.is_draft,0) = 1 OR (LOWER(pv.status) IN ('pending', 'confirming') AND (
                 COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.total_amount,0) <= 0 OR
                 NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id)
-            ) THEN 1 ELSE 0 END) AS draft,
+            )) THEN 1 ELSE 0 END) AS draft,
             SUM(CASE WHEN pv.status='approved' AND pv.currency='TZS' THEN pv.total_amount ELSE 0 END) AS approved_amount_tzs,
             SUM(CASE WHEN pv.status='approved' AND pv.currency='USD' THEN pv.total_amount ELSE 0 END) AS approved_amount_usd,
             SUM(pv.total_amount) AS total_value
-        FROM payment_vouchers pv" . $companySql);
-    $stmt->execute($companyParams);
+        FROM payment_vouchers pv" . $statsWhere);
+    $stmt->execute(array_merge($companyParams, $privateDraftParams));
     $statsRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
     $stats = [
@@ -85,9 +95,9 @@ try {
         'total_value' => (float) ($statsRow['total_value'] ?? 0),
     ];
 
-    $currSql = "SELECT currency, SUM(total_amount) AS val FROM payment_vouchers pv" . $companySql . " GROUP BY currency";
+    $currSql = "SELECT currency, SUM(total_amount) AS val FROM payment_vouchers pv" . $statsWhere . " GROUP BY currency";
     $stmt = $pdo->prepare($currSql);
-    $stmt->execute($companyParams);
+    $stmt->execute(array_merge($companyParams, $privateDraftParams));
     $currencyTotals = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $cur = (string) ($row['currency'] ?? '');
@@ -102,7 +112,7 @@ try {
         ? '(SELECT COUNT(*) FROM voucher_attachments va WHERE va.voucher_id = pv.id) AS attachment_count'
         : '0 AS attachment_count';
 
-    $listWhere = $companySql !== '' ? $companySql : ' WHERE 1=1';
+    $listWhere = ($companySql !== '' ? $companySql : ' WHERE 1=1') . $privateDraftSql;
     $orderSql = function_exists('buildPaymentVoucherListOrderBySql')
         ? buildPaymentVoucherListOrderBySql('newest', 'pv')
         : 'ORDER BY pv.id DESC';
@@ -114,6 +124,7 @@ try {
                 IFNULL(pv.is_posted,0) AS is_posted,
                 IFNULL(pv.is_restricted,0) AS is_restricted,
                 IFNULL(pv.is_reference,0) AS is_reference,
+                IFNULL(pv.is_draft,0) AS is_draft,
                 (SELECT COUNT(*) FROM voucher_items vi WHERE vi.voucher_id = pv.id) AS item_count,
                 $attachmentCountSql,
                 u.full_name AS creator_name, u.department
@@ -123,7 +134,7 @@ try {
             $orderSql
             LIMIT 2000";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($companyParams);
+    $stmt->execute(array_merge($companyParams, $privateDraftParams));
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $statusApproved = defined('STATUS_APPROVED') ? STATUS_APPROVED : 'approved';
@@ -140,11 +151,16 @@ try {
         $isRestricted = (int) ($v['is_restricted'] ?? 0) === 1;
         $statusLower = strtolower((string) ($v['status'] ?? ''));
 
-        $looksDraft = !$isPaidFlag && !$isPostedFlag
-            && in_array($statusLower, [$statusPending, $statusConfirming], true)
-            && (
-                empty($v['payee_name']) || $v['payee_name'] === '(Draft)'
-                || (float) $v['total_amount'] <= 0 || (int) ($v['item_count'] ?? 0) === 0
+        $looksDraft = ((int) ($v['is_draft'] ?? 0) === 1)
+            || $statusLower === $statusDraft
+            || $statusLower === 'draft'
+            || (
+                !$isPaidFlag && !$isPostedFlag
+                && in_array($statusLower, [$statusPending, $statusConfirming], true)
+                && (
+                    empty($v['payee_name']) || $v['payee_name'] === '(Draft)'
+                    || (float) $v['total_amount'] <= 0 || (int) ($v['item_count'] ?? 0) === 0
+                )
             );
         $derivedStatus = $looksDraft ? $statusDraft : $v['status'];
         if ($isPostedFlag) {

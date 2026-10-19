@@ -12,6 +12,8 @@ header('Content-Type: application/json; charset=utf-8');
 if (function_exists('voucher_bootstrap_operational_pdo')) {
     voucher_bootstrap_operational_pdo();
 }
+if (function_exists('ensurePaymentVouchersCoreSchema')) ensurePaymentVouchersCoreSchema();
+if (function_exists('ensurePaymentVoucherIsDraftColumn')) ensurePaymentVoucherIsDraftColumn();
 if (function_exists('ensureSwiftDocumentColumn')) ensureSwiftDocumentColumn();
 if (function_exists('ensurePostedColumnsOnPaymentVouchers')) ensurePostedColumnsOnPaymentVouchers();
 if (function_exists('ensureRestrictedColumn')) ensureRestrictedColumn();
@@ -39,6 +41,11 @@ try {
         $ownerSql = ' AND created_by = ?';
         $ownerParams = [$userId];
     }
+    $privateDraftSql = '';
+    $privateDraftParams = [];
+    if (function_exists('paymentVoucherHideOthersPrivateDraftsSql')) {
+        $privateDraftSql = paymentVoucherHideOthersPrivateDraftsSql('', $privateDraftParams, $userId);
+    }
 
     // Headline stats (company scope; optionally only vouchers created by current user).
     $stmt = $pdo->prepare("SELECT
@@ -50,8 +57,8 @@ try {
             SUM(CASE WHEN status='rejected' THEN 1 ELSE 0 END) AS rejected,
             SUM(CASE WHEN IFNULL(is_paid,0) = 1 AND IFNULL(is_posted,0) = 0 THEN 1 ELSE 0 END) AS paid,
             SUM(CASE WHEN IFNULL(is_posted,0) = 1 THEN 1 ELSE 0 END) AS posted
-        FROM payment_vouchers WHERE 1=1" . $companySql . $ownerSql);
-    $stmt->execute(array_merge($companyParams, $ownerParams));
+        FROM payment_vouchers WHERE 1=1" . $companySql . $ownerSql . $privateDraftSql);
+    $stmt->execute(array_merge($companyParams, $ownerParams, $privateDraftParams));
     $statsRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
     $stats = [
@@ -66,8 +73,8 @@ try {
     ];
 
     // Breakdown by currency.
-    $stmt = $pdo->prepare("SELECT currency, SUM(total_amount) AS val FROM payment_vouchers WHERE 1=1" . $companySql . $ownerSql . " GROUP BY currency");
-    $stmt->execute(array_merge($companyParams, $ownerParams));
+    $stmt = $pdo->prepare("SELECT currency, SUM(total_amount) AS val FROM payment_vouchers WHERE 1=1" . $companySql . $ownerSql . $privateDraftSql . " GROUP BY currency");
+    $stmt->execute(array_merge($companyParams, $ownerParams, $privateDraftParams));
     $currencyTotals = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $cur = (string) ($row['currency'] ?? '');
@@ -99,6 +106,11 @@ try {
         $listOwnerSql = ' AND pv.created_by = ?';
         $listOwnerParams = [$userId];
     }
+    $listPrivateDraftSql = '';
+    $listPrivateDraftParams = [];
+    if (function_exists('paymentVoucherHideOthersPrivateDraftsSql')) {
+        $listPrivateDraftSql = paymentVoucherHideOthersPrivateDraftsSql('pv', $listPrivateDraftParams, $userId);
+    }
 
     $sql = "SELECT pv.id, pv.voucher_no, pv.payee_name, pv.total_amount, pv.status,
                 pv.date_created, pv.currency, pv.created_at, pv.prepared_by, pv.description,
@@ -108,17 +120,18 @@ try {
                 IFNULL(pv.is_posted,0) AS is_posted,
                 IFNULL(pv.is_restricted,0) AS is_restricted,
                 IFNULL(pv.is_reference,0) AS is_reference,
+                IFNULL(pv.is_draft,0) AS is_draft,
                 (SELECT COUNT(*) FROM voucher_items vi WHERE vi.voucher_id = pv.id) AS item_count,
                 $attachmentCountSql,
                 u.full_name AS creator_name, u.department
             FROM payment_vouchers pv
             LEFT JOIN users u ON pv.created_by = u.id
-            WHERE 1=1" . $listScopeSql . $listOwnerSql . " "
+            WHERE 1=1" . $listScopeSql . $listOwnerSql . $listPrivateDraftSql . " "
         . (function_exists('buildPaymentVoucherListOrderBySql')
             ? buildPaymentVoucherListOrderBySql('newest', 'pv')
             : 'ORDER BY pv.id DESC');
     $stmt = $pdo->prepare($sql);
-    $stmt->execute(array_merge($listScopeParams, $listOwnerParams));
+    $stmt->execute(array_merge($listScopeParams, $listOwnerParams, $listPrivateDraftParams));
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $myId = $userId;
@@ -161,11 +174,16 @@ try {
 
         $canView = $isRestricted ? ($canSeeRestricted || $isCreator) : true;
 
-        $looksDraft = !$isPaidFlag && !$isPostedFlag
-            && in_array($statusLower, [$statusPending, $statusConfirming], true)
-            && (
-                empty($v['payee_name']) || $v['payee_name'] === '(Draft)'
-                || (float) $v['total_amount'] <= 0 || (int) ($v['item_count'] ?? 0) === 0
+        $looksDraft = ((int) ($v['is_draft'] ?? 0) === 1)
+            || $statusLower === $statusDraft
+            || $statusLower === 'draft'
+            || (
+                !$isPaidFlag && !$isPostedFlag
+                && in_array($statusLower, [$statusPending, $statusConfirming], true)
+                && (
+                    empty($v['payee_name']) || $v['payee_name'] === '(Draft)'
+                    || (float) $v['total_amount'] <= 0 || (int) ($v['item_count'] ?? 0) === 0
+                )
             );
 
         $roleFlags = $approvalFlagsById[$vid] ?? null;

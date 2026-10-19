@@ -54,6 +54,13 @@ try {
         }
     }
 
+    if (function_exists('paymentVoucherHideOthersPrivateDraftsSql')) {
+        $draftHide = paymentVoucherHideOthersPrivateDraftsSql('pv', $params);
+        if ($draftHide !== '') {
+            $where[] = ltrim($draftHide, " \t\n\r\0\x0BAND");
+        }
+    }
+
     $whereClause = $where !== [] ? 'WHERE ' . implode(' AND ', $where) : '';
     $sql = "
         SELECT

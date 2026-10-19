@@ -3497,15 +3497,19 @@ function resolvePaymentVoucherDisplayStatus(PDO $pdo = null, array $voucher = ar
         : (isset($voucher['item_count']) ? (int) $voucher['item_count'] : -1);
     $payeeRaw = trim((string) ($voucher['payee_name'] ?? ''));
     $isPlaceholderPayee = ($payeeRaw === '' || stripos($payeeRaw, '(draft') === 0);
+    $isPrivateDraft = isset($voucher['is_draft']) && (int) $voucher['is_draft'] === 1;
     $looksDraft = array_key_exists('looks_draft', $opts) && $opts['looks_draft'] !== null
         ? (bool) $opts['looks_draft']
         : (
-            !$isPaid && !$isPosted
-            && in_array($statusLower, array('pending', 'confirming'), true)
-            && (
-                $isPlaceholderPayee
-                || (float) ($voucher['total_amount'] ?? 0) <= 0
-                || ($itemCount >= 0 && $itemCount === 0)
+            $isPrivateDraft
+            || (
+                !$isPaid && !$isPosted
+                && in_array($statusLower, array('pending', 'confirming'), true)
+                && (
+                    $isPlaceholderPayee
+                    || (float) ($voucher['total_amount'] ?? 0) <= 0
+                    || ($itemCount >= 0 && $itemCount === 0)
+                )
             )
         );
 
@@ -3534,7 +3538,7 @@ function resolvePaymentVoucherDisplayStatus(PDO $pdo = null, array $voucher = ar
     if ($statusLower === 'approved') {
         return $finish('Approved', 'approved', 'approved', false);
     }
-    if ($looksDraft) {
+    if ($statusLower === 'draft' || $isPrivateDraft || $looksDraft) {
         $draftKey = defined('STATUS_DRAFT') ? STATUS_DRAFT : 'draft';
 
         return $finish('Draft', 'draft', $draftKey, true);
@@ -12862,6 +12866,10 @@ function ensurePaymentVouchersCoreSchema($explicitPdo = null)
             ");
         }
 
+        if (function_exists('ensurePaymentVoucherIsDraftColumn')) {
+            ensurePaymentVoucherIsDraftColumn($usePdo);
+        }
+
         $completed[$token] = true;
         if (function_exists('ensurePayeesTableSchema')) {
             ensurePayeesTableSchema($usePdo);
@@ -12871,6 +12879,86 @@ function ensurePaymentVouchersCoreSchema($explicitPdo = null)
         error_log('ensurePaymentVouchersCoreSchema: ' . $e->getMessage());
         return false;
     }
+}
+
+/**
+ * Private auto-save drafts (Back / leave create-voucher) — only the creator sees them
+ * until they click Create Voucher (is_draft cleared).
+ */
+function ensurePaymentVoucherIsDraftColumn($explicitPdo = null): bool
+{
+    global $pdo;
+    $usePdo = $explicitPdo ?? $pdo;
+    if (!($usePdo instanceof PDO) || !function_exists('tableExists') || !tableExists('payment_vouchers', $usePdo)) {
+        return false;
+    }
+    static $done = [];
+    $token = function_exists('pdoInstanceToken') ? pdoInstanceToken($usePdo) : spl_object_hash($usePdo);
+    if (isset($done[$token])) {
+        return (bool) $done[$token];
+    }
+    $hasColumn = static function (PDO $conn): bool {
+        try {
+            $st = $conn->query("SHOW COLUMNS FROM payment_vouchers LIKE 'is_draft'");
+            return $st && (bool) $st->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return false;
+        }
+    };
+    try {
+        if (!$hasColumn($usePdo)) {
+            $usePdo->exec('ALTER TABLE payment_vouchers ADD COLUMN is_draft TINYINT(1) NOT NULL DEFAULT 0');
+            try {
+                $usePdo->exec('ALTER TABLE payment_vouchers ADD KEY idx_payment_vouchers_is_draft (is_draft)');
+            } catch (Throwable $eIdx) {
+                // index optional
+            }
+        }
+        $ok = $hasColumn($usePdo);
+        $done[$token] = $ok;
+        return $ok;
+    } catch (Throwable $e) {
+        error_log('ensurePaymentVoucherIsDraftColumn: ' . $e->getMessage());
+        $done[$token] = false;
+        return false;
+    }
+}
+
+function paymentVoucherHasIsDraftColumn(?PDO $explicitPdo = null): bool
+{
+    return ensurePaymentVoucherIsDraftColumn($explicitPdo);
+}
+
+/**
+ * Hide other users' private drafts from shared voucher lists/KPIs.
+ * Creator still sees their own (is_draft = 1 AND created_by = viewer).
+ *
+ * @param list<mixed> $params
+ */
+function paymentVoucherHideOthersPrivateDraftsSql(string $alias, array &$params, ?int $viewerId = null): string
+{
+    global $pdo;
+    if (!paymentVoucherHasIsDraftColumn($pdo instanceof PDO ? $pdo : null)) {
+        return '';
+    }
+    $vid = $viewerId !== null ? (int) $viewerId : (int) ($_SESSION['user_id'] ?? 0);
+    $a = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+    $params[] = $vid;
+    return " AND (IFNULL({$a}is_draft, 0) = 0 OR {$a}created_by = ?)";
+}
+
+function paymentVoucherIsPrivateDraft(array $voucher): bool
+{
+    return isset($voucher['is_draft']) && (int) $voucher['is_draft'] === 1;
+}
+
+function viewerCanSeePrivateDraftVoucher(array $voucher, ?int $viewerId = null): bool
+{
+    if (!paymentVoucherIsPrivateDraft($voucher)) {
+        return true;
+    }
+    $vid = $viewerId !== null ? (int) $viewerId : (int) ($_SESSION['user_id'] ?? 0);
+    return $vid > 0 && (int) ($voucher['created_by'] ?? 0) === $vid;
 }
 
 // -------------- Voucher attachments schema & helpers --------------

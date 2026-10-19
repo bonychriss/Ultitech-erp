@@ -270,6 +270,10 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     if ($isRestricted && !isAdmin() && !isFinance() && !$isCreator) {
         return ['ok' => false, 'error' => 'Access denied', 'code' => 403];
     }
+    if (function_exists('viewerCanSeePrivateDraftVoucher')
+        && !viewerCanSeePrivateDraftVoucher($voucher, (int) ($_SESSION['user_id'] ?? 0))) {
+        return ['ok' => false, 'error' => 'Access denied', 'code' => 403];
+    }
 
     $stmt = $pdo->prepare('SELECT * FROM voucher_items WHERE voucher_id = ? ORDER BY id');
     $stmt->execute([$voucherId]);

@@ -39,6 +39,13 @@ if (!$voucher) {
     exit();
 }
 
+// Private Back/leave drafts are creator-only until Create Voucher publishes them.
+if (function_exists('viewerCanSeePrivateDraftVoucher')
+    && !viewerCanSeePrivateDraftVoucher($voucher, (int) ($_SESSION['user_id'] ?? 0))) {
+    header('Location: ' . $dashboardUrl);
+    exit();
+}
+
 $vfLimitedEditMode = voucherUsesLimitedClassificationEditMode($voucher, $voucher_id, (int) $_SESSION['user_id']);
 
 // Get voucher items
@@ -52,14 +59,21 @@ $success = '';
 
 // Draft detection (matches listing logic) for compact display
 $isPaidFlag = isset($voucher['is_paid']) && (int)$voucher['is_paid'] === 1;
-$isDraftDerived = !$isPaidFlag
-    && isset($voucher['status']) && strtolower($voucher['status']) === STATUS_PENDING
-    && (
-        empty(trim((string)$voucher['payee_name']))
-        || (float)$voucher['total_amount'] <= 0
-        || count($existing_items) === 0
+$statusLowerNow = strtolower((string) ($voucher['status'] ?? ''));
+$isDraftDerived = (isset($voucher['is_draft']) && (int) $voucher['is_draft'] === 1)
+    || $statusLowerNow === (defined('STATUS_DRAFT') ? STATUS_DRAFT : 'draft')
+    || (
+        !$isPaidFlag
+        && in_array($statusLowerNow, ['pending', 'confirming'], true)
+        && (
+            empty(trim((string) $voucher['payee_name']))
+            || (float) $voucher['total_amount'] <= 0
+            || count($existing_items) === 0
+        )
     );
-$isDraftView = $isDraftDerived || (isset($_GET['draft']) && $_GET['draft'] == '1');
+$isDraftView = $isDraftDerived
+    || (isset($voucher['is_draft']) && (int) $voucher['is_draft'] === 1)
+    || (isset($_GET['draft']) && $_GET['draft'] == '1');
 
 $approvalUserLists = function_exists('fetchVoucherApprovalUsers')
     ? fetchVoucherApprovalUsers($pdo)
@@ -443,6 +457,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
                     $pdo->prepare('UPDATE payment_vouchers SET ' . implode(', ', $extraSets) . ' WHERE id = ?')->execute($extraVals);
                 }
             } catch (Throwable $eExtra) { /* ignore optional columns */ }
+
+            // Saving from edit publishes the voucher — others may see it; Draft → Confirming.
+            try {
+                if (function_exists('ensurePaymentVoucherIsDraftColumn')) {
+                    ensurePaymentVoucherIsDraftColumn($pdo);
+                }
+                $pubSets = [];
+                if (function_exists('columnExists') && columnExists('payment_vouchers', 'is_draft', $pdo)) {
+                    $pubSets[] = 'is_draft = 0';
+                }
+                $pubSets[] = "status = CASE WHEN LOWER(COALESCE(status,'')) = 'draft' THEN "
+                    . $pdo->quote(defined('STATUS_CONFIRMING') ? STATUS_CONFIRMING : 'confirming')
+                    . ' ELSE status END';
+                $pdo->prepare('UPDATE payment_vouchers SET ' . implode(', ', $pubSets) . ' WHERE id = ?')
+                    ->execute([$voucher_id]);
+            } catch (Throwable $eDraft) { /* ignore */ }
 
             // Delete existing items
             $stmt = $pdo->prepare("DELETE FROM voucher_items WHERE voucher_id = ?");

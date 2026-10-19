@@ -15,6 +15,8 @@ header('Content-Type: application/json; charset=utf-8');
 if (function_exists('voucher_bootstrap_operational_pdo')) {
     voucher_bootstrap_operational_pdo();
 }
+if (function_exists('ensurePaymentVouchersCoreSchema')) ensurePaymentVouchersCoreSchema();
+if (function_exists('ensurePaymentVoucherIsDraftColumn')) ensurePaymentVoucherIsDraftColumn();
 if (function_exists('ensureSwiftDocumentColumn')) ensureSwiftDocumentColumn();
 if (function_exists('ensurePostedColumnsOnPaymentVouchers')) ensurePostedColumnsOnPaymentVouchers();
 if (function_exists('ensureVoucherAttachmentsSchema')) ensureVoucherAttachmentsSchema();
@@ -76,6 +78,14 @@ try {
         }
     }
 
+    // Private auto-drafts (Back from create) — only the creator can see them.
+    if (function_exists('paymentVoucherHideOthersPrivateDraftsSql')) {
+        $draftHide = paymentVoucherHideOthersPrivateDraftsSql('pv', $params);
+        if ($draftHide !== '') {
+            $where_conditions[] = ltrim($draftHide, " \t\n\r\0\x0BAND");
+        }
+    }
+
     if ($status_filter) {
         if ($status_filter === 'paid') {
             // Paid only — exclude posted (those show under Posted).
@@ -84,9 +94,9 @@ try {
             // Posted only (ledger-synced vouchers).
             $where_conditions[] = 'IFNULL(pv.is_posted, 0) = 1';
         } elseif ($status_filter === 'draft') {
-            $where_conditions[] = "pv.status IN ('pending', 'confirming') AND (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))";
+            $where_conditions[] = "(LOWER(COALESCE(pv.status,'')) = 'draft' OR IFNULL(pv.is_draft,0) = 1 OR (pv.status IN ('pending', 'confirming') AND (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.payee_name,'') = '(Draft)' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))))";
         } elseif ($status_filter === 'pending') {
-            $where_conditions[] = "pv.status IN ('pending', 'confirming') AND NOT (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))";
+            $where_conditions[] = "pv.status IN ('pending', 'confirming') AND IFNULL(pv.is_draft,0) = 0 AND NOT (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.payee_name,'') = '(Draft)' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))";
         } elseif ($status_filter === 'approved') {
             // Status approved only — exclude paid/posted (those show under Paid / Posted).
             $where_conditions[] = "pv.status = 'approved' AND IFNULL(pv.is_paid, 0) = 0 AND IFNULL(pv.is_posted, 0) = 0";
@@ -152,6 +162,7 @@ try {
                IFNULL(pv.is_paid,0) AS is_paid,
                IFNULL(pv.is_posted,0) AS is_posted,
                IFNULL(pv.is_reference,0) AS is_reference,
+               IFNULL(pv.is_draft,0) AS is_draft,
                pv.approved_by,
                (SELECT COUNT(*) FROM voucher_items vi WHERE vi.voucher_id = pv.id) AS item_count,
                pv.supporting_documents,
@@ -200,12 +211,17 @@ try {
         $statusLower = strtolower((string) ($v['status'] ?? ''));
         $vid = (int) ($v['id'] ?? 0);
 
-        $looksDraft = !$isPaidFlag
-            && in_array($statusLower, array($statusPending, $statusConfirming), true)
-            && (
-                empty($v['payee_name'])
-                || (float) $v['total_amount'] <= 0
-                || (int) ($v['item_count'] ?? 0) === 0
+        $looksDraft = ((int) ($v['is_draft'] ?? 0) === 1)
+            || $statusLower === $statusDraft
+            || $statusLower === 'draft'
+            || (
+                !$isPaidFlag
+                && in_array($statusLower, array($statusPending, $statusConfirming), true)
+                && (
+                    empty($v['payee_name'])
+                    || (float) $v['total_amount'] <= 0
+                    || (int) ($v['item_count'] ?? 0) === 0
+                )
             );
 
         $roleFlags = $approvalFlagsById[$vid] ?? null;

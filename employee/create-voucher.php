@@ -542,7 +542,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $createdBy,
             $date_created,
             $prepared_by,
-            STATUS_CONFIRMING,
+            $isDraft
+                ? (defined('STATUS_DRAFT') ? STATUS_DRAFT : 'draft')
+                : (defined('STATUS_CONFIRMING') ? STATUS_CONFIRMING : 'confirming'),
             $is_restricted
         ];
 
@@ -570,6 +572,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (in_array('company_id', $pvCols, true)) {
             $insertCols[] = 'company_id';
             $insertVals[] = (int) currentCompanyId();
+        }
+        if (function_exists('ensurePaymentVoucherIsDraftColumn')) {
+            ensurePaymentVoucherIsDraftColumn($pdo);
+            try {
+                $pvCols = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: $pvCols;
+            } catch (Throwable $eCols2) {
+                // keep prior $pvCols
+            }
+        }
+        if (in_array('is_draft', $pvCols, true)) {
+            $insertCols[] = 'is_draft';
+            $insertVals[] = $isDraft ? 1 : 0;
         }
 
         $placeholders = implode(', ', array_fill(0, count($insertCols), '?'));
@@ -865,10 +879,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Post-commit non-critical actions (should not affect success shown to user)
-        try {
-            notifyAdminsNewVoucher($voucher_id);
-        } catch (Throwable $e2) {
-            error_log('notifyAdminsNewVoucher failed: ' . $e2->getMessage());
+        // Private auto-drafts must not notify others — only real Create Voucher does.
+        if (!$isDraft) {
+            try {
+                notifyAdminsNewVoucher($voucher_id);
+            } catch (Throwable $e2) {
+                error_log('notifyAdminsNewVoucher failed: ' . $e2->getMessage());
+            }
         }
         // Inform Applicant, Department Manager, and Checked By
         if (!$isDraft && function_exists('notifyPaymentVoucherAssigneesOnCreate')) {

@@ -33,6 +33,15 @@ $sql = 'SELECT * FROM suppliers ORDER BY name ASC';
 $stmt = $pdo->query($sql);
 $suppliers_raw = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
 
+// Keep voucher payee list aligned with stock suppliers (including rows created before mirroring).
+if (function_exists('ensureStockSuppliersMirroredAsPayees')) {
+    try {
+        ensureStockSuppliersMirroredAsPayees($pdo instanceof PDO ? $pdo : null);
+    } catch (Throwable $e) {
+        error_log('suppliers/index.php payee mirror: ' . $e->getMessage());
+    }
+}
+
 $supplierPayload = [];
 foreach ($suppliers_raw as $s) {
     $type = (string) ($s['supplier_type'] ?? 'general');

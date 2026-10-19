@@ -2546,6 +2546,139 @@ function syncPayeeToStocksSupplier(PDO $pdo, string $name, string $contact = '')
 }
 
 /**
+ * Mirror stock `suppliers` rows into voucher `payees` (insert/reactivate missing names).
+ * Reads from the voucher DB and, when different, the stock company DB — older suppliers
+ * may still live only in the tenant stock database.
+ */
+function ensureStockSuppliersMirroredAsPayees(?PDO $explicitPdo = null): int
+{
+    static $ran = false;
+    if ($ran) {
+        return 0;
+    }
+    $ran = true;
+
+    if (!function_exists('createOrReactivatePayee') || !function_exists('payeesOperationalPdo')) {
+        return 0;
+    }
+
+    $party = payeesOperationalPdo($explicitPdo);
+    if (!($party instanceof PDO) || !function_exists('erp_connection_has_table')) {
+        return 0;
+    }
+
+    $sources = [];
+    $rememberSource = static function (?PDO $conn) use (&$sources): void {
+        if (!($conn instanceof PDO) || !function_exists('erp_connection_has_table')) {
+            return;
+        }
+        if (!erp_connection_has_table($conn, 'suppliers')) {
+            return;
+        }
+        foreach ($sources as $existing) {
+            if ($existing === $conn) {
+                return;
+            }
+        }
+        $sources[] = $conn;
+    };
+
+    $rememberSource($party);
+    global $pdo, $control_pdo;
+    $rememberSource(($explicitPdo instanceof PDO) ? $explicitPdo : null);
+    $rememberSource(($pdo instanceof PDO) ? $pdo : null);
+    if (function_exists('stock_company_pdo')) {
+        try {
+            $rememberSource(stock_company_pdo());
+        } catch (Throwable $e) {
+            // ignore
+        }
+    }
+    if (isset($GLOBALS['tenant_pdo']) && $GLOBALS['tenant_pdo'] instanceof PDO) {
+        $rememberSource($GLOBALS['tenant_pdo']);
+    }
+    // Create-voucher pages may not load stock helpers — resolve company tenant DB directly.
+    if (function_exists('connectToTenantDatabase')) {
+        try {
+            $cid = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+            if ($cid <= 0) {
+                $cid = (int) ($_SESSION['company_id'] ?? 0);
+            }
+            $meta = ($control_pdo instanceof PDO) ? $control_pdo : (($pdo instanceof PDO) ? $pdo : null);
+            if ($cid > 0 && $meta instanceof PDO && function_exists('tableExists') && tableExists('companies', $meta)) {
+                $st = $meta->prepare('SELECT db_name FROM companies WHERE id = ? LIMIT 1');
+                $st->execute([$cid]);
+                $dbName = trim((string) ($st->fetchColumn() ?: ''));
+                if ($dbName !== '') {
+                    $tenant = connectToTenantDatabase($dbName);
+                    $rememberSource($tenant instanceof PDO ? $tenant : null);
+                }
+            }
+        } catch (Throwable $e) {
+            // ignore
+        }
+    }
+
+    $byKey = [];
+    foreach ($sources as $src) {
+        try {
+            $rows = $src->query(
+                'SELECT name, contact_person, phone, email, address, location
+                 FROM suppliers
+                 WHERE name IS NOT NULL AND TRIM(name) <> \'\''
+            )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            try {
+                $rows = $src->query(
+                    'SELECT name FROM suppliers WHERE name IS NOT NULL AND TRIM(name) <> \'\''
+                )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (Throwable $e2) {
+                continue;
+            }
+        }
+        foreach ($rows as $row) {
+            $name = trim((string) ($row['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $key = strtolower($name);
+            if (isset($byKey[$key])) {
+                continue;
+            }
+            $contactParts = array_filter([
+                trim((string) ($row['contact_person'] ?? '')),
+                trim((string) ($row['phone'] ?? '')),
+                trim((string) ($row['email'] ?? '')),
+                trim((string) ($row['address'] ?? $row['location'] ?? '')),
+            ], static function ($v) {
+                return $v !== '';
+            });
+            $byKey[$key] = [
+                'name' => $name,
+                'contact' => implode(' | ', $contactParts),
+            ];
+        }
+    }
+
+    if ($byKey === []) {
+        return 0;
+    }
+
+    $created = 0;
+    foreach ($byKey as $item) {
+        try {
+            createOrReactivatePayee($party, $item['name'], 'Supplier', '', $item['contact']);
+            $created++;
+        } catch (RuntimeException $e) {
+            // Already an active payee with this name.
+        } catch (Throwable $e) {
+            error_log('ensureStockSuppliersMirroredAsPayees: ' . $e->getMessage());
+        }
+    }
+    return $created;
+}
+
+/**
  * Active payees from the canonical payees database.
  *
  * @return list<array{id:int,name:string,type:string,tin?:string,contact_details?:string}>
@@ -2555,6 +2688,9 @@ function fetchActivePayees(?PDO $explicitPdo = null): array
     $db = payeesOperationalPdo($explicitPdo);
     if (!($db instanceof PDO)) {
         return [];
+    }
+    if (function_exists('ensureStockSuppliersMirroredAsPayees')) {
+        ensureStockSuppliersMirroredAsPayees($db);
     }
     try {
         $stmt = $db->query(

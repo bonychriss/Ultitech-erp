@@ -36,11 +36,11 @@ if (function_exists('stock_company_pdo')) {
 }
 
 // Ultimate: stock suppliers share the same DB as voucher payees (DATA_DB_NAME).
-if (
-    function_exists('isUltimatePrimaryCompanyId')
-    && isUltimatePrimaryCompanyId()
-    && function_exists('payeesAndSuppliersPdo')
-) {
+$stockCompanySlug = strtolower(trim((string) ($_SESSION['company_slug'] ?? '')));
+$stockCompanyId = (int) ($_SESSION['company_id'] ?? 0);
+$isUltimatePartyDb = ($stockCompanySlug === 'ultimate')
+    || ($stockCompanyId > 0 && function_exists('isUltimatePrimaryCompanyId') && isUltimatePrimaryCompanyId($stockCompanyId));
+if ($isUltimatePartyDb && function_exists('payeesAndSuppliersPdo')) {
     $partyPdo = payeesAndSuppliersPdo($pdo instanceof PDO ? $pdo : null);
     if ($partyPdo instanceof PDO) {
         $pdo = $partyPdo;

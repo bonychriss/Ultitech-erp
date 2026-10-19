@@ -100,6 +100,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute($insertParams);
             $newSupplierId = (int) $pdo->lastInsertId();
 
+            // Payment vouchers use the payees table — mirror stock suppliers there.
+            if (function_exists('createOrReactivatePayee')) {
+                $contactParts = array_filter([
+                    $contact_person,
+                    $phone,
+                    $email,
+                    $address,
+                ], static fn($v) => trim((string) $v) !== '');
+                try {
+                    if (function_exists('voucher_bootstrap_operational_pdo')) {
+                        voucher_bootstrap_operational_pdo();
+                    }
+                    createOrReactivatePayee(
+                        $pdo,
+                        $name,
+                        'Supplier',
+                        '',
+                        implode(' | ', $contactParts)
+                    );
+                } catch (RuntimeException $e) {
+                    // Active payee with same name already exists — OK.
+                } catch (Throwable $e) {
+                    error_log('suppliers/add.php payee mirror failed: ' . $e->getMessage());
+                }
+            }
+
             flash('success', 'Supplier added successfully!');
             $redirectUrl = 'index.php?msg=added';
             if ($newSupplierId > 0) {

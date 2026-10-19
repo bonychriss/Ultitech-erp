@@ -106,6 +106,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
 
+            // Keep payment-voucher payees in sync with stock suppliers.
+            if (function_exists('createOrReactivatePayee')) {
+                $contactParts = array_filter([
+                    $contact_person,
+                    $phone,
+                    $email,
+                    $address,
+                ], static fn($v) => trim((string) $v) !== '');
+                try {
+                    if (function_exists('voucher_bootstrap_operational_pdo')) {
+                        voucher_bootstrap_operational_pdo();
+                    }
+                    createOrReactivatePayee(
+                        $pdo,
+                        $name,
+                        'Supplier',
+                        '',
+                        implode(' | ', $contactParts)
+                    );
+                } catch (RuntimeException $e) {
+                    // Already an active payee with this name.
+                } catch (Throwable $e) {
+                    error_log('suppliers/edit.php payee mirror failed: ' . $e->getMessage());
+                }
+            }
+
             flash('success', 'Supplier updated successfully!');
             redirect('index.php?update=success');
         } catch (PDOException $e) {

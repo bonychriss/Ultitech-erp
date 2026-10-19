@@ -4,6 +4,13 @@ requireAdmin();
 if (function_exists('voucher_bootstrap_operational_pdo')) {
     voucher_bootstrap_operational_pdo();
 }
+if (function_exists('payeesOperationalPdo')) {
+    $bestPayeesPdo = payeesOperationalPdo($pdo instanceof PDO ? $pdo : null);
+    if ($bestPayeesPdo instanceof PDO) {
+        $pdo = $bestPayeesPdo;
+        $GLOBALS['pdo'] = $bestPayeesPdo;
+    }
+}
 
 $success = '';
 $error = '';
@@ -80,8 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch Payees
-$stmt = $pdo->query('SELECT * FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
-$payees = $stmt->fetchAll();
+$payees = function_exists('fetchActivePayees') ? fetchActivePayees($pdo) : [];
+if ($payees === []) {
+    $stmt = $pdo->query('SELECT * FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
+    $payees = $stmt->fetchAll();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -82,11 +82,13 @@ $allUsers = $approvalUserLists['all'] ?? array();
 $financeUsers = $approvalUserLists['finance'] ?? array();
 
 // Prepare Payees
-$payees = [];
-try {
-    $stmt = $pdo->query('SELECT id, name, type FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
-    $payees = $stmt->fetchAll();
-} catch (Exception $e) { /* silent */
+$payees = function_exists('fetchActivePayees') ? fetchActivePayees($pdo) : [];
+if ($payees === []) {
+    try {
+        $stmt = $pdo->query('SELECT id, name, type FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
+        $payees = $stmt->fetchAll();
+    } catch (Exception $e) { /* silent */
+    }
 }
 
 // Prepare Sales Orders (from Sales module) for optional voucher linking.

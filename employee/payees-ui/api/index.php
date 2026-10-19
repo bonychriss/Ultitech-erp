@@ -11,6 +11,13 @@ header('Content-Type: application/json; charset=utf-8');
 if (function_exists('voucher_bootstrap_operational_pdo')) {
     voucher_bootstrap_operational_pdo();
 }
+if (function_exists('payeesOperationalPdo')) {
+    $bestPayeesPdo = payeesOperationalPdo($pdo instanceof PDO ? $pdo : null);
+    if ($bestPayeesPdo instanceof PDO) {
+        $pdo = $bestPayeesPdo;
+        $GLOBALS['pdo'] = $bestPayeesPdo;
+    }
+}
 
 function payees_json($data, int $status = 200): void
 {
@@ -39,22 +46,7 @@ try {
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
     if ($method === 'GET') {
-        $rows = [];
-        try {
-            $stmt = $pdo->query('SELECT id, name, type, tin, contact_details FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        } catch (Throwable $e) {
-            $rows = [];
-        }
-        $payees = array_map(static function ($r) {
-            return [
-                'id' => (int) $r['id'],
-                'name' => (string) $r['name'],
-                'type' => (string) ($r['type'] ?? 'Other'),
-                'tin' => (string) ($r['tin'] ?? ''),
-                'contact_details' => (string) ($r['contact_details'] ?? ''),
-            ];
-        }, $rows);
+        $payees = function_exists('fetchActivePayees') ? fetchActivePayees($pdo) : [];
         payees_json(['ok' => true, 'payees' => $payees]);
     }
 

@@ -125,6 +125,20 @@ export default function CreateVoucherPage() {
   const init = CFG.initial || {}
   const [payees, setPayees] = useState(CFG.payees)
   const [payeeId, setPayeeId] = useState(() => String(draftOr('payeeId', init.payee_id ? String(init.payee_id) : '') || ''))
+
+  useEffect(() => {
+    const url = CFG.payeesRefreshUrl
+    if (!url) return undefined
+    let cancelled = false
+    fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled || !data || data.ok === false || !Array.isArray(data.payees)) return
+        setPayees(data.payees)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
   const [currency, setCurrency] = useState(() => String(draftOr('currency', init.currency || CFG.currencies[0] || 'TZS') || 'TZS'))
   const [dateCreated, setDateCreated] = useState(() => String(draftOr('dateCreated', init.date_created || CFG.today) || CFG.today))
   const [purpose, setPurpose] = useState(() => String(draftOr('purpose', init.purpose || CFG.purposes[0]?.value || 'general') || 'general'))

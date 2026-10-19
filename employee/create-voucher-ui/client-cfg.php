@@ -123,6 +123,11 @@ function createVoucherBuildClientCfg(array $data = []): array
             'Others / Miscellaneous',
         ],
         'payees' => $mapPayees(is_array($data['payees'] ?? null) ? $data['payees'] : []),
+        'payeesRefreshUrl' => function_exists('company_url')
+            ? company_url('employee/create-voucher-ui/api/payees.php')
+            : (function_exists('app_url')
+                ? app_url('/employee/create-voucher-ui/api/payees.php')
+                : 'create-voucher-ui/api/payees.php'),
         'users' => $mapUserNames(is_array($data['users'] ?? null) ? $data['users'] : []),
         'financeUsers' => $mapUserNames(is_array($data['financeUsers'] ?? null) ? $data['financeUsers'] : []),
         'salesOrders' => $mapSalesOrders(is_array($data['salesOrders'] ?? null) ? $data['salesOrders'] : []),

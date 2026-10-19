@@ -34,6 +34,7 @@ export const CFG = {
     'Others / Miscellaneous',
   ],
   payees: RAW.payees || [],
+  payeesRefreshUrl: RAW.payeesRefreshUrl || '',
   users: RAW.users || [],
   financeUsers: RAW.financeUsers || [],
   salesOrders: RAW.salesOrders || [],

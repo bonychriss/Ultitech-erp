@@ -73,11 +73,13 @@ if (isset($_GET['module']) && (string) $_GET['module'] !== '') {
 }
 
 // Prepare Payees (match create-voucher)
-$payees = [];
-try {
-    $stmt = $pdo->query('SELECT id, name, type FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
-    $payees = $stmt->fetchAll();
-} catch (Exception $e) { /* silent */ }
+$payees = function_exists('fetchActivePayees') ? fetchActivePayees($pdo) : [];
+if ($payees === []) {
+    try {
+        $stmt = $pdo->query('SELECT id, name, type FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
+        $payees = $stmt->fetchAll();
+    } catch (Exception $e) { /* silent */ }
+}
 
 // Prepare Sales Orders for optional linking
 $salesOrders = [];

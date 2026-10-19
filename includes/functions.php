@@ -2409,74 +2409,183 @@ function erp_bootstrap_active_pdo()
 }
 
 /**
+ * Choose the PDO that holds the real payees list (max active rows).
+ * Explicitly considers DATA_DB_NAME for Ultimate so empty tenant shells lose.
+ */
+function payeesOperationalPdo(?PDO $fallback = null): ?PDO
+{
+    static $cache = null;
+    static $cacheKey = null;
+
+    global $pdo, $control_pdo;
+
+    $primary = ($fallback instanceof PDO) ? $fallback : (($pdo instanceof PDO) ? $pdo : null);
+    $keyParts = [];
+    foreach ([$primary, $pdo, $control_pdo] as $conn) {
+        if (!($conn instanceof PDO)) {
+            continue;
+        }
+        try {
+            $keyParts[] = (string) $conn->query('SELECT DATABASE()')->fetchColumn();
+        } catch (Throwable $e) {
+            $keyParts[] = 'pdo';
+        }
+    }
+    if (defined('DATA_DB_NAME')) {
+        $keyParts[] = trim((string) DATA_DB_NAME);
+    }
+    $key = implode('|', $keyParts);
+    if ($cache instanceof PDO && $cacheKey === $key) {
+        return $cache;
+    }
+
+    $candidates = [];
+    $addCandidate = static function (?PDO $conn) use (&$candidates): void {
+        if (!($conn instanceof PDO)) {
+            return;
+        }
+        try {
+            $name = (string) $conn->query('SELECT DATABASE()')->fetchColumn();
+        } catch (Throwable $e) {
+            $name = '';
+        }
+        $token = $name !== '' ? $name : ('obj:' . spl_object_id($conn));
+        if (isset($candidates[$token])) {
+            return;
+        }
+        $candidates[$token] = $conn;
+    };
+
+    $addCandidate($primary);
+    $addCandidate($pdo instanceof PDO ? $pdo : null);
+    $addCandidate(($control_pdo ?? null) instanceof PDO ? $control_pdo : null);
+
+    $dataDb = defined('DATA_DB_NAME') ? trim((string) DATA_DB_NAME) : '';
+    if ($dataDb !== '' && function_exists('connectToTenantDatabase')) {
+        $skipShared = function_exists('isSharedTrialDatabaseName') && isSharedTrialDatabaseName($dataDb);
+        $useDataDb = !$skipShared;
+        if ($useDataDb && function_exists('isUltimatePrimaryCompanyId') && !isUltimatePrimaryCompanyId()) {
+            $curDb = '';
+            if ($primary instanceof PDO) {
+                try {
+                    $curDb = (string) $primary->query('SELECT DATABASE()')->fetchColumn();
+                } catch (Throwable $e) {
+                }
+            }
+            // Dedicated non-Ultimate tenants must keep their own DB.
+            if ($curDb !== '' && strcasecmp($curDb, $dataDb) !== 0) {
+                $useDataDb = false;
+            }
+            if ($curDb !== '' && function_exists('isSharedTrialDatabaseName') && isSharedTrialDatabaseName($curDb)) {
+                $useDataDb = false;
+            }
+        }
+        if ($useDataDb) {
+            $addCandidate(connectToTenantDatabase($dataDb));
+        }
+    }
+
+    $best = null;
+    $bestCount = -1;
+    $bestHasPv = false;
+    foreach ($candidates as $conn) {
+        if (!function_exists('erp_connection_has_table') || !erp_connection_has_table($conn, 'payees')) {
+            continue;
+        }
+        $count = 0;
+        try {
+            $count = (int) $conn->query('SELECT COUNT(*) FROM payees WHERE COALESCE(is_active, 1) = 1')->fetchColumn();
+        } catch (Throwable $e) {
+            try {
+                $count = (int) $conn->query('SELECT COUNT(*) FROM payees')->fetchColumn();
+            } catch (Throwable $e2) {
+                $count = 0;
+            }
+        }
+        $hasPv = erp_connection_has_table($conn, 'payment_vouchers');
+        $better = false;
+        if (!($best instanceof PDO)) {
+            $better = true;
+        } elseif ($count > $bestCount) {
+            $better = true;
+        } elseif ($count === $bestCount && $hasPv && !$bestHasPv) {
+            $better = true;
+        }
+        if ($better) {
+            $best = $conn;
+            $bestCount = $count;
+            $bestHasPv = $hasPv;
+        }
+    }
+
+    if (!($best instanceof PDO)) {
+        $best = $primary;
+    }
+
+    $cache = $best;
+    $cacheKey = $key;
+    return $best;
+}
+
+/**
+ * Active payees from the canonical payees database.
+ *
+ * @return list<array{id:int,name:string,type:string,tin?:string,contact_details?:string}>
+ */
+function fetchActivePayees(?PDO $explicitPdo = null): array
+{
+    $db = payeesOperationalPdo($explicitPdo);
+    if (!($db instanceof PDO)) {
+        return [];
+    }
+    try {
+        $stmt = $db->query(
+            'SELECT id, name, type, tin, contact_details
+             FROM payees
+             WHERE COALESCE(is_active, 1) = 1
+             ORDER BY name ASC'
+        );
+        $rows = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $r) {
+        $out[] = [
+            'id' => (int) ($r['id'] ?? 0),
+            'name' => (string) ($r['name'] ?? ''),
+            'type' => (string) ($r['type'] ?? 'Other'),
+            'tin' => (string) ($r['tin'] ?? ''),
+            'contact_details' => (string) ($r['contact_details'] ?? ''),
+        ];
+    }
+    return $out;
+}
+
+/**
  * Ensure voucher pages use the DB that has payees (tenant/data), not control-only schema.
  */
 function voucher_bootstrap_operational_pdo()
 {
     global $pdo;
-    if (defined('IS_TENANT_DB') && IS_TENANT_DB && $pdo instanceof PDO) {
-        if (function_exists('ensurePaymentVouchersCoreSchema')) {
-            ensurePaymentVouchersCoreSchema($pdo);
+
+    $best = payeesOperationalPdo($pdo instanceof PDO ? $pdo : null);
+    if ($best instanceof PDO && $best !== $pdo) {
+        if (!isset($GLOBALS['tenant_pdo']) || !($GLOBALS['tenant_pdo'] instanceof PDO)) {
+            $GLOBALS['tenant_pdo'] = $pdo;
         }
-        if (function_exists('ensurePayeesTableSchema')) {
-            ensurePayeesTableSchema($pdo);
+        $pdo = $best;
+        $GLOBALS['pdo'] = $best;
+        try {
+            $GLOBALS['payees_operational_database'] = (string) $best->query('SELECT DATABASE()')->fetchColumn();
+        } catch (Throwable $e) {
         }
-        if (function_exists('ensureApprovalsTableSchema')) {
-            ensureApprovalsTableSchema();
-        }
-        return;
-    }
-    if (!function_exists('voucher_operational_pdo')) {
-        return;
-    }
-    $op = voucher_operational_pdo();
-    if (!($op instanceof PDO)) {
-        return;
-    }
-    if ($op === $pdo) {
-        if (function_exists('ensurePaymentVouchersCoreSchema')) {
-            ensurePaymentVouchersCoreSchema($pdo);
-        }
-        if (function_exists('ensurePayeesTableSchema')) {
-            ensurePayeesTableSchema($pdo);
-        }
-        if (function_exists('ensureApprovalsTableSchema')) {
-            ensureApprovalsTableSchema();
-        }
-        return;
-    }
-    if (!erp_connection_has_table($op, 'payees')) {
-        return;
     }
 
-    // Prefer the operational DB even when the current connection has an empty
-    // payees shell table (created by ensurePayeesTableSchema on the wrong DB).
-    $shouldSwitch = !erp_connection_has_table($pdo, 'payees');
-    if (!$shouldSwitch) {
-        $opHasPv = erp_connection_has_table($op, 'payment_vouchers');
-        $pdoHasPv = erp_connection_has_table($pdo, 'payment_vouchers');
-        if ($opHasPv && !$pdoHasPv) {
-            $shouldSwitch = true;
-        } else {
-            try {
-                $cPdo = (int) $pdo->query('SELECT COUNT(*) FROM payees')->fetchColumn();
-                $cOp = (int) $op->query('SELECT COUNT(*) FROM payees')->fetchColumn();
-                if ($cOp > $cPdo) {
-                    $shouldSwitch = true;
-                }
-            } catch (Throwable $e) {
-            }
-        }
-    }
-    if (!$shouldSwitch) {
+    if (!($pdo instanceof PDO)) {
         return;
     }
-
-    if (!isset($GLOBALS['tenant_pdo']) || !($GLOBALS['tenant_pdo'] instanceof PDO)) {
-        $GLOBALS['tenant_pdo'] = $pdo;
-    }
-    $pdo = $op;
-    $GLOBALS['pdo'] = $op;
     if (function_exists('ensurePaymentVouchersCoreSchema')) {
         ensurePaymentVouchersCoreSchema($pdo);
     }
@@ -2748,6 +2857,11 @@ function createOrReactivatePayee(PDO $pdo, string $name, string $type = 'Other',
     $type = trim($type) !== '' ? trim($type) : 'Other';
     $tin = trim($tin);
     $contact = trim($contact);
+
+    $best = payeesOperationalPdo($pdo);
+    if ($best instanceof PDO) {
+        $pdo = $best;
+    }
 
     if (function_exists('ensurePayeesTableSchema')) {
         ensurePayeesTableSchema($pdo);

@@ -19,21 +19,7 @@ if ($assets === null) {
 }
 
 // Server-render the initial payee list so the page is populated instantly.
-$initialPayees = [];
-try {
-    $stmt = $pdo->query('SELECT id, name, type, tin, contact_details FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
-    foreach (($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) as $r) {
-        $initialPayees[] = [
-            'id' => (int) $r['id'],
-            'name' => (string) $r['name'],
-            'type' => (string) ($r['type'] ?? 'Other'),
-            'tin' => (string) ($r['tin'] ?? ''),
-            'contact_details' => (string) ($r['contact_details'] ?? ''),
-        ];
-    }
-} catch (Throwable $e) {
-    $initialPayees = [];
-}
+$initialPayees = function_exists('fetchActivePayees') ? fetchActivePayees($pdo) : [];
 
 $payeesConfig = [
     'apiUrl' => $assets['apiUrl'],

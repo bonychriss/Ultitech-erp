@@ -464,6 +464,12 @@ body.page-rev-desk,
   background: var(--rev-accent-soft);
 }
 
+.rev-desk-date-preset.is-active {
+  border-color: #fb923c;
+  color: #9a3412;
+  background: var(--rev-accent-soft);
+}
+
 .rev-desk-filters-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -529,6 +535,7 @@ body.page-rev-desk,
   align-items: center;
   gap: 0.4rem;
   flex: 0 0 auto;
+  padding: 0 0 0.55rem;
 }
 
 .rev-desk-filter-chip {

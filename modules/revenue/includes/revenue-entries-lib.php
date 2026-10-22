@@ -499,6 +499,95 @@ function revenue_entries_parse_filters(array $get): array
 }
 
 /**
+ * Sum summary KPIs from the same rows returned to the desk table.
+ *
+ * @param array<int, array<string, mixed>> $rows
+ * @return array{sum_net:float,sum_vat:float,sum_total:float,outstanding:float}
+ */
+function revenue_entries_listed_kpi(array $rows): array
+{
+    $sumNet = 0.0;
+    $sumVat = 0.0;
+    $sumTotal = 0.0;
+    $outstanding = 0.0;
+    foreach ($rows as $row) {
+        $total = (float) ($row['amount_total'] ?? 0);
+        $vat = max(0.0, (float) ($row['vat_amount'] ?? 0));
+        $exclusive = (float) ($row['amount_exclusive'] ?? 0);
+        if ($exclusive <= 0.009 && $total > 0.009) {
+            $exclusive = max(0.0, $total - $vat);
+        }
+        $sumNet += $exclusive;
+        $sumVat += $vat;
+        $sumTotal += $total;
+        $bal = (float) ($row['balance_due'] ?? ren_row_balance_due($row));
+        if ($bal > 0.009) {
+            $outstanding += $bal;
+        }
+    }
+
+    return [
+        'sum_net' => $sumNet,
+        'sum_vat' => $sumVat,
+        'sum_total' => $sumTotal,
+        'outstanding' => $outstanding,
+    ];
+}
+
+/**
+ * Invoice-style cards derived from listed revenue rows (not the whole invoices book).
+ *
+ * @param array<int, array<string, mixed>> $rows
+ * @return array<string, mixed>
+ */
+function revenue_entries_listed_invoice_kpi(array $rows): array
+{
+    $total = 0.0;
+    $count = 0;
+    $outstanding = 0.0;
+    $overdue = 0.0;
+    $today = new DateTimeImmutable('today');
+
+    foreach ($rows as $row) {
+        $amountTotal = (float) ($row['amount_total'] ?? 0);
+        $total += $amountTotal;
+        $count++;
+        $bal = (float) ($row['balance_due'] ?? ren_row_balance_due($row));
+        if ($bal <= 0.009) {
+            continue;
+        }
+        $outstanding += $bal;
+        $isInvoice = ((int) ($row['source_invoice_id'] ?? 0) > 0)
+            || trim((string) ($row['linked_invoice_number'] ?? '')) !== '';
+        if (!$isInvoice) {
+            continue;
+        }
+        $due = trim((string) ($row['due_date'] ?? ''));
+        if ($due === '') {
+            continue;
+        }
+        try {
+            $dueDate = new DateTimeImmutable(strlen($due) <= 10 ? $due . ' 12:00:00' : $due);
+            if ($dueDate->setTime(0, 0) < $today) {
+                $overdue += $bal;
+            }
+        } catch (Throwable $e) {
+        }
+    }
+
+    $pctBase = $total > 0.009 ? $total : 0.0;
+
+    return [
+        'total' => $total,
+        'count' => $count,
+        'outstanding' => $outstanding,
+        'overdue' => $overdue,
+        'pct_outstanding' => $pctBase > 0.009 ? ($outstanding / $pctBase) * 100 : 0.0,
+        'pct_overdue' => $pctBase > 0.009 ? ($overdue / $pctBase) * 100 : 0.0,
+    ];
+}
+
+/**
  * @param array<string, mixed> $filters
  * @return array{0:array<int,string>,1:array<string,mixed>}
  */
@@ -612,24 +701,48 @@ function revenue_entries_fetch(PDO $revPdo, array $get): array
     [$conds, $params] = revenue_entries_build_where($filters, $revPdo, $hasSourceInvoiceCol);
     $whereSql = implode(' AND ', $conds);
 
-    $kpi = ['sum_net' => 0.0, 'sum_vat' => 0.0, 'sum_total' => 0.0, 'outstanding' => 0.0];
-    $st = $revPdo->prepare("SELECT COALESCE(SUM(re.amount_exclusive),0) sn,COALESCE(SUM(re.vat_amount),0) sv,COALESCE(SUM(re.amount_total),0) st,
-        COALESCE(SUM(CASE WHEN re.approval_status<>'Pending' THEN GREATEST(0,re.amount_total-re.total_paid) ELSE 0 END),0) so $sqlJoin WHERE $whereSql");
-    $st->execute($params);
-    if ($r = $st->fetch(PDO::FETCH_ASSOC)) {
-        $kpi = [
-            'sum_net' => (float) $r['sn'],
-            'sum_vat' => (float) $r['sv'],
-            'sum_total' => (float) $r['st'],
-            'outstanding' => (float) $r['so'],
-        ];
-    }
-
     $baseConds = array_values(array_filter($conds, static fn ($c) => $c !== 're.entry_date >= :df' && $c !== 're.entry_date <= :dt'));
     $baseParams = $params;
     unset($baseParams[':df'], $baseParams[':dt']);
     $baseWhere = implode(' AND ', $baseConds);
 
+    $sort = $filters['sort'];
+    $dir = $filters['dir'];
+    $orderSql = $sort === 'amount' ? "re.amount_total $dir, re.id DESC" : "re.entry_date $dir, re.id DESC";
+    $dueDateSelect = 'NULL AS linked_due_date';
+    if ($hasInvoices) {
+        try {
+            $invCols = $revPdo->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if (in_array('due_date', $invCols, true)) {
+                $dueDateSelect = 'i.due_date AS linked_due_date';
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    $orderIdSelect = 'NULL AS linked_order_id';
+    if ($hasInvoices) {
+        try {
+            $invCols = $invCols ?? ($revPdo->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: []);
+            if (in_array('order_id', $invCols, true)) {
+                $orderIdSelect = 'i.order_id AS linked_order_id';
+            }
+        } catch (Throwable $e) {
+        }
+    }
+    $listSelect = "SELECT re.*, i.invoice_number AS linked_invoice_number, {$dueDateSelect}, {$orderIdSelect}, cust.id AS resolved_customer_id, cust.customer_code AS resolved_customer_code, cust.company_name AS resolved_company_name";
+
+    $listStmt = $revPdo->prepare($listSelect . " $sqlJoin WHERE $whereSql ORDER BY $orderSql LIMIT 5000");
+    $listStmt->execute($params);
+    $entries = $listStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $enriched = array_map(static fn (array $row): array => revenue_entries_enrich_row($row, $revPdo), $entries);
+    $enriched = revenue_entries_dedupe_pairs($enriched);
+    $visibleTotal = count($enriched);
+
+    // Summary KPIs must match the same listed (deduped) rows shown in the table.
+    $kpi = revenue_entries_listed_kpi($enriched);
+    $invoiceKpi = revenue_entries_listed_invoice_kpi($enriched);
+
+    // Prior-month / calendar-month cards stay SQL-based (not the current list window).
     $kpiPrev = ['sum_net' => 0.0, 'sum_vat' => 0.0, 'sum_total' => 0.0, 'outstanding' => 0.0];
     $pp = $baseParams;
     $pp[':pms'] = date('Y-m-01', strtotime('first day of last month'));
@@ -664,60 +777,6 @@ function revenue_entries_fetch(PDO $revPdo, array $get): array
     if ($r = $st->fetch(PDO::FETCH_ASSOC)) {
         $prevMonthRev = (float) $r['mtot'];
     }
-
-    $sort = $filters['sort'];
-    $dir = $filters['dir'];
-    $orderSql = $sort === 'amount' ? "re.amount_total $dir, re.id DESC" : "re.entry_date $dir, re.id DESC";
-    $dueDateSelect = 'NULL AS linked_due_date';
-    if ($hasInvoices) {
-        try {
-            $invCols = $revPdo->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-            if (in_array('due_date', $invCols, true)) {
-                $dueDateSelect = 'i.due_date AS linked_due_date';
-            }
-        } catch (Throwable $e) {
-        }
-    }
-    $orderIdSelect = 'NULL AS linked_order_id';
-    if ($hasInvoices) {
-        try {
-            $invCols = $invCols ?? ($revPdo->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: []);
-            if (in_array('order_id', $invCols, true)) {
-                $orderIdSelect = 'i.order_id AS linked_order_id';
-            }
-        } catch (Throwable $e) {
-        }
-    }
-    $listSelect = "SELECT re.*, i.invoice_number AS linked_invoice_number, {$dueDateSelect}, {$orderIdSelect}, cust.id AS resolved_customer_id, cust.customer_code AS resolved_customer_code, cust.company_name AS resolved_company_name";
-
-    $countStmt = $revPdo->prepare("SELECT COUNT(*) $sqlJoin WHERE $whereSql");
-    $countStmt->execute($params);
-    $total = (int) $countStmt->fetchColumn();
-
-    $listStmt = $revPdo->prepare($listSelect . " $sqlJoin WHERE $whereSql ORDER BY $orderSql LIMIT 5000");
-    $listStmt->execute($params);
-    $entries = $listStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    $enriched = array_map(static fn (array $row): array => revenue_entries_enrich_row($row, $revPdo), $entries);
-    $enriched = revenue_entries_dedupe_pairs($enriched);
-    $visibleTotal = count($enriched);
-
-    if (!function_exists('revenue_invoice_kpi_fetch_by_ids')) {
-        require_once __DIR__ . '/revenue-invoices-kpi-lib.php';
-    }
-    // Invoice cards follow the same filtered revenue rows (not the whole invoices book).
-    $invoiceIds = [];
-    if ($hasSourceInvoiceCol) {
-        $idStmt = $revPdo->prepare(
-            "SELECT DISTINCT re.source_invoice_id $sqlJoin WHERE $whereSql
-             AND re.source_invoice_id IS NOT NULL AND re.source_invoice_id > 0"
-        );
-        $idStmt->execute($params);
-        $invoiceIds = array_values(array_filter(array_map(
-            static fn ($id) => (int) $id,
-            $idStmt->fetchAll(PDO::FETCH_COLUMN) ?: []
-        )));
-    }
-    $invoiceKpi = revenue_invoice_kpi_fetch_by_ids($revPdo, $invoiceIds);
 
     return [
         'entries' => $enriched,
@@ -785,9 +844,9 @@ function revenue_entries_init_meta(PDO $pdo): array
             ['value' => 'other', 'label' => 'Other'],
         ],
         'default_filters' => [
-            'date_from' => '',
-            'date_to' => '',
-            'default_month_filter' => false,
+            'date_from' => date('Y-m-01'),
+            'date_to' => date('Y-m-d'),
+            'default_month_filter' => true,
         ],
         'is_admin' => function_exists('isAdmin') && isAdmin(),
         'csrf_token' => function_exists('csrf_token') ? csrf_token() : '',

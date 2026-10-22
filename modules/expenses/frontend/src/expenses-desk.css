@@ -634,6 +634,12 @@ body.page-exp-desk .exp-desk-page button.exp-desk-filter-btn {
   background: #eef2ff;
 }
 
+.exp-desk-date-preset.is-active {
+  border-color: #6366f1;
+  color: #4338ca;
+  background: #e0e7ff;
+}
+
 .exp-desk-filters-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

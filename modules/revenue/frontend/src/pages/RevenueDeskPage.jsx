@@ -47,14 +47,13 @@ const emptyFilters = {
   dir: 'desc',
 };
 
-function hasAdvancedFilters(activeFilters, defaults) {
-  const d = defaults || {};
+function hasAdvancedFilters(activeFilters) {
   if (String(activeFilters.customer_id ?? '').trim() !== '') return true;
   if (String(activeFilters.type ?? '').trim() !== '') return true;
   if (String(activeFilters.status ?? '').trim() !== '') return true;
   if (String(activeFilters.payment ?? '').trim() !== '') return true;
-  if ((activeFilters.date_from || '') !== (d.date_from || '')) return true;
-  if ((activeFilters.date_to || '') !== (d.date_to || '')) return true;
+  if (String(activeFilters.date_from ?? '').trim() !== '') return true;
+  if (String(activeFilters.date_to ?? '').trim() !== '') return true;
   return false;
 }
 
@@ -86,12 +85,18 @@ function matchesSearch(row, query) {
 
 function readListStateFromUrl() {
   if (typeof window === 'undefined') {
-    return { search: '', selectedId: 0, filters: { ...emptyAdvancedFilters } };
+    return {
+      search: '',
+      selectedId: 0,
+      hasDateParams: false,
+      filters: { ...emptyAdvancedFilters },
+    };
   }
   const p = new URLSearchParams(window.location.search);
   return {
     search: p.get('q') || '',
     selectedId: Number(p.get('sel') || 0) || 0,
+    hasDateParams: p.has('date_from') || p.has('date_to'),
     filters: {
       date_from: p.get('date_from') || '',
       date_to: p.get('date_to') || '',
@@ -145,6 +150,22 @@ function toInputDate(date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function thisMonthDateRange(now = new Date()) {
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  return {
+    date_from: toInputDate(from),
+    date_to: toInputDate(now),
+  };
+}
+
+function isThisMonthRange(filters, now = new Date()) {
+  const month = thisMonthDateRange(now);
+  return (
+    String(filters?.date_from || '') === month.date_from
+    && String(filters?.date_to || '') === month.date_to
+  );
 }
 
 function formatFilterDateLabel(value) {
@@ -288,13 +309,23 @@ function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember, onView, onDel
 function mergeListFilters(urlList, restoredList) {
   const restoredFilters = restoredList && restoredList.filters ? restoredList.filters : {};
   const urlFilters = urlList && urlList.filters ? urlList.filters : {};
+  const month = thisMonthDateRange();
+  let date_from = month.date_from;
+  let date_to = month.date_to;
+  if (urlList && urlList.hasDateParams) {
+    date_from = urlFilters.date_from || '';
+    date_to = urlFilters.date_to || '';
+  } else if (restoredList && restoredList.filters) {
+    date_from = restoredFilters.date_from || '';
+    date_to = restoredFilters.date_to || '';
+  }
   return {
     ...emptyFilters,
     search: restoredList && typeof restoredList.search === 'string'
       ? restoredList.search
       : (urlList.search || ''),
-    date_from: urlFilters.date_from || restoredFilters.date_from || '',
-    date_to: urlFilters.date_to || restoredFilters.date_to || '',
+    date_from,
+    date_to,
     customer_id: urlFilters.customer_id || restoredFilters.customer_id || '',
     type: urlFilters.type || restoredFilters.type || '',
     status: urlFilters.status || restoredFilters.status || '',
@@ -480,6 +511,7 @@ export default function RevenueDeskPage() {
         if (cancelled) return;
         setInit(initData);
         const defaults = initData.default_filters || {};
+        const month = thisMonthDateRange();
         const urlParams = typeof window !== 'undefined'
           ? new URLSearchParams(window.location.search)
           : null;
@@ -488,10 +520,26 @@ export default function RevenueDeskPage() {
         const urlType = urlParams?.get('type') || '';
         const urlQ = urlParams?.get('q') || (restoredList && typeof restoredList.search === 'string' ? restoredList.search : '') || bootFilters.search || '';
         const restoredFilters = restoredList && restoredList.filters ? restoredList.filters : {};
+        const hasUrlDates = !!(urlParams && (urlParams.has('date_from') || urlParams.has('date_to')));
+        let date_from = month.date_from;
+        let date_to = month.date_to;
+        if (hasUrlDates) {
+          date_from = urlParams.get('date_from') || '';
+          date_to = urlParams.get('date_to') || '';
+        } else if (restoredList && restoredList.filters) {
+          date_from = restoredFilters.date_from || '';
+          date_to = restoredFilters.date_to || '';
+        } else if (bootFilters.date_from || bootFilters.date_to) {
+          date_from = bootFilters.date_from || '';
+          date_to = bootFilters.date_to || '';
+        } else if (defaults.date_from || defaults.date_to) {
+          date_from = defaults.date_from || '';
+          date_to = defaults.date_to || '';
+        }
         const initial = {
           ...emptyFilters,
-          date_from: urlParams?.get('date_from') || restoredFilters.date_from || bootFilters.date_from || defaults.date_from || '',
-          date_to: urlParams?.get('date_to') || restoredFilters.date_to || bootFilters.date_to || defaults.date_to || '',
+          date_from,
+          date_to,
           status: urlStatus || restoredFilters.status || bootFilters.status || '',
           payment: urlPayment || restoredFilters.payment || bootFilters.payment || '',
           type: urlType || restoredFilters.type || bootFilters.type || '',
@@ -782,7 +830,6 @@ export default function RevenueDeskPage() {
   }
 
   const hasSearchValue = filters.search.trim() !== '' || draftSearch.trim() !== '';
-  const defaultFilters = init?.default_filters || {};
 
   function applyFilters() {
     setFilters((current) => ({ ...current, ...draftFilters }));
@@ -814,11 +861,7 @@ export default function RevenueDeskPage() {
   }
 
   function resetFilters() {
-    const cleared = {
-      ...emptyAdvancedFilters,
-      date_from: defaultFilters.date_from || '',
-      date_to: defaultFilters.date_to || '',
-    };
+    const cleared = { ...emptyAdvancedFilters };
     setDraftFilters(cleared);
     setFilters((current) => ({ ...current, ...cleared }));
     setFiltersOpen(false);
@@ -826,10 +869,7 @@ export default function RevenueDeskPage() {
 
   function clearAdvancedFilter(key) {
     if (key === 'date_from') {
-      const cleared = {
-        date_from: defaultFilters.date_from || '',
-        date_to: defaultFilters.date_to || '',
-      };
+      const cleared = { date_from: '', date_to: '' };
       setDraftFilters((current) => ({ ...current, ...cleared }));
       setFilters((current) => ({ ...current, ...cleared }));
       return;
@@ -868,15 +908,12 @@ export default function RevenueDeskPage() {
     if (activeFilters.date_from || activeFilters.date_to) {
       const fromLabel = activeFilters.date_from ? formatFilterDateLabel(activeFilters.date_from) : 'Any';
       const toLabel = activeFilters.date_to ? formatFilterDateLabel(activeFilters.date_to) : 'Any';
-      if (
-        (activeFilters.date_from || '') !== (defaultFilters.date_from || '')
-        || (activeFilters.date_to || '') !== (defaultFilters.date_to || '')
-      ) {
-        chips.push({
-          key: 'date_from',
-          label: `Date: ${fromLabel} - ${toLabel}`,
-        });
-      }
+      chips.push({
+        key: 'date_from',
+        label: isThisMonthRange(activeFilters)
+          ? 'Date: This month'
+          : `Date: ${fromLabel} - ${toLabel}`,
+      });
     }
 
     if (activeFilters.customer_id) {
@@ -948,7 +985,11 @@ export default function RevenueDeskPage() {
         <div className="rev-desk-filters-section">
           <div className="rev-desk-filters-section-label">Date range</div>
           <div className="rev-desk-date-presets" role="group" aria-label="Quick date ranges">
-            <button type="button" className="rev-desk-date-preset" onClick={() => setDatePreset('month')}>
+            <button
+              type="button"
+              className={`rev-desk-date-preset${isThisMonthRange(draftFilters) ? ' is-active' : ''}`}
+              onClick={() => setDatePreset('month')}
+            >
               This month
             </button>
             <button type="button" className="rev-desk-date-preset" onClick={() => setDatePreset('30d')}>
@@ -1092,8 +1133,13 @@ export default function RevenueDeskPage() {
 
     visibleEntries.forEach((row) => {
       const amountTotal = Number(row.amount_total) || 0;
-      sumNet += Number(row.amount_exclusive) || 0;
-      sumVat += Number(row.vat_amount) || 0;
+      let vatAmt = Math.max(0, Number(row.vat_amount) || 0);
+      let exclusiveAmt = Number(row.amount_exclusive);
+      if (!Number.isFinite(exclusiveAmt) || (exclusiveAmt <= 0.009 && amountTotal > 0.009)) {
+        exclusiveAmt = Math.max(0, amountTotal - vatAmt);
+      }
+      sumNet += exclusiveAmt;
+      sumVat += vatAmt;
       sumTotal += amountTotal;
       // Total Invoices includes Sales and Other (and any other types in view).
       invoiceTotal += amountTotal;
@@ -1147,13 +1193,12 @@ export default function RevenueDeskPage() {
     window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
   }, [previewEntry, desk]);
   const kpi = {
-    ...(desk?.kpi ?? {}),
     sum_net: viewSummary.sum_net,
     sum_vat: viewSummary.sum_vat,
     sum_total: viewSummary.sum_total,
+    outstanding: viewSummary.outstanding,
   };
   const invoiceKpi = {
-    ...(desk?.invoice_kpi ?? {}),
     total: viewSummary.invoice_total,
     count: viewSummary.invoice_count,
     outstanding: viewSummary.outstanding,
@@ -1163,7 +1208,10 @@ export default function RevenueDeskPage() {
   };
 
   function openKpiTrace(key) {
-    const trace = resolveKpiTrace(key, init, desk, filters);
+    const deskForTrace = desk
+      ? { ...desk, kpi, invoice_kpi: invoiceKpi }
+      : desk;
+    const trace = resolveKpiTrace(key, init, deskForTrace, filters);
     if (trace) {
       setActiveKpiTrace({ key, trace });
     }
@@ -1232,7 +1280,7 @@ export default function RevenueDeskPage() {
                 title="Filters"
               >
                 <SlidersHorizontal size={18} strokeWidth={2.25} aria-hidden="true" />
-                {hasAdvancedFilters(filters, defaultFilters) && (
+                {hasAdvancedFilters(filters) && (
                   <span className="rev-desk-filter-dot" aria-hidden="true" />
                 )}
               </button>
@@ -1254,26 +1302,6 @@ export default function RevenueDeskPage() {
       {successMessage ? (
         <div className="rev-desk-success" role="status">{successMessage}</div>
       ) : null}
-
-      {activeFilterChips.length > 0 && (
-        <div className="rev-desk-active-filters" aria-label="Active filters">
-          {activeFilterChips.map((chip) => (
-            <button
-              key={chip.key}
-              type="button"
-              className="rev-desk-filter-chip"
-              onClick={() => clearAdvancedFilter(chip.key)}
-              title="Remove filter"
-            >
-              <span>{chip.label}</span>
-              <X size={12} aria-hidden="true" />
-            </button>
-          ))}
-          <button type="button" className="rev-desk-filter-chip rev-desk-filter-chip--clear" onClick={resetFilters}>
-            Clear all
-          </button>
-        </div>
-      )}
 
       {renderFiltersPanel()}
 
@@ -1365,6 +1393,26 @@ export default function RevenueDeskPage() {
             />
           </div>
         </div>
+
+        {activeFilterChips.length > 0 && (
+          <div className="rev-desk-active-filters" aria-label="Active filters">
+            {activeFilterChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                className="rev-desk-filter-chip"
+                onClick={() => clearAdvancedFilter(chip.key)}
+                title="Remove filter"
+              >
+                <span>{chip.label}</span>
+                <X size={12} aria-hidden="true" />
+              </button>
+            ))}
+            <button type="button" className="rev-desk-filter-chip rev-desk-filter-chip--clear" onClick={resetFilters}>
+              All data
+            </button>
+          </div>
+        )}
 
         <div className="rev-desk-table-wrap">
         <table className="rev-desk-table">

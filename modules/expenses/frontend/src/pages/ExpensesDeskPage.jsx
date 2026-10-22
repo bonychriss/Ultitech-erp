@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ChevronLeft,
-  ChevronRight,
   Eye,
   LayoutGrid,
   Loader2,
@@ -75,13 +73,41 @@ const STATUS_LABELS = {
   pending: 'Pending',
 };
 
+function thisMonthDateRange(now = new Date()) {
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  return {
+    date_from: toInputDate(from),
+    date_to: toInputDate(now),
+  };
+}
+
+function isThisMonthRange(filters, now = new Date()) {
+  const month = thisMonthDateRange(now);
+  return (
+    String(filters?.date_from || '') === month.date_from
+    && String(filters?.date_to || '') === month.date_to
+  );
+}
+
+function defaultListFilters() {
+  return { ...emptyFilters, ...thisMonthDateRange() };
+}
+
 function filtersFromLocationSearch() {
-  if (typeof window === 'undefined') return emptyFilters;
+  const base = defaultListFilters();
+  if (typeof window === 'undefined') return base;
   const params = new URLSearchParams(window.location.search);
   const status = String(params.get('status') || '').trim().toLowerCase();
   const allowed = new Set(['draft', 'posted', 'unposted', 'pending', 'rejected']);
-  if (!allowed.has(status)) return emptyFilters;
-  return { ...emptyFilters, status };
+  if (allowed.has(status)) {
+    base.status = status;
+  }
+  // Explicit URL dates override the default month filter (empty = all dates).
+  if (params.has('date_from') || params.has('date_to')) {
+    base.date_from = String(params.get('date_from') || '').trim();
+    base.date_to = String(params.get('date_to') || '').trim();
+  }
+  return base;
 }
 
 function importedNoticeFromLocationSearch() {
@@ -252,9 +278,7 @@ export default function ExpensesDeskPage() {
   const [exportModalError, setExportModalError] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
   const [selectedId, setSelectedId] = useState(0);
-  const [page, setPage] = useState(1);
   const [showAnalytics, setShowAnalytics] = useState(true);
-  const pageSize = 50;
   const [importNotice, setImportNotice] = useState(() => importedNoticeFromLocationSearch());
   const filterDropdownRef = useRef(null);
   const filterBtnRef = useRef(null);
@@ -284,7 +308,6 @@ export default function ExpensesDeskPage() {
 
   useEffect(() => {
     loadData(filters);
-    setPage(1);
   }, [filters, loadData]);
 
   async function fetchExpensesForExport(range) {
@@ -478,15 +501,6 @@ export default function ExpensesDeskPage() {
     () => buildStatusBreakdownFromRows(expenses),
     [expenses],
   );
-  const totalPages = Math.max(1, Math.ceil(expenses.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const pageStart = expenses.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const pageEnd = Math.min(expenses.length, safePage * pageSize);
-  const pagedExpenses = useMemo(
-    () => expenses.slice((safePage - 1) * pageSize, safePage * pageSize),
-    [expenses, safePage, pageSize],
-  );
-
   function applyFilters() {
     setFilters((current) => ({ ...current, ...draftFilters, search: current.search }));
     setFiltersOpen(false);
@@ -608,7 +622,9 @@ export default function ExpensesDeskPage() {
       const toLabel = activeFilters.date_to ? formatFilterDateLabel(activeFilters.date_to) : 'Any';
       chips.push({
         key: 'date_from',
-        label: `Date: ${fromLabel} - ${toLabel}`,
+        label: isThisMonthRange(activeFilters)
+          ? 'Date: This month'
+          : `Date: ${fromLabel} - ${toLabel}`,
       });
     }
 
@@ -879,7 +895,11 @@ export default function ExpensesDeskPage() {
         <div className="exp-desk-filters-section">
           <div className="exp-desk-filters-section-label">Date range</div>
           <div className="exp-desk-date-presets" role="group" aria-label="Quick date ranges">
-            <button type="button" className="exp-desk-date-preset" onClick={() => setDatePreset('month')}>
+            <button
+              type="button"
+              className={`exp-desk-date-preset${isThisMonthRange(draftFilters) ? ' is-active' : ''}`}
+              onClick={() => setDatePreset('month')}
+            >
               This month
             </button>
             <button type="button" className="exp-desk-date-preset" onClick={() => setDatePreset('30d')}>
@@ -1267,7 +1287,7 @@ export default function ExpensesDeskPage() {
               </button>
             ))}
             <button type="button" className="exp-desk-filter-chip exp-desk-filter-chip--clear" onClick={resetFilters}>
-              Clear all
+              All data
             </button>
           </div>
         )}
@@ -1313,7 +1333,7 @@ export default function ExpensesDeskPage() {
                   </td>
                 </tr>
               ) : (
-                pagedExpenses.map((expense) => {
+                expenses.map((expense) => {
                   const payeeName = expenseDisplayName(expense) || '-';
                   const rowKey = expense.row_key || `exp-${expense.id}`;
                   const selectedKey = selectedId === (expense.row_key || expense.id)
@@ -1413,30 +1433,9 @@ export default function ExpensesDeskPage() {
         <div className="exp-desk-pagination">
           <span className="exp-desk-pagination-meta">
             {expenses.length === 0
-              ? 'Showing 0 of 0 records'
-              : `Showing ${pageStart}-${pageEnd} of ${expenses.length} record${expenses.length === 1 ? '' : 's'}`}
+              ? 'Showing 0 records'
+              : `Showing ${expenses.length} record${expenses.length === 1 ? '' : 's'}`}
           </span>
-          <div className="exp-desk-pagination-controls">
-            <button
-              type="button"
-              className="exp-desk-page-btn"
-              disabled={safePage <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              aria-label="Previous page"
-            >
-              <ChevronLeft size={16} aria-hidden="true" />
-            </button>
-            <span className="exp-desk-page-current">{safePage}</span>
-            <button
-              type="button"
-              className="exp-desk-page-btn"
-              disabled={safePage >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              aria-label="Next page"
-            >
-              <ChevronRight size={16} aria-hidden="true" />
-            </button>
-          </div>
         </div>
       </section>
 

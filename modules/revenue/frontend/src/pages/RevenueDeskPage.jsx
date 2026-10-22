@@ -1235,7 +1235,7 @@ export default function RevenueDeskPage() {
   }
 
   return (
-    <div className={`rev-desk-page${!showAnalytics ? ' rev-desk-page--analytics-off' : ''}`}>
+    <div className="rev-desk-page rev-desk-page--analytics-off">
       {error && <div className="rev-desk-error">{error}</div>}
 
       <div className="rev-desk-page-header">

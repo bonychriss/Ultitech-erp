@@ -1035,7 +1035,7 @@ export default function ExpensesDeskPage() {
   }
 
   return (
-    <div className={`exp-desk-page${!showAnalytics ? ' exp-desk-page--analytics-off' : ''}`}>
+    <div className="exp-desk-page exp-desk-page--analytics-off">
       {previewExpense && (
         <ExpenseQuickViewModal
           expense={previewExpense}

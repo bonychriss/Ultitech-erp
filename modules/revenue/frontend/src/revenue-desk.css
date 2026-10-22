@@ -679,7 +679,7 @@ body.page-rev-desk,
 .rev-desk-kpi-card {
   width: 100%;
   min-height: 0;
-  padding: 0.55rem 0.75rem;
+  padding: 0.5rem 0.7rem;
   border: 1px solid #e8edf3 !important;
   border-radius: var(--rev-desk-radius-kpi) !important;
   background: #fff !important;
@@ -716,8 +716,8 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
 }
 
 .rev-desk-kpi-icon {
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -726,8 +726,8 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
 }
 
 .rev-desk-kpi-icon svg {
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 .rev-desk-kpi-icon--blue { background: #eef2ff; color: #4f46e5; }
@@ -744,14 +744,14 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
 }
 
 .rev-desk-kpi-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 500;
   color: #94a3b8;
   line-height: 1.2;
 }
 
 .rev-desk-kpi-value {
-  font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+  font-size: clamp(0.95rem, 1.4vw, 1.15rem);
   font-weight: 600;
   line-height: 1.1;
   margin-top: 0.05rem;
@@ -759,7 +759,7 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
 }
 
 .rev-desk-kpi-value--money {
-  font-size: clamp(0.875rem, 1.35vw, 1.05rem);
+  font-size: clamp(0.78rem, 1.2vw, 0.95rem);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;

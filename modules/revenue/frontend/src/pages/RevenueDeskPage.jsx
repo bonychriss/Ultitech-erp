@@ -380,7 +380,7 @@ export default function RevenueDeskPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(true);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);

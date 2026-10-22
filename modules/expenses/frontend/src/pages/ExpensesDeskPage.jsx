@@ -278,7 +278,7 @@ export default function ExpensesDeskPage() {
   const [exportModalError, setExportModalError] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
   const [selectedId, setSelectedId] = useState(0);
-  const [showAnalytics, setShowAnalytics] = useState(true);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [importNotice, setImportNotice] = useState(() => importedNoticeFromLocationSearch());
   const filterDropdownRef = useRef(null);
   const filterBtnRef = useRef(null);

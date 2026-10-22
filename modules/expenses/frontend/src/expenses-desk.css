@@ -981,7 +981,7 @@ body.page-exp-desk .exp-desk-filters-close {
 .exp-desk-kpi-card {
   width: 100%;
   min-height: 0;
-  padding: 0.65rem 0.85rem;
+  padding: 0.5rem 0.7rem;
   border: 1px solid #e8edf3 !important;
   border-radius: var(--exp-desk-radius-kpi) !important;
   background: #fff !important;
@@ -1019,8 +1019,8 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 .exp-desk-kpi-icon {
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 1.9rem;
+  height: 1.9rem;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -1029,8 +1029,8 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 .exp-desk-kpi-icon svg {
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 1rem;
+  height: 1rem;
 }
 
 .exp-desk-kpi-icon--violet { background: #f5f3ff; color: #7c3aed; }
@@ -1081,7 +1081,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 .exp-desk-kpi-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: none;
   color: #64748b;
@@ -1089,15 +1089,15 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 .exp-desk-kpi-value {
-  font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+  font-size: clamp(0.95rem, 1.4vw, 1.15rem);
   font-weight: 800;
   line-height: 1.1;
-  margin-top: 0.1rem;
+  margin-top: 0.05rem;
   color: #0f172a;
 }
 
 .exp-desk-kpi-value--money {
-  font-size: clamp(0.875rem, 1.35vw, 1.05rem);
+  font-size: clamp(0.78rem, 1.2vw, 0.95rem);
 }
 
 .exp-desk-kpi-helper {

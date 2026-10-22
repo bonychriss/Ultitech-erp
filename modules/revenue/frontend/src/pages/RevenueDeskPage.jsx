@@ -183,6 +183,15 @@ function formatCurrency(value) {
   return `TZS ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** Shrink KPI money text for large amounts so the card size stays fixed. */
+function kpiMoneySizeClass(formatted) {
+  const digits = String(formatted || '').replace(/\D/g, '').length;
+  if (digits >= 13) return ' is-xxl';
+  if (digits >= 11) return ' is-xl';
+  if (digits >= 9) return ' is-lg';
+  return '';
+}
+
 function formatPctOfTotal(value) {
   const pct = Number(value) || 0;
   return `${pct.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}% of total`;
@@ -201,19 +210,23 @@ function formatDate(dateStr) {
 function KpiCard({
   icon: Icon, iconTone, label, value, foot, onClick, ariaLabel, isMoney = true,
 }) {
+  const valueClass = isMoney
+    ? `rev-desk-kpi-value rev-desk-kpi-value--money${kpiMoneySizeClass(value)}`
+    : 'rev-desk-kpi-value';
   return (
     <button
       type="button"
       className="rev-desk-kpi rev-desk-kpi-card rev-desk-kpi-card--clickable"
       onClick={onClick}
       aria-label={ariaLabel || `View details for ${label}`}
+      title={typeof value === 'string' ? value : undefined}
     >
       <div className={`rev-desk-kpi-icon rev-desk-kpi-icon--${iconTone}`} aria-hidden="true">
         <Icon size={17} strokeWidth={2} />
       </div>
       <div className="rev-desk-kpi-body">
         <div className="rev-desk-kpi-label">{label}</div>
-        <div className={`rev-desk-kpi-value${isMoney ? ' rev-desk-kpi-value--money' : ''}`}>{value}</div>
+        <div className={valueClass}>{value}</div>
         {foot ? <div className="rev-desk-kpi-foot rev-desk-kpi-foot--muted">{foot}</div> : null}
       </div>
     </button>

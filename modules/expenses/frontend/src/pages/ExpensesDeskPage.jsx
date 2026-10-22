@@ -148,6 +148,27 @@ function formatCurrency(value, currencyCode) {
   return `${code} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** Shrink KPI money text for large amounts so the card size stays fixed. */
+function kpiMoneySizeClass(formatted) {
+  const digits = String(formatted || '').replace(/\D/g, '').length;
+  if (digits >= 13) return ' is-xxl';
+  if (digits >= 11) return ' is-xl';
+  if (digits >= 9) return ' is-lg';
+  return '';
+}
+
+function KpiMoney({ amount, currencyCode = 'TZS' }) {
+  const text = formatCurrency(amount, currencyCode);
+  return (
+    <div
+      className={`exp-desk-kpi-value exp-desk-kpi-value--money${kpiMoneySizeClass(text)}`}
+      title={text}
+    >
+      {text}
+    </div>
+  );
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return '-';
   const normalized = dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`;
@@ -1156,9 +1177,7 @@ export default function ExpensesDeskPage() {
           </div>
           <div className="exp-desk-kpi-body">
             <div className="exp-desk-kpi-label">Total Expenses (Exclusive)</div>
-            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
-              {formatCurrency(summaryStats.total_exclusive, 'TZS')}
-            </div>
+            <KpiMoney amount={summaryStats.total_exclusive} />
             <div className="exp-desk-kpi-helper">amount − VAT</div>
           </div>
         </button>
@@ -1171,9 +1190,7 @@ export default function ExpensesDeskPage() {
           </div>
           <div className="exp-desk-kpi-body">
             <div className="exp-desk-kpi-label">Input VAT</div>
-            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
-              {formatCurrency(summaryStats.input_vat, 'TZS')}
-            </div>
+            <KpiMoney amount={summaryStats.input_vat} />
           </div>
         </button>
         <button {...kpiCardProps('totalInclusive', 'Total Expenses (VAT + Exclusive)')}>
@@ -1185,9 +1202,7 @@ export default function ExpensesDeskPage() {
           </div>
           <div className="exp-desk-kpi-body">
             <div className="exp-desk-kpi-label">Total Expenses (VAT + Exclusive)</div>
-            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
-              {formatCurrency(summaryStats.total_inclusive, 'TZS')}
-            </div>
+            <KpiMoney amount={summaryStats.total_inclusive} />
             <div className="exp-desk-kpi-helper">gross</div>
           </div>
         </button>
@@ -1201,9 +1216,7 @@ export default function ExpensesDeskPage() {
           </div>
           <div className="exp-desk-kpi-body">
             <div className="exp-desk-kpi-label">Total Bank</div>
-            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
-              {formatCurrency(summaryStats.total_bank, 'TZS')}
-            </div>
+            <KpiMoney amount={summaryStats.total_bank} />
             <div className="exp-desk-kpi-helper">bank / mobile / cheque</div>
           </div>
         </button>
@@ -1216,9 +1229,7 @@ export default function ExpensesDeskPage() {
           </div>
           <div className="exp-desk-kpi-body">
             <div className="exp-desk-kpi-label">Total Cash</div>
-            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
-              {formatCurrency(summaryStats.total_cash, 'TZS')}
-            </div>
+            <KpiMoney amount={summaryStats.total_cash} />
           </div>
         </button>
         <button {...kpiCardProps('totalPayables', 'Total Payables')}>
@@ -1230,9 +1241,7 @@ export default function ExpensesDeskPage() {
           </div>
           <div className="exp-desk-kpi-body">
             <div className="exp-desk-kpi-label">Total Payables</div>
-            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
-              {formatCurrency(summaryStats.total_payables, 'TZS')}
-            </div>
+            <KpiMoney amount={summaryStats.total_payables} />
             <div className="exp-desk-kpi-helper">Credit payment type</div>
           </div>
         </button>

@@ -756,6 +756,9 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
   line-height: 1.1;
   margin-top: 0.05rem;
   color: #0f172a;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .rev-desk-kpi-value--money {
@@ -763,6 +766,21 @@ body.page-rev-desk .rev-desk-page button.rev-desk-kpi-card {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.rev-desk-kpi-value--money.is-lg {
+  font-size: clamp(0.7rem, 1.05vw, 0.85rem);
+}
+
+.rev-desk-kpi-value--money.is-xl {
+  font-size: clamp(0.64rem, 0.95vw, 0.78rem);
+  letter-spacing: -0.02em;
+}
+
+.rev-desk-kpi-value--money.is-xxl {
+  font-size: clamp(0.56rem, 0.85vw, 0.7rem);
+  letter-spacing: -0.03em;
 }
 
 .rev-desk-kpi-foot {

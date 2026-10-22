@@ -8,7 +8,6 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
 $currentMonth = date('Y-m');
-$scopeSql = expenses_scope_sql();
 
 try {
     expenses_balances_bootstrap();
@@ -35,15 +34,19 @@ try {
         }
     }
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM erp_expenses WHERE $scopeSql AND is_posted = 1 AND date LIKE ?");
-    $stmt->execute(["$currentMonth%"]);
-    $postedMonthCount = (int) ($stmt->fetchColumn() ?: 0);
+    // Same universe as the expenses table (receipts + General Payment vouchers).
+    $listedStats = expenses_build_listed_status_breakdown($pdo, []);
+    $totalCount = (int) ($listedStats['total'] ?? 0);
+    $statusBreakdown = is_array($listedStats['breakdown'] ?? null) ? $listedStats['breakdown'] : [];
 
-    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM erp_expenses WHERE $scopeSql AND is_posted = 1 AND date LIKE ?");
-    $stmt->execute(["$currentMonth%"]);
-    $spendMonth = (float) $stmt->fetchColumn();
+    $trendStats = expenses_build_listed_trend_stats($pdo, []);
+    $postedMonthCount = (int) ($trendStats['posted_month_count'] ?? 0);
+    $spendMonth = (float) ($trendStats['spend_month'] ?? 0);
+    $trendRows = is_array($trendStats['trend'] ?? null) ? $trendStats['trend'] : [];
+    $trendFrom = (string) ($trendStats['trend_from'] ?? ($currentMonth . '-01'));
+    $trendTo = (string) ($trendStats['trend_to'] ?? date('Y-m-t', strtotime($trendFrom)));
 
-    $totalCount = (int) ($pdo->query("SELECT COUNT(*) FROM erp_expenses WHERE $scopeSql")->fetchColumn() ?: 0);
+    $summaryStats = expenses_build_listed_summary_stats($pdo, []);
 
     echo json_encode([
         'categories' => $categories,
@@ -57,6 +60,16 @@ try {
             'total_count' => $totalCount,
             'current_month' => $currentMonth,
             'current_month_label' => date('F Y'),
+            'status_breakdown' => $statusBreakdown,
+            'trend' => $trendRows,
+            'trend_from' => $trendFrom,
+            'trend_to' => $trendTo,
+            'total_exclusive' => (float) ($summaryStats['total_exclusive'] ?? 0),
+            'input_vat' => (float) ($summaryStats['input_vat'] ?? 0),
+            'total_inclusive' => (float) ($summaryStats['total_inclusive'] ?? 0),
+            'total_bank' => (float) ($summaryStats['total_bank'] ?? 0),
+            'total_cash' => (float) ($summaryStats['total_cash'] ?? 0),
+            'total_payables' => (float) ($summaryStats['total_payables'] ?? 0),
         ],
         'updateBadge' => expenses_module_update_badge(),
         'summaryTraces' => expenses_build_kpi_traces($pdo),

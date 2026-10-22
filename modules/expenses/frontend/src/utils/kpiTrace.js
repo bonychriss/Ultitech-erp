@@ -1,3 +1,5 @@
+import { buildListedSummaryStats, paymentBucket, summaryRowsForTrace } from './summaryStats';
+
 function formatMoney(value, currency = 'TZS') {
   const code = String(currency || 'TZS').replace(/^TSh$/i, 'TZS');
   const amount = Number(value) || 0;
@@ -112,6 +114,45 @@ export function formatKpiHeadline(trace) {
   return trace.headline;
 }
 
+const SUMMARY_KPI_META = {
+  totalExclusive: {
+    title: 'Total Expenses (Exclusive)',
+    field: 'total_exclusive',
+    method: 'SUM(amount − tax_amount) on posted/paid listed rows (and credit payables)',
+    confirmation: 'This is the VAT-exclusive total of posted and payable expenses in the list.',
+  },
+  inputVat: {
+    title: 'Input VAT',
+    field: 'input_vat',
+    method: 'SUM(tax_amount) on posted/paid listed rows (and credit payables)',
+    confirmation: 'This is recoverable input VAT recorded on those expenses.',
+  },
+  totalInclusive: {
+    title: 'Total Expenses (VAT + Exclusive)',
+    field: 'total_inclusive',
+    method: 'SUM(amount) on posted/paid listed rows (and credit payables)',
+    confirmation: 'This is the full expense total including VAT.',
+  },
+  totalBank: {
+    title: 'Total Bank',
+    field: 'total_bank',
+    method: 'SUM(amount) where payment is bank transfer, mobile, or cheque',
+    confirmation: 'Expenses settled through bank, mobile money, or cheque.',
+  },
+  totalCash: {
+    title: 'Total Cash',
+    field: 'total_cash',
+    method: 'SUM(amount) where payment method is cash',
+    confirmation: 'Expenses settled in cash.',
+  },
+  totalPayables: {
+    title: 'Total Payables',
+    field: 'total_payables',
+    method: 'SUM(amount) where payment type is Credit / payable',
+    confirmation: 'Expenses on credit that count as payables.',
+  },
+};
+
 function normalizeTrace(trace) {
   return {
     ...trace,
@@ -120,39 +161,40 @@ function normalizeTrace(trace) {
   };
 }
 
+function buildSummaryTraceFromList(key, expenses, filters, categories = []) {
+  const meta = SUMMARY_KPI_META[key];
+  if (!meta) return null;
+
+  const summary = buildListedSummaryStats(expenses);
+  const rows = summaryRowsForTrace(expenses).filter((row) => {
+    if (key === 'totalBank') {
+      const bucket = paymentBucket(row);
+      return bucket === 'bank' || bucket === 'other';
+    }
+    if (key === 'totalCash') return paymentBucket(row) === 'cash';
+    if (key === 'totalPayables') return paymentBucket(row) === 'payables';
+    return true;
+  });
+
+  return {
+    title: meta.title,
+    headline: String(summary[meta.field] ?? 0),
+    currency: 'TZS',
+    source: 'listed expenses',
+    method: meta.method,
+    criteria: [
+      ...filterCriteria(filters, categories),
+      { label: 'Summary scope', value: 'Matches the filtered table and summary cards' },
+    ],
+    confirmation: meta.confirmation,
+    viaAi: false,
+    items: rows.map(mapExpenseToTraceItem),
+    footnote: 'Totals follow the filters applied to the expenses table.',
+  };
+}
+
 function buildSummaryTraceFallback(key, init, expenses) {
   const stats = init?.stats ?? {};
-  const monthLabel = stats.current_month_label || 'this month';
-
-  if (key === 'postedThisMonth') {
-    return {
-      title: 'Posted this month',
-      headline: String(stats.posted_month_count ?? 0),
-      source: 'erp_expenses',
-      method: 'COUNT(*) where status is not deleted, is_posted = 1, and date is in the current calendar month',
-      criteria: [{ label: 'Month', value: monthLabel }],
-      confirmation: `This counts expenses that were posted in ${monthLabel}.`,
-      viaAi: false,
-      items: [],
-      footnote: 'Reload the page if this breakdown looks incomplete.',
-    };
-  }
-
-  if (key === 'monthlySpend') {
-    return {
-      title: 'Monthly spend',
-      headline: String(stats.spend_month ?? 0),
-      currency: 'TZS',
-      source: 'erp_expenses',
-      method: 'SUM(amount) on posted, non-deleted expenses dated in the current calendar month',
-      criteria: [{ label: 'Month', value: monthLabel }],
-      confirmation: `This is the total spent on posted expenses in ${monthLabel}.`,
-      viaAi: false,
-      items: [],
-      footnote: 'Reload the page if this breakdown looks incomplete.',
-    };
-  }
-
   return {
     title: 'Total records',
     headline: String(stats.total_count ?? 0),
@@ -169,6 +211,10 @@ function buildSummaryTraceFallback(key, init, expenses) {
 export function resolveKpiTrace(key, init, expenses, filters) {
   if (key === 'listedNow') {
     return buildListedNowTrace(expenses, filters, init?.categories ?? []);
+  }
+
+  if (SUMMARY_KPI_META[key]) {
+    return normalizeTrace(buildSummaryTraceFromList(key, expenses, filters, init?.categories ?? []));
   }
 
   if (!init) return null;

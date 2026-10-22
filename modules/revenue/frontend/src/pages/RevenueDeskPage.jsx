@@ -6,6 +6,7 @@ import {
   Coins,
   Eye,
   FileText,
+  LayoutGrid,
   Loader2,
   MoreVertical,
   Pencil,
@@ -18,12 +19,14 @@ import {
   X,
 } from 'lucide-react';
 import { deleteRevenueEntry, deskPageUrl, fetchDeskEntries, fetchDeskInit } from '../api/revenueDesk';
+import RevenueAnalyticsPanel from '../components/RevenueAnalyticsPanel';
 import RevenueDeleteModal from '../components/RevenueDeleteModal';
 import RevenueExportMenu from '../components/RevenueExportMenu';
 import RevenueExportModal from '../components/RevenueExportModal';
 import RevenuePayModal from '../components/RevenuePayModal';
 import RevenueQuickViewModal from '../components/RevenueQuickViewModal';
 import RevenueKpiTraceModal from '../components/RevenueKpiTraceModal';
+import { buildRevenueStatusBreakdown, buildRevenueTrendStats } from '../utils/analyticsStats';
 import { resolveKpiTrace } from '../utils/kpiTrace';
 import { rememberRevenueList, revenueInvoiceHref } from '../utils/revenueNav';
 
@@ -346,6 +349,7 @@ export default function RevenueDeskPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(true);
   const [exportFormat, setExportFormat] = useState('csv');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -1064,12 +1068,15 @@ export default function RevenueDeskPage() {
     [entries, draftSearch],
   );
   const suggestions = useMemo(() => visibleEntries.slice(0, 6), [visibleEntries]);
-  const selectedEntry = useMemo(
-    () => entries.find((row) => sameId(row.id, highlightedId)) || null,
-    [entries, highlightedId],
+
+  const analyticsTrend = useMemo(
+    () => buildRevenueTrendStats(visibleEntries),
+    [visibleEntries],
   );
-  // All entries can be edited when allowed (admin for ratified; finance for pending/open).
-  const canEditSelected = Boolean(selectedEntry?.can_edit);
+  const statusBreakdown = useMemo(
+    () => buildRevenueStatusBreakdown(visibleEntries),
+    [visibleEntries],
+  );
 
   /** Summary cards always match the rows currently shown in the table. */
   const viewSummary = useMemo(() => {
@@ -1180,7 +1187,7 @@ export default function RevenueDeskPage() {
   }
 
   return (
-    <div className="rev-desk-page">
+    <div className={`rev-desk-page${!showAnalytics ? ' rev-desk-page--analytics-off' : ''}`}>
       {error && <div className="rev-desk-error">{error}</div>}
 
       <div className="rev-desk-page-header">
@@ -1230,19 +1237,6 @@ export default function RevenueDeskPage() {
                 )}
               </button>
             </div>
-            {canEditSelected && selectedEntry ? (
-              <a
-                href={deskPageUrl('revenue_edit.php', { id: selectedEntry.id })}
-                className="rev-desk-btn rev-desk-btn-secondary rev-desk-btn-edit"
-                aria-label={`Edit ${selectedEntry.voucher_number || `revenue #${selectedEntry.id}`}`}
-                title="Edit selected revenue"
-                onClick={() => rememberList(selectedEntry.id)}
-              >
-                <Pencil size={16} aria-hidden="true" />
-                <span className="rev-desk-btn-label-desktop">Edit</span>
-                <span className="rev-desk-btn-label-mobile">Edit</span>
-              </a>
-            ) : null}
             <a
               href={deskPageUrl('revenue_create.php')}
               className="rev-desk-btn rev-desk-btn-primary rev-desk-btn-create"
@@ -1334,21 +1328,42 @@ export default function RevenueDeskPage() {
         />
       </div>
 
+      {showAnalytics ? (
+        <RevenueAnalyticsPanel
+          trend={analyticsTrend.trend}
+          statusBreakdown={statusBreakdown}
+          trendFrom={analyticsTrend.trend_from}
+          trendTo={analyticsTrend.trend_to}
+          totalRecords={visibleEntries.length}
+        />
+      ) : null}
+
       <section className="rev-desk-results" aria-label="Revenue entries">
         <div className="rev-desk-results-head">
           <span className="rev-desk-results-count">
             {visibleEntries.length} {visibleEntries.length === 1 ? 'entry' : 'entries'}
           </span>
-          <RevenueExportMenu
-            onExportCsv={() => {
-              setExportFormat('csv');
-              setExportOpen(true);
-            }}
-            onExportPdf={() => {
-              setExportFormat('pdf');
-              setExportOpen(true);
-            }}
-          />
+          <div className="rev-desk-results-controls">
+            <button
+              type="button"
+              className={`rev-desk-layout-toggle${showAnalytics ? ' is-active' : ''}`}
+              onClick={() => setShowAnalytics((v) => !v)}
+              title={showAnalytics ? 'Hide analytics' : 'Show analytics'}
+              aria-pressed={showAnalytics}
+            >
+              <LayoutGrid size={16} aria-hidden="true" />
+            </button>
+            <RevenueExportMenu
+              onExportCsv={() => {
+                setExportFormat('csv');
+                setExportOpen(true);
+              }}
+              onExportPdf={() => {
+                setExportFormat('pdf');
+                setExportOpen(true);
+              }}
+            />
+          </div>
         </div>
 
         <div className="rev-desk-table-wrap">

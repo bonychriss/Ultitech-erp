@@ -51,36 +51,39 @@ try {
             exit;
         }
 
-        // List expenses (all except deleted).
+        // List expenses (receipts) + General Payment vouchers in the same table shape.
         $filters = expenses_parse_list_filters($_GET);
+        $sourceFilter = strtolower(trim((string) ($filters['source_type'] ?? '')));
 
-        $params = [];
-        $where = expenses_build_list_where($filters, $params);
+        $expenses = [];
+        if ($sourceFilter !== 'voucher') {
+            $params = [];
+            $where = expenses_build_list_where($filters, $params);
 
-        // Count total
-        $countQuery = "SELECT COUNT(*) FROM erp_expenses e $where";
-        $stmt = $pdo->prepare($countQuery);
-        $stmt->execute($params);
-        $total = (int) $stmt->fetchColumn();
+            $query = "SELECT e.*
+                      FROM erp_expenses e
+                      $where
+                      ORDER BY e.date DESC, e.id DESC
+                      LIMIT 5000";
 
-        // Fetch all matching rows (no pagination).
-        $query = "SELECT e.*
-                  FROM erp_expenses e
-                  $where
-                  ORDER BY e.date DESC, e.id DESC
-                  LIMIT 5000";
-
-        $stmt = $pdo->prepare($query);
-        $stmt->execute($params);
-        $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($expenses as &$row) {
-            $row = expenses_enrich_list_row($pdo, $row);
+            $stmt = $pdo->prepare($query);
+            $stmt->execute($params);
+            $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            foreach ($expenses as &$row) {
+                $row = expenses_enrich_list_row($pdo, $row);
+                if (!isset($row['row_key'])) {
+                    $row['row_key'] = 'exp-' . (int) ($row['id'] ?? 0);
+                }
+            }
+            unset($row);
         }
-        unset($row);
+
+        $voucherRows = expenses_fetch_general_vouchers_as_list_rows($pdo, $filters);
+        $merged = expenses_merge_list_rows($expenses, $voucherRows);
 
         echo json_encode([
-            'data' => $expenses,
-            'total' => $total,
+            'data' => $merged,
+            'total' => count($merged),
         ]);
 
     } elseif ($method === 'POST') {

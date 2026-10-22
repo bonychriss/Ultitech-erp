@@ -717,7 +717,19 @@ export default function ExpenseCreatePage({
                     </option>
                   ))}
                 </select>
-                <div className="exp-create-help">What the money was spent on.</div>
+                <div className="exp-create-help">
+                  {hasSimpleCategories
+                    ? 'What the money was spent on.'
+                    : (
+                      <>
+                        No expense accounts in the chart of accounts yet.{' '}
+                        {init.balances_url ? (
+                          <a href={init.balances_url}>Open Balances</a>
+                        ) : 'Open Balances'}
+                        {' '}to add categories, then refresh this form.
+                      </>
+                    )}
+                </div>
               </div>
             </div>
 

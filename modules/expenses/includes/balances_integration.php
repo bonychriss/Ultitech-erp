@@ -18,6 +18,16 @@ function expenses_balances_bootstrap(): void
     if ($pdo instanceof PDO && function_exists('coa_ensure_parent_id_column')) {
         coa_ensure_parent_id_column($pdo);
     }
+    // Create form categories come from financial_accounts; seed default COA when empty
+    // so Category / Paid from are available without visiting Balances first.
+    if ($pdo instanceof PDO && function_exists('balances_ensure_default_accounts')) {
+        try {
+            $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+            balances_ensure_default_accounts($pdo, $companyId > 0 ? $companyId : null);
+        } catch (Throwable $e) {
+            error_log('expenses_balances_bootstrap seed: ' . $e->getMessage());
+        }
+    }
     if ($pdo instanceof PDO && function_exists('expenses_ensure_schema')) {
         expenses_ensure_schema($pdo);
     }
@@ -249,11 +259,11 @@ function expenses_is_payment_account_type(string $type): bool
 
 function expenses_is_expense_account_type(string $type): bool
 {
-    if (function_exists('coa_normalize_ledger_type')) {
-        return coa_normalize_ledger_type($type) === 'expense';
-    }
+    $normalized = function_exists('coa_normalize_ledger_type')
+        ? coa_normalize_ledger_type($type)
+        : strtolower(trim($type));
 
-    return strtolower(trim($type)) === 'expense';
+    return in_array($normalized, ['expense', 'expenses'], true);
 }
 
 /**
@@ -544,11 +554,15 @@ function expenses_fetch_expense_sub_accounts(PDO $pdo): array
                 $options[] = $row;
             }
         }
-        usort($options, static function ($a, $b) {
-            return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
-        });
+        if ($options !== []) {
+            usort($options, static function ($a, $b) {
+                return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+            });
 
-        return $options;
+            return $options;
+        }
+        // Hierarchical parents exist but no leaf accounts yet — allow selecting mains.
+        return array_values($tree['mains']);
     }
 
     $map = expenses_fetch_financial_account_map($pdo);
@@ -1417,6 +1431,7 @@ function expenses_resolve_display_name(array $row): string
 function expenses_build_desk_form_init(PDO $pdo): array
 {
     require_once __DIR__ . '/currency_helpers.php';
+    expenses_balances_bootstrap();
 
     $expenseTree = expenses_build_expense_account_tree($pdo);
     $paymentTree = expenses_build_payment_account_tree($pdo);
@@ -1675,6 +1690,687 @@ function expenses_build_list_where(array $filters, array &$params): string
 }
 
 /**
+ * Same row universe as the expenses table (receipts + General Payment vouchers).
+ *
+ * @param array<string, string> $filters
+ * @return list<array<string, mixed>>
+ */
+function expenses_fetch_listed_rows(PDO $pdo, array $filters = []): array
+{
+    $filters = array_merge(expenses_parse_list_filters([]), $filters);
+
+    $expenseRows = [];
+    $sourceFilter = strtolower(trim((string) ($filters['source_type'] ?? '')));
+    if ($sourceFilter !== 'voucher') {
+        $params = [];
+        $where = expenses_build_list_where($filters, $params);
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT e.* FROM erp_expenses e {$where}
+                 ORDER BY e.date DESC, e.id DESC LIMIT 5000"
+            );
+            $stmt->execute($params);
+            $expenseRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            foreach ($expenseRows as &$row) {
+                $row = expenses_enrich_list_row($pdo, $row);
+            }
+            unset($row);
+        } catch (Throwable $e) {
+            $expenseRows = [];
+        }
+    }
+
+    $voucherRows = expenses_fetch_general_vouchers_as_list_rows($pdo, $filters);
+
+    return expenses_merge_list_rows($expenseRows, $voucherRows);
+}
+
+/**
+ * Whether a listed row should count toward spend / trend (posted or paid).
+ *
+ * @param array<string, mixed> $row
+ */
+function expenses_listed_row_is_spend(array $row): bool
+{
+    $display = strtolower(trim((string) ($row['display_status'] ?? '')));
+    $status = strtolower(trim((string) ($row['status'] ?? '')));
+
+    if ((int) ($row['is_posted'] ?? 0) === 1 || $display === 'posted' || $status === 'posted') {
+        return true;
+    }
+    if ((int) ($row['is_paid'] ?? 0) === 1 || $display === 'paid' || $status === 'paid') {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Status breakdown for the desk chart — same row universe as the expenses table.
+ *
+ * @param array<string, string> $filters
+ * @return array{total:int,breakdown:list<array{key:string,label:string,count:int,color:string}>}
+ */
+function expenses_build_listed_status_breakdown(PDO $pdo, array $filters = []): array
+{
+    $merged = expenses_fetch_listed_rows($pdo, $filters);
+
+    $counts = [
+        'posted' => 0,
+        'paid' => 0,
+        'approved' => 0,
+        'pending' => 0,
+        'confirming' => 0,
+        'draft' => 0,
+        'rejected' => 0,
+    ];
+
+    foreach ($merged as $row) {
+        $display = strtolower(trim((string) ($row['display_status'] ?? '')));
+        $status = strtolower(trim((string) ($row['status'] ?? '')));
+        $isPosted = (int) ($row['is_posted'] ?? 0) === 1;
+        $isPaid = (int) ($row['is_paid'] ?? 0) === 1;
+
+        if ($isPosted || $display === 'posted' || $status === 'posted') {
+            $counts['posted']++;
+        } elseif ($isPaid || $display === 'paid' || $status === 'paid') {
+            $counts['paid']++;
+        } elseif ($display === 'approved' || $status === 'approved') {
+            $counts['approved']++;
+        } elseif ($display === 'rejected' || $status === 'rejected') {
+            $counts['rejected']++;
+        } elseif ($display === 'pending' || $status === 'pending') {
+            $counts['pending']++;
+        } elseif ($display === 'confirming' || $status === 'confirming') {
+            $counts['confirming']++;
+        } else {
+            $counts['draft']++;
+        }
+    }
+
+    $meta = [
+        'posted' => ['label' => 'Posted', 'color' => '#22c55e'],
+        'paid' => ['label' => 'Paid', 'color' => '#3b82f6'],
+        'approved' => ['label' => 'Approved', 'color' => '#14b8a6'],
+        'pending' => ['label' => 'Pending', 'color' => '#f59e0b'],
+        'confirming' => ['label' => 'Confirming', 'color' => '#a855f7'],
+        'draft' => ['label' => 'Draft', 'color' => '#94a3b8'],
+        'rejected' => ['label' => 'Rejected', 'color' => '#ef4444'],
+    ];
+
+    $breakdown = [];
+    foreach ($meta as $key => $info) {
+        $count = (int) ($counts[$key] ?? 0);
+        if ($count <= 0) {
+            continue;
+        }
+        $breakdown[] = [
+            'key' => $key,
+            'label' => $info['label'],
+            'count' => $count,
+            'color' => $info['color'],
+        ];
+    }
+
+    return [
+        'total' => count($merged),
+        'breakdown' => $breakdown,
+    ];
+}
+
+/**
+ * Trend + monthly KPIs from the same listed universe as the expenses table.
+ *
+ * @param array<string, string> $filters
+ * @return array{
+ *   trend:list<array{date:string,label:string,amount:float}>,
+ *   trend_from:string,
+ *   trend_to:string,
+ *   posted_month_count:int,
+ *   spend_month:float
+ * }
+ */
+function expenses_build_listed_trend_stats(PDO $pdo, array $filters = []): array
+{
+    $currentMonth = date('Y-m');
+    $monthStart = $currentMonth . '-01';
+    $monthEnd = date('Y-m-t', strtotime($monthStart));
+
+    $merged = expenses_fetch_listed_rows($pdo, $filters);
+    $spendByDay = [];
+    $spendDates = [];
+    $postedMonthCount = 0;
+    $spendMonth = 0.0;
+
+    foreach ($merged as $row) {
+        if (!expenses_listed_row_is_spend($row)) {
+            continue;
+        }
+        $day = substr((string) ($row['date'] ?? ''), 0, 10);
+        if ($day === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
+            continue;
+        }
+        $amount = (float) ($row['amount'] ?? 0);
+        if ($amount <= 0) {
+            continue;
+        }
+        $spendByDay[$day] = ($spendByDay[$day] ?? 0) + $amount;
+        $spendDates[] = $day;
+        if (strpos($day, $currentMonth) === 0) {
+            $postedMonthCount++;
+            $spendMonth += $amount;
+        }
+    }
+
+    $trendFrom = $monthStart;
+    $trendTo = $monthEnd;
+
+    // Current month empty but historical posted/paid exist → show the active spend window.
+    if ($spendMonth <= 0 && $spendDates !== []) {
+        sort($spendDates);
+        $latest = $spendDates[count($spendDates) - 1];
+        $earliest = $spendDates[0];
+        $windowStart = date('Y-m-d', strtotime('-5 months', strtotime(substr($latest, 0, 7) . '-01')));
+        $trendFrom = $earliest > $windowStart ? $earliest : $windowStart;
+        $trendTo = $latest;
+        // Align to month boundaries for a cleaner "monthly" chart.
+        $trendFrom = date('Y-m-01', strtotime($trendFrom));
+        $trendTo = date('Y-m-t', strtotime($trendTo));
+    }
+
+    $fromTs = strtotime($trendFrom);
+    $toTs = strtotime($trendTo);
+    if ($fromTs === false || $toTs === false || $fromTs > $toTs) {
+        $trendFrom = $monthStart;
+        $trendTo = $monthEnd;
+        $fromTs = strtotime($trendFrom);
+        $toTs = strtotime($trendTo);
+    }
+
+    $daySpan = (int) round(($toTs - $fromTs) / 86400) + 1;
+    $useMonthly = $daySpan > 45;
+    $buckets = [];
+
+    if ($useMonthly) {
+        $cursor = strtotime(date('Y-m-01', $fromTs));
+        $endMonth = strtotime(date('Y-m-01', $toTs));
+        while ($cursor !== false && $cursor <= $endMonth) {
+            $key = date('Y-m', $cursor);
+            $buckets[$key] = [
+                'date' => $key . '-01',
+                'label' => date('M Y', $cursor),
+                'amount' => 0.0,
+            ];
+            $cursor = strtotime('+1 month', $cursor);
+        }
+        foreach ($spendByDay as $day => $amount) {
+            if ($day < $trendFrom || $day > $trendTo) {
+                continue;
+            }
+            $key = substr($day, 0, 7);
+            if (isset($buckets[$key])) {
+                $buckets[$key]['amount'] += (float) $amount;
+            }
+        }
+    } else {
+        $cursor = $fromTs;
+        while ($cursor !== false && $cursor <= $toTs) {
+            $day = date('Y-m-d', $cursor);
+            $buckets[$day] = [
+                'date' => $day,
+                'label' => date('M j', $cursor),
+                'amount' => (float) ($spendByDay[$day] ?? 0),
+            ];
+            $cursor = strtotime('+1 day', $cursor);
+        }
+    }
+
+    return [
+        'trend' => array_values($buckets),
+        'trend_from' => $trendFrom,
+        'trend_to' => $trendTo,
+        'posted_month_count' => $postedMonthCount,
+        'spend_month' => $spendMonth,
+    ];
+}
+
+/**
+ * Payment channel bucket for desk summary cards.
+ *
+ * @param array<string, mixed> $row
+ * @return 'cash'|'bank'|'payables'|'other'
+ */
+function expenses_listed_row_payment_bucket(array $row): string
+{
+    $method = strtolower(trim((string) ($row['payment_method'] ?? '')));
+    $label = strtolower(trim((string) ($row['payment_method_label'] ?? '')));
+    $haystack = $method . ' ' . $label;
+
+    if ($haystack !== ' ' && (str_contains($haystack, 'credit') || str_contains($haystack, 'payable'))) {
+        return 'payables';
+    }
+    if ($haystack !== ' ' && str_contains($haystack, 'cash')) {
+        return 'cash';
+    }
+    if (
+        $haystack !== ' '
+        && (
+            str_contains($haystack, 'bank')
+            || str_contains($haystack, 'mobile')
+            || str_contains($haystack, 'cheque')
+            || str_contains($haystack, 'check')
+            || str_contains($haystack, 'transfer')
+        )
+    ) {
+        return 'bank';
+    }
+
+    return 'other';
+}
+
+/**
+ * Whether a listed row belongs in the financial summary cards.
+ *
+ * @param array<string, mixed> $row
+ */
+function expenses_listed_row_in_summary(array $row): bool
+{
+    $display = strtolower(trim((string) ($row['display_status'] ?? '')));
+    $status = strtolower(trim((string) ($row['status'] ?? '')));
+
+    if (in_array($display, ['draft', 'rejected', 'deleted'], true) || in_array($status, ['draft', 'rejected', 'deleted'], true)) {
+        return false;
+    }
+
+    // Credit / payable rows count even before they are posted or paid.
+    if (expenses_listed_row_payment_bucket($row) === 'payables') {
+        return true;
+    }
+
+    return expenses_listed_row_is_spend($row);
+}
+
+/**
+ * Desk summary totals: exclusive, input VAT, gross, bank, cash, payables.
+ *
+ * @param array<string, string> $filters
+ * @return array{
+ *   total_exclusive:float,
+ *   input_vat:float,
+ *   total_inclusive:float,
+ *   total_bank:float,
+ *   total_cash:float,
+ *   total_payables:float
+ * }
+ */
+function expenses_build_listed_summary_stats(PDO $pdo, array $filters = []): array
+{
+    $merged = expenses_fetch_listed_rows($pdo, $filters);
+
+    $totalExclusive = 0.0;
+    $inputVat = 0.0;
+    $totalInclusive = 0.0;
+    $totalBank = 0.0;
+    $totalCash = 0.0;
+    $totalPayables = 0.0;
+
+    foreach ($merged as $row) {
+        if (!expenses_listed_row_in_summary($row)) {
+            continue;
+        }
+
+        $amount = (float) ($row['amount'] ?? 0);
+        if ($amount <= 0) {
+            continue;
+        }
+
+        $tax = max(0.0, (float) ($row['tax_amount'] ?? 0));
+        if ($tax > $amount) {
+            $tax = $amount;
+        }
+        $exclusive = max(0.0, $amount - $tax);
+
+        $totalExclusive += $exclusive;
+        $inputVat += $tax;
+        $totalInclusive += $amount;
+
+        $bucket = expenses_listed_row_payment_bucket($row);
+        if ($bucket === 'cash') {
+            $totalCash += $amount;
+        } elseif ($bucket === 'payables') {
+            $totalPayables += $amount;
+        } elseif ($bucket === 'bank') {
+            $totalBank += $amount;
+        } else {
+            // Unknown channel → treat as bank (most general payments settle via bank).
+            $totalBank += $amount;
+        }
+    }
+
+    return [
+        'total_exclusive' => round($totalExclusive, 2),
+        'input_vat' => round($inputVat, 2),
+        'total_inclusive' => round($totalInclusive, 2),
+        'total_bank' => round($totalBank, 2),
+        'total_cash' => round($totalCash, 2),
+        'total_payables' => round($totalPayables, 2),
+    ];
+}
+
+/**
+ * Whether list filters should include General Payment vouchers from payment_vouchers.
+ */
+function expenses_list_should_include_general_vouchers(array $filters): bool
+{
+    $source = strtolower(trim((string) ($filters['source_type'] ?? '')));
+    if ($source !== '' && $source !== 'voucher') {
+        return false;
+    }
+    // Voucher rows have no Chart-of-Accounts account_id; skip when filtering by account.
+    if (trim((string) ($filters['category'] ?? '')) !== '') {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * SQL purpose predicate for General Payment vouchers (excludes stock purchase).
+ */
+function expenses_general_voucher_purpose_sql(string $alias = 'pv'): string
+{
+    $p = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+    $candidates = [];
+    foreach (['purpose', 'payment_purpose', 'voucher_purpose'] as $col) {
+        if (function_exists('columnExists') && columnExists('payment_vouchers', $col)) {
+            $candidates[] = "NULLIF(TRIM({$p}{$col}), '')";
+        }
+    }
+    if ($candidates === []) {
+        return '1=1';
+    }
+
+    $resolved = 'LOWER(TRIM(COALESCE(' . implode(', ', $candidates) . ", 'general')))";
+
+    return "({$resolved} IN ('general', 'general_payment') OR {$resolved} = '')
+        AND {$resolved} NOT IN ('stock_purchase', 'stockpurchase')
+        AND {$resolved} NOT LIKE '%stock%purchase%'";
+}
+
+/**
+ * Map a payment voucher (+ first line item) into the expenses desk row shape.
+ *
+ * @param array<string, mixed> $voucher
+ * @param array<string, mixed>|null $firstItem
+ * @return array<string, mixed>
+ */
+function expenses_map_general_voucher_to_list_row(array $voucher, ?array $firstItem = null): array
+{
+    $pvId = (int) ($voucher['id'] ?? 0);
+    $status = strtolower(trim((string) ($voucher['status'] ?? '')));
+    $isPosted = (int) ($voucher['is_posted'] ?? 0) === 1;
+    $isPaid = (int) ($voucher['is_paid'] ?? 0) === 1;
+
+    $budgetType = trim((string) ($firstItem['budget_type'] ?? ''));
+    $paymentType = trim((string) ($firstItem['payment_type'] ?? ''));
+    $itemName = trim((string) ($firstItem['name'] ?? ''));
+
+    if ($isPosted) {
+        $displayStatus = 'posted';
+    } elseif ($isPaid) {
+        $displayStatus = 'paid';
+    } elseif ($status === 'approved') {
+        $displayStatus = 'approved';
+    } elseif ($status === 'rejected') {
+        $displayStatus = 'rejected';
+    } elseif ($status === 'pending') {
+        $displayStatus = 'pending';
+    } elseif ($status === 'confirming') {
+        $displayStatus = 'confirming';
+    } else {
+        $displayStatus = $status !== '' ? $status : 'pending';
+    }
+
+    $currency = strtoupper(trim((string) ($voucher['currency'] ?? 'TZS')));
+    if ($currency === 'TSH') {
+        $currency = 'TZS';
+    }
+
+    $paymentLabel = $paymentType !== '' ? $paymentType : 'Payment Voucher';
+    $accountLabel = $budgetType !== '' ? $budgetType : 'General Payment';
+    $description = trim((string) ($voucher['description'] ?? ''));
+    if ($description === '' && $itemName !== '') {
+        $description = $itemName;
+    }
+
+    $date = (string) ($voucher['date_created'] ?? '');
+    if (strlen($date) > 10) {
+        $date = substr($date, 0, 10);
+    }
+
+    return [
+        'id' => -1 * $pvId,
+        'row_key' => 'pv-' . $pvId,
+        'pv_id' => $pvId,
+        'source_type' => 'voucher',
+        'is_voucher' => 1,
+        'expense_number' => (string) ($voucher['voucher_no'] ?? ('PV-' . $pvId)),
+        'date' => $date,
+        'payee' => (string) ($voucher['payee_name'] ?? ''),
+        'display_name' => (string) ($voucher['payee_name'] ?? ''),
+        'description' => $description,
+        'amount' => (float) ($voucher['total_amount'] ?? 0),
+        'tax_amount' => 0,
+        'currency_code' => $currency,
+        'currency_display' => $currency,
+        'account_id' => 0,
+        'source_account_id' => (int) ($voucher['payment_account_id'] ?? 0),
+        'category_name' => $accountLabel,
+        'main_account_name' => $accountLabel,
+        'sub_account_name' => '-',
+        'payment_method' => strtolower(str_replace(' ', '_', $paymentType)),
+        'payment_method_label' => $paymentLabel,
+        'source_account_name' => '',
+        'status' => $status !== '' ? $status : 'pending',
+        'display_status' => $displayStatus,
+        'is_posted' => $isPosted ? 1 : 0,
+        'is_paid' => $isPaid ? 1 : 0,
+        'can_edit' => 0,
+        'can_delete' => 0,
+        'voucher_url' => '../../employee/view-voucher.php?id=' . $pvId . '&module=voucher',
+        'prepared_by' => (string) ($voucher['prepared_by'] ?? ''),
+    ];
+}
+
+/**
+ * Fetch General Payment vouchers shaped like expense desk rows.
+ *
+ * @param array<string, string> $filters
+ * @return list<array<string, mixed>>
+ */
+function expenses_fetch_general_vouchers_as_list_rows(PDO $pdo, array $filters = []): array
+{
+    if (!expenses_list_should_include_general_vouchers($filters)) {
+        return [];
+    }
+    if (!function_exists('tableExists') || !tableExists('payment_vouchers', $pdo)) {
+        return [];
+    }
+
+    $params = [];
+    $where = ['1=1', expenses_general_voucher_purpose_sql('pv')];
+
+    // Hide private drafts; keep public confirming/pending/approved/rejected/paid.
+    if (function_exists('columnExists') && columnExists('payment_vouchers', 'is_draft', $pdo)) {
+        $where[] = 'IFNULL(pv.is_draft, 0) = 0';
+    }
+
+    $companyWhere = '';
+    if (function_exists('companyScopeSql')) {
+        [$companyFrag, $companyParams] = companyScopeSql('payment_vouchers', 'pv');
+        if (is_string($companyFrag) && trim($companyFrag) !== '') {
+            $companyWhere = $companyFrag;
+            foreach ($companyParams as $cp) {
+                $params[] = $cp;
+            }
+        }
+    }
+
+    if (($filters['search'] ?? '') !== '') {
+        $needle = '%' . $filters['search'] . '%';
+        $where[] = '(pv.voucher_no LIKE ? OR pv.payee_name LIKE ? OR COALESCE(pv.description, \'\') LIKE ?)';
+        $params[] = $needle;
+        $params[] = $needle;
+        $params[] = $needle;
+    }
+
+    $status = strtolower(trim((string) ($filters['status'] ?? '')));
+    if ($status === 'posted') {
+        $where[] = 'IFNULL(pv.is_posted, 0) = 1';
+    } elseif ($status === 'draft') {
+        $where[] = "LOWER(TRIM(pv.status)) IN ('confirming', 'pending')";
+    } elseif ($status === 'rejected') {
+        $where[] = "LOWER(TRIM(pv.status)) = 'rejected'";
+    } elseif ($status === 'unposted' || $status === 'approved') {
+        $where[] = "IFNULL(pv.is_posted, 0) = 0 AND LOWER(TRIM(pv.status)) = 'approved'";
+    } elseif ($status !== '') {
+        $where[] = 'LOWER(TRIM(pv.status)) = ?';
+        $params[] = $status;
+    }
+
+    if (($filters['date_from'] ?? '') !== '') {
+        $where[] = 'DATE(pv.date_created) >= ?';
+        $params[] = $filters['date_from'];
+    }
+    if (($filters['date_to'] ?? '') !== '') {
+        $where[] = 'DATE(pv.date_created) <= ?';
+        $params[] = $filters['date_to'];
+    }
+
+    if (($filters['payment_method'] ?? '') === 'cash') {
+        $where[] = "EXISTS (
+            SELECT 1 FROM voucher_items vi
+            WHERE vi.voucher_id = pv.id
+              AND LOWER(vi.payment_type) LIKE '%cash%'
+        )";
+    } elseif (($filters['payment_method'] ?? '') === 'bank') {
+        $where[] = "EXISTS (
+            SELECT 1 FROM voucher_items vi
+            WHERE vi.voucher_id = pv.id
+              AND (
+                LOWER(vi.payment_type) LIKE '%bank%'
+                OR LOWER(vi.payment_type) LIKE '%mobile%'
+                OR LOWER(vi.payment_type) LIKE '%cheque%'
+              )
+        )";
+    }
+
+    if (($filters['amount_min'] ?? '') !== '' && is_numeric($filters['amount_min'])) {
+        $where[] = 'pv.total_amount >= ?';
+        $params[] = (float) $filters['amount_min'];
+    }
+    if (($filters['amount_max'] ?? '') !== '' && is_numeric($filters['amount_max'])) {
+        $where[] = 'pv.total_amount <= ?';
+        $params[] = (float) $filters['amount_max'];
+    }
+
+    $whereSql = implode(' AND ', $where) . ($companyWhere !== '' ? ' ' . $companyWhere : '');
+
+    try {
+        $sql = "
+            SELECT
+                pv.*,
+                (
+                    SELECT vi.payment_type FROM voucher_items vi
+                    WHERE vi.voucher_id = pv.id
+                    ORDER BY vi.id ASC LIMIT 1
+                ) AS item_payment_type,
+                (
+                    SELECT vi.budget_type FROM voucher_items vi
+                    WHERE vi.voucher_id = pv.id
+                    ORDER BY vi.id ASC LIMIT 1
+                ) AS item_budget_type,
+                (
+                    SELECT vi.name FROM voucher_items vi
+                    WHERE vi.voucher_id = pv.id
+                    ORDER BY vi.id ASC LIMIT 1
+                ) AS item_name
+            FROM payment_vouchers pv
+            WHERE {$whereSql}
+            ORDER BY DATE(pv.date_created) DESC, pv.id DESC
+            LIMIT 5000
+        ";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        error_log('expenses_fetch_general_vouchers_as_list_rows: ' . $e->getMessage());
+
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $voucher) {
+        $firstItem = [
+            'payment_type' => (string) ($voucher['item_payment_type'] ?? ''),
+            'budget_type' => (string) ($voucher['item_budget_type'] ?? ''),
+            'name' => (string) ($voucher['item_name'] ?? ''),
+        ];
+        $out[] = expenses_map_general_voucher_to_list_row($voucher, $firstItem);
+    }
+
+    return $out;
+}
+
+/**
+ * Merge receipt expenses with General Payment voucher rows, newest first.
+ * Prefers live voucher rows when the same pv_id already exists in erp_expenses.
+ *
+ * @param list<array<string, mixed>> $expenseRows
+ * @param list<array<string, mixed>> $voucherRows
+ * @return list<array<string, mixed>>
+ */
+function expenses_merge_list_rows(array $expenseRows, array $voucherRows): array
+{
+    $voucherPvIds = [];
+    foreach ($voucherRows as $row) {
+        $pvId = (int) ($row['pv_id'] ?? 0);
+        if ($pvId > 0) {
+            $voucherPvIds[$pvId] = true;
+        }
+    }
+
+    $merged = [];
+    foreach ($expenseRows as $row) {
+        $pvId = (int) ($row['pv_id'] ?? 0);
+        if ($pvId > 0 && isset($voucherPvIds[$pvId])) {
+            continue;
+        }
+        if (!isset($row['row_key'])) {
+            $row['row_key'] = 'exp-' . (int) ($row['id'] ?? 0);
+        }
+        $merged[] = $row;
+    }
+    foreach ($voucherRows as $row) {
+        $merged[] = $row;
+    }
+
+    usort($merged, static function (array $a, array $b): int {
+        $dateA = (string) ($a['date'] ?? '');
+        $dateB = (string) ($b['date'] ?? '');
+        if ($dateA !== $dateB) {
+            return strcmp($dateB, $dateA);
+        }
+        $idA = (int) ($a['pv_id'] ?? abs((int) ($a['id'] ?? 0)));
+        $idB = (int) ($b['pv_id'] ?? abs((int) ($b['id'] ?? 0)));
+
+        return $idB <=> $idA;
+    });
+
+    return $merged;
+}
+
+/**
  * Map an expense row to a KPI trace line item.
  *
  * @param array<string, mixed> $row
@@ -1682,12 +2378,15 @@ function expenses_build_list_where(array $filters, array &$params): string
  */
 function expenses_map_kpi_trace_item(PDO $pdo, array $row, float $contribution, string $note): array
 {
-    $row = expenses_enrich_list_row($pdo, $row);
+    // Voucher-shaped list rows are already enriched; re-running expense enrich would wipe labels.
+    if (empty($row['is_voucher']) && (string) ($row['source_type'] ?? '') !== 'voucher') {
+        $row = expenses_enrich_list_row($pdo, $row);
+    }
 
     return [
         'id' => (int) ($row['id'] ?? 0),
         'expenseNumber' => (string) ($row['expense_number'] ?? ''),
-        'payee' => (string) ($row['payee'] ?? ''),
+        'payee' => (string) ($row['payee'] ?? $row['display_name'] ?? ''),
         'date' => (string) ($row['date'] ?? ''),
         'account' => (string) ($row['category_name'] ?? ''),
         'payment' => (string) ($row['payment_method_label'] ?? ''),
@@ -1791,104 +2490,151 @@ function expenses_kpi_build_confirmation(string $key, array $context): string
  */
 function expenses_build_kpi_traces(PDO $pdo): array
 {
-    $scopeSql = expenses_scope_sql();
-    $month = date('Y-m');
-    $monthLabel = date('F Y');
-
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM erp_expenses WHERE $scopeSql AND is_posted = 1 AND date LIKE ?");
-    $stmt->execute(["$month%"]);
-    $postedCount = (int) ($stmt->fetchColumn() ?: 0);
-
-    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM erp_expenses WHERE $scopeSql AND is_posted = 1 AND date LIKE ?");
-    $stmt->execute(["$month%"]);
-    $spendAmount = (float) $stmt->fetchColumn();
-
-    $totalCount = (int) ($pdo->query("SELECT COUNT(*) FROM erp_expenses WHERE $scopeSql")->fetchColumn() ?: 0);
-
-    $postedRows = expenses_fetch_kpi_trace_rows($pdo, 'posted_month');
-    $totalRows = expenses_fetch_kpi_trace_rows($pdo, 'total');
-
-    $postedItems = array_map(
-        static fn(array $row): array => expenses_map_kpi_trace_item($pdo, $row, 1.0, 'Counts as 1 posted expense'),
-        $postedRows
-    );
-    $spendItems = array_map(
-        static fn(array $row): array => expenses_map_kpi_trace_item(
-            $pdo,
-            $row,
-            (float) ($row['amount'] ?? 0),
-            'Amount added to monthly spend'
-        ),
-        $postedRows
-    );
-    $totalItems = array_map(
-        static fn(array $row): array => expenses_map_kpi_trace_item($pdo, $row, 1.0, 'Non-deleted expense'),
-        $totalRows
-    );
-
-    $monthCriteria = [
-        ['label' => 'Table', 'value' => 'erp_expenses'],
-        ['label' => 'Excluded', 'value' => "status = 'deleted' and voucher-synced rows"],
-        ['label' => 'Posted only', 'value' => 'is_posted = 1'],
-        ['label' => 'Month', 'value' => "{$monthLabel} (date LIKE '{$month}%')"],
+    $summary = expenses_build_listed_summary_stats($pdo, []);
+    $rows = expenses_fetch_listed_rows($pdo, []);
+    $criteria = [
+        ['label' => 'Universe', 'value' => 'Listed expenses + General Payment vouchers'],
+        ['label' => 'Included', 'value' => 'Posted/paid spend, plus Credit/payables rows'],
+        ['label' => 'Excluded', 'value' => 'Draft, rejected, deleted'],
         ['label' => 'API', 'value' => 'modules/expenses/api/desk-init.php'],
     ];
 
-    $totalCriteria = [
-        ['label' => 'Table', 'value' => 'erp_expenses'],
-        ['label' => 'Excluded', 'value' => "status = 'deleted' and voucher-synced rows"],
-        ['label' => 'API', 'value' => 'modules/expenses/api/desk-init.php'],
-    ];
+    $mapAmountItems = static function (array $rows, callable $contribFn, string $note) use ($pdo): array {
+        $items = [];
+        foreach ($rows as $row) {
+            if (!expenses_listed_row_in_summary($row)) {
+                continue;
+            }
+            $contrib = (float) $contribFn($row);
+            if ($contrib <= 0) {
+                continue;
+            }
+            $items[] = expenses_map_kpi_trace_item($pdo, $row, $contrib, $note);
+            if (count($items) >= 500) {
+                break;
+            }
+        }
+        return $items;
+    };
 
-    $postedFootnote = count($postedItems) < $postedCount
-        ? 'Table shows up to 500 posted expenses for this month. The headline count includes all matching rows.'
-        : '';
-    $totalFootnote = count($totalItems) < $totalCount
-        ? 'Table shows up to 500 most recent records. The headline count includes all non-deleted expenses.'
-        : '';
+    $bucketItems = static function (array $rows, string $bucket) use ($pdo): array {
+        $items = [];
+        foreach ($rows as $row) {
+            if (!expenses_listed_row_in_summary($row)) {
+                continue;
+            }
+            $rowBucket = expenses_listed_row_payment_bucket($row);
+            $normalized = $rowBucket === 'other' ? 'bank' : $rowBucket;
+            if ($normalized !== $bucket) {
+                continue;
+            }
+            $amount = (float) ($row['amount'] ?? 0);
+            if ($amount <= 0) {
+                continue;
+            }
+            $items[] = expenses_map_kpi_trace_item($pdo, $row, $amount, 'Counted in ' . $bucket);
+            if (count($items) >= 500) {
+                break;
+            }
+        }
+        return $items;
+    };
 
-    $context = [
-        'monthLabel' => $monthLabel,
-        'postedCount' => $postedCount,
-        'spendAmount' => $spendAmount,
-        'totalCount' => $totalCount,
-        'itemCount' => count($totalItems),
-    ];
+    $exclusiveItems = $mapAmountItems(
+        $rows,
+        static function (array $row): float {
+            $amount = (float) ($row['amount'] ?? 0);
+            $tax = max(0.0, min($amount, (float) ($row['tax_amount'] ?? 0)));
+            return max(0.0, $amount - $tax);
+        },
+        'Exclusive amount (gross − VAT)'
+    );
+    $vatItems = $mapAmountItems(
+        $rows,
+        static function (array $row): float {
+            $amount = (float) ($row['amount'] ?? 0);
+            return max(0.0, min($amount, (float) ($row['tax_amount'] ?? 0)));
+        },
+        'Input VAT'
+    );
+    $inclusiveItems = $mapAmountItems(
+        $rows,
+        static fn(array $row): float => (float) ($row['amount'] ?? 0),
+        'Gross amount (VAT inclusive)'
+    );
 
     return [
-        'postedThisMonth' => [
-            'title' => 'Posted this month',
-            'headline' => (string) $postedCount,
-            'source' => 'erp_expenses',
-            'method' => 'COUNT(*) where status is not deleted, is_posted = 1, and date is in the current calendar month',
-            'criteria' => $monthCriteria,
-            'confirmation' => expenses_kpi_build_confirmation('postedThisMonth', $context),
-            'viaAi' => false,
-            'items' => $postedItems,
-            'footnote' => $postedFootnote,
-        ],
-        'monthlySpend' => [
-            'title' => 'Monthly spend',
-            'headline' => (string) $spendAmount,
+        'totalExclusive' => [
+            'title' => 'Total Expenses (Exclusive)',
+            'headline' => (string) ($summary['total_exclusive'] ?? 0),
             'currency' => 'TZS',
-            'source' => 'erp_expenses',
-            'method' => 'SUM(amount) on posted, non-deleted expenses dated in the current calendar month',
-            'criteria' => $monthCriteria,
-            'confirmation' => expenses_kpi_build_confirmation('monthlySpend', $context),
+            'source' => 'listed expenses',
+            'method' => 'SUM(amount − tax_amount) on posted/paid listed rows (and credit payables)',
+            'criteria' => $criteria,
+            'confirmation' => 'This is the VAT-exclusive total of posted and payable expenses in the list.',
             'viaAi' => false,
-            'items' => $spendItems,
-            'footnote' => $postedFootnote,
+            'items' => $exclusiveItems,
+            'footnote' => '',
         ],
-        'totalRecords' => [
-            'title' => 'Total records',
-            'headline' => (string) $totalCount,
-            'source' => 'erp_expenses',
-            'method' => 'COUNT(*) of all expenses except those with status deleted',
-            'criteria' => $totalCriteria,
-            'confirmation' => expenses_kpi_build_confirmation('totalRecords', $context),
+        'inputVat' => [
+            'title' => 'Input VAT',
+            'headline' => (string) ($summary['input_vat'] ?? 0),
+            'currency' => 'TZS',
+            'source' => 'listed expenses',
+            'method' => 'SUM(tax_amount) on posted/paid listed rows (and credit payables)',
+            'criteria' => $criteria,
+            'confirmation' => 'This is recoverable input VAT recorded on those expenses.',
             'viaAi' => false,
-            'items' => $totalItems,
-            'footnote' => $totalFootnote,
+            'items' => $vatItems,
+            'footnote' => '',
+        ],
+        'totalInclusive' => [
+            'title' => 'Total Expenses (VAT + Exclusive)',
+            'headline' => (string) ($summary['total_inclusive'] ?? 0),
+            'currency' => 'TZS',
+            'source' => 'listed expenses',
+            'method' => 'SUM(amount) on posted/paid listed rows (and credit payables)',
+            'criteria' => $criteria,
+            'confirmation' => 'This is the full expense total including VAT.',
+            'viaAi' => false,
+            'items' => $inclusiveItems,
+            'footnote' => '',
+        ],
+        'totalBank' => [
+            'title' => 'Total Bank',
+            'headline' => (string) ($summary['total_bank'] ?? 0),
+            'currency' => 'TZS',
+            'source' => 'listed expenses',
+            'method' => 'SUM(amount) where payment is bank transfer, mobile, or cheque',
+            'criteria' => $criteria,
+            'confirmation' => 'Expenses settled through bank, mobile money, or cheque.',
+            'viaAi' => false,
+            'items' => $bucketItems($rows, 'bank'),
+            'footnote' => '',
+        ],
+        'totalCash' => [
+            'title' => 'Total Cash',
+            'headline' => (string) ($summary['total_cash'] ?? 0),
+            'currency' => 'TZS',
+            'source' => 'listed expenses',
+            'method' => 'SUM(amount) where payment method is cash',
+            'criteria' => $criteria,
+            'confirmation' => 'Expenses settled in cash.',
+            'viaAi' => false,
+            'items' => $bucketItems($rows, 'cash'),
+            'footnote' => '',
+        ],
+        'totalPayables' => [
+            'title' => 'Total Payables',
+            'headline' => (string) ($summary['total_payables'] ?? 0),
+            'currency' => 'TZS',
+            'source' => 'listed expenses',
+            'method' => 'SUM(amount) where payment type is Credit / payable',
+            'criteria' => $criteria,
+            'confirmation' => 'Expenses on credit that count as payables.',
+            'viaAi' => false,
+            'items' => $bucketItems($rows, 'payables'),
+            'footnote' => '',
         ],
     ];
 }

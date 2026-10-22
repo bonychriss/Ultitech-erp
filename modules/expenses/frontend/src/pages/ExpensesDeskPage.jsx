@@ -1,21 +1,38 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Inbox, Loader2, Pencil, Search, Trash2, X } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  LayoutGrid,
+  Loader2,
+  MoreVertical,
+  Pencil,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+  X,
+} from 'lucide-react';
 import ExpenseQuickViewModal from '../components/ExpenseQuickViewModal';
 import ExpensePostConfirmModal from '../components/ExpensePostConfirmModal';
 import ExpenseKpiTraceModal from '../components/ExpenseKpiTraceModal';
+import ExpenseAnalyticsPanel from '../components/ExpenseAnalyticsPanel';
+import ExportMenu from '../components/ExportMenu';
+import ExportRangeModal from '../components/ExportRangeModal';
 import ExpenseCreatePage from './ExpenseCreatePage';
 import ExpenseStatusBadge, { canDeleteDraftExpense, expenseStatusLabel } from '../components/ExpenseStatusBadge';
 import {
   deleteDraftExpense,
   deskPageUrl,
-  exportUrl,
   fetchDeskExpenses,
   fetchDeskInit,
   fetchPostDraftPreview,
   postDraftExpense,
 } from '../api/expensesDesk';
+import { exportExpensesExcel, exportExpensesPdf } from '../utils/exportExpenses';
 import { resolveKpiTrace } from '../utils/kpiTrace';
+import { buildListedSummaryStats } from '../utils/summaryStats';
 
 const emptyAdvancedFilters = {
   status: '',
@@ -28,6 +45,27 @@ const emptyAdvancedFilters = {
 };
 
 const emptyFilters = { search: '', ...emptyAdvancedFilters };
+
+const STATUS_BREAKDOWN_META = [
+  { key: 'posted', label: 'Posted', color: '#22c55e' },
+  { key: 'paid', label: 'Paid', color: '#3b82f6' },
+  { key: 'approved', label: 'Approved', color: '#14b8a6' },
+  { key: 'pending', label: 'Pending', color: '#f59e0b' },
+  { key: 'confirming', label: 'Confirming', color: '#a855f7' },
+  { key: 'draft', label: 'Draft', color: '#94a3b8' },
+  { key: 'rejected', label: 'Rejected', color: '#ef4444' },
+];
+
+function buildStatusBreakdownFromRows(rows) {
+  const counts = Object.create(null);
+  for (const row of rows) {
+    const key = expenseStatusLabel(row).toLowerCase();
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return STATUS_BREAKDOWN_META
+    .map((meta) => ({ ...meta, count: counts[meta.key] || 0 }))
+    .filter((row) => row.count > 0);
+}
 
 const STATUS_LABELS = {
   posted: 'Posted',
@@ -100,10 +138,94 @@ function expenseDisplayName(expense) {
   return String(expense?.description ?? expense?.display_name ?? '').trim();
 }
 
+function partyInitials(name) {
+  const parts = String(name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+}
+
+function partyAvatarTone(name) {
+  const raw = String(name || '');
+  let hash = 0;
+  for (let i = 0; i < raw.length; i += 1) {
+    hash = (hash + raw.charCodeAt(i) * (i + 1)) % 10;
+  }
+  return hash;
+}
+
 function isRowActionTarget(target) {
   if (!(target instanceof Element)) return false;
   return Boolean(
-    target.closest('a, button, input, select, textarea, label, [data-exp-row-ignore]'),
+    target.closest('a, button, input, select, textarea, label, [data-exp-row-ignore], [data-exp-row-menu]'),
+  );
+}
+
+function ExpenseRowActionsMenu({ menu, onClose, onView, onEdit, onDelete, deleting }) {
+  if (!menu || typeof document === 'undefined') return null;
+
+  const style = {
+    position: 'fixed',
+    top: `${menu.top}px`,
+    right: `${menu.right}px`,
+    zIndex: 14000,
+  };
+
+  return createPortal(
+    <div className="exp-desk-row-menu exp-desk-row-menu--portal" role="menu" style={style} data-exp-row-menu>
+      <button
+        type="button"
+        role="menuitem"
+        className="exp-desk-row-menu-item"
+        onClick={(event) => {
+          event.stopPropagation();
+          onClose();
+          onView(menu.expense);
+        }}
+      >
+        <Eye size={15} aria-hidden="true" />
+        View
+      </button>
+      {menu.canEdit ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="exp-desk-row-menu-item"
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+            onEdit(menu.expense);
+          }}
+        >
+          <Pencil size={15} aria-hidden="true" />
+          Edit
+        </button>
+      ) : null}
+      {menu.canDelete ? (
+        <>
+          <div className="exp-desk-row-menu-divider" role="separator" />
+          <button
+            type="button"
+            role="menuitem"
+            className="exp-desk-row-menu-item exp-desk-row-menu-delete"
+            disabled={deleting}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (deleting) return;
+              onClose();
+              onDelete(menu.expense);
+            }}
+          >
+            <Trash2 size={15} aria-hidden="true" />
+            Delete
+          </button>
+        </>
+      ) : null}
+    </div>,
+    document.body,
   );
 }
 
@@ -123,8 +245,16 @@ export default function ExpensesDeskPage() {
   const [recordModal, setRecordModal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [exportState, setExportState] = useState('idle');
-  const exportResetRef = useRef(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState('pdf');
+  const [exportModalError, setExportModalError] = useState(null);
+  const [rowMenu, setRowMenu] = useState(null);
+  const [selectedId, setSelectedId] = useState(0);
+  const [page, setPage] = useState(1);
+  const [showAnalytics, setShowAnalytics] = useState(true);
+  const pageSize = 50;
   const [importNotice, setImportNotice] = useState(() => importedNoticeFromLocationSearch());
   const filterDropdownRef = useRef(null);
   const filterBtnRef = useRef(null);
@@ -133,6 +263,7 @@ export default function ExpensesDeskPage() {
   const searchExpandRef = useRef(null);
   const searchInputRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
+  const appliedSearchRef = useRef((initialFilters.search || '').trim());
 
   const loadData = useCallback(async (activeFilters, silent = false) => {
     if (!silent) setLoading(true);
@@ -153,60 +284,56 @@ export default function ExpensesDeskPage() {
 
   useEffect(() => {
     loadData(filters);
+    setPage(1);
   }, [filters, loadData]);
 
-  useEffect(() => () => {
-    if (exportResetRef.current) {
-      clearTimeout(exportResetRef.current);
-    }
-  }, []);
+  async function fetchExpensesForExport(range) {
+    const activeFilters = {
+      ...filters,
+      date_from: range.allTime ? '' : (range.startDate || ''),
+      date_to: range.allTime ? '' : (range.endDate || ''),
+    };
+    const listData = await fetchDeskExpenses(activeFilters);
+    return Array.isArray(listData.data) ? listData.data : [];
+  }
 
-  async function handleExport() {
-    if (exportState === 'exporting') return;
+  function openExportModal(format) {
+    setExportFormat(format);
+    setExportModalError(null);
+    setExportModalOpen(true);
+  }
 
-    if (exportResetRef.current) {
-      clearTimeout(exportResetRef.current);
-      exportResetRef.current = null;
-    }
+  function closeExportModal() {
+    if (exportingExcel || exportingPdf) return;
+    setExportModalOpen(false);
+    setExportModalError(null);
+  }
 
-    setExportState('exporting');
+  async function handleExportRange(range) {
+    const isExcel = exportFormat === 'excel';
+    const setBusy = isExcel ? setExportingExcel : setExportingPdf;
+    setBusy(true);
+    setExportModalError(null);
     setError('');
-
     try {
-      const res = await fetch(exportUrl(filters), { credentials: 'same-origin' });
-      if (!res.ok) {
-        throw new Error(`Export failed (${res.status})`);
+      const rows = await fetchExpensesForExport(range);
+      if (isExcel) {
+        await exportExpensesExcel(rows);
+      } else {
+        const subtitle = range.allTime
+          ? 'All time'
+          : `${range.startDate} to ${range.endDate}`;
+        await exportExpensesPdf(rows, { title: 'Expenses report', subtitle });
       }
-
-      const dispo = res.headers.get('content-disposition') || '';
-      const match = dispo.match(/filename="([^"]+)"/i);
-      const filename = match?.[1] || `expenses_export_${new Date().toISOString().slice(0, 10)}.csv`;
-      const blob = await res.blob();
-      if (!blob || blob.size === 0) {
-        throw new Error('Export file was empty.');
-      }
-
-      const objectUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = objectUrl;
-      anchor.download = filename;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 2500);
-
-      setExportState('success');
-      exportResetRef.current = setTimeout(() => {
-        setExportState('idle');
-        exportResetRef.current = null;
-      }, 1800);
+      setExportModalOpen(false);
     } catch (err) {
-      setExportState('error');
-      setError(err instanceof Error ? err.message : 'Could not export expenses.');
-      exportResetRef.current = setTimeout(() => {
-        setExportState('idle');
-        exportResetRef.current = null;
-      }, 2200);
+      setExportModalError(
+        err instanceof Error
+          ? err.message
+          : (isExcel ? 'Failed to export Excel' : 'Failed to export PDF report'),
+      );
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -298,6 +425,18 @@ export default function ExpensesDeskPage() {
   }, [filters.search]);
 
   useEffect(() => {
+    const next = (draftFilters.search || '').trim();
+    if (next === appliedSearchRef.current) return undefined;
+    const timer = window.setTimeout(() => {
+      appliedSearchRef.current = next;
+      setFilters((current) => (
+        current.search === next ? current : { ...current, search: next }
+      ));
+    }, 280);
+    return () => window.clearTimeout(timer);
+  }, [draftFilters.search]);
+
+  useEffect(() => {
     if (!searchOpen) return undefined;
 
     function handlePointerDown(event) {
@@ -331,6 +470,22 @@ export default function ExpensesDeskPage() {
     { value: 'cash', label: 'Cash' },
     { value: 'bank', label: 'Bank transfer' },
   ];
+  const summaryStats = useMemo(
+    () => buildListedSummaryStats(expenses),
+    [expenses],
+  );
+  const statusBreakdown = useMemo(
+    () => buildStatusBreakdownFromRows(expenses),
+    [expenses],
+  );
+  const totalPages = Math.max(1, Math.ceil(expenses.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = expenses.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const pageEnd = Math.min(expenses.length, safePage * pageSize);
+  const pagedExpenses = useMemo(
+    () => expenses.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [expenses, safePage, pageSize],
+  );
 
   function applyFilters() {
     setFilters((current) => ({ ...current, ...draftFilters, search: current.search }));
@@ -338,7 +493,15 @@ export default function ExpensesDeskPage() {
   }
 
   function applySearch() {
-    setFilters((current) => ({ ...current, search: draftFilters.search }));
+    const next = (draftFilters.search || '').trim();
+    appliedSearchRef.current = next;
+    setFilters((current) => (
+      current.search === next ? current : { ...current, search: next }
+    ));
+  }
+
+  function onSearchChange(value) {
+    setDraftFilters((f) => ({ ...f, search: value }));
   }
 
   function openFilters() {
@@ -471,21 +634,71 @@ export default function ExpensesDeskPage() {
 
   const activeFilterChips = buildActiveFilterChips(filters);
 
-  function clearSearch() {
-    const next = { ...filters, search: '' };
-    setDraftFilters((f) => ({ ...f, search: '' }));
-    setFilters(next);
+  function clearSearch(inputRef) {
+    appliedSearchRef.current = '';
+    setDraftFilters((f) => (f.search === '' ? f : { ...f, search: '' }));
+    setFilters((current) => (
+      current.search === '' ? current : { ...current, search: '' }
+    ));
     setSearchOpen(false);
+    if (inputRef?.current) {
+      inputRef.current.focus();
+    }
   }
 
   function toggleMobileSearch() {
     setSearchOpen((open) => !open);
   }
 
+  function closeRowMenu() {
+    setRowMenu(null);
+  }
+
+  function openRowMenu(event, expense) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    const rect = button.getBoundingClientRect();
+    const canMutate = canDeleteDraftExpense(expense);
+    const menuId = expense.row_key || expense.id;
+    setRowMenu((current) => {
+      if (current?.id === menuId) return null;
+      return {
+        id: menuId,
+        expense,
+        canEdit: canMutate,
+        canDelete: canMutate,
+        top: Math.round(rect.bottom + 4),
+        right: Math.round(window.innerWidth - rect.right),
+      };
+    });
+  }
+
   function handleExpenseRowClick(event, expense) {
     if (isRowActionTarget(event.target)) return;
+    setSelectedId(expense.row_key || Number(expense.id) || 0);
     setPreviewExpense(expense);
   }
+
+  useEffect(() => {
+    if (!rowMenu) return undefined;
+    const onPointerDown = (event) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('[data-exp-row-menu]')) return;
+      closeRowMenu();
+    };
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') closeRowMenu();
+    };
+    const onScroll = () => closeRowMenu();
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [rowMenu]);
 
   const handleDeleteDraft = useCallback(async (expense) => {
     if (!expense?.id || !init?.csrf_token) return;
@@ -596,30 +809,39 @@ export default function ExpensesDeskPage() {
   }, [postConfirm?.posting]);
 
   function renderSearchField(inputRef, id = 'exp-desk-search') {
+    const showClear = draftFilters.search.trim() !== '' || filters.search.trim() !== '';
     return (
       <div className="exp-desk-search-field">
         <Search className="exp-desk-search-icon" aria-hidden="true" />
         <input
           ref={inputRef}
           id={id}
-          type="search"
+          type="text"
+          role="searchbox"
           className="exp-desk-search-input"
           placeholder="Search expense #, description, accounts"
           value={draftFilters.search}
-          onChange={(e) => setDraftFilters((f) => ({ ...f, search: e.target.value }))}
+          onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') applySearch();
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              applySearch();
+              e.currentTarget.blur();
+            }
+            if (e.key === 'Escape') clearSearch(inputRef);
           }}
           aria-label="Search expenses"
+          autoComplete="off"
         />
-        {draftFilters.search.trim() !== '' && (
+        {showClear && (
           <button
             type="button"
             className="exp-desk-search-clear"
-            onClick={clearSearch}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => clearSearch(inputRef)}
             aria-label="Clear search"
           >
-            <X className="w-4 h-4" />
+            <X size={16} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -793,7 +1015,7 @@ export default function ExpensesDeskPage() {
   }
 
   return (
-    <div className="exp-desk-page">
+    <div className={`exp-desk-page${!showAnalytics ? ' exp-desk-page--analytics-off' : ''}`}>
       {previewExpense && (
         <ExpenseQuickViewModal
           expense={previewExpense}
@@ -830,6 +1052,7 @@ export default function ExpensesDeskPage() {
         />
       )}
       {renderFiltersPanel()}
+
       <div className="exp-desk-page-header">
         <div className="exp-desk-page-header-search exp-desk-page-header-search--desktop">
           {renderSearchField(searchInputRef, 'exp-desk-search-desktop')}
@@ -858,86 +1081,33 @@ export default function ExpensesDeskPage() {
                 {renderSearchField(mobileSearchInputRef, 'exp-desk-search-mobile')}
               </div>
             </div>
-            <div
-              className={`exp-desk-filter-dropdown${filtersOpen ? ' is-open' : ''}`}
-              ref={filterDropdownRef}
-            >
+            <div className={`exp-desk-filter-dropdown${filtersOpen ? ' is-open' : ''}`} ref={filterDropdownRef}>
+              <button
+                ref={filterBtnRef}
+                type="button"
+                className={`exp-desk-filter-btn${filtersOpen ? ' is-active' : ''}`}
+                onClick={toggleFilters}
+                aria-expanded={filtersOpen}
+                aria-haspopup="dialog"
+                title="Filters"
+              >
+                <SlidersHorizontal size={18} strokeWidth={2.25} aria-hidden="true" />
+                {hasAdvancedFilters(filters) && <span className="exp-desk-filter-dot" aria-hidden="true" />}
+              </button>
+            </div>
             <button
-              ref={filterBtnRef}
               type="button"
-              className={`exp-desk-filter-btn${filtersOpen ? ' is-active' : ''}`}
-              onClick={toggleFilters}
-              aria-expanded={filtersOpen}
-              aria-haspopup="dialog"
-              title="Filters"
+              className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
+              aria-label="Record expense"
+              onClick={() => setRecordModal({ editId: null })}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <line x1="4" y1="21" x2="4" y2="14" />
-                <line x1="4" y1="10" x2="4" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="12" />
-                <line x1="12" y1="8" x2="12" y2="3" />
-                <line x1="20" y1="21" x2="20" y2="16" />
-                <line x1="20" y1="12" x2="20" y2="3" />
-                <line x1="1" y1="14" x2="7" y2="14" />
-                <line x1="9" y1="8" x2="15" y2="8" />
-                <line x1="17" y1="16" x2="23" y2="16" />
-              </svg>
-              {hasAdvancedFilters(filters) && <span className="exp-desk-filter-dot" aria-hidden="true" />}
+              <Plus size={16} aria-hidden="true" />
+              <span className="exp-desk-btn-label-desktop">Record expense</span>
+              <span className="exp-desk-btn-label-mobile">New</span>
             </button>
-          </div>
-          <button
-            type="button"
-            className={`exp-desk-btn exp-desk-btn-secondary exp-desk-btn-export${exportState === 'exporting' ? ' is-exporting' : ''}${exportState === 'success' ? ' is-export-success' : ''}${exportState === 'error' ? ' is-export-error' : ''}`}
-            onClick={handleExport}
-            disabled={exportState === 'exporting'}
-            aria-live="polite"
-            aria-busy={exportState === 'exporting'}
-          >
-            {exportState === 'exporting' ? (
-              <>
-                <Loader2 className="exp-desk-export-spin" size={15} aria-hidden="true" />
-                <span>Exporting…</span>
-              </>
-            ) : exportState === 'success' ? (
-              <span>Exported!</span>
-            ) : exportState === 'error' ? (
-              <span>Try again</span>
-            ) : (
-              <span>Export</span>
-            )}
-          </button>
-          <button
-            type="button"
-            className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
-            aria-label="Record expense"
-            onClick={() => setRecordModal({ editId: null })}
-          >
-            <span className="exp-desk-btn-label-desktop">Record expense</span>
-            <span className="exp-desk-btn-label-mobile">New</span>
-          </button>
           </div>
         </div>
       </div>
-
-      {activeFilterChips.length > 0 && (
-        <div className="exp-desk-active-filters" aria-label="Active filters">
-          {activeFilterChips.map((chip) => (
-            <button
-              key={chip.key}
-              type="button"
-              className="exp-desk-filter-chip"
-              onClick={() => clearAdvancedFilter(chip.key)}
-              title="Remove filter"
-            >
-              <span>{chip.label}</span>
-              <X size={12} aria-hidden="true" />
-            </button>
-          ))}
-          <button type="button" className="exp-desk-filter-chip exp-desk-filter-chip--clear" onClick={resetFilters}>
-            Clear all
-          </button>
-        </div>
-      )}
 
       {error && (
         <div className="exp-desk-flash exp-desk-flash-error" role="alert">{error}</div>
@@ -956,178 +1126,336 @@ export default function ExpensesDeskPage() {
         </div>
       )}
 
-      <section className="exp-desk-kpi-grid" aria-label="Summary">
-        <button {...kpiCardProps('postedThisMonth', 'posted this month')}>
+      <section className="exp-desk-kpi-grid exp-desk-kpi-grid--dash" aria-label="Summary">
+        <button {...kpiCardProps('totalExclusive', 'total expenses exclusive')}>
           <div className="exp-desk-kpi-icon exp-desk-kpi-icon--violet">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v12M8 10h5a2.5 2.5 0 0 1 0 5H8" />
             </svg>
           </div>
           <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">posted this month</div>
-            <div className="exp-desk-kpi-value">{stats?.posted_month_count ?? 0}</div>
+            <div className="exp-desk-kpi-label">Total Expenses (Exclusive)</div>
+            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
+              {formatCurrency(summaryStats.total_exclusive, 'TZS')}
+            </div>
+            <div className="exp-desk-kpi-helper">amount − VAT</div>
           </div>
         </button>
-        <button {...kpiCardProps('monthlySpend', 'monthly spend')}>
+        <button {...kpiCardProps('inputVat', 'Input VAT')}>
           <div className="exp-desk-kpi-icon exp-desk-kpi-icon--indigo">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
+              <path d="M4 7h16M4 12h10M4 17h7" />
+              <path d="M18 12v7M15.5 16.5 18 19l2.5-2.5" />
             </svg>
           </div>
           <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">monthly spend</div>
+            <div className="exp-desk-kpi-label">Input VAT</div>
             <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
-              {formatCurrency(stats?.spend_month, 'TZS')}
+              {formatCurrency(summaryStats.input_vat, 'TZS')}
             </div>
           </div>
         </button>
-        <button {...kpiCardProps('totalRecords', 'total records')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--amber">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-          </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">total records</div>
-            <div className="exp-desk-kpi-value">{stats?.total_count ?? 0}</div>
-          </div>
-        </button>
-        <button {...kpiCardProps('listedNow', 'listed now')}>
+        <button {...kpiCardProps('totalInclusive', 'Total Expenses (VAT + Exclusive)')}>
           <div className="exp-desk-kpi-icon exp-desk-kpi-icon--teal">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <line x1="8" y1="6" x2="21" y2="6" />
-              <line x1="8" y1="12" x2="21" y2="12" />
-              <line x1="8" y1="18" x2="21" y2="18" />
-              <line x1="3" y1="6" x2="3.01" y2="6" />
-              <line x1="3" y1="12" x2="3.01" y2="12" />
-              <line x1="3" y1="18" x2="3.01" y2="18" />
+              <rect x="2" y="7" width="20" height="14" rx="2" />
+              <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
             </svg>
           </div>
           <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">listed now</div>
-            <div className="exp-desk-kpi-value">{expenses.length}</div>
-            <div className="exp-desk-kpi-helper">matching current filters</div>
+            <div className="exp-desk-kpi-label">Total Expenses (VAT + Exclusive)</div>
+            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
+              {formatCurrency(summaryStats.total_inclusive, 'TZS')}
+            </div>
+            <div className="exp-desk-kpi-helper">gross</div>
+          </div>
+        </button>
+        <button {...kpiCardProps('totalBank', 'Total Bank')}>
+          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M3 10h18L12 3 3 10z" />
+              <path d="M5 10v8h14v-8" />
+              <path d="M9 18v-4h6v4" />
+            </svg>
+          </div>
+          <div className="exp-desk-kpi-body">
+            <div className="exp-desk-kpi-label">Total Bank</div>
+            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
+              {formatCurrency(summaryStats.total_bank, 'TZS')}
+            </div>
+            <div className="exp-desk-kpi-helper">bank / mobile / cheque</div>
+          </div>
+        </button>
+        <button {...kpiCardProps('totalCash', 'Total Cash')}>
+          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--amber">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <rect x="2" y="6" width="20" height="12" rx="2" />
+              <circle cx="12" cy="12" r="2.5" />
+            </svg>
+          </div>
+          <div className="exp-desk-kpi-body">
+            <div className="exp-desk-kpi-label">Total Cash</div>
+            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
+              {formatCurrency(summaryStats.total_cash, 'TZS')}
+            </div>
+          </div>
+        </button>
+        <button {...kpiCardProps('totalPayables', 'Total Payables')}>
+          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--rose">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M8 7h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3V9a2 2 0 0 1 2-2z" />
+              <path d="M10 12h6M10 15h4" />
+            </svg>
+          </div>
+          <div className="exp-desk-kpi-body">
+            <div className="exp-desk-kpi-label">Total Payables</div>
+            <div className="exp-desk-kpi-value exp-desk-kpi-value--money">
+              {formatCurrency(summaryStats.total_payables, 'TZS')}
+            </div>
+            <div className="exp-desk-kpi-helper">Credit payment type</div>
           </div>
         </button>
       </section>
 
-      <section className="exp-desk-results">
+      {showAnalytics ? (
+        <ExpenseAnalyticsPanel
+          trend={stats?.trend || []}
+          statusBreakdown={statusBreakdown}
+          trendFrom={stats?.trend_from || ''}
+          trendTo={stats?.trend_to || ''}
+          totalRecords={expenses.length}
+        />
+      ) : null}
+
+      <section className="exp-desk-results" aria-label="Expense entries">
         <div className="exp-desk-results-head">
           <span className="exp-desk-results-count">
-            {expenses.length} {expenses.length === 1 ? 'result' : 'results'}
+            {expenses.length} {expenses.length === 1 ? 'entry' : 'entries'}
           </span>
+          <div className="exp-desk-results-controls">
+            <ExportMenu
+              exportingExcel={exportingExcel}
+              exportingPdf={exportingPdf}
+              onExportExcel={() => openExportModal('excel')}
+              onExportPdf={() => openExportModal('pdf')}
+            />
+            <button
+              type="button"
+              className={`exp-desk-layout-toggle${showAnalytics ? ' is-active' : ''}`}
+              onClick={() => setShowAnalytics((v) => !v)}
+              title={showAnalytics ? 'Hide analytics' : 'Show analytics'}
+              aria-pressed={showAnalytics}
+            >
+              <LayoutGrid size={16} aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
-        {loading && (
+        {activeFilterChips.length > 0 && (
+          <div className="exp-desk-active-filters" aria-label="Active filters">
+            {activeFilterChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                className="exp-desk-filter-chip"
+                onClick={() => clearAdvancedFilter(chip.key)}
+                title="Remove filter"
+              >
+                <span>{chip.label}</span>
+                <X size={12} aria-hidden="true" />
+              </button>
+            ))}
+            <button type="button" className="exp-desk-filter-chip exp-desk-filter-chip--clear" onClick={resetFilters}>
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {loading ? (
           <div className="exp-desk-loading" role="status">
             <Loader2 className="exp-desk-boot-spinner" aria-hidden="true" />
             <span>Refreshing...</span>
           </div>
-        )}
+        ) : null}
 
-        {!loading && expenses.length === 0 ? (
-          <div className="exp-desk-empty">
-            <Inbox className="exp-desk-empty-icon" aria-hidden="true" />
-            <p className="exp-desk-empty-title">No expenses found</p>
-            <p className="exp-desk-empty-sub">Try adjusting your search or filters.</p>
-          </div>
-        ) : (
-          <div className="exp-desk-table-wrap">
-            <table className="exp-desk-table">
-              <thead>
+        <div className="exp-desk-table-wrap">
+          <table className="exp-desk-table exp-desk-table--ledger">
+            <colgroup>
+              <col className="col-ref" />
+              <col className="col-date" />
+              <col className="col-payee" />
+              <col className="col-type" />
+              <col className="col-total" />
+              <col className="col-exclusive" />
+              <col className="col-vat" />
+              <col className="col-status" />
+              <col className="col-actions" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th className="col-ref">Reference</th>
+                <th className="col-date">Date</th>
+                <th className="col-payee">Payee</th>
+                <th className="col-type">Type</th>
+                <th className="col-total">Total</th>
+                <th className="col-exclusive">Exclusive</th>
+                <th className="col-vat">VAT</th>
+                <th className="col-status">Status</th>
+                <th className="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.length === 0 ? (
                 <tr>
-                  <th>Reference</th>
-                  <th>Account</th>
-                  <th>Payment</th>
-                  <th>Status</th>
-                  <th>Amount</th>
-                  <th>Actions</th>
+                  <td colSpan={9}>
+                    <div className="exp-desk-empty">No expense entries match your filters.</div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {expenses.map((expense) => (
+              ) : (
+                pagedExpenses.map((expense) => {
+                  const payeeName = expenseDisplayName(expense) || '-';
+                  const rowKey = expense.row_key || `exp-${expense.id}`;
+                  const selectedKey = selectedId === (expense.row_key || expense.id)
+                    || selectedId === Number(expense.id);
+                  const totalAmt = Math.max(0, Number(expense.amount) || 0);
+                  const vatAmt = Math.max(0, Math.min(totalAmt, Number(expense.tax_amount) || 0));
+                  const exclusiveAmt = Math.max(0, totalAmt - vatAmt);
+                  const accountLabel = expense.category_name || expense.main_account_name || '';
+                  return (
                     <tr
-                      key={expense.id}
-                      className="exp-desk-row-clickable"
+                      key={rowKey}
+                      data-exp-entry-id={rowKey}
+                      className={`exp-desk-row-clickable${selectedKey ? ' is-selected' : ''}`}
                       tabIndex={0}
                       onClick={(event) => handleExpenseRowClick(event, expense)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault();
+                          setSelectedId(expense.row_key || Number(expense.id) || 0);
                           setPreviewExpense(expense);
                         }
                       }}
                     >
-                      <td>
-                        <span className="exp-desk-ref">{expense.expense_number || ''}</span>
-                        {expenseDisplayName(expense) ? (
-                          <div className="exp-desk-cell-sub exp-desk-expense-name">
-                            {expenseDisplayName(expense)}
-                          </div>
-                        ) : null}
-                        <div className="exp-desk-subdate">{formatDate(expense.date)}</div>
-                      </td>
-                      <td>
-                        <span className="exp-desk-cell-main">
-                          {expense.category_name || expense.main_account_name || ''}
+                      <td className="col-ref">
+                        <span className="exp-desk-ref" title={expense.expense_number || `#${expense.id}`}>
+                          {expense.expense_number || `#${expense.id}`}
                         </span>
                       </td>
-                      <td>
-                        <div className="exp-desk-cell-main">{expense.payment_method_label || ''}</div>
-                        <div className="exp-desk-cell-sub">{expense.source_account_name || ''}</div>
+                      <td className="col-date">{formatDate(expense.date)}</td>
+                      <td className="col-payee">
+                        <div className="exp-desk-party">
+                          <span
+                            className={`exp-desk-party-av exp-desk-party-av--tone-${partyAvatarTone(payeeName)}`}
+                            aria-hidden="true"
+                          >
+                            {partyInitials(payeeName)}
+                          </span>
+                          <div className="exp-desk-party-body">
+                            <span className="exp-desk-party-name" title={payeeName}>
+                              {payeeName}
+                            </span>
+                          </div>
+                        </div>
                       </td>
-                      <td>
+                      <td className="col-type">
+                        <div className="exp-desk-type-cell">
+                          <span className="exp-desk-type">
+                            {expense.payment_method_label || '-'}
+                          </span>
+                          {accountLabel ? (
+                            <span className="exp-desk-type-meta" title={accountLabel}>{accountLabel}</span>
+                          ) : expense.source_account_name ? (
+                            <span className="exp-desk-type-meta">{expense.source_account_name}</span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="col-total">
+                        <span className="exp-desk-amt" title={formatCurrency(totalAmt, expense.currency_code)}>
+                          {formatCurrency(totalAmt, expense.currency_code)}
+                        </span>
+                      </td>
+                      <td className="col-exclusive">
+                        <span className="exp-desk-amt exp-desk-amt--muted" title={formatCurrency(exclusiveAmt, expense.currency_code)}>
+                          {formatCurrency(exclusiveAmt, expense.currency_code)}
+                        </span>
+                      </td>
+                      <td className="col-vat">
+                        <span className="exp-desk-amt exp-desk-amt--muted" title={formatCurrency(vatAmt, expense.currency_code)}>
+                          {formatCurrency(vatAmt, expense.currency_code)}
+                        </span>
+                      </td>
+                      <td className="col-status">
                         <ExpenseStatusBadge expense={expense} />
                       </td>
-                      <td className="exp-desk-amt">{formatCurrency(expense.amount, expense.currency_code)}</td>
-                      <td className="exp-desk-row-actions" data-exp-row-ignore>
-                        {canDeleteDraftExpense(expense) ? (
-                          <div className="exp-desk-row-actions-inner">
-                            <button
-                              type="button"
-                              className="exp-desk-row-action"
-                              title="Edit draft"
-                              aria-label={`Edit ${expense.expense_number || 'draft'}`}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setPreviewExpense(null);
-                                setRecordModal({ editId: expense.id });
-                              }}
-                            >
-                              <Pencil size={15} aria-hidden="true" />
-                              <span className="exp-desk-row-action-label">Edit</span>
-                            </button>
-                            <button
-                              type="button"
-                              className="exp-desk-row-action exp-desk-row-action--danger"
-                              title="Delete draft"
-                              aria-label={`Delete ${expense.expense_number || 'draft'}`}
-                              disabled={deletingDraftId === expense.id}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleDeleteDraft(expense);
-                              }}
-                            >
-                              <Trash2 size={15} aria-hidden="true" />
-                              <span className="exp-desk-row-action-label">Delete</span>
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="exp-desk-row-actions-empty" aria-hidden="true">—</span>
-                        )}
+                      <td className="col-actions" data-exp-row-ignore data-exp-row-menu>
+                        <div className={`exp-desk-row-menu-wrap${rowMenu?.id === rowKey ? ' is-open' : ''}`}>
+                          <button
+                            type="button"
+                            className="exp-desk-row-menu-btn"
+                            aria-label="Row actions"
+                            aria-haspopup="menu"
+                            aria-expanded={rowMenu?.id === rowKey}
+                            onClick={(event) => openRowMenu(event, expense)}
+                          >
+                            <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                ))}
-              </tbody>
-            </table>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="exp-desk-pagination">
+          <span className="exp-desk-pagination-meta">
+            {expenses.length === 0
+              ? 'Showing 0 of 0 records'
+              : `Showing ${pageStart}-${pageEnd} of ${expenses.length} record${expenses.length === 1 ? '' : 's'}`}
+          </span>
+          <div className="exp-desk-pagination-controls">
+            <button
+              type="button"
+              className="exp-desk-page-btn"
+              disabled={safePage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={16} aria-hidden="true" />
+            </button>
+            <span className="exp-desk-page-current">{safePage}</span>
+            <button
+              type="button"
+              className="exp-desk-page-btn"
+              disabled={safePage >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              aria-label="Next page"
+            >
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
           </div>
-        )}
+        </div>
       </section>
+
+      {rowMenu ? (
+        <ExpenseRowActionsMenu
+          menu={rowMenu}
+          onClose={closeRowMenu}
+          deleting={deletingDraftId === rowMenu.id}
+          onView={(expense) => {
+            setSelectedId(Number(expense.id) || 0);
+            setPreviewExpense(expense);
+          }}
+          onEdit={(expense) => {
+            setPreviewExpense(null);
+            setRecordModal({ editId: expense.id });
+          }}
+          onDelete={handleDeleteDraft}
+        />
+      ) : null}
 
       {recordModal ? (
         <ExpenseCreatePage
@@ -1144,6 +1472,15 @@ export default function ExpensesDeskPage() {
           }}
         />
       ) : null}
+
+      <ExportRangeModal
+        open={exportModalOpen}
+        format={exportFormat}
+        exporting={exportFormat === 'excel' ? exportingExcel : exportingPdf}
+        error={exportModalError}
+        onClose={closeExportModal}
+        onExport={handleExportRange}
+      />
     </div>
   );
 }

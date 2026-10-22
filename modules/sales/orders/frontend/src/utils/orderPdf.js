@@ -196,8 +196,8 @@ export function choosePdfSliceHeight(sourceY, maxSlice, totalHeight, bands) {
   for (let i = 0; i < bands.length; i += 1) {
     const band = bands[i];
     if (band.bottom <= sourceY + 1) continue;
-    if (band.top >= hardEnd - 1) break;
-    if (band.top < hardEnd - 1 && band.bottom > hardEnd + 1) {
+    if (band.top >= hardEnd) break;
+    if (band.top < hardEnd && band.bottom > hardEnd) {
       cutBand = band;
       break;
     }
@@ -209,24 +209,25 @@ export function choosePdfSliceHeight(sourceY, maxSlice, totalHeight, bands) {
   let bestBottom = 0;
   for (let i = 0; i < bands.length; i += 1) {
     const bottom = bands[i].bottom;
-    if (bottom > sourceY + 2 && bottom <= cutBand.top + 1 && bottom <= hardEnd) {
-      bestBottom = bottom;
+    if (bottom > sourceY + 2 && bottom <= cutBand.top + 0.5 && bottom <= hardEnd) {
+      bestBottom = Math.max(bestBottom, bottom);
     }
   }
   if (bestBottom > sourceY) {
     return bestBottom - sourceY;
   }
   if (cutBand.top - sourceY > 8) {
-    return cutBand.top - sourceY;
+    return Math.max(1, cutBand.top - sourceY);
   }
   return Math.max(1, hardEnd - sourceY);
 }
 
 function orderPdfScaleBands(bands, pixelScale) {
+  const pad = Math.max(1, Math.round(pixelScale));
   return bands
     .map((band) => ({
-      top: band.top * pixelScale,
-      bottom: band.bottom * pixelScale,
+      top: (band.top * pixelScale) - pad,
+      bottom: (band.bottom * pixelScale) + pad,
     }))
     .filter((band) => band.bottom > band.top + 0.5)
     .sort((a, b) => a.top - b.top);
@@ -319,6 +320,9 @@ async function orderPdfElementToCanvas(el, options = {}) {
   await orderPdfWaitForAssets();
 
   const desktopCapture = document.documentElement.classList.contains('ov-pdf-desktop-capture');
+  let layoutFromClone = null;
+  const marker = `pdf-cap-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  el.setAttribute('data-pdf-capture', marker);
   const html2canvasOpts = {
     scale: options.scale || orderPdfCaptureScale(el),
     logging: false,
@@ -327,7 +331,7 @@ async function orderPdfElementToCanvas(el, options = {}) {
     scrollY: -window.scrollY,
     windowWidth: desktopCapture ? Math.max(el.scrollWidth, 1100) : el.scrollWidth,
     windowHeight: desktopCapture ? Math.max(el.scrollHeight, el.offsetHeight, 1400) : el.scrollHeight,
-    onclone: (clonedDoc) => {
+    onclone: (clonedDoc, clonedEl) => {
       orderPdfPrepareCloneForCapture(clonedDoc);
       if (desktopCapture) {
         clonedDoc.documentElement.classList.add('ov-pdf-desktop-capture');
@@ -340,6 +344,11 @@ async function orderPdfElementToCanvas(el, options = {}) {
       if (stripImages) {
         clonedDoc.querySelectorAll('img').forEach((img) => img.remove());
       }
+      const root = clonedEl
+        || clonedDoc.querySelector(`[data-pdf-capture="${marker}"]`)
+        || (el.id ? clonedDoc.getElementById(el.id) : null)
+        || clonedDoc.body;
+      layoutFromClone = orderPdfMeasureLayout(root);
     },
   };
 
@@ -349,18 +358,20 @@ async function orderPdfElementToCanvas(el, options = {}) {
     html2canvasOpts.useCORS = true;
   }
 
-  return window.html2canvas(el, html2canvasOpts);
+  try {
+    const canvas = await window.html2canvas(el, html2canvasOpts);
+    return { canvas, layout: layoutFromClone || orderPdfMeasureLayout(el) };
+  } finally {
+    el.removeAttribute('data-pdf-capture');
+  }
 }
 
 async function orderPdfElementToCanvasWithFallback(el) {
-  const layout = orderPdfMeasureLayout(el);
   try {
-    const canvas = await orderPdfElementToCanvas(el);
-    return { canvas, layout };
+    return await orderPdfElementToCanvas(el);
   } catch (firstErr) {
     try {
-      const canvas = await orderPdfElementToCanvas(el, { stripImages: true, scale: 2 });
-      return { canvas, layout };
+      return await orderPdfElementToCanvas(el, { stripImages: true, scale: 2 });
     } catch (secondErr) {
       throw secondErr || firstErr;
     }

@@ -148,8 +148,8 @@ function pickSliceEnd(sourceY, maxEnd, bands) {
   for (let i = 0; i < bands.length; i += 1) {
     const band = bands[i];
     if (band.bottom <= sourceY + 1) continue;
-    if (band.top >= maxEnd - 1) break;
-    if (band.top < maxEnd - 1 && band.bottom > maxEnd + 1) {
+    if (band.top >= maxEnd) break;
+    if (band.top < maxEnd && band.bottom > maxEnd) {
       cutBand = band;
       break;
     }
@@ -159,12 +159,12 @@ function pickSliceEnd(sourceY, maxEnd, bands) {
   let bestBottom = 0;
   for (let i = 0; i < bands.length; i += 1) {
     const bottom = bands[i].bottom;
-    if (bottom > sourceY + 2 && bottom <= cutBand.top + 1 && bottom <= maxEnd) {
-      bestBottom = bottom;
+    if (bottom > sourceY + 2 && bottom <= cutBand.top + 0.5 && bottom <= maxEnd) {
+      bestBottom = Math.max(bestBottom, bottom);
     }
   }
   if (bestBottom > sourceY) return bestBottom;
-  if (cutBand.top - sourceY > 8) return cutBand.top;
+  if (cutBand.top - sourceY > 8) return Math.max(sourceY + 1, cutBand.top);
   return maxEnd;
 }
 

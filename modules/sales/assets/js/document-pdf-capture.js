@@ -180,7 +180,16 @@
         '.invoice-header, .sheet-header, .doc-terms-section, .terms-block, .signature-block, .quot-bank-details, .document-footer-closing'
       ).forEach(pushEl);
 
-      return bands.sort(function (a, b) { return a.top - b.top || a.bottom - b.bottom; });
+      var pad = Math.max(1, Math.round(scaleY));
+      return bands
+        .map(function (b) {
+          return {
+            top: Math.max(0, b.top - pad),
+            bottom: Math.min(canvas.height, b.bottom + pad),
+          };
+        })
+        .filter(function (b) { return b.bottom > b.top + 1; })
+        .sort(function (a, b) { return a.top - b.top || a.bottom - b.bottom; });
     } finally {
       restored.forEach(function (entry) {
         entry[0].style.minHeight = entry[1];
@@ -200,8 +209,8 @@
     for (var i = 0; i < bands.length; i += 1) {
       var band = bands[i];
       if (band.bottom <= sourceY + 1) continue;
-      if (band.top >= maxEnd - 1) break;
-      if (band.top < maxEnd - 1 && band.bottom > maxEnd + 1) {
+      if (band.top >= maxEnd) break;
+      if (band.top < maxEnd && band.bottom > maxEnd) {
         cutBand = band;
         break;
       }
@@ -211,12 +220,12 @@
     var bestBottom = 0;
     for (var j = 0; j < bands.length; j += 1) {
       var bottom = bands[j].bottom;
-      if (bottom > sourceY + 2 && bottom <= cutBand.top + 1 && bottom <= maxEnd) {
-        bestBottom = bottom;
+      if (bottom > sourceY + 2 && bottom <= cutBand.top + 0.5 && bottom <= maxEnd) {
+        if (bottom > bestBottom) bestBottom = bottom;
       }
     }
     if (bestBottom > sourceY) return bestBottom;
-    if (cutBand.top - sourceY > 8) return cutBand.top;
+    if (cutBand.top - sourceY > 8) return Math.max(sourceY + 1, cutBand.top);
     return maxEnd;
   }
 

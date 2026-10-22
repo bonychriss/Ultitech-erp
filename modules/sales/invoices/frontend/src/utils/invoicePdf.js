@@ -147,6 +147,77 @@ async function invoicePdfWaitForAssets() {
   }));
 }
 
+/**
+ * Measure avoid-bands in CSS px relative to rootEl (call on the html2canvas clone).
+ */
+function measureAvoidBandsCss(rootEl) {
+  if (!rootEl) return { cssHeight: 1, bands: [] };
+  const rootRect = rootEl.getBoundingClientRect();
+  const cssHeight = Math.max(1, rootEl.scrollHeight, rootEl.offsetHeight, rootRect.height);
+  const bands = [];
+  const seen = new Set();
+
+  const pushBox = (top, bottom) => {
+    if (!(bottom - top >= 2)) return;
+    bands.push({ top, bottom });
+  };
+
+  const pushEl = (node) => {
+    if (!node || seen.has(node)) return;
+    seen.add(node);
+    const r = node.getBoundingClientRect();
+    pushBox(r.top - rootRect.top, r.bottom - rootRect.top);
+  };
+
+  rootEl.querySelectorAll(
+    '.o-table tbody tr, .o-table thead tr, .items-table tbody tr, .items-table thead tr, .product-grid-item, .catalog-item',
+  ).forEach(pushEl);
+
+  // Keep totals + payment details + closing line together when possible.
+  rootEl.querySelectorAll('.o-totals-table').forEach((table) => {
+    const wrap = table.parentElement && table.parentElement.tagName === 'DIV'
+      ? table.parentElement
+      : table;
+    let bottomEl = wrap;
+    let sib = wrap.nextElementSibling;
+    while (sib) {
+      if (
+        sib.classList?.contains('quot-bank-details')
+        || sib.classList?.contains('document-footer-closing')
+        || sib.classList?.contains('avoid-break')
+      ) {
+        bottomEl = sib;
+        sib = sib.nextElementSibling;
+        continue;
+      }
+      break;
+    }
+    const topR = wrap.getBoundingClientRect();
+    const botR = bottomEl.getBoundingClientRect();
+    pushBox(topR.top - rootRect.top, botR.bottom - rootRect.top);
+  });
+
+  rootEl.querySelectorAll(
+    '.invoice-header, .sheet-header, .doc-terms-section, .terms-block, .signature-block, .quot-bank-details, .document-footer-closing',
+  ).forEach(pushEl);
+
+  bands.sort((a, b) => a.top - b.top || a.bottom - b.bottom);
+  return { cssHeight, bands };
+}
+
+function scaleAvoidBands(measured, canvas) {
+  if (!measured || !canvas || !canvas.height) return [];
+  const scaleY = canvas.height / Math.max(1, measured.cssHeight || 1);
+  const pad = Math.max(1, Math.round(scaleY)); // ~1 CSS px — catches letter tips
+  return (measured.bands || [])
+    .map((b) => ({
+      top: Math.max(0, Math.round(b.top * scaleY) - pad),
+      bottom: Math.min(canvas.height, Math.round(b.bottom * scaleY) + pad),
+    }))
+    .filter((b) => b.bottom > b.top + 1)
+    .sort((a, b) => a.top - b.top || a.bottom - b.bottom);
+}
+
 async function invoicePdfElementToCanvas(el, options = {}) {
   const stripImages = options.stripImages === true;
   if (!el) throw new Error('Nothing to capture for PDF.');
@@ -162,6 +233,9 @@ async function invoicePdfElementToCanvas(el, options = {}) {
 
   await invoicePdfWaitForAssets();
 
+  let measured = { cssHeight: 1, bands: [] };
+  const marker = `pdf-cap-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  el.setAttribute('data-pdf-capture', marker);
   const html2canvasOpts = {
     scale: options.scale || 2,
     logging: false,
@@ -170,11 +244,16 @@ async function invoicePdfElementToCanvas(el, options = {}) {
     scrollY: -window.scrollY,
     windowWidth: el.scrollWidth,
     windowHeight: el.scrollHeight,
-    onclone: (clonedDoc) => {
+    onclone: (clonedDoc, clonedEl) => {
       invoicePdfPrepareCloneForCapture(clonedDoc);
       if (stripImages) {
         clonedDoc.querySelectorAll('img').forEach((img) => img.remove());
       }
+      const root = clonedEl
+        || clonedDoc.querySelector(`[data-pdf-capture="${marker}"]`)
+        || (el.id ? clonedDoc.getElementById(el.id) : null)
+        || clonedDoc.body;
+      measured = measureAvoidBandsCss(root);
     },
   };
 
@@ -184,7 +263,12 @@ async function invoicePdfElementToCanvas(el, options = {}) {
     html2canvasOpts.useCORS = true;
   }
 
-  return window.html2canvas(el, html2canvasOpts);
+  try {
+    const canvas = await window.html2canvas(el, html2canvasOpts);
+    return { canvas, bands: scaleAvoidBands(measured, canvas) };
+  } finally {
+    el.removeAttribute('data-pdf-capture');
+  }
 }
 
 async function invoicePdfElementToCanvasWithFallback(el) {
@@ -208,93 +292,9 @@ function canvasSliceToDataUrl(tempCanvas, jpegQuality) {
 }
 
 /**
- * Avoid-bands (canvas px) for rows / keep-together blocks. Page slices may end
- * anywhere except mid-band — only retreat when hardEnd would cut a band.
+ * Only shorten the page when hardEnd would cut through a row/block.
+ * Otherwise use the full page window (avoids blank-page orphans).
  */
-function collectAvoidBands(rootEl, canvas) {
-  if (!rootEl || !canvas || !canvas.width || !canvas.height) return [];
-
-  const restored = [];
-  rootEl.querySelectorAll('.sheet, .doc-terms-sheet-inner, .sheet-container').forEach((node) => {
-    restored.push([node, node.style.minHeight, node.style.height]);
-    node.style.minHeight = 'auto';
-    node.style.height = 'auto';
-  });
-
-  try {
-    const rootRect = rootEl.getBoundingClientRect();
-    const cssH = Math.max(1, rootEl.scrollHeight, rootEl.offsetHeight, rootRect.height);
-    const scaleY = canvas.height / cssH;
-    const bands = [];
-    const seen = new Set();
-
-    const pushEl = (el) => {
-      if (!el || seen.has(el)) return;
-      seen.add(el);
-      const r = el.getBoundingClientRect();
-      const top = Math.round((r.top - rootRect.top) * scaleY);
-      const bottom = Math.round((r.bottom - rootRect.top) * scaleY);
-      if (bottom - top < 2) return;
-      if (bottom <= 1 || top >= canvas.height - 1) return;
-      bands.push({
-        top: Math.max(0, top),
-        bottom: Math.min(canvas.height, bottom),
-      });
-    };
-
-    rootEl.querySelectorAll(
-      '.o-table tbody tr, .o-table thead tr, .items-table tbody tr, .items-table thead tr, .product-grid-item, .catalog-item',
-    ).forEach(pushEl);
-
-    // Keep totals + payment details + closing line on the same page when possible.
-    rootEl.querySelectorAll('.o-totals-table').forEach((table) => {
-      const wrap = table.parentElement && table.parentElement.tagName === 'DIV'
-        ? table.parentElement
-        : table;
-      let bottomEl = wrap;
-      let sib = wrap.nextElementSibling;
-      while (sib) {
-        if (
-          sib.classList?.contains('quot-bank-details')
-          || sib.classList?.contains('document-footer-closing')
-          || sib.classList?.contains('avoid-break')
-        ) {
-          bottomEl = sib;
-          sib = sib.nextElementSibling;
-          continue;
-        }
-        break;
-      }
-      const topR = wrap.getBoundingClientRect();
-      const botR = bottomEl.getBoundingClientRect();
-      const top = Math.round((topR.top - rootRect.top) * scaleY);
-      const bottom = Math.round((botR.bottom - rootRect.top) * scaleY);
-      if (bottom - top >= 2 && bottom > 1 && top < canvas.height - 1) {
-        bands.push({
-          top: Math.max(0, top),
-          bottom: Math.min(canvas.height, bottom),
-        });
-      }
-    });
-
-    rootEl.querySelectorAll(
-      '.invoice-header, .sheet-header, .doc-terms-section, .terms-block, .signature-block, .quot-bank-details, .document-footer-closing',
-    ).forEach(pushEl);
-
-    return bands.sort((a, b) => a.top - b.top || a.bottom - b.bottom);
-  } finally {
-    restored.forEach(([node, minHeight, height]) => {
-      node.style.minHeight = minHeight;
-      node.style.height = height;
-    });
-  }
-}
-
-/** @deprecated use collectAvoidBands — kept for call sites expecting Y bottoms */
-function collectSafeBreakYs(rootEl, canvas) {
-  return collectAvoidBands(rootEl, canvas).map((b) => b.bottom);
-}
-
 function pickSliceEnd(sourceY, maxEnd, bands) {
   if (!Array.isArray(bands) || !bands.length) return maxEnd;
 
@@ -302,28 +302,24 @@ function pickSliceEnd(sourceY, maxEnd, bands) {
   for (let i = 0; i < bands.length; i += 1) {
     const band = bands[i];
     if (band.bottom <= sourceY + 1) continue;
-    if (band.top >= maxEnd - 1) break;
-    if (band.top < maxEnd - 1 && band.bottom > maxEnd + 1) {
+    if (band.top >= maxEnd) break;
+    // Any straddle: page edge lands inside this band.
+    if (band.top < maxEnd && band.bottom > maxEnd) {
       cutBand = band;
       break;
     }
   }
   if (!cutBand) return maxEnd;
 
-  // Prefer ending at the last completed band bottom before the cut.
   let bestBottom = 0;
   for (let i = 0; i < bands.length; i += 1) {
     const bottom = bands[i].bottom;
-    if (bottom > sourceY + 2 && bottom <= cutBand.top + 1 && bottom <= maxEnd) {
-      bestBottom = bottom;
+    if (bottom > sourceY + 2 && bottom <= cutBand.top + 0.5 && bottom <= maxEnd) {
+      bestBottom = Math.max(bestBottom, bottom);
     }
   }
   if (bestBottom > sourceY) return bestBottom;
-
-  // Otherwise start the overflowing band on the next page.
-  if (cutBand.top - sourceY > 8) return cutBand.top;
-
-  // Band taller than the remaining page — unavoidable mid-band cut.
+  if (cutBand.top - sourceY > 8) return Math.max(sourceY + 1, cutBand.top);
   return maxEnd;
 }
 
@@ -416,18 +412,17 @@ async function appendInvoiceElementsToPdf(doc, elements, jpegQuality, onProgress
       onProgress(blockStart, `Capturing page ${index + 1} of ${total}...`);
     }
 
-    const canvas = await invoicePdfElementToCanvasWithFallback(el);
-    const bands = collectAvoidBands(el, canvas);
+    const captured = await invoicePdfElementToCanvasWithFallback(el);
 
     if (onProgress) {
       onProgress(captureDone, `Building PDF page ${index + 1} of ${total}...`);
     }
 
-    appendRasterCanvasToPdf(doc, canvas, jpegQuality, (sliceRatio) => {
+    appendRasterCanvasToPdf(doc, captured.canvas, jpegQuality, (sliceRatio) => {
       if (!onProgress) return;
       const slicePct = captureDone + ((blockEnd - captureDone) * sliceRatio);
       onProgress(slicePct, `Assembling page ${index + 1} of ${total}...`);
-    }, { startOnNewPage: index > 0, bands });
+    }, { startOnNewPage: index > 0, bands: captured.bands });
 
     if (onProgress) {
       onProgress(blockEnd, `Page ${index + 1} of ${total} ready`);
@@ -462,12 +457,11 @@ export async function generateInvoicePdf(displayInvoiceNumber, onProgress) {
 
   if (catalogElement && catalogElement.offsetHeight > 0) {
     report(74, 'Capturing product catalog...');
-    const catalogCanvas = await invoicePdfElementToCanvasWithFallback(catalogElement);
-    const catalogBands = collectAvoidBands(catalogElement, catalogCanvas);
+    const catalogCaptured = await invoicePdfElementToCanvasWithFallback(catalogElement);
     report(82, 'Building catalog pages...');
-    appendRasterCanvasToPdf(doc, catalogCanvas, 0.93, (sliceRatio) => {
+    appendRasterCanvasToPdf(doc, catalogCaptured.canvas, 0.93, (sliceRatio) => {
       report(82 + (10 * sliceRatio), 'Assembling catalog pages...');
-    }, { startOnNewPage: true, bands: catalogBands });
+    }, { startOnNewPage: true, bands: catalogCaptured.bands });
     report(92, 'Catalog added');
   }
 

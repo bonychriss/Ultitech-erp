@@ -118,6 +118,7 @@ const ORDER_PDF_BLOCK_SELECTOR = [
   '.spare-bottom-info',
   '.totals-area',
   '.quot-bank-details',
+  '.document-footer-closing',
   '.doc-terms',
   '.terms-block',
   '.signature-block',
@@ -181,8 +182,9 @@ export function orderPdfMeasureLayout(el) {
 }
 
 /**
- * Pick a page-slice height that ends on a completed row/block bottom so
- * descriptions are not cut mid-text (same idea as invoice/delivery-note PDFs).
+ * Only shorten a page when hardEnd would cut through a row/block band.
+ * Otherwise use the full page window so totals/payment are not orphaned
+ * onto the next page with a large empty gap.
  */
 export function choosePdfSliceHeight(sourceY, maxSlice, totalHeight, bands) {
   const hardEnd = Math.min(sourceY + maxSlice, totalHeight);
@@ -190,24 +192,33 @@ export function choosePdfSliceHeight(sourceY, maxSlice, totalHeight, bands) {
     return Math.max(1, totalHeight - sourceY);
   }
 
+  let cutBand = null;
+  for (let i = 0; i < bands.length; i += 1) {
+    const band = bands[i];
+    if (band.bottom <= sourceY + 1) continue;
+    if (band.top >= hardEnd - 1) break;
+    if (band.top < hardEnd - 1 && band.bottom > hardEnd + 1) {
+      cutBand = band;
+      break;
+    }
+  }
+  if (!cutBand) {
+    return Math.max(1, hardEnd - sourceY);
+  }
+
   let bestBottom = 0;
   for (let i = 0; i < bands.length; i += 1) {
     const bottom = bands[i].bottom;
-    if (bottom > sourceY + 2 && bottom <= hardEnd) {
+    if (bottom > sourceY + 2 && bottom <= cutBand.top + 1 && bottom <= hardEnd) {
       bestBottom = bottom;
     }
   }
   if (bestBottom > sourceY) {
     return bestBottom - sourceY;
   }
-
-  for (let i = 0; i < bands.length; i += 1) {
-    const band = bands[i];
-    if (band.top > sourceY + 2 && band.top < hardEnd && band.bottom > hardEnd) {
-      return Math.max(1, band.top - sourceY);
-    }
+  if (cutBand.top - sourceY > 8) {
+    return cutBand.top - sourceY;
   }
-
   return Math.max(1, hardEnd - sourceY);
 }
 

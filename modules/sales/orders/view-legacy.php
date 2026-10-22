@@ -1550,12 +1550,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 const catalogElement = document.getElementById('catalog-content');
                 if (catalogElement && catalogElement.offsetHeight > 0) {
                     const catalogCanvas = await orderPdfElementToCanvas(catalogElement);
-                    const breakYs = window.SalesDocumentPdfCapture
-                        ? window.SalesDocumentPdfCapture.collectSafeBreakYs(catalogElement, catalogCanvas)
+                    const bands = window.SalesDocumentPdfCapture
+                        ? window.SalesDocumentPdfCapture.collectAvoidBands(catalogElement, catalogCanvas)
                         : [];
                     appendRasterCanvasToPdf(doc, catalogCanvas, 0.93, {
                         startOnNewPage: true,
-                        breakYs,
+                        bands,
                     });
                 }
 
@@ -1652,12 +1652,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 const catalogElement = document.getElementById('catalog-content');
                 if (catalogElement && catalogElement.offsetHeight > 0) {
                     const catalogCanvas = await orderPdfElementToCanvas(catalogElement);
-                    const breakYs = window.SalesDocumentPdfCapture
-                        ? window.SalesDocumentPdfCapture.collectSafeBreakYs(catalogElement, catalogCanvas)
+                    const bands = window.SalesDocumentPdfCapture
+                        ? window.SalesDocumentPdfCapture.collectAvoidBands(catalogElement, catalogCanvas)
                         : [];
                     appendRasterCanvasToPdf(doc, catalogCanvas, 0.93, {
                         startOnNewPage: true,
-                        breakYs,
+                        bands,
                     });
                 }
                 

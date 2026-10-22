@@ -111,39 +111,113 @@
     };
   }
 
-  function collectSafeBreakYs(rootEl, canvas) {
-    if (!rootEl || !canvas || !canvas.width) return [];
-    var rootRect = rootEl.getBoundingClientRect();
-    var cssW = Math.max(1, rootEl.scrollWidth || rootEl.offsetWidth || rootRect.width);
-    var scale = canvas.width / cssW;
-    var breaks = [];
+  function collectAvoidBands(rootEl, canvas) {
+    if (!rootEl || !canvas || !canvas.width || !canvas.height) return [];
 
-    function pushBottom(el) {
-      if (!el) return;
-      var r = el.getBoundingClientRect();
-      var bottom = Math.round((r.bottom - rootRect.top) * scale);
-      if (bottom > 1 && bottom < canvas.height - 1) {
-        breaks.push(bottom);
+    var restored = [];
+    rootEl.querySelectorAll('.sheet, .doc-terms-sheet-inner, .sheet-container').forEach(function (node) {
+      restored.push([node, node.style.minHeight, node.style.height]);
+      node.style.minHeight = 'auto';
+      node.style.height = 'auto';
+    });
+
+    try {
+      var rootRect = rootEl.getBoundingClientRect();
+      var cssH = Math.max(1, rootEl.scrollHeight, rootEl.offsetHeight, rootRect.height);
+      var scaleY = canvas.height / cssH;
+      var bands = [];
+      var seen = new Set();
+
+      function pushEl(el) {
+        if (!el || seen.has(el)) return;
+        seen.add(el);
+        var r = el.getBoundingClientRect();
+        var top = Math.round((r.top - rootRect.top) * scaleY);
+        var bottom = Math.round((r.bottom - rootRect.top) * scaleY);
+        if (bottom - top < 2) return;
+        if (bottom <= 1 || top >= canvas.height - 1) return;
+        bands.push({
+          top: Math.max(0, top),
+          bottom: Math.min(canvas.height, bottom),
+        });
       }
+
+      rootEl.querySelectorAll(
+        '.o-table tbody tr, .o-table thead tr, .items-table tbody tr, .items-table thead tr, .product-grid-item, .catalog-item'
+      ).forEach(pushEl);
+
+      rootEl.querySelectorAll('.o-totals-table').forEach(function (table) {
+        var wrap = table.parentElement && table.parentElement.tagName === 'DIV'
+          ? table.parentElement
+          : table;
+        var bottomEl = wrap;
+        var sib = wrap.nextElementSibling;
+        while (sib) {
+          if (
+            (sib.classList && sib.classList.contains('quot-bank-details'))
+            || (sib.classList && sib.classList.contains('document-footer-closing'))
+            || (sib.classList && sib.classList.contains('avoid-break'))
+          ) {
+            bottomEl = sib;
+            sib = sib.nextElementSibling;
+            continue;
+          }
+          break;
+        }
+        var topR = wrap.getBoundingClientRect();
+        var botR = bottomEl.getBoundingClientRect();
+        var top = Math.round((topR.top - rootRect.top) * scaleY);
+        var bottom = Math.round((botR.bottom - rootRect.top) * scaleY);
+        if (bottom - top >= 2 && bottom > 1 && top < canvas.height - 1) {
+          bands.push({
+            top: Math.max(0, top),
+            bottom: Math.min(canvas.height, bottom),
+          });
+        }
+      });
+
+      rootEl.querySelectorAll(
+        '.invoice-header, .sheet-header, .doc-terms-section, .terms-block, .signature-block, .quot-bank-details, .document-footer-closing'
+      ).forEach(pushEl);
+
+      return bands.sort(function (a, b) { return a.top - b.top || a.bottom - b.bottom; });
+    } finally {
+      restored.forEach(function (entry) {
+        entry[0].style.minHeight = entry[1];
+        entry[0].style.height = entry[2];
+      });
     }
-
-    rootEl.querySelectorAll('.o-table tr, .items-table tr, .product-grid-item, .catalog-item').forEach(pushBottom);
-    rootEl.querySelectorAll(
-      '.invoice-header, .sheet-header, .o-totals-table, .doc-terms, .terms-block, .signature-block'
-    ).forEach(pushBottom);
-
-    return Array.from(new Set(breaks)).sort(function (a, b) { return a - b; });
   }
 
-  function pickSliceEnd(sourceY, maxEnd, breaks) {
-    var best = 0;
-    for (var i = 0; i < breaks.length; i += 1) {
-      var b = breaks[i];
-      if (b > sourceY + 2 && b <= maxEnd) {
-        best = b;
+  function collectSafeBreakYs(rootEl, canvas) {
+    return collectAvoidBands(rootEl, canvas).map(function (b) { return b.bottom; });
+  }
+
+  function pickSliceEnd(sourceY, maxEnd, bands) {
+    if (!Array.isArray(bands) || !bands.length) return maxEnd;
+
+    var cutBand = null;
+    for (var i = 0; i < bands.length; i += 1) {
+      var band = bands[i];
+      if (band.bottom <= sourceY + 1) continue;
+      if (band.top >= maxEnd - 1) break;
+      if (band.top < maxEnd - 1 && band.bottom > maxEnd + 1) {
+        cutBand = band;
+        break;
       }
     }
-    return best > sourceY ? best : maxEnd;
+    if (!cutBand) return maxEnd;
+
+    var bestBottom = 0;
+    for (var j = 0; j < bands.length; j += 1) {
+      var bottom = bands[j].bottom;
+      if (bottom > sourceY + 2 && bottom <= cutBand.top + 1 && bottom <= maxEnd) {
+        bestBottom = bottom;
+      }
+    }
+    if (bestBottom > sourceY) return bestBottom;
+    if (cutBand.top - sourceY > 8) return cutBand.top;
+    return maxEnd;
   }
 
   function appendRasterCanvasToPdf(doc, canvas, jpegQuality, options) {
@@ -160,15 +234,30 @@
     var innerHmm = pageHmm - 2 * marginMm;
     var sliceHeightInPixels = (trimmedCanvas.width * innerHmm) / innerWmm;
     var totalHeightInPixels = trimmedCanvas.height;
-    var usableBreaks = (Array.isArray(options.breakYs) ? options.breakYs : [])
-      .filter(function (y) { return y > 0 && y <= totalHeightInPixels; })
-      .sort(function (a, b) { return a - b; });
+    var rawBands = Array.isArray(options.bands)
+      ? options.bands
+      : (Array.isArray(options.breakYs) ? options.breakYs.map(function (y) { return { top: y, bottom: y }; }) : []);
+    var usableBands = rawBands
+      .map(function (b) {
+        return {
+          top: typeof b === 'number' ? b : Number(b.top) || 0,
+          bottom: typeof b === 'number' ? b : Number(b.bottom) || 0,
+        };
+      })
+      .filter(function (b) { return b.bottom > b.top && b.bottom > 0 && b.top < totalHeightInPixels; })
+      .map(function (b) {
+        return {
+          top: Math.max(0, b.top),
+          bottom: Math.min(totalHeightInPixels, b.bottom),
+        };
+      })
+      .sort(function (a, b) { return a.top - b.top || a.bottom - b.bottom; });
     var sourceY = 0;
     var pageNum = 0;
 
     while (sourceY < totalHeightInPixels) {
       var hardEnd = Math.min(sourceY + sliceHeightInPixels, totalHeightInPixels);
-      var sliceEnd = pickSliceEnd(sourceY, hardEnd, usableBreaks);
+      var sliceEnd = pickSliceEnd(sourceY, hardEnd, usableBands);
       var currentSliceHeight = Math.max(1, sliceEnd - sourceY);
       var tempCanvas = document.createElement('canvas');
       tempCanvas.width = trimmedCanvas.width;
@@ -211,7 +300,7 @@
       appendRasterCanvasToPdf(doc, canvas, jpegQuality, {
         marginMm: options.marginMm,
         startOnNewPage: index > 0,
-        breakYs: collectSafeBreakYs(el, canvas),
+        bands: collectAvoidBands(el, canvas),
       });
     }
   }
@@ -219,6 +308,7 @@
   global.SalesDocumentPdfCapture = {
     captureElements: captureElements,
     elementToCanvasOptions: elementToCanvasOptions,
+    collectAvoidBands: collectAvoidBands,
     collectSafeBreakYs: collectSafeBreakYs,
     appendRasterCanvasToPdf: appendRasterCanvasToPdf,
     appendElementsToPdf: appendElementsToPdf,

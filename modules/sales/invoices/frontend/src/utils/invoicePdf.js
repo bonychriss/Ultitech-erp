@@ -208,42 +208,123 @@ function canvasSliceToDataUrl(tempCanvas, jpegQuality) {
 }
 
 /**
- * Canvas Y positions at bottoms of invoice line rows / catalog cards so page
- * slices do not cut through a description mid-text.
+ * Avoid-bands (canvas px) for rows / keep-together blocks. Page slices may end
+ * anywhere except mid-band — only retreat when hardEnd would cut a band.
  */
-function collectSafeBreakYs(rootEl, canvas) {
-  if (!rootEl || !canvas || !canvas.width) return [];
-  const rootRect = rootEl.getBoundingClientRect();
-  const cssW = Math.max(1, rootEl.scrollWidth || rootEl.offsetWidth || rootRect.width);
-  const scale = canvas.width / cssW;
-  const breaks = [];
+function collectAvoidBands(rootEl, canvas) {
+  if (!rootEl || !canvas || !canvas.width || !canvas.height) return [];
 
-  const pushBottom = (el) => {
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const bottom = Math.round((r.bottom - rootRect.top) * scale);
-    if (bottom > 1 && bottom < canvas.height - 1) {
-      breaks.push(bottom);
-    }
-  };
+  const restored = [];
+  rootEl.querySelectorAll('.sheet, .doc-terms-sheet-inner, .sheet-container').forEach((node) => {
+    restored.push([node, node.style.minHeight, node.style.height]);
+    node.style.minHeight = 'auto';
+    node.style.height = 'auto';
+  });
 
-  rootEl.querySelectorAll('.o-table tr, .items-table tr, .product-grid-item, .catalog-item').forEach(pushBottom);
-  rootEl.querySelectorAll(
-    '.invoice-header, .sheet-header, .o-totals-table, .doc-terms, .terms-block, .signature-block',
-  ).forEach(pushBottom);
+  try {
+    const rootRect = rootEl.getBoundingClientRect();
+    const cssH = Math.max(1, rootEl.scrollHeight, rootEl.offsetHeight, rootRect.height);
+    const scaleY = canvas.height / cssH;
+    const bands = [];
+    const seen = new Set();
 
-  return [...new Set(breaks)].sort((a, b) => a - b);
+    const pushEl = (el) => {
+      if (!el || seen.has(el)) return;
+      seen.add(el);
+      const r = el.getBoundingClientRect();
+      const top = Math.round((r.top - rootRect.top) * scaleY);
+      const bottom = Math.round((r.bottom - rootRect.top) * scaleY);
+      if (bottom - top < 2) return;
+      if (bottom <= 1 || top >= canvas.height - 1) return;
+      bands.push({
+        top: Math.max(0, top),
+        bottom: Math.min(canvas.height, bottom),
+      });
+    };
+
+    rootEl.querySelectorAll(
+      '.o-table tbody tr, .o-table thead tr, .items-table tbody tr, .items-table thead tr, .product-grid-item, .catalog-item',
+    ).forEach(pushEl);
+
+    // Keep totals + payment details + closing line on the same page when possible.
+    rootEl.querySelectorAll('.o-totals-table').forEach((table) => {
+      const wrap = table.parentElement && table.parentElement.tagName === 'DIV'
+        ? table.parentElement
+        : table;
+      let bottomEl = wrap;
+      let sib = wrap.nextElementSibling;
+      while (sib) {
+        if (
+          sib.classList?.contains('quot-bank-details')
+          || sib.classList?.contains('document-footer-closing')
+          || sib.classList?.contains('avoid-break')
+        ) {
+          bottomEl = sib;
+          sib = sib.nextElementSibling;
+          continue;
+        }
+        break;
+      }
+      const topR = wrap.getBoundingClientRect();
+      const botR = bottomEl.getBoundingClientRect();
+      const top = Math.round((topR.top - rootRect.top) * scaleY);
+      const bottom = Math.round((botR.bottom - rootRect.top) * scaleY);
+      if (bottom - top >= 2 && bottom > 1 && top < canvas.height - 1) {
+        bands.push({
+          top: Math.max(0, top),
+          bottom: Math.min(canvas.height, bottom),
+        });
+      }
+    });
+
+    rootEl.querySelectorAll(
+      '.invoice-header, .sheet-header, .doc-terms-section, .terms-block, .signature-block, .quot-bank-details, .document-footer-closing',
+    ).forEach(pushEl);
+
+    return bands.sort((a, b) => a.top - b.top || a.bottom - b.bottom);
+  } finally {
+    restored.forEach(([node, minHeight, height]) => {
+      node.style.minHeight = minHeight;
+      node.style.height = height;
+    });
+  }
 }
 
-function pickSliceEnd(sourceY, maxEnd, breaks) {
-  let best = 0;
-  for (let i = 0; i < breaks.length; i += 1) {
-    const b = breaks[i];
-    if (b > sourceY + 2 && b <= maxEnd) {
-      best = b;
+/** @deprecated use collectAvoidBands — kept for call sites expecting Y bottoms */
+function collectSafeBreakYs(rootEl, canvas) {
+  return collectAvoidBands(rootEl, canvas).map((b) => b.bottom);
+}
+
+function pickSliceEnd(sourceY, maxEnd, bands) {
+  if (!Array.isArray(bands) || !bands.length) return maxEnd;
+
+  let cutBand = null;
+  for (let i = 0; i < bands.length; i += 1) {
+    const band = bands[i];
+    if (band.bottom <= sourceY + 1) continue;
+    if (band.top >= maxEnd - 1) break;
+    if (band.top < maxEnd - 1 && band.bottom > maxEnd + 1) {
+      cutBand = band;
+      break;
     }
   }
-  return best > sourceY ? best : maxEnd;
+  if (!cutBand) return maxEnd;
+
+  // Prefer ending at the last completed band bottom before the cut.
+  let bestBottom = 0;
+  for (let i = 0; i < bands.length; i += 1) {
+    const bottom = bands[i].bottom;
+    if (bottom > sourceY + 2 && bottom <= cutBand.top + 1 && bottom <= maxEnd) {
+      bestBottom = bottom;
+    }
+  }
+  if (bestBottom > sourceY) return bestBottom;
+
+  // Otherwise start the overflowing band on the next page.
+  if (cutBand.top - sourceY > 8) return cutBand.top;
+
+  // Band taller than the remaining page — unavoidable mid-band cut.
+  return maxEnd;
 }
 
 function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, options = {}) {
@@ -260,9 +341,20 @@ function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, opti
 
   const sliceHeightInPixels = (trimmedCanvas.width * innerHmm) / innerWmm;
   const totalHeightInPixels = trimmedCanvas.height;
-  const usableBreaks = (Array.isArray(options.breakYs) ? options.breakYs : [])
-    .filter((y) => y > 0 && y <= totalHeightInPixels)
-    .sort((a, b) => a - b);
+  const rawBands = Array.isArray(options.bands)
+    ? options.bands
+    : (Array.isArray(options.breakYs) ? options.breakYs.map((y) => ({ top: y, bottom: y })) : []);
+  const usableBands = rawBands
+    .map((b) => ({
+      top: typeof b === 'number' ? b : Number(b.top) || 0,
+      bottom: typeof b === 'number' ? b : Number(b.bottom) || 0,
+    }))
+    .filter((b) => b.bottom > b.top && b.bottom > 0 && b.top < totalHeightInPixels)
+    .map((b) => ({
+      top: Math.max(0, b.top),
+      bottom: Math.min(totalHeightInPixels, b.bottom),
+    }))
+    .sort((a, b) => a.top - b.top || a.bottom - b.bottom);
   const totalSlices = Math.max(1, Math.ceil(totalHeightInPixels / sliceHeightInPixels));
 
   let sourceY = 0;
@@ -270,7 +362,7 @@ function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, opti
 
   while (sourceY < totalHeightInPixels) {
     const hardEnd = Math.min(sourceY + sliceHeightInPixels, totalHeightInPixels);
-    const sliceEnd = pickSliceEnd(sourceY, hardEnd, usableBreaks);
+    const sliceEnd = pickSliceEnd(sourceY, hardEnd, usableBands);
     const currentSliceHeight = Math.max(1, sliceEnd - sourceY);
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = trimmedCanvas.width;
@@ -325,7 +417,7 @@ async function appendInvoiceElementsToPdf(doc, elements, jpegQuality, onProgress
     }
 
     const canvas = await invoicePdfElementToCanvasWithFallback(el);
-    const breakYs = collectSafeBreakYs(el, canvas);
+    const bands = collectAvoidBands(el, canvas);
 
     if (onProgress) {
       onProgress(captureDone, `Building PDF page ${index + 1} of ${total}...`);
@@ -335,7 +427,7 @@ async function appendInvoiceElementsToPdf(doc, elements, jpegQuality, onProgress
       if (!onProgress) return;
       const slicePct = captureDone + ((blockEnd - captureDone) * sliceRatio);
       onProgress(slicePct, `Assembling page ${index + 1} of ${total}...`);
-    }, { startOnNewPage: index > 0, breakYs });
+    }, { startOnNewPage: index > 0, bands });
 
     if (onProgress) {
       onProgress(blockEnd, `Page ${index + 1} of ${total} ready`);
@@ -371,11 +463,11 @@ export async function generateInvoicePdf(displayInvoiceNumber, onProgress) {
   if (catalogElement && catalogElement.offsetHeight > 0) {
     report(74, 'Capturing product catalog...');
     const catalogCanvas = await invoicePdfElementToCanvasWithFallback(catalogElement);
-    const catalogBreakYs = collectSafeBreakYs(catalogElement, catalogCanvas);
+    const catalogBands = collectAvoidBands(catalogElement, catalogCanvas);
     report(82, 'Building catalog pages...');
     appendRasterCanvasToPdf(doc, catalogCanvas, 0.93, (sliceRatio) => {
       report(82 + (10 * sliceRatio), 'Assembling catalog pages...');
-    }, { startOnNewPage: true, breakYs: catalogBreakYs });
+    }, { startOnNewPage: true, bands: catalogBands });
     report(92, 'Catalog added');
   }
 

@@ -867,6 +867,7 @@ if ($brandingLogoUrl === '' && !empty($company_settings['company_logo'])) {
             vertical-align: middle;
         }
         .o-table td { padding: 10px 5px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        .o-table tr { page-break-inside: avoid; break-inside: avoid; }
         .o-table .num { text-align: right; }
         .o-table th.num { text-align: right; }
         .totals-area {

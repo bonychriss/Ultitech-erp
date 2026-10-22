@@ -122,6 +122,14 @@
 #delivery-note-content .items-table tbody tr:last-child td {
     border-bottom: 1px solid var(--border-med);
 }
+/* Keep each product row whole across page breaks (print / html2pdf). */
+#delivery-note-content .items-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+#delivery-note-content .items-table thead {
+    display: table-header-group;
+}
 #delivery-note-content .col-center { text-align: center !important; }
 #delivery-note-content .sku-cell { color: var(--text-muted); font-family: monospace; }
 #delivery-note-content .received-cell { font-family: initial; letter-spacing: 2px; color: var(--border-med); }

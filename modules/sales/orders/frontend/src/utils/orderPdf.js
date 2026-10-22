@@ -105,15 +105,22 @@ const ORDER_PDF_BLOCK_SELECTOR = [
   '.truck-table tbody tr',
   '.o-table thead tr',
   '.o-table tbody tr',
+  '.items-table thead tr',
+  '.items-table tbody tr',
   '.ov-catalog-table thead tr',
   '.ov-catalog-table tbody tr',
   '.spare-totals-table tr',
   '.truck-totals-table tr',
   '.o-totals-table tr',
+  '.product-grid-item',
+  '.catalog-item',
   '.spare-footer-area',
   '.spare-bottom-info',
   '.totals-area',
   '.quot-bank-details',
+  '.doc-terms',
+  '.terms-block',
+  '.signature-block',
   '.avoid-break',
 ].join(', ');
 
@@ -143,7 +150,8 @@ function orderPdfRelativeBox(node, rootTop) {
 export function orderPdfMeasureLayout(el) {
   const rootRect = el.getBoundingClientRect();
   const rootTop = rootRect.top;
-  const cssHeight = Math.max(rootRect.height, 1);
+  // Match html2canvas height basis so band Y → canvas px scale stays accurate.
+  const cssHeight = Math.max(el.scrollHeight, el.offsetHeight, rootRect.height, 1);
   const bands = [];
 
   el.querySelectorAll(ORDER_PDF_BLOCK_SELECTOR).forEach((node) => {
@@ -172,29 +180,35 @@ export function orderPdfMeasureLayout(el) {
   return { cssHeight, bands, tables };
 }
 
+/**
+ * Pick a page-slice height that ends on a completed row/block bottom so
+ * descriptions are not cut mid-text (same idea as invoice/delivery-note PDFs).
+ */
 export function choosePdfSliceHeight(sourceY, maxSlice, totalHeight, bands) {
   const hardEnd = Math.min(sourceY + maxSlice, totalHeight);
   if (hardEnd >= totalHeight - 0.5) {
     return Math.max(1, totalHeight - sourceY);
   }
 
-  let end = hardEnd;
-  const minAdvance = Math.max(24, maxSlice * 0.28);
+  let bestBottom = 0;
+  for (let i = 0; i < bands.length; i += 1) {
+    const bottom = bands[i].bottom;
+    if (bottom > sourceY + 2 && bottom <= hardEnd) {
+      bestBottom = bottom;
+    }
+  }
+  if (bestBottom > sourceY) {
+    return bestBottom - sourceY;
+  }
 
   for (let i = 0; i < bands.length; i += 1) {
     const band = bands[i];
-    if (band.bottom <= sourceY + 1) continue;
-    if (band.top >= hardEnd - 2) break;
-    const cutsBand = band.top < hardEnd - 2 && band.bottom > hardEnd + 2;
-    if (!cutsBand) continue;
-    if (band.top - sourceY >= minAdvance) {
-      end = Math.min(end, band.top);
+    if (band.top > sourceY + 2 && band.top < hardEnd && band.bottom > hardEnd) {
+      return Math.max(1, band.top - sourceY);
     }
   }
 
-  const height = end - sourceY;
-  if (height < 1) return Math.max(1, hardEnd - sourceY);
-  return height;
+  return Math.max(1, hardEnd - sourceY);
 }
 
 function orderPdfScaleBands(bands, pixelScale) {
@@ -366,7 +380,8 @@ function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, opti
 
   const sliceHeightInPixels = (trimmedCanvas.width * innerHmm) / innerWmm;
   const totalHeightInPixels = trimmedCanvas.height;
-  const bandsPx = orderPdfScaleBands(layout.bands || [], pixelScale);
+  const bandsPx = orderPdfScaleBands(layout.bands || [], pixelScale)
+    .filter((band) => band.bottom > 0 && band.top < totalHeightInPixels);
   const tables = layout.tables || [];
   const totalSlices = Math.max(1, Math.ceil(totalHeightInPixels / sliceHeightInPixels));
 

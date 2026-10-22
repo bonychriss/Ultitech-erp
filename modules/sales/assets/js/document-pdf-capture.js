@@ -111,6 +111,41 @@
     };
   }
 
+  function collectSafeBreakYs(rootEl, canvas) {
+    if (!rootEl || !canvas || !canvas.width) return [];
+    var rootRect = rootEl.getBoundingClientRect();
+    var cssW = Math.max(1, rootEl.scrollWidth || rootEl.offsetWidth || rootRect.width);
+    var scale = canvas.width / cssW;
+    var breaks = [];
+
+    function pushBottom(el) {
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      var bottom = Math.round((r.bottom - rootRect.top) * scale);
+      if (bottom > 1 && bottom < canvas.height - 1) {
+        breaks.push(bottom);
+      }
+    }
+
+    rootEl.querySelectorAll('.o-table tr, .items-table tr, .product-grid-item, .catalog-item').forEach(pushBottom);
+    rootEl.querySelectorAll(
+      '.invoice-header, .sheet-header, .o-totals-table, .doc-terms, .terms-block, .signature-block'
+    ).forEach(pushBottom);
+
+    return Array.from(new Set(breaks)).sort(function (a, b) { return a - b; });
+  }
+
+  function pickSliceEnd(sourceY, maxEnd, breaks) {
+    var best = 0;
+    for (var i = 0; i < breaks.length; i += 1) {
+      var b = breaks[i];
+      if (b > sourceY + 2 && b <= maxEnd) {
+        best = b;
+      }
+    }
+    return best > sourceY ? best : maxEnd;
+  }
+
   function appendRasterCanvasToPdf(doc, canvas, jpegQuality, options) {
     options = options || {};
     var trimmedCanvas = trimCanvasBottomWhitespace(canvas);
@@ -125,11 +160,16 @@
     var innerHmm = pageHmm - 2 * marginMm;
     var sliceHeightInPixels = (trimmedCanvas.width * innerHmm) / innerWmm;
     var totalHeightInPixels = trimmedCanvas.height;
+    var usableBreaks = (Array.isArray(options.breakYs) ? options.breakYs : [])
+      .filter(function (y) { return y > 0 && y <= totalHeightInPixels; })
+      .sort(function (a, b) { return a - b; });
     var sourceY = 0;
     var pageNum = 0;
 
     while (sourceY < totalHeightInPixels) {
-      var currentSliceHeight = Math.min(sliceHeightInPixels, totalHeightInPixels - sourceY);
+      var hardEnd = Math.min(sourceY + sliceHeightInPixels, totalHeightInPixels);
+      var sliceEnd = pickSliceEnd(sourceY, hardEnd, usableBreaks);
+      var currentSliceHeight = Math.max(1, sliceEnd - sourceY);
       var tempCanvas = document.createElement('canvas');
       tempCanvas.width = trimmedCanvas.width;
       tempCanvas.height = currentSliceHeight;
@@ -171,6 +211,7 @@
       appendRasterCanvasToPdf(doc, canvas, jpegQuality, {
         marginMm: options.marginMm,
         startOnNewPage: index > 0,
+        breakYs: collectSafeBreakYs(el, canvas),
       });
     }
   }
@@ -178,6 +219,7 @@
   global.SalesDocumentPdfCapture = {
     captureElements: captureElements,
     elementToCanvasOptions: elementToCanvasOptions,
+    collectSafeBreakYs: collectSafeBreakYs,
     appendRasterCanvasToPdf: appendRasterCanvasToPdf,
     appendElementsToPdf: appendElementsToPdf,
     prepareCloneForCapture: prepareCloneForCapture,

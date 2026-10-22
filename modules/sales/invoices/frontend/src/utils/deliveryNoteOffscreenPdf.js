@@ -113,7 +113,46 @@ function trimCanvasBottomWhitespace(canvas) {
   return out;
 }
 
-function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress) {
+/**
+ * Collect Y positions (canvas px) at the bottom of table rows / major blocks
+ * so PDF page slices do not cut through a product row mid-description.
+ */
+function collectSafeBreakYs(rootEl, canvas) {
+  if (!rootEl || !canvas || !canvas.width) return [];
+  const rootRect = rootEl.getBoundingClientRect();
+  const cssW = Math.max(1, rootEl.scrollWidth || rootEl.offsetWidth || rootRect.width);
+  const scale = canvas.width / cssW;
+  const breaks = [];
+
+  const pushBottom = (el) => {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const bottom = Math.round((r.bottom - rootRect.top) * scale);
+    if (bottom > 1 && bottom < canvas.height - 1) {
+      breaks.push(bottom);
+    }
+  };
+
+  rootEl.querySelectorAll('.items-table tr').forEach(pushBottom);
+  rootEl.querySelectorAll(
+    '.header-top, .doc-title-section, .meta-strip, .legal-caveat, .signatures, .signature-section, .signature-block',
+  ).forEach(pushBottom);
+
+  return [...new Set(breaks)].sort((a, b) => a - b);
+}
+
+function pickSliceEnd(sourceY, maxEnd, breaks) {
+  let best = 0;
+  for (let i = 0; i < breaks.length; i += 1) {
+    const b = breaks[i];
+    if (b > sourceY + 2 && b <= maxEnd) {
+      best = b;
+    }
+  }
+  return best > sourceY ? best : maxEnd;
+}
+
+function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, breakYs = []) {
   const trimmedCanvas = trimCanvasBottomWhitespace(canvas);
   const pageWmm = doc.internal.pageSize.getWidth();
   const pageHmm = doc.internal.pageSize.getHeight();
@@ -123,17 +162,25 @@ function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress) {
 
   const pxPerMm = trimmedCanvas.width / innerWmm;
   const pageHeightPx = Math.max(1, Math.floor(innerHmm * pxPerMm));
+  const usableBreaks = (Array.isArray(breakYs) ? breakYs : [])
+    .filter((y) => y > 0 && y <= trimmedCanvas.height)
+    .sort((a, b) => a - b);
   const totalSlices = Math.max(1, Math.ceil(trimmedCanvas.height / pageHeightPx));
 
   let sourceY = 0;
   let pageNum = 0;
 
   while (sourceY < trimmedCanvas.height) {
-    const currentSliceHeight = Math.min(pageHeightPx, trimmedCanvas.height - sourceY);
+    const hardEnd = Math.min(sourceY + pageHeightPx, trimmedCanvas.height);
+    const sliceEnd = pickSliceEnd(sourceY, hardEnd, usableBreaks);
+    const currentSliceHeight = Math.max(1, sliceEnd - sourceY);
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = trimmedCanvas.width;
     tempCanvas.height = currentSliceHeight;
-    tempCanvas.getContext('2d').drawImage(
+    const ctx = tempCanvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    ctx.drawImage(
       trimmedCanvas,
       0,
       sourceY,
@@ -203,12 +250,13 @@ export async function downloadDeliveryNotePdfFromHtml(payload, onProgress) {
 
     report(28, 'Capturing delivery note...');
     const canvas = await elementToCanvasWithFallback(captureRoot);
+    const breakYs = collectSafeBreakYs(captureRoot, canvas);
 
     report(62, 'Building PDF...');
     const doc = new JsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
     appendRasterCanvasToPdf(doc, canvas, 0.93, (ratio) => {
       report(62 + (28 * ratio), 'Assembling pages...');
-    });
+    }, breakYs);
 
     const filename = `DeliveryNote_${payload?.displayNumber || 'document'}.pdf`;
     report(95, 'Saving to your downloads folder...');

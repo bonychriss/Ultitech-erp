@@ -743,6 +743,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             vertical-align: middle;
         }
         .o-table td { padding: 10px 5px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        .o-table tr { page-break-inside: avoid; break-inside: avoid; }
         .o-table .num { text-align: right; }
         .o-table th.num { text-align: right; }
         .totals-area {
@@ -1415,6 +1416,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="<?php echo htmlspecialchars(function_exists('app_url') ? app_url('/modules/sales/assets/js/document-pdf-capture.js') : '/modules/sales/assets/js/document-pdf-capture.js', ENT_QUOTES, 'UTF-8'); ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
              window.jsPDF = window.jspdf.jsPDF;
@@ -1489,63 +1491,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             });
         }
 
-        function appendRasterCanvasToPdf(doc, canvas, jpegQuality) {
-            const marginMm = 8;
-            const pageHmm = doc.internal.pageSize.getHeight();
-            const pageWmm = doc.internal.pageSize.getWidth();
-            const innerWmm = pageWmm - 2 * marginMm;
-            const innerHmm = pageHmm - 2 * marginMm;
-
-            const sliceHeightInPixels = (canvas.width * innerHmm) / innerWmm;
-            const totalHeightInPixels = canvas.height;
-
-            let sourceY = 0;
-            let pageNum = 0;
-
-            while (sourceY < totalHeightInPixels) {
-                if (pageNum > 0) {
-                    doc.addPage();
-                }
-
-                const currentSliceHeight = Math.min(sliceHeightInPixels, totalHeightInPixels - sourceY);
-
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = canvas.width;
-                tempCanvas.height = currentSliceHeight;
-
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.fillStyle = '#ffffff';
-                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-
-                tempCtx.drawImage(
-                    canvas,
-                    0, sourceY, canvas.width, currentSliceHeight,
-                    0, 0, canvas.width, currentSliceHeight
-                );
-
-                const sliceDataUrl = tempCanvas.toDataURL('image/jpeg', jpegQuality);
-                const destHeightMm = (currentSliceHeight * innerWmm) / canvas.width;
-                
-                doc.addImage(sliceDataUrl, 'JPEG', marginMm, marginMm, innerWmm, destHeightMm);
-
-                sourceY += currentSliceHeight;
-                pageNum++;
+        function appendRasterCanvasToPdf(doc, canvas, jpegQuality, options) {
+            if (window.SalesDocumentPdfCapture) {
+                window.SalesDocumentPdfCapture.appendRasterCanvasToPdf(doc, canvas, jpegQuality, options || {});
+                return;
             }
+            throw new Error('PDF capture library not loaded.');
         }
 
         async function appendOrderElementsToPdf(doc, elements, jpegQuality) {
-            let hasPages = false;
-            for (const el of elements) {
-                if (!el) {
-                    continue;
-                }
-                if (hasPages) {
-                    doc.addPage();
-                }
-                const canvas = await orderPdfElementToCanvas(el);
-                appendRasterCanvasToPdf(doc, canvas, jpegQuality);
-                hasPages = true;
+            if (window.SalesDocumentPdfCapture) {
+                await window.SalesDocumentPdfCapture.appendElementsToPdf(
+                    doc,
+                    elements,
+                    jpegQuality,
+                    orderPdfElementToCanvas,
+                    { marginMm: 8 }
+                );
+                return;
             }
+            throw new Error('PDF capture library not loaded.');
         }
 
         function confirmEmailSend(event, url, email) {
@@ -1583,10 +1548,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 await appendOrderElementsToPdf(doc, orderPdfCaptureElements(), 0.93);
 
                 const catalogElement = document.getElementById('catalog-content');
-                if (catalogElement) {
-                    doc.addPage();
+                if (catalogElement && catalogElement.offsetHeight > 0) {
                     const catalogCanvas = await orderPdfElementToCanvas(catalogElement);
-                    appendRasterCanvasToPdf(doc, catalogCanvas, 0.93);
+                    const breakYs = window.SalesDocumentPdfCapture
+                        ? window.SalesDocumentPdfCapture.collectSafeBreakYs(catalogElement, catalogCanvas)
+                        : [];
+                    appendRasterCanvasToPdf(doc, catalogCanvas, 0.93, {
+                        startOnNewPage: true,
+                        breakYs,
+                    });
                 }
 
                 const pdfData = doc.output('datauristring');
@@ -1680,10 +1650,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 await appendOrderElementsToPdf(doc, orderPdfCaptureElements(), 0.93);
 
                 const catalogElement = document.getElementById('catalog-content');
-                if (catalogElement) {
-                    doc.addPage();
+                if (catalogElement && catalogElement.offsetHeight > 0) {
                     const catalogCanvas = await orderPdfElementToCanvas(catalogElement);
-                    appendRasterCanvasToPdf(doc, catalogCanvas, 0.93);
+                    const breakYs = window.SalesDocumentPdfCapture
+                        ? window.SalesDocumentPdfCapture.collectSafeBreakYs(catalogElement, catalogCanvas)
+                        : [];
+                    appendRasterCanvasToPdf(doc, catalogCanvas, 0.93, {
+                        startOnNewPage: true,
+                        breakYs,
+                    });
                 }
                 
                 clearInterval(progressInterval);

@@ -117,7 +117,7 @@ $sheetH = static function ($value): string {
 
             <div class="notebook">
                 <table class="o-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-                    <thead>
+                    <thead style="display: table-header-group;">
                         <tr style="background-color: #ffcc00;">
                             <th style="width: 70px; padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal;">PHOTO</th>
                             <th style="width: 14%; padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal;">PRODUCT</th>
@@ -129,7 +129,7 @@ $sheetH = static function ($value): string {
                     </thead>
                     <tbody>
                         <?php foreach ($items as $item): ?>
-                            <tr>
+                            <tr style="page-break-inside: avoid; break-inside: avoid;">
                                 <td style="width: 70px; text-align: center; padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle;">
 
                                     <?php

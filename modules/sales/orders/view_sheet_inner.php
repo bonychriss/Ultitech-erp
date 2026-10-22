@@ -117,7 +117,7 @@ $docFontStack = function_exists('sales_document_font_family_css')
                     </thead>
                     <tbody>
                         <?php foreach ($items as $itemIdx => $item): ?>
-                            <tr>
+                            <tr style="page-break-inside: avoid; break-inside: avoid;">
                                 <td class="num"><?php echo $itemIdx + 1; ?></td>
                                 <td style="padding: 4px 6px;">
                                     <?php 

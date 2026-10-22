@@ -207,6 +207,45 @@ function canvasSliceToDataUrl(tempCanvas, jpegQuality) {
   }
 }
 
+/**
+ * Canvas Y positions at bottoms of invoice line rows / catalog cards so page
+ * slices do not cut through a description mid-text.
+ */
+function collectSafeBreakYs(rootEl, canvas) {
+  if (!rootEl || !canvas || !canvas.width) return [];
+  const rootRect = rootEl.getBoundingClientRect();
+  const cssW = Math.max(1, rootEl.scrollWidth || rootEl.offsetWidth || rootRect.width);
+  const scale = canvas.width / cssW;
+  const breaks = [];
+
+  const pushBottom = (el) => {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const bottom = Math.round((r.bottom - rootRect.top) * scale);
+    if (bottom > 1 && bottom < canvas.height - 1) {
+      breaks.push(bottom);
+    }
+  };
+
+  rootEl.querySelectorAll('.o-table tr, .items-table tr, .product-grid-item, .catalog-item').forEach(pushBottom);
+  rootEl.querySelectorAll(
+    '.invoice-header, .sheet-header, .o-totals-table, .doc-terms, .terms-block, .signature-block',
+  ).forEach(pushBottom);
+
+  return [...new Set(breaks)].sort((a, b) => a - b);
+}
+
+function pickSliceEnd(sourceY, maxEnd, breaks) {
+  let best = 0;
+  for (let i = 0; i < breaks.length; i += 1) {
+    const b = breaks[i];
+    if (b > sourceY + 2 && b <= maxEnd) {
+      best = b;
+    }
+  }
+  return best > sourceY ? best : maxEnd;
+}
+
 function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, options = {}) {
   const trimmedCanvas = trimCanvasBottomWhitespace(canvas);
   if (!trimmedCanvas.width || !trimmedCanvas.height) {
@@ -221,13 +260,18 @@ function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, opti
 
   const sliceHeightInPixels = (trimmedCanvas.width * innerHmm) / innerWmm;
   const totalHeightInPixels = trimmedCanvas.height;
+  const usableBreaks = (Array.isArray(options.breakYs) ? options.breakYs : [])
+    .filter((y) => y > 0 && y <= totalHeightInPixels)
+    .sort((a, b) => a - b);
   const totalSlices = Math.max(1, Math.ceil(totalHeightInPixels / sliceHeightInPixels));
 
   let sourceY = 0;
   let pageNum = 0;
 
   while (sourceY < totalHeightInPixels) {
-    const currentSliceHeight = Math.min(sliceHeightInPixels, totalHeightInPixels - sourceY);
+    const hardEnd = Math.min(sourceY + sliceHeightInPixels, totalHeightInPixels);
+    const sliceEnd = pickSliceEnd(sourceY, hardEnd, usableBreaks);
+    const currentSliceHeight = Math.max(1, sliceEnd - sourceY);
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = trimmedCanvas.width;
     tempCanvas.height = currentSliceHeight;
@@ -281,6 +325,7 @@ async function appendInvoiceElementsToPdf(doc, elements, jpegQuality, onProgress
     }
 
     const canvas = await invoicePdfElementToCanvasWithFallback(el);
+    const breakYs = collectSafeBreakYs(el, canvas);
 
     if (onProgress) {
       onProgress(captureDone, `Building PDF page ${index + 1} of ${total}...`);
@@ -290,7 +335,7 @@ async function appendInvoiceElementsToPdf(doc, elements, jpegQuality, onProgress
       if (!onProgress) return;
       const slicePct = captureDone + ((blockEnd - captureDone) * sliceRatio);
       onProgress(slicePct, `Assembling page ${index + 1} of ${total}...`);
-    }, { startOnNewPage: index > 0 });
+    }, { startOnNewPage: index > 0, breakYs });
 
     if (onProgress) {
       onProgress(blockEnd, `Page ${index + 1} of ${total} ready`);
@@ -326,10 +371,11 @@ export async function generateInvoicePdf(displayInvoiceNumber, onProgress) {
   if (catalogElement && catalogElement.offsetHeight > 0) {
     report(74, 'Capturing product catalog...');
     const catalogCanvas = await invoicePdfElementToCanvasWithFallback(catalogElement);
+    const catalogBreakYs = collectSafeBreakYs(catalogElement, catalogCanvas);
     report(82, 'Building catalog pages...');
     appendRasterCanvasToPdf(doc, catalogCanvas, 0.93, (sliceRatio) => {
       report(82 + (10 * sliceRatio), 'Assembling catalog pages...');
-    }, { startOnNewPage: true });
+    }, { startOnNewPage: true, breakYs: catalogBreakYs });
     report(92, 'Catalog added');
   }
 

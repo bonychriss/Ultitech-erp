@@ -11,9 +11,10 @@ $employeeHeaderExtraClass = $employeeHeaderExtraClass ?? 'employee-header--inv-d
 $invoicesListLayout = in_array($invoicesPage, ['list', 'corrections'], true);
 $mainRootClass = $invoicesListLayout ? 'exp-desk-react-root' : 'inv-desk-react-root';
 $bodyPageClass = $invoicesListLayout ? 'page-exp-desk exp-dashboard-page page-invoices-desk invoices-dashboard-page' : 'page-inv-desk inv-dashboard-page';
+$htmlLockClass = $invoicesListLayout ? 'page-invoices-desk-lock' : '';
 $GLOBALS['_erp_header_style_linked'] = true;?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= $htmlLockClass !== '' ? ' class="' . htmlspecialchars($htmlLockClass, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,6 +23,9 @@ $GLOBALS['_erp_header_style_linked'] = true;?>
     (function() {
         var t = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
+        <?php if ($invoicesListLayout): ?>
+        document.documentElement.classList.add('page-invoices-desk-lock');
+        <?php endif; ?>
     })();
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,6 +37,87 @@ $GLOBALS['_erp_header_style_linked'] = true;?>
 <?php include __DIR__ . '/../../../../includes/header_employee.php'; ?>
 
 <style>
+<?php if ($invoicesListLayout): ?>
+/* Match revenue desk: no outer page scrollbar; only the invoices table scrolls. */
+html.page-invoices-desk-lock,
+html.page-invoices-desk-lock body,
+body.page-invoices-desk,
+body.page-invoices-desk.dashboard {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    scrollbar-gutter: auto !important;
+}
+html.page-invoices-desk-lock::-webkit-scrollbar,
+html.page-invoices-desk-lock body::-webkit-scrollbar,
+body.page-invoices-desk .layout-main-wrapper::-webkit-scrollbar,
+body.page-invoices-desk .flex-grow-1::-webkit-scrollbar,
+main.main-content.exp-desk-react-root::-webkit-scrollbar,
+main.main-content.exp-desk-react-root #root::-webkit-scrollbar,
+main.main-content.exp-desk-react-root .exp-desk-page::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+    background: transparent !important;
+}
+body.page-invoices-desk .layout-main-wrapper,
+body.page-invoices-desk .layout-main-wrapper.min-vh-100 {
+    align-items: stretch !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    scrollbar-width: none !important;
+}
+body.page-invoices-desk .layout-main-wrapper > .flex-grow-1,
+body.page-invoices-desk .flex-grow-1.d-flex.flex-column {
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    scrollbar-width: none !important;
+}
+body.page-invoices-desk .employee-header.employee-header--exp-desk,
+body.page-invoices-desk .employee-header {
+    flex: 0 0 auto !important;
+    position: relative !important;
+}
+main.main-content.exp-desk-react-root {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 1.25rem 1rem !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    background: #f8fafc !important;
+    display: flex !important;
+    flex-direction: column !important;
+    scrollbar-width: none !important;
+    box-sizing: border-box;
+}
+main.main-content.exp-desk-react-root #root,
+main.main-content.exp-desk-react-root .exp-desk-page {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+}
+@media (max-width: 767.98px) {
+    main.main-content.exp-desk-react-root { padding: 0 0.75rem 1.5rem !important; }
+}
+<?php endif; ?>
 body.page-inv-desk.dashboard .layout-main-wrapper,
 body.page-exp-desk.dashboard .layout-main-wrapper { align-items: stretch; }
 body.page-inv-desk.dashboard .layout-main-wrapper > .flex-grow-1,
@@ -101,6 +186,7 @@ body.page-exp-desk .employee-header--exp-desk .header-right.header-actions-tray 
     flex: 0 0 auto !important;
     gap: 0.5rem !important;
 }
+<?php if (!$invoicesListLayout): ?>
 main.main-content.inv-desk-react-root,
 main.main-content.exp-desk-react-root {
     flex: 1 1 auto;
@@ -123,6 +209,7 @@ main.main-content.exp-desk-react-root #root {
     main.main-content.inv-desk-react-root,
     main.main-content.exp-desk-react-root { padding: 0 0.75rem 1.5rem !important; }
 }
+<?php endif; ?>
 html[data-theme="dark"] body.page-inv-desk,
 html[data-theme="dark"] body.page-exp-desk,
 html[data-theme="dark"] body.page-inv-desk .layout-main-wrapper,

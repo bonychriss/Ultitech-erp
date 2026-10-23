@@ -194,17 +194,23 @@ export default function ViewVoucherPage() {
             <div style={{ marginTop: 24, borderTop: '1px solid #e5e7eb', paddingTop: 20 }} className="no-print">
               <h3 style={{ fontSize: 16, fontWeight: 600, color: '#111', marginBottom: 12 }}>Approval Comments</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {data.comments.map((vc, i) => (
-                  <div key={i} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
-                        {vc.full_name} <span style={{ fontWeight: 400, color: '#6b7280' }}>({vc.action.replace(/_/g, ' ')})</span>
-                      </span>
-                      <span style={{ fontSize: 11, color: '#9ca3af' }}>{new Date(vc.created_at).toLocaleString()}</span>
+                {data.comments.map((vc, i) => {
+                  const actionLabel = String(vc.action || '').replace(/_/g, ' ').trim()
+                  return (
+                    <div key={i} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                          {vc.full_name || 'User'}
+                          {actionLabel ? (
+                            <span style={{ fontWeight: 400, color: '#6b7280' }}>{` (${actionLabel})`}</span>
+                          ) : null}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#9ca3af' }}>{new Date(vc.created_at).toLocaleString()}</span>
+                      </div>
+                      <div style={{ fontSize: 14, color: '#1f2937', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{vc.comments}</div>
                     </div>
-                    <div style={{ fontSize: 14, color: '#1f2937', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{vc.comments}</div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

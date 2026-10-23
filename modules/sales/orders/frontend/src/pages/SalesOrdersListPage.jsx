@@ -130,6 +130,66 @@ function formatDateTime(dateStr) {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
+function parseDateOnly(dateStr) {
+  if (!dateStr) return null;
+  const raw = String(dateStr).trim();
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  }
+  const d = new Date(raw.includes('T') ? raw : raw.replace(' ', 'T'));
+  if (Number.isNaN(d.getTime())) return null;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function toInputDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatFilterDateLabel(value) {
+  if (!value) return '';
+  const normalized = value.includes('T') ? value : `${value}T12:00:00`;
+  return new Date(normalized).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function thisMonthDateRange(now = new Date()) {
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  return {
+    date_from: toInputDate(from),
+    date_to: toInputDate(now),
+  };
+}
+
+function isThisMonthRange(filters, now = new Date()) {
+  const month = thisMonthDateRange(now);
+  return (
+    String(filters?.date_from || '') === month.date_from
+    && String(filters?.date_to || '') === month.date_to
+  );
+}
+
+function orderInDateRange(order, dateFrom, dateTo) {
+  if (!dateFrom && !dateTo) return true;
+  const orderDate = parseDateOnly(order?.created_at);
+  if (!orderDate) return false;
+  if (dateFrom) {
+    const from = parseDateOnly(dateFrom);
+    if (from && orderDate.getTime() < from.getTime()) return false;
+  }
+  if (dateTo) {
+    const to = parseDateOnly(dateTo);
+    if (to && orderDate.getTime() > to.getTime()) return false;
+  }
+  return true;
+}
+
 function fmtBig(n) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n || 0);
 }
@@ -148,9 +208,20 @@ function readListState() {
     search: params.get('q') || '',
     status: params.get('status') || '',
     mine: params.get('mine') === '1',
+    date_from: params.get('date_from') || '',
+    date_to: params.get('date_to') || '',
     opened: Number(params.get('sel') || 0) || 0,
   };
-  if (fromUrl.search || fromUrl.status || fromUrl.mine || fromUrl.opened) return fromUrl;
+  if (
+    fromUrl.search
+    || fromUrl.status
+    || fromUrl.mine
+    || fromUrl.date_from
+    || fromUrl.date_to
+    || fromUrl.opened
+  ) {
+    return fromUrl;
+  }
   try {
     const saved = JSON.parse(window.sessionStorage.getItem(LIST_STATE_KEY) || 'null');
     window.sessionStorage.removeItem(LIST_STATE_KEY);
@@ -159,6 +230,8 @@ function readListState() {
         search: String(saved.search || ''),
         status: String(saved.status || ''),
         mine: Boolean(saved.mine),
+        date_from: String(saved.date_from || ''),
+        date_to: String(saved.date_to || ''),
         opened: Number(saved.opened || 0) || 0,
       };
     }
@@ -178,6 +251,8 @@ function writeListStateToUrl(state) {
   setOrDel('q', state.search);
   setOrDel('status', state.status);
   setOrDel('mine', state.mine ? '1' : '');
+  setOrDel('date_from', state.date_from);
+  setOrDel('date_to', state.date_to);
   setOrDel('sel', state.opened ? String(state.opened) : '');
   const next = url.pathname + url.search + url.hash;
   const cur = window.location.pathname + window.location.search + window.location.hash;
@@ -212,9 +287,13 @@ export default function SalesOrdersListPage() {
   const [search, setSearch] = useState(restored.search);
   const [statusFilter, setStatusFilter] = useState(restored.status);
   const [myOrdersOnly, setMyOrdersOnly] = useState(restored.mine);
+  const [dateFrom, setDateFrom] = useState(restored.date_from || '');
+  const [dateTo, setDateTo] = useState(restored.date_to || '');
   const [openedId, setOpenedId] = useState(restored.opened);
   const [draftStatusFilter, setDraftStatusFilter] = useState('');
   const [draftMyOrdersOnly, setDraftMyOrdersOnly] = useState(false);
+  const [draftDateFrom, setDraftDateFrom] = useState('');
+  const [draftDateTo, setDraftDateTo] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -249,9 +328,11 @@ export default function SalesOrdersListPage() {
       search,
       status: statusFilter,
       mine: myOrdersOnly,
+      date_from: dateFrom,
+      date_to: dateTo,
       opened: openedId,
     });
-  }, [search, statusFilter, myOrdersOnly, openedId]);
+  }, [search, statusFilter, myOrdersOnly, dateFrom, dateTo, openedId]);
 
   useEffect(() => {
     if (!init || !openedId) return undefined;
@@ -354,7 +435,6 @@ export default function SalesOrdersListPage() {
   const currentUserId = init?.current_user_id || 0;
   const isRoadmaster = !!init?.is_roadmaster;
   const supportsOrderTypeSplit = !!init?.supports_order_type_split;
-  const useRmShell = !!init?.use_rm_shell_layout;
   const defaultCurrency = init?.default_currency || 'TZS';
 
   const filteredOrders = useMemo(() => orders.filter((o) => {
@@ -365,8 +445,9 @@ export default function SalesOrdersListPage() {
       || (o.company_name || '').toLowerCase().includes(qSearch)
       || (o.salesperson || '').toLowerCase().includes(qSearch);
     const matchesStatus = !statusFilter || (o.status || '').toLowerCase() === statusFilter;
-    return mineOk && matchesSearch && matchesStatus;
-  }), [orders, search, statusFilter, myOrdersOnly, currentUserId]);
+    const matchesDate = orderInDateRange(o, dateFrom, dateTo);
+    return mineOk && matchesSearch && matchesStatus && matchesDate;
+  }), [orders, search, statusFilter, myOrdersOnly, dateFrom, dateTo, currentUserId]);
 
   const orderStats = useMemo(() => {
     const terminal = new Set(['paid', 'completed', 'delivered', 'cancelled', 'canceled']);
@@ -387,18 +468,28 @@ export default function SalesOrdersListPage() {
   const canInvoice = selectedList.length === 1
     && orderCanDirectInvoice(selectedList[0]?.status)
     && !rowHasInvoice(selectedList[0]);
-  const hasActiveFilters = !!statusFilter || myOrdersOnly;
+  const hasActiveFilters = !!statusFilter || myOrdersOnly || !!dateFrom || !!dateTo;
   const hasSearchValue = search.trim() !== '';
 
   const activeFilterChips = useMemo(() => {
     const chips = [];
+    if (dateFrom || dateTo) {
+      const fromLabel = dateFrom ? formatFilterDateLabel(dateFrom) : 'Any';
+      const toLabel = dateTo ? formatFilterDateLabel(dateTo) : 'Any';
+      chips.push({
+        key: 'date_from',
+        label: isThisMonthRange({ date_from: dateFrom, date_to: dateTo })
+          ? 'Date: This month'
+          : `Date: ${fromLabel} – ${toLabel}`,
+      });
+    }
     if (statusFilter) {
       const label = STATUS_OPTIONS.find((o) => o.value === statusFilter)?.label || statusFilter;
       chips.push({ key: 'status', label: `Status: ${label}` });
     }
     if (myOrdersOnly) chips.push({ key: 'mine', label: 'My sales orders' });
     return chips;
-  }, [statusFilter, myOrdersOnly]);
+  }, [statusFilter, myOrdersOnly, dateFrom, dateTo]);
 
   function toggleSelection(id) {
     selectionAnchorRef.current = id;
@@ -476,6 +567,8 @@ export default function SalesOrdersListPage() {
       search,
       status: statusFilter,
       mine: myOrdersOnly,
+      date_from: dateFrom,
+      date_to: dateTo,
       opened: nextId,
     };
     setOpenedId(nextId);
@@ -494,28 +587,61 @@ export default function SalesOrdersListPage() {
       if (next) {
         setDraftStatusFilter(statusFilter);
         setDraftMyOrdersOnly(myOrdersOnly);
+        setDraftDateFrom(dateFrom);
+        setDraftDateTo(dateTo);
       }
       return next;
     });
   }
 
+  function setDatePreset(preset) {
+    const now = new Date();
+    if (preset === 'month') {
+      const month = thisMonthDateRange(now);
+      setDraftDateFrom(month.date_from);
+      setDraftDateTo(month.date_to);
+      return;
+    }
+    if (preset === '30d') {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 30);
+      setDraftDateFrom(toInputDate(from));
+      setDraftDateTo(toInputDate(now));
+      return;
+    }
+    setDraftDateFrom('');
+    setDraftDateTo('');
+  }
+
   function applyFilters() {
     setStatusFilter(draftStatusFilter);
     setMyOrdersOnly(draftMyOrdersOnly);
+    setDateFrom(draftDateFrom);
+    setDateTo(draftDateTo);
     setFiltersOpen(false);
   }
 
   function resetFilters() {
     setStatusFilter('');
     setMyOrdersOnly(false);
+    setDateFrom('');
+    setDateTo('');
     setDraftStatusFilter('');
     setDraftMyOrdersOnly(false);
+    setDraftDateFrom('');
+    setDraftDateTo('');
     setFiltersOpen(false);
   }
 
   function clearAdvancedFilter(key) {
     if (key === 'status') setStatusFilter('');
     if (key === 'mine') setMyOrdersOnly(false);
+    if (key === 'date_from') {
+      setDateFrom('');
+      setDateTo('');
+      setDraftDateFrom('');
+      setDraftDateTo('');
+    }
   }
 
   function clearSearch() {
@@ -567,11 +693,50 @@ export default function SalesOrdersListPage() {
         <div className="exp-desk-filters-head">
           <div>
             <h2 className="exp-desk-filters-title">Filters</h2>
-            <p className="exp-desk-filters-sub">Narrow the list by status or ownership.</p>
+            <p className="exp-desk-filters-sub">Narrow the list by date, status, or ownership.</p>
           </div>
           <button type="button" className="exp-desk-filters-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
             <X size={16} aria-hidden="true" />
           </button>
+        </div>
+
+        <div className="exp-desk-filters-section">
+          <div className="exp-desk-filters-section-label">Date range</div>
+          <div className="exp-desk-date-presets" role="group" aria-label="Quick date ranges">
+            <button
+              type="button"
+              className={`exp-desk-date-preset${isThisMonthRange({ date_from: draftDateFrom, date_to: draftDateTo }) ? ' is-active' : ''}`}
+              onClick={() => setDatePreset('month')}
+            >
+              This month
+            </button>
+            <button type="button" className="exp-desk-date-preset" onClick={() => setDatePreset('30d')}>
+              Last 30 days
+            </button>
+            <button type="button" className="exp-desk-date-preset" onClick={() => setDatePreset('clear')}>
+              Clear dates
+            </button>
+          </div>
+          <div className="exp-desk-filters-grid exp-desk-filters-grid--dates">
+            <div className="exp-desk-field">
+              <label htmlFor="soFilterDateFrom">From</label>
+              <input
+                id="soFilterDateFrom"
+                type="date"
+                value={draftDateFrom}
+                onChange={(e) => setDraftDateFrom(e.target.value)}
+              />
+            </div>
+            <div className="exp-desk-field">
+              <label htmlFor="soFilterDateTo">To</label>
+              <input
+                id="soFilterDateTo"
+                type="date"
+                value={draftDateTo}
+                onChange={(e) => setDraftDateTo(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="exp-desk-filters-section">
@@ -607,6 +772,8 @@ export default function SalesOrdersListPage() {
           <button type="button" className="exp-desk-btn exp-desk-btn-ghost" onClick={() => {
             setDraftStatusFilter('');
             setDraftMyOrdersOnly(false);
+            setDraftDateFrom('');
+            setDraftDateTo('');
           }}
           >
             Clear
@@ -622,7 +789,7 @@ export default function SalesOrdersListPage() {
 
   if (loading && !init) {
     return (
-      <div className="exp-desk-page exp-desk-boot-loading" role="status" aria-live="polite">
+      <div className="exp-desk-page exp-desk-page--analytics-off exp-desk-boot-loading" role="status" aria-live="polite">
         <Loader2 className="exp-desk-boot-spinner" aria-hidden="true" />
         <span>Loading sales orders...</span>
       </div>
@@ -631,7 +798,7 @@ export default function SalesOrdersListPage() {
 
   if (error || !init) {
     return (
-      <div className="exp-desk-page">
+      <div className="exp-desk-page exp-desk-page--analytics-off">
         <div className="exp-desk-flash exp-desk-flash-error" role="alert">{error || 'Could not load sales orders.'}</div>
       </div>
     );
@@ -650,7 +817,7 @@ export default function SalesOrdersListPage() {
   );
 
   return (
-    <div className="exp-desk-page">
+    <div className="exp-desk-page exp-desk-page--analytics-off">
       {init.flash && <div className="exp-desk-flash exp-desk-flash-success" role="status">{init.flash}</div>}
       {renderFiltersPanel()}
 
@@ -692,12 +859,6 @@ export default function SalesOrdersListPage() {
               </button>
             </div>
 
-            {useRmShell && (
-              <a href={urls.settings} className="qt-settings-btn" title="Sales settings">
-                <i className="fas fa-cog" />
-              </a>
-            )}
-
             {createQuotationBtn}
           </div>
         </div>
@@ -718,7 +879,7 @@ export default function SalesOrdersListPage() {
             </button>
           ))}
           <button type="button" className="exp-desk-filter-chip exp-desk-filter-chip--clear" onClick={resetFilters}>
-            Clear all
+            All data
           </button>
         </div>
       )}
@@ -756,10 +917,10 @@ export default function SalesOrdersListPage() {
         </article>
       </section>
 
-      <section className="exp-desk-results qt-quotations-table so-orders-table">
+      <section className="exp-desk-results so-orders-table" aria-label="Sales orders">
         <div className="exp-desk-results-head">
           <span className="exp-desk-results-count">
-            {filteredOrders.length} {filteredOrders.length === 1 ? 'result' : 'results'}
+            {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'}
           </span>
         </div>
 
@@ -791,19 +952,29 @@ export default function SalesOrdersListPage() {
           </div>
         ) : (
           <div className="exp-desk-table-wrap">
-            <table className="exp-desk-table">
+            <table className="exp-desk-table so-desk-table">
+              <colgroup>
+                <col className="so-col-check" />
+                <col className="so-col-number" />
+                <col className="so-col-customer" />
+                <col className="so-col-salesperson" />
+                <col className="so-col-date" />
+                <col className="so-col-status" />
+                <col className="so-col-total" />
+                <col className="so-col-actions" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th className="qt-col-check qt-col-serial" title={`${filteredOrders.length} sales orders in this list`}>
+                  <th className="qt-col-check qt-col-serial so-col-check" title={`${filteredOrders.length} sales orders in this list`}>
                     No.
                   </th>
-                  <th>Number</th>
-                  <th>Customer</th>
-                  <th>Salesperson</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th className="exp-desk-amt">Total</th>
-                  <th className="qt-col-actions">Actions</th>
+                  <th className="so-col-number">Number</th>
+                  <th className="so-col-customer">Customer</th>
+                  <th className="so-col-salesperson">Salesperson</th>
+                  <th className="so-col-date">Date</th>
+                  <th className="so-col-status">Status</th>
+                  <th className="exp-desk-amt so-col-total">Total</th>
+                  <th className="qt-col-actions so-col-actions" aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
@@ -822,32 +993,36 @@ export default function SalesOrdersListPage() {
                       }
                     }}
                   >
-                    <td className="qt-col-check qt-col-serial">{index + 1}</td>
-                    <td>
-                      <span className="exp-desk-ref">{o.order_number}</span>
-                      {supportsOrderTypeSplit && o.order_type && (
-                        <div className="exp-desk-cell-sub"><TypeBadge type={o.order_type} /></div>
-                      )}
+                    <td className="qt-col-check qt-col-serial so-col-check">{index + 1}</td>
+                    <td className="so-col-number">
+                      <span className="so-number-cell">
+                        <span className="exp-desk-ref">{o.order_number}</span>
+                        {supportsOrderTypeSplit && o.order_type && (
+                          <span className="so-number-type"><TypeBadge type={o.order_type} /></span>
+                        )}
+                      </span>
                     </td>
-                    <td>
+                    <td className="so-col-customer">
                       <span
-                        className="exp-desk-cell-main"
+                        className="exp-desk-cell-main so-cell-customer"
                         title={o.company_name || ''}
                         style={{ textTransform: isRoadmaster ? 'uppercase' : 'none' }}
                       >
                         {o.company_name || '-'}
                       </span>
                     </td>
-                    <td>
+                    <td className="so-col-salesperson">
                       <div className="qt-salesperson-cell">
                         <span className="qt-avatar" style={avatarStyle(o.salesperson)}>{initials(o.salesperson)}</span>
                         <span className="qt-salesperson-name" title={o.salesperson || ''}>{o.salesperson || '-'}</span>
                       </div>
                     </td>
-                    <td><span className="exp-desk-subdate">{formatDateTime(o.created_at)}</span></td>
-                    <td><StatusPill status={o.status} /></td>
-                    <td className="exp-desk-amt">{formatCurrency(o.total_amount)}</td>
-                    <td className="qt-col-actions" onClick={(e) => e.stopPropagation()} data-qt-actions="1">
+                    <td className="so-col-date">
+                      <span className="exp-desk-subdate so-date-value">{formatDateTime(o.created_at)}</span>
+                    </td>
+                    <td className="so-col-status"><StatusPill status={o.status} /></td>
+                    <td className="exp-desk-amt so-col-total">{formatCurrency(o.total_amount)}</td>
+                    <td className="qt-col-actions so-col-actions" onClick={(e) => e.stopPropagation()} data-qt-actions="1">
                       <div className="qt-actions-menu">
                         <button
                           type="button"

@@ -420,38 +420,52 @@ html[data-theme="dark"] .so-kpi-grid > .so-kpi--clickable:hover {
   outline-offset: 2px;
 }
 
+/* Compact summary cards (match invoices / revenue desk) */
+.so-kpi-grid--slim {
+  flex: 0 0 auto;
+  gap: 0.55rem;
+}
+
 .so-kpi-grid--slim > .so-kpi {
-  padding: 0.7rem 0.9rem;
-  min-height: 4.75rem;
+  padding: 0.5rem 0.7rem;
+  min-height: 0;
   border-radius: 14px !important;
-}
-
-.so-kpi-grid--slim .so-kpi-label {
-  font-size: 0.8rem;
-}
-
-.so-kpi-grid--slim .so-kpi-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px !important;
-}
-
-.so-kpi-grid--slim .so-kpi-value {
-  margin: 0.45rem 0 0;
-  font-size: 1.2rem;
-}
-
-.so-kpi-grid--slim .so-kpi-value--money {
-  font-size: clamp(0.85rem, 1.15vw, 1.05rem);
-}
-
-.so-kpi-grid--slim > .so-kpi {
   background: #fff;
   border-color: #e7edf3;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.so-kpi-grid--slim .so-kpi-label { color: #64748b; }
+.so-kpi-grid--slim .so-kpi-label {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.so-kpi-grid--slim .so-kpi-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 8px !important;
+}
+
+.so-kpi-grid--slim .so-kpi-icon svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.so-kpi-grid--slim .so-kpi-value {
+  margin: 0.05rem 0 0;
+  font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.so-kpi-grid--slim .so-kpi-value--money {
+  font-size: clamp(0.78rem, 1.2vw, 0.95rem);
+  font-variant-numeric: tabular-nums;
+}
+
 .so-kpi-grid--slim .so-kpi--orders .so-kpi-icon { background: #eef4ff; color: #2563eb; }
 .so-kpi-grid--slim .so-kpi--value .so-kpi-icon { background: #f5f1ff; color: #7c3aed; }
 .so-kpi-grid--slim .so-kpi--pipeline .so-kpi-icon { background: #fff7eb; color: #d97706; }
@@ -490,77 +504,296 @@ html[data-theme="dark"] .so-kpi-value { color: #f8fafc; }
 html[data-theme="dark"] .so-kpi-foot { color: #94a3b8; }
 html[data-theme="dark"] .so-kpi-icon { background: rgba(15, 23, 42, 0.45); }
 
-/* Ledger table look for sales orders and quotations (matches outstanding invoices) */
-.so-orders-table .exp-desk-table-wrap {
-  border: 1px solid #e7edf3;
-  border-radius: 16px;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
-  background: #fff;
+/* Table layout matched to invoices / revenue desk */
+.so-orders-table.exp-desk-results {
+  border: none;
+  border-radius: 0;
+  flex: 1 1 auto;
+  min-height: 12rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: transparent;
 }
 
+.so-orders-table .exp-desk-results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 0.4rem;
+  border-bottom: none;
+  background: transparent;
+  flex: 0 0 auto;
+}
+
+.so-orders-table .exp-desk-results-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.so-orders-table .exp-desk-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.so-orders-table .exp-desk-table-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.so-orders-table .exp-desk-table-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+
+.so-orders-table .exp-desk-table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.so-orders-table .exp-desk-table.so-desk-table,
 .so-orders-table .exp-desk-table {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  table-layout: auto;
   border-collapse: separate;
   border-spacing: 0;
+  font-size: 0.78rem;
 }
 
-.so-orders-table .exp-desk-table thead th,
-.so-orders-table .exp-desk-table thead th.qt-col-serial,
-.so-orders-table .exp-desk-table thead th.exp-desk-amt {
-  background: #1e293b;
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.so-orders-table .so-desk-table thead th,
+.so-orders-table .exp-desk-table thead th {
+  text-align: left;
+  padding: 0.55rem 0.45rem;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
-  padding-top: 0.72rem;
-  padding-bottom: 0.72rem;
-  border-bottom: 0;
+  vertical-align: middle;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  box-shadow: inset 0 -1px 0 #e2e8f0;
 }
 
-.so-orders-table .exp-desk-table thead th:first-child { border-top-left-radius: 15px; }
-.so-orders-table .exp-desk-table thead th:last-child { border-top-right-radius: 15px; }
-.so-orders-table .exp-desk-table tbody tr:last-child td:first-child { border-bottom-left-radius: 15px; }
-.so-orders-table .exp-desk-table tbody tr:last-child td:last-child { border-bottom-right-radius: 15px; }
-
+.so-orders-table .so-desk-table tbody td,
 .so-orders-table .exp-desk-table tbody td {
-  padding-top: 0.72rem;
-  padding-bottom: 0.72rem;
-  border-bottom: 1px solid #eef2f6;
-  font-size: 0.875rem;
+  padding: 0.55rem 0.45rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  overflow: visible;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 400;
+  line-height: 1.25;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.so-orders-table .so-desk-table th:first-child,
+.so-orders-table .so-desk-table td:first-child,
+.so-orders-table .exp-desk-table th:first-child,
+.so-orders-table .exp-desk-table td:first-child {
+  padding-left: 0.75rem;
+}
+
+.so-orders-table .so-desk-table th:last-child,
+.so-orders-table .so-desk-table td:last-child,
+.so-orders-table .exp-desk-table th:last-child,
+.so-orders-table .exp-desk-table td:last-child {
+  padding-right: 0.75rem;
+}
+
+.so-orders-table .exp-desk-table tbody tr:hover td { background: #fffbeb; }
+.so-orders-table .exp-desk-table tbody tr:last-child td { border-bottom: none; }
+
+.so-orders-table .so-desk-table .so-col-check,
+.so-orders-table .exp-desk-table td.qt-col-serial {
+  white-space: nowrap;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: #64748b;
+  font-weight: 600;
+  min-width: 2.75rem;
+}
+
+.so-orders-table .so-desk-table th.so-col-check,
+.so-orders-table .so-desk-table td.so-col-check {
+  position: sticky;
+  left: 0;
+  z-index: 3;
   background: #fff;
 }
 
-.so-orders-table .exp-desk-table tbody tr:last-child td { border-bottom: 0; }
-.so-orders-table .exp-desk-table tbody tr:nth-child(even) td { background: #f8fafc; }
-.so-orders-table .exp-desk-table tbody tr:hover td { background: #eef4ff; }
-.so-orders-table .exp-desk-table tbody tr.qt-row-selected td { background: #e0e7ff; }
-
-.so-orders-table .exp-desk-table td.qt-col-serial {
-  color: #64748b;
-  font-weight: 700;
+.so-orders-table .so-desk-table th.so-col-number,
+.so-orders-table .so-desk-table td.so-col-number {
+  position: sticky;
+  left: 2.75rem;
+  z-index: 3;
+  background: #fff;
+  min-width: 9.5rem;
+  white-space: nowrap;
 }
 
-.so-orders-table .exp-desk-table .exp-desk-cell-main {
-  color: #0f172a;
-  font-weight: 700;
+.so-orders-table .so-desk-table thead th.so-col-check,
+.so-orders-table .so-desk-table thead th.so-col-number {
+  z-index: 5;
+  background: #f8fafc;
 }
 
+.so-orders-table .so-desk-table tbody tr:hover td.so-col-check,
+.so-orders-table .so-desk-table tbody tr:hover td.so-col-number {
+  background: #fffbeb;
+}
+
+.so-orders-table .exp-desk-row-clickable.qt-row-selected td {
+  background: #eef2ff !important;
+}
+
+.so-orders-table .exp-desk-row-clickable.qt-row-selected td.so-col-check,
+.so-orders-table .exp-desk-row-clickable.qt-row-selected td.so-col-number {
+  background: #e0e7ff !important;
+}
+
+.so-orders-table .exp-desk-table tbody tr.is-opened td {
+  background: #f5f3ff !important;
+}
+
+.so-orders-table .exp-desk-table tbody tr.is-opened td.so-col-check,
+.so-orders-table .exp-desk-table tbody tr.is-opened td.so-col-number {
+  background: #ede9fe !important;
+}
+
+.so-orders-table .so-desk-table th.so-col-total,
+.so-orders-table .so-desk-table td.so-col-total,
 .so-orders-table .exp-desk-table td.exp-desk-amt {
-  color: #0f172a;
-  font-weight: 650;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.so-orders-table .so-desk-table th.so-col-status,
+.so-orders-table .so-desk-table td.so-col-status {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.so-orders-table .so-desk-table th.so-col-actions,
+.so-orders-table .so-desk-table td.so-col-actions {
+  text-align: right;
+  white-space: nowrap;
+  padding-left: 0.35rem;
+  overflow: visible;
+}
+
+.so-orders-table .so-desk-table .so-col-number .so-number-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.so-orders-table .so-desk-table .so-col-number .exp-desk-ref {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.so-orders-table .so-desk-table .so-col-customer .exp-desk-cell-main,
+.so-orders-table .so-desk-table .so-col-customer .so-cell-customer {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: #0f172a;
+  max-width: 16rem;
+}
+
+.so-orders-table .so-desk-table .so-col-salesperson .qt-salesperson-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.so-orders-table .so-desk-table .so-col-salesperson .qt-salesperson-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 400;
+  min-width: 0;
+}
+
+.so-orders-table .so-desk-table td.so-col-date .exp-desk-subdate,
+.so-orders-table .so-desk-table td.so-col-date .so-date-value {
+  display: inline;
+  margin-top: 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #0f172a !important;
+  white-space: nowrap;
+}
+
+.so-orders-table .so-desk-table .so-col-total.exp-desk-amt,
+.so-orders-table .exp-desk-amt {
+  display: inline-block;
+  text-align: right;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: #16a34a;
+  white-space: nowrap;
+}
+
+.so-orders-table .so-desk-table .so-col-status .qt-status {
+  font-size: 0.68rem;
+  padding: 0.18rem 0.5rem;
+  font-weight: 600;
+}
+
+.so-orders-table .so-desk-table .so-col-salesperson .qt-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.so-orders-table .so-desk-table .so-col-actions .qt-actions-menu {
+  display: inline-flex;
+  justify-content: flex-end;
 }
 
 html[data-theme="dark"] .so-orders-table .exp-desk-table-wrap { background: #1e293b; border-color: #334155; }
-html[data-theme="dark"] .so-orders-table .exp-desk-table thead th { background: #0f172a; }
-html[data-theme="dark"] .so-orders-table .exp-desk-table tbody td,
-html[data-theme="dark"] .so-orders-table .exp-desk-table tbody tr:nth-child(even) td { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+html[data-theme="dark"] .so-orders-table .so-desk-table thead th,
+html[data-theme="dark"] .so-orders-table .exp-desk-table thead th { background: #0f172a; color: #e2e8f0; }
+html[data-theme="dark"] .so-orders-table .so-desk-table tbody td,
+html[data-theme="dark"] .so-orders-table .exp-desk-table tbody td { background: #1e293b; color: #e2e8f0; border-color: #334155; }
 html[data-theme="dark"] .so-orders-table .exp-desk-table tbody tr:hover td { background: #334155; }
-html[data-theme="dark"] .so-orders-table .exp-desk-table tbody tr.qt-row-selected td { background: #312e81; }
-html[data-theme="dark"] .so-orders-table .exp-desk-table .exp-desk-cell-main,
-html[data-theme="dark"] .so-orders-table .exp-desk-table td.exp-desk-amt { color: #f8fafc; }
+html[data-theme="dark"] .so-orders-table .exp-desk-row-clickable.qt-row-selected td { background: #312e81 !important; }
+html[data-theme="dark"] .so-orders-table .so-desk-table .exp-desk-cell-main,
+html[data-theme="dark"] .so-orders-table .so-desk-table .so-col-total.exp-desk-amt,
+html[data-theme="dark"] .so-orders-table .exp-desk-amt { color: #f8fafc; }
 
 .qt-quotations-table .exp-desk-table th.qt-col-actions,
 .qt-quotations-table .exp-desk-table td.qt-col-actions {

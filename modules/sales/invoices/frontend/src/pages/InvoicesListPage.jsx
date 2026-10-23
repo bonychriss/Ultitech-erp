@@ -102,6 +102,54 @@ function parseDateOnly(dateStr) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+function toInputDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatFilterDateLabel(value) {
+  if (!value) return '';
+  const normalized = value.includes('T') ? value : `${value}T12:00:00`;
+  return new Date(normalized).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function thisMonthDateRange(now = new Date()) {
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  return {
+    date_from: toInputDate(from),
+    date_to: toInputDate(now),
+  };
+}
+
+function isThisMonthRange(filters, now = new Date()) {
+  const month = thisMonthDateRange(now);
+  return (
+    String(filters?.date_from || '') === month.date_from
+    && String(filters?.date_to || '') === month.date_to
+  );
+}
+
+function invoiceInDateRange(invoice, dateFrom, dateTo) {
+  if (!dateFrom && !dateTo) return true;
+  const invDate = parseDateOnly(invoice?.invoice_date || invoice?.created_at);
+  if (!invDate) return false;
+  if (dateFrom) {
+    const from = parseDateOnly(dateFrom);
+    if (from && invDate.getTime() < from.getTime()) return false;
+  }
+  if (dateTo) {
+    const to = parseDateOnly(dateTo);
+    if (to && invDate.getTime() > to.getTime()) return false;
+  }
+  return true;
+}
+
 function isInvoiceDueDateOverdue(invoice) {
   const status = (invoice?.status || '').toLowerCase().trim();
   if (['paid', 'cancelled', 'canceled', 'draft'].includes(status)) return false;
@@ -173,9 +221,20 @@ function readListState() {
     search: params.get('q') || '',
     status: params.get('status') || '',
     mine: params.get('mine') === '1',
+    date_from: params.get('date_from') || '',
+    date_to: params.get('date_to') || '',
     opened: Number(params.get('sel') || 0) || 0,
   };
-  if (fromUrl.search || fromUrl.status || fromUrl.mine || fromUrl.opened) return fromUrl;
+  if (
+    fromUrl.search
+    || fromUrl.status
+    || fromUrl.mine
+    || fromUrl.date_from
+    || fromUrl.date_to
+    || fromUrl.opened
+  ) {
+    return fromUrl;
+  }
   try {
     const saved = JSON.parse(window.sessionStorage.getItem(LIST_STATE_KEY) || 'null');
     window.sessionStorage.removeItem(LIST_STATE_KEY);
@@ -184,6 +243,8 @@ function readListState() {
         search: String(saved.search || ''),
         status: String(saved.status || ''),
         mine: Boolean(saved.mine),
+        date_from: String(saved.date_from || ''),
+        date_to: String(saved.date_to || ''),
         opened: Number(saved.opened || 0) || 0,
       };
     }
@@ -203,6 +264,8 @@ function writeListStateToUrl(state) {
   setOrDel('q', state.search);
   setOrDel('status', state.status);
   setOrDel('mine', state.mine ? '1' : '');
+  setOrDel('date_from', state.date_from);
+  setOrDel('date_to', state.date_to);
   setOrDel('sel', state.opened ? String(state.opened) : '');
   const next = url.pathname + url.search + url.hash;
   const cur = window.location.pathname + window.location.search + window.location.hash;
@@ -279,9 +342,13 @@ export default function InvoicesListPage() {
   const [search, setSearch] = useState(restored.search);
   const [statusFilter, setStatusFilter] = useState(restored.status);
   const [myInvoicesOnly, setMyInvoicesOnly] = useState(restored.mine);
+  const [dateFrom, setDateFrom] = useState(restored.date_from || '');
+  const [dateTo, setDateTo] = useState(restored.date_to || '');
   const [openedId, setOpenedId] = useState(restored.opened);
   const [draftStatusFilter, setDraftStatusFilter] = useState('');
   const [draftMyInvoicesOnly, setDraftMyInvoicesOnly] = useState(false);
+  const [draftDateFrom, setDraftDateFrom] = useState('');
+  const [draftDateTo, setDraftDateTo] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -321,9 +388,11 @@ export default function InvoicesListPage() {
       search,
       status: statusFilter,
       mine: myInvoicesOnly,
+      date_from: dateFrom,
+      date_to: dateTo,
       opened: openedId,
     });
-  }, [search, statusFilter, myInvoicesOnly, openedId]);
+  }, [search, statusFilter, myInvoicesOnly, dateFrom, dateTo, openedId]);
 
   useEffect(() => {
     if (!init || !openedId) return undefined;
@@ -425,7 +494,6 @@ export default function InvoicesListPage() {
   const canRegisterPayment = !!init?.can_register_payment;
   const supportsTruckInvoices = !!init?.supports_truck_invoices;
   const supportsOrderTypeSplit = !!init?.supports_order_type_split;
-  const useRmShell = !!init?.use_rm_shell_layout;
   const defaultCurrency = init?.default_currency || 'TZS';
 
   const filteredInvoices = useMemo(() => invoices.filter((inv) => {
@@ -437,8 +505,9 @@ export default function InvoicesListPage() {
       || (inv.customer_name || '').toLowerCase().includes(qSearch)
       || (inv.salesperson || '').toLowerCase().includes(qSearch);
     const matchesStatus = !statusFilter || (inv.status || '').toLowerCase() === statusFilter;
-    return mineOk && matchesSearch && matchesStatus;
-  }), [invoices, search, statusFilter, myInvoicesOnly, currentUserId]);
+    const matchesDate = invoiceInDateRange(inv, dateFrom, dateTo);
+    return mineOk && matchesSearch && matchesStatus && matchesDate;
+  }), [invoices, search, statusFilter, myInvoicesOnly, dateFrom, dateTo, currentUserId]);
 
   const invoiceStats = useMemo(() => {
     let totalVal = 0;
@@ -458,22 +527,34 @@ export default function InvoicesListPage() {
       search,
       statusFilter,
       myInvoicesOnly,
+      dateFrom,
+      dateTo,
     },
     defaultCurrency,
-  }), [invoices, filteredInvoices, search, statusFilter, myInvoicesOnly, defaultCurrency]);
+  }), [invoices, filteredInvoices, search, statusFilter, myInvoicesOnly, dateFrom, dateTo, defaultCurrency]);
 
-  const hasActiveFilters = !!statusFilter || myInvoicesOnly;
+  const hasActiveFilters = !!statusFilter || myInvoicesOnly || !!dateFrom || !!dateTo;
   const hasSearchValue = search.trim() !== '';
 
   const activeFilterChips = useMemo(() => {
     const chips = [];
+    if (dateFrom || dateTo) {
+      const fromLabel = dateFrom ? formatFilterDateLabel(dateFrom) : 'Any';
+      const toLabel = dateTo ? formatFilterDateLabel(dateTo) : 'Any';
+      chips.push({
+        key: 'date_from',
+        label: isThisMonthRange({ date_from: dateFrom, date_to: dateTo })
+          ? 'Date: This month'
+          : `Date: ${fromLabel} – ${toLabel}`,
+      });
+    }
     if (statusFilter) {
       const label = STATUS_OPTIONS.find((o) => o.value === statusFilter)?.label || statusFilter;
       chips.push({ key: 'status', label: `Status: ${label}` });
     }
     if (myInvoicesOnly) chips.push({ key: 'mine', label: 'My invoices' });
     return chips;
-  }, [statusFilter, myInvoicesOnly]);
+  }, [statusFilter, myInvoicesOnly, dateFrom, dateTo]);
 
   function toggleSelection(id) {
     selectionAnchorRef.current = id;
@@ -667,6 +748,8 @@ export default function InvoicesListPage() {
       search,
       status: statusFilter,
       mine: myInvoicesOnly,
+      date_from: dateFrom,
+      date_to: dateTo,
       opened: nextId,
     };
     setOpenedId(nextId);
@@ -739,28 +822,61 @@ export default function InvoicesListPage() {
       if (next) {
         setDraftStatusFilter(statusFilter);
         setDraftMyInvoicesOnly(myInvoicesOnly);
+        setDraftDateFrom(dateFrom);
+        setDraftDateTo(dateTo);
       }
       return next;
     });
   }
 
+  function setDatePreset(preset) {
+    const now = new Date();
+    if (preset === 'month') {
+      const month = thisMonthDateRange(now);
+      setDraftDateFrom(month.date_from);
+      setDraftDateTo(month.date_to);
+      return;
+    }
+    if (preset === '30d') {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 30);
+      setDraftDateFrom(toInputDate(from));
+      setDraftDateTo(toInputDate(now));
+      return;
+    }
+    setDraftDateFrom('');
+    setDraftDateTo('');
+  }
+
   function applyFilters() {
     setStatusFilter(draftStatusFilter);
     setMyInvoicesOnly(draftMyInvoicesOnly);
+    setDateFrom(draftDateFrom);
+    setDateTo(draftDateTo);
     setFiltersOpen(false);
   }
 
   function resetFilters() {
     setStatusFilter('');
     setMyInvoicesOnly(false);
+    setDateFrom('');
+    setDateTo('');
     setDraftStatusFilter('');
     setDraftMyInvoicesOnly(false);
+    setDraftDateFrom('');
+    setDraftDateTo('');
     setFiltersOpen(false);
   }
 
   function clearAdvancedFilter(key) {
     if (key === 'status') setStatusFilter('');
     if (key === 'mine') setMyInvoicesOnly(false);
+    if (key === 'date_from') {
+      setDateFrom('');
+      setDateTo('');
+      setDraftDateFrom('');
+      setDraftDateTo('');
+    }
   }
 
   function clearSearch() {
@@ -829,11 +945,50 @@ export default function InvoicesListPage() {
         <div className="exp-desk-filters-head">
           <div>
             <h2 className="exp-desk-filters-title">Filters</h2>
-            <p className="exp-desk-filters-sub">Narrow the list by status or ownership.</p>
+            <p className="exp-desk-filters-sub">Narrow the list by date, status, or ownership.</p>
           </div>
           <button type="button" className="exp-desk-filters-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
             <X size={16} aria-hidden="true" />
           </button>
+        </div>
+
+        <div className="exp-desk-filters-section">
+          <div className="exp-desk-filters-section-label">Date range</div>
+          <div className="exp-desk-date-presets" role="group" aria-label="Quick date ranges">
+            <button
+              type="button"
+              className={`exp-desk-date-preset${isThisMonthRange({ date_from: draftDateFrom, date_to: draftDateTo }) ? ' is-active' : ''}`}
+              onClick={() => setDatePreset('month')}
+            >
+              This month
+            </button>
+            <button type="button" className="exp-desk-date-preset" onClick={() => setDatePreset('30d')}>
+              Last 30 days
+            </button>
+            <button type="button" className="exp-desk-date-preset" onClick={() => setDatePreset('clear')}>
+              Clear dates
+            </button>
+          </div>
+          <div className="exp-desk-filters-grid exp-desk-filters-grid--dates">
+            <div className="exp-desk-field">
+              <label htmlFor="invFilterDateFrom">From</label>
+              <input
+                id="invFilterDateFrom"
+                type="date"
+                value={draftDateFrom}
+                onChange={(e) => setDraftDateFrom(e.target.value)}
+              />
+            </div>
+            <div className="exp-desk-field">
+              <label htmlFor="invFilterDateTo">To</label>
+              <input
+                id="invFilterDateTo"
+                type="date"
+                value={draftDateTo}
+                onChange={(e) => setDraftDateTo(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="exp-desk-filters-section">
@@ -869,6 +1024,8 @@ export default function InvoicesListPage() {
           <button type="button" className="exp-desk-btn exp-desk-btn-ghost" onClick={() => {
             setDraftStatusFilter('');
             setDraftMyInvoicesOnly(false);
+            setDraftDateFrom('');
+            setDraftDateTo('');
           }}
           >
             Clear
@@ -884,7 +1041,7 @@ export default function InvoicesListPage() {
 
   if (loading && !init) {
     return (
-      <div className="exp-desk-page exp-desk-boot-loading" role="status" aria-live="polite">
+      <div className="exp-desk-page exp-desk-page--analytics-off exp-desk-boot-loading" role="status" aria-live="polite">
         <Loader2 className="exp-desk-boot-spinner" aria-hidden="true" />
         <span>Loading invoices...</span>
       </div>
@@ -912,7 +1069,7 @@ export default function InvoicesListPage() {
   );
 
   return (
-    <div className="exp-desk-page">
+    <div className="exp-desk-page exp-desk-page--analytics-off">
       {init.flash && <div className="exp-desk-flash exp-desk-flash-success" role="status">{init.flash}</div>}
       {notice ? (
         <div className="exp-desk-flash-ok" role="status">
@@ -960,12 +1117,6 @@ export default function InvoicesListPage() {
               </button>
             </div>
 
-            {useRmShell && urls.settings && (
-              <a href={urls.settings} className="qt-settings-btn" title="Sales settings">
-                <i className="fas fa-cog" />
-              </a>
-            )}
-
             {createInvoiceBtn}
           </div>
         </div>
@@ -986,7 +1137,7 @@ export default function InvoicesListPage() {
             </button>
           ))}
           <button type="button" className="exp-desk-filter-chip exp-desk-filter-chip--clear" onClick={resetFilters}>
-            Clear all
+            All data
           </button>
         </div>
       )}
@@ -1031,10 +1182,10 @@ export default function InvoicesListPage() {
         </button>
       </section>
 
-      <section className="exp-desk-results inv-invoices-table">
+      <section className="exp-desk-results inv-invoices-table" aria-label="Invoices">
         <div className="exp-desk-results-head">
           <span className="exp-desk-results-count">
-            {filteredInvoices.length} {filteredInvoices.length === 1 ? 'result' : 'results'}
+            {filteredInvoices.length} {filteredInvoices.length === 1 ? 'invoice' : 'invoices'}
           </span>
         </div>
 

@@ -264,12 +264,14 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
   const canvasRef = useRef(null)
   const [useProfile, setUseProfile] = useState(!!data.profileSignature)
   const [confirmed, setConfirmed] = useState(false)
+  const [comments, setComments] = useState('')
   const [saving, setSaving] = useState(false)
   const drawing = useRef(false)
 
   useEffect(() => {
     if (!open) {
       setConfirmed(false)
+      setComments('')
       setSaving(false)
       setUseProfile(!!data.profileSignature)
     }
@@ -328,11 +330,15 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
 
   if (!open || !approval) return null
 
+  const roleLabel = rolesStr || approval.role || 'Approver'
+  const isFinalApproval = !!approval.is_final_approval
+
   async function submit() {
     setSaving(true)
     const fd = new FormData()
     fd.append('voucher_id', String(data.voucher.id))
     fd.append('approval_id', String(approval.id))
+    fd.append('comments', comments)
     if (useProfile) {
       fd.append('use_profile_signature', '1')
     } else {
@@ -346,42 +352,61 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
       }
     }
     try {
-      const rawApprove = String(data.actions?.approveUrl || '').trim() || 'approve_voucher.php'
-      let approveUrl
-      try {
-        approveUrl = new URL(rawApprove, window.location.origin)
-      } catch {
-        approveUrl = new URL(rawApprove, window.location.href)
-      }
-      // Keep company-slug paths intact; only fix missing slug when path starts at /employee/.
-      const hereParts = window.location.pathname.split('/').filter(Boolean)
-      const thereParts = approveUrl.pathname.split('/').filter(Boolean)
-      const companyHint = hereParts[0] && !['employee', 'admin', 'stock', 'modules', 'assets'].includes(hereParts[0].toLowerCase())
-        ? hereParts[0]
+      // Prefer employee/... approve URL. Naive view-voucher → approve_voucher rewrite
+      // breaks for /ultimate/view-voucher.php (no approve at company root → 404 HTML).
+      const pagePath = String(window.location.pathname || '')
+      const fromEmployeePage = /\/employee\/view-voucher(\.php)?$/i.test(pagePath)
+        ? pagePath
+          .replace(/\/view-voucher\.php$/i, '/approve_voucher.php')
+          .replace(/\/view-voucher$/i, '/approve_voucher')
         : ''
-      if (
-        companyHint
-        && thereParts[0]
-        && thereParts[0].toLowerCase() === 'employee'
-        && thereParts[0].toLowerCase() !== companyHint.toLowerCase()
-      ) {
-        approveUrl.pathname = `/${companyHint}/${thereParts.join('/')}`
+      let approveUrl = fromEmployeePage
+      if (!approveUrl) {
+        const rawApprove = String(data.actions?.approveUrl || '').trim() || 'employee/approve_voucher.php'
+        try {
+          approveUrl = new URL(rawApprove, window.location.href).href
+        } catch {
+          approveUrl = rawApprove
+        }
       }
-      const res = await fetch(`${approveUrl.pathname}${approveUrl.search}`, {
+      const res = await fetch(approveUrl, {
         method: 'POST',
         body: fd,
         credentials: 'same-origin',
-        headers: { Accept: 'application/json' },
         redirect: 'manual',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
       })
-      if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
-        throw new Error('Session expired or redirect while approving. Please refresh and try again.')
+      const redirected = res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)
+      if (redirected) {
+        throw new Error('Session expired. Please refresh and log in again.')
       }
+      const rawText = await res.text()
+      const contentType = String(res.headers.get('content-type') || '').toLowerCase()
       let j = null
       try {
-        j = await res.json()
+        j = rawText ? JSON.parse(rawText) : null
       } catch {
-        throw new Error(res.ok ? 'Invalid server response' : `Request failed (${res.status})`)
+        j = null
+      }
+      if (res.status === 401 || res.status === 403) {
+        throw new Error((j && j.message) || 'Session expired. Please refresh and log in again.')
+      }
+      if (!j) {
+        const looksLogin = /log\s*in|sign\s*in|session expired/i.test(rawText || '')
+        const snippet = String(rawText || '').replace(/\s+/g, ' ').trim().slice(0, 160)
+        throw new Error(
+          looksLogin
+            ? 'Session expired. Please refresh and log in again.'
+            : (snippet
+              ? `Approval failed (${res.status}). ${snippet}`
+              : `Approval failed (${res.status}). Empty response from ${approveUrl}`)
+        )
+      }
+      if (!contentType.includes('application/json') && !(j && typeof j === 'object')) {
+        throw new Error('Session expired. Please refresh and log in again.')
       }
       if (j && j.success) {
         const remainingCount = Number(j.remaining_count || 0)
@@ -430,9 +455,6 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
     }
   }
 
-  const roleLabel = rolesStr || approval.role || 'Approver'
-  const isFinalApproval = !!approval.is_final_approval
-
   return (
     <VvModalOverlay open={open} onClose={onClose} id="approveModalAction">
       <div className="modal-content-clean" onMouseDown={(e) => e.stopPropagation()}>
@@ -466,6 +488,21 @@ export function ApproveModal({ open, onClose, approval, rolesStr, data, onSucces
             </a>
           )}
         </div>
+        <label className="vv-react-modal__field" style={{ display: 'block', margin: '12px 0 0' }}>
+          <span style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600, color: '#334155' }}>
+            Comments (Optional)
+          </span>
+          <textarea
+            name="comments"
+            rows={3}
+            value={comments}
+            onChange={(e) => setComments(e.target.value)}
+            placeholder="Add a reason or note..."
+            className="vv-react-modal__textarea"
+            disabled={saving}
+            style={{ width: '100%', boxSizing: 'border-box' }}
+          />
+        </label>
         <div className="warning-alert-clean">
           <div className="warning-alert-clean__title">Warning</div>
           <p>

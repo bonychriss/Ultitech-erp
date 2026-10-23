@@ -171,7 +171,13 @@ export function formatInvoiceKpiHeadline(trace) {
 function buildListedNowTrace(filteredInvoices, filters, defaultCurrency) {
   const count = filteredInvoices.length;
   const total = filteredInvoices.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
-  const hasFilters = Boolean(filters.search?.trim() || filters.statusFilter || filters.myInvoicesOnly);
+  const hasFilters = Boolean(
+    filters.search?.trim()
+    || filters.statusFilter
+    || filters.myInvoicesOnly
+    || filters.dateFrom
+    || filters.dateTo,
+  );
 
   return buildTrace({
     title: 'Listed now',

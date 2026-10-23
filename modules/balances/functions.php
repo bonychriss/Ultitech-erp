@@ -1479,7 +1479,58 @@ function coa_default_accounts_catalog(): array
             'type' => 'expense',
             'description' => 'Costs of running your business day to day',
             'display_order' => 10,
-            'children' => [],
+            'children' => [
+                [
+                    'code' => '5001',
+                    'name' => 'Office Supplies',
+                    'description' => 'Stationery, consumables, and general office materials',
+                ],
+                [
+                    'code' => '5002',
+                    'name' => 'Travel & Transport',
+                    'description' => 'Travel, fuel, taxi, and transport costs',
+                ],
+                [
+                    'code' => '5003',
+                    'name' => 'Utilities',
+                    'description' => 'Electricity, water, internet, and similar utilities',
+                ],
+                [
+                    'code' => '5004',
+                    'name' => 'Rent & Premises',
+                    'description' => 'Office or shop rent and related premises costs',
+                ],
+                [
+                    'code' => '5005',
+                    'name' => 'Salaries & Wages',
+                    'description' => 'Staff salaries, wages, and related payroll costs',
+                ],
+                [
+                    'code' => '5006',
+                    'name' => 'Marketing & Advertising',
+                    'description' => 'Ads, promotions, and marketing campaigns',
+                ],
+                [
+                    'code' => '5007',
+                    'name' => 'Professional Fees',
+                    'description' => 'Legal, accounting, consulting, and professional services',
+                ],
+                [
+                    'code' => '5008',
+                    'name' => 'Repairs & Maintenance',
+                    'description' => 'Repairs and upkeep of equipment, vehicles, or premises',
+                ],
+                [
+                    'code' => '5009',
+                    'name' => 'Communication',
+                    'description' => 'Phone, SMS, airtime, and communication costs',
+                ],
+                [
+                    'code' => '5010',
+                    'name' => 'Miscellaneous Expenses',
+                    'description' => 'Other operating expenses that do not fit a specific category',
+                ],
+            ],
         ],
         [
             'code' => '4000',

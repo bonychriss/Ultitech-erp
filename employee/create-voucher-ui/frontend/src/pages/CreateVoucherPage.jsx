@@ -134,6 +134,8 @@ export default function CreateVoucherPage() {
       .then((res) => res.json())
       .then((data) => {
         if (cancelled || !data || data.ok === false || !Array.isArray(data.payees)) return
+        // Never wipe a populated dropdown with an empty refresh (wrong DB / transient miss).
+        if (data.payees.length === 0) return
         setPayees(data.payees)
       })
       .catch(() => {})

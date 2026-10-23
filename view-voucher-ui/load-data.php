@@ -568,13 +568,14 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         ];
     }
 
-    // Comments
+    // Approval comments only (typed notes on approve/reject — not activity like attachment deletes).
     $comments = [];
     try {
         $stmtC = $pdo->prepare(
             'SELECT al.*, u.full_name, u.role FROM approval_logs al '
             . 'LEFT JOIN users u ON al.user_id = u.id '
-            . "WHERE al.voucher_id = ? AND al.comments IS NOT NULL AND al.comments != '' "
+            . "WHERE al.voucher_id = ? AND al.comments IS NOT NULL AND TRIM(al.comments) != '' "
+            . "AND LOWER(TRIM(al.action)) IN ('approved', 'rejected') "
             . 'ORDER BY al.created_at DESC'
         );
         $stmtC->execute([$voucherId]);

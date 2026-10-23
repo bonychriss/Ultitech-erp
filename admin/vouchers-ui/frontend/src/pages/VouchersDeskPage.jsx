@@ -257,6 +257,15 @@ function submitForm(action, fields) {
   form.submit()
 }
 
+/** Optional comments before approve/reject. Returns null if cancelled. */
+function promptApprovalComments(action) {
+  const label = action === 'approved' ? 'approve' : 'reject'
+  if (!window.confirm(`Are you sure you want to ${label} this voucher?`)) return null
+  const comments = window.prompt('Comments (optional). Leave blank if none:', '')
+  if (comments === null) return null
+  return String(comments)
+}
+
 function currentGetParams() {
   const params = {}
   const usp = new URLSearchParams(window.location.search)
@@ -359,8 +368,9 @@ function RowActionsMenu({
       icon: <CheckCircle2 size={14} aria-hidden="true" />,
       className: 'pv-menu-ok',
       onClick: () => {
-        if (window.confirm('Are you sure you want to approve this voucher?')) {
-          submitForm(ACT.approveUrl, { voucher_id: v.id, action: 'approved' })
+        const comments = promptApprovalComments('approved')
+        if (comments !== null) {
+          submitForm(ACT.approveUrl, { voucher_id: v.id, action: 'approved', comments })
         }
         onClose()
       },
@@ -373,8 +383,9 @@ function RowActionsMenu({
       icon: <Ban size={14} aria-hidden="true" />,
       className: 'pv-menu-danger',
       onClick: () => {
-        if (window.confirm('Are you sure you want to reject this voucher?')) {
-          submitForm(ACT.approveUrl, { voucher_id: v.id, action: 'rejected' })
+        const comments = promptApprovalComments('rejected')
+        if (comments !== null) {
+          submitForm(ACT.approveUrl, { voucher_id: v.id, action: 'rejected', comments })
         }
         onClose()
       },
@@ -898,8 +909,9 @@ export default function VouchersDeskPage() {
   }
 
   function quickApprove(id, action) {
-    if (window.confirm(`Are you sure you want to ${action} this voucher?`)) {
-      submitForm(ACT.approveUrl, { voucher_id: id, action })
+    const comments = promptApprovalComments(action)
+    if (comments !== null) {
+      submitForm(ACT.approveUrl, { voucher_id: id, action, comments })
     }
   }
 

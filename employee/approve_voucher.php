@@ -14,11 +14,16 @@ if (function_exists('voucher_bootstrap_operational_pdo')) {
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit;
 }
 
-header('Content-Type: application/json');
+while (ob_get_level() > 0) {
+    @ob_end_clean();
+}
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
 
 $voucher_id = isset($_POST['voucher_id']) ? (int) $_POST['voucher_id'] : 0;
 
@@ -124,9 +129,34 @@ try {
             echo json_encode(['success' => true, 'message' => 'Already approved']);
             exit;
         }
+
+        // If the UI sent a specific pending approval row the user owns, keep it even when
+        // getUserPendingVoucherApprovals() omitted it (common for General Manager).
+        if (empty($rolesToApprove)) {
+            $roleKey = function_exists('normalizeVoucherApprovalRoleKey')
+                ? normalizeVoucherApprovalRoleKey($approval['role'] ?? '')
+                : strtolower(trim((string) ($approval['role'] ?? '')));
+            $ownsRow = ((int) ($approval['approver_id'] ?? 0) === (int) $userId)
+                || (
+                    $uname !== ''
+                    && strcasecmp(trim((string) ($approval['approver_name'] ?? '')), $uname) === 0
+                );
+            $isGm = ($roleKey === 'general manager' || $roleKey === 'gm');
+            if ($ownsRow || ($isGm && function_exists('isAdmin') && isAdmin())) {
+                $rolesToApprove = [[
+                    'id' => (int) ($approval['id'] ?? 0),
+                    'role' => (string) ($approval['role'] ?? ''),
+                    'role_key' => $roleKey !== '' ? $roleKey : 'general manager',
+                    'approver_name' => $uname !== '' ? $uname : (string) ($approval['approver_name'] ?? ''),
+                    'is_final_approval' => $isGm,
+                ]];
+                file_put_contents($logFile, "Fallback rolesToApprove from approval row role={$roleKey}\n", FILE_APPEND);
+            }
+        }
     }
 
     if (empty($rolesToApprove)) {
+        file_put_contents($logFile, "EMPTY rolesToApprove for voucher={$voucher_id} user={$userId}\n", FILE_APPEND);
         $pdo->rollBack();
         echo json_encode(['success' => false, 'message' => 'You are not registered as an approver for this voucher']);
         exit;
@@ -259,9 +289,11 @@ try {
 
     $pdo->commit();
 
+    $comments = trim((string) ($_POST['comments'] ?? ''));
+
     if ($finalizeAsGm) {
         try {
-            notifyUserVoucherStatus($voucher_id, 'approved');
+            notifyUserVoucherStatus($voucher_id, 'approved', $comments !== '' ? $comments : null);
         } catch (Throwable $eNotify) {
         }
     }
@@ -295,7 +327,7 @@ try {
 
     // Log after commit so approval_logs FK issues cannot roll back the approval.
     try {
-        logVoucherAction($voucher_id, $userId, 'approved');
+        logVoucherAction($voucher_id, $userId, 'approved', $comments !== '' ? $comments : null);
     } catch (Throwable $logEx) {
         error_log('approve_voucher log failed voucher ' . $voucher_id . ': ' . $logEx->getMessage());
     }

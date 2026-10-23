@@ -33,10 +33,15 @@ function createVoucherBuildClientCfg(array $data = []): array
     $mapPayees = static function (array $rows): array {
         $out = [];
         foreach ($rows as $r) {
+            $name = trim((string) ($r['name'] ?? ''));
+            $id = (int) ($r['id'] ?? 0);
+            if ($name === '' || $id <= 0) {
+                continue;
+            }
             $out[] = [
-                'id' => (int) ($r['id'] ?? 0),
-                'name' => (string) ($r['name'] ?? ''),
-                'type' => (string) ($r['type'] ?? ''),
+                'id' => $id,
+                'name' => $name,
+                'type' => (string) ($r['type'] ?? 'Other'),
             ];
         }
         return $out;

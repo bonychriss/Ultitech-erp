@@ -2679,6 +2679,64 @@ function ensureStockSuppliersMirroredAsPayees(?PDO $explicitPdo = null): int
 }
 
 /**
+ * Ensure distinct historical voucher payee names exist in `payees`.
+ * Helps Create Voucher when the payees master was emptied or never seeded.
+ */
+function ensureVoucherPayeeNamesMirroredAsPayees(?PDO $explicitPdo = null): int
+{
+    static $ran = false;
+    if ($ran) {
+        return 0;
+    }
+    $ran = true;
+
+    if (!function_exists('createOrReactivatePayee') || !function_exists('payeesOperationalPdo')) {
+        return 0;
+    }
+    if (!function_exists('erp_connection_has_table')) {
+        return 0;
+    }
+
+    $party = payeesOperationalPdo($explicitPdo);
+    if (!($party instanceof PDO) || !erp_connection_has_table($party, 'payment_vouchers')) {
+        return 0;
+    }
+    if (!erp_connection_has_table($party, 'payees')) {
+        return 0;
+    }
+
+    try {
+        $names = $party->query(
+            "SELECT DISTINCT TRIM(payee_name) AS name
+             FROM payment_vouchers
+             WHERE payee_name IS NOT NULL
+               AND TRIM(payee_name) <> ''
+               AND LOWER(TRIM(payee_name)) NOT IN ('(draft)', 'draft', 'n/a', '-')"
+        )->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Throwable $e) {
+        return 0;
+    }
+
+    $created = 0;
+    foreach ($names as $name) {
+        $name = trim((string) $name);
+        if ($name === '') {
+            continue;
+        }
+        try {
+            createOrReactivatePayee($party, $name, 'Other', '', '');
+            $created++;
+        } catch (RuntimeException $e) {
+            // Already an active payee with this name.
+        } catch (Throwable $e) {
+            error_log('ensureVoucherPayeeNamesMirroredAsPayees: ' . $e->getMessage());
+        }
+    }
+
+    return $created;
+}
+
+/**
  * Active payees from the canonical payees database.
  *
  * @return list<array{id:int,name:string,type:string,tin?:string,contact_details?:string}>
@@ -2689,26 +2747,59 @@ function fetchActivePayees(?PDO $explicitPdo = null): array
     if (!($db instanceof PDO)) {
         return [];
     }
+    if (function_exists('ensurePayeesTableSchema')) {
+        try {
+            ensurePayeesTableSchema($db);
+        } catch (Throwable $e) {
+            // continue
+        }
+    }
     if (function_exists('ensureStockSuppliersMirroredAsPayees')) {
         ensureStockSuppliersMirroredAsPayees($db);
+    }
+    if (function_exists('ensureVoucherPayeeNamesMirroredAsPayees')) {
+        ensureVoucherPayeeNamesMirroredAsPayees($db);
     }
     try {
         $stmt = $db->query(
             'SELECT id, name, type, tin, contact_details
              FROM payees
              WHERE COALESCE(is_active, 1) = 1
+               AND name IS NOT NULL
+               AND TRIM(name) <> \'\'
              ORDER BY name ASC'
         );
         $rows = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
     } catch (Throwable $e) {
-        return [];
+        $rows = [];
+    }
+
+    // Last resort: current request PDO (may differ if operational link failed).
+    if ($rows === [] && $explicitPdo instanceof PDO && $explicitPdo !== $db) {
+        try {
+            $stmt = $explicitPdo->query(
+                'SELECT id, name, type, tin, contact_details
+                 FROM payees
+                 WHERE COALESCE(is_active, 1) = 1
+                   AND name IS NOT NULL
+                   AND TRIM(name) <> \'\'
+                 ORDER BY name ASC'
+            );
+            $rows = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+        } catch (Throwable $e) {
+            $rows = [];
+        }
     }
 
     $out = [];
     foreach ($rows as $r) {
+        $name = trim((string) ($r['name'] ?? ''));
+        if ($name === '') {
+            continue;
+        }
         $out[] = [
             'id' => (int) ($r['id'] ?? 0),
-            'name' => (string) ($r['name'] ?? ''),
+            'name' => $name,
             'type' => (string) ($r['type'] ?? 'Other'),
             'tin' => (string) ($r['tin'] ?? ''),
             'contact_details' => (string) ($r['contact_details'] ?? ''),
@@ -7588,11 +7679,34 @@ function isFinance()
     return (preg_match('/\b(finance|account|accounts|accounting)\b/i', $dept) === 1);
 }
 
+function erpRequestWantsJson(): bool
+{
+    $accept = strtolower((string) ($_SERVER['HTTP_ACCEPT'] ?? ''));
+    if (str_contains($accept, 'application/json')) {
+        return true;
+    }
+    $xrw = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+
+    return $xrw === 'xmlhttprequest';
+}
+
+function erpJsonAuthFailure(string $message = 'Session expired. Please refresh and log in again.', int $status = 401): void
+{
+    if (!headers_sent()) {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode(['success' => false, 'message' => $message]);
+    exit;
+}
+
 function requireLogin()
 {
     global $pdo;
     ensureMultiCompanyControlSchema();
-    if (function_exists('redirectBareTenantPathToCompanyUrl')) {
+    $wantsJson = function_exists('erpRequestWantsJson') && erpRequestWantsJson();
+    // JSON/XHR callers must not receive HTML login/company redirects.
+    if (!$wantsJson && function_exists('redirectBareTenantPathToCompanyUrl')) {
         redirectBareTenantPathToCompanyUrl();
     }
     $requestedCompanySlug = getRequestedCompanySlug();
@@ -7614,6 +7728,9 @@ function requireLogin()
     };
     if (!isLoggedIn()) {
         global $pdo;
+        if ($wantsJson) {
+            erpJsonAuthFailure();
+        }
         $needRegister = false;
         try {
             $stmt = $pdo->query("SELECT COUNT(*) AS c FROM users WHERE is_active = 1");
@@ -7641,6 +7758,9 @@ function requireLogin()
         $resolvedCompanyId = currentCompanyId();
         if (empty($resolvedCompanyId)) {
             clearAuthSession();
+            if ($wantsJson) {
+                erpJsonAuthFailure('Company context missing. Please refresh and log in again.');
+            }
             if (!headers_sent()) {
                 header('Location: ' . app_url('/login.php?error=company_context'));
             } else {
@@ -7660,6 +7780,9 @@ function requireLogin()
             $sessionCompanyId = (int) ($_SESSION['company_id'] ?? 0);
             if ($requestedCompanyId <= 0 || $sessionCompanyId <= 0) {
                 clearAuthSession();
+                if ($wantsJson) {
+                    erpJsonAuthFailure();
+                }
                 header('Location: ' . company_login_url($requestedCompanySlug));
                 exit;
             }

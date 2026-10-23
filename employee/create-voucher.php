@@ -81,12 +81,17 @@ $approvalUserLists = function_exists('fetchVoucherApprovalUsers')
 $allUsers = $approvalUserLists['all'] ?? array();
 $financeUsers = $approvalUserLists['finance'] ?? array();
 
-// Prepare Payees
+// Prepare Payees (operational DB + supplier/history backfill)
 $payees = function_exists('fetchActivePayees') ? fetchActivePayees($pdo) : [];
 if ($payees === []) {
     try {
-        $stmt = $pdo->query('SELECT id, name, type FROM payees WHERE COALESCE(is_active, 1) = 1 ORDER BY name ASC');
-        $payees = $stmt->fetchAll();
+        $stmt = $pdo->query(
+            "SELECT id, name, type FROM payees
+             WHERE COALESCE(is_active, 1) = 1
+               AND name IS NOT NULL AND TRIM(name) <> ''
+             ORDER BY name ASC"
+        );
+        $payees = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
     } catch (Exception $e) { /* silent */
     }
 }

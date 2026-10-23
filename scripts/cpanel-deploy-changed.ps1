@@ -74,7 +74,7 @@ function Resolve-DeployUpload {
         }
 
         # App UI builds and shells live on the parent app root (stubs chdir there).
-        if ($rel -match '^(employee|admin|deliveries|attendance|todo|stock|store-management-system)/') {
+        if ($rel -match '^(employee|admin|deliveries|attendance|todo|stock|store-management-system|view-voucher-ui)/') {
             return @(
                 @{ Local = $rel; RemoteBase = $parentBase; Remote = $rel }
             )

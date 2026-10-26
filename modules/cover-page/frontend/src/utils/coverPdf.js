@@ -251,14 +251,16 @@ async function drawSignatureOrText(doc, page, { url, fallbackText }, line, font)
   const image = await embedSignatureImage(doc, url);
   if (image) {
     const maxW = Math.max(24, line.x1 - line.x0 - 4);
-    const maxH = 20;
+    const maxH = 18;
     const scale = Math.min(maxW / image.width, maxH / image.height);
     const w = image.width * scale;
     const h = image.height * scale;
     const box = page.getCropBox();
+    // Top-left coords: line.y is the underline. pdf-lib y is the image bottom —
+    // sit that bottom just above the underline (same band as text baselines).
     page.drawImage(image, {
       x: box.x + line.x0 + 2,
-      y: box.y + box.height - line.y - h + 3,
+      y: box.y + box.height - line.y + 1.5,
       width: w,
       height: h,
     });

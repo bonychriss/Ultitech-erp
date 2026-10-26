@@ -98,6 +98,9 @@ $suppliers = $pdo->query('SELECT id, name FROM suppliers ORDER BY name ASC')->fe
 if ($isUltimateStockSimple && function_exists('stock_ultimate_ensure_website_brands')) {
     stock_ultimate_ensure_website_brands($pdo);
 }
+if ($isUltimateStockSimple && function_exists('stock_ultimate_ensure_website_categories')) {
+    stock_ultimate_ensure_website_categories($pdo);
+}
 $brands = [];
 try {
     $brands = $pdo->query('SELECT id, name, brand_type, logo FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -294,39 +297,41 @@ html[data-theme="dark"] main.main-content.product-create-react-root {
                 'showCost' => $showCost,
                 'product' => $productPayload,
                 'existingImages' => $imagePayload,
-                'categories' => array_map(static function ($c) use ($categoryProductThumbs, $base) {
-                    $imageUrl = '';
-                    if (function_exists('stock_category_image_url')) {
-                        foreach (['cover_image', 'icon', 'banner', 'image'] as $key) {
-                            $fn = trim((string) ($c[$key] ?? ''));
-                            if ($fn === '' || strcasecmp($fn, 'default_cat.png') === 0) {
-                                continue;
-                            }
-                            $url = (string) stock_category_image_url($fn);
-                            if ($url !== '') {
-                                $imageUrl = $url;
-                                break;
+                'categories' => ($isUltimateStockSimple && function_exists('stock_ultimate_category_picker_rows'))
+                    ? stock_ultimate_category_picker_rows($pdo, $categories)
+                    : array_map(static function ($c) use ($categoryProductThumbs, $base) {
+                        $imageUrl = '';
+                        if (function_exists('stock_category_image_url')) {
+                            foreach (['cover_image', 'icon', 'banner', 'image'] as $key) {
+                                $fn = trim((string) ($c[$key] ?? ''));
+                                if ($fn === '' || strcasecmp($fn, 'default_cat.png') === 0) {
+                                    continue;
+                                }
+                                $url = (string) stock_category_image_url($fn);
+                                if ($url !== '') {
+                                    $imageUrl = $url;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    if ($imageUrl === '') {
-                        $cid = (int) ($c['id'] ?? 0);
-                        $fallback = $categoryProductThumbs[$cid] ?? null;
-                        if (is_array($fallback) && function_exists('stock_product_list_image_url')) {
-                            $imageUrl = (string) stock_product_list_image_url(
-                                (int) ($fallback['product_id'] ?? 0),
-                                (string) ($fallback['filename'] ?? ''),
-                                'thumbnail',
-                                (string) $base
-                            );
+                        if ($imageUrl === '') {
+                            $cid = (int) ($c['id'] ?? 0);
+                            $fallback = $categoryProductThumbs[$cid] ?? null;
+                            if (is_array($fallback) && function_exists('stock_product_list_image_url')) {
+                                $imageUrl = (string) stock_product_list_image_url(
+                                    (int) ($fallback['product_id'] ?? 0),
+                                    (string) ($fallback['filename'] ?? ''),
+                                    'thumbnail',
+                                    (string) $base
+                                );
+                            }
                         }
-                    }
-                    return [
-                        'id' => (int) $c['id'],
-                        'name' => (string) $c['name'],
-                        'image_url' => $imageUrl,
-                    ];
-                }, $categories),
+                        return [
+                            'id' => (int) $c['id'],
+                            'name' => (string) $c['name'],
+                            'image_url' => $imageUrl,
+                        ];
+                    }, $categories),
                 'suppliers' => array_map(static function ($s) {
                     return ['id' => (int) $s['id'], 'name' => (string) $s['name']];
                 }, $suppliers),

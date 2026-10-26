@@ -871,7 +871,18 @@ if (!function_exists('stock_blade_product_create_data')) {
             || (!empty($_SESSION['company_slug']) && strtolower((string) $_SESSION['company_slug']) === 'roadmaster');
         $showCost = in_array($_SESSION['role'] ?? '', ['admin', 'procurement'], true);
 
-        $categories = $pdo->query('SELECT id, name FROM categories ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $categories = [];
+        try {
+            $categories = $pdo->query(
+                'SELECT id, name, icon, cover_image, banner FROM categories ORDER BY name ASC'
+            )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (PDOException $e) {
+            try {
+                $categories = $pdo->query('SELECT id, name FROM categories ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (PDOException $e2) {
+                $categories = [];
+            }
+        }
         $suppliers = $pdo->query('SELECT id, name FROM suppliers ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $brands = [];
         try {
@@ -886,6 +897,32 @@ if (!function_exists('stock_blade_product_create_data')) {
                     $brands = [];
                 }
             }
+        }
+
+        if ($isUltimate && function_exists('stock_ultimate_category_picker_rows')) {
+            $categoryPayload = stock_ultimate_category_picker_rows($pdo, $categories);
+        } else {
+            $categoryPayload = array_map(static function ($c) {
+                $imageUrl = '';
+                if (function_exists('stock_category_image_url')) {
+                    foreach (['icon', 'cover_image', 'banner', 'image'] as $key) {
+                        $fn = trim((string) ($c[$key] ?? ''));
+                        if ($fn === '' || strcasecmp($fn, 'default_cat.png') === 0) {
+                            continue;
+                        }
+                        $url = (string) stock_category_image_url($fn);
+                        if ($url !== '') {
+                            $imageUrl = $url;
+                            break;
+                        }
+                    }
+                }
+                return [
+                    'id' => (int) ($c['id'] ?? 0),
+                    'name' => (string) ($c['name'] ?? ''),
+                    'image_url' => $imageUrl,
+                ];
+            }, $categories);
         }
 
         if ($isUltimate && function_exists('stock_ultimate_brand_picker_rows')) {
@@ -930,9 +967,7 @@ if (!function_exists('stock_blade_product_create_data')) {
             'isUltimate' => $isUltimate,
             'requireProductImage' => $requireProductImage,
             'showCost' => $showCost,
-            'categories' => array_map(static function ($c) {
-                return ['id' => (int) $c['id'], 'name' => (string) $c['name']];
-            }, $categories),
+            'categories' => $categoryPayload,
             'suppliers' => array_map(static function ($s) {
                 return ['id' => (int) $s['id'], 'name' => (string) $s['name']];
             }, $suppliers),

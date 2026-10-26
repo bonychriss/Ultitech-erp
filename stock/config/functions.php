@@ -2140,6 +2140,295 @@ if (!function_exists('stock_ultimate_brand_picker_rows')) {
 }
 
 /**
+ * Normalize a brand/category name for fuzzy matching (HEAD PROTECTIONS ≈ Head Protections).
+ */
+if (!function_exists('stock_ultimate_norm_name')) {
+    function stock_ultimate_norm_name($name)
+    {
+        $s = strtolower(trim((string) $name));
+        $s = preg_replace('/[^a-z0-9]+/', '', $s) ?? '';
+
+        return $s;
+    }
+}
+
+/**
+ * Main PPE categories from ultimate.co.tz (nav / Shop PPE).
+ * Values are local SVG icon keys written under the categories upload dir.
+ *
+ * @return array<string, string>
+ */
+if (!function_exists('stock_ultimate_website_category_catalog')) {
+    function stock_ultimate_website_category_catalog()
+    {
+        return [
+            'Head Protections' => 'local:head.svg',
+            'Face & Eye Protections' => 'local:face-eye.svg',
+            'Hearing Protections' => 'local:hearing.svg',
+            'Respiratory Protections' => 'local:respiratory.svg',
+            'Body Protections' => 'local:body.svg',
+            'Official Wear' => 'local:official.svg',
+            'Hand Protections' => 'local:hand.svg',
+            'Fall Protections' => 'local:fall.svg',
+            'Foot Protections' => 'local:foot.svg',
+            'Fire Protections' => 'local:fire.svg',
+            'Emergency Protections' => 'local:emergency.svg',
+            'Welding Materials' => 'local:welding.svg',
+        ];
+    }
+}
+
+/**
+ * Write a category icon SVG into the stock categories upload dir.
+ * Returns stored filename or '' on failure.
+ */
+if (!function_exists('stock_ultimate_store_category_icon')) {
+    function stock_ultimate_store_category_icon($name, $iconSource)
+    {
+        $name = trim((string) $name);
+        $iconSource = trim((string) $iconSource);
+        if ($name === '' || $iconSource === '') {
+            return '';
+        }
+
+        $dir = function_exists('stock_category_upload_dir')
+            ? stock_category_upload_dir()
+            : (dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'categories');
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        if (!is_dir($dir) || !is_writable($dir)) {
+            return '';
+        }
+
+        $slug = preg_replace('/[^a-z0-9]+/i', '-', strtolower($name)) ?: 'category';
+        $slug = trim($slug, '-');
+        $key = '';
+        if (preg_match('#^local:([a-z0-9\-]+)\.svg$#i', $iconSource, $m)) {
+            $key = strtolower($m[1]);
+        }
+
+        $paths = [
+            'head' => '<path d="M3 17.5h18"/><path d="M4.5 17.5V15a7.5 7.5 0 0 1 15 0v2.5"/><path d="M10 7.7V5.5h4v2.2"/><path d="M9 8.2V12M15 8.2V12"/>',
+            'face-eye' => '<circle cx="6.5" cy="14" r="3.5"/><circle cx="17.5" cy="14" r="3.5"/><path d="M10 14c.8-1 3.2-1 4 0"/><path d="M3 14l1.5-6M21 14l-1.5-6"/>',
+            'hearing' => '<path d="M5 15v-3a7 7 0 0 1 14 0v3"/><rect x="3" y="14" width="4.5" height="7" rx="1.8"/><rect x="16.5" y="14" width="4.5" height="7" rx="1.8"/>',
+            'hand' => '<path d="M7.5 21v-3.8L4.6 13.6a1.6 1.6 0 0 1 2.5-2L8.5 13V5.3a1.25 1.25 0 0 1 2.5 0V11"/><path d="M11 10V4a1.25 1.25 0 0 1 2.5 0v6.5"/><path d="M13.5 10.5V5a1.25 1.25 0 0 1 2.5 0v6"/><path d="M16 11V7.5a1.25 1.25 0 0 1 2.5 0v6.8c0 2.7-1.2 4.2-2.5 5V21"/><path d="M7.5 21H16"/>',
+            'body' => '<path d="M8.5 3 5 5.2V20a1 1 0 0 0 1 1h4.5V11z"/><path d="M15.5 3 19 5.2V20a1 1 0 0 1-1 1h-4.5V11z"/><path d="M8.5 3c.9 2 2.2 3 3.5 3s2.6-1 3.5-3"/><path d="M5 15.5h5.5M13.5 15.5H19"/>',
+            'foot' => '<path d="M5 3h6v8.5l6.4 2.1a3 3 0 0 1 2.1 2.9V19H4V4a1 1 0 0 1 1-1z"/><path d="M4 19v2h15.5v-2"/><path d="M11 6.5H8M11 9.5H8"/>',
+            'respiratory' => '<path d="M4 14c0-4.4 3.6-8 8-8s8 3.6 8 8"/><path d="M7 14v3.5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V14"/><path d="M9.5 11.5h5"/><circle cx="9" cy="9.2" r="1"/><circle cx="15" cy="9.2" r="1"/>',
+            'official' => '<path d="M4 7.5 12 3l8 4.5V11c0 5.2-3.4 8.6-8 10-4.6-1.4-8-4.8-8-10V7.5z"/><path d="M9 12.2l2 2 4-4"/>',
+            'fall' => '<path d="M12 3v10"/><path d="M8.5 7.5 12 4l3.5 3.5"/><path d="M7 14c0 2.8 2.2 5 5 5s5-2.2 5-5"/><path d="M9.5 21h5"/>',
+            'fire' => '<path d="M12 21c3.6 0 6-2.5 6-6.2 0-2.6-1.5-4.2-3.2-5.6.2 1.6-.4 2.8-1.5 3.5C14 9 12.4 6.8 12 4c-1.8 2.2-4.8 4.8-4.8 9.2C7.2 18.2 9.2 21 12 21z"/>',
+            'emergency' => '<path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4.5"/>',
+            'welding' => '<path d="M4 18h16"/><path d="M7 18 10 8h4l3 10"/><path d="M9.5 12.5h5"/><path d="M12 8V5"/>',
+        ];
+
+        if ($key === '' || !isset($paths[$key])) {
+            return '';
+        }
+
+        $filename = 'ultimate-cat-' . $slug . '.svg';
+        $path = rtrim(str_replace('\\', '/', $dir), '/') . '/' . $filename;
+        if (!is_file($path) || @filesize($path) < 20) {
+            $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" '
+                . 'stroke="#111" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" '
+                . 'role="img" aria-label="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '">'
+                . $paths[$key]
+                . '</svg>';
+            @file_put_contents($path, $svg);
+        }
+
+        return is_file($path) ? $filename : '';
+    }
+}
+
+/**
+ * Ensure Ultimate stock categories mirror ultimate.co.tz PPE categories (with icons).
+ */
+if (!function_exists('stock_ultimate_ensure_website_categories')) {
+    function stock_ultimate_ensure_website_categories(PDO $pdo)
+    {
+        $catalog = function_exists('stock_ultimate_website_category_catalog')
+            ? stock_ultimate_website_category_catalog()
+            : [];
+        if ($catalog === []) {
+            return;
+        }
+
+        $hasIcon = false;
+        $hasCover = false;
+        $hasItemType = false;
+        try {
+            $cols = $pdo->query('SHOW COLUMNS FROM categories')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            $hasIcon = in_array('icon', $cols, true);
+            $hasCover = in_array('cover_image', $cols, true);
+            $hasItemType = in_array('item_type', $cols, true);
+        } catch (Throwable $e) {
+            return;
+        }
+
+        $existing = [];
+        try {
+            $existing = $pdo->query('SELECT id, name, icon, cover_image FROM categories')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            try {
+                $existing = $pdo->query('SELECT id, name FROM categories')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (Throwable $e2) {
+                return;
+            }
+        }
+
+        $byNorm = [];
+        foreach ($existing as $row) {
+            $norm = stock_ultimate_norm_name($row['name'] ?? '');
+            if ($norm !== '') {
+                $byNorm[$norm] = $row;
+            }
+        }
+
+        foreach ($catalog as $name => $iconSource) {
+            $name = trim((string) $name);
+            if ($name === '') {
+                continue;
+            }
+            $norm = stock_ultimate_norm_name($name);
+            $storedIcon = ($hasIcon || $hasCover)
+                ? stock_ultimate_store_category_icon($name, $iconSource)
+                : '';
+
+            try {
+                if (isset($byNorm[$norm])) {
+                    $row = $byNorm[$norm];
+                    $id = (int) ($row['id'] ?? 0);
+                    $sets = [];
+                    $vals = [];
+                    if (strcasecmp((string) ($row['name'] ?? ''), $name) !== 0) {
+                        $sets[] = 'name = ?';
+                        $vals[] = $name;
+                    }
+                    if ($storedIcon !== '') {
+                        $curIcon = trim((string) ($row['icon'] ?? ''));
+                        if ($hasIcon && $curIcon !== $storedIcon) {
+                            $sets[] = 'icon = ?';
+                            $vals[] = $storedIcon;
+                        }
+                        $curCover = trim((string) ($row['cover_image'] ?? ''));
+                        if ($hasCover && ($curCover === '' || stripos($curCover, 'ultimate-cat-') === 0)
+                            && $curCover !== $storedIcon) {
+                            $sets[] = 'cover_image = ?';
+                            $vals[] = $storedIcon;
+                        }
+                    }
+                    if ($sets !== [] && $id > 0) {
+                        $vals[] = $id;
+                        $pdo->prepare(
+                            'UPDATE categories SET ' . implode(', ', $sets) . ' WHERE id = ?'
+                        )->execute($vals);
+                    }
+                    continue;
+                }
+
+                $fields = ['name'];
+                $values = [$name];
+                if ($hasItemType) {
+                    $fields[] = 'item_type';
+                    $values[] = 'general';
+                }
+                if ($hasIcon && $storedIcon !== '') {
+                    $fields[] = 'icon';
+                    $values[] = $storedIcon;
+                }
+                if ($hasCover && $storedIcon !== '') {
+                    $fields[] = 'cover_image';
+                    $values[] = $storedIcon;
+                }
+                $placeholders = implode(', ', array_fill(0, count($fields), '?'));
+                $pdo->prepare(
+                    'INSERT INTO categories (' . implode(', ', $fields) . ') VALUES (' . $placeholders . ')'
+                )->execute($values);
+            } catch (Throwable $e) {
+                /* skip one category; keep going */
+            }
+        }
+    }
+}
+
+/**
+ * Category picker rows for Ultimate: website PPE categories only, with icons.
+ *
+ * @param array<int, array<string, mixed>> $dbCategories
+ * @return array<int, array{id:int,name:string,image_url:string}>
+ */
+if (!function_exists('stock_ultimate_category_picker_rows')) {
+    function stock_ultimate_category_picker_rows(PDO $pdo, array $dbCategories = [])
+    {
+        if (function_exists('stock_ultimate_ensure_website_categories')) {
+            stock_ultimate_ensure_website_categories($pdo);
+        }
+
+        if ($dbCategories === []) {
+            try {
+                $dbCategories = $pdo->query(
+                    'SELECT id, name, icon, cover_image, banner FROM categories ORDER BY name ASC'
+                )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (Throwable $e) {
+                try {
+                    $dbCategories = $pdo->query(
+                        'SELECT id, name FROM categories ORDER BY name ASC'
+                    )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                } catch (Throwable $e2) {
+                    $dbCategories = [];
+                }
+            }
+        }
+
+        $dbByNorm = [];
+        foreach ($dbCategories as $c) {
+            $norm = stock_ultimate_norm_name($c['name'] ?? '');
+            if ($norm !== '') {
+                $dbByNorm[$norm] = $c;
+            }
+        }
+
+        $catalog = function_exists('stock_ultimate_website_category_catalog')
+            ? stock_ultimate_website_category_catalog()
+            : [];
+        $rows = [];
+        foreach ($catalog as $name => $iconSource) {
+            $norm = stock_ultimate_norm_name($name);
+            $db = $dbByNorm[$norm] ?? null;
+            $imageUrl = '';
+            if ($db && function_exists('stock_category_image_url')) {
+                foreach (['icon', 'cover_image', 'banner', 'image'] as $key) {
+                    $fn = trim((string) ($db[$key] ?? ''));
+                    if ($fn === '' || strcasecmp($fn, 'default_cat.png') === 0) {
+                        continue;
+                    }
+                    $url = (string) stock_category_image_url($fn);
+                    if ($url !== '') {
+                        $imageUrl = $url;
+                        break;
+                    }
+                }
+            }
+            if ($imageUrl === '' && function_exists('stock_ultimate_store_category_icon')) {
+                $stored = stock_ultimate_store_category_icon($name, $iconSource);
+                if ($stored !== '' && function_exists('stock_category_image_url')) {
+                    $imageUrl = (string) stock_category_image_url($stored);
+                }
+            }
+            $rows[] = [
+                'id' => $db ? (int) ($db['id'] ?? 0) : 0,
+                'name' => (string) $name,
+                'image_url' => $imageUrl,
+            ];
+        }
+
+        return $rows;
+    }
+}
+
+/**
  * Resolve a brand logo URL for a product brand / category name.
  */
 if (!function_exists('stock_resolve_brand_logo_url')) {

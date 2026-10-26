@@ -201,7 +201,7 @@ html[data-theme="dark"] main.main-content.product-create-react-root {
         body.dashboard .prod-create-row {
             display: block !important;
             margin-top: 0 !important;
-            margin-bottom: 16px !important;
+            margin-bottom: 10px !important;
         }
         body.dashboard .prod-create-label {
             display: block !important;
@@ -230,17 +230,17 @@ html[data-theme="dark"] main.main-content.product-create-react-root {
             margin-bottom: 0 !important;
         }
         body.dashboard .prod-create-section {
-            padding-bottom: 1.25rem !important;
-            margin-bottom: 1.25rem !important;
+            padding-bottom: 0 !important;
+            margin-bottom: 0.65rem !important;
         }
         body.dashboard .prod-create-section-header {
-            margin-bottom: 1rem !important;
+            margin-bottom: 8px !important;
         }
         body.dashboard .prod-create-actions {
             display: flex !important;
             flex-direction: column !important;
-            gap: 0.65rem !important;
-            margin-bottom: 1.5rem !important;
+            gap: 0.5rem !important;
+            margin-bottom: 1rem !important;
         }
         body.dashboard .prod-create-actions a,
         body.dashboard .prod-create-actions button {

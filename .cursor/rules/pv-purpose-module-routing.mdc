@@ -1,0 +1,18 @@
+---
+description: Route payment vouchers by purpose — General Payment to Expenses, Stock Purchase to Purchases
+alwaysApply: true
+---
+
+# Payment voucher purpose ? module
+
+When creating or listing PVs, keep this split:
+
+| PV purpose (form / DB) | Accounting module | Notes |
+|------------------------|-------------------|--------|
+| **General Payment** (`general`) | **Expenses** (`modules/expenses`) | Receipts + general payment vouchers |
+| **Stock Purchases** (`stock_purchase`) | **Purchases** (`modules/purchases`) | Stock purchase PVs only (often linked to POs) |
+
+- Do not show stock-purchase PVs on the Expenses desk.
+- Do not show general-payment PVs (or expense receipts) on the Purchases desk.
+- Canonical purpose value: `stock_purchase` (helpers like `normalizePaymentVoucherPurpose`, `buildPaymentVoucherStockPurchasePurposeWhereSql`).
+- Purchases reuses the expenses desk UI with `desk=purchases` / `__EXPENSES_DESK_MODE__=purchases`.

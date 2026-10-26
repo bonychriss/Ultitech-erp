@@ -2809,7 +2809,7 @@ try {
                     'manageProductsUrl' => function_exists('company_url')
                         ? company_url('stock/modules/products/index.php')
                         : (function_exists('app_url')
-                            ? app_url('stock/modules/products/index.php')
+                        ? app_url('stock/modules/products/index.php')
                             : '../stock/modules/products/index.php'),
                     'manageWarehousesUrl' => function_exists('company_url')
                         ? company_url('store-management-system/index.php') . '?module=warehouses'

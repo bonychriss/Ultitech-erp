@@ -777,8 +777,8 @@ a.cb-text-link:hover {
 
 .cb-create-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
+    justify-content: flex-end;
+    gap: 0.5rem;
   margin-top: 0.35rem;
 }
 
@@ -863,7 +863,7 @@ a.cb-text-link:hover {
 .cb-modal h3 {
   margin: 0;
   font-size: 1.1rem;
-  font-weight: 700;
+    font-weight: 700;
 }
 
 .cb-modal-head {

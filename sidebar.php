@@ -51,6 +51,9 @@ if (stripos($path_to_check, '/deliveries/') !== false
 if (strpos($script_name, '/modules/expenses/') !== false) {
     $active_module = 'expenses';
 }
+if (strpos($script_name, '/modules/purchases/') !== false) {
+    $active_module = 'accounting';
+}
 if (strpos($script_name, '/modules/petty-cash/') !== false) {
     $active_module = 'petty_cash';
 }
@@ -229,7 +232,7 @@ if (!function_exists('addItem')) {
             $moduleKey = 'letter';
         } elseif (strpos($pathStr, '/modules/finance/') !== false || strpos($pathStr, '/modules/expenses/') !== false) {
             $moduleKey = 'finance';
-        } elseif (strpos($pathStr, '/modules/balances/') !== false || strpos($pathStr, '/accounting/') !== false) {
+        } elseif (strpos($pathStr, '/modules/balances/') !== false || strpos($pathStr, '/modules/purchases/') !== false || strpos($pathStr, '/accounting/') !== false) {
             $moduleKey = 'accounting';
         } elseif (strpos($pathStr, '/attendance/') !== false) {
             $moduleKey = 'attendance';
@@ -647,6 +650,7 @@ switch ($active_module) {
                 'path' => $prefix . 'modules/expenses/view.php?module=expenses',
             ],
         ], $__expensesModuleUpdateBadge);
+        addItem($menuItems, 'purchases', 'Purchases', 'cart', $prefix . 'modules/purchases/index.php?module=purchases');
         addParentItem($menuItems, 'petty-cash-parent', 'Cash Book', 'wallet2', [
             [
                 'id' => 'petty-cash-dashboard',

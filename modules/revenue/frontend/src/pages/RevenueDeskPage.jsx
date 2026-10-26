@@ -28,6 +28,7 @@ import RevenueQuickViewModal from '../components/RevenueQuickViewModal';
 import RevenueKpiTraceModal from '../components/RevenueKpiTraceModal';
 import { buildRevenueStatusBreakdown, buildRevenueTrendStats } from '../utils/analyticsStats';
 import { resolveKpiTrace } from '../utils/kpiTrace';
+import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
 import { rememberRevenueList, revenueInvoiceHref } from '../utils/revenueNav';
 
 const emptyAdvancedFilters = {
@@ -170,12 +171,7 @@ function isThisMonthRange(filters, now = new Date()) {
 
 function formatFilterDateLabel(value) {
   if (!value) return '';
-  const normalized = value.includes('T') ? value : `${value}T12:00:00`;
-  return new Date(normalized).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return formatDateDigits(value);
 }
 
 function formatCurrency(value) {
@@ -198,13 +194,7 @@ function formatPctOfTotal(value) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  const normalized = dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`;
-  return new Date(normalized).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return formatDateDigits(dateStr);
 }
 
 function KpiCard({
@@ -826,7 +816,7 @@ export default function RevenueDeskPage() {
                   }}
                 >
                   <div className="rev-suggest-top">
-                    <span className="rev-suggest-ref">{row.voucher_number || `#${row.id}`}</span>
+                    <span className="rev-suggest-ref">{formatVoucherRef(row.voucher_number, `#${row.id}`)}</span>
                     <span className={`rev-status rev-status--${row.status_class || 'unpaid'}`}>{row.status_label}</span>
                   </div>
                   <div className="rev-suggest-meta">
@@ -1491,7 +1481,7 @@ export default function RevenueDeskPage() {
               >
                 <td className="col-voucher">
                   <span className="rev-desk-voucher" title={row.voucher_number || `#${row.id}`}>
-                    {row.voucher_number || `#${row.id}`}
+                    {formatVoucherRef(row.voucher_number, `#${row.id}`)}
                   </span>
                 </td>
                 <td className="col-date">{formatDate(row.entry_date)}</td>
@@ -1520,7 +1510,7 @@ export default function RevenueDeskPage() {
                       <a
                         href={revenueInvoiceHref(row)}
                         className="rev-type-meta rev-type-meta--link"
-                        title={`Open invoice ${row.linked_invoice_number}`}
+                        title={`Open invoice ${formatVoucherRef(row.linked_invoice_number)}`}
                         data-rev-row-ignore
                         onClick={(event) => {
                           event.preventDefault();
@@ -1530,10 +1520,10 @@ export default function RevenueDeskPage() {
                           if (href) window.location.href = href;
                         }}
                       >
-                        {row.linked_invoice_number}
+                        {formatVoucherRef(row.linked_invoice_number)}
                       </a>
                     ) : row.linked_invoice_number ? (
-                      <span className="rev-type-meta">{row.linked_invoice_number}</span>
+                      <span className="rev-type-meta">{formatVoucherRef(row.linked_invoice_number)}</span>
                     ) : null}
                   </div>
                 </td>

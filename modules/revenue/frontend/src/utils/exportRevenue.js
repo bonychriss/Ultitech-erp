@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatDateDigits, formatVoucherRef } from './formatDisplay';
 
 function safeFilePart(value) {
   const cleaned = String(value || '')
@@ -28,13 +29,7 @@ function cleanText(value) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  const normalized = String(dateStr).includes('T') ? String(dateStr) : String(dateStr).replace(' ', 'T');
-  const d = new Date(normalized);
-  if (Number.isNaN(d.getTime())) return String(dateStr);
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}/${mm}/${d.getFullYear()}`;
+  return formatDateDigits(dateStr);
 }
 
 function formatMoney(value) {
@@ -75,7 +70,7 @@ export async function exportRevenuePdf(entries, options = {}) {
 
   const body = entries.map((row, index) => [
     String(index + 1),
-    cleanText(row.voucher_number || '-') || '-',
+    cleanText(formatVoucherRef(row.voucher_number, '-')) || '-',
     formatDate(row.entry_date),
     cleanText(row.customer_display || row.customer_name || '-') || '-',
     cleanText(row.type_label || row.entry_type || '-') || '-',

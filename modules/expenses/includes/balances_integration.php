@@ -2098,6 +2098,33 @@ function expenses_general_voucher_purpose_sql(string $alias = 'pv'): string
 }
 
 /**
+ * SQL purpose predicate for Stock Purchase payment vouchers only.
+ */
+function expenses_stock_purchase_voucher_purpose_sql(string $alias = 'pv'): string
+{
+    if (function_exists('buildPaymentVoucherStockPurchasePurposeWhereSql')) {
+        $pvCols = [];
+        foreach (['purpose', 'payment_purpose', 'voucher_purpose'] as $col) {
+            if (function_exists('columnExists') && columnExists('payment_vouchers', $col)) {
+                $pvCols[] = $col;
+            }
+        }
+        return buildPaymentVoucherStockPurchasePurposeWhereSql($alias, $pvCols);
+    }
+
+    $p = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+    $parts = [];
+    foreach (['purpose', 'payment_purpose', 'voucher_purpose'] as $col) {
+        if (function_exists('columnExists') && columnExists('payment_vouchers', $col)) {
+            $parts[] = "LOWER(TRIM(COALESCE({$p}`{$col}`, ''))) = 'stock_purchase'";
+            $parts[] = "REPLACE(LOWER(TRIM(COALESCE({$p}`{$col}`, ''))), ' ', '_') = 'stock_purchase'";
+        }
+    }
+
+    return $parts === [] ? '1 = 0' : '(' . implode(' OR ', $parts) . ')';
+}
+
+/**
  * Map a payment voucher (+ first line item) into the expenses desk row shape.
  *
  * @param array<string, mixed> $voucher
@@ -2183,22 +2210,34 @@ function expenses_map_general_voucher_to_list_row(array $voucher, ?array $firstI
 }
 
 /**
- * Fetch General Payment vouchers shaped like expense desk rows.
+ * Fetch payment vouchers shaped like expense desk rows.
  *
  * @param array<string, string> $filters
+ * @param 'general'|'stock_purchase' $purposeMode
  * @return list<array<string, mixed>>
  */
-function expenses_fetch_general_vouchers_as_list_rows(PDO $pdo, array $filters = []): array
+function expenses_fetch_vouchers_as_list_rows(PDO $pdo, array $filters = [], string $purposeMode = 'general'): array
 {
-    if (!expenses_list_should_include_general_vouchers($filters)) {
+    $purposeMode = $purposeMode === 'stock_purchase' ? 'stock_purchase' : 'general';
+    if ($purposeMode === 'general' && !expenses_list_should_include_general_vouchers($filters)) {
         return [];
+    }
+    if ($purposeMode === 'stock_purchase' && !expenses_list_should_include_general_vouchers($filters)) {
+        // Stock purchases desk still allows voucher-only lists; only block non-voucher source filters.
+        $source = strtolower(trim((string) ($filters['source_type'] ?? '')));
+        if ($source !== '' && $source !== 'voucher') {
+            return [];
+        }
     }
     if (!function_exists('tableExists') || !tableExists('payment_vouchers', $pdo)) {
         return [];
     }
 
     $params = [];
-    $where = ['1=1', expenses_general_voucher_purpose_sql('pv')];
+    $purposeSql = $purposeMode === 'stock_purchase'
+        ? expenses_stock_purchase_voucher_purpose_sql('pv')
+        : expenses_general_voucher_purpose_sql('pv');
+    $where = ['1=1', $purposeSql];
 
     // Hide private drafts; keep public confirming/pending/approved/rejected/paid.
     if (function_exists('columnExists') && columnExists('payment_vouchers', 'is_draft', $pdo)) {
@@ -2304,7 +2343,7 @@ function expenses_fetch_general_vouchers_as_list_rows(PDO $pdo, array $filters =
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (Throwable $e) {
-        error_log('expenses_fetch_general_vouchers_as_list_rows: ' . $e->getMessage());
+        error_log('expenses_fetch_vouchers_as_list_rows: ' . $e->getMessage());
 
         return [];
     }
@@ -2316,10 +2355,39 @@ function expenses_fetch_general_vouchers_as_list_rows(PDO $pdo, array $filters =
             'budget_type' => (string) ($voucher['item_budget_type'] ?? ''),
             'name' => (string) ($voucher['item_name'] ?? ''),
         ];
-        $out[] = expenses_map_general_voucher_to_list_row($voucher, $firstItem);
+        $row = expenses_map_general_voucher_to_list_row($voucher, $firstItem);
+        if ($purposeMode === 'stock_purchase') {
+            $row['category_name'] = 'Stock Purchase';
+            $row['main_account_name'] = 'Stock Purchase';
+            $row['voucher_purpose'] = 'stock_purchase';
+            $row['purpose_tag'] = 'STK';
+        }
+        $out[] = $row;
     }
 
     return $out;
+}
+
+/**
+ * Fetch General Payment vouchers shaped like expense desk rows.
+ *
+ * @param array<string, string> $filters
+ * @return list<array<string, mixed>>
+ */
+function expenses_fetch_general_vouchers_as_list_rows(PDO $pdo, array $filters = []): array
+{
+    return expenses_fetch_vouchers_as_list_rows($pdo, $filters, 'general');
+}
+
+/**
+ * Fetch Stock Purchase vouchers shaped like expense desk rows.
+ *
+ * @param array<string, string> $filters
+ * @return list<array<string, mixed>>
+ */
+function expenses_fetch_stock_purchase_vouchers_as_list_rows(PDO $pdo, array $filters = []): array
+{
+    return expenses_fetch_vouchers_as_list_rows($pdo, $filters, 'stock_purchase');
 }
 
 /**

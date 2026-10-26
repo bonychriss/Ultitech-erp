@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Upload, Wallet, X } from 'lucide-react';
 import { fetchPaymentInit, submitPayment } from '../api/revenueDesk';
+import { formatVoucherRef } from '../utils/formatDisplay';
 
 function depositBucketForPayment(method) {
   const m = String(method || '').toLowerCase();
@@ -158,7 +159,7 @@ export default function RevenuePayModal({ entryId, onClose, onSuccess }) {
           <div>
             <h2 id="rev-pay-title">Record payment</h2>
             <p className="rev-pay-sub">
-              {entry.voucher_number || `#${entryId}`}
+              {formatVoucherRef(entry.voucher_number, `#${entryId}`)}
               {entry.customer_name ? ` - ${entry.customer_name}` : ''}
             </p>
           </div>

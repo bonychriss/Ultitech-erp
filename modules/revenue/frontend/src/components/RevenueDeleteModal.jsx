@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Loader2, Trash2, X } from 'lucide-react';
+import { formatVoucherRef } from '../utils/formatDisplay';
 
 function formatCurrency(value) {
   const amount = Number(value) || 0;
@@ -23,7 +24,7 @@ export default function RevenueDeleteModal({ entry, busy, error, onCancel, onCon
     };
   }, [busy, onCancel]);
 
-  const label = entry.voucher_number || `REV #${entry.id}`;
+  const label = formatVoucherRef(entry.voucher_number, `REV #${entry.id}`);
 
   return createPortal(
     <div className="rev-desk-modal-backdrop" onClick={busy ? undefined : onCancel} role="presentation">

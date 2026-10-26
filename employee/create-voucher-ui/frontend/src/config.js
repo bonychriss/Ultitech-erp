@@ -16,6 +16,7 @@ export const CFG = {
   voucherNo: RAW.voucherNo || '',
   statusLabel: RAW.statusLabel || '',
   currencies: RAW.currencies || ['TZS', 'USD', 'CNY'],
+  defaultPurpose: RAW.defaultPurpose || 'general',
   purposes: RAW.purposes || [
     { value: 'general', label: 'General Payment' },
     { value: 'stock_purchase', label: 'Stock Purchase' },

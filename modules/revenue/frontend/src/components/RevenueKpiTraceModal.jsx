@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, X } from 'lucide-react';
 import { fetchKpiAiConfirmation } from '../api/revenueDesk';
+import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
 import { formatKpiHeadline } from '../utils/kpiTrace';
 import RevenueKpiIllustration from './RevenueKpiIllustration';
 
@@ -11,13 +12,7 @@ function formatCurrency(value) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  const normalized = dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`;
-  return new Date(normalized).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return formatDateDigits(dateStr);
 }
 
 function cellText(value) {
@@ -157,7 +152,7 @@ export default function RevenueKpiTraceModal({ trace, traceKey, onClose }) {
                       <tr key={`${item.id}-${item.voucherNumber}-${item.date}`}>
                         <td>
                           <div className="rev-kpi-trace-voucher-cell">
-                            <span className="rev-kpi-trace-voucher">{cellText(item.voucherNumber)}</span>
+                            <span className="rev-kpi-trace-voucher">{formatVoucherRef(item.voucherNumber, cellText(item.voucherNumber))}</span>
                             {item.date ? (
                               <span className="rev-kpi-trace-date">{formatDate(item.date)}</span>
                             ) : null}

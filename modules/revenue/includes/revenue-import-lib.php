@@ -916,7 +916,7 @@ function revenue_import_save_entry(PDO $pdo, array $post, array $row): array
         if (!function_exists('generateRevenueVoucherNumber')) {
             require_once dirname(__DIR__, 3) . '/includes/revenue_sync.php';
         }
-        $voucherNumber = generateRevenueVoucherNumber($pdo);
+        $voucherNumber = generateRevenueVoucherNumber($pdo, $entryDate);
         $pdo->beginTransaction();
 
         $hasRevenueAccountCol = revenue_import_has_column($pdo, 'revenue_entries', 'revenue_account_id');

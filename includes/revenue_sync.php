@@ -149,28 +149,146 @@ function ensureRevenueSourceInvoiceSchema($pdo)
 }
 
 /**
- * Next voucher number (shared with revenue_process.php).
- * Format: REV-{year}-{m}-{n} — monthly sequence, no leading zeros (1, 2, …).
- * Year/month use the current date (when the voucher is created). Month is numeric (1–12).
+ * Resolve year/month for a revenue voucher from entry date (fallback: today).
+ *
+ * @return array{0:string,1:string} [year, monthWithoutLeadingZero]
  */
-function generateRevenueVoucherNumber(PDO $pdo): string
+function revenueVoucherYearMonthFromDate(?string $entryDate = null): array
 {
-    $year = date('Y');
-    $month = (string) (int) date('n');
-    $prefix = "REV-$year-$month-";
-
-    $stmt = $pdo->prepare('SELECT voucher_number FROM revenue_entries WHERE voucher_number LIKE ? ORDER BY id DESC LIMIT 1');
-    $stmt->execute([$prefix . '%']);
-    $last = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($last && !empty($last['voucher_number'])) {
-        $parts = explode('-', (string) $last['voucher_number']);
-        $num = (int) end($parts) + 1;
-    } else {
-        $num = 1;
+    $raw = trim((string) $entryDate);
+    $ts = $raw !== '' ? strtotime($raw) : false;
+    if ($ts === false) {
+        return [date('Y'), (string) (int) date('n')];
     }
 
-    return $prefix . (string) max(1, $num);
+    return [date('Y', $ts), (string) (int) date('n', $ts)];
+}
+
+/**
+ * True when a stored voucher_number belongs to REV-{year}-{month}-* (digit or month abbr).
+ */
+function revenueVoucherNumberMatchesMonth(string $voucherNumber, string $year, string $month): bool
+{
+    $voucherNumber = trim($voucherNumber);
+    if ($voucherNumber === '') {
+        return false;
+    }
+    $monthNum = (int) $month;
+    if ($monthNum < 1 || $monthNum > 12) {
+        return false;
+    }
+    $abbr = date('M', mktime(0, 0, 0, $monthNum, 1, 2000)); // Jan, Feb, …
+    $patterns = [
+        '/^REV-' . preg_quote($year, '/') . '-' . preg_quote((string) $monthNum, '/') . '-\d+$/i',
+        '/^REV-' . preg_quote($year, '/') . '-0?' . preg_quote((string) $monthNum, '/') . '-\d+$/i',
+        '/^REV-' . preg_quote($year, '/') . '-' . preg_quote($abbr, '/') . '-\d+$/i',
+    ];
+    foreach ($patterns as $re) {
+        if (preg_match($re, $voucherNumber)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Next voucher number (shared with revenue_process.php).
+ * Format: REV-{year}-{m}-{n} — monthly sequence resets each month, no leading zeros (1, 2, …).
+ * Year/month come from the revenue entry_date (not "today"), so January entries stay REV-YYYY-1-*.
+ */
+function generateRevenueVoucherNumber(PDO $pdo, ?string $entryDate = null): string
+{
+    [$year, $month] = revenueVoucherYearMonthFromDate($entryDate);
+    $prefix = "REV-{$year}-{$month}-";
+
+    $max = 0;
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT voucher_number FROM revenue_entries
+             WHERE voucher_number LIKE ?
+                OR voucher_number LIKE ?
+                OR voucher_number LIKE ?"
+        );
+        $abbr = date('M', mktime(0, 0, 0, (int) $month, 1, 2000));
+        $stmt->execute([
+            $prefix . '%',
+            "REV-{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . '-%',
+            "REV-{$year}-{$abbr}-%",
+        ]);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $vn = trim((string) ($row['voucher_number'] ?? ''));
+            if (!revenueVoucherNumberMatchesMonth($vn, $year, $month)) {
+                continue;
+            }
+            $parts = explode('-', $vn);
+            $n = (int) end($parts);
+            if ($n > $max) {
+                $max = $n;
+            }
+        }
+    } catch (Throwable $e) {
+        $max = 0;
+    }
+
+    return $prefix . (string) max(1, $max + 1);
+}
+
+/**
+ * Reassign voucher_number for all revenue_entries by entry_date month sequence.
+ * January → REV-YYYY-1-1, REV-YYYY-1-2, … then February → REV-YYYY-2-1, …
+ *
+ * @return array{updated:int,months:int}
+ */
+function renumberRevenueVouchersByEntryMonth(PDO $pdo): array
+{
+    $rows = $pdo->query(
+        "SELECT id, entry_date, voucher_number
+         FROM revenue_entries
+         ORDER BY COALESCE(entry_date, '1970-01-01') ASC, id ASC"
+    )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $seqByMonth = [];
+    $updated = 0;
+    $monthsTouched = [];
+
+    $pdo->beginTransaction();
+    try {
+        $upd = $pdo->prepare('UPDATE revenue_entries SET voucher_number = ? WHERE id = ?');
+        foreach ($rows as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            [$year, $month] = revenueVoucherYearMonthFromDate(
+                isset($row['entry_date']) ? (string) $row['entry_date'] : null
+            );
+            $key = $year . '-' . $month;
+            if (!isset($seqByMonth[$key])) {
+                $seqByMonth[$key] = 0;
+            }
+            $seqByMonth[$key]++;
+            $monthsTouched[$key] = true;
+            $newVn = 'REV-' . $year . '-' . $month . '-' . $seqByMonth[$key];
+            $oldVn = trim((string) ($row['voucher_number'] ?? ''));
+            if ($oldVn === $newVn) {
+                continue;
+            }
+            $upd->execute([$newVn, $id]);
+            $updated++;
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
+    return [
+        'updated' => $updated,
+        'months' => count($monthsTouched),
+    ];
 }
 
 /**
@@ -343,7 +461,7 @@ function syncInvoiceToRevenue($pdo, $invoiceId)
         return $entryId;
     }
 
-    $voucher = generateRevenueVoucherNumber($pdo);
+    $voucher = generateRevenueVoucherNumber($pdo, $entryDate);
 
     if ($hasSourceCol && $accountCol) {
         $ins = $pdo->prepare("INSERT INTO revenue_entries

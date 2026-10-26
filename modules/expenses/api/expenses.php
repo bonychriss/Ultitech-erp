@@ -51,9 +51,23 @@ try {
             exit;
         }
 
-        // List expenses (receipts) + General Payment vouchers in the same table shape.
+        // List expenses (receipts) + payment vouchers in the same table shape.
         $filters = expenses_parse_list_filters($_GET);
+        $deskMode = strtolower(trim((string) ($_GET['desk'] ?? '')));
+        $purposeMode = strtolower(trim((string) ($_GET['purpose'] ?? '')));
+        $isPurchasesDesk = ($deskMode === 'purchases' || $purposeMode === 'stock_purchase');
         $sourceFilter = strtolower(trim((string) ($filters['source_type'] ?? '')));
+
+        if ($isPurchasesDesk) {
+            $filters['source_type'] = 'voucher';
+            $voucherRows = expenses_fetch_stock_purchase_vouchers_as_list_rows($pdo, $filters);
+            echo json_encode([
+                'data' => $voucherRows,
+                'total' => count($voucherRows),
+                'desk' => 'purchases',
+            ]);
+            exit;
+        }
 
         $expenses = [];
         if ($sourceFilter !== 'voucher') {

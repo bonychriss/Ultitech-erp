@@ -594,7 +594,7 @@ function revenue_process_create_entry(PDO $pdo, array $post, ?array $file = null
     $revenueEntryAccountCol = resolveExistingColumn('revenue_entries', 'account_id', ['bank_account_id', 'gl_account_id', 'financial_account_id']);
 
     try {
-        $voucherNumber = generateRevenueVoucherNumber($pdo);
+        $voucherNumber = generateRevenueVoucherNumber($pdo, $entryDate);
         $pdo->beginTransaction();
 
         $hasRevenueAccountCol = columnExists('revenue_entries', 'revenue_account_id', $pdo);

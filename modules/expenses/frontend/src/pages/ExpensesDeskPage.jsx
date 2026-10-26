@@ -26,7 +26,9 @@ import {
   fetchDeskExpenses,
   fetchDeskInit,
   fetchPostDraftPreview,
+  isPurchasesDesk,
   postDraftExpense,
+  purchasesCreateVoucherUrl,
 } from '../api/expensesDesk';
 import { exportExpensesExcel, exportExpensesPdf } from '../utils/exportExpenses';
 import { resolveKpiTrace } from '../utils/kpiTrace';
@@ -277,6 +279,7 @@ function ExpenseRowActionsMenu({ menu, onClose, onView, onEdit, onDelete, deleti
 }
 
 export default function ExpensesDeskPage() {
+  const purchasesDesk = isPurchasesDesk();
   const initialFilters = filtersFromLocationSearch();
   const [init, setInit] = useState(null);
   const [expenses, setExpenses] = useState([]);
@@ -856,7 +859,7 @@ export default function ExpensesDeskPage() {
           type="text"
           role="searchbox"
           className="exp-desk-search-input"
-          placeholder="Search expense #, description, accounts"
+          placeholder={purchasesDesk ? 'Search voucher #, payee, description' : 'Search expense #, description, accounts'}
           value={draftFilters.search}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => {
@@ -867,7 +870,7 @@ export default function ExpensesDeskPage() {
             }
             if (e.key === 'Escape') clearSearch(inputRef);
           }}
-          aria-label="Search expenses"
+          aria-label={purchasesDesk ? 'Search purchases' : 'Search expenses'}
           autoComplete="off"
         />
         {showClear && (
@@ -1111,7 +1114,7 @@ export default function ExpensesDeskPage() {
                 onClick={toggleMobileSearch}
                 aria-expanded={searchOpen}
                 aria-controls="exp-desk-search-mobile-panel"
-                title="Search expenses"
+                title={purchasesDesk ? 'Search purchases' : 'Search expenses'}
               >
                 <Search size={18} aria-hidden="true" />
               </button>
@@ -1136,16 +1139,28 @@ export default function ExpensesDeskPage() {
                 {hasAdvancedFilters(filters) && <span className="exp-desk-filter-dot" aria-hidden="true" />}
               </button>
             </div>
-            <button
-              type="button"
-              className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
-              aria-label="Record expense"
-              onClick={() => setRecordModal({ editId: null })}
-            >
-              <Plus size={16} aria-hidden="true" />
-              <span className="exp-desk-btn-label-desktop">Record expense</span>
-              <span className="exp-desk-btn-label-mobile">New</span>
-            </button>
+            {purchasesDesk ? (
+              <a
+                href={purchasesCreateVoucherUrl()}
+                className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
+                aria-label="Create purchase"
+              >
+                <Plus size={16} aria-hidden="true" />
+                <span className="exp-desk-btn-label-desktop">Create purchase</span>
+                <span className="exp-desk-btn-label-mobile">New</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
+                aria-label="Record expense"
+                onClick={() => setRecordModal({ editId: null })}
+              >
+                <Plus size={16} aria-hidden="true" />
+                <span className="exp-desk-btn-label-desktop">Record expense</span>
+                <span className="exp-desk-btn-label-mobile">New</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1176,11 +1191,12 @@ export default function ExpensesDeskPage() {
             </svg>
           </div>
           <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">Total Expenses (Exclusive)</div>
+            <div className="exp-desk-kpi-label">{purchasesDesk ? 'Total Purchases' : 'Total Expenses (Exclusive)'}</div>
             <KpiMoney amount={summaryStats.total_exclusive} />
-            <div className="exp-desk-kpi-helper">amount − VAT</div>
+            <div className="exp-desk-kpi-helper">{purchasesDesk ? 'voucher totals' : 'amount − VAT'}</div>
           </div>
         </button>
+        {!purchasesDesk && (
         <button {...kpiCardProps('inputVat', 'Input VAT')}>
           <div className="exp-desk-kpi-icon exp-desk-kpi-icon--indigo">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -1193,7 +1209,8 @@ export default function ExpensesDeskPage() {
             <KpiMoney amount={summaryStats.input_vat} />
           </div>
         </button>
-        <button {...kpiCardProps('totalInclusive', 'Total Expenses (VAT + Exclusive)')}>
+        )}
+        <button {...kpiCardProps('totalInclusive', purchasesDesk ? 'Listed vouchers' : 'Total Expenses (VAT + Exclusive)')}>
           <div className="exp-desk-kpi-icon exp-desk-kpi-icon--teal">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <rect x="2" y="7" width="20" height="14" rx="2" />
@@ -1201,9 +1218,13 @@ export default function ExpensesDeskPage() {
             </svg>
           </div>
           <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">Total Expenses (VAT + Exclusive)</div>
-            <KpiMoney amount={summaryStats.total_inclusive} />
-            <div className="exp-desk-kpi-helper">gross</div>
+            <div className="exp-desk-kpi-label">{purchasesDesk ? 'Listed now' : 'Total Expenses (VAT + Exclusive)'}</div>
+            {purchasesDesk ? (
+              <div className="exp-desk-kpi-value">{expenses.length}</div>
+            ) : (
+              <KpiMoney amount={summaryStats.total_inclusive} />
+            )}
+            <div className="exp-desk-kpi-helper">{purchasesDesk ? 'matching filters' : 'gross'}</div>
           </div>
         </button>
         <button {...kpiCardProps('totalBank', 'Total Bank')}>
@@ -1257,7 +1278,7 @@ export default function ExpensesDeskPage() {
         />
       ) : null}
 
-      <section className="exp-desk-results" aria-label="Expense entries">
+      <section className="exp-desk-results" aria-label={purchasesDesk ? 'Stock purchase vouchers' : 'Expense entries'}>
         <div className="exp-desk-results-head">
           <span className="exp-desk-results-count">
             {expenses.length} {expenses.length === 1 ? 'entry' : 'entries'}
@@ -1338,7 +1359,11 @@ export default function ExpensesDeskPage() {
               {expenses.length === 0 ? (
                 <tr>
                   <td colSpan={9}>
-                    <div className="exp-desk-empty">No expense entries match your filters.</div>
+                    <div className="exp-desk-empty">
+                      {purchasesDesk
+                        ? 'No Stock Purchase vouchers match your filters.'
+                        : 'No expense entries match your filters.'}
+                    </div>
                   </td>
                 </tr>
               ) : (

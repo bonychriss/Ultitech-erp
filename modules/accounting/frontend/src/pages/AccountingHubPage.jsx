@@ -5,6 +5,7 @@ import {
   Percent,
   Scale,
   Settings,
+  ShoppingCart,
   SlidersHorizontal,
   Table2,
 } from 'lucide-react'
@@ -40,6 +41,7 @@ function SectionIcon({ icon, iconUrl, tone }) {
     gear: Settings,
     table: Table2,
     link: Link2,
+    cart: ShoppingCart,
   }
   const Icon = map[icon] || BookOpen
   return (

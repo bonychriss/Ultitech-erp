@@ -34,6 +34,73 @@ try {
         }
     }
 
+    $deskMode = strtolower(trim((string) ($_GET['desk'] ?? '')));
+    $isPurchasesDesk = ($deskMode === 'purchases');
+
+    if ($isPurchasesDesk) {
+        $voucherRows = expenses_fetch_stock_purchase_vouchers_as_list_rows($pdo, []);
+        $statusBreakdown = [];
+        $counts = [];
+        $totalInclusive = 0.0;
+        $totalBank = 0.0;
+        $totalCash = 0.0;
+        $totalPayables = 0.0;
+        foreach ($voucherRows as $row) {
+            $key = strtolower(trim((string) ($row['display_status'] ?? $row['status'] ?? 'pending')));
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+            $amount = (float) ($row['amount'] ?? 0);
+            $totalInclusive += $amount;
+            $bucket = expenses_listed_row_payment_bucket($row);
+            if ($bucket === 'cash') {
+                $totalCash += $amount;
+            } elseif ($bucket === 'bank') {
+                $totalBank += $amount;
+            } else {
+                $totalPayables += $amount;
+            }
+        }
+        foreach (['posted', 'paid', 'approved', 'pending', 'confirming', 'draft', 'rejected'] as $key) {
+            if (($counts[$key] ?? 0) > 0) {
+                $statusBreakdown[] = [
+                    'key' => $key,
+                    'label' => ucfirst($key),
+                    'count' => (int) $counts[$key],
+                ];
+            }
+        }
+
+        echo json_encode([
+            'desk' => 'purchases',
+            'categories' => [],
+            'paymentMethods' => [
+                ['value' => 'cash', 'label' => 'Cash'],
+                ['value' => 'bank', 'label' => 'Bank transfer'],
+            ],
+            'stats' => [
+                'posted_month_count' => (int) ($counts['posted'] ?? 0),
+                'spend_month' => $totalInclusive,
+                'total_count' => count($voucherRows),
+                'current_month' => $currentMonth,
+                'current_month_label' => date('F Y'),
+                'status_breakdown' => $statusBreakdown,
+                'trend' => [],
+                'trend_from' => $currentMonth . '-01',
+                'trend_to' => date('Y-m-t'),
+                'total_exclusive' => $totalInclusive,
+                'input_vat' => 0,
+                'total_inclusive' => $totalInclusive,
+                'total_bank' => $totalBank,
+                'total_cash' => $totalCash,
+                'total_payables' => $totalPayables,
+            ],
+            'updateBadge' => null,
+            'summaryTraces' => new stdClass(),
+            'aiAvailable' => false,
+            'csrf_token' => csrf_token(),
+        ]);
+        exit;
+    }
+
     // Same universe as the expenses table (receipts + General Payment vouchers).
     $listedStats = expenses_build_listed_status_breakdown($pdo, []);
     $totalCount = (int) ($listedStats['total'] ?? 0);

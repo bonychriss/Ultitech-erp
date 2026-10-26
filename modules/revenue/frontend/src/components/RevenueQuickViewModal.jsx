@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { FileText, Paperclip, Pencil, Wallet, X } from 'lucide-react';
 import RevenueStatusBadge from './RevenueStatusBadge';
 import { deskPageUrl } from '../api/revenueDesk';
+import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
 import { revenueInvoiceHref } from '../utils/revenueNav';
 
 function formatCurrency(value) {
@@ -11,13 +12,7 @@ function formatCurrency(value) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  const normalized = dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`;
-  return new Date(normalized).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return formatDateDigits(dateStr);
 }
 
 function withInvoiceLink(text, invoiceNumber, link) {
@@ -155,7 +150,7 @@ export default function RevenueQuickViewModal({
         <div className="rev-desk-quick-head">
           <div className="rev-desk-quick-head-main">
             <h2 id="rev-desk-quick-title" className="rev-desk-quick-title">
-              {entry.voucher_number || `REV #${entry.id}`}
+              {formatVoucherRef(entry.voucher_number, `REV #${entry.id}`)}
             </h2>
             <p className="rev-desk-quick-subtitle">{entry.customer_display || entry.customer_name || '-'}</p>
             <div className="rev-desk-quick-meta">

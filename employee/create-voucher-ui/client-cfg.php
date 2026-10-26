@@ -102,6 +102,15 @@ function createVoucherBuildClientCfg(array $data = []): array
         $canRestrict = isAdmin();
     }
 
+    $defaultPurpose = 'general';
+    if (isset($_GET['purpose']) && (string) $_GET['purpose'] !== '') {
+        $defaultPurpose = function_exists('normalizePaymentVoucherPurpose')
+            ? normalizePaymentVoucherPurpose($_GET['purpose'])
+            : (in_array((string) $_GET['purpose'], ['general', 'stock_purchase'], true)
+                ? (string) $_GET['purpose']
+                : 'general');
+    }
+
     return [
         'postUrl' => $cvPostUrl,
         'cancelUrl' => $cvCancelUrl,
@@ -109,6 +118,7 @@ function createVoucherBuildClientCfg(array $data = []): array
         'preparedBy' => trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? '')),
         'today' => date('Y-m-d'),
         'canRestrict' => $canRestrict,
+        'defaultPurpose' => $defaultPurpose,
         'currencies' => ['TZS', 'USD', 'CNY'],
         'purposes' => [
             ['value' => 'general', 'label' => 'General Payment'],

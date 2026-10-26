@@ -143,7 +143,7 @@ export default function CreateVoucherPage() {
   }, [])
   const [currency, setCurrency] = useState(() => String(draftOr('currency', init.currency || CFG.currencies[0] || 'TZS') || 'TZS'))
   const [dateCreated, setDateCreated] = useState(() => String(draftOr('dateCreated', init.date_created || CFG.today) || CFG.today))
-  const [purpose, setPurpose] = useState(() => String(draftOr('purpose', init.purpose || CFG.purposes[0]?.value || 'general') || 'general'))
+  const [purpose, setPurpose] = useState(() => String(draftOr('purpose', init.purpose || CFG.defaultPurpose || CFG.purposes[0]?.value || 'general') || 'general'))
   const [isRestricted, setIsRestricted] = useState(() => !!draftOr('isRestricted', !!init.is_restricted))
   const [items, setItems] = useState(initialItems)
   const [description, setDescription] = useState(() => String(draftOr('description', init.description || '') || ''))

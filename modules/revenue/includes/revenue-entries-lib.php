@@ -735,7 +735,8 @@ function revenue_entries_fetch(PDO $revPdo, array $get): array
     $listStmt->execute($params);
     $entries = $listStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     $enriched = array_map(static fn (array $row): array => revenue_entries_enrich_row($row, $revPdo), $entries);
-    $enriched = revenue_entries_dedupe_pairs($enriched);
+    // Show every revenue row (including manual Other entries that match a sales invoice).
+    // Hiding duplicates made voucher sequences look like they had gaps.
     $visibleTotal = count($enriched);
 
     // Summary KPIs must match the same listed (deduped) rows shown in the table.

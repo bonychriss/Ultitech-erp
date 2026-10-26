@@ -78,7 +78,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'create_entry') {
         exit;
     }
     
-    $voucher_number = generateRevenueVoucherNumber($pdo);
+    $voucher_number = generateRevenueVoucherNumber($pdo, $entry_date);
 
     $allowedCurrencies = array_keys([
         'TZS' => 1, 'USD' => 1, 'EUR' => 1, 'GBP' => 1, 'KES' => 1, 'UGX' => 1,

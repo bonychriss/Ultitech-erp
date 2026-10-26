@@ -53,6 +53,14 @@ final class Nav
                 'tone' => 'green',
             ],
             [
+                'id' => 'purchases',
+                'title' => 'Purchases',
+                'desc' => 'Stock Purchase payment vouchers linked to procurement.',
+                'href' => $u('modules/purchases/index') . '?module=purchases',
+                'icon' => 'cart',
+                'tone' => 'blue',
+            ],
+            [
                 'id' => 'journal-entries',
                 'title' => 'Journal Entries',
                 'desc' => 'Create and review journal entries.',

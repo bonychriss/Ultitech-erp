@@ -39,6 +39,9 @@ if (stripos($path_to_check, '/deliveries/') !== false) {
 if (strpos($script_name, '/modules/expenses/') !== false) {
     $active_module = 'expenses';
 }
+if (strpos($script_name, '/modules/purchases/') !== false) {
+    $active_module = 'accounting';
+}
 if (strpos($script_name, '/modules/finance/') !== false) {
     $active_module = 'finance';
 }
@@ -124,7 +127,7 @@ function addItem(&$arr, $id, $label, $icon, $path, $badge = null, $children = nu
         $moduleKey = 'letter';
     } elseif (strpos($pathStr, '/modules/finance/') !== false || strpos($pathStr, '/modules/expenses/') !== false) {
         $moduleKey = 'finance';
-    } elseif (strpos($pathStr, '/modules/balances/') !== false || strpos($pathStr, '/accounting/') !== false) {
+    } elseif (strpos($pathStr, '/modules/balances/') !== false || strpos($pathStr, '/modules/purchases/') !== false || strpos($pathStr, '/accounting/') !== false) {
         $moduleKey = 'accounting';
     } elseif (strpos($pathStr, '/attendance/') !== false) {
         $moduleKey = 'attendance';
@@ -435,6 +438,7 @@ switch ($active_module) {
         addItem($menuItems, 'accounts', 'Accounts', 'credit-card', $prefix . 'modules/balances/accounts.php');
         addItem($menuItems, 'revenue', 'Revenue', 'fas fa-coins', $prefix . 'revenue_entries.php?module=revenue', null, 'sidebar-revenue-link');
         addItem($menuItems, 'expenses', 'Expenses', 'receipt', $prefix . 'modules/expenses/index.php?module=expenses', $__expensesModuleUpdateBadge);
+        addItem($menuItems, 'purchases', 'Purchases', 'shopping-cart', $prefix . 'modules/purchases/index.php?module=purchases');
         addParentItem($menuItems, 'journal-parent', 'Journal', 'journal-text', [
             [
                 'id' => 'journal-entries',

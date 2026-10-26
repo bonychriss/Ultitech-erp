@@ -5,6 +5,17 @@ function getApiBase() {
   return './api';
 }
 
+export function getDeskMode() {
+  if (typeof window !== 'undefined' && window.__EXPENSES_DESK_MODE__) {
+    return String(window.__EXPENSES_DESK_MODE__).trim().toLowerCase();
+  }
+  return 'expenses';
+}
+
+export function isPurchasesDesk() {
+  return getDeskMode() === 'purchases';
+}
+
 async function parseJson(response) {
   const text = await response.text();
   try {
@@ -22,7 +33,10 @@ async function parseJson(response) {
 }
 
 export async function fetchDeskInit() {
-  const res = await fetch(`${getApiBase()}/desk-init.php`);
+  const params = new URLSearchParams();
+  if (isPurchasesDesk()) params.set('desk', 'purchases');
+  const qs = params.toString();
+  const res = await fetch(`${getApiBase()}/desk-init.php${qs ? `?${qs}` : ''}`);
   const data = await parseJson(res);
   if (!res.ok || data.error) {
     throw new Error(data.error || `Request failed (${res.status})`);
@@ -32,6 +46,10 @@ export async function fetchDeskInit() {
 
 export async function fetchDeskExpenses(filters = {}) {
   const params = new URLSearchParams();
+  if (isPurchasesDesk()) {
+    params.set('desk', 'purchases');
+    params.set('purpose', 'stock_purchase');
+  }
   if (filters.search) params.set('search', filters.search);
   if (filters.status) params.set('status', filters.status);
   if (filters.category) params.set('category', filters.category);
@@ -52,8 +70,22 @@ export async function fetchDeskExpenses(filters = {}) {
 }
 
 export function deskPageUrl(file, extraParams = {}) {
-  const params = new URLSearchParams({ module: 'expenses', ...extraParams });
+  const module = isPurchasesDesk() ? 'purchases' : 'expenses';
+  const params = new URLSearchParams({ module, ...extraParams });
+  if (isPurchasesDesk()) {
+    // Purchases list lives at modules/purchases; create/import stay on expenses if ever used.
+    if (String(file || '').toLowerCase() === 'index.php') {
+      return `../purchases/index.php?${params.toString()}`;
+    }
+  }
   return `./${file}?${params.toString()}`;
+}
+
+export function purchasesCreateVoucherUrl() {
+  if (typeof window !== 'undefined' && window.__PURCHASES_CREATE_VOUCHER_URL__) {
+    return String(window.__PURCHASES_CREATE_VOUCHER_URL__);
+  }
+  return '../../employee/create-voucher.php?module=voucher&purpose=stock_purchase';
 }
 
 export function exportUrl(filters = {}) {

@@ -1,0 +1,12 @@
+---
+description: Always fix and verify on local before touching live
+alwaysApply: true
+---
+
+# Local-first workflow
+
+- All code changes, debugging, and verification happen on the **local** server first (`localhost` / XAMPP / `ultitech_erp`).
+- If the user shares a **live** URL (e.g. `ultitech.io`) to show a bug, treat it as a **symptom reference only**. Reproduce and fix on local.
+- Do **not** FTP/upload/deploy to the live server unless the user **explicitly** asks to upload, deploy, or push to live.
+- Do **not** create or mutate live production data (payment vouchers, stock, payees, etc.) unless the user explicitly asks.
+- After a local fix is confirmed, wait for the user to approve before deploying to live or pushing deploy-related steps to production.

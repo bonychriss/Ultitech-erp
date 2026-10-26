@@ -121,6 +121,12 @@ if (empty($category_id)) {
     exit;
 }
 
+if (!$isUltimateStockSimple && $oem_number === '') {
+    http_response_code(422);
+    echo json_encode(['ok' => false, 'error' => 'OEM / Part no is required.']);
+    exit;
+}
+
 if ($requireProductImage) {
     $hasUploadedImage = false;
     if (isset($_FILES['product_images']) && is_array($_FILES['product_images']['name'] ?? null)) {

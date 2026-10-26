@@ -105,6 +105,12 @@ if (empty($category_id)) {
     exit;
 }
 
+if (!$isUltimateStockSimple && $oem_number === '') {
+    http_response_code(422);
+    echo json_encode(['ok' => false, 'error' => 'OEM / Part no is required.']);
+    exit;
+}
+
 if ($isUltimateStockSimple) {
     $item_type = 'general';
 } else {

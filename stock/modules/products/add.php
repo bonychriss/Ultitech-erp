@@ -21,16 +21,66 @@ $requireProductImage = $isUltimateStockSimple
 
 $showCost = in_array($_SESSION['role'] ?? '', ['admin', 'procurement'], true);
 
-$categories = $pdo->query('SELECT id, name FROM categories ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC);
+$categories = [];
+try {
+    $categories = $pdo->query(
+        'SELECT id, name, icon, cover_image, banner, image FROM categories ORDER BY name ASC'
+    )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+} catch (PDOException $e) {
+    try {
+        $categories = $pdo->query(
+            'SELECT id, name, icon, cover_image, banner FROM categories ORDER BY name ASC'
+        )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (PDOException $e2) {
+        try {
+            $categories = $pdo->query('SELECT id, name FROM categories ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (PDOException $e3) {
+            $categories = [];
+        }
+    }
+}
+
+/** @var array<int,array{product_id:int,filename:string}> $categoryProductThumbs */
+$categoryProductThumbs = [];
+try {
+    $thumbRows = $pdo->query(
+        "SELECT p.category_id, p.id AS product_id, p.main_image
+         FROM products p
+         INNER JOIN (
+             SELECT category_id, MIN(id) AS min_id
+             FROM products
+             WHERE category_id IS NOT NULL
+               AND main_image IS NOT NULL
+               AND TRIM(main_image) <> ''
+             GROUP BY category_id
+         ) first_img ON first_img.min_id = p.id"
+    )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    foreach ($thumbRows as $tr) {
+        $cid = (int) ($tr['category_id'] ?? 0);
+        if ($cid < 1) {
+            continue;
+        }
+        $categoryProductThumbs[$cid] = [
+            'product_id' => (int) ($tr['product_id'] ?? 0),
+            'filename' => (string) ($tr['main_image'] ?? ''),
+        ];
+    }
+} catch (PDOException $e) {
+    $categoryProductThumbs = [];
+}
 $suppliers = $pdo->query('SELECT id, name FROM suppliers ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $brands = [];
 try {
-    $brands = $pdo->query('SELECT id, name, brand_type FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC);
+    $brands = $pdo->query('SELECT id, name, brand_type, logo FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
 } catch (PDOException $e) {
     try {
-        $brands = $pdo->query('SELECT id, name FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC);
+        $brands = $pdo->query('SELECT id, name, brand_type FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (PDOException $e2) {
-        $brands = [];
+        try {
+            $brands = $pdo->query('SELECT id, name FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (PDOException $e3) {
+            $brands = [];
+        }
     }
 }
 
@@ -154,17 +204,53 @@ html[data-theme="dark"] main.main-content.product-create-react-root {
                 'isUltimate' => $isUltimateStockSimple,
                 'requireProductImage' => $requireProductImage,
                 'showCost' => $showCost,
-                'categories' => array_map(static function ($c) {
-                    return ['id' => (int) $c['id'], 'name' => (string) $c['name']];
+                'categories' => array_map(static function ($c) use ($categoryProductThumbs, $base) {
+                    $imageUrl = '';
+                    if (function_exists('stock_category_image_url')) {
+                        foreach (['cover_image', 'icon', 'banner', 'image'] as $key) {
+                            $fn = trim((string) ($c[$key] ?? ''));
+                            if ($fn === '' || strcasecmp($fn, 'default_cat.png') === 0) {
+                                continue;
+                            }
+                            $url = (string) stock_category_image_url($fn);
+                            if ($url !== '') {
+                                $imageUrl = $url;
+                                break;
+                            }
+                        }
+                    }
+                    if ($imageUrl === '') {
+                        $cid = (int) ($c['id'] ?? 0);
+                        $fallback = $categoryProductThumbs[$cid] ?? null;
+                        if (is_array($fallback) && function_exists('stock_product_list_image_url')) {
+                            $imageUrl = (string) stock_product_list_image_url(
+                                (int) ($fallback['product_id'] ?? 0),
+                                (string) ($fallback['filename'] ?? ''),
+                                'thumbnail',
+                                (string) $base
+                            );
+                        }
+                    }
+                    return [
+                        'id' => (int) $c['id'],
+                        'name' => (string) $c['name'],
+                        'image_url' => $imageUrl,
+                    ];
                 }, $categories),
                 'suppliers' => array_map(static function ($s) {
                     return ['id' => (int) $s['id'], 'name' => (string) $s['name']];
                 }, $suppliers),
                 'brands' => array_map(static function ($b) {
+                    $logo = trim((string) ($b['logo'] ?? ''));
+                    $logoUrl = ($logo !== '' && function_exists('stock_brand_image_url'))
+                        ? (string) stock_brand_image_url($logo)
+                        : '';
                     return [
                         'id' => (int) ($b['id'] ?? 0),
                         'name' => (string) ($b['name'] ?? ''),
                         'brand_type' => (string) ($b['brand_type'] ?? ''),
+                        'logo_url' => $logoUrl,
+                        'image_url' => $logoUrl,
                     ];
                 }, $brands),
                 'useBrandFreeText' => count($brands) === 0,

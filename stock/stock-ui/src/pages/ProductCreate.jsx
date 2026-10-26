@@ -10,6 +10,11 @@ import {
 import './product-create.css';
 
 const UOM_OPTIONS = ['pcs', 'kg', 'box', 'set', 'pair'];
+const TRUCK_TYPE_OPTIONS = ['Tractor Head', 'Tipper', 'Cargo Truck', 'Mixer', 'Tanker', 'Flatbed', 'Other'];
+const DRIVE_CONFIG_OPTIONS = ['4 x 2', '6 x 2', '6 x 4', '8 x 4', '8 x 8'];
+const TRANSMISSION_OPTIONS = ['Manual, 12F & 2R', 'Manual, 9F & 1R', 'Manual, 16F & 2R', 'Automatic', 'Other'];
+const FUEL_TYPE_OPTIONS = ['Diesel', 'Petrol', 'CNG', 'Electric', 'Hybrid'];
+const STOCK_LOCATION_OPTIONS = ['Main Yard', 'Warehouse', 'Showroom', 'Workshop'];
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
 const FLAG_BASE = 'https://flagcdn.com/w40/';
 
@@ -38,6 +43,237 @@ function FieldRow({ label, htmlFor, required, children, help }) {
       </label>
       {children}
       {help ? <div className="prod-create-help">{help}</div> : null}
+    </div>
+  );
+}
+
+function BrandPicker({ id = 'prod-brand', value, options = [], onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const list = Array.isArray(options) ? options : [];
+  const selected = list.find((b) => String(b.name) === String(value)) || null;
+  const selectedImg = selected?.logo_url || selected?.image_url || '';
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className={`prod-create-cat${open ? ' is-open' : ''}`} ref={ref}>
+      <button
+        type="button"
+        id={id}
+        className="prod-create-cat-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="prod-create-cat-thumb" aria-hidden="true">
+          {selectedImg ? (
+            <img
+              src={selectedImg}
+              alt=""
+              loading="lazy"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement?.classList.add('is-empty');
+              }}
+            />
+          ) : (
+            <span className="prod-create-cat-thumb-empty" />
+          )}
+        </span>
+        <span className={`prod-create-cat-label${!selected ? ' is-placeholder' : ''}`}>
+          {selected ? selected.name : 'Select brand'}
+        </span>
+        <HiOutlineChevronDown size={16} className="prod-create-cat-chevron" aria-hidden />
+      </button>
+      {open ? (
+        <div className="prod-create-cat-menu" role="listbox">
+          <button
+            type="button"
+            role="option"
+            aria-selected={!value}
+            className={`prod-create-cat-option${!value ? ' is-selected' : ''}`}
+            onClick={() => {
+              onChange('');
+              setOpen(false);
+            }}
+          >
+            <span className="prod-create-cat-thumb" aria-hidden="true">
+              <span className="prod-create-cat-thumb-empty" />
+            </span>
+            <span className="prod-create-cat-label is-placeholder">Select brand</span>
+          </button>
+          {list.map((opt) => {
+            const img = opt.logo_url || opt.image_url || '';
+            const selectedOpt = String(opt.name) === String(value);
+            return (
+              <button
+                key={opt.id || opt.name}
+                type="button"
+                role="option"
+                aria-selected={selectedOpt}
+                className={`prod-create-cat-option${selectedOpt ? ' is-selected' : ''}`}
+                onClick={() => {
+                  onChange(String(opt.name));
+                  setOpen(false);
+                }}
+              >
+                <span className="prod-create-cat-thumb" aria-hidden="true">
+                  {img ? (
+                    <img
+                      src={img}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement?.classList.add('is-empty');
+                      }}
+                    />
+                  ) : (
+                    <span className="prod-create-cat-thumb-empty" />
+                  )}
+                </span>
+                <span className="prod-create-cat-label">{opt.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CategoryPicker({ id = 'prod-category', value, options = [], onChange, required = false }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const list = Array.isArray(options) ? options : [];
+  const selected = list.find((c) => String(c.id) === String(value)) || null;
+  const selectedImg = selected?.image_url || '';
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className={`prod-create-cat${open ? ' is-open' : ''}`} ref={ref}>
+      <button
+        type="button"
+        id={id}
+        className="prod-create-cat-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-required={required || undefined}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="prod-create-cat-thumb" aria-hidden="true">
+          {selectedImg ? (
+            <img
+              src={selectedImg}
+              alt=""
+              loading="lazy"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement?.classList.add('is-empty');
+              }}
+            />
+          ) : (
+            <span className="prod-create-cat-thumb-empty" />
+          )}
+        </span>
+        <span className={`prod-create-cat-label${!selected ? ' is-placeholder' : ''}`}>
+          {selected ? selected.name : 'Select category'}
+        </span>
+        <HiOutlineChevronDown size={16} className="prod-create-cat-chevron" aria-hidden />
+      </button>
+      {open ? (
+        <div className="prod-create-cat-menu" role="listbox">
+          <button
+            type="button"
+            role="option"
+            aria-selected={!value}
+            className={`prod-create-cat-option${!value ? ' is-selected' : ''}`}
+            onClick={() => {
+              onChange('');
+              setOpen(false);
+            }}
+          >
+            <span className="prod-create-cat-thumb" aria-hidden="true">
+              <span className="prod-create-cat-thumb-empty" />
+            </span>
+            <span className="prod-create-cat-label is-placeholder">Select category</span>
+          </button>
+          {list.map((opt) => {
+            const img = opt.image_url || '';
+            const selectedOpt = String(opt.id) === String(value);
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                role="option"
+                aria-selected={selectedOpt}
+                className={`prod-create-cat-option${selectedOpt ? ' is-selected' : ''}`}
+                onClick={() => {
+                  onChange(String(opt.id));
+                  setOpen(false);
+                }}
+              >
+                <span className="prod-create-cat-thumb" aria-hidden="true">
+                  {img ? (
+                    <img
+                      src={img}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement?.classList.add('is-empty');
+                      }}
+                    />
+                  ) : (
+                    <span className="prod-create-cat-thumb-empty" />
+                  )}
+                </span>
+                <span className="prod-create-cat-label">{opt.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+      {required ? (
+        <input
+          tabIndex={-1}
+          aria-hidden="true"
+          className="prod-create-cat-required"
+          value={value || ''}
+          onChange={() => {}}
+          required
+        />
+      ) : null}
     </div>
   );
 }
@@ -326,6 +562,13 @@ export default function ProductCreate({ data = {} }) {
   const [modelNumber, setModelNumber] = useState(product?.model_number || '');
   const [engineModel, setEngineModel] = useState(product?.engine_model || '');
   const [transmission, setTransmission] = useState(product?.transmission_model || '');
+  const [driveConfiguration, setDriveConfiguration] = useState(product?.drive_configuration || '');
+  const [cabDetails, setCabDetails] = useState(product?.cab_details || '');
+  const [fuelType, setFuelType] = useState(product?.fuel_type || 'Diesel');
+  const [tireModel, setTireModel] = useState(product?.tire_model || '');
+  const [curbWeight, setCurbWeight] = useState(
+    product?.curb_weight_kg != null ? String(product.curb_weight_kg) : ''
+  );
   const [images, setImages] = useState([]);
   const [savedImages, setSavedImages] = useState(() =>
     Array.isArray(existingImages) ? existingImages.filter((img) => img && img.id) : []
@@ -354,12 +597,8 @@ export default function ProductCreate({ data = {} }) {
 
   const brandOptions = useMemo(() => {
     if (useBrandFreeText || !brands.length) return [];
-    if (isUltimate) return brands;
-    if (isTruck) {
-      return brands.filter((b) => !b.brand_type || b.brand_type === 'truck' || b.brand_type === 'vehicle');
-    }
-    return brands.filter((b) => !b.brand_type || b.brand_type === 'spare_part' || b.brand_type === 'general');
-  }, [brands, useBrandFreeText, isUltimate, isTruck]);
+    return brands;
+  }, [brands, useBrandFreeText]);
 
   const visibleSavedImages = useMemo(
     () => savedImages.filter((img) => !deleteImageIds.includes(img.id)),
@@ -382,8 +621,22 @@ export default function ProductCreate({ data = {} }) {
     e.preventDefault();
     const nextErrors = [];
     if (isEdit && !productCode.trim()) nextErrors.push('Product code is required.');
-    if (!name.trim()) nextErrors.push('Product name is required.');
-    if (!categoryId) nextErrors.push('Category is required.');
+    if (isTruck) {
+      if (!modelNumber.trim()) nextErrors.push('Model No. is required.');
+      if (!brand.trim()) nextErrors.push('Make is required.');
+      if (!truckType.trim()) nextErrors.push('Truck type is required.');
+      if (!cabDetails.trim()) nextErrors.push('Cabin is required.');
+      if (!engineModel.trim()) nextErrors.push('Engine is required.');
+      if (!transmission.trim()) nextErrors.push('Transmission is required.');
+      if (!fuelType.trim()) nextErrors.push('Fuel type is required.');
+      if (!isEdit && (currentStock === '' || Number.isNaN(Number(currentStock)))) {
+        nextErrors.push('Opening stock is required.');
+      }
+    } else {
+      if (!name.trim()) nextErrors.push('Product name is required.');
+      if (!categoryId) nextErrors.push('Category is required.');
+      if (!isUltimate && !oemNumber.trim()) nextErrors.push('OEM / Part no is required.');
+    }
     if (unitPrice === '' || Number.isNaN(Number(unitPrice))) nextErrors.push('Selling price is required.');
     if (requireProductImage && !isEdit && images.length === 0) {
       nextErrors.push('Please add at least one product image before saving.');
@@ -406,9 +659,23 @@ export default function ProductCreate({ data = {} }) {
       fd.append('id', String(product.id));
       fd.append('product_code', productCode.trim());
     }
+    const submitName = isTruck
+      ? (name.trim() || [brand, modelNumber].filter(Boolean).join(' ').trim() || 'Truck')
+      : name.trim();
+    let submitCategoryId = categoryId;
+    if (isTruck && !submitCategoryId) {
+      const brandMatch = categories.find(
+        (c) => String(c.name || '').toLowerCase() === String(brand || '').toLowerCase()
+      );
+      submitCategoryId = brandMatch
+        ? String(brandMatch.id)
+        : categories[0]
+          ? String(categories[0].id)
+          : '';
+    }
     fd.append('register_type', isUltimate ? 'general' : registerType);
-    fd.append('name', name.trim());
-    fd.append('category_id', categoryId);
+    fd.append('name', submitName);
+    fd.append('category_id', submitCategoryId);
     fd.append('description', description);
     fd.append('brand', brand);
     fd.append('supplier_id', supplierId);
@@ -433,6 +700,11 @@ export default function ProductCreate({ data = {} }) {
     fd.append('model_number', modelNumber);
     fd.append('engine_model', engineModel);
     fd.append('transmission_model', transmission);
+    fd.append('drive_configuration', driveConfiguration);
+    fd.append('cab_details', cabDetails);
+    fd.append('fuel_type', fuelType);
+    fd.append('tire_model', tireModel);
+    fd.append('curb_weight_kg', curbWeight);
     images.forEach((file) => fd.append('product_images[]', file));
     if (isEdit) {
       if (deleteImageIds.length) {
@@ -494,16 +766,11 @@ export default function ProductCreate({ data = {} }) {
             </div>
           )}
 
-          {!isUltimate && (
-            <section className="prod-create-section" id="product-type">
-              <div className="prod-create-section-header">
-                <h2>Product type</h2>
-                <p>Choose spare part or truck registration.</p>
-              </div>
-              <div className="prod-create-card">
-                <div className="prod-create-row">
-                  <span className="prod-create-label">Type<span className="req">*</span></span>
-                  <div className="prod-create-type-toggle">
+          <section className="prod-create-section" id="product-details">
+            <div className="prod-create-card">
+              {!isUltimate ? (
+                <FieldRow label="Type" htmlFor="prod-type" required>
+                  <div className="prod-create-type-toggle" id="prod-type">
                     <label className={registerType === 'spare_part' ? 'is-active' : ''}>
                       <input
                         type="radio"
@@ -525,335 +792,325 @@ export default function ProductCreate({ data = {} }) {
                       Truck
                     </label>
                   </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          <section className="prod-create-section" id="product-basics">
-            <div className="prod-create-section-header">
-              <h2>Basics</h2>
-              <p>Name, category, and description.</p>
-            </div>
-            <div className="prod-create-card">
-              {isEdit ? (
-                <FieldRow label="Product code" htmlFor="prod-code" required>
-                  <input
-                    id="prod-code"
-                    className="prod-create-input"
-                    value={productCode}
-                    onChange={(e) => setProductCode(e.target.value)}
-                    required
-                  />
                 </FieldRow>
               ) : null}
 
+              {isTruck ? (
+                <>
+                  <div className="prod-create-pair">
+                    <FieldRow label="Model No." htmlFor="prod-model-no" required>
+                      <input
+                        id="prod-model-no"
+                        className="prod-create-input"
+                        value={modelNumber}
+                        onChange={(e) => setModelNumber(e.target.value)}
+                        placeholder="e.g. CA4181P2K15T1YA80"
+                        required
+                      />
+                    </FieldRow>
+                    <FieldRow label="Make" htmlFor="prod-brand" required>
+                      {useBrandFreeText || brandOptions.length === 0 ? (
+                        <input
+                          id="prod-brand"
+                          className="prod-create-input"
+                          value={brand}
+                          onChange={(e) => setBrand(e.target.value)}
+                          placeholder="Select make"
+                          required
+                        />
+                      ) : (
+                        <BrandPicker
+                          id="prod-brand"
+                          value={brand}
+                          options={brandOptions}
+                          onChange={setBrand}
+                        />
+                      )}
+                    </FieldRow>
+                  </div>
+
+                  <div className="prod-create-pair">
+                    <FieldRow label="Truck type" htmlFor="prod-truck-type" required>
+                      <select
+                        id="prod-truck-type"
+                        className="prod-create-select"
+                        value={truckType}
+                        onChange={(e) => setTruckType(e.target.value)}
+                        required
+                      >
+                        <option value="">Select truck type</option>
+                        {TRUCK_TYPE_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        {truckType && !TRUCK_TYPE_OPTIONS.includes(truckType) ? (
+                          <option value={truckType}>{truckType}</option>
+                        ) : null}
+                      </select>
+                    </FieldRow>
+                    <FieldRow label="Drive configuration" htmlFor="prod-drive">
+                      <select
+                        id="prod-drive"
+                        className="prod-create-select"
+                        value={driveConfiguration}
+                        onChange={(e) => setDriveConfiguration(e.target.value)}
+                      >
+                        <option value="">Select drive</option>
+                        {DRIVE_CONFIG_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        {driveConfiguration && !DRIVE_CONFIG_OPTIONS.includes(driveConfiguration) ? (
+                          <option value={driveConfiguration}>{driveConfiguration}</option>
+                        ) : null}
+                      </select>
+                    </FieldRow>
+                  </div>
+
+                  <div className="prod-create-pair">
+                    <FieldRow label="Cabin" htmlFor="prod-cabin" required>
+                      <input
+                        id="prod-cabin"
+                        className="prod-create-input"
+                        value={cabDetails}
+                        onChange={(e) => setCabDetails(e.target.value)}
+                        placeholder="e.g. Flat roof, Single Sleeper"
+                        required
+                      />
+                    </FieldRow>
+                    <FieldRow label="Engine" htmlFor="prod-engine-model" required>
+                      <input
+                        id="prod-engine-model"
+                        className="prod-create-input"
+                        value={engineModel}
+                        onChange={(e) => setEngineModel(e.target.value)}
+                        placeholder="e.g. Weichai, 380HP, Euro II"
+                        required
+                      />
+                    </FieldRow>
+                  </div>
+
+                  <div className="prod-create-pair">
+                    <FieldRow label="Transmission" htmlFor="prod-trans" required>
+                      <select
+                        id="prod-trans"
+                        className="prod-create-select"
+                        value={transmission}
+                        onChange={(e) => setTransmission(e.target.value)}
+                        required
+                      >
+                        <option value="">Select transmission</option>
+                        {TRANSMISSION_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        {transmission && !TRANSMISSION_OPTIONS.includes(transmission) ? (
+                          <option value={transmission}>{transmission}</option>
+                        ) : null}
+                      </select>
+                    </FieldRow>
+                    <FieldRow label="Fuel type" htmlFor="prod-fuel" required>
+                      <select
+                        id="prod-fuel"
+                        className="prod-create-select"
+                        value={fuelType}
+                        onChange={(e) => setFuelType(e.target.value)}
+                        required
+                      >
+                        <option value="">Select fuel type</option>
+                        {FUEL_TYPE_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </FieldRow>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <FieldRow label="Product name" htmlFor="prod-name" required>
+                    <input
+                      id="prod-name"
+                      className="prod-create-input"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Enter product name"
+                      required
+                    />
+                  </FieldRow>
+
+                  <div className="prod-create-pair">
+                    <FieldRow label="Category" htmlFor="prod-category" required>
+                      <CategoryPicker
+                        id="prod-category"
+                        value={categoryId}
+                        options={categories}
+                        onChange={setCategoryId}
+                        required
+                      />
+                    </FieldRow>
+
+                    <FieldRow label="Brand" htmlFor="prod-brand">
+                      {useBrandFreeText || brandOptions.length === 0 ? (
+                        <input
+                          id="prod-brand"
+                          className="prod-create-input"
+                          value={brand}
+                          onChange={(e) => setBrand(e.target.value)}
+                          placeholder="Select brand"
+                        />
+                      ) : (
+                        <BrandPicker
+                          id="prod-brand"
+                          value={brand}
+                          options={brandOptions}
+                          onChange={setBrand}
+                        />
+                      )}
+                    </FieldRow>
+                  </div>
+
+                  <div className="prod-create-pair">
+                    {isEdit ? (
+                      <FieldRow label="In stock" htmlFor="prod-qty-spare" help="Quantity is changed via stock movements.">
+                        <input
+                          id="prod-qty-spare"
+                          className="prod-create-input prod-create-input--readonly"
+                          value={currentStock}
+                          readOnly
+                        />
+                      </FieldRow>
+                    ) : (
+                      <FieldRow label="Opening stock" htmlFor="prod-qty-spare">
+                        <input
+                          id="prod-qty-spare"
+                          type="number"
+                          min="0"
+                          className="prod-create-input"
+                          value={currentStock}
+                          onChange={(e) => setCurrentStock(e.target.value)}
+                          placeholder="Enter quantity"
+                        />
+                      </FieldRow>
+                    )}
+
+                    {!isUltimate ? (
+                      <FieldRow label="OEM / Part no" htmlFor="prod-oem" required>
+                        <input
+                          id="prod-oem"
+                          className="prod-create-input"
+                          value={oemNumber}
+                          onChange={(e) => setOemNumber(e.target.value)}
+                          placeholder="e.g. 12345-67890"
+                          required
+                        />
+                      </FieldRow>
+                    ) : (
+                      <div aria-hidden="true" />
+                    )}
+                  </div>
+                </>
+              )}
+
               <div className="prod-create-pair">
-                <FieldRow label="Name" htmlFor="prod-name" required>
+                <FieldRow label={`Selling price (${currencyCode})`} htmlFor="prod-sell" required>
                   <input
-                    id="prod-name"
-                    className="prod-create-input"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Enter product name"
+                    id="prod-sell"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="prod-create-input prod-create-input--price"
+                    value={unitPrice}
+                    onChange={(e) => setUnitPrice(e.target.value)}
+                    placeholder="Enter selling price"
                     required
                   />
                 </FieldRow>
 
-                <FieldRow label="Category" htmlFor="prod-category" required>
-                  <select
-                    id="prod-category"
-                    className="prod-create-select"
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    required
-                  >
-                    <option value="">Select category</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={String(c.id)}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </FieldRow>
-              </div>
-
-              <FieldRow label="Description" htmlFor="prod-desc">
-                <textarea
-                  id="prod-desc"
-                  className="prod-create-textarea"
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Short description"
-                />
-              </FieldRow>
-            </div>
-          </section>
-
-          <section className="prod-create-section" id="product-sourcing">
-            <div className="prod-create-section-header">
-              <h2>Brand &amp; supplier</h2>
-              <p>Who makes it and who you buy it from.</p>
-            </div>
-            <div className="prod-create-card">
-              <div className="prod-create-pair">
-                <FieldRow label="Brand" htmlFor="prod-brand">
-                  {useBrandFreeText || brandOptions.length === 0 ? (
-                    <input
-                      id="prod-brand"
-                      className="prod-create-input"
-                      value={brand}
-                      onChange={(e) => setBrand(e.target.value)}
-                      placeholder="Brand"
-                    />
-                  ) : (
-                    <select
-                      id="prod-brand"
-                      className="prod-create-select"
-                      value={brand}
-                      onChange={(e) => setBrand(e.target.value)}
-                    >
-                      <option value="">Select brand</option>
-                      {brandOptions.map((b) => (
-                        <option key={b.id || b.name} value={b.name}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </FieldRow>
-
-                <FieldRow label="Supplier" htmlFor="prod-supplier">
-                  <select
-                    id="prod-supplier"
-                    className="prod-create-select"
-                    value={supplierId}
-                    onChange={(e) => setSupplierId(e.target.value)}
-                  >
-                    <option value="">None</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={String(s.id)}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </FieldRow>
-              </div>
-            </div>
-          </section>
-
-          {(isUltimate || isSpare || registerType === 'general') && (
-            <section className="prod-create-section" id="product-unit">
-              <div className="prod-create-section-header">
-                <h2>Unit &amp; condition</h2>
-                <p>How the item is measured and its condition.</p>
-              </div>
-              <div className="prod-create-card">
-                <div className="prod-create-pair">
-                  <FieldRow label="UOM" htmlFor="prod-uom">
-                    <select
-                      id="prod-uom"
-                      className="prod-create-select"
-                      value={uom}
-                      onChange={(e) => setUom(e.target.value)}
-                    >
-                      {UOM_OPTIONS.map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                    </select>
-                  </FieldRow>
-                  <FieldRow label="Condition" htmlFor="prod-condition">
-                    <select
-                      id="prod-condition"
-                      className="prod-create-select"
-                      value={partCondition}
-                      onChange={(e) => setPartCondition(e.target.value)}
-                    >
-                      <option value="new">New</option>
-                      <option value="used">Used</option>
-                    </select>
-                  </FieldRow>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {isSpare && (
-            <section className="prod-create-section" id="product-compatibility">
-              <div className="prod-create-section-header">
-                <h2>Compatibility</h2>
-                <p>Models and OEM numbers this spare fits.</p>
-              </div>
-              <div className="prod-create-card">
-                <FieldRow label="Compatible model" htmlFor="prod-compat">
+                <FieldRow label={`Buying price (${currencyCode})`} htmlFor="prod-buy">
                   <input
-                    id="prod-compat"
-                    className="prod-create-input"
-                    value={compatibility}
-                    onChange={(e) => setCompatibility(e.target.value)}
-                    placeholder="e.g. Volvo FH16"
+                    id="prod-buy"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="prod-create-input prod-create-input--price"
+                    value={buyingPrice}
+                    onChange={(e) => setBuyingPrice(e.target.value)}
+                    placeholder="Enter buying price"
                   />
                 </FieldRow>
-                {!isUltimate && (
-                  <FieldRow label="OEM / Part no" htmlFor="prod-oem">
-                    <input
-                      id="prod-oem"
-                      className="prod-create-input"
-                      value={oemNumber}
-                      onChange={(e) => setOemNumber(e.target.value)}
-                    />
-                  </FieldRow>
-                )}
               </div>
-            </section>
-          )}
 
-          {isTruck && (
-            <section className="prod-create-section" id="product-truck">
-              <div className="prod-create-section-header">
-                <h2>Truck details</h2>
-                <p>Identification and specifications.</p>
-              </div>
-              <div className="prod-create-card">
-              <FieldRow label="VIN" htmlFor="prod-vin">
-                <input id="prod-vin" className="prod-create-input" value={vin} onChange={(e) => setVin(e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Chassis #" htmlFor="prod-chassis">
-                <input id="prod-chassis" className="prod-create-input" value={chassisNumber} onChange={(e) => setChassisNumber(e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Engine #" htmlFor="prod-engine">
-                <input id="prod-engine" className="prod-create-input" value={engineNumber} onChange={(e) => setEngineNumber(e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Model year" htmlFor="prod-year">
-                <input id="prod-year" type="number" className="prod-create-input" value={modelYear} onChange={(e) => setModelYear(e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Mileage" htmlFor="prod-mileage">
-                <input id="prod-mileage" type="number" className="prod-create-input" value={mileage} onChange={(e) => setMileage(e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Color" htmlFor="prod-color">
-                <input id="prod-color" className="prod-create-input" value={color} onChange={(e) => setColor(e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Truck type" htmlFor="prod-truck-type">
-                <input id="prod-truck-type" className="prod-create-input" value={truckType} onChange={(e) => setTruckType(e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Model number" htmlFor="prod-model-no">
-                <input id="prod-model-no" className="prod-create-input" value={modelNumber} onChange={(e) => setModelNumber(e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Engine model" htmlFor="prod-engine-model">
-                <input id="prod-engine-model" className="prod-create-input" value={engineModel} onChange={(e) => setEngineModel(e.target.value)} />
-              </FieldRow>
-              <FieldRow label="Transmission" htmlFor="prod-trans">
-                <input id="prod-trans" className="prod-create-input" value={transmission} onChange={(e) => setTransmission(e.target.value)} />
-              </FieldRow>
-              </div>
-            </section>
-          )}
-
-          <section className="prod-create-section" id="product-pricing">
-            <div className="prod-create-section-header">
-              <h2>Pricing</h2>
-              <p>Currency and unit prices.</p>
-            </div>
-            <div className="prod-create-card">
-            <FieldRow label="Currency" htmlFor="prod-currency" required>
-              <CurrencyPicker value={currency} options={currencies} onChange={setCurrency} />
-            </FieldRow>
-
-            <FieldRow label="Buying price" htmlFor="prod-buy">
-              <input
-                id="prod-buy"
-                type="number"
-                step="0.01"
-                min="0"
-                className="prod-create-input prod-create-input--price"
-                value={buyingPrice}
-                onChange={(e) => setBuyingPrice(e.target.value)}
-                placeholder="0.00"
-              />
-            </FieldRow>
-
-            <FieldRow label="Selling price" htmlFor="prod-sell" required>
-              <input
-                id="prod-sell"
-                type="number"
-                step="0.01"
-                min="0"
-                className="prod-create-input prod-create-input--price"
-                value={unitPrice}
-                onChange={(e) => setUnitPrice(e.target.value)}
-                placeholder="0.00"
-                required
-              />
-            </FieldRow>
-
-            {!isTruck ? (
-              <FieldRow label="Wholesale" htmlFor="prod-wholesale">
-                <input
-                  id="prod-wholesale"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="prod-create-input prod-create-input--price"
-                  value={wholesalePrice}
-                  onChange={(e) => setWholesalePrice(e.target.value)}
-                  placeholder="0.00"
-                />
-              </FieldRow>
-            ) : null}
-            </div>
-          </section>
-
-          <section className="prod-create-section" id="product-stock">
-            <div className="prod-create-section-header">
-              <h2>Stock</h2>
-              <p>{isEdit ? 'Reorder level and storage location.' : 'Opening quantity and reorder settings.'}</p>
-            </div>
-            <div className="prod-create-card">
-            {isEdit ? (
-              <FieldRow label="In stock" htmlFor="prod-qty" help="Quantity is changed via stock movements.">
-                <input
-                  id="prod-qty"
-                  className="prod-create-input prod-create-input--readonly"
-                  value={currentStock}
-                  readOnly
-                />
-              </FieldRow>
-            ) : (
-              <FieldRow label="Opening qty" htmlFor="prod-qty">
-                <input
-                  id="prod-qty"
-                  type="number"
-                  min="0"
-                  className="prod-create-input"
-                  value={currentStock}
-                  onChange={(e) => setCurrentStock(e.target.value)}
-                />
-              </FieldRow>
-            )}
-
-            <FieldRow label="Reorder level" htmlFor="prod-reorder">
-              <input
-                id="prod-reorder"
-                type="number"
-                min="0"
-                className="prod-create-input"
-                value={reorderLevel}
-                onChange={(e) => setReorderLevel(e.target.value)}
-              />
-            </FieldRow>
-
-            <FieldRow label="Location" htmlFor="prod-location">
-              <input
-                id="prod-location"
-                className="prod-create-input"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Warehouse / shelf"
-              />
-            </FieldRow>
+              {isTruck ? (
+                <>
+                  <div className="prod-create-pair">
+                    {isEdit ? (
+                      <FieldRow label="In stock" htmlFor="prod-qty" help="Quantity is changed via stock movements.">
+                        <input
+                          id="prod-qty"
+                          className="prod-create-input prod-create-input--readonly"
+                          value={currentStock}
+                          readOnly
+                        />
+                      </FieldRow>
+                    ) : (
+                      <FieldRow label="Opening stock" htmlFor="prod-qty" required>
+                        <input
+                          id="prod-qty"
+                          type="number"
+                          min="0"
+                          className="prod-create-input"
+                          value={currentStock}
+                          onChange={(e) => setCurrentStock(e.target.value)}
+                          placeholder="Enter quantity"
+                          required
+                        />
+                      </FieldRow>
+                    )}
+                    <FieldRow label="Stock location" htmlFor="prod-location">
+                      <select
+                        id="prod-location"
+                        className="prod-create-select"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                      >
+                        <option value="">Select location</option>
+                        {STOCK_LOCATION_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        {location && !STOCK_LOCATION_OPTIONS.includes(location) ? (
+                          <option value={location}>{location}</option>
+                        ) : null}
+                      </select>
+                    </FieldRow>
+                  </div>
+                  <div className="prod-create-pair">
+                    <FieldRow label="Supplier" htmlFor="prod-supplier">
+                      <select
+                        id="prod-supplier"
+                        className="prod-create-select"
+                        value={supplierId}
+                        onChange={(e) => setSupplierId(e.target.value)}
+                      >
+                        <option value="">None</option>
+                        {suppliers.map((s) => (
+                          <option key={s.id} value={String(s.id)}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </FieldRow>
+                    <FieldRow label="Condition" htmlFor="prod-condition">
+                      <select
+                        id="prod-condition"
+                        className="prod-create-select"
+                        value={partCondition}
+                        onChange={(e) => setPartCondition(e.target.value)}
+                      >
+                        <option value="new">New</option>
+                        <option value="used">Used</option>
+                        <option value="refurbished">Refurbished</option>
+                      </select>
+                    </FieldRow>
+                  </div>
+                </>
+              ) : null}
             </div>
           </section>
 
@@ -863,50 +1120,228 @@ export default function ProductCreate({ data = {} }) {
                 Images
                 {requireProductImage && !isEdit ? <span className="req"> *</span> : null}
               </h2>
-              <p>
-                {isEdit
-                  ? 'Manage existing photos or upload new ones. Mark one as primary.'
-                  : requireProductImage
-                    ? 'Add at least one product photo before saving. The first image is used as the primary photo.'
-                    : 'Upload one or more product photos. The first image is used as the primary photo.'}
-              </p>
+              <p>Upload product photos. The first image is primary.</p>
             </div>
             <div className="prod-create-card">
-            {isEdit && visibleSavedImages.length > 0 ? (
-              <ul className="prod-create-preview-grid prod-create-existing-grid">
-                {visibleSavedImages.map((img) => (
-                  <li
-                    key={img.id}
-                    className={`prod-create-preview${primaryImageId === img.id ? ' is-primary' : ''}`}
-                  >
-                    <img src={img.medium_url || img.thumbnail_url || ''} alt="" />
-                    {primaryImageId === img.id ? (
-                      <span className="prod-create-preview-badge">Primary</span>
-                    ) : (
+              {isEdit && visibleSavedImages.length > 0 ? (
+                <ul className="prod-create-preview-grid prod-create-existing-grid">
+                  {visibleSavedImages.map((img) => (
+                    <li
+                      key={img.id}
+                      className={`prod-create-preview${primaryImageId === img.id ? ' is-primary' : ''}`}
+                    >
+                      <img src={img.medium_url || img.thumbnail_url || ''} alt="" />
+                      {primaryImageId === img.id ? (
+                        <span className="prod-create-preview-badge">Primary</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="prod-create-preview-primary"
+                          onClick={() => setPrimaryImageId(img.id)}
+                        >
+                          Set primary
+                        </button>
+                      )}
                       <button
                         type="button"
-                        className="prod-create-preview-primary"
-                        onClick={() => setPrimaryImageId(img.id)}
+                        className="prod-create-preview-remove"
+                        onClick={() => markDeleteImage(img.id)}
+                        title="Remove"
+                        aria-label="Remove image"
                       >
-                        Set primary
+                        <HiOutlineXMark size={14} />
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      className="prod-create-preview-remove"
-                      onClick={() => markDeleteImage(img.id)}
-                      title="Remove"
-                      aria-label="Remove image"
-                    >
-                      <HiOutlineXMark size={14} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
 
-            <ImageUpload images={images} onChange={onFiles} />
+              <ImageUpload images={images} onChange={onFiles} />
             </div>
+          </section>
+
+          <section className="prod-create-section" id="product-more">
+            <button
+              type="button"
+              className={`prod-create-more-toggle${moreOpen ? ' is-open' : ''}`}
+              onClick={() => setMoreOpen((v) => !v)}
+              aria-expanded={moreOpen}
+            >
+              <span className="prod-create-more-toggle-left">
+                <HiOutlineBars3 size={18} aria-hidden />
+                More details (optional)
+              </span>
+              <HiOutlineChevronDown size={18} className="prod-create-more-chevron" aria-hidden />
+            </button>
+
+            {moreOpen ? (
+              <div className="prod-create-card prod-create-card--more">
+                {isEdit ? (
+                  <FieldRow label="Product code" htmlFor="prod-code" required>
+                    <input
+                      id="prod-code"
+                      className="prod-create-input"
+                      value={productCode}
+                      onChange={(e) => setProductCode(e.target.value)}
+                      required
+                    />
+                  </FieldRow>
+                ) : null}
+
+                <FieldRow label="Description" htmlFor="prod-desc">
+                  <textarea
+                    id="prod-desc"
+                    className="prod-create-textarea"
+                    rows={3}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Short description"
+                  />
+                </FieldRow>
+
+                <div className="prod-create-pair">
+                  <FieldRow label="Supplier" htmlFor="prod-supplier">
+                    <select
+                      id="prod-supplier"
+                      className="prod-create-select"
+                      value={supplierId}
+                      onChange={(e) => setSupplierId(e.target.value)}
+                    >
+                      <option value="">None</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={String(s.id)}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldRow>
+
+                  <FieldRow label="Currency" htmlFor="prod-currency">
+                    <CurrencyPicker value={currency} options={currencies} onChange={setCurrency} />
+                  </FieldRow>
+                </div>
+
+                {(isUltimate || isSpare || registerType === 'general') && (
+                  <div className="prod-create-pair">
+                    <FieldRow label="UOM" htmlFor="prod-uom">
+                      <select
+                        id="prod-uom"
+                        className="prod-create-select"
+                        value={uom}
+                        onChange={(e) => setUom(e.target.value)}
+                      >
+                        {UOM_OPTIONS.map((u) => (
+                          <option key={u} value={u}>
+                            {u}
+                          </option>
+                        ))}
+                      </select>
+                    </FieldRow>
+                    <FieldRow label="Condition" htmlFor="prod-condition">
+                      <select
+                        id="prod-condition"
+                        className="prod-create-select"
+                        value={partCondition}
+                        onChange={(e) => setPartCondition(e.target.value)}
+                      >
+                        <option value="new">New</option>
+                        <option value="used">Used</option>
+                      </select>
+                    </FieldRow>
+                  </div>
+                )}
+
+                {isSpare ? (
+                  <FieldRow label="Compatible model" htmlFor="prod-compat">
+                    <input
+                      id="prod-compat"
+                      className="prod-create-input"
+                      value={compatibility}
+                      onChange={(e) => setCompatibility(e.target.value)}
+                      placeholder="e.g. Volvo FH16"
+                    />
+                  </FieldRow>
+                ) : null}
+
+                {!isTruck ? (
+                  <FieldRow label="Wholesale" htmlFor="prod-wholesale">
+                    <input
+                      id="prod-wholesale"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="prod-create-input prod-create-input--price"
+                      value={wholesalePrice}
+                      onChange={(e) => setWholesalePrice(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </FieldRow>
+                ) : null}
+
+                <div className="prod-create-pair">
+                  <FieldRow label="Reorder level" htmlFor="prod-reorder">
+                    <input
+                      id="prod-reorder"
+                      type="number"
+                      min="0"
+                      className="prod-create-input"
+                      value={reorderLevel}
+                      onChange={(e) => setReorderLevel(e.target.value)}
+                    />
+                  </FieldRow>
+                  <FieldRow label="Location" htmlFor="prod-location">
+                    <input
+                      id="prod-location"
+                      className="prod-create-input"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Warehouse / shelf"
+                    />
+                  </FieldRow>
+                </div>
+
+                {isTruck ? (
+                  <>
+                    <FieldRow label="VIN" htmlFor="prod-vin">
+                      <input id="prod-vin" className="prod-create-input" value={vin} onChange={(e) => setVin(e.target.value)} />
+                    </FieldRow>
+                    <FieldRow label="Chassis #" htmlFor="prod-chassis">
+                      <input id="prod-chassis" className="prod-create-input" value={chassisNumber} onChange={(e) => setChassisNumber(e.target.value)} />
+                    </FieldRow>
+                    <FieldRow label="Engine #" htmlFor="prod-engine">
+                      <input id="prod-engine" className="prod-create-input" value={engineNumber} onChange={(e) => setEngineNumber(e.target.value)} />
+                    </FieldRow>
+                    <div className="prod-create-pair">
+                      <FieldRow label="Model year" htmlFor="prod-year">
+                        <input id="prod-year" type="number" className="prod-create-input" value={modelYear} onChange={(e) => setModelYear(e.target.value)} />
+                      </FieldRow>
+                      <FieldRow label="Mileage" htmlFor="prod-mileage">
+                        <input id="prod-mileage" type="number" className="prod-create-input" value={mileage} onChange={(e) => setMileage(e.target.value)} />
+                      </FieldRow>
+                    </div>
+                    <div className="prod-create-pair">
+                      <FieldRow label="Color" htmlFor="prod-color">
+                        <input id="prod-color" className="prod-create-input" value={color} onChange={(e) => setColor(e.target.value)} />
+                      </FieldRow>
+                      <FieldRow label="Truck type" htmlFor="prod-truck-type">
+                        <input id="prod-truck-type" className="prod-create-input" value={truckType} onChange={(e) => setTruckType(e.target.value)} />
+                      </FieldRow>
+                    </div>
+                    <div className="prod-create-pair">
+                      <FieldRow label="Model number" htmlFor="prod-model-no">
+                        <input id="prod-model-no" className="prod-create-input" value={modelNumber} onChange={(e) => setModelNumber(e.target.value)} />
+                      </FieldRow>
+                      <FieldRow label="Engine model" htmlFor="prod-engine-model">
+                        <input id="prod-engine-model" className="prod-create-input" value={engineModel} onChange={(e) => setEngineModel(e.target.value)} />
+                      </FieldRow>
+                    </div>
+                    <FieldRow label="Transmission" htmlFor="prod-trans">
+                      <input id="prod-trans" className="prod-create-input" value={transmission} onChange={(e) => setTransmission(e.target.value)} />
+                    </FieldRow>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
           </section>
 
           <div className="prod-create-actions">

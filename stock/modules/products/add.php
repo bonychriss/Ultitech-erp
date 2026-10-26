@@ -178,10 +178,26 @@ main.main-content.product-create-react-root #root {
     max-width: none;
     margin: 0;
 }
-@media (max-width: 767.98px) {
+@media (max-width: 900px) {
+    body.page-product-create .employee-header,
+    body.page-product-create .employee-header.employee-header--product-create {
+        padding: 0 0.75rem !important;
+    }
     main.main-content.product-create-react-root {
         padding: 0 0.75rem 1.5rem !important;
         -webkit-overflow-scrolling: touch;
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+    main.main-content.product-create-react-root #root,
+    main.main-content.product-create-react-root .prod-create-shell,
+    main.main-content.product-create-react-root .prod-create-layout,
+    main.main-content.product-create-react-root .prod-create-main,
+    main.main-content.product-create-react-root .prod-create-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
     }
 }
 html[data-theme="dark"] body.page-product-create,
@@ -269,67 +285,159 @@ html[data-theme="dark"] main.main-content.product-create-react-root {
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0)) ?: '{"page":"product-create","data":{}}' ?>;
     </script>
     <link rel="stylesheet" href="<?= htmlspecialchars($uiCss, ENT_QUOTES, 'UTF-8') ?>?v=<?= htmlspecialchars($assetVersion, ENT_QUOTES, 'UTF-8') ?>">
+    <style id="prod-create-field-unify">
+    /* Beat global style.css input/select { border-radius: 0 !important } */
+    body.page-product-create .prod-create-input,
+    body.page-product-create .prod-create-select,
+    body.page-product-create .prod-create-textarea,
+    body.page-product-create input.prod-create-input,
+    body.page-product-create select.prod-create-select,
+    body.page-product-create textarea.prod-create-textarea,
+    body.page-product-create .prod-create-cat-trigger,
+    body.page-product-create button.prod-create-cat-trigger,
+    body.page-product-create .prod-create-currency-trigger,
+    body.page-product-create button.prod-create-currency-trigger {
+        border-radius: 10px !important;
+        border: 1px solid #cbd5e1 !important;
+        background-color: #fff !important;
+        min-height: 36px;
+        height: 36px;
+        padding: 6px 12px;
+        font-size: 13px;
+        box-shadow: none;
+    }
+    body.page-product-create .prod-create-textarea,
+    body.page-product-create textarea.prod-create-textarea {
+        height: auto;
+        min-height: 72px;
+    }
+    body.page-product-create .prod-create-input:focus,
+    body.page-product-create .prod-create-select:focus,
+    body.page-product-create .prod-create-textarea:focus,
+    body.page-product-create .prod-create-cat.is-open .prod-create-cat-trigger,
+    body.page-product-create .prod-create-currency.is-open .prod-create-currency-trigger {
+        border-color: #7c3aed !important;
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+    }
+    body.page-product-create .prod-create-more-toggle,
+    body.page-product-create button.prod-create-more-toggle {
+        border-radius: 12px !important;
+        border: 1px solid #cbd5e1 !important;
+        background: #fff !important;
+    }
+    </style>
     <style id="prod-create-mobile-force">
-    /* Force compact stacking & kill any cached wildcard bottom margins */
+    /* Kill desktop 180px|1fr label grid — full-width stacked fields on phones */
     @media (max-width: 900px) {
-        body.dashboard .prod-create-shell,
-        body.dashboard .prod-create-layout,
-        body.dashboard .prod-create-main,
-        body.dashboard .prod-create-section,
-        body.dashboard .prod-create-row,
-        body.dashboard .prod-create-row > * {
-            height: auto !important;
-            min-height: 0 !important;
-            max-height: none !important;
-            flex: none !important;
-            align-content: start !important;
+        body.page-product-create .prod-create-shell,
+        body.page-product-create .prod-create-layout,
+        body.page-product-create .prod-create-main,
+        body.page-product-create .prod-create-section,
+        body.page-product-create .prod-create-card,
+        body.page-product-create .prod-create-fields--fill,
+        body.page-product-create .prod-create-pair,
+        body.page-product-create .prod-create-row,
+        body.page-product-create .prod-create-row > * {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
         }
-        body.dashboard .prod-create-row {
-            display: block !important;
-            margin-top: 0 !important;
-            margin-bottom: 10px !important;
+        body.page-product-create .prod-create-row,
+        body.page-product-create .prod-create-card .prod-create-row,
+        body.page-product-create .prod-create-pair .prod-create-row {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            grid-template-columns: none !important;
+            margin: 0 0 0.65rem 0 !important;
+            gap: 0.25rem !important;
+            width: 100% !important;
         }
-        body.dashboard .prod-create-label {
-            display: block !important;
-            padding: 0 0 4px !important;
-            margin: 0 0 4px 0 !important;
+        body.page-product-create .prod-create-pair,
+        body.page-product-create .prod-create-fields--fill .prod-create-pair,
+        body.page-product-create .prod-create-card .prod-create-pair {
+            display: flex !important;
+            flex-direction: column !important;
+            grid-template-columns: none !important;
+            gap: 0.55rem !important;
+            width: 100% !important;
         }
-        body.dashboard .prod-create-row > div {
+        body.page-product-create .prod-create-fields--fill {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.55rem !important;
+            width: 100% !important;
+        }
+        body.page-product-create .prod-create-label {
             display: block !important;
-            height: auto !important;
-            min-height: 0 !important;
-            margin: 0 !important;
+            width: 100% !important;
             padding: 0 !important;
+            margin: 0 0 2px 0 !important;
         }
-        body.dashboard .prod-create-help {
+        body.page-product-create .prod-create-row > div,
+        body.page-product-create .prod-create-row > input,
+        body.page-product-create .prod-create-row > select,
+        body.page-product-create .prod-create-row > textarea,
+        body.page-product-create .prod-create-type-toggle,
+        body.page-product-create .prod-create-cat,
+        body.page-product-create .prod-create-currency {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            min-width: 0 !important;
+        }
+        body.page-product-create .prod-create-input,
+        body.page-product-create .prod-create-select,
+        body.page-product-create .prod-create-textarea,
+        body.page-product-create .prod-create-cat-trigger,
+        body.page-product-create .prod-create-currency-trigger {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+        }
+        body.page-product-create .prod-create-textarea {
+            height: auto !important;
+            min-height: 72px !important;
+        }
+        body.page-product-create .prod-create-help {
             display: block !important;
             margin: 4px 0 0 0 !important;
             padding: 0 !important;
+            grid-column: auto !important;
         }
-        body.dashboard .prod-create-input,
-        body.dashboard .prod-create-select,
-        body.dashboard .prod-create-textarea,
-        body.dashboard .prod-create-currency {
-            width: 100% !important;
-            max-width: none !important;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-        }
-        body.dashboard .prod-create-section {
+        body.page-product-create .prod-create-section {
             padding-bottom: 0 !important;
-            margin-bottom: 0.65rem !important;
+            margin-bottom: 0.75rem !important;
+            width: 100% !important;
         }
-        body.dashboard .prod-create-section-header {
-            margin-bottom: 8px !important;
+        body.page-product-create #product-pricing-stock {
+            margin-top: 0.75rem !important;
         }
-        body.dashboard .prod-create-actions {
+        body.page-product-create .prod-create-section-header {
+            margin-bottom: 6px !important;
+        }
+        body.page-product-create .prod-create-type-toggle {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            width: 100% !important;
+            gap: 0.45rem !important;
+        }
+        body.page-product-create .prod-create-type-toggle label {
+            flex: 1 1 calc(50% - 0.25rem) !important;
+            justify-content: center !important;
+            min-width: 0 !important;
+        }
+        body.page-product-create .prod-create-actions {
             display: flex !important;
             flex-direction: column !important;
             gap: 0.5rem !important;
             margin-bottom: 1rem !important;
+            width: 100% !important;
         }
-        body.dashboard .prod-create-actions a,
-        body.dashboard .prod-create-actions button {
+        body.page-product-create .prod-create-actions a,
+        body.page-product-create .prod-create-actions button {
             width: 100% !important;
         }
     }

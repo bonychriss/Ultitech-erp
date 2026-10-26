@@ -746,7 +746,6 @@ export default function ProductCreate({ data = {} }) {
       <div className="prod-create-topbar">
         <div>
           <h1>{isEdit ? 'Edit Product' : 'Add Product'}</h1>
-          <p>{isEdit ? 'Update product details and photos.' : 'Register a new product for stock.'}</p>
         </div>
       </div>
 
@@ -767,6 +766,11 @@ export default function ProductCreate({ data = {} }) {
           )}
 
           <section className="prod-create-section" id="product-details">
+            {isTruck ? (
+              <div className="prod-create-section-header">
+                <h2>1. Truck Details</h2>
+              </div>
+            ) : null}
             <div className="prod-create-card">
               {!isUltimate ? (
                 <FieldRow label="Type" htmlFor="prod-type" required>
@@ -796,7 +800,7 @@ export default function ProductCreate({ data = {} }) {
               ) : null}
 
               {isTruck ? (
-                <>
+                <div className="prod-create-fields--fill">
                   <div className="prod-create-pair">
                     <FieldRow label="Model No." htmlFor="prod-model-no" required>
                       <input
@@ -819,12 +823,23 @@ export default function ProductCreate({ data = {} }) {
                           required
                         />
                       ) : (
-                        <BrandPicker
+                        <select
                           id="prod-brand"
+                          className="prod-create-select"
                           value={brand}
-                          options={brandOptions}
-                          onChange={setBrand}
-                        />
+                          onChange={(e) => setBrand(e.target.value)}
+                          required
+                        >
+                          <option value="">Select make</option>
+                          {brandOptions.map((b) => (
+                            <option key={b.id || b.name} value={b.name}>
+                              {b.name}
+                            </option>
+                          ))}
+                          {brand && !brandOptions.some((b) => String(b.name) === String(brand)) ? (
+                            <option value={brand}>{brand}</option>
+                          ) : null}
+                        </select>
                       )}
                     </FieldRow>
                   </div>
@@ -921,7 +936,7 @@ export default function ProductCreate({ data = {} }) {
                       </select>
                     </FieldRow>
                   </div>
-                </>
+                </div>
               ) : (
                 <>
                   <FieldRow label="Product name" htmlFor="prod-name" required>
@@ -1005,122 +1020,158 @@ export default function ProductCreate({ data = {} }) {
                       <div aria-hidden="true" />
                     )}
                   </div>
+
+                  <div className="prod-create-pair">
+                    <FieldRow label={`Selling price (${currencyCode})`} htmlFor="prod-sell" required>
+                      <input
+                        id="prod-sell"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="prod-create-input prod-create-input--price"
+                        value={unitPrice}
+                        onChange={(e) => setUnitPrice(e.target.value)}
+                        placeholder="Enter selling price"
+                        required
+                      />
+                    </FieldRow>
+
+                    <FieldRow label={`Buying price (${currencyCode})`} htmlFor="prod-buy">
+                      <input
+                        id="prod-buy"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="prod-create-input prod-create-input--price"
+                        value={buyingPrice}
+                        onChange={(e) => setBuyingPrice(e.target.value)}
+                        placeholder="Enter buying price"
+                      />
+                    </FieldRow>
+                  </div>
                 </>
               )}
-
-              <div className="prod-create-pair">
-                <FieldRow label={`Selling price (${currencyCode})`} htmlFor="prod-sell" required>
-                  <input
-                    id="prod-sell"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="prod-create-input prod-create-input--price"
-                    value={unitPrice}
-                    onChange={(e) => setUnitPrice(e.target.value)}
-                    placeholder="Enter selling price"
-                    required
-                  />
-                </FieldRow>
-
-                <FieldRow label={`Buying price (${currencyCode})`} htmlFor="prod-buy">
-                  <input
-                    id="prod-buy"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="prod-create-input prod-create-input--price"
-                    value={buyingPrice}
-                    onChange={(e) => setBuyingPrice(e.target.value)}
-                    placeholder="Enter buying price"
-                  />
-                </FieldRow>
-              </div>
-
-              {isTruck ? (
-                <>
-                  <div className="prod-create-pair">
-                    {isEdit ? (
-                      <FieldRow label="In stock" htmlFor="prod-qty" help="Quantity is changed via stock movements.">
-                        <input
-                          id="prod-qty"
-                          className="prod-create-input prod-create-input--readonly"
-                          value={currentStock}
-                          readOnly
-                        />
-                      </FieldRow>
-                    ) : (
-                      <FieldRow label="Opening stock" htmlFor="prod-qty" required>
-                        <input
-                          id="prod-qty"
-                          type="number"
-                          min="0"
-                          className="prod-create-input"
-                          value={currentStock}
-                          onChange={(e) => setCurrentStock(e.target.value)}
-                          placeholder="Enter quantity"
-                          required
-                        />
-                      </FieldRow>
-                    )}
-                    <FieldRow label="Stock location" htmlFor="prod-location">
-                      <select
-                        id="prod-location"
-                        className="prod-create-select"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                      >
-                        <option value="">Select location</option>
-                        {STOCK_LOCATION_OPTIONS.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                        {location && !STOCK_LOCATION_OPTIONS.includes(location) ? (
-                          <option value={location}>{location}</option>
-                        ) : null}
-                      </select>
-                    </FieldRow>
-                  </div>
-                  <div className="prod-create-pair">
-                    <FieldRow label="Supplier" htmlFor="prod-supplier">
-                      <select
-                        id="prod-supplier"
-                        className="prod-create-select"
-                        value={supplierId}
-                        onChange={(e) => setSupplierId(e.target.value)}
-                      >
-                        <option value="">None</option>
-                        {suppliers.map((s) => (
-                          <option key={s.id} value={String(s.id)}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
-                    </FieldRow>
-                    <FieldRow label="Condition" htmlFor="prod-condition">
-                      <select
-                        id="prod-condition"
-                        className="prod-create-select"
-                        value={partCondition}
-                        onChange={(e) => setPartCondition(e.target.value)}
-                      >
-                        <option value="new">New</option>
-                        <option value="used">Used</option>
-                        <option value="refurbished">Refurbished</option>
-                      </select>
-                    </FieldRow>
-                  </div>
-                </>
-              ) : null}
             </div>
           </section>
+
+          {isTruck ? (
+            <section className="prod-create-section" id="product-pricing-stock">
+              <div className="prod-create-section-header">
+                <h2>2. Pricing & Stock</h2>
+              </div>
+              <div className="prod-create-card">
+                <div className="prod-create-fields--fill">
+                <div className="prod-create-pair">
+                  <FieldRow label={`Selling price (${currencyCode})`} htmlFor="prod-sell" required>
+                    <input
+                      id="prod-sell"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="prod-create-input prod-create-input--price"
+                      value={unitPrice}
+                      onChange={(e) => setUnitPrice(e.target.value)}
+                      placeholder="Enter selling price"
+                      required
+                    />
+                  </FieldRow>
+
+                  <FieldRow label={`Buying price (${currencyCode})`} htmlFor="prod-buy">
+                    <input
+                      id="prod-buy"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="prod-create-input prod-create-input--price"
+                      value={buyingPrice}
+                      onChange={(e) => setBuyingPrice(e.target.value)}
+                      placeholder="Enter buying price"
+                    />
+                  </FieldRow>
+                </div>
+
+                <div className="prod-create-pair">
+                  {isEdit ? (
+                    <FieldRow label="In stock" htmlFor="prod-qty" help="Quantity is changed via stock movements.">
+                      <input
+                        id="prod-qty"
+                        className="prod-create-input prod-create-input--readonly"
+                        value={currentStock}
+                        readOnly
+                      />
+                    </FieldRow>
+                  ) : (
+                    <FieldRow label="Opening stock" htmlFor="prod-qty" required>
+                      <input
+                        id="prod-qty"
+                        type="number"
+                        min="0"
+                        className="prod-create-input"
+                        value={currentStock}
+                        onChange={(e) => setCurrentStock(e.target.value)}
+                        placeholder="Enter quantity"
+                        required
+                      />
+                    </FieldRow>
+                  )}
+                  <FieldRow label="Stock location" htmlFor="prod-location">
+                    <select
+                      id="prod-location"
+                      className="prod-create-select"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                    >
+                      <option value="">Select location</option>
+                      {STOCK_LOCATION_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                      {location && !STOCK_LOCATION_OPTIONS.includes(location) ? (
+                        <option value={location}>{location}</option>
+                      ) : null}
+                    </select>
+                  </FieldRow>
+                </div>
+
+                <div className="prod-create-pair">
+                  <FieldRow label="Supplier" htmlFor="prod-supplier">
+                    <select
+                      id="prod-supplier"
+                      className="prod-create-select"
+                      value={supplierId}
+                      onChange={(e) => setSupplierId(e.target.value)}
+                    >
+                      <option value="">None</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={String(s.id)}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldRow>
+                  <FieldRow label="Condition" htmlFor="prod-condition">
+                    <select
+                      id="prod-condition"
+                      className="prod-create-select"
+                      value={partCondition}
+                      onChange={(e) => setPartCondition(e.target.value)}
+                    >
+                      <option value="new">New</option>
+                      <option value="used">Used</option>
+                      <option value="refurbished">Refurbished</option>
+                    </select>
+                  </FieldRow>
+                </div>
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           <section className="prod-create-section" id="product-images">
             <div className="prod-create-section-header">
               <h2>
-                Images
+                Product Images
                 {requireProductImage && !isEdit ? <span className="req"> *</span> : null}
               </h2>
-              <p>Upload product photos. The first image is primary.</p>
             </div>
             <div className="prod-create-card">
               {isEdit && visibleSavedImages.length > 0 ? (
@@ -1169,7 +1220,9 @@ export default function ProductCreate({ data = {} }) {
             >
               <span className="prod-create-more-toggle-left">
                 <HiOutlineBars3 size={18} aria-hidden />
-                More details (optional)
+                {isTruck
+                  ? 'Additional truck details (year, tyre size, weight, etc)'
+                  : 'More details (optional)'}
               </span>
               <HiOutlineChevronDown size={18} className="prod-create-more-chevron" aria-hidden />
             </button>
@@ -1188,128 +1241,24 @@ export default function ProductCreate({ data = {} }) {
                   </FieldRow>
                 ) : null}
 
-                <FieldRow label="Description" htmlFor="prod-desc">
-                  <textarea
-                    id="prod-desc"
-                    className="prod-create-textarea"
-                    rows={3}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Short description"
-                  />
-                </FieldRow>
-
-                <div className="prod-create-pair">
-                  <FieldRow label="Supplier" htmlFor="prod-supplier">
-                    <select
-                      id="prod-supplier"
-                      className="prod-create-select"
-                      value={supplierId}
-                      onChange={(e) => setSupplierId(e.target.value)}
-                    >
-                      <option value="">None</option>
-                      {suppliers.map((s) => (
-                        <option key={s.id} value={String(s.id)}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </FieldRow>
-
-                  <FieldRow label="Currency" htmlFor="prod-currency">
-                    <CurrencyPicker value={currency} options={currencies} onChange={setCurrency} />
-                  </FieldRow>
-                </div>
-
-                {(isUltimate || isSpare || registerType === 'general') && (
-                  <div className="prod-create-pair">
-                    <FieldRow label="UOM" htmlFor="prod-uom">
-                      <select
-                        id="prod-uom"
-                        className="prod-create-select"
-                        value={uom}
-                        onChange={(e) => setUom(e.target.value)}
-                      >
-                        {UOM_OPTIONS.map((u) => (
-                          <option key={u} value={u}>
-                            {u}
-                          </option>
-                        ))}
-                      </select>
-                    </FieldRow>
-                    <FieldRow label="Condition" htmlFor="prod-condition">
-                      <select
-                        id="prod-condition"
-                        className="prod-create-select"
-                        value={partCondition}
-                        onChange={(e) => setPartCondition(e.target.value)}
-                      >
-                        <option value="new">New</option>
-                        <option value="used">Used</option>
-                      </select>
-                    </FieldRow>
-                  </div>
-                )}
-
-                {isSpare ? (
-                  <FieldRow label="Compatible model" htmlFor="prod-compat">
-                    <input
-                      id="prod-compat"
-                      className="prod-create-input"
-                      value={compatibility}
-                      onChange={(e) => setCompatibility(e.target.value)}
-                      placeholder="e.g. Volvo FH16"
-                    />
-                  </FieldRow>
-                ) : null}
-
-                {!isTruck ? (
-                  <FieldRow label="Wholesale" htmlFor="prod-wholesale">
-                    <input
-                      id="prod-wholesale"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="prod-create-input prod-create-input--price"
-                      value={wholesalePrice}
-                      onChange={(e) => setWholesalePrice(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </FieldRow>
-                ) : null}
-
-                <div className="prod-create-pair">
-                  <FieldRow label="Reorder level" htmlFor="prod-reorder">
-                    <input
-                      id="prod-reorder"
-                      type="number"
-                      min="0"
-                      className="prod-create-input"
-                      value={reorderLevel}
-                      onChange={(e) => setReorderLevel(e.target.value)}
-                    />
-                  </FieldRow>
-                  <FieldRow label="Location" htmlFor="prod-location">
-                    <input
-                      id="prod-location"
-                      className="prod-create-input"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="Warehouse / shelf"
-                    />
-                  </FieldRow>
-                </div>
-
                 {isTruck ? (
                   <>
-                    <FieldRow label="VIN" htmlFor="prod-vin">
-                      <input id="prod-vin" className="prod-create-input" value={vin} onChange={(e) => setVin(e.target.value)} />
+                    <FieldRow label="Display name" htmlFor="prod-name">
+                      <input
+                        id="prod-name"
+                        className="prod-create-input"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Defaults to Make + Model No."
+                      />
                     </FieldRow>
-                    <FieldRow label="Chassis #" htmlFor="prod-chassis">
-                      <input id="prod-chassis" className="prod-create-input" value={chassisNumber} onChange={(e) => setChassisNumber(e.target.value)} />
-                    </FieldRow>
-                    <FieldRow label="Engine #" htmlFor="prod-engine">
-                      <input id="prod-engine" className="prod-create-input" value={engineNumber} onChange={(e) => setEngineNumber(e.target.value)} />
+                    <FieldRow label="Category" htmlFor="prod-category">
+                      <CategoryPicker
+                        id="prod-category"
+                        value={categoryId}
+                        options={categories}
+                        onChange={setCategoryId}
+                      />
                     </FieldRow>
                     <div className="prod-create-pair">
                       <FieldRow label="Model year" htmlFor="prod-year">
@@ -1320,26 +1269,167 @@ export default function ProductCreate({ data = {} }) {
                       </FieldRow>
                     </div>
                     <div className="prod-create-pair">
-                      <FieldRow label="Color" htmlFor="prod-color">
-                        <input id="prod-color" className="prod-create-input" value={color} onChange={(e) => setColor(e.target.value)} />
+                      <FieldRow label="Tyre size / model" htmlFor="prod-tire">
+                        <input
+                          id="prod-tire"
+                          className="prod-create-input"
+                          value={tireModel}
+                          onChange={(e) => setTireModel(e.target.value)}
+                          placeholder="e.g. 12R22.5"
+                        />
                       </FieldRow>
-                      <FieldRow label="Truck type" htmlFor="prod-truck-type">
-                        <input id="prod-truck-type" className="prod-create-input" value={truckType} onChange={(e) => setTruckType(e.target.value)} />
+                      <FieldRow label="Curb weight (kg)" htmlFor="prod-weight">
+                        <input
+                          id="prod-weight"
+                          type="number"
+                          min="0"
+                          className="prod-create-input"
+                          value={curbWeight}
+                          onChange={(e) => setCurbWeight(e.target.value)}
+                        />
                       </FieldRow>
                     </div>
                     <div className="prod-create-pair">
-                      <FieldRow label="Model number" htmlFor="prod-model-no">
-                        <input id="prod-model-no" className="prod-create-input" value={modelNumber} onChange={(e) => setModelNumber(e.target.value)} />
+                      <FieldRow label="VIN" htmlFor="prod-vin">
+                        <input id="prod-vin" className="prod-create-input" value={vin} onChange={(e) => setVin(e.target.value)} />
                       </FieldRow>
-                      <FieldRow label="Engine model" htmlFor="prod-engine-model">
-                        <input id="prod-engine-model" className="prod-create-input" value={engineModel} onChange={(e) => setEngineModel(e.target.value)} />
+                      <FieldRow label="Chassis #" htmlFor="prod-chassis">
+                        <input id="prod-chassis" className="prod-create-input" value={chassisNumber} onChange={(e) => setChassisNumber(e.target.value)} />
                       </FieldRow>
                     </div>
-                    <FieldRow label="Transmission" htmlFor="prod-trans">
-                      <input id="prod-trans" className="prod-create-input" value={transmission} onChange={(e) => setTransmission(e.target.value)} />
+                    <div className="prod-create-pair">
+                      <FieldRow label="Engine #" htmlFor="prod-engine">
+                        <input id="prod-engine" className="prod-create-input" value={engineNumber} onChange={(e) => setEngineNumber(e.target.value)} />
+                      </FieldRow>
+                      <FieldRow label="Color" htmlFor="prod-color">
+                        <input id="prod-color" className="prod-create-input" value={color} onChange={(e) => setColor(e.target.value)} />
+                      </FieldRow>
+                    </div>
+                    <FieldRow label="Description" htmlFor="prod-desc">
+                      <textarea
+                        id="prod-desc"
+                        className="prod-create-textarea"
+                        rows={3}
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Short description"
+                      />
+                    </FieldRow>
+                    <FieldRow label="Currency" htmlFor="prod-currency">
+                      <CurrencyPicker value={currency} options={currencies} onChange={setCurrency} />
                     </FieldRow>
                   </>
-                ) : null}
+                ) : (
+                  <>
+                    <FieldRow label="Description" htmlFor="prod-desc">
+                      <textarea
+                        id="prod-desc"
+                        className="prod-create-textarea"
+                        rows={3}
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Short description"
+                      />
+                    </FieldRow>
+
+                    <div className="prod-create-pair">
+                      <FieldRow label="Supplier" htmlFor="prod-supplier">
+                        <select
+                          id="prod-supplier"
+                          className="prod-create-select"
+                          value={supplierId}
+                          onChange={(e) => setSupplierId(e.target.value)}
+                        >
+                          <option value="">None</option>
+                          {suppliers.map((s) => (
+                            <option key={s.id} value={String(s.id)}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                      </FieldRow>
+
+                      <FieldRow label="Currency" htmlFor="prod-currency">
+                        <CurrencyPicker value={currency} options={currencies} onChange={setCurrency} />
+                      </FieldRow>
+                    </div>
+
+                    <div className="prod-create-pair">
+                      <FieldRow label="UOM" htmlFor="prod-uom">
+                        <select
+                          id="prod-uom"
+                          className="prod-create-select"
+                          value={uom}
+                          onChange={(e) => setUom(e.target.value)}
+                        >
+                          {UOM_OPTIONS.map((u) => (
+                            <option key={u} value={u}>
+                              {u}
+                            </option>
+                          ))}
+                        </select>
+                      </FieldRow>
+                      <FieldRow label="Condition" htmlFor="prod-condition">
+                        <select
+                          id="prod-condition"
+                          className="prod-create-select"
+                          value={partCondition}
+                          onChange={(e) => setPartCondition(e.target.value)}
+                        >
+                          <option value="new">New</option>
+                          <option value="used">Used</option>
+                        </select>
+                      </FieldRow>
+                    </div>
+
+                    {isSpare ? (
+                      <FieldRow label="Compatible model" htmlFor="prod-compat">
+                        <input
+                          id="prod-compat"
+                          className="prod-create-input"
+                          value={compatibility}
+                          onChange={(e) => setCompatibility(e.target.value)}
+                          placeholder="e.g. Volvo FH16"
+                        />
+                      </FieldRow>
+                    ) : null}
+
+                    <FieldRow label="Wholesale" htmlFor="prod-wholesale">
+                      <input
+                        id="prod-wholesale"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="prod-create-input prod-create-input--price"
+                        value={wholesalePrice}
+                        onChange={(e) => setWholesalePrice(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </FieldRow>
+
+                    <div className="prod-create-pair">
+                      <FieldRow label="Reorder level" htmlFor="prod-reorder">
+                        <input
+                          id="prod-reorder"
+                          type="number"
+                          min="0"
+                          className="prod-create-input"
+                          value={reorderLevel}
+                          onChange={(e) => setReorderLevel(e.target.value)}
+                        />
+                      </FieldRow>
+                      <FieldRow label="Location" htmlFor="prod-location-spare">
+                        <input
+                          id="prod-location-spare"
+                          className="prod-create-input"
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                          placeholder="Warehouse / shelf"
+                        />
+                      </FieldRow>
+                    </div>
+                  </>
+                )}
               </div>
             ) : null}
           </section>

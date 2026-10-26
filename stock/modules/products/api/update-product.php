@@ -33,10 +33,10 @@ $isUltimateStockSimple = (
     || (!empty($_SESSION['company_slug']) && strtolower((string) $_SESSION['company_slug']) === 'ultimate')
 );
 
-function stock_products_update_has_column(PDO $pdo, string $column): bool
+function stock_products_update_has_column(PDO $pdo, string $column, bool $refresh = false): bool
 {
     static $cache = null;
-    if ($cache === null) {
+    if ($refresh || $cache === null) {
         try {
             $cache = $pdo->query('SHOW COLUMNS FROM products')->fetchAll(PDO::FETCH_COLUMN) ?: [];
         } catch (Throwable $e) {
@@ -44,6 +44,20 @@ function stock_products_update_has_column(PDO $pdo, string $column): bool
         }
     }
     return in_array($column, $cache, true);
+}
+
+function stock_products_update_ensure_column(PDO $pdo, string $column, string $definition): void
+{
+    if (stock_products_update_has_column($pdo, $column)) {
+        return;
+    }
+    try {
+        $safe = str_replace('`', '``', $column);
+        $pdo->exec('ALTER TABLE products ADD COLUMN `' . $safe . '` ' . $definition);
+        stock_products_update_has_column($pdo, $column, true);
+    } catch (Throwable $e) {
+        /* ignore */
+    }
 }
 
 $id = (int) ($_POST['id'] ?? 0);
@@ -92,6 +106,86 @@ $truck_type = trim((string) ($_POST['truck_type'] ?? ''));
 $model_number = trim((string) ($_POST['model_number'] ?? ''));
 $engine_model = trim((string) ($_POST['engine_model'] ?? ''));
 $transmission = trim((string) ($_POST['transmission_model'] ?? ''));
+$drive_configuration = trim((string) ($_POST['drive_configuration'] ?? ''));
+$cab_details = trim((string) ($_POST['cab_details'] ?? ''));
+$fuel_type = trim((string) ($_POST['fuel_type'] ?? ''));
+$tire_model = trim((string) ($_POST['tire_model'] ?? ''));
+$curb_weight_kg = isset($_POST['curb_weight_kg']) && $_POST['curb_weight_kg'] !== ''
+    ? (int) $_POST['curb_weight_kg']
+    : null;
+
+if ($isUltimateStockSimple) {
+    $item_type = 'general';
+} else {
+    $type = (string) ($_POST['register_type'] ?? 'spare_part');
+    if ($type === 'truck' || $type === 'vehicle') {
+        $item_type = 'vehicle';
+    } elseif ($type === 'general') {
+        $item_type = 'general';
+    } else {
+        $item_type = 'spare_part';
+    }
+}
+
+$isTruckUpdate = !$isUltimateStockSimple && ($item_type === 'vehicle');
+
+if ($isTruckUpdate) {
+    stock_products_update_ensure_column($pdo, 'drive_configuration', 'VARCHAR(50) NULL');
+    stock_products_update_ensure_column($pdo, 'fuel_type', 'VARCHAR(40) NULL');
+    stock_products_update_ensure_column($pdo, 'cab_details', 'TEXT NULL');
+    stock_products_update_ensure_column($pdo, 'tire_model', 'VARCHAR(100) NULL');
+    stock_products_update_ensure_column($pdo, 'curb_weight_kg', 'INT NULL');
+    if ($model_number === '') {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'Model No. is required.']);
+        exit;
+    }
+    if ($brand === '') {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'Make is required.']);
+        exit;
+    }
+    if ($truck_type === '') {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'Truck type is required.']);
+        exit;
+    }
+    if ($cab_details === '') {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'Cabin is required.']);
+        exit;
+    }
+    if ($engine_model === '') {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'Engine is required.']);
+        exit;
+    }
+    if ($transmission === '') {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'Transmission is required.']);
+        exit;
+    }
+    if ($fuel_type === '') {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'Fuel type is required.']);
+        exit;
+    }
+    if ($name === '') {
+        $name = trim($brand . ' ' . $model_number);
+    }
+    if (empty($category_id)) {
+        try {
+            $catStmt = $pdo->prepare('SELECT id FROM categories WHERE LOWER(name) = LOWER(?) LIMIT 1');
+            $catStmt->execute([$brand]);
+            $category_id = (int) ($catStmt->fetchColumn() ?: 0);
+            if ($category_id < 1) {
+                $category_id = (int) ($pdo->query('SELECT id FROM categories ORDER BY name ASC LIMIT 1')->fetchColumn() ?: 0);
+            }
+        } catch (Throwable $e) {
+            $category_id = 0;
+        }
+    }
+}
 
 if ($name === '' || $product_code === '') {
     http_response_code(422);
@@ -105,23 +199,10 @@ if (empty($category_id)) {
     exit;
 }
 
-if (!$isUltimateStockSimple && $oem_number === '') {
+if (!$isUltimateStockSimple && !$isTruckUpdate && $oem_number === '') {
     http_response_code(422);
     echo json_encode(['ok' => false, 'error' => 'OEM / Part no is required.']);
     exit;
-}
-
-if ($isUltimateStockSimple) {
-    $item_type = 'general';
-} else {
-    $type = (string) ($_POST['register_type'] ?? 'spare_part');
-    if ($type === 'truck' || $type === 'vehicle') {
-        $item_type = 'vehicle';
-    } elseif ($type === 'general') {
-        $item_type = 'general';
-    } else {
-        $item_type = 'spare_part';
-    }
 }
 
 $deleteIds = [];
@@ -171,6 +252,11 @@ try {
         'model_number' => ($model_number !== '' ? $model_number : null),
         'engine_model' => ($engine_model !== '' ? $engine_model : null),
         'transmission_model' => ($transmission !== '' ? $transmission : null),
+        'drive_configuration' => ($drive_configuration !== '' ? $drive_configuration : null),
+        'cab_details' => ($cab_details !== '' ? $cab_details : null),
+        'fuel_type' => ($fuel_type !== '' ? $fuel_type : null),
+        'tire_model' => ($tire_model !== '' ? $tire_model : null),
+        'curb_weight_kg' => $curb_weight_kg,
         'oem_number' => ($oem_number !== '' ? $oem_number : null),
         'item_type' => $item_type,
     ];

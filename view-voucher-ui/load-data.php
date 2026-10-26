@@ -251,6 +251,14 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     $returnFinance = !empty($opts['returnFinance']);
     $moduleQs = isset($opts['moduleQs']) ? (string) $opts['moduleQs'] : '';
 
+    if (function_exists('ensureRestrictedColumn')) {
+        ensureRestrictedColumn();
+    }
+
+    $sessionUserId = function_exists('resolveVoucherSessionUserId')
+        ? resolveVoucherSessionUserId($pdo)
+        : (int) ($_SESSION['user_id'] ?? 0);
+
     $stmt = $pdo->prepare(
         'SELECT pv.*, u.full_name AS creator_name, u.department AS creator_department, '
         . 'ua.full_name AS approver_name, ua.email AS approver_email, ua.role AS approver_role '
@@ -266,12 +274,12 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     }
 
     $isRestricted = !empty($voucher['is_restricted']) && (int) $voucher['is_restricted'] === 1;
-    $isCreator = ((int) ($voucher['created_by'] ?? 0)) === (int) ($_SESSION['user_id'] ?? 0);
+    $isCreator = ((int) ($voucher['created_by'] ?? 0)) === (int) $sessionUserId;
     if ($isRestricted && !isAdmin() && !isFinance() && !$isCreator) {
         return ['ok' => false, 'error' => 'Access denied', 'code' => 403];
     }
     if (function_exists('viewerCanSeePrivateDraftVoucher')
-        && !viewerCanSeePrivateDraftVoucher($voucher, (int) ($_SESSION['user_id'] ?? 0))) {
+        && !viewerCanSeePrivateDraftVoucher($voucher, $sessionUserId)) {
         return ['ok' => false, 'error' => 'Access denied', 'code' => 403];
     }
 
@@ -607,14 +615,18 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         isAdmin() || (isFinance() && $approvedByAdmin && !$isDraftDerived && !$blockFinanceForIncomplete)
     );
     $canPost = $isPaid && !$isPosted && (isFinance() || isAdmin()) && $statusLower === 'approved';
-    $vvShowEdit = (function_exists('canEditVoucher') && canEditVoucher($voucherId, (int) ($_SESSION['user_id'] ?? 0)) && !$isPosted && !$returnFinance)
-        || (function_exists('canLimitedEditApprovedVoucher') && canLimitedEditApprovedVoucher($voucherId, (int) ($_SESSION['user_id'] ?? 0)));
-    $canDeleteAttachment = function_exists('canEditVoucher') && canEditVoucher($voucherId, (int) ($_SESSION['user_id'] ?? 0));
+    // Use the already-loaded row so Edit is not lost when company-scoped canEditVoucher() misses the PV.
+    $canEditRow = function_exists('canEditVoucherRow')
+        ? canEditVoucherRow($voucher, $sessionUserId)
+        : (function_exists('canEditVoucher') && canEditVoucher($voucherId, $sessionUserId));
+    $vvShowEdit = ($canEditRow && !$isPosted && !$returnFinance)
+        || (function_exists('canLimitedEditApprovedVoucher') && canLimitedEditApprovedVoucher($voucherId, $sessionUserId));
+    $canDeleteAttachment = (bool) $canEditRow;
 
     $userPendingApprovals = [];
     $pendingCount = 0;
     try {
-        $uid = function_exists('resolveVoucherSessionUserId') ? resolveVoucherSessionUserId($pdo) : (int) ($_SESSION['user_id'] ?? 0);
+        $uid = $sessionUserId;
         $uname = trim((string) ($_SESSION['full_name'] ?? ''));
         if ($uname === '') {
             $uname = trim((string) ($_SESSION['username'] ?? ''));

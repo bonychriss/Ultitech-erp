@@ -8210,64 +8210,90 @@ function generateVoucherNumber()
     }
 }
 
-function canEditVoucher($voucher_id, $user_id)
+/**
+ * Edit permission from an already-loaded payment_vouchers row (avoids a second company-scoped lookup).
+ *
+ * @param array<string,mixed> $voucher
+ */
+function canEditVoucherRow(array $voucher, $user_id): bool
 {
-    global $pdo;
-    $companyId = (int) (currentCompanyId() ?? 0);
-    $company_sql = getCompanySql('pv');
-    if ($company_sql !== '' && $companyId <= 0) {
+    if ($voucher === []) {
         return false;
     }
-    // Include posted flag so we can lock editing after posting
-    // Also fetch is_restricted and creator department
-    $params = array_merge([$voucher_id], getCompanyParam());
-    
-    $stmt = $pdo->prepare("
-        SELECT pv.status, pv.created_by, IFNULL(pv.is_posted,0) AS is_posted, pv.is_restricted, u.department AS creator_department
-        FROM payment_vouchers pv 
-        LEFT JOIN users u ON pv.created_by = u.id
-        WHERE pv.id = ?$company_sql");
-    $stmt->execute($params);
-    $voucher = $stmt->fetch();
-
-    if (!$voucher)
-        return false;
 
     // Admin can always edit
-    if (isAdmin())
+    if (isAdmin()) {
         return true;
+    }
 
     // Restricted Check
-    if (!empty($voucher['is_restricted']) && (int)$voucher['is_restricted'] === 1) {
-        // Allow Finance users to edit locked vouchers (as requested)
+    if (!empty($voucher['is_restricted']) && (int) $voucher['is_restricted'] === 1) {
         if (function_exists('isFinance') && isFinance()) {
             return true;
         }
-        // Allow creator? Usually yes for "Confidential" content, but "Lock" might imply Freezing.
-        // Given earlier prompt "admin and finance users should be able to access", implies others shouldn't.
-        // I'll allow Creator for now to avoid locking them out of their own work, 
-        // unless the "Lock" is an Admin Action to prevent tampering.
-        // Let's assume Locked = Restricted Access (Privacy).
-        if ($voucher['created_by'] == $user_id) {
+        if ((int) ($voucher['created_by'] ?? 0) === (int) $user_id) {
             return true;
         }
-        // Conflict: If status is pending but restricted, block others.
         return false;
     }
 
     // Once posted, only admin can edit
-    if ((int) ($voucher['is_posted'] ?? 0) === 1)
+    if ((int) ($voucher['is_posted'] ?? 0) === 1) {
         return false;
-    
+    }
+
     // Finance can edit any unposted voucher (e.g. to fix details before posting)
     if (isFinance()) {
         return true;
     }
 
     // Any logged-in employee can edit vouchers that are still before final approval.
-    // This includes pending and confirming states so users can correct mistakes.
-    $status = strtolower((string)($voucher['status'] ?? ''));
+    $status = strtolower((string) ($voucher['status'] ?? ''));
     return in_array($status, ['pending', 'confirming'], true);
+}
+
+function canEditVoucher($voucher_id, $user_id)
+{
+    global $pdo;
+    if (function_exists('ensureRestrictedColumn')) {
+        ensureRestrictedColumn();
+    }
+
+    $companyId = (int) (currentCompanyId() ?? 0);
+    $company_sql = getCompanySql('pv');
+    // Do not hard-fail when company context is missing — view pages still load the row by id.
+    $hasRestricted = !function_exists('columnExists') || columnExists('payment_vouchers', 'is_restricted', $pdo);
+    $restrictedSelect = $hasRestricted ? 'pv.is_restricted' : '0 AS is_restricted';
+
+    $selectSql = "
+        SELECT pv.status, pv.created_by, IFNULL(pv.is_posted,0) AS is_posted, {$restrictedSelect}, u.department AS creator_department
+        FROM payment_vouchers pv
+        LEFT JOIN users u ON pv.created_by = u.id
+        WHERE pv.id = ?";
+
+    $voucher = null;
+    try {
+        if ($company_sql !== '' && $companyId > 0) {
+            $stmt = $pdo->prepare($selectSql . $company_sql);
+            $stmt->execute(array_merge([(int) $voucher_id], getCompanyParam($companyId)));
+            $voucher = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+        // Fallback: id-only (covers NULL/0 company_id rows that view-voucher still shows)
+        if (!$voucher) {
+            $stmt = $pdo->prepare($selectSql);
+            $stmt->execute([(int) $voucher_id]);
+            $voucher = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+    } catch (Throwable $e) {
+        error_log('canEditVoucher: ' . $e->getMessage());
+        return false;
+    }
+
+    if (!$voucher) {
+        return false;
+    }
+
+    return canEditVoucherRow($voucher, $user_id);
 }
 
 /**

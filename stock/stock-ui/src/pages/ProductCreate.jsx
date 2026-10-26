@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   HiOutlineArrowPath,
+  HiOutlineBars3,
+  HiOutlineChevronDown,
   HiOutlinePhoto,
   HiOutlinePlus,
   HiOutlineXMark,
@@ -336,9 +338,11 @@ export default function ProductCreate({ data = {} }) {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState([]);
   const [successMsg, setSuccessMsg] = useState(updated ? 'Product updated successfully.' : '');
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const isTruck = !isUltimate && registerType === 'truck';
   const isSpare = !isUltimate && registerType === 'spare_part';
+  const currencyCode = currencyMeta(currency).code || currency || 'TSh';
 
   const codePreview = isTruck ? previewTruckCode : previewCode;
 

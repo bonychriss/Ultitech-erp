@@ -9,6 +9,22 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 requireLogin();
 
+// Prefer short desk URL (/sales/orders) like quotations (/sales/quotations).
+if (
+    empty($GLOBALS['ERP_SALES_CONTEXT'])
+    && (!isset($_GET['desk']) || trim((string) $_GET['desk']) === '')
+    && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET'
+    && function_exists('sales_module_url')
+) {
+    $legacyQuery = $_GET;
+    unset($legacyQuery['company_slug'], $legacyQuery['desk']);
+    $target = sales_module_url('orders/index.php', $legacyQuery);
+    if (is_string($target) && $target !== '' && !preg_match('#/modules/sales/orders/index\.php(?:$|\?)#i', $target)) {
+        header('Location: ' . $target, true, 302);
+        exit;
+    }
+}
+
 if (function_exists('salesOrdersListUsesReactShell') && salesOrdersListUsesReactShell()) {
     salesOrdersListRenderReactShell();
 }

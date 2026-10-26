@@ -252,7 +252,7 @@ switch ($active_module) {
     case 'sales':
         $links = [
             ['slug' => 'home', 'url' => $modUrl('modules/sales/dashboard/index.php?module=sales'), 'label' => 'Home', 'bi' => 'bar-chart'],
-            ['slug' => 'cart', 'url' => $modUrl('modules/sales/orders/index.php?module=sales'), 'label' => 'Orders', 'bi' => 'bag'],
+            ['slug' => 'cart', 'url' => $modUrl('sales/orders?module=sales'), 'label' => 'Orders', 'bi' => 'bag'],
             ['slug' => 'modules', 'url' => $modUrl('select-module.php'), 'label' => 'Modules', 'bi' => 'grid'],
             ['slug' => 'account', 'url' => $modUrl($accountPath . '?module=sales'), 'label' => 'Account', 'bi' => $mfBiAccount],
             ['slug' => 'settings', 'url' => $modUrl('modules/sales/orders/create.php?module=sales'), 'label' => 'Quote', 'bi' => 'file-earmark-plus'],

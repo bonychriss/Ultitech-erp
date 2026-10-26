@@ -10,19 +10,25 @@ import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
   Clock,
+  EllipsisVertical,
+  Download,
+  Eye,
   FileText,
   Loader2,
+  Receipt,
   Search,
   SlidersHorizontal,
   Wallet,
   X,
 } from 'lucide-react';
 import { fetchSalesOrdersInit } from '../api/salesOrdersDesk';
+import OrderDownloadModal from '../components/OrderDownloadModal.jsx';
 import {
   handleInvoiceLinkClick,
   resolveInvoiceSourceLabel,
   applyInvoicedStatusToRows,
 } from '../utils/invoiceTransform';
+import { downloadSalesDocPdfViaPrintUrl } from '../utils/listPdfDownload';
 
 const AVATAR_STYLES = [
   { background: '#e0f2fe', color: '#0369a1' },
@@ -200,6 +206,25 @@ function buildUrl(base, id) {
   return `${base}${sep}id=${id}`;
 }
 
+function buildDownloadUrl(urls, id) {
+  const raw = String(urls?.print || '').trim();
+  if (!raw || !id) return '#';
+  const [pathPart, queryPart = ''] = raw.split('?');
+  let path = pathPart.replace(/\/$/, '');
+  // Short desk URLs need /sales/print/order/{id} (rewrite does not accept ?id= alone).
+  if (/\/print\/(order|invoice)$/i.test(path)) {
+    path = `${path}/${encodeURIComponent(String(id))}`;
+  } else if (!new RegExp(`/${id}(?:/|$)`).test(path)) {
+    const params = new URLSearchParams(queryPart);
+    params.set('id', String(id));
+    params.set('download', 'pdf');
+    return `${path}?${params.toString()}`;
+  }
+  const params = new URLSearchParams(queryPart);
+  params.set('download', 'pdf');
+  return `${path}?${params.toString()}`;
+}
+
 const LIST_STATE_KEY = 'so-list-state';
 
 function readListState() {
@@ -270,9 +295,9 @@ function saveListStateForReturn(state) {
 function TypeBadge({ type }) {
   const t = (type || 'spare').toLowerCase();
   if (t === 'truck') {
-    return <span className="qt-type-badge qt-type-badge--truck"><i className="fas fa-truck" /> TRUCK</span>;
+    return <span className="prod-desk-type prod-desk-type--truck">Truck</span>;
   }
-  return <span className="qt-type-badge qt-type-badge--spare"><i className="fas fa-wrench" /> SPARE</span>;
+  return <span className="prod-desk-type prod-desk-type--spare">Spare Part</span>;
 }
 
 function StatusPill({ status }) {
@@ -300,6 +325,11 @@ export default function SalesOrdersListPage() {
   const selectionAnchorRef = useRef(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [filterPanelStyle, setFilterPanelStyle] = useState(null);
+  const [pdfState, setPdfState] = useState('idle');
+  const [pdfProgress, setPdfProgress] = useState(0);
+  const [pdfMessage, setPdfMessage] = useState('Preparing document...');
+  const [pdfFileName, setPdfFileName] = useState('');
+  const pdfCloseTimer = useRef(null);
 
   const filterDropdownRef = useRef(null);
   const filterBtnRef = useRef(null);
@@ -501,6 +531,15 @@ export default function SalesOrdersListPage() {
     });
   }
 
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      if (filteredOrders.length > 0 && prev.size === filteredOrders.length) {
+        return new Set();
+      }
+      return new Set(filteredOrders.map((o) => o.id));
+    });
+  }
+
   function selectRange(id) {
     const ids = filteredOrders.map((o) => o.id);
     const end = ids.indexOf(id);
@@ -579,6 +618,56 @@ export default function SalesOrdersListPage() {
   function goView(id) {
     markOpened(id);
     window.location.href = buildUrl(urls.view || 'view.php', id);
+  }
+
+  function closeDownloadModal(force = false) {
+    if (!force && pdfState === 'loading') return;
+    if (pdfCloseTimer.current) {
+      window.clearTimeout(pdfCloseTimer.current);
+      pdfCloseTimer.current = null;
+    }
+    setPdfState('idle');
+    setPdfProgress(0);
+    setPdfMessage('Preparing document...');
+    setPdfFileName('');
+  }
+
+  async function handleDownloadClick(event, order) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (pdfState === 'loading') return;
+
+    const orderId = order?.id;
+    const href = buildDownloadUrl(urls, orderId);
+    if (!href || href === '#') return;
+
+    setOpenMenuId(null);
+    markOpened(orderId);
+
+    const displayNumber = order?.order_number || String(orderId);
+    const fileName = `Order_${displayNumber}.pdf`;
+    setPdfFileName(fileName);
+    setPdfState('loading');
+    setPdfProgress(4);
+    setPdfMessage('Preparing document...');
+
+    try {
+      await downloadSalesDocPdfViaPrintUrl(href, {
+        onProgress: (percent, message) => {
+          setPdfProgress(percent);
+          if (message) setPdfMessage(message);
+        },
+      });
+      setPdfState('success');
+      setPdfProgress(100);
+      setPdfMessage('Your PDF has been saved to your downloads folder.');
+      if (pdfCloseTimer.current) window.clearTimeout(pdfCloseTimer.current);
+      pdfCloseTimer.current = window.setTimeout(() => closeDownloadModal(true), 1800);
+    } catch (err) {
+      const reason = err?.message || 'Download failed.';
+      setPdfState('error');
+      setPdfMessage(reason);
+    }
   }
 
   function toggleFilters() {
@@ -816,8 +905,18 @@ export default function SalesOrdersListPage() {
     </a>
   );
 
+  const pdfModalOpen = pdfState !== 'idle';
+
   return (
     <div className="exp-desk-page exp-desk-page--analytics-off">
+      <OrderDownloadModal
+        open={pdfModalOpen}
+        state={pdfState}
+        progress={pdfProgress}
+        message={pdfMessage}
+        fileName={pdfFileName}
+        onClose={closeDownloadModal}
+      />
       {init.flash && <div className="exp-desk-flash exp-desk-flash-success" role="status">{init.flash}</div>}
       {renderFiltersPanel()}
 
@@ -917,19 +1016,182 @@ export default function SalesOrdersListPage() {
         </article>
       </section>
 
-      <section className="exp-desk-results so-orders-table" aria-label="Sales orders">
-        <div className="exp-desk-results-head">
-          <span className="exp-desk-results-count">
+      <section className="exp-desk-results so-orders-table qt-quotations-table" aria-label="Sales orders">
+        <div className="prod-desk-results-head">
+          <span className="prod-desk-results-count">
             {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'}
           </span>
         </div>
 
-        {selectedIds.size > 0 && (
-          <div className="qt-bulk-bar">
-            <span>{selectedIds.size} selected</span>
-            {canInvoice && (
+        {filteredOrders.length === 0 ? (
+          <div className="prod-desk-empty">
+            <FileText size={28} style={{ color: '#94a3b8' }} aria-hidden="true" />
+            <p className="prod-desk-empty-title">No sales orders found</p>
+            <p className="prod-desk-empty-sub">Try adjusting your search or filters.</p>
+          </div>
+        ) : (
+          <div className="prod-desk-table-wrap">
+            <table className="prod-desk-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 40 }}>
+                    <input
+                      type="checkbox"
+                      checked={filteredOrders.length > 0 && selectedIds.size === filteredOrders.length}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </th>
+                  <th>Order</th>
+                  {supportsOrderTypeSplit ? <th>Type</th> : null}
+                  <th>Customer</th>
+                  <th>Salesperson</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map((o) => {
+                  const isSelected = selectedIds.has(o.id);
+                  return (
+                    <tr
+                      key={o.id}
+                      data-order-id={o.id}
+                      aria-current={openedId === Number(o.id) ? 'true' : undefined}
+                      className={[
+                        'exp-desk-row-clickable',
+                        isSelected ? 'is-selected' : '',
+                        openedId === Number(o.id) ? 'is-glow' : '',
+                      ].filter(Boolean).join(' ')}
+                      tabIndex={0}
+                      onClick={(event) => handleRowClick(event, o)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          goView(o.id);
+                        }
+                      }}
+                    >
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelection(o.id)}
+                          aria-label={`Select ${o.order_number || o.id}`}
+                        />
+                      </td>
+                      <td>
+                        <div className="prod-desk-product">
+                          <div style={{ minWidth: 0 }}>
+                            <a
+                              href={buildUrl(urls.view, o.id)}
+                              className="prod-desk-name"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markOpened(o.id);
+                              }}
+                            >
+                              {o.order_number || `Order #${o.id}`}
+                            </a>
+                            <div className="prod-desk-code">DATE: {formatDateTime(o.created_at)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      {supportsOrderTypeSplit ? (
+                        <td>
+                          <TypeBadge type={o.order_type} />
+                        </td>
+                      ) : null}
+                      <td>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            textTransform: isRoadmaster ? 'uppercase' : 'none',
+                          }}
+                          title={o.company_name || ''}
+                        >
+                          {o.company_name || '-'}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="qt-salesperson-cell">
+                          <span className="qt-avatar qt-avatar--sm" style={avatarStyle(o.salesperson)}>
+                            {initials(o.salesperson)}
+                          </span>
+                          <span className="qt-salesperson-name" title={o.salesperson || ''}>
+                            {o.salesperson || '-'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <StatusPill status={o.status} />
+                      </td>
+                      <td>
+                        <div className="prod-desk-muted">Amount</div>
+                        <div className="prod-desk-price">
+                          {formatCurrency(o.total_amount)}
+                        </div>
+                      </td>
+                      <td className="qt-col-actions" onClick={(e) => e.stopPropagation()} data-qt-actions="1">
+                        <div className="qt-actions-menu">
+                          <button
+                            type="button"
+                            className="qt-actions-btn"
+                            aria-label="Actions"
+                            aria-expanded={openMenuId === o.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId((id) => (id === o.id ? null : o.id));
+                            }}
+                          >
+                            <EllipsisVertical size={18} aria-hidden="true" />
+                          </button>
+                          {openMenuId === o.id ? (
+                            <div className="qt-actions-dropdown">
+                              <a href={buildUrl(urls.view, o.id)} onClick={() => markOpened(o.id)}>
+                                <Eye size={16} className="qt-action-icon qt-action-icon--view" aria-hidden="true" />
+                                View
+                              </a>
+                              <a
+                                href={buildDownloadUrl(urls, o.id)}
+                                onClick={(e) => handleDownloadClick(e, o)}
+                              >
+                                <Download size={16} className="qt-action-icon qt-action-icon--download" aria-hidden="true" />
+                                Download
+                              </a>
+                              {orderCanDirectInvoice(o.status) && !rowHasInvoice(o) ? (
+                                <a
+                                  href={buildInvoiceCreateHref(urls, o.id)}
+                                  onClick={(e) => handleInvoiceLinkClick(
+                                    e,
+                                    buildInvoiceCreateHref(urls, o.id),
+                                    { ...invoiceTransformOptions(o), module: init?.module || 'sales' },
+                                  )}
+                                >
+                                  <Receipt size={16} className="qt-action-icon qt-action-icon--invoice" aria-hidden="true" />
+                                  Invoice
+                                </a>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {selectedIds.size > 0 ? (
+          <div className="prod-desk-bulk-bar">
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, borderRight: '1px solid #334155', paddingRight: '0.75rem' }}>
+              {selectedIds.size} selected
+            </span>
+            {canInvoice ? (
               <a
-                className="qt-bulk-btn"
                 href={buildInvoiceCreateHref(urls, Array.from(selectedIds)[0])}
                 onClick={(e) => handleInvoiceLinkClick(
                   e,
@@ -937,132 +1199,11 @@ export default function SalesOrdersListPage() {
                   { ...invoiceTransformOptions(selectedList[0]), module: init?.module || 'sales' },
                 )}
               >
-                <i className="fas fa-file-invoice-dollar" style={{ color: '#2563eb', marginRight: 6 }} />
                 Invoice
               </a>
-            )}
+            ) : null}
           </div>
-        )}
-
-        {filteredOrders.length === 0 ? (
-          <div className="exp-desk-empty">
-            <FileText className="exp-desk-empty-icon" aria-hidden="true" />
-            <p className="exp-desk-empty-title">No sales orders found</p>
-            <p className="exp-desk-empty-sub">Try adjusting your search or filters.</p>
-          </div>
-        ) : (
-          <div className="exp-desk-table-wrap">
-            <table className="exp-desk-table so-desk-table">
-              <colgroup>
-                <col className="so-col-check" />
-                <col className="so-col-number" />
-                <col className="so-col-customer" />
-                <col className="so-col-salesperson" />
-                <col className="so-col-date" />
-                <col className="so-col-status" />
-                <col className="so-col-total" />
-                <col className="so-col-actions" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th className="qt-col-check qt-col-serial so-col-check" title={`${filteredOrders.length} sales orders in this list`}>
-                    No.
-                  </th>
-                  <th className="so-col-number">Number</th>
-                  <th className="so-col-customer">Customer</th>
-                  <th className="so-col-salesperson">Salesperson</th>
-                  <th className="so-col-date">Date</th>
-                  <th className="so-col-status">Status</th>
-                  <th className="exp-desk-amt so-col-total">Total</th>
-                  <th className="qt-col-actions so-col-actions" aria-label="Actions" />
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.map((o, index) => (
-                  <tr
-                    key={o.id}
-                    data-order-id={o.id}
-                    aria-current={openedId === Number(o.id) ? 'true' : undefined}
-                    className={`exp-desk-row-clickable${selectedIds.has(o.id) ? ' qt-row-selected' : ''}${openedId === Number(o.id) ? ' is-opened' : ''}`}
-                    tabIndex={0}
-                    onClick={(event) => handleRowClick(event, o)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        goView(o.id);
-                      }
-                    }}
-                  >
-                    <td className="qt-col-check qt-col-serial so-col-check">{index + 1}</td>
-                    <td className="so-col-number">
-                      <span className="so-number-cell">
-                        <span className="exp-desk-ref">{o.order_number}</span>
-                        {supportsOrderTypeSplit && o.order_type && (
-                          <span className="so-number-type"><TypeBadge type={o.order_type} /></span>
-                        )}
-                      </span>
-                    </td>
-                    <td className="so-col-customer">
-                      <span
-                        className="exp-desk-cell-main so-cell-customer"
-                        title={o.company_name || ''}
-                        style={{ textTransform: isRoadmaster ? 'uppercase' : 'none' }}
-                      >
-                        {o.company_name || '-'}
-                      </span>
-                    </td>
-                    <td className="so-col-salesperson">
-                      <div className="qt-salesperson-cell">
-                        <span className="qt-avatar" style={avatarStyle(o.salesperson)}>{initials(o.salesperson)}</span>
-                        <span className="qt-salesperson-name" title={o.salesperson || ''}>{o.salesperson || '-'}</span>
-                      </div>
-                    </td>
-                    <td className="so-col-date">
-                      <span className="exp-desk-subdate so-date-value">{formatDateTime(o.created_at)}</span>
-                    </td>
-                    <td className="so-col-status"><StatusPill status={o.status} /></td>
-                    <td className="exp-desk-amt so-col-total">{formatCurrency(o.total_amount)}</td>
-                    <td className="qt-col-actions so-col-actions" onClick={(e) => e.stopPropagation()} data-qt-actions="1">
-                      <div className="qt-actions-menu">
-                        <button
-                          type="button"
-                          className="qt-actions-btn"
-                          aria-label="Actions"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenMenuId((id) => (id === o.id ? null : o.id));
-                          }}
-                        >
-                          <i className="fas fa-ellipsis-vertical" />
-                        </button>
-                        {openMenuId === o.id && (
-                          <div className="qt-actions-dropdown">
-                            <a href={buildUrl(urls.view, o.id)} onClick={() => markOpened(o.id)}><i className="fas fa-eye" style={{ width: 20, color: '#94a3b8' }} /> View</a>
-                            <a href={buildUrl(urls.print, o.id)} target="_blank" rel="noopener noreferrer" onClick={() => markOpened(o.id)}><i className="fas fa-print" style={{ width: 20, color: '#94a3b8' }} /> Print</a>
-                            {orderCanDirectInvoice(o.status) && !rowHasInvoice(o) ? (
-                              <a
-                                href={buildInvoiceCreateHref(urls, o.id)}
-                                onClick={(e) => handleInvoiceLinkClick(
-                                  e,
-                                  buildInvoiceCreateHref(urls, o.id),
-                                  { ...invoiceTransformOptions(o), module: init?.module || 'sales' },
-                                )}
-                              >
-                                <i className="fas fa-file-invoice-dollar" style={{ width: 20, color: '#2563eb' }} />
-                                {' '}
-                                Invoice
-                              </a>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        ) : null}
       </section>
     </div>
   );

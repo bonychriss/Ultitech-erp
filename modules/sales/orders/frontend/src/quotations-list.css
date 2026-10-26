@@ -423,11 +423,24 @@ body.page-orders-desk .exp-desk-btn-create {
   position: relative;
 }
 
-.qt-actions-dropdown svg {
+.qt-actions-dropdown svg,
+.qt-actions-dropdown .qt-action-icon {
   width: 1rem;
   height: 1rem;
-  color: #94a3b8;
   flex: 0 0 auto;
+}
+
+.qt-action-icon--view {
+  color: #2563eb;
+}
+
+.qt-action-icon--print,
+.qt-action-icon--download {
+  color: #7c3aed;
+}
+
+.qt-action-icon--invoice {
+  color: #059669;
 }
 
 .qt-actions-dropdown .qt-actions-delete svg {

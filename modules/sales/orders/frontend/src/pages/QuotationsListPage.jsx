@@ -11,10 +11,10 @@ import {
   CheckCircle2,
   Clock,
   EllipsisVertical,
+  Download,
   Eye,
   FileText,
   Loader2,
-  Printer,
   Receipt,
   Search,
   SlidersHorizontal,
@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react';
 import { confirmDeleteQuotations, fetchQuotationsInit, quotationStatusIsDeletable, submitDeleteForm } from '../api/quotationsDesk';
+import OrderDownloadModal from '../components/OrderDownloadModal.jsx';
 import QuotationKpiTraceModal from '../components/QuotationKpiTraceModal';
 import { resolveQuotationKpiTrace } from '../utils/quotationKpiTrace';
 import {
@@ -30,6 +31,7 @@ import {
   resolveInvoiceSourceLabel,
   applyInvoicedStatusToRows,
 } from '../utils/invoiceTransform';
+import { downloadSalesDocPdfViaPrintUrl } from '../utils/listPdfDownload';
 
 const AVATAR_STYLES = [
   { background: '#e0f2fe', color: '#0369a1' },
@@ -147,6 +149,25 @@ function buildUrl(base, id) {
   return `${base}${sep}id=${id}`;
 }
 
+function buildDownloadUrl(urls, id) {
+  const raw = String(urls?.print || '').trim();
+  if (!raw || !id) return '#';
+  const [pathPart, queryPart = ''] = raw.split('?');
+  let path = pathPart.replace(/\/$/, '');
+  // Short desk URLs need /sales/print/order/{id} (rewrite does not accept ?id= alone).
+  if (/\/print\/(order|invoice)$/i.test(path)) {
+    path = `${path}/${encodeURIComponent(String(id))}`;
+  } else if (!new RegExp(`/${id}(?:/|$)`).test(path)) {
+    const params = new URLSearchParams(queryPart);
+    params.set('id', String(id));
+    params.set('download', 'pdf');
+    return `${path}?${params.toString()}`;
+  }
+  const params = new URLSearchParams(queryPart);
+  params.set('download', 'pdf');
+  return `${path}?${params.toString()}`;
+}
+
 const LIST_STATE_KEY = 'qt-list-state';
 
 function readListState() {
@@ -228,6 +249,11 @@ export default function QuotationsListPage() {
   const selectionAnchorRef = useRef(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [filterPanelStyle, setFilterPanelStyle] = useState(null);
+  const [pdfState, setPdfState] = useState('idle');
+  const [pdfProgress, setPdfProgress] = useState(0);
+  const [pdfMessage, setPdfMessage] = useState('Preparing document...');
+  const [pdfFileName, setPdfFileName] = useState('');
+  const pdfCloseTimer = useRef(null);
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
 
   const filterDropdownRef = useRef(null);
@@ -547,6 +573,56 @@ export default function QuotationsListPage() {
     window.location.href = buildUrl(urls.view || 'view.php', id);
   }
 
+  function closeDownloadModal(force = false) {
+    if (!force && pdfState === 'loading') return;
+    if (pdfCloseTimer.current) {
+      window.clearTimeout(pdfCloseTimer.current);
+      pdfCloseTimer.current = null;
+    }
+    setPdfState('idle');
+    setPdfProgress(0);
+    setPdfMessage('Preparing document...');
+    setPdfFileName('');
+  }
+
+  async function handleDownloadClick(event, quotation) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (pdfState === 'loading') return;
+
+    const orderId = quotation?.id;
+    const href = buildDownloadUrl(urls, orderId);
+    if (!href || href === '#') return;
+
+    setOpenMenuId(null);
+    markOpened(orderId);
+
+    const displayNumber = quotation?.order_number || String(orderId);
+    const fileName = `Order_${displayNumber}.pdf`;
+    setPdfFileName(fileName);
+    setPdfState('loading');
+    setPdfProgress(4);
+    setPdfMessage('Preparing document...');
+
+    try {
+      await downloadSalesDocPdfViaPrintUrl(href, {
+        onProgress: (percent, message) => {
+          setPdfProgress(percent);
+          if (message) setPdfMessage(message);
+        },
+      });
+      setPdfState('success');
+      setPdfProgress(100);
+      setPdfMessage('Your PDF has been saved to your downloads folder.');
+      if (pdfCloseTimer.current) window.clearTimeout(pdfCloseTimer.current);
+      pdfCloseTimer.current = window.setTimeout(() => closeDownloadModal(true), 1800);
+    } catch (err) {
+      const reason = err?.message || 'Download failed.';
+      setPdfState('error');
+      setPdfMessage(reason);
+    }
+  }
+
   function openKpiTrace(key) {
     const trace = resolveQuotationKpiTrace(key, kpiTraceContext);
     if (trace) {
@@ -725,8 +801,18 @@ export default function QuotationsListPage() {
     </a>
   );
 
+  const pdfModalOpen = pdfState !== 'idle';
+
   return (
     <div className="exp-desk-page">
+      <OrderDownloadModal
+        open={pdfModalOpen}
+        state={pdfState}
+        progress={pdfProgress}
+        message={pdfMessage}
+        fileName={pdfFileName}
+        onClose={closeDownloadModal}
+      />
       {init.flash && <div className="exp-desk-flash exp-desk-flash-success" role="status">{init.flash}</div>}
       {renderFiltersPanel()}
 
@@ -978,15 +1064,13 @@ export default function QuotationsListPage() {
                           {openMenuId === q.id ? (
                             <div className="qt-actions-dropdown">
                               <a href={buildUrl(urls.view, q.id)} onClick={() => { setOpenMenuId(null); markOpened(q.id); }}>
-                                <Eye size={16} aria-hidden="true" /> View
+                                <Eye size={16} className="qt-action-icon qt-action-icon--view" aria-hidden="true" /> View
                               </a>
                               <a
-                                href={buildUrl(urls.print, q.id)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={() => { setOpenMenuId(null); markOpened(q.id); }}
+                                href={buildDownloadUrl(urls, q.id)}
+                                onClick={(e) => handleDownloadClick(e, q)}
                               >
-                                <Printer size={16} aria-hidden="true" /> Print
+                                <Download size={16} className="qt-action-icon qt-action-icon--download" aria-hidden="true" /> Download
                               </a>
                               {canInvoiceRow ? (
                                 <a
@@ -1000,7 +1084,7 @@ export default function QuotationsListPage() {
                                     );
                                   }}
                                 >
-                                  <Receipt size={16} aria-hidden="true" /> Invoice
+                                  <Receipt size={16} className="qt-action-icon qt-action-icon--invoice" aria-hidden="true" /> Invoice
                                 </a>
                               ) : null}
                               <button

@@ -131,6 +131,8 @@ RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/sales/quote/([0-9]+)/edit/?$ sales.php?company_slug=$1&desk=quote-edit&id=$2 [QSA,L,NC]
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/sales/print/(order|invoice)/([0-9]+)/?$ sales.php?company_slug=$1&desk=print-$2&id=$3 [QSA,L,NC]
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/sales/print/(order|invoice)/?$ sales.php?company_slug=$1&desk=print-$2 [QSA,L,NC]
 # /{company_slug}/stock → erp-laravel Domains/Stock (stock.php)
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/stock/?$ stock.php?module=stocks&company_slug=$1 [QSA,L,NC]

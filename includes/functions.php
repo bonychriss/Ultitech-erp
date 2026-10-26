@@ -956,6 +956,9 @@ function buildPaymentVoucherListOrderBySql(string $sort, string $alias = 'pv'): 
  */
 function paymentVoucherReferenceToggleUrl(): string
 {
+    if (function_exists('company_url')) {
+        return company_url('toggle-voucher-reference.php');
+    }
     return function_exists('app_url')
         ? app_url('/toggle-voucher-reference.php')
         : '/toggle-voucher-reference.php';
@@ -9200,6 +9203,21 @@ function erp_build_system_font_css_rules(): string
     $css .= "html body .fas,html body .fa-solid,html body i.fas,html body i.fa-solid{font-weight:900!important;}\n";
     $css .= "html body .far,html body .fa-regular,html body i.far,html body i.fa-regular{font-weight:400!important;}\n";
     $css .= "html body .bi,html body [class^=\"bi-\"],html body [class*=\" bi-\"]{font-family:bootstrap-icons!important;}\n";
+    // Sales settings font picker: each option uses its own face via --ss-option-font.
+    $css .= "html body .ss-font-select-value,html body .ss-font-select-option,\n";
+    $css .= "html body .ss-font-select-option-label,html body button.ss-font-select-option,\n";
+    $css .= "html body.dashboard .ss-font-select-value,html body.dashboard .ss-font-select-option,\n";
+    $css .= "html body.dashboard .ss-font-select-option-label,html body.dashboard button.ss-font-select-option,\n";
+    $css .= "html body.page-exp-desk .ss-font-select-value,html body.page-exp-desk .ss-font-select-option,\n";
+    $css .= "html body.page-exp-desk .ss-font-select-option-label,html body.page-exp-desk button.ss-font-select-option,\n";
+    $css .= "html .exp-create-shell .ss-font-select-value,html .exp-create-shell .ss-font-select-option,\n";
+    $css .= "html .exp-create-shell .ss-font-select-option-label,html .exp-create-shell button.ss-font-select-option{\n";
+    $css .= "font-family:var(--ss-option-font,inherit)!important;}\n";
+    // Personalization system-font picker.
+    $css .= "html body .sf-font-face,html body .sf-dropdown-option,html body button.sf-dropdown-option,\n";
+    $css .= "html body.dashboard .sf-font-face,html body.dashboard button.sf-dropdown-option,\n";
+    $css .= "html body.page-system-font .sf-font-face,html body.page-system-font button.sf-dropdown-option{\n";
+    $css .= "font-family:var(--sf-option-font,inherit)!important;}\n";
 
     return $css;
 }
@@ -9322,6 +9340,9 @@ function erp_get_theme_toggle_css_body_override_html(): string
         return '';
     }
     $done = true;
+    if (function_exists('erp_sanitize_css_for_html_style_embed')) {
+        $css = erp_sanitize_css_for_html_style_embed($css);
+    }
 
     return "<style id=\"erp-theme-toggle-glass-final\">\n" . $css . "\n</style>\n";
 }
@@ -9358,6 +9379,16 @@ function erp_get_dark_theme_head_html(): string
     return $html;
 }
 
+/**
+ * Neutralize sequences that break HTML when CSS is inlined in a &lt;style&gt; tag
+ * (naive injectors and browsers treat &lt;/…&gt; specially outside of proper CSS parsing).
+ */
+function erp_sanitize_css_for_html_style_embed(string $css): string
+{
+    // Break </tag> so buffer injectors / HTML parsers cannot treat CSS comments as markup.
+    return (string) preg_replace('/<\/([a-zA-Z])/', '<\\/$1', $css);
+}
+
 /** Final dark-theme block before &lt;/body&gt; (beats page-local light &lt;style&gt;). */
 function erp_get_dark_theme_body_override_html(): string
 {
@@ -9372,6 +9403,7 @@ function erp_get_dark_theme_body_override_html(): string
     if (!is_string($css) || trim($css) === '') {
         return '';
     }
+    $css = erp_sanitize_css_for_html_style_embed($css);
     return "<style id=\"erp-dark-theme-final\">\n" . $css . "\n</style>\n";
 }
 
@@ -9655,17 +9687,8 @@ HTML;
 /** Whether to inject the mobile immersive top chrome. */
 function erp_should_inject_mobile_top_chrome(): bool
 {
-    if (!erp_should_inject_theme_assets()) {
-        return false;
-    }
-    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    $skip = ['/login.php', '/logout.php', '/register.php', '/api/', '/cron', '/webhook'];
-    foreach ($skip as $needle) {
-        if (str_contains($script, $needle)) {
-            return false;
-        }
-    }
-    return true;
+    // Soft light-blue status/header strip removed on all mobile module pages.
+    return false;
 }
 
 /**
@@ -9792,9 +9815,10 @@ function erp_inject_system_font_into_html_buffer(string $buffer): string
             $bodyMarkup .= erp_get_nav_back_script_html();
         }
         if ($bodyMarkup !== '') {
-            $replaced = preg_replace('/<\/body>/i', $bodyMarkup . '</body>', $buffer, 1);
-            if (is_string($replaced)) {
-                $buffer = $replaced;
+            // Use the last </body> so a literal tag inside an earlier inlined <style> cannot win.
+            $pos = strripos($buffer, '</body>');
+            if ($pos !== false) {
+                $buffer = substr($buffer, 0, $pos) . $bodyMarkup . substr($buffer, $pos);
             }
         }
     }

@@ -1,7 +1,8 @@
 /**
  * Global dark theme � loaded on every page (head + body override).
- * Beats page-local light styles via late injection before </body>.
+ * Beats page-local light styles via late injection before body close.
  * Toggle: html[data-theme="dark"] (set by theme init script + header toggle).
+ * Do not put literal HTML closing tags in this file — it is also inlined in HTML.
  */
 
 html[data-theme="dark"] {

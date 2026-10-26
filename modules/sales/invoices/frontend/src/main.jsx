@@ -5,6 +5,7 @@ import './index.css';
 import './invoice-create.css';
 import './invoice-pay-modal.css';
 import '../../../../expenses/frontend/src/expenses-desk.css';
+import '../../../../../stock/stock-ui/src/pages/products-desk.css';
 import '../../../orders/frontend/src/quotations-list.css';
 import '../../../orders/frontend/src/order-view.css';
 import './invoices-list.css';

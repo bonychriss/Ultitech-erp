@@ -236,6 +236,16 @@ function adminSettingsUiHubCards(): array
             'superAdminOnly' => false,
         ],
         [
+            'id' => 'permissions',
+            'title' => 'Permissions',
+            'description' => 'Control who can use features such as website quote requests.',
+            'href' => '#permissions',
+            'accent' => '#0f766e',
+            'icon' => 'users',
+            'action' => 'permissions',
+            'superAdminOnly' => false,
+        ],
+        [
             'id' => 'stock_purchase',
             'title' => 'Stock purchase & vouchers',
             'description' => 'Set PO type (Internal / Abroad), link Stock Purchase payment vouchers, and route to Finance approval.',
@@ -332,6 +342,19 @@ function adminSettingsUiInitPayload(): array
         ];
     }
 
+    $webQuoteAccess = [
+        'users' => [],
+        'selectedIds' => [],
+    ];
+    $quoteLib = dirname(__DIR__, 2) . '/modules/sales/quote-requests/includes/quote-requests-lib.php';
+    if (is_file($quoteLib)) {
+        require_once $quoteLib;
+        if (function_exists('salesQuoteRequestsCompanyUsers') && function_exists('salesQuoteRequestsAllowedUserIds')) {
+            $webQuoteAccess['users'] = salesQuoteRequestsCompanyUsers();
+            $webQuoteAccess['selectedIds'] = salesQuoteRequestsAllowedUserIds();
+        }
+    }
+
     return [
         'companyName' => $companyName,
         'todayLabel' => date('l, d M Y'),
@@ -341,6 +364,7 @@ function adminSettingsUiInitPayload(): array
         'siteContact' => $siteContact,
         'siteTexts' => $siteTexts,
         'siteContactPageUrl' => $isSystemAdmin && function_exists('app_url') ? app_url('/contact.php') : '',
+        'webQuoteAccess' => $webQuoteAccess,
         'font' => [
             'current' => $systemFontKey,
             'label' => (string) ($systemFontDef['label'] ?? 'Poppins'),
@@ -357,6 +381,7 @@ function adminSettingsUiInitPayload(): array
             'saveFont' => adminSettingsUiPublicUrl('api/save-font.php'),
             'factoryReset' => adminSettingsUiPublicUrl('api/factory-reset.php'),
             'saveSiteContact' => adminSettingsUiPublicUrl('api/save-site-contact.php'),
+            'saveWebQuoteAccess' => adminSettingsUiPublicUrl('api/save-web-quote-access.php'),
         ],
     ];
 }

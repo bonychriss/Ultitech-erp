@@ -10,10 +10,15 @@ import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
   Clock,
+  EllipsisVertical,
+  Eye,
   FileText,
   Loader2,
+  Printer,
+  Receipt,
   Search,
   SlidersHorizontal,
+  Trash2,
   Wallet,
   X,
 } from 'lucide-react';
@@ -197,9 +202,9 @@ function saveListStateForReturn(state) {
 function TypeBadge({ type }) {
   const t = (type || 'spare').toLowerCase();
   if (t === 'truck') {
-    return <span className="qt-type-badge qt-type-badge--truck"><i className="fas fa-truck" /> TRUCK</span>;
+    return <span className="prod-desk-type prod-desk-type--truck">Truck</span>;
   }
-  return <span className="qt-type-badge qt-type-badge--spare"><i className="fas fa-wrench" /> SPARE</span>;
+  return <span className="prod-desk-type prod-desk-type--spare">Spare Part</span>;
 }
 
 function StatusPill({ status }) {
@@ -441,6 +446,15 @@ export default function QuotationsListPage() {
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      if (filteredQuotations.length > 0 && prev.size === filteredQuotations.length) {
+        return new Set();
+      }
+      return new Set(filteredQuotations.map((q) => q.id));
     });
   }
 
@@ -825,19 +839,216 @@ export default function QuotationsListPage() {
         </button>
       </section>
 
-      <section className="exp-desk-results qt-quotations-table so-orders-table">
-        <div className="exp-desk-results-head">
-          <span className="exp-desk-results-count">
+      <section className="exp-desk-results qt-quotations-table">
+        <div className="prod-desk-results-head">
+          <span className="prod-desk-results-count">
             {filteredQuotations.length} {filteredQuotations.length === 1 ? 'result' : 'results'}
           </span>
         </div>
 
+        {filteredQuotations.length === 0 ? (
+          <div className="prod-desk-empty">
+            <FileText size={28} style={{ color: '#94a3b8' }} aria-hidden="true" />
+            <p className="prod-desk-empty-title">No quotations found</p>
+            <p className="prod-desk-empty-sub">Try adjusting your search or filters.</p>
+          </div>
+        ) : (
+          <div className="prod-desk-table-wrap">
+            <table className="prod-desk-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 40 }}>
+                    <input
+                      type="checkbox"
+                      checked={filteredQuotations.length > 0 && selectedIds.size === filteredQuotations.length}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </th>
+                  <th>Quotation</th>
+                  {supportsOrderTypeSplit ? <th>Type</th> : null}
+                  <th>Customer</th>
+                  <th>Salesperson</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQuotations.map((q) => {
+                  const isSelected = selectedIds.has(q.id);
+                  const canInvoiceRow = orderCanDirectInvoice(q.status) && !rowHasInvoice(q);
+                  const canDeleteRow = quotationStatusIsDeletable(q.status) && !rowHasInvoice(q);
+                  return (
+                    <tr
+                      key={q.id}
+                      data-quotation-id={q.id}
+                      aria-current={openedId === Number(q.id) ? 'true' : undefined}
+                      className={[
+                        'exp-desk-row-clickable',
+                        isSelected ? 'is-selected' : '',
+                        openedId === Number(q.id) ? 'is-glow' : '',
+                      ].filter(Boolean).join(' ')}
+                      tabIndex={0}
+                      onClick={(event) => handleRowClick(event, q)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          goView(q.id);
+                        }
+                      }}
+                    >
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelection(q.id)}
+                          aria-label={`Select ${q.order_number || q.id}`}
+                        />
+                      </td>
+                      <td>
+                        <div className="prod-desk-product">
+                          <div style={{ minWidth: 0 }}>
+                            <a
+                              href={buildUrl(urls.view, q.id)}
+                              className="prod-desk-name"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markOpened(q.id);
+                              }}
+                            >
+                              {q.order_number || `Quotation #${q.id}`}
+                            </a>
+                            <div className="prod-desk-code">DATE: {formatDateTime(q.created_at)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      {supportsOrderTypeSplit ? (
+                        <td>
+                          <TypeBadge type={q.order_type} />
+                        </td>
+                      ) : null}
+                      <td>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            textTransform: isRoadmaster ? 'uppercase' : 'none',
+                          }}
+                          title={q.company_name || ''}
+                        >
+                          {q.company_name || '-'}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="qt-salesperson-cell">
+                          <span className="qt-avatar qt-avatar--sm" style={avatarStyle(q.salesperson)}>
+                            {initials(q.salesperson)}
+                          </span>
+                          <span className="qt-salesperson-name" title={q.salesperson || ''}>
+                            {q.salesperson || '-'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <StatusPill status={q.status} />
+                      </td>
+                      <td>
+                        <div className="prod-desk-muted">Amount</div>
+                        <div className="prod-desk-price">
+                          {formatCurrency(q.total_amount)}{' '}
+                          <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>
+                            {q.currency || defaultCurrency}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="qt-col-actions" onClick={(e) => e.stopPropagation()} data-qt-actions="1">
+                        <div className="qt-actions-menu">
+                          <button
+                            type="button"
+                            className="qt-actions-btn"
+                            aria-label="Actions"
+                            aria-expanded={openMenuId === q.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId((id) => (id === q.id ? null : q.id));
+                            }}
+                          >
+                            <EllipsisVertical size={18} aria-hidden="true" />
+                          </button>
+                          {openMenuId === q.id ? (
+                            <div className="qt-actions-dropdown">
+                              <a href={buildUrl(urls.view, q.id)} onClick={() => { setOpenMenuId(null); markOpened(q.id); }}>
+                                <Eye size={16} aria-hidden="true" /> View
+                              </a>
+                              <a
+                                href={buildUrl(urls.print, q.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => { setOpenMenuId(null); markOpened(q.id); }}
+                              >
+                                <Printer size={16} aria-hidden="true" /> Print
+                              </a>
+                              {canInvoiceRow ? (
+                                <a
+                                  href={buildInvoiceCreateHref(urls, q.id)}
+                                  onClick={(e) => {
+                                    setOpenMenuId(null);
+                                    handleInvoiceLinkClick(
+                                      e,
+                                      buildInvoiceCreateHref(urls, q.id),
+                                      { ...invoiceTransformOptions(q), module: init?.module || 'sales' },
+                                    );
+                                  }}
+                                >
+                                  <Receipt size={16} aria-hidden="true" /> Invoice
+                                </a>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="qt-actions-delete"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(null);
+                                  if (!canDeleteRow) {
+                                    const message = 'Only a draft, quotation, or cancelled quotation with no invoice can be deleted.';
+                                    if (typeof window.Swal !== 'undefined') {
+                                      window.Swal.fire({
+                                        icon: 'info',
+                                        title: 'This quotation cannot be deleted',
+                                        text: message,
+                                      });
+                                    } else {
+                                      window.alert(message);
+                                    }
+                                    return;
+                                  }
+                                  handleDeleteIds([q.id]);
+                                }}
+                              >
+                                <Trash2 size={16} aria-hidden="true" /> Delete
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {selectedIds.size > 0 && (
-          <div className="qt-bulk-bar">
-            <span>{selectedIds.size} selected</span>
+          <div className="prod-desk-bulk-bar">
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, borderRight: '1px solid #334155', paddingRight: '0.75rem' }}>
+              {selectedIds.size} selected
+            </span>
+            <button type="button" onClick={() => setSelectedIds(new Set())}>
+              Deselect
+            </button>
             {canInvoice && (
               <a
-                className="qt-bulk-btn"
                 href={buildInvoiceCreateHref(urls, Array.from(selectedIds)[0])}
                 onClick={(e) => handleInvoiceLinkClick(
                   e,
@@ -845,147 +1056,14 @@ export default function QuotationsListPage() {
                   { ...invoiceTransformOptions(selectedList[0]), module: init?.module || 'sales' },
                 )}
               >
-                <i className="fas fa-file-invoice-dollar" style={{ color: '#2563eb', marginRight: 6 }} />
-                Invoice
+                <Receipt size={14} aria-hidden="true" /> Invoice
               </a>
             )}
             {canDelete && (
-              <button type="button" className="qt-bulk-btn qt-bulk-btn--danger" onClick={handleDelete}>
-                <i className="fas fa-trash-alt" style={{ marginRight: 6 }} />
-                Delete
+              <button type="button" className="prod-desk-bulk-del" onClick={handleDelete}>
+                <Trash2 size={14} aria-hidden="true" /> Delete
               </button>
             )}
-          </div>
-        )}
-
-        {filteredQuotations.length === 0 ? (
-          <div className="exp-desk-empty">
-            <FileText className="exp-desk-empty-icon" aria-hidden="true" />
-            <p className="exp-desk-empty-title">No quotations found</p>
-            <p className="exp-desk-empty-sub">Try adjusting your search or filters.</p>
-          </div>
-        ) : (
-          <div className="exp-desk-table-wrap">
-            <table className="exp-desk-table">
-              <thead>
-                <tr>
-                  <th className="qt-col-check qt-col-serial" title={`${filteredQuotations.length} quotations in this list`}>
-                    No.
-                  </th>
-                  <th>Number</th>
-                  <th>Customer</th>
-                  <th>Salesperson</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th className="exp-desk-amt">Total</th>
-                  <th className="qt-col-actions">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredQuotations.map((q, index) => (
-                  <tr
-                    key={q.id}
-                    data-quotation-id={q.id}
-                    aria-current={openedId === Number(q.id) ? 'true' : undefined}
-                    className={`exp-desk-row-clickable${selectedIds.has(q.id) ? ' qt-row-selected' : ''}${openedId === Number(q.id) ? ' is-opened' : ''}`}
-                    tabIndex={0}
-                    onClick={(event) => handleRowClick(event, q)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        goView(q.id);
-                      }
-                    }}
-                  >
-                    <td className="qt-col-check qt-col-serial">{index + 1}</td>
-                    <td>
-                      <span className="exp-desk-ref">{q.order_number}</span>
-                      {supportsOrderTypeSplit && q.order_type && (
-                        <div className="exp-desk-cell-sub"><TypeBadge type={q.order_type} /></div>
-                      )}
-                    </td>
-                    <td>
-                      <span
-                        className="exp-desk-cell-main"
-                        title={q.company_name || ''}
-                        style={{ textTransform: isRoadmaster ? 'uppercase' : 'none' }}
-                      >
-                        {q.company_name || '-'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="qt-salesperson-cell">
-                        <span className="qt-avatar" style={avatarStyle(q.salesperson)}>{initials(q.salesperson)}</span>
-                        <span className="qt-salesperson-name" title={q.salesperson || ''}>{q.salesperson || '-'}</span>
-                      </div>
-                    </td>
-                    <td><span className="exp-desk-subdate">{formatDateTime(q.created_at)}</span></td>
-                    <td><StatusPill status={q.status} /></td>
-                    <td className="exp-desk-amt">{formatCurrency(q.total_amount)}</td>
-                    <td className="qt-col-actions" onClick={(e) => e.stopPropagation()} data-qt-actions="1">
-                      <div className="qt-actions-menu">
-                        <button
-                          type="button"
-                          className="qt-actions-btn"
-                          aria-label="Actions"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenMenuId((id) => (id === q.id ? null : q.id));
-                          }}
-                        >
-                          <i className="fas fa-ellipsis-vertical" />
-                        </button>
-                        {openMenuId === q.id && (
-                          <div className="qt-actions-dropdown">
-                            <a href={buildUrl(urls.view, q.id)} onClick={() => markOpened(q.id)}><i className="fas fa-eye" style={{ width: 20, color: '#94a3b8' }} /> View</a>
-                            <a href={buildUrl(urls.print, q.id)} target="_blank" rel="noopener noreferrer" onClick={() => markOpened(q.id)}><i className="fas fa-print" style={{ width: 20, color: '#94a3b8' }} /> Print</a>
-                            {orderCanDirectInvoice(q.status) && !rowHasInvoice(q) ? (
-                              <a
-                                href={buildInvoiceCreateHref(urls, q.id)}
-                                onClick={(e) => handleInvoiceLinkClick(
-                                  e,
-                                  buildInvoiceCreateHref(urls, q.id),
-                                  { ...invoiceTransformOptions(q), module: init?.module || 'sales' },
-                                )}
-                              >
-                                <i className="fas fa-file-invoice-dollar" style={{ width: 20, color: '#2563eb' }} />
-                                {' '}
-                                Invoice
-                              </a>
-                            ) : null}
-                            <button
-                              type="button"
-                              className="qt-actions-delete"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(null);
-                                if (!quotationStatusIsDeletable(q.status) || rowHasInvoice(q)) {
-                                  const message = 'Only a draft, quotation, or cancelled quotation with no invoice can be deleted.';
-                                  if (typeof window.Swal !== 'undefined') {
-                                    window.Swal.fire({
-                                      icon: 'info',
-                                      title: 'This quotation cannot be deleted',
-                                      text: message,
-                                    });
-                                  } else {
-                                    window.alert(message);
-                                  }
-                                  return;
-                                }
-                                handleDeleteIds([q.id]);
-                              }}
-                            >
-                              <i className="fas fa-trash-alt" style={{ width: 20, color: '#dc2626' }} />
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
       </section>

@@ -230,7 +230,21 @@ switch ($active_module) {
     case 'website':
         addItem($menuItems, 'website-dashboard', 'Dashboard', 'chart-bar', $prefix . 'website/dashboard');
         addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'website');
-        addItem($menuItems, 'website-quotes', 'Quote requests', 'file-text', $prefix . 'website/quotes');
+        $quoteAccessLib = dirname(__DIR__) . '/modules/sales/quote-requests/includes/quote-requests-lib.php';
+        if (is_file($quoteAccessLib)) {
+            require_once $quoteAccessLib;
+        }
+        if (!function_exists('salesQuoteRequestsUserCanAccess') || salesQuoteRequestsUserCanAccess()) {
+            addItem($menuItems, 'website-quotes', 'Quote requests', 'file-text', $prefix . 'website/quotes');
+        }
+        addItem($menuItems, 'website-advertisements', 'Advertisements', 'bullhorn', $prefix . 'website/advertisements/email', null, [
+            [
+                'id' => 'website-ad-email',
+                'label' => 'Email advertisement',
+                'icon' => 'envelope',
+                'path' => $prefix . 'website/advertisements/email',
+            ],
+        ]);
         break;
 
     case 'crm':

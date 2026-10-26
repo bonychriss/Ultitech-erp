@@ -1,0 +1,326 @@
+/*
+ * Layout 5 — yellow-bar Brand Name.
+ * Background is the original mockup page (2342x3277) with text erased.
+ * Positions measured from that crop, in cqw (% of sheet width).
+ */
+.l5 {
+  --yellow: #ffd000;
+  --ink: #2b303b;
+  --muted: #6a7280;
+  --dark: #2c3038;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2342 / 3277;
+  container-type: inline-size;
+  background: #fff;
+  overflow: hidden;
+  font-family: var(--sans);
+  color: var(--ink);
+  font-size: 1.5cqw;
+  line-height: 1.4;
+}
+
+.l5-bg {
+  display: none;
+}
+
+.l5-content {
+  position: absolute;
+  inset: 0;
+}
+
+/* brand: above the yellow band (band 15.1–20.4cqw) */
+.l5-brand {
+  position: absolute;
+  left: 7.8cqw;
+  top: 6.6cqw;
+  display: flex;
+  align-items: center;
+  gap: 1.4cqw;
+}
+
+.l5-logo-mark {
+  width: 5.6cqw;
+  height: 5.6cqw;
+  color: var(--dark);
+}
+
+.l5-brand-name {
+  font-size: 2.7cqw;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--dark);
+}
+
+.l5-brand-tag {
+  margin-top: 0.35cqw;
+  font-size: 1.05cqw;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+/* yellow title band with white gap for INVOICE */
+.l5-title-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 15.1cqw;
+  height: 5.3cqw;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+}
+
+.l5-title-band::before,
+.l5-title-band::after {
+  content: '';
+  background: var(--yellow);
+}
+
+.l5-title {
+  margin: 0;
+  padding: 0 2.8cqw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5.6cqw;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--dark);
+  line-height: 1;
+  background: #fff;
+}
+
+/* invoice to + ids */
+.l5-meta {
+  position: absolute;
+  left: 7.8cqw;
+  right: 7.8cqw;
+  top: 24.6cqw;
+  display: flex;
+  justify-content: space-between;
+}
+
+.l5-to-label {
+  font-size: 1.85cqw;
+  font-weight: 700;
+  margin-bottom: 0.5cqw;
+}
+
+.l5-to-name {
+  font-size: 1.85cqw;
+  font-weight: 700;
+  margin-bottom: 0.35cqw;
+}
+
+.l5-muted {
+  font-size: 1.4cqw;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.l5-ids {
+  margin-top: 3.4cqw;
+  min-width: 28cqw;
+}
+
+.l5-id-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4cqw;
+  font-size: 1.5cqw;
+  line-height: 1.7;
+}
+
+.l5-id-row span {
+  color: var(--muted);
+}
+
+.l5-id-row strong {
+  font-weight: 600;
+  text-align: right;
+}
+
+/* no bg artwork box — content sits on plain white */
+
+.l5-table {
+  position: absolute;
+  left: 7.8cqw;
+  top: 43cqw;
+  width: 84.3cqw;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.l5-table thead th {
+  height: 5.6cqw;
+  color: #fff;
+  font-size: 1.55cqw;
+  font-weight: 700;
+  padding: 0 1.4cqw;
+  text-align: left;
+  background: var(--dark);
+}
+
+.l5-table .col-sl {
+  width: 10%;
+  text-align: center;
+}
+
+.l5-table .col-desc {
+  width: 42%;
+}
+
+.l5-table .col-num {
+  width: 18%;
+  text-align: right;
+}
+
+.l5-table .col-qty {
+  width: 12%;
+  text-align: center;
+}
+
+.l5-table thead th.col-num,
+.l5-table thead th.col-qty,
+.l5-table thead th.col-sl {
+  text-align: center;
+}
+
+.l5-table tbody td {
+  height: 6.4cqw;
+  padding: 0 1.4cqw;
+  font-size: 1.55cqw;
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid #d5d8de;
+}
+
+.l5-table tbody tr:last-child td {
+  border-bottom: 1.5px solid var(--dark);
+}
+
+/* thank you / terms + totals — sit just under the last row */
+.l5-mid {
+  position: absolute;
+  left: 7.8cqw;
+  right: 7.8cqw;
+  top: 76.2cqw;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.l5-thanks {
+  font-size: 1.7cqw;
+  font-weight: 700;
+  margin-bottom: 2.2cqw;
+}
+
+.l5-terms-label {
+  font-size: 1.55cqw;
+  font-weight: 700;
+  margin-bottom: 0.4cqw;
+}
+
+.l5-terms {
+  font-size: 1.25cqw;
+  color: var(--muted);
+  max-width: 38cqw;
+  line-height: 1.45;
+}
+
+.l5-sums {
+  width: 39.8cqw;
+  padding-top: 0.4cqw;
+}
+
+.l5-sum-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.5cqw;
+  line-height: 1.85;
+  padding: 0 1.6cqw;
+}
+
+.l5-sum-row span {
+  color: var(--muted);
+}
+
+.l5-sum-row strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.l5-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.15cqw;
+  height: 5.3cqw;
+  padding: 0 1.6cqw;
+  background: var(--yellow);
+  font-size: 1.85cqw;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.l5-total strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* payment */
+.l5-pay {
+  position: absolute;
+  left: 7.8cqw;
+  top: 118.6cqw;
+}
+
+.l5-pay-title {
+  font-size: 1.55cqw;
+  font-weight: 700;
+  margin-bottom: 0.45cqw;
+}
+
+.l5-pay p {
+  font-size: 1.35cqw;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.l5-pay span {
+  color: var(--muted);
+}
+
+/* authorised sign */
+.l5-sign {
+  position: absolute;
+  right: 7.8cqw;
+  top: 127.6cqw;
+  min-width: 22cqw;
+  padding: 1.1cqw 2.4cqw;
+  font-size: 1.45cqw;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  background: var(--yellow);
+}
+
+/* footer under the yellow line */
+.l5-foot {
+  position: absolute;
+  left: 7.8cqw;
+  right: 7.8cqw;
+  top: 132.2cqw;
+  padding-top: 1.4cqw;
+  border-top: 0.45cqw solid var(--yellow);
+  font-size: 1.4cqw;
+  color: var(--ink);
+}
+
+.l5-foot span {
+  color: var(--muted);
+  padding: 0 0.6cqw;
+}

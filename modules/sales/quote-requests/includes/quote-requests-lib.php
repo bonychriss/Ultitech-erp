@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Website quote requests (Roadmaster storefront) — schema + fetch helpers.
+ * Website quote requests (Roadmaster storefront) ï¿½ schema + fetch helpers.
  */
 
 function salesQuoteRequestsEnsureSchema(?PDO $pdo = null): void
@@ -269,4 +269,218 @@ function salesQuoteRequestsFetchAll(?PDO $pdo = null): array
         $row['product_id'] = isset($row['product_id']) ? (int) $row['product_id'] : null;
         return $row;
     }, $rows);
+}
+
+function salesQuoteRequestsAccessSettingKey(): string
+{
+    return 'website_quote_access_user_ids';
+}
+
+/**
+ * @return list<int>
+ */
+function salesQuoteRequestsAllowedUserIds(): array
+{
+    if (!function_exists('getCompanySetting')) {
+        return [];
+    }
+    $raw = getCompanySetting(salesQuoteRequestsAccessSettingKey(), '[]');
+    if (is_array($raw)) {
+        $decoded = $raw;
+    } else {
+        $decoded = json_decode((string) $raw, true);
+    }
+    if (!is_array($decoded)) {
+        return [];
+    }
+    $ids = [];
+    foreach ($decoded as $value) {
+        $id = (int) $value;
+        if ($id > 0) {
+            $ids[$id] = $id;
+        }
+    }
+
+    return array_values($ids);
+}
+
+/**
+ * @param list<int|string> $userIds
+ */
+function salesQuoteRequestsSetAllowedUserIds(array $userIds): bool
+{
+    if (!function_exists('setCompanySetting')) {
+        return false;
+    }
+    $ids = [];
+    foreach ($userIds as $value) {
+        $id = (int) $value;
+        if ($id > 0) {
+            $ids[$id] = $id;
+        }
+    }
+    $json = json_encode(array_values($ids), JSON_UNESCAPED_SLASHES);
+
+    return setCompanySetting(salesQuoteRequestsAccessSettingKey(), $json !== false ? $json : '[]');
+}
+
+function salesQuoteRequestsRoleIsAdmin(string $role): bool
+{
+    $role = strtolower(trim($role));
+    if ($role === '') {
+        return false;
+    }
+    $roleAdmin = defined('ROLE_ADMIN') ? (string) ROLE_ADMIN : 'admin';
+    $roleCoAdmin = defined('ROLE_COMPANY_ADMIN') ? (string) ROLE_COMPANY_ADMIN : 'company_admin';
+
+    return $role === strtolower($roleAdmin)
+        || $role === strtolower($roleCoAdmin)
+        || in_array($role, [
+            'admin', 'administrator', 'superadmin', 'super_admin',
+            'company_admin', 'company admin', 'owner', 'system_admin', 'platform_admin',
+        ], true);
+}
+
+function salesQuoteRequestsUserCanAccess(?int $userId = null): bool
+{
+    $uid = $userId ?? (int) ($_SESSION['user_id'] ?? 0);
+    if ($uid <= 0) {
+        return false;
+    }
+    if (function_exists('isAdmin') && isAdmin()) {
+        return true;
+    }
+    if (function_exists('isSuperAdmin') && isSuperAdmin()) {
+        return true;
+    }
+    $role = strtolower(trim((string) ($_SESSION['role'] ?? '')));
+    if ($role !== '' && salesQuoteRequestsRoleIsAdmin($role)) {
+        return true;
+    }
+
+    return in_array($uid, salesQuoteRequestsAllowedUserIds(), true);
+}
+
+/**
+ * @return list<array{id:int,name:string,email:string,role:string,is_admin:bool}>
+ */
+function salesQuoteRequestsCompanyUsers(?PDO $pdo = null): array
+{
+    $db = $pdo instanceof PDO ? $pdo : ($GLOBALS['pdo'] ?? null);
+    if (!($db instanceof PDO)) {
+        return [];
+    }
+    try {
+        $hasStatus = function_exists('columnExists') && columnExists('users', 'status', $db);
+        $hasFullName = function_exists('columnExists') && columnExists('users', 'full_name', $db);
+        $nameExpr = $hasFullName
+            ? "COALESCE(NULLIF(TRIM(full_name), ''), NULLIF(TRIM(username), ''), NULLIF(TRIM(email), ''), CONCAT('User #', id))"
+            : "COALESCE(NULLIF(TRIM(username), ''), NULLIF(TRIM(email), ''), CONCAT('User #', id))";
+        $sql = "SELECT id, {$nameExpr} AS display_name, COALESCE(email, '') AS email, COALESCE(role, '') AS role
+                FROM users";
+        if ($hasStatus) {
+            $sql .= " WHERE LOWER(TRIM(COALESCE(status, 'active'))) NOT IN ('disabled', 'inactive', 'deleted', 'suspended')";
+        }
+        $sql .= ' ORDER BY display_name ASC, id ASC LIMIT 500';
+        $rows = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $row) {
+        $id = (int) ($row['id'] ?? 0);
+        if ($id <= 0) {
+            continue;
+        }
+        $role = (string) ($row['role'] ?? '');
+        $out[] = [
+            'id' => $id,
+            'name' => (string) ($row['display_name'] ?? ('User #' . $id)),
+            'email' => (string) ($row['email'] ?? ''),
+            'role' => $role,
+            'is_admin' => salesQuoteRequestsRoleIsAdmin($role),
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * @return list<int>
+ */
+function salesQuoteRequestsNotifyRecipientIds(?PDO $pdo = null): array
+{
+    $ids = [];
+    foreach (salesQuoteRequestsAllowedUserIds() as $id) {
+        $ids[$id] = $id;
+    }
+    foreach (salesQuoteRequestsCompanyUsers($pdo) as $user) {
+        if (!empty($user['is_admin'])) {
+            $id = (int) ($user['id'] ?? 0);
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+    }
+
+    return array_values($ids);
+}
+
+function salesQuoteRequestsNotifyLink(string $quoteNumber = ''): string
+{
+    $path = 'website/quotes';
+    $qn = trim($quoteNumber);
+    if ($qn !== '') {
+        $path .= '?quote=' . rawurlencode(substr($qn, 0, 64));
+    }
+    if (function_exists('company_url')) {
+        return company_url($path);
+    }
+    if (function_exists('app_url')) {
+        return app_url('/' . ltrim($path, '/'));
+    }
+
+    return '/' . ltrim($path, '/');
+}
+
+function salesQuoteRequestsNotifyNew(string $quoteNumber, string $customerName = '', int $itemCount = 0, ?PDO $pdo = null): void
+{
+    $quoteNumber = trim($quoteNumber);
+    if ($quoteNumber === '') {
+        return;
+    }
+    $customerName = trim($customerName);
+    $itemCount = max(0, $itemCount);
+    $title = 'New website quote request';
+    $parts = [$quoteNumber];
+    if ($customerName !== '') {
+        $parts[] = $customerName;
+    }
+    if ($itemCount > 0) {
+        $parts[] = $itemCount === 1 ? '1 item' : ($itemCount . ' items');
+    }
+    $message = implode(' ï¿½ ', $parts);
+    $link = salesQuoteRequestsNotifyLink($quoteNumber);
+
+    $recipients = salesQuoteRequestsNotifyRecipientIds($pdo);
+    if ($recipients === []) {
+        return;
+    }
+
+    foreach ($recipients as $userId) {
+        if (function_exists('createSystemNotification')) {
+            createSystemNotification($userId, $title, $message, $link, 'info');
+            continue;
+        }
+        if (function_exists('createNotification')) {
+            createNotification([
+                'user_id' => $userId,
+                'audience' => 'user',
+                'title' => $title,
+                'message' => $message,
+                'type' => 'info',
+            ]);
+        }
+    }
 }

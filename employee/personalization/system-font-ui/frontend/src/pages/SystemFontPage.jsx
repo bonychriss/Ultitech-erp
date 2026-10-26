@@ -5,18 +5,33 @@ import { CFG, companyDefaultLabel, labelForKey, stackForKey } from '../config.js
 
 const loadedGoogle = new Set()
 
-function loadGoogleFont(url) {
+function loadFontStylesheet(url, marker) {
   if (!url || loadedGoogle.has(url)) return
   loadedGoogle.add(url)
+  const existing = document.querySelector(`link[data-sf-font="${marker}"]`)
+  if (existing) return
   const link = document.createElement('link')
   link.rel = 'stylesheet'
   link.href = url
+  link.dataset.sfFont = marker
   document.head.appendChild(link)
 }
 
 function preloadFonts(fonts, companyFont) {
-  fonts.forEach((f) => loadGoogleFont(f.google))
-  if (companyFont?.google) loadGoogleFont(companyFont.google)
+  const loaders = []
+  fonts.forEach((f) => {
+    if (f.localCss) loadFontStylesheet(f.localCss, `local-${f.id}`)
+    if (f.google) loadFontStylesheet(f.google, `google-${f.id}`)
+    const family = String(f.stack || '').split(',')[0].replace(/['"]/g, '').trim()
+    if (family && document.fonts?.load) {
+      loaders.push(document.fonts.load(`400 16px "${family}"`).catch(() => null))
+      loaders.push(document.fonts.load(`700 16px "${family}"`).catch(() => null))
+    }
+  })
+  if (companyFont?.google) loadFontStylesheet(companyFont.google, 'company-google')
+  Promise.all(loaders).then(() => {
+    document.dispatchEvent(new CustomEvent('sf-fonts-ready'))
+  })
 }
 
 export default function SystemFontPage() {
@@ -41,7 +56,9 @@ export default function SystemFontPage() {
 
   useEffect(() => {
     const font = CFG.fonts.find((f) => f.id === selectedKey)
-    loadGoogleFont(selectedKey === '' ? '' : (font?.google || ''))
+    if (!font) return
+    if (font.localCss) loadFontStylesheet(font.localCss, `local-${font.id}`)
+    if (font.google) loadFontStylesheet(font.google, `google-${font.id}`)
   }, [selectedKey])
 
   const applyServerData = useCallback((data) => {

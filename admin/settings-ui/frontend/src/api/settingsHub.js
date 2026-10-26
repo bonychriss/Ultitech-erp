@@ -43,3 +43,17 @@ export async function executeFactoryReset(apiUrl, confirmReset) {
   }
   return data
 }
+
+export async function saveWebQuoteAccess(apiUrl, userIds) {
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ user_ids: userIds }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || !data.ok) {
+    throw new Error(data.message || 'Could not save website quote permissions.')
+  }
+  return data
+}

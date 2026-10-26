@@ -8,10 +8,12 @@ require_once __DIR__ . '/config/functions.php';
 require_once __DIR__ . '/includes/web-services-lib.php';
 requireLogin();
 
-if (!function_exists('isUltimate') || !isUltimate()) {
+$canWebsite = (function_exists('isUltimate') && isUltimate())
+    || (function_exists('isRoadmaster') && isRoadmaster());
+if (!$canWebsite) {
     http_response_code(403);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['ok' => false, 'error' => 'Ultimate company only.']);
+    echo json_encode(['ok' => false, 'error' => 'Website module is not available for this company.']);
     exit;
 }
 

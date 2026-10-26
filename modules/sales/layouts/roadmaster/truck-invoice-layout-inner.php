@@ -879,7 +879,12 @@ $docFontImport = function_exists('sales_document_font_import_css')
         return '';
     };
 
-    $truckPay = $pick($company_settings, 'truck_payment_details', 'spare_payment_details');
+    $truckPay = function_exists('sales_document_payment_details')
+        ? sales_document_payment_details($company_settings, true)
+        : $pick($company_settings, 'truck_payment_details', 'spare_payment_details');
+    if ($truckPay === '') {
+        $truckPay = trim((string) ($company_settings['bank_details'] ?? ''));
+    }
     $truckTerms = $pick($company_settings, 'truck_terms', 'spare_terms');
     $truckValidity = $pick($company_settings, 'truck_validity', 'spare_validity');
     $truckReturn = $pick($company_settings, 'truck_return_policy', 'spare_return_policy');
@@ -895,7 +900,7 @@ $docFontImport = function_exists('sales_document_font_import_css')
     }
     $invRemarks = implode("\n\n", $remarkParts);
 
-    $bankDetails = trim((string) ($company_settings['bank_details'] ?? ''));
+    $bankDetails = '';
     $thanksSecond = $pick($company_settings, 'truck_thanks_note', 'spare_thanks_note');
     // Page 2: extended terms only (payment + bank appear on page 1)
     // Always show the Terms & remarks page for truck documents (signature lives on page 2).
@@ -915,9 +920,9 @@ $docFontImport = function_exists('sales_document_font_import_css')
                 <?php endif; ?>
             </div>
             <div class="truck-address-block">
-                <?= nl2br(htmlspecialchars($company_settings['company_address'])) ?><br>
-                Phone: <?= htmlspecialchars($company_settings['company_phone']) ?><br>
-                Email: <?= htmlspecialchars($company_settings['company_email']) ?>
+                <?= nl2br(htmlspecialchars((string) ($company_settings['company_address'] ?? ''))) ?><br>
+                Phone: <?= htmlspecialchars((string) ($company_settings['company_phone'] ?? '')) ?><br>
+                Email: <?= htmlspecialchars((string) ($company_settings['company_email'] ?? '')) ?>
             </div>
         </div>
         <div class="truck-header-right">
@@ -943,7 +948,7 @@ $docFontImport = function_exists('sales_document_font_import_css')
 
     <div class="truck-bill-bar">
         <span class="truck-bill-to-label">BILL TO:</span>
-        <span class="truck-bill-to-value"><?= htmlspecialchars($invoice['company_name']) ?></span>
+        <span class="truck-bill-to-value"><?= htmlspecialchars((string) ($invoice['company_name'] ?? '')) ?></span>
         <div class="truck-tin-vrn">
             <span>TIN: <?= htmlspecialchars($invoice['tin'] ?? '----') ?></span>
             <span>VRN: <?= htmlspecialchars($invoice['vrn'] ?? '') ?></span>

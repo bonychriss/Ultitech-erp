@@ -487,7 +487,21 @@ switch ($active_module) {
     case 'website':
         addItem($menuItems, 'website-dashboard', 'Dashboard', 'bar-chart', $prefix . 'website/dashboard');
         addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'website');
-        addItem($menuItems, 'website-quotes', 'Quote requests', 'file-text', $prefix . 'website/quotes');
+        $quoteAccessLib = __DIR__ . '/modules/sales/quote-requests/includes/quote-requests-lib.php';
+        if (is_file($quoteAccessLib)) {
+            require_once $quoteAccessLib;
+        }
+        if (!function_exists('salesQuoteRequestsUserCanAccess') || salesQuoteRequestsUserCanAccess()) {
+            addItem($menuItems, 'website-quotes', 'Quote requests', 'file-text', $prefix . 'website/quotes');
+        }
+        addParentItem($menuItems, 'website-advertisements', 'Advertisements', 'megaphone', [
+            [
+                'id' => 'website-ad-email',
+                'label' => 'Email advertisement',
+                'icon' => 'envelope-at',
+                'path' => $prefix . 'website/advertisements/email',
+            ],
+        ], null, $prefix . 'website/advertisements/email');
         break;
 
     case 'warehouses':

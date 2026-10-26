@@ -128,12 +128,20 @@ html[data-theme="dark"] body.page-system-font .employee-header.employee-header--
 <?= erp_get_dark_theme_body_override_html() ?>
 <style id="system-font-react-isolation">
 html body.page-system-font #root,
-html body.page-system-font #root *:not(.sf-preview-box):not(.sf-preview-box *) {
+html body.page-system-font #root *:not(.sf-preview-box):not(.sf-preview-box *):not(.sf-font-face):not(.sf-dropdown-option):not(.sf-dropdown-option *) {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
 }
 html body.page-system-font .sf-preview-box,
 html body.page-system-font .sf-preview-box *:not(.fa):not(.fas):not(.far):not(.fab):not(.bi) {
     font-family: var(--preview-font-stack, inherit) !important;
+}
+html body.page-system-font .sf-font-face,
+html body.page-system-font .sf-dropdown-option,
+html body.page-system-font .sf-dropdown-option .sf-font-face,
+html body .sf-font-face,
+html body button.sf-dropdown-option,
+html body button.sf-dropdown-option .sf-font-face {
+    font-family: var(--sf-option-font, inherit) !important;
 }
 </style>
 

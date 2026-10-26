@@ -57,10 +57,14 @@ function dashboardUiLoadReactAssets(): ?array
 
     $cssPath = $uiDir . '/dist/assets/' . $cssFile;
     $jsPath = $uiDir . '/dist/assets/' . $jsFile;
+    // Static Vite assets stay on physical /employee/...; API must be company-scoped.
+    $apiUrl = function_exists('company_url')
+        ? rtrim((string) company_url('employee/dashboard-ui/api'), '/')
+        : dashboardUiPublicUrl('api');
 
     return [
         'assetBase' => dashboardUiPublicUrl('frontend/dist/assets/'),
-        'apiUrl' => dashboardUiPublicUrl('api'),
+        'apiUrl' => $apiUrl,
         'cssFile' => $cssFile,
         'jsFile' => $jsFile,
         'cssVersion' => is_file($cssPath) ? (string) filemtime($cssPath) : (string) time(),

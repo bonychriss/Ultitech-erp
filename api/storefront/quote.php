@@ -66,14 +66,19 @@ try {
     }
 
     $ids = [];
+    $resolvedCustomer = $name;
     foreach ($items as $item) {
+        $itemCustomer = $name !== '' ? $name : (string) ($item['customer_name'] ?? '');
+        if ($resolvedCustomer === '' && $itemCustomer !== '') {
+            $resolvedCustomer = $itemCustomer;
+        }
         $ids[] = salesQuoteRequestsInsert($pdo, [
             'quote_number' => $quoteNumber,
             'product_id' => $item['product_id'] ?? null,
             'product_sku' => $item['product_sku'] ?? ($item['sku'] ?? ''),
             'product_name' => $item['product_name'] ?? ($item['name'] ?? ''),
             'quantity' => $item['quantity'] ?? 1,
-            'customer_name' => $name !== '' ? $name : ($item['customer_name'] ?? ''),
+            'customer_name' => $itemCustomer,
             'customer_email' => $email !== '' ? $email : ($item['customer_email'] ?? ''),
             'customer_phone' => $phone !== '' ? $phone : ($item['customer_phone'] ?? ''),
             'notes' => $notes !== '' ? $notes : ($item['notes'] ?? ''),
@@ -82,6 +87,14 @@ try {
             'status' => 'new',
             'created_at' => $createdAt,
         ]);
+    }
+
+    if ($ids !== [] && function_exists('salesQuoteRequestsNotifyNew')) {
+        try {
+            salesQuoteRequestsNotifyNew($quoteNumber, $resolvedCustomer, count($ids), $pdo);
+        } catch (Throwable $notifyError) {
+            error_log('storefront quote notify: ' . $notifyError->getMessage());
+        }
     }
 
     storefrontApiJson([

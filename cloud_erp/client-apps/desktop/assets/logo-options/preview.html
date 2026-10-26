@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UltiTech ERP � Logo Picker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 2rem;
+    }
+    h1 { margin: 0 0 0.5rem; font-size: 1.5rem; }
+    p { color: #94a3b8; margin: 0 0 2rem; max-width: 40rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+    .card {
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .card:hover { border-color: #38bdf8; transform: translateY(-2px); }
+    .card.selected { border-color: #22c55e; box-shadow: 0 0 0 2px #22c55e44; }
+    .preview {
+      aspect-ratio: 1;
+      background: linear-gradient(145deg, #0f172a, #1e293b);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .preview img {
+      max-width: 85%;
+      max-height: 85%;
+      object-fit: contain;
+    }
+    .meta {
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      border-top: 1px solid #334155;
+    }
+    .meta strong { display: block; color: #f8fafc; margin-bottom: 0.25rem; }
+    .pick {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 20px #0006;
+    }
+    .pick:disabled { opacity: 0.5; cursor: not-allowed; }
+    #choice { color: #38bdf8; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>UltiTech ERP � choose a splash logo</h1>
+  <p>Click a design to select it, then tell your developer the number (e.g. <strong>#3</strong>). Splash background matches the dark theme below each logo.</p>
+  <p>Selected: <span id="choice">none</span></p>
+  <div class="grid" id="grid"></div>
+  <button class="pick" id="copyBtn" disabled>Copy filename to clipboard</button>
+  <script>
+    const logos = [
+      { n: 1, file: 'ultitech-logo-01-minimal-ugt.png', name: 'Minimal UGT square' },
+      { n: 2, file: 'ultitech-logo-02-wordmark.png', name: 'UltiTech wordmark' },
+      { n: 3, file: 'ultitech-logo-03-geometric-cube.png', name: 'Geometric cube U' },
+      { n: 4, file: 'ultitech-logo-04-shield-enterprise.png', name: 'Shield enterprise' },
+      { n: 5, file: 'ultitech-logo-05-circuit-badge.png', name: 'Circuit badge' },
+      { n: 6, file: 'ultitech-logo-06-monogram-ut.png', name: 'UT monogram gold' },
+      { n: 7, file: 'ultitech-logo-07-bold-u.png', name: 'Bold U speed lines' },
+      { n: 8, file: 'ultitech-logo-08-globe-trade.png', name: 'Globe trade' },
+      { n: 9, file: 'ultitech-logo-09-hexagon-layers.png', name: 'Hexagon layers' },
+      { n: 10, file: 'ultitech-logo-10-app-icon.png', name: 'Blue app icon UGT' },
+      { n: 11, file: 'ultitech-logo-11-infinity-u.png', name: 'Infinity U loop' },
+      { n: 12, file: 'ultitech-logo-12-warehouse-arrow.png', name: 'Warehouse + arrow' },
+      { n: 13, file: 'ultitech-logo-13-diamond-u.png', name: 'Diamond U gem' },
+      { n: 14, file: 'ultitech-logo-14-network-nodes.png', name: 'Network nodes' },
+      { n: 15, file: 'ultitech-logo-15-wordmark-orange.png', name: 'Wordmark orange accent' },
+      { n: 16, file: 'ultitech-logo-16-book-chart.png', name: 'Book + chart' },
+      { n: 17, file: 'ultitech-logo-17-compass-u.png', name: 'Compass U' },
+      { n: 18, file: 'ultitech-logo-18-documents-check.png', name: 'Documents check' },
+      { n: 19, file: 'ultitech-logo-19-aurora-ring.png', name: 'Aurora ring U' },
+      { n: 20, file: 'ultitech-logo-20-geometric-africa.png', name: 'Geometric Africa UGT' },
+    ];
+    let selected = null;
+    const grid = document.getElementById('grid');
+    const choice = document.getElementById('choice');
+    const copyBtn = document.getElementById('copyBtn');
+    logos.forEach((logo) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="preview"><img src="./${logo.file}" alt="#${logo.n}" /></div>
+        <div class="meta"><strong>#${logo.n} � ${logo.name}</strong>${logo.file}</div>`;
+      card.onclick = () => {
+        document.querySelectorAll('.card').forEach((c) => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selected = logo;
+        choice.textContent = `#${logo.n} � ${logo.name} (${logo.file})`;
+        copyBtn.disabled = false;
+      };
+      grid.appendChild(card);
+    });
+    copyBtn.onclick = () => {
+      if (!selected) return;
+      navigator.clipboard.writeText(selected.file).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy filename to clipboard'; }, 2000);
+      });
+    };
+  </script>
+</body>
+</html>

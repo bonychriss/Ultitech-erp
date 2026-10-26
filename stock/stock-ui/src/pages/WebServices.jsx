@@ -38,6 +38,7 @@ export default function WebServices({ data }) {
     cancelUrl = '',
     dashboard = null,
     dashboardUrl = '',
+    siteHost = 'ultimate.co.tz',
   } = data;
   const lists = { pending, edited, deleted };
   const [tab, setTab] = useState(() => TABS.find((t) => lists[t.key].length > 0)?.key || 'pending');
@@ -71,7 +72,7 @@ export default function WebServices({ data }) {
     abortRef.current = controller;
     setSyncing(true);
     setError('');
-    setMessage('Syncing products to ultimate.co.tz. This can take a few minutes.');
+    setMessage(`Syncing products to ${siteHost}. This can take a few minutes.`);
     try {
       const res = await fetch(withRun(syncUrl, runId), {
         method: 'POST',
@@ -105,7 +106,7 @@ export default function WebServices({ data }) {
     return (
       <div className="prod-desk-page">
         {dashboard ? (
-          <WebsiteDashboard dashboard={dashboard} websiteUrl={dashboardUrl} />
+          <WebsiteDashboard dashboard={dashboard} websiteUrl={dashboardUrl} siteHost={siteHost} />
         ) : (
           <div className="alert alert-warning mb-0">The website dashboard could not be loaded. Refresh the page to try again.</div>
         )}
@@ -124,7 +125,7 @@ export default function WebServices({ data }) {
     <div className="prod-desk-page">
       <div className="prod-desk-page-header" style={{ gridTemplateColumns: '1fr auto' }}>
         <p style={{ margin: 0, color: '#64748b', fontSize: '0.925rem' }}>
-          Products that changed in UltiTech since the last sync to ultimate.co.tz. Syncing adds new products, updates edited
+          Products that changed in UltiTech since the last sync to {siteHost}. Syncing adds new products, updates edited
           ones, and hides deleted ones on the website.
         </p>
         <div className="prod-desk-page-header-actions" style={{ gridColumn: 'auto' }}>

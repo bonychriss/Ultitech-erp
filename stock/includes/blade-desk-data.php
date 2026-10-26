@@ -951,6 +951,9 @@ if (!function_exists('stock_blade_web_services_data')) {
             }
         }
 
+        $siteHost = function_exists('webSyncShopHost') ? webSyncShopHost() : 'https://ultimate.co.tz';
+        $siteHost = preg_replace('#^https?://#i', '', $siteHost) ?: 'ultimate.co.tz';
+
         return [
             'view' => $view,
             'pending' => $changes['pending'],
@@ -960,6 +963,7 @@ if (!function_exists('stock_blade_web_services_data')) {
             'cancelUrl' => $cancelUrl,
             'dashboardUrl' => function_exists('company_url') ? company_url('website/dashboard') : '/website/dashboard',
             'dashboard' => $dashboard,
+            'siteHost' => $siteHost,
         ];
     }
 }

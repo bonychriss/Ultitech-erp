@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 /**
  * Website dashboard numbers for /{company}/website.
- * Visitors, product views and likes come from ultimate.co.tz/ultitech/stats.php.
- * Enquiries, quotes and revenue come from the UltiTech database.
+ * Visitors, product views and likes come from the company shop stats endpoint.
+ * Enquiries, quotes and revenue come from the UltiTech tenant database.
  */
 
 require_once __DIR__ . '/web-services-lib.php';
@@ -84,6 +84,15 @@ function webDashStatsUrl(): string
     $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
     $local = $host === '' || str_starts_with($host, 'localhost') || str_starts_with($host, '127.0.0.1');
 
+    if (function_exists('isRoadmaster') && isRoadmaster()) {
+        if ($local) {
+            return 'http://127.0.0.1:8082/ultitech/stats';
+        }
+        $shop = function_exists('webSyncShopHost') ? webSyncShopHost() : 'https://roadmasterspares.com';
+
+        return rtrim($shop, '/') . '/ultitech/stats';
+    }
+
     return $local ? 'http://localhost:8081/ultitech/stats.php' : 'https://ultimate.co.tz/ultitech/stats.php';
 }
 
@@ -119,7 +128,8 @@ function webDashShopStats(string $from, string $to): ?array
 {
     $url = webDashStatsUrl() . '?' . http_build_query(['from' => $from, 'to' => $to]);
     $cache = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ugt-web-dash-' . md5($url) . '.json';
-    if (is_file($cache) && time() - (int) filemtime($cache) < 300) {
+    // Short cache so the Website dashboard stays close to live shop numbers.
+    if (is_file($cache) && time() - (int) filemtime($cache) < 45) {
         $cached = json_decode((string) file_get_contents($cache), true);
         if (is_array($cached)) {
             return $cached;
@@ -330,6 +340,7 @@ function webDashboardData(PDO $pdo, string $range, string $fromInput = '', strin
     $totals = ['cur' => $blank, 'prev' => $blank];
 
     $shop = webDashShopStats($prevFromStr, $toStr);
+    $shopEnquiryDays = !empty($shop['has_enquiries']);
     foreach ((array) ($shop['days'] ?? []) as $row) {
         $date = (string) ($row['date'] ?? '');
         $which = $period($date);
@@ -341,6 +352,17 @@ function webDashboardData(PDO $pdo, string $range, string $fromInput = '', strin
             $totals[$which][$key] += $value;
             if ($which === 'cur') {
                 $days[$date][$key] = $value;
+            }
+        }
+        // Roadmaster (and any shop that sends these) — website is source of truth for enquiries/quotes.
+        if ($shopEnquiryDays) {
+            $enq = (int) ($row['enquiries'] ?? 0);
+            $quo = (int) ($row['quotes'] ?? 0);
+            $totals[$which]['enquiries'] += $enq;
+            $totals[$which]['quotes'] += $quo;
+            if ($which === 'cur') {
+                $days[$date]['enquiries'] = $enq;
+                $days[$date]['quotes'] = $quo;
             }
         }
     }
@@ -360,25 +382,43 @@ function webDashboardData(PDO $pdo, string $range, string $fromInput = '', strin
         }
     }
 
-    foreach ($enquiries as $enquiry) {
-        $date = $enquiry['date'];
-        $which = $period($date);
-        if ($which === null) {
-            continue;
-        }
-        $quoted = in_array($enquiry['status'], WEB_DASH_QUOTED, true);
-        $converted = false;
-        foreach ($sales['enquiry_customers'][$enquiry['quote_number']] ?? [] as $customerId) {
-            foreach ($invoiceDates[$customerId] ?? [] as $invoiceDate) {
-                $converted = $converted || $invoiceDate >= $date;
+    if (!$shopEnquiryDays) {
+        foreach ($enquiries as $enquiry) {
+            $date = $enquiry['date'];
+            $which = $period($date);
+            if ($which === null) {
+                continue;
+            }
+            $quoted = in_array($enquiry['status'], WEB_DASH_QUOTED, true);
+            $converted = false;
+            foreach ($sales['enquiry_customers'][$enquiry['quote_number']] ?? [] as $customerId) {
+                foreach ($invoiceDates[$customerId] ?? [] as $invoiceDate) {
+                    $converted = $converted || $invoiceDate >= $date;
+                }
+            }
+            $totals[$which]['enquiries']++;
+            $totals[$which]['quotes'] += $quoted ? 1 : 0;
+            $totals[$which]['converted'] += $converted ? 1 : 0;
+            if ($which === 'cur') {
+                $days[$date]['enquiries']++;
+                $days[$date]['quotes'] += $quoted ? 1 : 0;
             }
         }
-        $totals[$which]['enquiries']++;
-        $totals[$which]['quotes'] += $quoted ? 1 : 0;
-        $totals[$which]['converted'] += $converted ? 1 : 0;
-        if ($which === 'cur') {
-            $days[$date]['enquiries']++;
-            $days[$date]['quotes'] += $quoted ? 1 : 0;
+    } else {
+        // Still compute conversion from ERP-linked invoices when the enquiry also landed in UltiTech.
+        foreach ($enquiries as $enquiry) {
+            $date = $enquiry['date'];
+            $which = $period($date);
+            if ($which === null) {
+                continue;
+            }
+            $converted = false;
+            foreach ($sales['enquiry_customers'][$enquiry['quote_number']] ?? [] as $customerId) {
+                foreach ($invoiceDates[$customerId] ?? [] as $invoiceDate) {
+                    $converted = $converted || $invoiceDate >= $date;
+                }
+            }
+            $totals[$which]['converted'] += $converted ? 1 : 0;
         }
     }
 
@@ -417,6 +457,7 @@ function webDashboardData(PDO $pdo, string $range, string $fromInput = '', strin
         ],
         'days' => array_values($days),
         'top_viewed' => array_slice((array) ($shop['top_viewed'] ?? []), 0, 8),
+        'viewed_products' => array_values((array) ($shop['top_viewed'] ?? [])),
         'top_liked' => array_slice((array) ($shop['top_liked'] ?? []), 0, 8),
     ];
 }

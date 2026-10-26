@@ -54,6 +54,8 @@ RewriteRule ^modules/payroll/my_payslips\.php$ payroll.php?desk=my-payslips [L,Q
 # Website module
 RewriteRule ^website/quotes/?$ website.php?module=website&view=quotes [L,QSA,NC]
 RewriteRule ^website/dashboard/?$ website.php?module=website&view=dashboard [L,QSA,NC]
+RewriteRule ^website/advertisements/email/?$ website.php?module=website&view=advertisements-email [L,QSA,NC]
+RewriteRule ^website/advertisements/?$ website.php?module=website&view=advertisements-email [L,QSA,NC]
 RewriteRule ^website/?$ website.php?module=website [L,QSA,NC]
 RewriteRule ^modules/website/?$ website.php?module=website [L,QSA,NC]
 RewriteRule ^modules/website/index(\.php)?/?$ website.php?module=website [L,QSA,NC]

@@ -9,9 +9,15 @@ function sales_catalogue_resolve_return_url(string $docType): string
 {
     $returnUrl = trim((string) ($_GET['return'] ?? ''));
     if ($returnUrl === '') {
-        $returnUrl = ($docType === 'invoice')
-            ? sales_module_url('invoices/create.php')
-            : sales_module_url('orders/create.php', ['mode' => 'new']);
+        if ($docType === 'invoice') {
+            $returnUrl = sales_module_url('invoices/create.php');
+        } elseif ($docType === 'email_ad') {
+            $returnUrl = function_exists('company_url')
+                ? company_url('website/advertisements/email')
+                : sales_module_url('orders/create.php', ['mode' => 'new']);
+        } else {
+            $returnUrl = sales_module_url('orders/create.php', ['mode' => 'new']);
+        }
     }
     if (strpos($returnUrl, '://') === false) {
         if ($returnUrl !== '' && $returnUrl[0] !== '/') {
@@ -33,11 +39,22 @@ function sales_catalogue_resolve_return_url(string $docType): string
 function sales_load_catalogue_payload(PDO $pdo): array
 {
     $docType = (string) ($_GET['doc'] ?? 'quote');
-    if (!in_array($docType, ['quote', 'invoice', 'purchase'], true)) {
+    if (!in_array($docType, ['quote', 'invoice', 'purchase', 'email_ad'], true)) {
         $docType = 'quote';
     }
-    $docLabel = ($docType === 'invoice') ? 'Invoice' : (($docType === 'purchase') ? 'Purchase Order' : 'Quotation');
-    $addSelectedLabel = $docType === 'purchase' ? 'purchase order' : ($docType === 'invoice' ? 'invoice' : 'quotation');
+    if ($docType === 'invoice') {
+        $docLabel = 'Invoice';
+        $addSelectedLabel = 'invoice';
+    } elseif ($docType === 'purchase') {
+        $docLabel = 'Purchase Order';
+        $addSelectedLabel = 'purchase order';
+    } elseif ($docType === 'email_ad') {
+        $docLabel = 'Email ad';
+        $addSelectedLabel = 'email advertisement';
+    } else {
+        $docLabel = 'Quotation';
+        $addSelectedLabel = 'quotation';
+    }
     $returnUrl = sales_catalogue_resolve_return_url($docType);
 
     $salesDb = function_exists('sales_pdo') ? sales_pdo() : $pdo;
@@ -130,7 +147,9 @@ function sales_load_catalogue_payload(PDO $pdo): array
             'docLabel' => $docLabel,
             'addSelectedLabel' => $addSelectedLabel,
             'placeholderImage' => sales_app_url('stock/assets/images/no-image.png'),
-            'storageKey' => $docType === 'purchase' ? 'purchase_catalogue_items' : 'sales_catalogue_items',
+            'storageKey' => $docType === 'purchase'
+                ? 'purchase_catalogue_items'
+                : ($docType === 'email_ad' ? 'email_ad_catalogue_items' : 'sales_catalogue_items'),
         ],
     ];
 }

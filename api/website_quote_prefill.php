@@ -6,7 +6,19 @@ require_once __DIR__ . '/../includes/functions.php';
 
 header('Cache-Control: no-store');
 
-if (!function_exists('isLoggedIn') || !isLoggedIn() || !function_exists('isUltimate') || !isUltimate()) {
+if (!function_exists('isLoggedIn') || !isLoggedIn()) {
+    http_response_code(403);
+    echo 'You do not have access to website quote requests.';
+    exit;
+}
+
+$quoteAccessLib = __DIR__ . '/../modules/sales/quote-requests/includes/quote-requests-lib.php';
+if (is_file($quoteAccessLib)) {
+    require_once $quoteAccessLib;
+}
+$canWebsite = (function_exists('isUltimate') && isUltimate())
+    || (function_exists('isRoadmaster') && isRoadmaster());
+if (!$canWebsite || (function_exists('salesQuoteRequestsUserCanAccess') && !salesQuoteRequestsUserCanAccess())) {
     http_response_code(403);
     echo 'You do not have access to website quote requests.';
     exit;

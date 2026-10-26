@@ -83,6 +83,10 @@ Route::middleware([AttachErpContext::class])->group(function () {
 
     // Website (Ultimate shop sync)
     Route::match(['get', 'post'], '/website', [WebsitePageController::class, 'show'])->name('website.page');
+    Route::match(['get', 'post'], '/website/dashboard', [WebsitePageController::class, 'show'])->defaults('view', 'dashboard')->name('website.dashboard');
+    Route::match(['get', 'post'], '/website/quotes', [WebsitePageController::class, 'show'])->defaults('view', 'quotes')->name('website.quotes');
+    Route::match(['get', 'post'], '/website/advertisements', [WebsitePageController::class, 'show'])->defaults('view', 'advertisements-email')->name('website.advertisements');
+    Route::match(['get', 'post'], '/website/advertisements/email', [WebsitePageController::class, 'show'])->defaults('view', 'advertisements-email')->name('website.advertisements.email');
 
     // Letter
     Route::get('/letter', [LetterPageController::class, 'show'])->name('letter.page');

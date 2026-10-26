@@ -54,10 +54,14 @@ function vouchersUiLoadReactAssets(): ?array
 
     $cssPath = $uiDir . '/dist/assets/' . $cssFile;
     $jsPath = $uiDir . '/dist/assets/' . $jsFile;
+    // Static Vite assets stay on physical /admin/...; API must be company-scoped.
+    $apiUrl = function_exists('company_url')
+        ? rtrim((string) company_url('admin/vouchers-ui/api'), '/')
+        : vouchersUiPublicUrl('api');
 
     return [
         'assetBase' => vouchersUiPublicUrl('frontend/dist/assets/'),
-        'apiUrl' => vouchersUiPublicUrl('api'),
+        'apiUrl' => $apiUrl,
         'cssFile' => $cssFile,
         'jsFile' => $jsFile,
         'cssVersion' => is_file($cssPath) ? (string) filemtime($cssPath) : (string) time(),

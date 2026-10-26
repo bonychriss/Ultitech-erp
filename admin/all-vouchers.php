@@ -138,10 +138,15 @@ $referenceToggleUrl = function_exists('paymentVoucherReferenceToggleUrl')
     ? paymentVoucherReferenceToggleUrl()
     : (function_exists('app_url') ? app_url('/toggle-voucher-reference.php') : '/toggle-voucher-reference.php');
 
-// Absolute paths so the React desk works on pretty URLs like /{slug}/payment-vouchers.
-$adminBase = vouchersUiWebBasePath();
-$rootBase = rtrim(str_replace('\\', '/', dirname($adminBase)), '/');
-$employeeBase = ($rootBase === '' || $rootBase === '/') ? '/employee' : ($rootBase . '/employee');
+// Tenant-scoped bases so the React desk works on /{slug}/payment-vouchers (not bare /admin/...).
+if (function_exists('company_url')) {
+    $adminBase = rtrim((string) company_url('admin'), '/');
+    $employeeBase = rtrim((string) company_url('employee'), '/');
+} else {
+    $adminBase = vouchersUiWebBasePath();
+    $rootBase = rtrim(str_replace('\\', '/', dirname($adminBase)), '/');
+    $employeeBase = ($rootBase === '' || $rootBase === '/') ? '/employee' : ($rootBase . '/employee');
+}
 $suggestUrl = $adminBase . '/api-search-suggestions.php';
 
 $vouchersConfig = [

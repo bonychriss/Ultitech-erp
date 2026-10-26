@@ -1,11 +1,13 @@
 <?php
 /**
- * Header quote icon for Ultimate website quotation requests.
+ * Header quote icon for website quotation requests (Ultimate / Roadmaster).
  */
 if (!function_exists('isLoggedIn') || !isLoggedIn()) {
     return;
 }
-if (!function_exists('isUltimate') || !isUltimate()) {
+$canWebsiteQuotes = (function_exists('isUltimate') && isUltimate())
+    || (function_exists('isRoadmaster') && isRoadmaster());
+if (!$canWebsiteQuotes) {
     return;
 }
 if (!empty($GLOBALS['_ugt_quote_header'])) {

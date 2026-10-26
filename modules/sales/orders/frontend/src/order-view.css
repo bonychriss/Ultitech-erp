@@ -415,7 +415,16 @@
   }
 
   .ov-document-wrap .doc-terms-sheet {
-    margin-top: 20px;
+    display: block !important;
+    visibility: visible !important;
+    margin-top: 24px;
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .ov-document-wrap #order-content {
+    display: block;
+    width: 100%;
   }
 
 .ov-document-wrap .sheet {

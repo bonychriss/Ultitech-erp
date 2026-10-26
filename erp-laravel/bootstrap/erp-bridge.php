@@ -92,13 +92,20 @@ if ($method === 'GET' || $method === 'HEAD') {
     $input = array_merge($query, $input);
 }
 
+// Tenant URLs like /roadmaster/admin/x.php rewrite to SCRIPT_NAME /admin/x.php; Symfony then
+// treats /admin as the base URL and strips it from $route (e.g. /admin/desk/... -> 404).
+$server = $_SERVER;
+$server['SCRIPT_NAME'] = '/index.php';
+$server['PHP_SELF'] = '/index.php';
+$server['SCRIPT_FILENAME'] = $laravelRoot . '/public/index.php';
+
 $request = Request::create(
     $route,
     $method,
     $input,
     $_COOKIE,
     $_FILES,
-    $_SERVER
+    $server
 );
 
 $response = $kernel->handle($request);

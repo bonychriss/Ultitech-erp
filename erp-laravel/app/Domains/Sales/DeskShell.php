@@ -655,7 +655,8 @@ main.main-content.sales-catalogue-shell #root { width: 100%; min-height: 40vh; }
             'Sales Settings',
             $this->listBody('page-settings-desk page-sales-settings'),
             $assets,
-            $script
+            $script,
+            ['employeeHeaderTitle' => '']
         );
     }
 

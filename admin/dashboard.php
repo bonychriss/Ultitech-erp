@@ -366,9 +366,13 @@ if ($assets === null) {
     exit;
 }
 
-$adminBase = adminDashboardUiWebBasePath();
-$rootBase = adminDashboardUiRootWebPath();
-$employeeBase = ($rootBase === '' ? '' : $rootBase) . '/employee';
+// Tenant-scoped bases (/roadmaster/admin/...) — bare /admin/... redirects to the wrong company.
+$adminBase = function_exists('company_url')
+    ? rtrim((string) company_url('admin'), '/')
+    : adminDashboardUiWebBasePath();
+$employeeBase = function_exists('company_url')
+    ? rtrim((string) company_url('employee'), '/')
+    : (adminDashboardUiRootWebPath() === '' ? '' : adminDashboardUiRootWebPath()) . '/employee';
 $qsModule = isset($_GET['module']) && (string) $_GET['module'] !== '' ? (string) $_GET['module'] : 'voucher';
 
 $flashMsg = $_SESSION['success_msg'] ?? ($_SESSION['error_msg'] ?? '');
@@ -381,7 +385,9 @@ if ($flashMsg === '' && !empty($success)) {
 
 $referenceToggleUrl = function_exists('paymentVoucherReferenceToggleUrl')
     ? paymentVoucherReferenceToggleUrl()
-    : (function_exists('app_url') ? app_url('/toggle-voucher-reference.php') : '/toggle-voucher-reference.php');
+    : (function_exists('company_url')
+        ? company_url('toggle-voucher-reference.php')
+        : (function_exists('app_url') ? app_url('/toggle-voucher-reference.php') : '/toggle-voucher-reference.php'));
 
 $dashboardConfig = [
     'role' => 'admin',
@@ -904,7 +910,6 @@ html[data-theme="dark"] body.dashboard .ed-sticky-top::before {
         <noscript>
             <div class="alert alert-warning">JavaScript is required to use the Admin Dashboard.</div>
         </noscript>
-        <?php require __DIR__ . '/../includes/partials/ai_agent_dashboard_card.php'; ?>
         <div id="root"></div>
     </main>
 

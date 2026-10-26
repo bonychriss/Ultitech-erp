@@ -209,12 +209,15 @@ $push([
     'icon' => 'stock',
     'color' => '#1e3a8a',
 ]);
-if (function_exists('isUltimate') && isUltimate()) {
+if ((function_exists('isUltimate') && isUltimate()) || (function_exists('isRoadmaster') && isRoadmaster())) {
+    $websiteDesc = (function_exists('isRoadmaster') && isRoadmaster())
+        ? 'Send Roadmaster products to roadmasterspares.com'
+        : 'Send Ultimate products to ultimate.co.tz';
     $push([
         'id' => 'website',
         'label' => 'Website',
-        'desc' => 'Send Ultimate products to ultimate.co.tz',
-        'href' => $companyRoute('website'),
+        'desc' => $websiteDesc,
+        'href' => $companyRoute('website/dashboard'),
         'icon' => 'website',
         'color' => '#0f766e',
     ]);

@@ -72,11 +72,18 @@ function systemFontUiBuildInitialConfig(int $userId): array
 
     $fonts = [];
     foreach ($fontCatalog as $fontId => $fontMeta) {
+        $localCss = '';
+        if (!empty($fontMeta['local_css'])) {
+            $localCss = function_exists('app_url')
+                ? app_url((string) $fontMeta['local_css'])
+                : (string) $fontMeta['local_css'];
+        }
         $fonts[] = [
             'id' => $fontId,
             'label' => (string) ($fontMeta['label'] ?? $fontId),
             'stack' => (string) ($fontMeta['stack'] ?? ''),
             'google' => (string) ($fontMeta['google'] ?? ''),
+            'localCss' => $localCss,
         ];
     }
 

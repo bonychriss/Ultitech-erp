@@ -17,7 +17,13 @@ import {
   Type,
   Globe,
 } from 'lucide-react'
-import { executeFactoryReset, getSettingsCfg, saveSiteContact, saveSystemFont } from '../api/settingsHub.js'
+import {
+  executeFactoryReset,
+  getSettingsCfg,
+  saveSiteContact,
+  saveSystemFont,
+  saveWebQuoteAccess,
+} from '../api/settingsHub.js'
 
 const ICON_MAP = {
   building: Building2,
@@ -136,6 +142,13 @@ export default function SettingsHubPage() {
   const [contactTab, setContactTab] = useState('details')
   const [siteTexts, setSiteTexts] = useState(cfg.siteTexts?.values || {})
   const [textForm, setTextForm] = useState(cfg.siteTexts?.values || {})
+  const [quoteAccessOpen, setQuoteAccessOpen] = useState(false)
+  const [quoteAccessBusy, setQuoteAccessBusy] = useState(false)
+  const [quoteAccessUsers] = useState(() => cfg.webQuoteAccess?.users || [])
+  const [quoteAccessSelected, setQuoteAccessSelected] = useState(
+    () => new Set((cfg.webQuoteAccess?.selectedIds || []).map((id) => Number(id))),
+  )
+  const [quoteAccessFilter, setQuoteAccessFilter] = useState('')
 
   const catalog = cfg.font?.catalog || []
   const selectedFont = catalog.find((f) => f.id === fontKey) || {
@@ -256,6 +269,44 @@ export default function SettingsHubPage() {
     setResetMessage('')
   }
 
+  const openQuoteAccess = () => {
+    setQuoteAccessSelected(new Set((cfg.webQuoteAccess?.selectedIds || []).map((id) => Number(id))))
+    setQuoteAccessFilter('')
+    setQuoteAccessOpen(true)
+  }
+
+  const toggleQuoteAccessUser = (id) => {
+    const next = Number(id)
+    setQuoteAccessSelected((prev) => {
+      const copy = new Set(prev)
+      if (copy.has(next)) copy.delete(next)
+      else copy.add(next)
+      return copy
+    })
+  }
+
+  const onSaveQuoteAccess = async (e) => {
+    e.preventDefault()
+    setQuoteAccessBusy(true)
+    try {
+      const data = await saveWebQuoteAccess(cfg.api?.saveWebQuoteAccess, Array.from(quoteAccessSelected))
+      setFlash({ type: 'success', message: data.message || 'Permissions updated.' })
+      setQuoteAccessOpen(false)
+    } catch (err) {
+      setFlash({ type: 'error', message: err.message || 'Could not save permissions.' })
+    } finally {
+      setQuoteAccessBusy(false)
+    }
+  }
+
+  const filteredQuoteUsers = quoteAccessUsers.filter((user) => {
+    const q = quoteAccessFilter.trim().toLowerCase()
+    if (!q) return true
+    return [user.name, user.email, user.role]
+      .filter(Boolean)
+      .some((part) => String(part).toLowerCase().includes(q))
+  })
+
   return (
     <div className="ash-page">
       <header className="ash-sticky">
@@ -285,6 +336,7 @@ export default function SettingsHubPage() {
             const isRegister = card.action === 'register_company'
             const isFont = card.action === 'system_font'
             const isContact = card.action === 'site_contact'
+            const isQuoteAccess = card.action === 'permissions' || card.action === 'web_quote_access'
             const content = (
               <article
                 className={`ash-card${card.danger ? ' ash-card--danger' : ''}`}
@@ -318,6 +370,14 @@ export default function SettingsHubPage() {
             if (isContact) {
               return (
                 <button key={card.id} type="button" className="ash-card-link" onClick={openContact}>
+                  {content}
+                </button>
+              )
+            }
+
+            if (isQuoteAccess) {
+              return (
+                <button key={card.id} type="button" className="ash-card-link" onClick={openQuoteAccess}>
                   {content}
                 </button>
               )
@@ -796,6 +856,93 @@ export default function SettingsHubPage() {
                 </div>
               </form>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {quoteAccessOpen ? (
+        <div
+          className="ash-modal-backdrop"
+          role="presentation"
+          onClick={() => !quoteAccessBusy && setQuoteAccessOpen(false)}
+        >
+          <div
+            className="ash-modal ash-modal--quote-access"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ash-permissions-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="ash-permissions-title">Permissions</h2>
+            <p className="ash-reset-lead">
+              Choose who can use each feature. Admins always keep access.
+            </p>
+            <form onSubmit={onSaveQuoteAccess}>
+              <section className="ash-perm-block" aria-labelledby="ash-perm-web-quote-view">
+                <div className="ash-perm-block-head">
+                  <h3 id="ash-perm-web-quote-view">Web quote view</h3>
+                  <p>
+                    Users selected below can open Quote requests and get notified when a new website quote arrives.
+                  </p>
+                </div>
+                <label className="ash-label" htmlFor="ash-quote-access-search">
+                  Search users
+                </label>
+                <input
+                  id="ash-quote-access-search"
+                  className="ash-input"
+                  type="search"
+                  value={quoteAccessFilter}
+                  onChange={(e) => setQuoteAccessFilter(e.target.value)}
+                  placeholder="Name, email, or role"
+                  autoComplete="off"
+                />
+                <div className="ash-quote-access-list" role="group" aria-label="Users with web quote view">
+                  {filteredQuoteUsers.length === 0 ? (
+                    <p className="ash-contact-hint">No users match this search.</p>
+                  ) : (
+                    filteredQuoteUsers.map((user) => {
+                      const checked = quoteAccessSelected.has(Number(user.id)) || !!user.is_admin
+                      const locked = !!user.is_admin
+                      return (
+                        <label
+                          key={user.id}
+                          className={`ash-quote-access-row${locked ? ' is-locked' : ''}${checked ? ' is-checked' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={locked || quoteAccessBusy}
+                            onChange={() => toggleQuoteAccessUser(user.id)}
+                          />
+                          <span className="ash-quote-access-meta">
+                            <strong>{user.name}</strong>
+                            <span>
+                              {user.email || 'No email'}
+                              {user.role ? ` · ${user.role}` : ''}
+                              {locked ? ' · Admin (always allowed)' : ''}
+                            </span>
+                          </span>
+                        </label>
+                      )
+                    })
+                  )}
+                </div>
+              </section>
+              <div className="ash-modal-actions">
+                <button
+                  type="button"
+                  className="ash-btn-ghost"
+                  onClick={() => setQuoteAccessOpen(false)}
+                  disabled={quoteAccessBusy}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="ash-btn-primary" disabled={quoteAccessBusy}>
+                  {quoteAccessBusy ? 'Saving…' : 'Save permissions'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}

@@ -126,6 +126,10 @@ function notificationsUiDetectModule(array $n): string
         || preg_match('/\b(payroll|payslip|salary)\b/', $blob)) {
         return 'payroll';
     }
+    if (preg_match('/\/website\/quotes|website\/quotes|website quote request|quote requests?/', $blob)
+        || preg_match('/\b(website quote|web request)\b/', $blob)) {
+        return 'website';
+    }
     if (preg_match('/module=sales|\/sales\/|modules\/sales|customer_statement/', $blob)
         || preg_match('/\b(invoice|quotation|sales order|customer)\b/', $blob)) {
         return 'sales';
@@ -754,6 +758,7 @@ function notificationsUiModuleOptions(): array
         ['id' => 'voucher', 'label' => 'Payment voucher', 'color' => '#0f766e', 'description' => 'Signatures, approvals, and voucher status updates.'],
         ['id' => 'payroll', 'label' => 'Payroll', 'color' => '#1d4ed8', 'description' => 'Payslip releases and payroll processing alerts.'],
         ['id' => 'sales', 'label' => 'Sales', 'color' => '#4ade80', 'description' => 'Orders, invoices, and sales follow-up reminders.'],
+        ['id' => 'website', 'label' => 'Website', 'color' => '#0f766e', 'description' => 'New website quote requests and web enquiry alerts.'],
         ['id' => 'stock', 'label' => 'Stock / Purchases', 'color' => '#1e3a8a', 'description' => 'PO verification, receiving, and purchase alerts.'],
         ['id' => 'deliveries', 'label' => 'Deliveries', 'color' => '#0369a1', 'description' => 'Delivery started, completed, and shipment updates.'],
         ['id' => 'driver_kpi', 'label' => 'Driver KPI', 'color' => '#0e7490', 'description' => 'Driver performance and ride recording alerts.'],

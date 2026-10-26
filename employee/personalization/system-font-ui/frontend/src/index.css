@@ -211,12 +211,17 @@
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
 }
 
+.sf-font-face {
+  font-family: var(--sf-option-font, inherit) !important;
+}
+
 .sf-dropdown-option {
   display: block;
   width: 100%;
   text-align: left;
   border: none;
-  border-radius: 8px;
+  border-radius: 8px !important;
+  font-family: var(--sf-option-font, inherit) !important;
   background: transparent;
   padding: 0.6rem 0.75rem;
   cursor: pointer;

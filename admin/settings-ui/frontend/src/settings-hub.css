@@ -744,3 +744,83 @@ html body.dashboard .ash-modal--contact a.ash-btn-ghost {
     transform: rotate(360deg);
   }
 }
+
+.ash-modal--quote-access {
+  width: min(560px, 100%);
+  max-height: min(88vh, 720px);
+  overflow: auto;
+}
+
+.ash-perm-block {
+  margin-top: 0.35rem;
+}
+
+.ash-perm-block-head {
+  margin-bottom: 0.75rem;
+}
+
+.ash-perm-block-head h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ash-perm-block-head p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.ash-quote-access-list {
+  margin-top: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  max-height: 340px;
+  overflow: auto;
+  background: #fff;
+}
+
+.ash-quote-access-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+.ash-quote-access-row:last-child {
+  border-bottom: none;
+}
+
+.ash-quote-access-row.is-checked {
+  background: #f0fdfa;
+}
+
+.ash-quote-access-row.is-locked {
+  cursor: default;
+  opacity: 0.92;
+}
+
+.ash-quote-access-row input {
+  margin-top: 0.2rem;
+}
+
+.ash-quote-access-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.ash-quote-access-meta strong {
+  color: #0f172a;
+  font-size: 0.92rem;
+}
+
+.ash-quote-access-meta span {
+  color: #64748b;
+  font-size: 0.8rem;
+}

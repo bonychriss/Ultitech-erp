@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   HiOutlineArrowDownTray,
+  HiOutlineArrowLeft,
   HiOutlineBanknotes,
   HiOutlineChatBubbleLeftRight,
   HiOutlineCheckCircle,
@@ -88,9 +89,17 @@ function Spark({ values, color }) {
   );
 }
 
-function Kpi({ icon: Icon, label, value, change, points, hint, spark, color }) {
+function Kpi({ icon: Icon, label, value, change, points, hint, spark, color, onClick }) {
+  const clickable = typeof onClick === 'function';
+  const Tag = clickable ? 'button' : 'div';
   return (
-    <div className="wdash-kpi" style={{ '--kpi': color }}>
+    <Tag
+      type={clickable ? 'button' : undefined}
+      className={`wdash-kpi${clickable ? ' is-clickable' : ''}`}
+      style={{ '--kpi': color }}
+      onClick={clickable ? onClick : undefined}
+      aria-label={clickable ? `Open ${label} details` : undefined}
+    >
       <div className="wdash-kpi-head">
         <span className="wdash-kpi-icon"><Icon aria-hidden="true" /></span>
         <span className="wdash-kpi-label">{label}</span>
@@ -98,7 +107,106 @@ function Kpi({ icon: Icon, label, value, change, points, hint, spark, color }) {
       <div className="wdash-kpi-value">{value}</div>
       {hint ? <div className="wdash-kpi-hint">{hint}</div> : <Change value={change} points={points} />}
       {spark ? <Spark values={spark} color={color} /> : null}
-    </div>
+    </Tag>
+  );
+}
+
+function ProductViewsPage({ rows, from, to, totalViews, onBack }) {
+  const [q, setQ] = useState('');
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return rows;
+    return rows.filter((r) => {
+      const name = String(r.name || '').toLowerCase();
+      const sku = String(r.sku || '').toLowerCase();
+      return name.includes(needle) || sku.includes(needle);
+    });
+  }, [rows, q]);
+  const rangeLabel = from && to
+    ? `${dayLabel(from, true)} – ${dayLabel(to, true)}`
+    : '';
+
+  return (
+    <section className="wdash wdash-views-page" aria-label="Product views">
+      <header className="wdash-views-head">
+        <button type="button" className="wdash-views-back" onClick={onBack}>
+          <HiOutlineArrowLeft aria-hidden="true" />
+          Back to dashboard
+        </button>
+        <div className="wdash-views-title-block">
+          <h2 className="wdash-views-title">
+            <HiOutlineEye aria-hidden="true" />
+            Product views
+          </h2>
+          <p className="wdash-views-sub">
+            {number(totalViews)} view{Number(totalViews) === 1 ? '' : 's'} across {number(rows.length)} product{rows.length === 1 ? '' : 's'}
+            {rangeLabel ? ` · ${rangeLabel}` : ''}
+          </p>
+        </div>
+        <label className="wdash-views-search">
+          <span className="sr-only">Search products</span>
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by name or code"
+          />
+        </label>
+      </header>
+
+      {rows.length === 0 ? (
+        <div className="wdash-card">
+          <p className="wdash-empty">No product views in this period yet.</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="wdash-card">
+          <p className="wdash-empty">No products match “{q.trim()}”.</p>
+        </div>
+      ) : (
+        <div className="wdash-card wdash-views-table-wrap">
+          <table className="wdash-views-table">
+            <thead>
+              <tr>
+                <th className="is-rank">#</th>
+                <th>Product</th>
+                <th className="is-code">Code</th>
+                <th className="is-count">Views</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r, i) => (
+                <tr key={`${r.url || r.name}-${i}`}>
+                  <td className="is-rank">{i + 1}</td>
+                  <td>
+                    {r.url ? (
+                      <a href={r.url} target="_blank" rel="noopener noreferrer" className="wdash-top-product">
+                        <span className="wdash-top-thumb">
+                          {r.image ? (
+                            <img src={r.image} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                          ) : null}
+                        </span>
+                        <span className="wdash-top-name">{r.name}</span>
+                      </a>
+                    ) : (
+                      <span className="wdash-top-product">
+                        <span className="wdash-top-thumb">
+                          {r.image ? (
+                            <img src={r.image} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                          ) : null}
+                        </span>
+                        <span className="wdash-top-name">{r.name}</span>
+                      </span>
+                    )}
+                  </td>
+                  <td className="is-code">{r.sku || '—'}</td>
+                  <td className="is-count">{number(r.count)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -203,10 +311,15 @@ function Funnel({ steps }) {
   );
 }
 
-function TopList({ title, icon: Icon, rows, unit, empty }) {
+function TopList({ title, icon: Icon, rows, unit, empty, onSeeAll }) {
   return (
     <section className="wdash-card">
-      <h3 className="wdash-card-title"><Icon aria-hidden="true" />{title}</h3>
+      <div className="wdash-card-title-row">
+        <h3 className="wdash-card-title"><Icon aria-hidden="true" />{title}</h3>
+        {typeof onSeeAll === 'function' && rows.length > 0 ? (
+          <button type="button" className="wdash-see-all" onClick={onSeeAll}>See all</button>
+        ) : null}
+      </div>
       {rows.length === 0 ? (
         <p className="wdash-empty">{empty}</p>
       ) : (
@@ -421,7 +534,28 @@ function PdfDialog({ websiteUrl, from, to, today, maxDays, onClose }) {
   );
 }
 
-export default function WebsiteDashboard({ dashboard, websiteUrl }) {
+function panelFromUrl() {
+  try {
+    return new URLSearchParams(window.location.search).get('panel') === 'product-views'
+      ? 'product-views'
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function setPanelInUrl(panel) {
+  try {
+    const url = new URL(window.location.href);
+    if (panel) url.searchParams.set('panel', panel);
+    else url.searchParams.delete('panel');
+    window.history.pushState({}, '', url);
+  } catch {
+    // ignore
+  }
+}
+
+export default function WebsiteDashboard({ dashboard, websiteUrl, siteHost = 'ultimate.co.tz' }) {
   const d = dashboard || {};
   const totals = d.totals || {};
   const changes = d.changes || {};
@@ -432,12 +566,47 @@ export default function WebsiteDashboard({ dashboard, websiteUrl }) {
   const trackingStartedLate = d.tracking_since && d.tracking_since > d.from;
   const [offlineOpen, setOfflineOpen] = useState(Boolean(dashboard) && !d.shop_connected);
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [panel, setPanel] = useState(panelFromUrl);
+  const viewedProducts = useMemo(() => {
+    const list = Array.isArray(d.viewed_products) && d.viewed_products.length
+      ? d.viewed_products
+      : (d.top_viewed || []);
+    return [...list].sort((a, b) => (Number(b.count) || 0) - (Number(a.count) || 0));
+  }, [d.viewed_products, d.top_viewed]);
 
   useEffect(() => {
     if (!offlineOpen) return undefined;
     const timer = window.setTimeout(() => setOfflineOpen(false), 10000);
     return () => window.clearTimeout(timer);
   }, [offlineOpen]);
+
+  useEffect(() => {
+    const onPop = () => setPanel(panelFromUrl());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const openProductViews = () => {
+    setPanelInUrl('product-views');
+    setPanel('product-views');
+  };
+
+  const closeProductViews = () => {
+    setPanelInUrl(null);
+    setPanel(null);
+  };
+
+  if (panel === 'product-views') {
+    return (
+      <ProductViewsPage
+        rows={viewedProducts}
+        from={d.from}
+        to={d.to}
+        totalViews={totals.product_views}
+        onBack={closeProductViews}
+      />
+    );
+  }
 
   return (
     <section className="wdash" aria-label="Website dashboard">
@@ -476,7 +645,7 @@ export default function WebsiteDashboard({ dashboard, websiteUrl }) {
           <div className="wdash-notify-body">
             <strong>Shop stats unavailable</strong>
             <p>
-              Visitors, product views and likes are unavailable because ultimate.co.tz did not respond. Enquiries, quotes and revenue are up to date.
+              Visitors, product views and likes are unavailable because {siteHost} did not respond. Enquiries, quotes and revenue are up to date.
             </p>
           </div>
           <button type="button" className="wdash-notify-close" onClick={() => setOfflineOpen(false)} aria-label="Close notification">
@@ -493,7 +662,7 @@ export default function WebsiteDashboard({ dashboard, websiteUrl }) {
 
       <div className="wdash-kpis">
         <Kpi icon={HiOutlineUsers} label="Visitors" value={number(totals.visitors)} change={changes.visitors} spark={series('visitors')} color="#2563eb" />
-        <Kpi icon={HiOutlineEye} label="Product views" value={number(totals.product_views)} change={changes.product_views} spark={series('product_views')} color="#7c3aed" />
+        <Kpi icon={HiOutlineEye} label="Product views" value={number(totals.product_views)} change={changes.product_views} spark={series('product_views')} color="#7c3aed" onClick={openProductViews} />
         <Kpi icon={HiOutlineChatBubbleLeftRight} label="Enquiries" value={number(totals.enquiries)} change={changes.enquiries} spark={series('enquiries')} color="#0f766e" />
         <Kpi icon={HiOutlineDocumentText} label="Quotes" value={number(totals.quotes)} change={changes.quotes} spark={series('quotes')} color="#d97706" />
         <Kpi icon={HiOutlineBanknotes} label="Revenue" value={money(totals.revenue)} change={changes.revenue} spark={series('revenue')} color="#16a34a" />
@@ -533,7 +702,7 @@ export default function WebsiteDashboard({ dashboard, websiteUrl }) {
           </div>
           <EnquiryBars rows={rows} />
         </section>
-        <TopList title="Most viewed products" icon={HiOutlineEye} rows={d.top_viewed || []} unit="views" empty="No product views in this period yet." />
+        <TopList title="Most viewed products" icon={HiOutlineEye} rows={d.top_viewed || []} unit="views" empty="No product views in this period yet." onSeeAll={openProductViews} />
         <TopList title="Most liked products" icon={HiOutlineHeart} rows={d.top_liked || []} unit="likes" empty={`No likes in this period. ${number(d.likes_total)} wishlist saves in total.`} />
       </div>
     </section>

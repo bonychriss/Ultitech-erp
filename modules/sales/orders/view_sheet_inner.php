@@ -28,10 +28,10 @@ $docFontStack = function_exists('sales_document_font_family_css')
     ? sales_document_font_family_css($company_settings ?? [])
     : "'Arima', Arial, 'Helvetica Neue', Helvetica, sans-serif";
 ?>
-<div class="sheet-container" style="font-family: <?= $docFontStack ?>; font-size: 13px;">
-    <div class="sheet" style="display: flex; flex-direction: column; min-height: 297mm; font-family: inherit;">
-        <div class="sheet-header-title quot-sheet-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
-            <h1 class="sheet-title">
+<div class="sheet-container" style="font-family: <?= $docFontStack ?>; font-size: 12px;">
+    <div class="sheet" style="display: flex; flex-direction: column; font-family: inherit;">
+        <div class="sheet-header-title quot-sheet-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+            <h1 class="sheet-title" style="font-size: 1.15rem;">
                 <?php echo htmlspecialchars($sheetTitleLabel, ENT_QUOTES, 'UTF-8'); ?> #
                 <?php echo htmlspecialchars($displayOrderNumber); ?>
             </h1>
@@ -39,7 +39,7 @@ $docFontStack = function_exists('sales_document_font_family_css')
                 <?php 
                     $logoPath = !empty($company_settings['company_logo_url']) ? $company_settings['company_logo_url'] : '/assets/images/' . ($company_settings['company_logo'] ?: 'Untitled.jpg');
                 ?>
-                <img src="<?php echo htmlspecialchars((string) $logoPath, ENT_QUOTES, 'UTF-8'); ?>" alt="Company Logo" crossorigin="anonymous" style="max-height: 80px; margin-bottom: 10px;" onerror="this.style.display='none'">
+                <img src="<?php echo htmlspecialchars((string) $logoPath, ENT_QUOTES, 'UTF-8'); ?>" alt="Company Logo" crossorigin="anonymous" style="max-height: 56px; margin-bottom: 6px;" onerror="this.style.display='none'">
                 <h5 class="mb-1 fw-bold"><?php echo htmlspecialchars($company_settings['company_name']); ?></h5>
                 <p class="text-muted mb-0" style="white-space: pre-line; color: #000;"><?php echo htmlspecialchars($company_settings['company_address']); ?><?php if(!empty($company_settings['company_location'])): ?>, <?php echo htmlspecialchars($company_settings['company_location']); ?><?php endif; ?></p>
                 <?php if(!empty($company_settings['company_tin'])): ?>
@@ -150,8 +150,8 @@ $docFontStack = function_exists('sales_document_font_family_css')
                 </table>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                <table class="o-totals-table" style="width: 300px;">
+            <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                <table class="o-totals-table" style="width: 260px;">
                     <tr><td>Subtotal</td><td class="num"><?php echo number_format($order['subtotal'], 2); ?></td></tr>
                     <?php if (isset($order['discount_amount']) && (float)$order['discount_amount'] > 0): ?>
                     <tr><td>Discount</td><td class="num">-<?php echo number_format((float) $order['discount_amount'], 2); ?></td></tr>
@@ -167,10 +167,15 @@ $docFontStack = function_exists('sales_document_font_family_css')
                     </tr>
                 </table>
             </div>
-            <?php if (!empty($company_settings['bank_details'])): ?>
-                <div class="quot-bank-details" style="margin-top: 18px;">
-                    <div style="font-weight: 700; margin-bottom: 6px; color: #111827; font-size: 0.84rem;">Payment details</div>
-                    <div style="white-space: pre-wrap; color: #4b5563; line-height: 1.45; font-size: 0.82rem;"><?php echo htmlspecialchars($company_settings['bank_details']); ?></div>
+            <?php
+            $sheetPaymentDetails = function_exists('sales_document_payment_details')
+                ? sales_document_payment_details($company_settings, false)
+                : trim((string) ($company_settings['bank_details'] ?? $company_settings['spare_payment_details'] ?? ''));
+            ?>
+            <?php if ($sheetPaymentDetails !== ''): ?>
+                <div class="quot-bank-details" style="margin-top: 10px;">
+                    <div style="font-weight: 700; margin-bottom: 4px; color: #111827; font-size: 0.8rem;">Payment details</div>
+                    <div style="white-space: pre-wrap; color: #4b5563; line-height: 1.35; font-size: 0.78rem;"><?php echo htmlspecialchars($sheetPaymentDetails); ?></div>
                 </div>
             <?php endif; ?>
             <?php include __DIR__ . '/../includes/document-footer-message.php'; ?>
@@ -178,10 +183,10 @@ $docFontStack = function_exists('sales_document_font_family_css')
     </div>
 </div>
 <?php
-$salesDocTermsNumber = (string) (($displayOrderNumber ?? '') !== '' ? $displayOrderNumber : ($order['order_number'] ?? ''));
-$salesDocTermsTypeLabel = $sheetTitleLabel ?? (function_exists('sales_order_document_title_label')
-    ? sales_order_document_title_label($order['status'] ?? '', !empty($hasLinkedInvoice))
-    : 'Sales Order');
-$salesDocTermsSignatureUrl = $signatureUrl ?? '';
+$salesDocTermsNumber = (string) (($displayOrderNumber ?? '') !== ''
+    ? $displayOrderNumber
+    : ($order['order_number'] ?? ''));
+$salesDocTermsTypeLabel = (string) ($sheetTitleLabel ?? 'Document');
+$salesDocTermsSignatureUrl = (string) ($signatureUrl ?? '');
 include __DIR__ . '/../includes/document-settings-second-page.php';
 ?>

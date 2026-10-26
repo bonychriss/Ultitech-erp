@@ -79,3 +79,11 @@ client-apps/android/android/.idea/
 client-apps/desktop/dist-build-new/
 client-apps/desktop/updates/*.exe
 client-apps/desktop/updates/*.exe.blockmap
+
+# Desktop Electron builds (too large for GitHub)
+cloud_erp/client-apps/desktop/dist/
+cloud_erp/client-apps/desktop/dist-build/
+cloud_erp/client-apps/desktop/dist-build-new/
+cloud_erp/client-apps/desktop/updates/*.exe
+cloud_erp/client-apps/desktop/updates/*.exe.blockmap
+

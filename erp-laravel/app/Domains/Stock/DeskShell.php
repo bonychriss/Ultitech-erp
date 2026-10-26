@@ -257,6 +257,7 @@ final class DeskShell
     ): array {
         $sweetAlert = !empty($opts['sweetAlert']);
         $extraHead = (string) ($opts['extraHead'] ?? '');
+        $bodyClassExtra = trim((string) ($opts['bodyClassExtra'] ?? ''));
         $mainRootClass = (string) ($opts['mainRootClass'] ?? 'products-desk-react-root');
         $headerTitle = array_key_exists('employeeHeaderTitle', $opts)
             ? $opts['employeeHeaderTitle']
@@ -297,7 +298,7 @@ final class DeskShell
 
         return [
             'pageTitle' => $title,
-            'bodyClass' => trim($bodyClass . ' page-erp-laravel'),
+            'bodyClass' => trim($bodyClass . ' page-erp-laravel' . ($bodyClassExtra !== '' ? ' ' . $bodyClassExtra : '')),
             'headMarkup' => $headMarkup,
             'footerScripts' => $footerScripts,
             'employeeHeaderTitle' => $headerTitle,

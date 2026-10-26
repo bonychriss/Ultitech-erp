@@ -38,8 +38,10 @@ if ($layoutPath === null) {
 }
 
 $fullView = isset($_GET['full']) && (string) $_GET['full'] === '1';
+$modalView = !$fullView && isset($_GET['modal']) && (string) $_GET['modal'] === '1';
+$cardView = !$fullView && !$modalView && isset($_GET['card']) && (string) $_GET['card'] === '1';
 
 header('Content-Type: text/html; charset=utf-8');
 header('X-Frame-Options: SAMEORIGIN');
 
-echo sales_settings_render_layout_preview_html($isTruck, $settings, $layoutPath, $fullView);
+echo sales_settings_render_layout_preview_html($isTruck, $settings, $layoutPath, $fullView, $cardView, $modalView);

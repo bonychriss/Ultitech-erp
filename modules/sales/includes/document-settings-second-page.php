@@ -23,14 +23,13 @@ $salesDocTermsTypeLabel = trim((string) ($salesDocTermsTypeLabel ?? 'Document'))
 $salesDocTermsSignatureUrl = trim((string) ($salesDocTermsSignatureUrl ?? ''));
 $brandingLogoUrl = $brandingLogoUrl ?? (function_exists('getCompanyLogoUrl') ? getCompanyLogoUrl() : '');
 ?>
-<div class="sheet-container doc-terms-sheet" style="font-family: <?= $docFontStack ?>;">
-    <div class="sheet doc-terms-sheet-inner" style="display: flex; flex-direction: column;">
+<div class="sheet-container doc-terms-sheet" style="font-family: <?= $docFontStack ?>; width: 210mm; max-width: 100%; min-height: 297mm; margin: 24px auto 0; padding: 12mm 14mm; background: #fff; box-sizing: border-box; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);">
+    <div class="sheet doc-terms-sheet-inner" style="display: flex; flex-direction: column; min-height: 270mm;">
         <table style="width: 100%; margin-bottom: 24px; border-collapse: collapse;">
             <tr>
                 <td style="vertical-align: top;">
-                    <h1 class="sheet-title" style="margin: 0; font-size: 16pt; color: #1E272E;">Terms &amp; conditions</h1>
                     <?php if ($salesDocTermsNumber !== ''): ?>
-                        <div style="margin-top: 6px; font-size: 10pt; color: #64748b;">
+                        <div style="font-size: 10pt; color: #64748b;">
                             <?= htmlspecialchars($salesDocTermsTypeLabel) ?> #<?= htmlspecialchars($salesDocTermsNumber) ?>
                         </div>
                     <?php endif; ?>
@@ -40,19 +39,16 @@ $brandingLogoUrl = $brandingLogoUrl ?? (function_exists('getCompanyLogoUrl') ? g
                         <img src="<?= htmlspecialchars((string) $brandingLogoUrl, ENT_QUOTES, 'UTF-8') ?>"
                              alt="Company Logo"
                              crossorigin="anonymous"
-                             style="max-height: 60px; margin-bottom: 8px;"
+                             style="max-height: 60px;"
                              onerror="this.style.display='none'">
                     <?php endif; ?>
-                    <div style="font-weight: bold; font-size: 10pt; color: #111; text-transform: uppercase;">
-                        <?= htmlspecialchars((string) ($company_settings['company_name'] ?? '')) ?>
-                    </div>
                 </td>
             </tr>
         </table>
 
         <?php foreach ($sections as $section): ?>
             <div class="doc-terms-section" style="margin-bottom: 18px; page-break-inside: avoid;">
-                <div style="font-weight: 700; font-size: 10pt; text-transform: uppercase; color: #111827; margin-bottom: 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">
+                <div style="font-weight: 700; font-size: 13pt; letter-spacing: 0.03em; text-transform: uppercase; color: #111827; margin-bottom: 8px;">
                     <?= htmlspecialchars((string) ($section['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
                 </div>
                 <div style="white-space: pre-wrap; color: #374151; line-height: 1.55; font-size: 10pt;">

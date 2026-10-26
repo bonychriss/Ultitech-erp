@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 /**
- * Website module — React page for sending Ultimate products to ultimate.co.tz.
+ * Website module ï¿½ React page for syncing products to the company shop.
+ * Ultimate ? ultimate.co.tz ï¿½ Roadmaster ? roadmasterspares.com
  * URL: /{company}/website
  */
 require_once __DIR__ . '/includes/functions.php';
@@ -19,13 +20,25 @@ if ($slug === '' && function_exists('getRequestedCompanySlug')) {
     $slug = trim((string) getRequestedCompanySlug());
 }
 
-if (!function_exists('isUltimate') || !isUltimate()) {
+$canWebsite = (function_exists('isUltimate') && isUltimate())
+    || (function_exists('isRoadmaster') && isRoadmaster());
+if (!$canWebsite) {
     header('Location: ' . ($slug !== '' ? company_url('select-module', $slug) : app_url('/select-module.php')));
     exit;
 }
 
 $_GET['module'] = 'website';
 $_SESSION['active_module'] = 'website';
+
+// Pretty URLs like /{company}/website/dashboard must set view even if a rewrite missed ?view=
+$requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+if (trim((string) ($_GET['view'] ?? '')) === '') {
+    if (preg_match('#/website/advertisements(?:/email)?(?:/|\?|$)#i', $requestUri)) {
+        $_GET['view'] = 'advertisements-email';
+    } elseif (preg_match('#/website/(dashboard|quotes)(?:/|\?|$)#i', $requestUri, $viewMatch)) {
+        $_GET['view'] = strtolower($viewMatch[1]);
+    }
+}
 
 $ajax = (string) ($_GET['ajax'] ?? '');
 if (in_array($ajax, ['sync', 'cancel'], true)) {
@@ -36,8 +49,19 @@ if ($ajax === 'dashboard-pdf') {
     require __DIR__ . '/stock/web-dashboard-pdf.php';
     exit;
 }
+if ($ajax === 'ad-email') {
+    require_once __DIR__ . '/stock/config/database.php';
+    require_once __DIR__ . '/stock/includes/web-advertisements-lib.php';
+    if (!isset($pdo) || !$pdo instanceof PDO) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'Database unavailable.']);
+        exit;
+    }
+    webAdHandleAjax($pdo);
+    exit;
+}
 
-$requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '');
 if (stripos($requestUri, '/stock/web-services') !== false) {
     header('Location: ' . company_url('website', $slug !== '' ? $slug : null));
     exit;

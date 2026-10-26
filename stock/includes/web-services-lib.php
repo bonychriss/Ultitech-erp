@@ -2,8 +2,36 @@
 
 declare(strict_types=1);
 
+function webSyncIsRoadmasterShop(): bool
+{
+    return function_exists('isRoadmaster') && isRoadmaster();
+}
+
+function webSyncShopHost(): string
+{
+    if (webSyncIsRoadmasterShop()) {
+        $env = getenv('ROADMASTER_SHOP_URL');
+        if (is_string($env) && trim($env) !== '') {
+            return rtrim(trim($env), '/');
+        }
+
+        return 'https://roadmasterspares.com';
+    }
+
+    return 'https://ultimate.co.tz';
+}
+
 function webSyncUrl(): string
 {
+    if (webSyncIsRoadmasterShop()) {
+        $key = getenv('ROADMASTER_SHOP_SYNC_KEY');
+        if (!is_string($key) || trim($key) === '') {
+            $key = 'roadmaster-storefront-dev-token-change-me';
+        }
+
+        return webSyncShopHost() . '/ultitech/sync?key=' . rawurlencode(trim($key));
+    }
+
     return 'https://ultimate.co.tz/ultitech/sync.php?key=ugt7k-sync-4m2p';
 }
 
@@ -432,8 +460,52 @@ function webSyncNextUrl(string $html, string $current): ?string
     return $origin . '/ultitech/' . ltrim($next, '/');
 }
 
+function webSyncRunRoadmaster(int $userId = 0, string $run = ''): array
+{
+    @set_time_limit(0);
+    $finish = static function (array $result) use ($userId, $run): array {
+        webSyncClearCancel($userId, $run);
+
+        return $result;
+    };
+    if (webSyncIsCancelled($userId, $run)) {
+        return $finish(['ok' => false, 'cancelled' => true]);
+    }
+    try {
+        $body = webSyncFetch(webSyncUrl(), $userId, $run);
+    } catch (RuntimeException $e) {
+        if ($e->getMessage() === 'Sync cancelled.' || webSyncIsCancelled($userId, $run)) {
+            return $finish(['ok' => false, 'cancelled' => true]);
+        }
+        throw $e;
+    }
+    $json = json_decode($body, true);
+    if (is_array($json)) {
+        if (!empty($json['cancelled'])) {
+            return $finish(['ok' => false, 'cancelled' => true]);
+        }
+        if (!empty($json['ok'])) {
+            $summary = trim((string) ($json['summary'] ?? ''));
+
+            return $finish(['ok' => true, 'summary' => $summary !== '' ? $summary : 'Sync finished.']);
+        }
+        $error = trim((string) ($json['error'] ?? 'Website sync failed.'));
+        throw new RuntimeException($error !== '' ? $error : 'Website sync failed.');
+    }
+    $text = trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($body), ENT_QUOTES, 'UTF-8')) ?? '');
+    if (preg_match('/Created \d+, updated \d+(, removed \d+)?\./', $text, $m)) {
+        return $finish(['ok' => true, 'summary' => $m[0]]);
+    }
+
+    throw new RuntimeException('Website sync returned an unexpected response.');
+}
+
 function webSyncRun(int $userId = 0, string $run = ''): array
 {
+    if (webSyncIsRoadmasterShop()) {
+        return webSyncRunRoadmaster($userId, $run);
+    }
+
     @set_time_limit(0);
     $url = webSyncUrl();
     $seen = [];

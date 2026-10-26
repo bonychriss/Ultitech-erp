@@ -676,16 +676,16 @@ $docFontImport = function_exists('sales_document_font_import_css')
                 <?php endif; ?>
             </div>
             <div class="spare-address-block">
-                <?= nl2br(htmlspecialchars($company_settings['company_address'])) ?><br>
-                Phone: <?= htmlspecialchars($company_settings['company_phone']) ?><br>
-                Email: <?= htmlspecialchars($company_settings['company_email']) ?>
+                <?= nl2br(htmlspecialchars((string) ($company_settings['company_address'] ?? ''))) ?><br>
+                Phone: <?= htmlspecialchars((string) ($company_settings['company_phone'] ?? '')) ?><br>
+                Email: <?= htmlspecialchars((string) ($company_settings['company_email'] ?? '')) ?>
             </div>
         </div>
         <div class="spare-header-right">
             <div class="spare-doc-title"><?= $docType ?></div>
             <div class="spare-meta-row">
                 <span class="spare-meta-label"><?= $docType ?> No.</span>
-                <span class="spare-meta-value"><?= htmlspecialchars($invoice['invoice_number']) ?></span>
+                <span class="spare-meta-value"><?= htmlspecialchars((string) ($invoice['invoice_number'] ?? '')) ?></span>
             </div>
             <div class="spare-meta-row">
                 <span class="spare-meta-label">Invoice Date:</span>
@@ -704,7 +704,7 @@ $docFontImport = function_exists('sales_document_font_import_css')
 
     <div class="spare-bill-bar">
         <span class="spare-bill-to-label">BILL TO:</span>
-        <span class="spare-bill-to-value"><?= htmlspecialchars($invoice['company_name']) ?></span>
+        <span class="spare-bill-to-value"><?= htmlspecialchars((string) ($invoice['company_name'] ?? '')) ?></span>
         <div class="spare-tin-vrn">
             <span>TIN: <?= htmlspecialchars($invoice['tin'] ?? '') ?></span>
             <span>VRN: <?= htmlspecialchars($invoice['vrn'] ?? '') ?></span>
@@ -777,11 +777,27 @@ $docFontImport = function_exists('sales_document_font_import_css')
     </div>
 
     <div class="spare-bottom-info avoid-break">
+        <?php
+        $sparePaymentDetails = function_exists('sales_document_payment_details')
+            ? sales_document_payment_details($company_settings, false)
+            : trim((string) (
+                $company_settings['spare_payment_details']
+                ?? $company_settings['bank_details']
+                ?? ''
+            ));
+        ?>
+        <?php if ($sparePaymentDetails !== ''): ?>
         <div class="spare-payment-heading" style="color: #000;">Payment details</div>
         <div class="spare-payment-details">
-            <?= nl2br(htmlspecialchars($company_settings['spare_payment_details'] ?? '')) ?>
+            <?= nl2br(htmlspecialchars($sparePaymentDetails)) ?>
         </div>
+        <?php endif; ?>
 
+        <?php
+        $spareMoveFooterToPage2 = function_exists('sales_document_has_settings_second_page')
+            && sales_document_has_settings_second_page($company_settings);
+        ?>
+        <?php if (!$spareMoveFooterToPage2): ?>
         <div class="spare-terms">
             <?= nl2br(htmlspecialchars($company_settings['spare_terms'] ?? '')) ?><br>
             <?= htmlspecialchars($company_settings['spare_validity'] ?? '') ?>
@@ -807,9 +823,18 @@ $docFontImport = function_exists('sales_document_font_import_css')
                 <?= htmlspecialchars($company_settings['spare_return_policy'] ?? '') ?>
             </div>
         </div>
+        <?php endif; ?>
 
         <?php if (!empty($document_footer_closing)) { include __DIR__ . '/../../includes/document-footer-message.php'; } ?>
 
 
     </div>
 </div>
+<?php if (!empty($spareMoveFooterToPage2)): ?>
+<?php
+$salesDocTermsNumber = (string) ($invoice['invoice_number'] ?? $invoice['order_number'] ?? '');
+$salesDocTermsTypeLabel = !empty($docType) ? strip_tags((string) $docType) : 'Document';
+$salesDocTermsSignatureUrl = (string) ($signatureUrl ?? '');
+include __DIR__ . '/../../includes/document-settings-second-page.php';
+?>
+<?php endif; ?>

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import '../../../../expenses/frontend/src/expenses-desk.css';
+import '../../../../../stock/stock-ui/src/pages/products-desk.css';
 import './quotations-list.css';
 import './order-view.css';
 import ErrorBoundary from './ErrorBoundary.jsx';

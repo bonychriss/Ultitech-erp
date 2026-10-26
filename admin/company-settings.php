@@ -720,6 +720,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($profileMap as $k => $v) {
                 saveCompanySettingValue($pdo, $targetCompanyId, (string) $k, (string) $v);
             }
+            // Keep Sales → Document Layout payment/footer fields aligned with Finance tab.
+            $salesLib = dirname(__DIR__) . '/modules/sales/settings/includes/settings-lib.php';
+            if (is_file($salesLib)) {
+                require_once $salesLib;
+                if (function_exists('sales_settings_sync_from_company_finance')) {
+                    sales_settings_sync_from_company_finance(
+                        $pdo,
+                        (int) $targetCompanyId,
+                        (string) ($profileMap['bank_details'] ?? ''),
+                        (string) ($profileMap['document_footer_message'] ?? '')
+                    );
+                }
+            }
             $message = isset($_POST['complete_setup']) ? 'Company setup completed.' : 'Company settings saved.';
             if (isset($_POST['complete_setup'])) {
                 $_SESSION['active_company_id'] = $targetCompanyId;

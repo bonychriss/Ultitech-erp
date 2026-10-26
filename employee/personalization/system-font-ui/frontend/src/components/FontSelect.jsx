@@ -1,19 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 import { companyDefaultLabel, labelForKey } from '../config.js'
+
+function applyImportantFont(node, stack) {
+  if (!node || !stack) return
+  node.style.setProperty('font-family', stack, 'important')
+}
 
 export default function FontSelect({ value, options, onChange, disabled }) {
   const [open, setOpen] = useState(false)
   const [menuStyle, setMenuStyle] = useState({})
   const wrapRef = useRef(null)
   const btnRef = useRef(null)
+  const valueRef = useRef(null)
+  const optionRefs = useRef({})
+
+  const selected = useMemo(() => {
+    if (!value) return options.find((o) => o.id === '') || null
+    return options.find((o) => o.id === value) || null
+  }, [value, options])
 
   const selectedLabel = useMemo(() => {
     if (!value) return companyDefaultLabel()
-    const match = options.find((o) => o.id === value)
-    return match ? match.label : labelForKey(value)
-  }, [value, options])
+    return selected ? selected.label : labelForKey(value)
+  }, [value, selected])
+
+  const selectedStack = selected?.stack || 'system-ui, sans-serif'
 
   const positionMenu = () => {
     const btn = btnRef.current
@@ -37,6 +50,19 @@ export default function FontSelect({ value, options, onChange, disabled }) {
         : { top: `${Math.round(rect.bottom + gap)}px`, bottom: 'auto' }),
     })
   }
+
+  useLayoutEffect(() => {
+    const paint = () => {
+      applyImportantFont(valueRef.current, selectedStack)
+      options.forEach((opt) => {
+        const key = opt.id === '' ? '__company__' : opt.id
+        applyImportantFont(optionRefs.current[key], opt.stack || 'system-ui, sans-serif')
+      })
+    }
+    paint()
+    document.addEventListener('sf-fonts-ready', paint)
+    return () => document.removeEventListener('sf-fonts-ready', paint)
+  }, [options, open, selectedStack, value])
 
   useEffect(() => {
     if (!open) return undefined
@@ -71,35 +97,71 @@ export default function FontSelect({ value, options, onChange, disabled }) {
     }
   }, [open])
 
+  // Late CSS override after erp-system-font-final
+  useEffect(() => {
+    let style = document.getElementById('sf-font-select-override')
+    if (!style) {
+      style = document.createElement('style')
+      style.id = 'sf-font-select-override'
+      document.body.appendChild(style)
+    }
+    const rules = options.map((opt) => {
+      const stack = String(opt.stack || 'system-ui, sans-serif').replace(/;/g, '')
+      const key = opt.id === '' ? '__company__' : String(opt.id).replace(/[^a-z0-9_-]/gi, '')
+      if (!key) return ''
+      return [
+        `html body .sf-font-face[data-font="${key}"]`,
+        `html body button.sf-dropdown-option[data-font="${key}"]`,
+        `html body.dashboard .sf-font-face[data-font="${key}"]`,
+        `html body.dashboard button.sf-dropdown-option[data-font="${key}"]`,
+        `html body.page-system-font .sf-font-face[data-font="${key}"]`,
+        `html body.page-system-font button.sf-dropdown-option[data-font="${key}"]`,
+      ].join(',') + `{font-family:${stack}!important;}`
+    }).filter(Boolean).join('\n')
+    style.textContent = rules
+  }, [options])
+
+  const renderOption = (opt) => {
+    const isSelected = value === opt.id
+    const stack = opt.stack || 'system-ui, sans-serif'
+    const key = opt.id === '' ? '__company__' : opt.id
+    return (
+      <li key={key}>
+        <button
+          type="button"
+          className={`sf-dropdown-option${isSelected ? ' is-selected' : ''}`}
+          data-font={key}
+          style={{ '--sf-option-font': stack }}
+          ref={(node) => {
+            if (node) {
+              optionRefs.current[key] = node
+              applyImportantFont(node, stack)
+            } else {
+              delete optionRefs.current[key]
+            }
+          }}
+          onClick={() => { onChange(opt.id); setOpen(false) }}
+          role="option"
+          aria-selected={isSelected}
+        >
+          <span
+            className="sf-font-face"
+            data-font={key}
+            style={{ '--sf-option-font': stack }}
+            ref={(node) => applyImportantFont(node, stack)}
+          >
+            {opt.id === '' ? companyDefaultLabel() : opt.label}
+          </span>
+        </button>
+      </li>
+    )
+  }
+
   const menu = open
     ? createPortal(
         <ul id="sf-font-menu-portal" className="sf-dropdown-menu" style={menuStyle} role="listbox" aria-label="Font family">
-          <li>
-            <button
-              type="button"
-              className={`sf-dropdown-option${value === '' ? ' is-selected' : ''}`}
-              style={{ fontFamily: options.find((o) => o.id === '')?.stack || undefined }}
-              onClick={() => { onChange(''); setOpen(false) }}
-              role="option"
-              aria-selected={value === ''}
-            >
-              {companyDefaultLabel()}
-            </button>
-          </li>
-          {options.filter((o) => o.id !== '').map((opt) => (
-            <li key={opt.id}>
-              <button
-                type="button"
-                className={`sf-dropdown-option${value === opt.id ? ' is-selected' : ''}`}
-                style={{ fontFamily: opt.stack }}
-                onClick={() => { onChange(opt.id); setOpen(false) }}
-                role="option"
-                aria-selected={value === opt.id}
-              >
-                {opt.label}
-              </button>
-            </li>
-          ))}
+          {options.find((o) => o.id === '') ? renderOption(options.find((o) => o.id === '')) : null}
+          {options.filter((o) => o.id !== '').map((opt) => renderOption(opt))}
         </ul>,
         document.body,
       )
@@ -116,7 +178,14 @@ export default function FontSelect({ value, options, onChange, disabled }) {
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
       >
-        <span>{selectedLabel}</span>
+        <span
+          ref={valueRef}
+          className="sf-font-face"
+          data-font={selected?.id === '' || !selected?.id ? '__company__' : selected.id}
+          style={{ '--sf-option-font': selectedStack }}
+        >
+          {selectedLabel}
+        </span>
         <ChevronDown size={16} className={open ? 'sf-chevron-open' : ''} aria-hidden="true" />
       </button>
       {menu}

@@ -191,19 +191,24 @@ $docFontStack = function_exists('sales_document_font_family_css')
                     </tr>
                 </table>
             </div>
-            <?php if (!empty($company_settings['bank_details'])): ?>
+            <?php
+            $sheetPaymentDetails = function_exists('sales_document_payment_details')
+                ? sales_document_payment_details($company_settings, false)
+                : trim((string) ($company_settings['bank_details'] ?? $company_settings['spare_payment_details'] ?? ''));
+            ?>
+            <?php if ($sheetPaymentDetails !== ''): ?>
                 <div class="quot-bank-details" style="margin-top: 18px;">
                     <div style="font-weight: 700; margin-bottom: 6px; color: #111827;">Payment details</div>
-                    <div style="white-space: pre-wrap; color: #4b5563; line-height: 1.5;"><?php echo htmlspecialchars($company_settings['bank_details']); ?></div>
+                    <div style="white-space: pre-wrap; color: #4b5563; line-height: 1.5;"><?php echo htmlspecialchars($sheetPaymentDetails); ?></div>
                 </div>
             <?php endif; ?>
-            <?php include __DIR__ . '/../includes/document-footer-message.php'; ?>
+            <?php include __DIR__ . '/includes/document-footer-message.php'; ?>
         </div>
     </div>
 </div>
 <?php
-$salesDocTermsNumber = (string) ($invoice['invoice_number'] ?? ($invoice['quotation_number'] ?? ''));
+$salesDocTermsNumber = (string) ($invoice['invoice_number'] ?? $invoice['order_number'] ?? $order['order_number'] ?? '');
 $salesDocTermsTypeLabel = 'Quotation';
-$salesDocTermsSignatureUrl = $signatureUrl ?? '';
+$salesDocTermsSignatureUrl = (string) ($signatureUrl ?? '');
 include __DIR__ . '/includes/document-settings-second-page.php';
 ?>

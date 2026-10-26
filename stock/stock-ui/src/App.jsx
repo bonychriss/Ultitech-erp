@@ -28,6 +28,7 @@ import SalesCatalogue from './pages/SalesCatalogue';
 import Settings from './pages/Settings';
 import WebServices from './pages/WebServices';
 import QuoteRequestDetail from './pages/QuoteRequestDetail';
+import EmailAdvertisement from './pages/EmailAdvertisement';
 
 export default function App({ page = 'dashboard', data = {} }) {
   switch (page) {
@@ -87,6 +88,8 @@ export default function App({ page = 'dashboard', data = {} }) {
       return <WebServices data={data} />;
     case 'quote-request-detail':
       return <QuoteRequestDetail data={data} />;
+    case 'email-advertisement':
+      return <EmailAdvertisement data={data} />;
     case 'dashboard':
     default:
       return <Dashboard data={data} />;

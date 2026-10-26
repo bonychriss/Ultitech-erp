@@ -1,0 +1,340 @@
+/* Layout 2 — purple Brand Name invoice, matching layy.png */
+.l2 {
+  --purple: #504a90;
+  --purple-soft: #6b649e;
+  --ink: #2a2a32;
+  --muted: #7a7a86;
+  --line: #e6e4ef;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 489 / 684;
+  container-type: inline-size;
+  background: #fff;
+  overflow: hidden;
+  font-family: var(--sans);
+  color: var(--ink);
+  font-size: 1.55cqw;
+  line-height: 1.4;
+}
+
+/* footer: thin black bar on the left, flat-top purple wedge on the right */
+.l2-foot-art {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6.4cqw;
+  pointer-events: none;
+}
+
+.l2-foot-art::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 54%;
+  height: 2.4cqw;
+  background: #1e1e1e;
+}
+
+.l2-foot-art::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 50%;
+  height: 6.4cqw;
+  background: var(--purple);
+  clip-path: polygon(0 100%, 20% 0, 100% 0, 100% 100%);
+}
+
+.l2-head {
+  position: absolute;
+  left: 7.6cqw;
+  right: 7.6cqw;
+  top: 5.6cqw;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.l2-brand {
+  display: flex;
+  align-items: center;
+  gap: 1.6cqw;
+}
+
+.l2-mark {
+  width: 6.4cqw;
+  height: 6.4cqw;
+  border-radius: 0.7cqw;
+  background: var(--purple);
+  color: #fff;
+  font-size: 3.4cqw;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.l2-brand-name {
+  font-size: 2.5cqw;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+.l2-brand-tag {
+  margin-top: 0.25cqw;
+  font-size: 1.15cqw;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.l2-title-block {
+  text-align: right;
+}
+
+.l2-title {
+  margin: 0;
+  font-size: 5.6cqw;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: var(--purple);
+}
+
+.l2-date,
+.l2-no {
+  font-size: 1.4cqw;
+  color: var(--muted);
+  margin-top: 0.45cqw;
+}
+
+.l2-no {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.l2-to {
+  position: absolute;
+  left: 7.6cqw;
+  top: 22.4cqw;
+}
+
+.l2-to-label {
+  font-size: 1.45cqw;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.5cqw;
+}
+
+.l2-to-name {
+  font-size: 2cqw;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4cqw;
+}
+
+.l2-muted {
+  font-size: 1.4cqw;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.l2-table {
+  position: absolute;
+  left: 6.4cqw;
+  top: 38.6cqw;
+  width: 87.2cqw;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.l2-table thead th {
+  background: var(--purple);
+  color: #fff;
+  font-size: 1.35cqw;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  height: 5.2cqw;
+  padding: 0 1.4cqw;
+}
+
+.l2-table thead th:first-child {
+  border-radius: 2.6cqw 0 0 2.6cqw;
+}
+
+.l2-table thead th:last-child {
+  border-radius: 0 2.6cqw 2.6cqw 0;
+}
+
+.l2-table .col-sl {
+  width: 10%;
+  text-align: center;
+}
+
+.l2-table .col-desc {
+  width: 38%;
+  text-align: left;
+}
+
+.l2-table .col-num {
+  width: 18%;
+  text-align: center;
+}
+
+.l2-table .col-qty {
+  width: 16%;
+  text-align: center;
+}
+
+.l2-table tbody td {
+  height: 5.1cqw;
+  padding: 0 1.4cqw;
+  font-size: 1.5cqw;
+  font-weight: 500;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+.l2-after {
+  position: absolute;
+  left: 7.6cqw;
+  right: 7.6cqw;
+  top: 76.2cqw;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.l2-thanks {
+  font-size: 1.7cqw;
+  font-weight: 700;
+  margin-bottom: 1cqw;
+}
+
+.l2-contact {
+  display: flex;
+  align-items: center;
+  gap: 0.8cqw;
+  font-size: 1.3cqw;
+  color: var(--muted);
+}
+
+.l2-ico {
+  width: 2.4cqw;
+  height: 2.4cqw;
+  color: var(--purple);
+  display: grid;
+  place-items: center;
+}
+
+.l2-ico-web {
+  margin-left: 1.2cqw;
+}
+
+.l2-ico svg {
+  width: 100%;
+  height: 100%;
+}
+
+.l2-sums {
+  width: 38cqw;
+}
+
+.l2-sum-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.45cqw;
+  line-height: 1.75;
+  padding: 0 2.4cqw;
+}
+
+.l2-sum-row span {
+  color: var(--muted);
+}
+
+.l2-sum-row strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.l2-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.8cqw;
+  height: 5.2cqw;
+  padding: 0 2.6cqw;
+  background: var(--purple);
+  color: #fff;
+  border-radius: 2.6cqw;
+  font-size: 1.55cqw;
+  font-weight: 800;
+}
+
+.l2-total strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.l2-bottom {
+  position: absolute;
+  left: 7.6cqw;
+  right: 7.6cqw;
+  top: 94.4cqw;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6cqw;
+}
+
+.l2-lower-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3.6cqw;
+}
+
+.l2-label {
+  font-size: 1.45cqw;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.6cqw;
+}
+
+.l2-pay p,
+.l2-terms p:last-child {
+  font-size: 1.3cqw;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.l2-pay span {
+  display: inline-block;
+  min-width: 14cqw;
+}
+
+.l2-terms {
+  width: 38cqw;
+  text-align: left;
+  margin-top: 7.4cqw;
+}
+
+.l2-sign-script {
+  font-family: "Caveat", "Segoe Script", cursive;
+  font-size: 3.8cqw;
+  line-height: 1;
+  color: var(--ink);
+  margin-bottom: 0.4cqw;
+}
+
+.l2-sign-name {
+  font-size: 1.7cqw;
+  font-weight: 800;
+}
+
+.l2-sign-role {
+  font-size: 1.3cqw;
+  color: var(--muted);
+}

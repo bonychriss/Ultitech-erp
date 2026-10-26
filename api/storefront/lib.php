@@ -137,12 +137,14 @@ function storefrontApiFetchProducts(PDO $pdo, ?int $id = null): array
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $sales = storefrontApiSalesCounts($pdo);
 
     $out = [];
     foreach ($rows as $row) {
         $price = (float) ($row['selling_price'] ?? 0);
         $productId = (int) ($row['id'] ?? 0);
-        $image = storefrontApiResolveProductImageUrl($pdo, $productId, (string) ($row['main_image'] ?? ''));
+        $images = storefrontApiResolveProductImageUrls($pdo, $productId, (string) ($row['main_image'] ?? ''));
+        $image = $images[0] ?? '';
         $itemType = strtolower(trim((string) ($row['item_type'] ?? '')));
         $kind = in_array($itemType, ['vehicle', 'truck'], true) ? 'truck' : 'spare';
         $out[] = [
@@ -157,8 +159,70 @@ function storefrontApiFetchProducts(PDO $pdo, ?int $id = null): array
             'brand' => (string) ($row['brand'] ?? ''),
             'kind' => $kind,
             'image_url' => $image,
+            'images' => $images,
+            'sold_qty' => $sales[$productId]['sold'] ?? 0.0,
+            'quoted_qty' => $sales[$productId]['quoted'] ?? 0.0,
             'updated_at' => date('c'),
         ];
+    }
+    return $out;
+}
+
+/**
+ * Units per product on invoices (sold) and on open quotes + website quote requests (quoted).
+ * Quotes that were invoiced count as sold only. Each source is optional per tenant.
+ *
+ * @return array<int, array{sold: float, quoted: float}>
+ */
+function storefrontApiSalesCounts(PDO $pdo): array
+{
+    $out = [];
+    $add = static function (string $key, string $sql) use ($pdo, &$out): void {
+        try {
+            foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_NUM) ?: [] as [$productId, $qty]) {
+                $productId = (int) $productId;
+                if ($productId > 0) {
+                    $out[$productId][$key] = ($out[$productId][$key] ?? 0.0) + (float) $qty;
+                }
+            }
+        } catch (Throwable $e) {
+            // table or column missing in this tenant
+        }
+    };
+
+    $add('sold', "
+        SELECT soi.product_id, SUM(soi.quantity)
+        FROM sales_order_items soi
+        JOIN invoices i ON i.order_id = soi.order_id
+        WHERE LOWER(COALESCE(i.status, '')) NOT IN ('cancelled', 'canceled', 'void', 'draft')
+        GROUP BY soi.product_id");
+    $add('sold', "
+        SELECT ii.product_id, SUM(ii.quantity)
+        FROM erp_invoice_items ii
+        GROUP BY ii.product_id");
+    $add('quoted', "
+        SELECT soi.product_id, SUM(soi.quantity)
+        FROM sales_order_items soi
+        JOIN sales_orders so ON so.id = soi.order_id
+        WHERE so.doc_type = 'quote'
+          AND LOWER(COALESCE(so.status, '')) NOT IN ('cancelled', 'canceled', 'rejected', 'void', 'invoiced')
+          AND NOT EXISTS (SELECT 1 FROM invoices i WHERE i.order_id = so.id)
+        GROUP BY soi.product_id");
+    $add('quoted', "
+        SELECT qi.product_id, SUM(qi.quantity)
+        FROM erp_quote_items qi
+        JOIN erp_quotes q ON q.id = qi.quote_id
+        WHERE LOWER(COALESCE(q.status, '')) NOT IN ('cancelled', 'canceled', 'rejected', 'void')
+        GROUP BY qi.product_id");
+    $add('quoted', "
+        SELECT product_id, SUM(quantity)
+        FROM website_quote_requests
+        WHERE product_id IS NOT NULL
+          AND LOWER(COALESCE(status, '')) NOT IN ('cancelled', 'canceled', 'rejected', 'spam', 'deleted')
+        GROUP BY product_id");
+
+    foreach ($out as $productId => $counts) {
+        $out[$productId] = ['sold' => $counts['sold'] ?? 0.0, 'quoted' => $counts['quoted'] ?? 0.0];
     }
     return $out;
 }
@@ -177,11 +241,13 @@ function storefrontApiIsJunkImageFilename(string $filename): bool
 
 /**
  * Match UltiTech stock products list: real photo only, never junk placeholders.
+ *
+ * @return list<string>
  */
-function storefrontApiResolveProductImageUrl(PDO $pdo, int $productId, string $mainImage): string
+function storefrontApiResolveProductImageUrls(PDO $pdo, int $productId, string $mainImage): array
 {
     if ($productId <= 0) {
-        return '';
+        return [];
     }
 
     $candidates = [];
@@ -211,6 +277,7 @@ function storefrontApiResolveProductImageUrl(PDO $pdo, int $productId, string $m
         // product_images may be missing
     }
 
+    $urls = [];
     foreach ($candidates as $filename) {
         $url = '';
         if (function_exists('stock_product_list_image_url')) {
@@ -222,11 +289,21 @@ function storefrontApiResolveProductImageUrl(PDO $pdo, int $productId, string $m
         }
         $url = storefrontApiPublicImageUrl($url);
         if ($url !== '' && !storefrontApiIsJunkImageFilename($url) && stripos($url, 'placeholder') === false) {
-            return $url;
+            $urls[] = $url;
         }
     }
 
-    return '';
+    return $urls;
+}
+
+/**
+ * Match UltiTech stock products list: real photo only, never junk placeholders.
+ */
+function storefrontApiResolveProductImageUrl(PDO $pdo, int $productId, string $mainImage): string
+{
+    $urls = storefrontApiResolveProductImageUrls($pdo, $productId, $mainImage);
+
+    return $urls[0] ?? '';
 }
 
 /**

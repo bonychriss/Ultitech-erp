@@ -85,6 +85,56 @@ function settingsDeskShellHeadExtras(): string
 function sales_settings_sync_schema(PDO $pdo): void
 {
     try {
+        $exists = false;
+        try {
+            $pdo->query('SELECT 1 FROM sales_settings LIMIT 1');
+            $exists = true;
+        } catch (Throwable $e) {
+            $exists = false;
+        }
+
+        if (!$exists) {
+            $pdo->exec(
+                "CREATE TABLE IF NOT EXISTS sales_settings (
+                    id INT NOT NULL AUTO_INCREMENT,
+                    company_name VARCHAR(200) DEFAULT NULL,
+                    company_address TEXT DEFAULT NULL,
+                    company_logo VARCHAR(255) DEFAULT NULL,
+                    company_phone VARCHAR(50) DEFAULT NULL,
+                    company_email VARCHAR(100) DEFAULT NULL,
+                    company_website VARCHAR(100) DEFAULT NULL,
+                    company_tin VARCHAR(50) DEFAULT NULL,
+                    company_vat VARCHAR(50) DEFAULT NULL,
+                    bank_details TEXT DEFAULT NULL,
+                    default_currency VARCHAR(10) DEFAULT 'TZS',
+                    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    company_id INT DEFAULT 0,
+                    spare_part_layout INT DEFAULT 1,
+                    truck_layout INT DEFAULT 1,
+                    truck_footer TEXT DEFAULT NULL,
+                    spare_footer TEXT DEFAULT NULL,
+                    truck_payment_details TEXT DEFAULT NULL,
+                    truck_terms TEXT DEFAULT NULL,
+                    truck_validity TEXT DEFAULT NULL,
+                    truck_thanks_note TEXT DEFAULT NULL,
+                    truck_return_policy TEXT DEFAULT NULL,
+                    spare_payment_details TEXT DEFAULT NULL,
+                    spare_terms TEXT DEFAULT NULL,
+                    spare_validity TEXT DEFAULT NULL,
+                    spare_thanks_note TEXT DEFAULT NULL,
+                    spare_return_policy TEXT DEFAULT NULL,
+                    document_footer_message TEXT DEFAULT NULL,
+                    invoice_remarks TEXT DEFAULT NULL,
+                    truck_remarks TEXT DEFAULT NULL,
+                    enable_tax_inclusive TINYINT(1) DEFAULT 0,
+                    enable_tax_exclusive TINYINT(1) DEFAULT 1,
+                    sales_document_font VARCHAR(64) DEFAULT 'arima',
+                    PRIMARY KEY (id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+            );
+        }
+
         $stmt = $pdo->query('DESCRIBE sales_settings');
         $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -157,7 +207,7 @@ function sales_settings_sync_schema(PDO $pdo): void
             $pdo->exec('ALTER TABLE sales_settings ' . implode(', ', $missing));
         }
     } catch (Throwable $e) {
-        // Table may not exist yet.
+        // Schema sync is best-effort.
     }
 }
 
@@ -267,6 +317,133 @@ function sales_settings_field_map(): array
 }
 
 /**
+ * True when a payment-details field is empty or still the default placeholder.
+ */
+function sales_settings_is_blank_payment_text($value): bool
+{
+    $text = trim((string) $value);
+    if ($text === '') {
+        return true;
+    }
+
+    return strcasecmp($text, 'Payment details') === 0;
+}
+
+/**
+ * Overlay Admin → Company Settings → Finance onto sales_settings for the UI / documents.
+ * Payment Details on Document Layout auto-fills from company bank_details when blank.
+ *
+ * @param array<string, mixed> $settings
+ * @return array<string, mixed>
+ */
+function sales_settings_merge_company_finance(array $settings): array
+{
+    if (!function_exists('getCompanySetting')) {
+        return $settings;
+    }
+
+    $bank = trim((string) getCompanySetting('bank_details', ''));
+    $footer = trim((string) getCompanySetting('document_footer_message', ''));
+    $tin = trim((string) getCompanySetting('company_tin', ''));
+    $vat = trim((string) getCompanySetting('company_vat', ''));
+    $location = trim((string) getCompanySetting('company_location', ''));
+    $taxMode = strtolower(trim((string) getCompanySetting('tax_calculation_mode', '')));
+
+    if ($bank !== '') {
+        $settings['bank_details'] = $bank;
+        if (sales_settings_is_blank_payment_text($settings['spare_payment_details'] ?? null)) {
+            $settings['spare_payment_details'] = $bank;
+        }
+        if (sales_settings_is_blank_payment_text($settings['truck_payment_details'] ?? null)) {
+            $settings['truck_payment_details'] = $bank;
+        }
+    }
+
+    if ($footer !== '' && trim((string) ($settings['document_footer_message'] ?? '')) === '') {
+        $settings['document_footer_message'] = $footer;
+    }
+    if ($tin !== '' && trim((string) ($settings['company_tin'] ?? '')) === '') {
+        $settings['company_tin'] = $tin;
+    }
+    if ($vat !== '' && trim((string) ($settings['company_vat'] ?? '')) === '') {
+        $settings['company_vat'] = $vat;
+    }
+    if ($location !== '' && trim((string) ($settings['company_location'] ?? '')) === '') {
+        $settings['company_location'] = $location;
+    }
+
+    if ($taxMode === 'inclusive') {
+        $settings['enable_tax_inclusive'] = 1;
+        $settings['enable_tax_exclusive'] = 0;
+    } elseif ($taxMode === 'exclusive') {
+        $settings['enable_tax_inclusive'] = 0;
+        $settings['enable_tax_exclusive'] = 1;
+    }
+
+    if (function_exists('getCurrentCompany')) {
+        $company = getCurrentCompany();
+        $currency = trim((string) ($company['base_currency'] ?? ''));
+        if ($currency !== '' && trim((string) ($settings['default_currency'] ?? '')) === '') {
+            $settings['default_currency'] = $currency;
+        }
+    }
+
+    return $settings;
+}
+
+/**
+ * Persist company finance payment/footer into sales_settings so Document Layout stays in sync.
+ */
+function sales_settings_sync_from_company_finance(PDO $pdo, int $companyId, string $bankDetails, string $documentFooter = ''): void
+{
+    if ($companyId <= 0) {
+        return;
+    }
+
+    try {
+        sales_settings_sync_schema($pdo);
+        $stmt = $pdo->prepare('SELECT id, bank_details, spare_payment_details, truck_payment_details, document_footer_message FROM sales_settings WHERE company_id = ? LIMIT 1');
+        $stmt->execute([$companyId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return;
+        }
+
+        $bankDetails = trim($bankDetails);
+        $documentFooter = trim($documentFooter);
+        $sets = [];
+        $params = [];
+
+        if ($bankDetails !== '') {
+            $sets[] = 'bank_details = ?';
+            $params[] = $bankDetails;
+            if (sales_settings_is_blank_payment_text($row['spare_payment_details'] ?? null)) {
+                $sets[] = 'spare_payment_details = ?';
+                $params[] = $bankDetails;
+            }
+            if (sales_settings_is_blank_payment_text($row['truck_payment_details'] ?? null)) {
+                $sets[] = 'truck_payment_details = ?';
+                $params[] = $bankDetails;
+            }
+        }
+
+        if ($documentFooter !== '' && trim((string) ($row['document_footer_message'] ?? '')) === '') {
+            $sets[] = 'document_footer_message = ?';
+            $params[] = $documentFooter;
+        }
+
+        if ($sets === []) {
+            return;
+        }
+
+        $params[] = $companyId;
+        $pdo->prepare('UPDATE sales_settings SET ' . implode(', ', $sets) . ' WHERE company_id = ?')->execute($params);
+    } catch (Throwable $e) {
+        // Non-fatal: sales UI can still merge live via getCompanySetting.
+    }
+}
+
+/**
  * @return array<string, mixed>
  */
 function sales_settings_fetch(PDO $pdo, int $companyId): array
@@ -279,10 +456,10 @@ function sales_settings_fetch(PDO $pdo, int $companyId): array
     $settings = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$settings) {
-        return sales_settings_default_row();
+        $settings = sales_settings_default_row();
     }
 
-    return $settings;
+    return sales_settings_merge_company_finance($settings);
 }
 
 /**
@@ -374,76 +551,181 @@ function sales_settings_save(PDO $pdo, int $companyId, array $post, array $files
 /**
  * @return array<string, list<array{id:int,label:string,description:string}>>
  */
-function sales_settings_layout_catalog(): array
+function sales_settings_library_layout_catalog_entries(): array
 {
     return [
-        'truck' => [
-            [
-                'id' => 1,
-                'label' => 'Watermark',
-                'description' => 'High-fidelity truck layout with grayscale watermark styling.',
-                'comingSoon' => false,
-            ],
-            [
-                'id' => 2,
-                'label' => 'Classic',
-                'description' => 'Structured truck layout with boxed sections.',
-                'comingSoon' => true,
-            ],
-            [
-                'id' => 3,
-                'label' => 'Minimalist',
-                'description' => 'Clean truck layout with simplified header styling.',
-                'comingSoon' => true,
-            ],
+        [
+            'id' => 11,
+            'label' => 'Purple Classic',
+            'description' => 'Bold purple header table, TOTAL DUE bar, three-column footer.',
+            'comingSoon' => false,
         ],
-        'spare' => [
-            [
-                'id' => 1,
-                'label' => 'Premium',
-                'description' => 'Borderless stone header with clean product rows.',
-                'comingSoon' => false,
-            ],
-            [
-                'id' => 2,
-                'label' => 'Classic',
-                'description' => 'Boxed table borders with structured sections.',
-                'comingSoon' => false,
-            ],
-            [
-                'id' => 3,
-                'label' => 'Minimalist',
-                'description' => 'Dark blue header with white typography.',
-                'comingSoon' => false,
-            ],
+        [
+            'id' => 12,
+            'label' => 'Purple Brand Name',
+            'description' => 'Purple pills, rounded TOTAL bar, and a black-and-purple footer wave.',
+            'comingSoon' => false,
         ],
-        'ultimate' => [
-            [
-                'id' => 1,
-                'label' => 'Standard',
-                'description' => 'Classic Ultimate invoice layout used on quotations and invoices.',
-                'comingSoon' => false,
-            ],
-            [
-                'id' => 2,
-                'label' => 'Classic',
-                'description' => 'Boxed table borders with structured sections.',
-                'comingSoon' => false,
-            ],
-            [
-                'id' => 3,
-                'label' => 'Minimalist',
-                'description' => 'Teal header with white typography and clear grid lines.',
-                'comingSoon' => false,
-            ],
-            [
-                'id' => 4,
-                'label' => 'Formal',
-                'description' => 'Soft header band with refined ruled product table.',
-                'comingSoon' => false,
-            ],
+        [
+            'id' => 13,
+            'label' => 'Navy & Orange Swoosh',
+            'description' => 'Pre-made frame artwork with corner swooshes; details overlaid on top.',
+            'comingSoon' => false,
+        ],
+        [
+            'id' => 14,
+            'label' => 'Pixel Mart Red & Black',
+            'description' => 'Vector frame with black title band and red angles; full overlaid invoice.',
+            'comingSoon' => false,
+        ],
+        [
+            'id' => 15,
+            'label' => 'Yellow Bar Classic',
+            'description' => 'Yellow-bar artwork with INVOICE, dark table header, and yellow total.',
+            'comingSoon' => false,
         ],
     ];
+}
+
+function sales_settings_layout_catalog(): array
+{
+    $library = sales_settings_library_layout_catalog_entries();
+
+    return [
+        'truck' => array_merge(
+            [
+                [
+                    'id' => 1,
+                    'label' => 'Watermark',
+                    'description' => 'High-fidelity truck layout with grayscale watermark styling.',
+                    'comingSoon' => false,
+                ],
+                [
+                    'id' => 2,
+                    'label' => 'Classic',
+                    'description' => 'Structured truck layout with boxed sections.',
+                    'comingSoon' => true,
+                ],
+                [
+                    'id' => 3,
+                    'label' => 'Minimalist',
+                    'description' => 'Clean truck layout with simplified header styling.',
+                    'comingSoon' => true,
+                ],
+            ],
+            $library
+        ),
+        'spare' => array_merge(
+            [
+                [
+                    'id' => 1,
+                    'label' => 'Premium',
+                    'description' => 'Borderless stone header with clean product rows.',
+                    'comingSoon' => false,
+                ],
+                [
+                    'id' => 2,
+                    'label' => 'Classic',
+                    'description' => 'Boxed table borders with structured sections.',
+                    'comingSoon' => false,
+                ],
+                [
+                    'id' => 3,
+                    'label' => 'Minimalist',
+                    'description' => 'Dark blue header with white typography.',
+                    'comingSoon' => false,
+                ],
+            ],
+            $library
+        ),
+        'ultimate' => array_merge(
+            [
+                [
+                    'id' => 1,
+                    'label' => 'Standard',
+                    'description' => 'Classic Ultimate invoice layout used on quotations and invoices.',
+                    'comingSoon' => false,
+                ],
+                [
+                    'id' => 2,
+                    'label' => 'Classic',
+                    'description' => 'Boxed table borders with structured sections.',
+                    'comingSoon' => false,
+                ],
+                [
+                    'id' => 3,
+                    'label' => 'Minimalist',
+                    'description' => 'Teal header with white typography and clear grid lines.',
+                    'comingSoon' => false,
+                ],
+                [
+                    'id' => 4,
+                    'label' => 'Formal',
+                    'description' => 'Soft header band with refined ruled product table.',
+                    'comingSoon' => false,
+                ],
+            ],
+            $library
+        ),
+    ];
+}
+
+/**
+ * Demo footer copy used in layout previews when company settings are empty.
+ *
+ * @return array<string, string>
+ */
+function sales_settings_sample_footer_fields(bool $isTruck): array
+{
+    $payment = "Bank: CRDB Bank\nAccount name: Sample Trading Ltd\nAccount no: 0150123456789\nSwift: CORUTZTZ";
+    $terms = 'Goods remain the property of the seller until paid in full. Please settle within the stated validity period.';
+    $validity = 'Valid for 14 days from issue date.';
+    $thanks = $isTruck
+        ? 'Thank you for choosing our trucks and services.'
+        : 'Thank you for your business.';
+    $returns = 'Returns accepted within 7 days for unused items in original packaging.';
+
+    return [
+        'bank_details' => $payment,
+        'document_footer_message' => 'This is a computer-generated document preview.',
+        'spare_payment_details' => $payment,
+        'spare_terms' => $terms,
+        'spare_validity' => $validity,
+        'spare_thanks_note' => $thanks,
+        'spare_return_policy' => $returns,
+        'truck_payment_details' => $payment,
+        'truck_terms' => $terms,
+        'truck_validity' => $validity,
+        'truck_thanks_note' => $thanks,
+        'truck_return_policy' => $returns,
+    ];
+}
+
+/**
+ * @param array<string, mixed> $companySettings
+ * @return array<string, mixed>
+ */
+function sales_settings_with_preview_footer_defaults(array $companySettings, bool $isTruck): array
+{
+    $samples = sales_settings_sample_footer_fields($isTruck);
+    foreach ($samples as $key => $value) {
+        $current = trim((string) ($companySettings[$key] ?? ''));
+        if ($current === '') {
+            $companySettings[$key] = $value;
+        }
+    }
+
+    if (trim((string) ($companySettings['company_address'] ?? '')) === '') {
+        $companySettings['company_address'] = "Plot 12, Industrial Area\nDar es Salaam, Tanzania";
+    }
+    if (trim((string) ($companySettings['company_phone'] ?? '')) === '') {
+        $companySettings['company_phone'] = '+255 700 000 000';
+    }
+    if (trim((string) ($companySettings['company_email'] ?? '')) === '') {
+        $companySettings['company_email'] = 'sales@example.com';
+    }
+
+    return $companySettings;
 }
 
 /**
@@ -466,34 +748,58 @@ function sales_settings_sample_document_context(bool $isTruck): array
             'tin' => '100-200-300',
             'vrn' => '40-000000-A',
             'salesperson' => 'Sales Team',
-            'subtotal' => 1250000.0,
-            'tax_amount' => 225000.0,
-            'total_amount' => 1475000.0,
-            'balance_due' => 1475000.0,
+            'subtotal' => 1420000.0,
+            'tax_amount' => 255600.0,
+            'total_amount' => 1675600.0,
+            'balance_due' => 1675600.0,
             'currency' => 'TZS',
+            'notes' => 'Please include the invoice number on your payment reference.',
+            'remarks' => 'Delivery within 3–5 working days after confirmation.',
         ],
         'items' => [
             [
-                'product_name' => $isTruck ? 'Isuzu FTR Truck Chassis' : 'Brake Pad Set (Front)',
+                'product_name' => $isTruck ? 'Isuzu FTR Truck Chassis' : 'Brake Pad Set',
                 'product_code' => 'DEMO-001',
-                'description' => 'Preview line item for layout settings.',
+                'description' => 'Front axle set',
                 'quantity' => 1,
                 'unit_price' => 1250000.0,
                 'line_total' => 1250000.0,
                 'tax_amount' => 225000.0,
             ],
+            [
+                'product_name' => $isTruck ? 'Service Kit' : 'Oil Filter',
+                'product_code' => 'DEMO-002',
+                'description' => 'Standard spare',
+                'quantity' => 2,
+                'unit_price' => 85000.0,
+                'line_total' => 170000.0,
+                'tax_amount' => 30600.0,
+            ],
         ],
     ];
 }
 
-function sales_settings_render_layout_preview_html(bool $isTruck, array $companySettings, ?string $layoutPath, bool $fullView = false): string
+function sales_settings_render_layout_preview_html(bool $isTruck, array $companySettings, ?string $layoutPath, bool $fullView = false, bool $cardView = false, bool $modalView = false): string
 {
-    $viewportClass = $fullView ? 'ss-layout-preview-viewport ss-layout-preview-viewport--full' : 'ss-layout-preview-viewport';
-    $scaleClass = $fullView ? 'ss-layout-preview-scale ss-layout-preview-scale--full' : 'ss-layout-preview-scale';
+    $viewportClass = 'ss-layout-preview-viewport';
+    $scaleClass = 'ss-layout-preview-scale';
+    $embedClass = '';
+    if ($fullView) {
+        $viewportClass .= ' ss-layout-preview-viewport--full';
+        $scaleClass .= ' ss-layout-preview-scale--full';
+    } elseif ($modalView) {
+        $viewportClass .= ' ss-layout-preview-viewport--modal';
+        $scaleClass .= ' ss-layout-preview-scale--modal';
+        $embedClass = 'ss-preview-embed ss-preview-modal';
+    } elseif ($cardView) {
+        $viewportClass .= ' ss-layout-preview-viewport--card';
+        $scaleClass .= ' ss-layout-preview-scale--card';
+        $embedClass = 'ss-preview-embed ss-preview-card';
+    }
     ob_start();
     ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="<?= htmlspecialchars($embedClass, ENT_QUOTES, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -504,22 +810,62 @@ function sales_settings_render_layout_preview_html(bool $isTruck, array $company
             padding: 0;
             background: #f1f5f9;
         }
+        html.ss-preview-embed,
+        body.ss-preview-embed {
+            width: 100%;
+            height: 100%;
+            max-height: 100%;
+            overflow: hidden !important;
+            background: #fff;
+            scrollbar-width: none;
+        }
+        html.ss-preview-embed::-webkit-scrollbar,
+        body.ss-preview-embed::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
         .ss-layout-preview-viewport {
             width: 100%;
             min-height: 100vh;
             display: flex;
-            justify-content: center;
-            padding: 12px;
+            justify-content: flex-start;
+            padding: 8px;
             box-sizing: border-box;
+            overflow: hidden;
+            background: #f1f5f9;
         }
         .ss-layout-preview-viewport--full {
-            justify-content: flex-start;
+            justify-content: center;
             padding: 24px;
+            overflow: auto;
+        }
+        .ss-layout-preview-viewport--card,
+        .ss-layout-preview-viewport--modal {
+            position: absolute;
+            inset: 0;
+            min-height: 0;
+            height: 100%;
+            padding: 8px;
+            background: #fff;
+            overflow: hidden !important;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            box-sizing: border-box;
+        }
+        .ss-layout-preview-viewport--modal {
+            padding: 10px;
+            background: #f8fafc;
+            align-items: center;
+            justify-content: center;
         }
         .ss-layout-preview-scale {
-            transform: scale(0.48);
-            transform-origin: top center;
+            /* Keep origin top-left so the panel iframe does not clip to empty side gutters. */
+            transform: scale(0.38);
+            transform-origin: top left;
             width: 210mm;
+            margin: 0;
         }
         .ss-layout-preview-scale--full {
             transform: none;
@@ -527,6 +873,119 @@ function sales_settings_render_layout_preview_html(bool $isTruck, array $company
             max-width: 210mm;
             margin: 0 auto;
         }
+        .ss-layout-preview-scale--card {
+            width: 210mm;
+            /* zoom shrinks layout box so flex centering works inside the card */
+            zoom: 0.24;
+            transform: none;
+            flex-shrink: 0;
+        }
+        .ss-layout-preview-scale--modal {
+            width: 210mm;
+            zoom: 1;
+            transform: none;
+            transform-origin: top center;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            flex-shrink: 0;
+        }
+        @supports not (zoom: 1) {
+            .ss-layout-preview-viewport--card,
+            .ss-layout-preview-viewport--modal {
+                justify-content: center;
+            }
+            .ss-layout-preview-scale--card {
+                zoom: unset;
+                transform: scale(0.24);
+                transform-origin: top center;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .ss-layout-preview-scale--modal {
+                zoom: unset;
+                transform: none;
+                transform-origin: top center;
+            }
+        }
+
+        /* Standard sheet styles (normally provided by invoice view pages). */
+        .sheet-container {
+            width: 210mm;
+            max-width: 210mm;
+            margin: 0 auto;
+            background: #fff;
+            color: #111;
+            box-sizing: border-box;
+            padding: 12mm 12mm 10mm;
+            overflow: hidden;
+        }
+        .sheet-title { margin: 0; font-size: 18pt; color: #1E272E; }
+        .notebook { width: 100%; overflow: hidden; }
+        .o-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-bottom: 16px;
+        }
+        .o-table th {
+            background-color: #ffcc00;
+            color: #1E272E;
+            font-weight: 600;
+            font-size: 8.5pt;
+            padding: 8px 6px;
+            border-bottom: 2px solid #000;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+        }
+        .o-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+            font-size: 9pt;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .o-table th:nth-child(1),
+        .o-table td:nth-child(1) { width: 58px !important; }
+        .o-table th:nth-child(2),
+        .o-table td:nth-child(2) { width: 18% !important; }
+        .o-table th:nth-child(3),
+        .o-table td:nth-child(3) { width: auto !important; }
+        .o-table th:nth-child(4),
+        .o-table td:nth-child(4) { width: 52px !important; text-align: center; }
+        .o-table th:nth-child(5),
+        .o-table td:nth-child(5),
+        .o-table th:nth-child(6),
+        .o-table td:nth-child(6) {
+            width: 96px !important;
+            text-align: right;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+        .o-totals-table {
+            width: 280px;
+            border-collapse: collapse;
+            margin-left: auto;
+        }
+        .o-totals-table td {
+            padding: 5px 0;
+            font-size: 10pt;
+        }
+        .o-totals-table td:last-child {
+            text-align: right;
+            font-weight: 700;
+            padding-left: 16px;
+            white-space: nowrap;
+        }
+        .o-totals-grand td,
+        .o-totals-due td {
+            font-weight: 800;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 8px;
+        }
+
         .ss-layout-preview-error {
             margin: 2rem auto;
             max-width: 420px;
@@ -540,7 +999,7 @@ function sales_settings_render_layout_preview_html(bool $isTruck, array $company
         }
     </style>
 </head>
-<body>
+<body class="<?= htmlspecialchars($embedClass, ENT_QUOTES, 'UTF-8') ?>">
 <div class="<?= htmlspecialchars($viewportClass, ENT_QUOTES, 'UTF-8') ?>">
     <?php if ($layoutPath === null || !is_file($layoutPath)): ?>
         <div class="ss-layout-preview-error">No branded document layout is available for this company.</div>
@@ -549,15 +1008,69 @@ function sales_settings_render_layout_preview_html(bool $isTruck, array $company
         $sample = sales_settings_sample_document_context($isTruck);
         $invoice = $sample['invoice'];
         $items = $sample['items'];
-        $company_settings = $companySettings;
+        $company_settings = sales_settings_with_preview_footer_defaults($companySettings, $isTruck);
         $currency = $company_settings['default_currency'] ?? 'TZS';
         $is_print = false;
+        $isTruckOrder = $isTruck;
+        $document_footer_closing = true;
+        $logoUrl = '';
+        $signatureUrl = '';
+        if (function_exists('sales_is_library_document_layout_id')) {
+            $previewLayoutId = (int) ($isTruck
+                ? ($company_settings['truck_layout'] ?? 0)
+                : ($company_settings['spare_part_layout'] ?? 0));
+            if (function_exists('isUltimate') && isUltimate()) {
+                $previewLayoutId = (int) ($company_settings['spare_part_layout'] ?? 0);
+            }
+            if (sales_is_library_document_layout_id($previewLayoutId)) {
+                $libraryLayoutId = $previewLayoutId;
+            }
+        }
         ?>
-        <div class="<?= htmlspecialchars($scaleClass, ENT_QUOTES, 'UTF-8') ?>">
+        <div class="<?= htmlspecialchars($scaleClass, ENT_QUOTES, 'UTF-8') ?>" id="ss-layout-preview-scale">
             <?php include $layoutPath; ?>
         </div>
     <?php endif; ?>
 </div>
+<?php if ($modalView): ?>
+<script>
+(function () {
+  function fitModalPreview() {
+    var viewport = document.querySelector('.ss-layout-preview-viewport--modal');
+    var sheet = document.getElementById('ss-layout-preview-scale');
+    if (!viewport || !sheet) return;
+
+    sheet.style.zoom = '1';
+    sheet.style.transform = 'none';
+    sheet.style.width = '210mm';
+
+    var pad = 16;
+    var availW = Math.max(120, viewport.clientWidth - pad);
+    var availH = Math.max(120, viewport.clientHeight - pad);
+    var naturalW = sheet.scrollWidth || sheet.offsetWidth || 1;
+    var naturalH = sheet.scrollHeight || sheet.offsetHeight || 1;
+    var scale = Math.min(availW / naturalW, availH / naturalH);
+    if (!isFinite(scale) || scale <= 0) scale = 1;
+    // Fill the pane as much as possible while keeping the full page visible.
+    scale = Math.min(scale, 1.15);
+
+    if (typeof sheet.style.zoom !== 'undefined') {
+      sheet.style.zoom = String(scale);
+      sheet.style.transform = 'none';
+    } else {
+      sheet.style.zoom = '';
+      sheet.style.transform = 'scale(' + scale + ')';
+      sheet.style.transformOrigin = 'top center';
+    }
+  }
+
+  window.addEventListener('load', fitModalPreview);
+  window.addEventListener('resize', fitModalPreview);
+  setTimeout(fitModalPreview, 50);
+  setTimeout(fitModalPreview, 250);
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>
     <?php
@@ -1026,7 +1539,7 @@ function salesSettingsRenderReactShell(): void
     }
 
     $page_title = 'Sales Settings';
-    $employeeHeaderTitle = 'Sales Settings';
+    $employeeHeaderTitle = '';
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
 

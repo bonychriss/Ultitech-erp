@@ -1,6 +1,113 @@
-import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  BadgeCheck,
+  Calculator,
+  ChevronDown,
+  CircleDollarSign,
+  FileText,
+  LayoutTemplate,
+  Loader2,
+  MessageSquareText,
+  Package,
+  Settings2,
+  Target,
+  Truck,
+} from 'lucide-react';
 import { fetchMonthlyTargets, fetchSettingsInit, saveMonthlyTargets, saveSettings, saveSettingsFields } from '../api/settingsDesk';
+
+const TAB_ICONS = {
+  financials: CircleDollarSign,
+  targets: Target,
+  settings: LayoutTemplate,
+  truck: Truck,
+  spare: Package,
+};
+
+const TAB_ICON_TONES = {
+  financials: 'finance',
+  targets: 'target',
+  settings: 'layout',
+  truck: 'truck',
+  spare: 'spare',
+};
+
+function TabIcon({ tabKey }) {
+  const Icon = TAB_ICONS[tabKey] || Settings2;
+  const tone = TAB_ICON_TONES[tabKey] || 'settings';
+  return <Icon size={14} className={`ss-tab-icon ss-icon-tone ss-icon-tone--${tone}`} aria-hidden="true" />;
+}
+
+function SectionTitle({ icon: Icon, tone = 'settings', children }) {
+  return (
+    <h3 className="ss-form-block-title ss-form-block-title--with-icon">
+      {Icon ? (
+        <Icon size={14} className={`ss-section-icon ss-icon-tone ss-icon-tone--${tone}`} aria-hidden="true" />
+      ) : null}
+      <span>{children}</span>
+    </h3>
+  );
+}
+
+function LayoutCardSkeleton() {
+  return (
+    <div className="ss-layout-card ss-layout-card--skeleton" aria-hidden="true">
+      <div className="ss-layout-thumb ss-skeleton-block" />
+      <div className="ss-layout-card-body">
+        <div className="ss-skeleton-line ss-skeleton-line--title" />
+        <div className="ss-skeleton-line" />
+        <div className="ss-skeleton-line ss-skeleton-line--short" />
+      </div>
+    </div>
+  );
+}
+
+function DocumentLayoutPageSkeleton() {
+  return (
+    <div className="exp-create-shell ss-settings-shell" aria-busy="true" aria-live="polite">
+      <div className="ss-hero-card" aria-hidden="true">
+        <header className="ss-page-header">
+          <div className="ss-skeleton-line ss-skeleton-line--heading" />
+          <div className="ss-skeleton-line ss-skeleton-line--sub" />
+        </header>
+        <nav className="ss-settings-nav">
+          <ul>
+            <li><span className="ss-skeleton-nav" /></li>
+            <li><span className="ss-skeleton-nav" /></li>
+            <li><span className="ss-skeleton-nav ss-skeleton-nav--wide" /></li>
+          </ul>
+        </nav>
+      </div>
+      <div className="exp-create-main">
+        <section className="exp-create-section ss-form-section">
+          <div className="ss-layout-workspace ss-layout-workspace--single">
+            <div className="ss-layout-workspace-main">
+              <div className="ss-card">
+                <div className="ss-skeleton-line ss-skeleton-line--title" style={{ marginBottom: '0.85rem' }} />
+                <div className="ss-layout-cards">
+                  {Array.from({ length: 8 }, (_, index) => (
+                    <LayoutCardSkeleton key={index} />
+                  ))}
+                </div>
+              </div>
+              <div className="ss-card">
+                <div className="ss-skeleton-line ss-skeleton-line--title" style={{ marginBottom: '0.85rem' }} />
+                <div className="ss-form-stack">
+                  <div className="ss-skeleton-block ss-skeleton-block--field" />
+                  <div className="ss-skeleton-block ss-skeleton-block--field" />
+                  <div className="ss-form-grid">
+                    <div className="ss-skeleton-block ss-skeleton-block--input" />
+                    <div className="ss-skeleton-block ss-skeleton-block--input" />
+                    <div className="ss-skeleton-block ss-skeleton-block--input ss-skeleton-block--full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
 
 const ROADMASTER_TABS = [
   { key: 'financials', label: 'Tax & Finance' },
@@ -11,7 +118,36 @@ const ROADMASTER_TABS = [
 function tabFromLocation() {
   if (typeof window === 'undefined') return 'financials';
   const tab = new URLSearchParams(window.location.search).get('tab');
-  return tab === 'targets' ? 'targets' : 'financials';
+  if (tab === 'targets') return 'targets';
+  if (tab === 'settings' || tab === 'layout') return 'settings';
+  if (tab === 'truck') return 'truck';
+  if (tab === 'spare') return 'spare';
+  return 'financials';
+}
+
+function pageSubtitleForTab(activeTab, init) {
+  if (activeTab === 'settings' || activeTab === 'truck' || activeTab === 'spare') {
+    return 'Manage how your quotations and invoices look when printed or exported to PDF.';
+  }
+  if (activeTab === 'targets') {
+    return 'Set monthly and yearly sales targets for your team.';
+  }
+  if (activeTab === 'financials') {
+    return init?.is_ultimate
+      ? 'Manage tax, currency, and document defaults for your company.'
+      : 'VAT, currency, and payment details for quotations and invoices.';
+  }
+  return 'Manage sales settings for your company.';
+}
+
+function syncTabInUrl(tabKey) {
+  const url = new URL(window.location.href);
+  if (tabKey === 'financials') {
+    url.searchParams.delete('tab');
+  } else {
+    url.searchParams.set('tab', tabKey);
+  }
+  window.history.replaceState({}, '', url);
 }
 
 function getSettingsTabs(init) {
@@ -20,7 +156,7 @@ function getSettingsTabs(init) {
     return [
       { key: 'financials', label: 'Tax & Finance' },
       targets,
-      { key: 'settings', label: 'Document layout' },
+      { key: 'settings', label: 'Document Layout' },
     ];
   }
 
@@ -59,8 +195,11 @@ function getLayoutTabConfig(activeTab) {
       fieldPrefix: 'spare',
       previewType: 'spare',
       catalogKey: 'ultimate',
-      sectionTitle: 'Document layout',
-      sectionDescription: 'Choose the print layout and footer content for quotations and invoices.',
+      sectionTitle: 'Sales Settings',
+      sectionDescription: 'Manage how your quotations and invoices look when printed or exported to PDF.',
+      chooseTitle: 'Choose Document Layout',
+      footerTitle: 'Document Footer Content',
+      footerDescription: 'This content will be printed at the bottom of your quotations and invoices.',
       documentLabel: 'Ultimate',
       saveLabel: 'Document',
       showTruckRemarks: false,
@@ -74,8 +213,11 @@ function getLayoutTabConfig(activeTab) {
       fieldPrefix: 'truck',
       previewType: 'truck',
       catalogKey: 'truck',
-      sectionTitle: 'Truck document layout',
-      sectionDescription: 'Choose the print layout and footer content for truck quotations and invoices.',
+      sectionTitle: 'Sales Settings',
+      sectionDescription: 'Manage how truck quotations and invoices look when printed or exported to PDF.',
+      chooseTitle: 'Choose Truck Document Layout',
+      footerTitle: 'Document Footer Content',
+      footerDescription: 'This content will be printed at the bottom of your truck quotations and invoices.',
       documentLabel: 'truck',
       saveLabel: 'Truck',
       showTruckRemarks: true,
@@ -87,8 +229,11 @@ function getLayoutTabConfig(activeTab) {
     fieldPrefix: 'spare',
     previewType: 'spare',
     catalogKey: 'spare',
-    sectionTitle: 'Spare part document layout',
-    sectionDescription: 'Choose the print layout and footer content for spare part quotations and invoices.',
+    sectionTitle: 'Sales Settings',
+    sectionDescription: 'Manage how spare part quotations and invoices look when printed or exported to PDF.',
+    chooseTitle: 'Choose Spare Document Layout',
+    footerTitle: 'Document Footer Content',
+    footerDescription: 'This content will be printed at the bottom of your spare part quotations and invoices.',
     documentLabel: 'spare part',
     saveLabel: 'Spare',
     showTruckRemarks: false,
@@ -113,7 +258,18 @@ function showToast(message, icon = 'success') {
   }
 }
 
+const LIBRARY_LAYOUT_LABELS = {
+  11: 'Purple Classic',
+  12: 'Purple Brand Name',
+  13: 'Navy & Orange Swoosh',
+  14: 'Pixel Mart Red & Black',
+  15: 'Yellow Bar Classic',
+};
+
 function layoutLabel(activeTab, id) {
+  if (LIBRARY_LAYOUT_LABELS[id]) {
+    return LIBRARY_LAYOUT_LABELS[id];
+  }
   if (activeTab === 'truck') {
     if (id === 2) return 'Classic';
     if (id === 3) return 'Minimalist';
@@ -155,34 +311,57 @@ function getLayoutMeta(init, catalogKey, layoutId) {
   };
 }
 
-function buildLayoutPreviewUrl(init, previewType, layoutId, fullView = false) {
+function buildLayoutPreviewUrl(init, previewType, layoutId, mode = '') {
   if (!init?.urls?.layoutPreview) return '';
-  const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams();
+  const module = new URLSearchParams(window.location.search).get('module');
+  if (module) params.set('module', module);
   params.set('type', previewType);
   params.set('layout', String(layoutId));
-  if (fullView) {
-    params.set('full', '1');
-  } else {
-    params.delete('full');
-  }
+  if (mode === 'card') params.set('card', '1');
+  if (mode === 'modal') params.set('modal', '1');
+  if (mode === 'full') params.set('full', '1');
   return `${init.urls.layoutPreview}?${params.toString()}`;
 }
 
-function openLayoutPreviewPopup(previewUrl) {
-  if (!previewUrl || typeof window === 'undefined') return;
+function LayoutThumb({ init, previewType, layoutId, label, comingSoon }) {
+  const [loaded, setLoaded] = useState(false);
+  const previewUrl = !comingSoon
+    ? buildLayoutPreviewUrl(init, previewType, layoutId, 'card')
+    : '';
 
-  const url = new URL(previewUrl, window.location.origin);
-  url.searchParams.set('full', '1');
+  useEffect(() => {
+    setLoaded(false);
+  }, [previewUrl]);
 
-  const width = Math.min(window.screen.availWidth - 48, 980);
-  const height = Math.min(window.screen.availHeight - 48, 900);
-  const left = Math.max(0, Math.round((window.screen.availWidth - width) / 2));
-  const top = Math.max(0, Math.round((window.screen.availHeight - height) / 2));
+  if (!previewUrl) {
+    return (
+      <div className="ss-layout-thumb ss-layout-thumb--empty" aria-hidden="true">
+        <span className="ss-layout-thumb-empty-label">{comingSoon ? 'Coming soon' : 'Preview'}</span>
+      </div>
+    );
+  }
 
-  window.open(
-    url.toString(),
-    'salesLayoutPreview',
-    `popup=yes,width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`,
+  return (
+    <div className={`ss-layout-thumb ss-layout-thumb--live${loaded ? ' is-loaded' : ''}`} aria-hidden="true">
+      {!loaded ? (
+        <div className="ss-layout-thumb-skeleton" aria-hidden="true">
+          <span className="ss-skeleton-line ss-skeleton-line--thumb-top" />
+          <span className="ss-skeleton-line ss-skeleton-line--thumb-mid" />
+          <span className="ss-skeleton-line ss-skeleton-line--thumb-mid ss-skeleton-line--short" />
+          <span className="ss-skeleton-block ss-skeleton-block--thumb-table" />
+          <span className="ss-skeleton-block ss-skeleton-block--thumb-total" />
+        </div>
+      ) : null}
+      <iframe
+        className={`ss-layout-thumb-frame${loaded ? ' is-visible' : ''}`}
+        src={previewUrl}
+        title={`${label} layout preview`}
+        loading="lazy"
+        tabIndex={-1}
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
   );
 }
 
@@ -197,7 +376,7 @@ function TaxToggleRow({ title, subtitle, enabled, onChange }) {
       </div>
       <button
         type="button"
-        className={`ss-switch${isOn ? ' is-on' : ''}`}
+        className={`ss-switch ss-switch--pill${isOn ? ' is-on' : ''}`}
         role="switch"
         aria-checked={isOn}
         aria-label={`${title}: ${isOn ? 'On' : 'Off'}`}
@@ -209,60 +388,209 @@ function TaxToggleRow({ title, subtitle, enabled, onChange }) {
   );
 }
 
-function getSelectedFontStack(init, fontKey) {
-  const match = init?.fontCatalog?.find((entry) => entry.key === fontKey);
-  if (match?.stack) return match.stack;
-  if (fontKey === 'arima') return "'Arima', Arial, 'Helvetica Neue', Helvetica, sans-serif";
-  return 'system-ui, sans-serif';
+const FONT_STACK_FALLBACKS = {
+  dm_sans: "'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif",
+  poppins: "'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+  arima: "'Arima', Arial, 'Helvetica Neue', Helvetica, sans-serif",
+  inter: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+  outfit: "'Outfit', system-ui, -apple-system, sans-serif",
+  roboto: "'Roboto', system-ui, -apple-system, sans-serif",
+  open_sans: "'Open Sans', system-ui, -apple-system, sans-serif",
+  lato: "'Lato', system-ui, -apple-system, sans-serif",
+  montserrat: "'Montserrat', system-ui, -apple-system, sans-serif",
+  nunito_sans: "'Nunito Sans', system-ui, -apple-system, sans-serif",
+  source_sans_3: "'Source Sans 3', system-ui, -apple-system, sans-serif",
+  raleway: "'Raleway', system-ui, -apple-system, sans-serif",
+  ubuntu: "'Ubuntu', system-ui, -apple-system, sans-serif",
+  merriweather: "'Merriweather', Georgia, 'Times New Roman', serif",
+  playfair_display: "'Playfair Display', Georgia, 'Times New Roman', serif",
+  system_ui: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+};
+
+function resolveFontStack(fontOrKey, init = null) {
+  if (fontOrKey && typeof fontOrKey === 'object') {
+    if (fontOrKey.stack) return String(fontOrKey.stack);
+    return FONT_STACK_FALLBACKS[fontOrKey.key] || 'system-ui, sans-serif';
+  }
+  const key = String(fontOrKey || '');
+  const match = init?.fontCatalog?.find((entry) => entry.key === key);
+  if (match?.stack) return String(match.stack);
+  return FONT_STACK_FALLBACKS[key] || 'system-ui, sans-serif';
 }
 
-function useDocumentFontPreview(init, fontKey) {
-  const [, setFontTick] = useState(0);
+function getSelectedFontStack(init, fontKey) {
+  return resolveFontStack(fontKey, init);
+}
+
+function ensureFontStylesheet(href, marker) {
+  if (!href || typeof document === 'undefined') return null;
+  const safeMarker = String(marker).replace(/["\\]/g, '');
+  const existing = document.querySelector(`link[data-ss-font="${safeMarker}"]`);
+  if (existing) return existing;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  link.dataset.ssFont = marker;
+  document.head.appendChild(link);
+  return link;
+}
+
+function useDocumentFontCatalog(init) {
+  useEffect(() => {
+    if (!init?.fontCatalog?.length) return undefined;
+
+    const loaders = [];
+    init.fontCatalog.forEach((font) => {
+      if (font.localCss) {
+        ensureFontStylesheet(font.localCss, `local-${font.key}`);
+      }
+      if (font.google) {
+        ensureFontStylesheet(font.google, `google-${font.key}`);
+      }
+      const family = String(font.stack || '').split(',')[0].replace(/['"]/g, '').trim();
+      if (family && document.fonts?.load) {
+        loaders.push(document.fonts.load(`400 16px "${family}"`).catch(() => null));
+        loaders.push(document.fonts.load(`700 16px "${family}"`).catch(() => null));
+      }
+    });
+
+    // Inject after erp-system-font-final so each option face wins.
+    let style = document.getElementById('ss-font-select-override');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'ss-font-select-override';
+      document.body.appendChild(style);
+    }
+    const rules = init.fontCatalog.map((font) => {
+      const stack = String(font.stack || 'system-ui, sans-serif').replace(/;/g, '');
+      const key = String(font.key || '').replace(/[^a-z0-9_-]/gi, '');
+      if (!key) return '';
+      return [
+        `html body .ss-font-select-value[data-font="${key}"]`,
+        `html body .ss-font-select-option[data-font="${key}"]`,
+        `html body .ss-font-select-option[data-font="${key}"] .ss-font-select-option-label`,
+        `html body button.ss-font-select-option[data-font="${key}"]`,
+        `html body.dashboard .ss-font-select-value[data-font="${key}"]`,
+        `html body.dashboard button.ss-font-select-option[data-font="${key}"]`,
+        `html body.dashboard button.ss-font-select-option[data-font="${key}"] .ss-font-select-option-label`,
+        `html body.page-exp-desk button.ss-font-select-option[data-font="${key}"]`,
+        `html body.page-exp-desk button.ss-font-select-option[data-font="${key}"] .ss-font-select-option-label`,
+      ].join(',') + `{font-family:${stack}!important;}`;
+    }).filter(Boolean).join('\n');
+    style.textContent = rules;
+
+    Promise.all(loaders).then(() => {
+      document.dispatchEvent(new CustomEvent('ss-fonts-ready'));
+    });
+
+    return undefined;
+  }, [init]);
+}
+
+function applyImportantFont(node, stack) {
+  if (!node || !stack) return;
+  node.style.setProperty('font-family', stack, 'important');
+}
+
+function FontSelect({ id, name, value, fonts, onChange }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const valueRef = useRef(null);
+  const optionRefs = useRef({});
+  const selected = fonts.find((font) => font.key === value) || fonts[0] || null;
+  const selectedStack = resolveFontStack(selected || value);
+
+  useLayoutEffect(() => {
+    const paint = () => {
+      applyImportantFont(valueRef.current, selectedStack);
+      fonts.forEach((font) => {
+        applyImportantFont(optionRefs.current[font.key], resolveFontStack(font));
+      });
+    };
+    paint();
+    document.addEventListener('ss-fonts-ready', paint);
+    return () => document.removeEventListener('ss-fonts-ready', paint);
+  }, [fonts, open, selectedStack, value]);
 
   useEffect(() => {
-    if (!init?.fontCatalog) return undefined;
-
-    const match = init.fontCatalog.find((entry) => entry.key === fontKey);
-    const links = [];
-    let cancelled = false;
-
-    const notifyReady = () => {
-      if (!cancelled) {
-        setFontTick((value) => value + 1);
+    if (!open) return undefined;
+    const onPointerDown = (event) => {
+      if (rootRef.current && !rootRef.current.contains(event.target)) {
+        setOpen(false);
       }
     };
-
-    if (match?.localCss) {
-      const local = document.createElement('link');
-      local.rel = 'stylesheet';
-      local.href = match.localCss;
-      local.dataset.ssDocFontPreview = '1';
-      local.onload = notifyReady;
-      local.onerror = notifyReady;
-      document.head.appendChild(local);
-      links.push(local);
-    }
-
-    if (match?.google) {
-      const google = document.createElement('link');
-      google.rel = 'stylesheet';
-      google.href = match.google;
-      google.dataset.ssDocFontPreview = '1';
-      google.onload = notifyReady;
-      google.onerror = notifyReady;
-      document.head.appendChild(google);
-      links.push(google);
-    }
-
-    if (typeof document !== 'undefined' && document.fonts?.ready) {
-      document.fonts.ready.then(notifyReady).catch(notifyReady);
-    }
-
-    return () => {
-      cancelled = true;
-      links.forEach((node) => node.remove());
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false);
     };
-  }, [init, fontKey]);
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className={`ss-font-select${open ? ' is-open' : ''}`} ref={rootRef}>
+      <input type="hidden" id={id} name={name} value={value || ''} />
+      <button
+        type="button"
+        className="ss-font-select-trigger ss-field-input"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Document font"
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span
+          ref={valueRef}
+          className="ss-font-select-value"
+          data-font={selected?.key || ''}
+          style={{ '--ss-option-font': selectedStack }}
+        >
+          {selected?.label || 'Select font'}
+        </span>
+        <ChevronDown size={16} aria-hidden="true" />
+      </button>
+      {open ? (
+        <ul className="ss-font-select-menu" role="listbox" aria-label="Document fonts">
+          {fonts.map((font) => {
+            const isSelected = font.key === value;
+            const stack = resolveFontStack(font);
+            return (
+              <li key={font.key} role="option" aria-selected={isSelected}>
+                <button
+                  type="button"
+                  ref={(node) => {
+                    if (node) {
+                      optionRefs.current[font.key] = node;
+                      applyImportantFont(node, stack);
+                    } else {
+                      delete optionRefs.current[font.key];
+                    }
+                  }}
+                  className={`ss-font-select-option${isSelected ? ' is-selected' : ''}`}
+                  data-font={font.key}
+                  style={{ '--ss-option-font': stack }}
+                  onClick={() => {
+                    onChange({ target: { name, value: font.key } });
+                    setOpen(false);
+                  }}
+                >
+                  <span
+                    className="ss-font-select-option-label"
+                    ref={(node) => applyImportantFont(node, stack)}
+                    style={{ '--ss-option-font': stack }}
+                  >
+                    {font.label}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
 }
 
 export default function SalesSettingsPage() {
@@ -273,6 +601,7 @@ export default function SalesSettingsPage() {
   const [activeTab, setActiveTab] = useState(tabFromLocation);
   const [saving, setSaving] = useState(false);
   const [layoutTeaser, setLayoutTeaser] = useState(null);
+  const [layoutPreview, setLayoutPreview] = useState(null);
   const [targetMonth, setTargetMonth] = useState('');
   const [targetScope, setTargetScope] = useState('ongoing');
   const [targetMode, setTargetMode] = useState('all');
@@ -283,7 +612,7 @@ export default function SalesSettingsPage() {
   const [targetsLoading, setTargetsLoading] = useState(false);
   const [targetsSaving, setTargetsSaving] = useState(false);
 
-  useDocumentFontPreview(init, settings?.sales_document_font || 'arima');
+  useDocumentFontCatalog(init);
 
   useEffect(() => {
     let cancelled = false;
@@ -336,12 +665,51 @@ export default function SalesSettingsPage() {
   function handleLayoutSelect(type, option) {
     if (option.comingSoon) {
       setLayoutTeaser({ id: option.id, label: option.label });
+      setLayoutPreview(null);
       return;
     }
 
     setLayoutTeaser(null);
-    handleLayoutChange(type, option.id);
+    const tabConfig = getLayoutTabConfig(type);
+    setLayoutPreview({
+      id: option.id,
+      label: option.label,
+      description: option.description || '',
+      tab: type,
+      previewType: tabConfig.previewType,
+      documentLabel: tabConfig.documentLabel,
+      previewUrl: buildLayoutPreviewUrl(init, tabConfig.previewType, option.id, 'modal'),
+    });
   }
+
+  function closeLayoutPreview() {
+    setLayoutPreview(null);
+  }
+
+  function useLayoutFromPreview() {
+    if (!layoutPreview) return;
+    handleLayoutChange(layoutPreview.tab, layoutPreview.id);
+    setLayoutPreview(null);
+  }
+
+  useEffect(() => {
+    if (!layoutPreview) return undefined;
+
+    function onKeyDown(event) {
+      if (event.key === 'Escape') {
+        setLayoutPreview(null);
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [layoutPreview]);
 
   async function changeTargetMonth(month) {
     setTargetMonth(month);
@@ -431,12 +799,7 @@ export default function SalesSettingsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="exp-create-loading" role="status" aria-live="polite">
-        <Loader2 size={22} className="exp-create-spinner" aria-hidden="true" />
-        Loading settings...
-      </div>
-    );
+    return <DocumentLayoutPageSkeleton />;
   }
 
   if (error || !settings || !init) {
@@ -458,47 +821,49 @@ export default function SalesSettingsPage() {
   const selectedLayout = layoutConfig
     ? getLayoutMeta(init, layoutConfig.catalogKey, selectedLayoutId)
     : null;
-  const layoutPreviewUrl = layoutConfig
-    ? buildLayoutPreviewUrl(init, layoutConfig.previewType, selectedLayoutId)
-    : '';
   const fieldPrefix = layoutConfig?.fieldPrefix || activeTab;
+  const pageSubtitle = pageSubtitleForTab(activeTab, init);
 
   return (
     <div className="exp-create-shell ss-settings-shell">
-      <nav className="ss-settings-nav" aria-label="Settings sections">
-        <ul>
-          {settingsTabs.map((tab) => (
-            <li key={tab.key}>
-              <button
-                type="button"
-                className={activeTab === tab.key ? 'is-active' : ''}
-                onClick={() => {
-                  setActiveTab(tab.key);
-                  setLayoutTeaser(null);
-                  const url = new URL(window.location.href);
-                  if (tab.key === 'targets') url.searchParams.set('tab', 'targets');
-                  else url.searchParams.delete('tab');
-                  window.history.replaceState({}, '', url);
-                }}
-              >
-                {tab.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <div className="ss-hero-card">
+        <header className="ss-page-header">
+          <h1 className="ss-page-title">
+            <Settings2 size={20} className="ss-page-title-icon ss-icon-tone ss-icon-tone--settings" aria-hidden="true" />
+            <span>Sales Settings</span>
+          </h1>
+          <p className="ss-page-subtitle">{pageSubtitle}</p>
+        </header>
+
+        <nav className="ss-settings-nav" aria-label="Settings sections">
+          <ul>
+            {settingsTabs.map((tab) => (
+              <li key={tab.key}>
+                <button
+                  type="button"
+                  className={activeTab === tab.key ? 'is-active' : ''}
+                  onClick={() => {
+                    setActiveTab(tab.key);
+                    setLayoutTeaser(null);
+                    setLayoutPreview(null);
+                    syncTabInUrl(tab.key);
+                  }}
+                >
+                  <TabIcon tabKey={tab.key} />
+                  <span>{tab.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
 
       <form className="ss-settings-form" onSubmit={saveAll}>
         <div className="exp-create-main">
           {activeTab === 'financials' && (
-            <section className="exp-create-section ss-form-section" id="settings-financials">
-              <div className="exp-create-section-header">
-                <h2>Tax &amp; Finance</h2>
-                <p>VAT, currency, and payment details for quotations and invoices.</p>
-              </div>
-
-              <div className="ss-form-block">
-                <h3 className="ss-form-block-title">Registration</h3>
+            <section className="exp-create-section ss-form-section ss-doc-layout-page" id="settings-financials">
+              <div className="ss-doc-block ss-doc-block--financials">
+                <SectionTitle icon={BadgeCheck} tone="register">Registration</SectionTitle>
                 <div className="ss-form-grid">
                   <div className="ss-field">
                     <label className="ss-field-label" htmlFor="company_tin">TIN</label>
@@ -538,38 +903,23 @@ export default function SalesSettingsPage() {
                   </div>
                   <div className="ss-field">
                     <label className="ss-field-label" htmlFor="sales_document_font">Document font</label>
-                    <select
+                    <FontSelect
                       id="sales_document_font"
                       name="sales_document_font"
-                      className="ss-field-input ss-field-select"
                       value={settings.sales_document_font || 'arima'}
+                      fonts={init.fontCatalog || []}
                       onChange={handleInputChange}
-                    >
-                      {(init.fontCatalog || []).map((font) => (
-                        <option key={font.key} value={font.key}>
-                          {font.label}
-                        </option>
-                      ))}
-                    </select>
+                    />
                     <p className="ss-field-help">Used when printing or exporting PDF.</p>
                   </div>
                 </div>
-                <div
-                  className="ss-doc-font-preview"
-                  style={{
-                    '--ss-doc-font-stack': getSelectedFontStack(init, settings.sales_document_font || 'arima'),
-                    fontFamily: getSelectedFontStack(init, settings.sales_document_font || 'arima'),
-                  }}
-                >
-                  <div className="ss-doc-font-preview-label">Font preview</div>
-                  <p className="ss-doc-font-preview-body">
-                    Quotation #QT-2026-001 — Sample Customer Ltd — Total TZS 1,475,000
-                  </p>
-                </div>
               </div>
 
-              <div className="ss-form-block">
-                <h3 className="ss-form-block-title">Tax calculation</h3>
+              <div className="ss-doc-block">
+                <div className="ss-doc-block-head">
+                  <SectionTitle icon={Calculator} tone="tax">Tax calculation</SectionTitle>
+                  <p className="ss-doc-block-sub">Choose how VAT is calculated on quotations and invoices.</p>
+                </div>
                 <div className="ss-tax-options">
                   <TaxToggleRow
                     title="Tax inclusive"
@@ -586,8 +936,11 @@ export default function SalesSettingsPage() {
                 </div>
               </div>
 
-              <div className="ss-form-block">
-                <h3 className="ss-form-block-title">Customer-facing text</h3>
+              <div className="ss-doc-block">
+                <div className="ss-doc-block-head">
+                  <SectionTitle icon={MessageSquareText} tone="text">Customer-facing text</SectionTitle>
+                  <p className="ss-doc-block-sub">Payment and footer copy shown on quotations and invoices.</p>
+                </div>
                 <div className="ss-form-stack">
                   <div className="ss-field ss-field--full">
                     <label className="ss-field-label" htmlFor="bank_details">Payment details</label>
@@ -623,7 +976,10 @@ export default function SalesSettingsPage() {
           {activeTab === 'targets' && (
             <section className="exp-create-section ss-form-section" id="settings-targets">
               <div className="exp-create-section-header">
-                <h2>Sales target</h2>
+                <h2 className="ss-section-heading--with-icon">
+                  <Target size={18} className="ss-section-icon ss-icon-tone ss-icon-tone--target" aria-hidden="true" />
+                  <span>Sales target</span>
+                </h2>
                 <p>The revenue a salesperson should reach. One amount applies to everyone unless you set a different amount for a person.</p>
               </div>
 
@@ -786,226 +1142,173 @@ export default function SalesSettingsPage() {
           )}
 
           {layoutConfig && (
-            <section className="exp-create-section ss-form-section" id={`settings-${activeTab}`}>
-              <div className="exp-create-section-header">
-                <h2>{layoutConfig.sectionTitle}</h2>
-                <p>{layoutConfig.sectionDescription}</p>
-              </div>
-
-              <div className="ss-layout-workspace">
-                <div className="ss-layout-workspace-main">
-                  <div className="ss-card">
-                    <h3 className="ss-form-block-title">Document layout</h3>
-                    {layoutConfig.hideLayoutPicker ? (
-                      <>
-                        <div className="ss-layout-current">
-                          <span className="ss-layout-current-badge">In use</span>
-                          <div className="ss-layout-current-copy">
-                            <strong className="ss-layout-current-name">{selectedLayout.label}</strong>
-                            <span className="ss-layout-current-meta">
-                              Active layout for
-                              {' '}
-                              {layoutConfig.documentLabel}
-                              {' '}
-                              quotations and invoices
-                            </span>
-                          </div>
-                        </div>
-                        {selectedLayout.description ? (
-                          <p className="ss-field-help">{selectedLayout.description}</p>
-                        ) : null}
-                      </>
-                    ) : (
-                      <>
-                        <div className="ss-layout-pills" role="radiogroup" aria-label="Document layout">
-                          {layoutOptions.map((option) => {
-                            const selected = !option.comingSoon && Number(selectedLayoutId) === Number(option.id);
-                            const teaserActive = layoutTeaser && Number(layoutTeaser.id) === Number(option.id);
-                            return (
-                              <button
-                                key={option.id}
-                                type="button"
-                                role="radio"
-                                aria-checked={selected || Boolean(teaserActive)}
-                                aria-disabled={option.comingSoon || undefined}
-                                className={`ss-pill-choice${selected ? ' is-selected' : ''}${option.comingSoon ? ' is-coming-soon' : ''}${teaserActive ? ' is-teaser-active' : ''}`}
-                                onClick={() => handleLayoutSelect(activeTab, option)}
-                              >
-                                <span className="ss-pill-choice-label">{String(option.id)}</span>
-                                {option.comingSoon ? (
-                                  <span className="ss-pill-soon-badge">Soon</span>
-                                ) : selected ? (
-                                  <span className="ss-pill-choice-knob" aria-hidden="true" />
-                                ) : null}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <p className="ss-field-help">
-                          {layoutTeaser ? (
-                            <>
-                              <strong>{layoutTeaser.label}</strong>
-                              {' '}
-                              layout is
-                              {' '}
-                              <span className="ss-coming-soon-inline">coming soon</span>
-                              .
-                            </>
-                          ) : (
-                            <>
-                              <strong>{selectedLayout.label}</strong>
-                              {' '}
-                              layout is active for
-                              {' '}
-                              {layoutConfig.documentLabel}
-                              {' '}
-                              documents.
-                              {selectedLayout.description ? (
-                                <>
-                                  {' '}
-                                  {selectedLayout.description}
-                                </>
-                              ) : null}
-                            </>
-                          )}
-                        </p>
-                      </>
-                    )}
+            <>
+              <section className="exp-create-section ss-form-section ss-doc-layout-page" id={`settings-${activeTab}`}>
+                <div className="ss-doc-block ss-doc-block--layouts">
+                  <div className="ss-doc-block-head">
+                    <SectionTitle icon={LayoutTemplate} tone="layout">{layoutConfig.chooseTitle || 'Choose Document Layout'}</SectionTitle>
+                    <p className="ss-doc-block-sub">Select one layout to use for all your quotations and invoices.</p>
                   </div>
 
-                  <div className="ss-card">
-                    <h3 className="ss-form-block-title">Footer content</h3>
-                    <div className="ss-form-stack">
-                      <div className="ss-field ss-field--full">
-                        <label className="ss-field-label" htmlFor={`${fieldPrefix}_payment_details`}>Payment instructions</label>
-                        <textarea
-                          id={`${fieldPrefix}_payment_details`}
-                          name={`${fieldPrefix}_payment_details`}
-                          className="ss-field-input ss-field-textarea"
-                          rows={4}
-                          value={settings[`${fieldPrefix}_payment_details`] ?? ''}
-                          onChange={handleInputChange}
-                          placeholder="Enter bank names and account numbers..."
-                        />
+                  {layoutConfig.hideLayoutPicker ? (
+                    <div className="ss-layout-current">
+                      <span className="ss-layout-current-badge">Current</span>
+                      <div className="ss-layout-current-copy">
+                        <strong className="ss-layout-current-name">{selectedLayout.label}</strong>
+                        <span className="ss-layout-current-meta">
+                          Active layout for {layoutConfig.documentLabel} quotations and invoices
+                        </span>
                       </div>
-
-                      <div className="ss-field ss-field--full">
-                        <label className="ss-field-label" htmlFor={`${fieldPrefix}_terms`}>Terms &amp; policy</label>
-                        <textarea
-                          id={`${fieldPrefix}_terms`}
-                          name={`${fieldPrefix}_terms`}
-                          className="ss-field-input ss-field-textarea"
-                          rows={4}
-                          value={settings[`${fieldPrefix}_terms`] ?? ''}
-                          onChange={handleInputChange}
-                          placeholder="Standard terms and conditions..."
-                        />
-                      </div>
-
-                      <div className="ss-form-grid">
-                        <div className="ss-field">
-                          <label className="ss-field-label" htmlFor={`${fieldPrefix}_validity`}>Quote validity</label>
-                          <input
-                            id={`${fieldPrefix}_validity`}
-                            name={`${fieldPrefix}_validity`}
-                            className="ss-field-input"
-                            value={settings[`${fieldPrefix}_validity`] ?? ''}
-                            onChange={handleInputChange}
-                            placeholder="e.g. Valid for 10 days"
-                          />
-                        </div>
-                        <div className="ss-field">
-                          <label className="ss-field-label" htmlFor={`${fieldPrefix}_thanks_note`}>Closing note</label>
-                          <input
-                            id={`${fieldPrefix}_thanks_note`}
-                            name={`${fieldPrefix}_thanks_note`}
-                            className="ss-field-input"
-                            value={settings[`${fieldPrefix}_thanks_note`] ?? ''}
-                            onChange={handleInputChange}
-                            placeholder={activeTab === 'settings' ? 'e.g. Thank you for your business' : 'e.g. Thank you for choosing Roadmaster'}
-                          />
-                        </div>
-                        <div className="ss-field ss-field--full">
-                          <label className="ss-field-label" htmlFor={`${fieldPrefix}_return_policy`}>Return policy</label>
-                          <input
-                            id={`${fieldPrefix}_return_policy`}
-                            name={`${fieldPrefix}_return_policy`}
-                            className="ss-field-input"
-                            value={settings[`${fieldPrefix}_return_policy`] ?? ''}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                      </div>
-
-                      {layoutConfig.showTruckRemarks && (
-                        <div className="ss-field ss-field--full">
-                          <label className="ss-field-label" htmlFor="truck_remarks">Truck remarks</label>
-                          <textarea
-                            id="truck_remarks"
-                            name="truck_remarks"
-                            className="ss-field-input ss-field-textarea"
-                            rows={4}
-                            value={settings.truck_remarks ?? ''}
-                            onChange={handleInputChange}
-                            placeholder="Appears on the second page of truck documents..."
-                          />
-                        </div>
-                      )}
                     </div>
-                  </div>
-                </div>
-
-                <aside className="ss-layout-workspace-aside">
-                  {(!layoutConfig.hideLayoutPicker && layoutTeaser) ? null : (
-                    <div className="ss-card ss-card--preview">
-                      <div className="ss-card-head">
-                        <h3 className="ss-form-block-title">Document preview</h3>
-                      </div>
-                      <div className="ss-layout-live-preview ss-layout-live-preview--panel ss-layout-live-preview--soon">
-                        <div className="ss-coming-soon-card" role="status">
-                          <div className="ss-coming-soon-orbit" aria-hidden="true">
-                            <span />
-                            <span />
-                            <span />
-                          </div>
-                          <div className="ss-coming-soon-shimmer" aria-hidden="true" />
-                          <div className="ss-coming-soon-copy">
-                            <strong>Coming soon</strong>
-                            <p>Live document preview will appear here.</p>
-                          </div>
-                        </div>
-                      </div>
+                  ) : (
+                    <div className="ss-layout-cards" role="radiogroup" aria-label="Choose document layout">
+                      {layoutOptions.map((option) => {
+                        const selected = !option.comingSoon && Number(selectedLayoutId) === Number(option.id);
+                        const teaserActive = layoutTeaser && Number(layoutTeaser.id) === Number(option.id);
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected || Boolean(teaserActive)}
+                            aria-disabled={option.comingSoon || undefined}
+                            title={option.description || option.label}
+                            className={`ss-layout-card${selected ? ' is-selected' : ''}${option.comingSoon ? ' is-coming-soon' : ''}${teaserActive ? ' is-teaser-active' : ''}`}
+                            onClick={() => handleLayoutSelect(activeTab, option)}
+                          >
+                            <span className={`ss-layout-card-radio${selected ? ' is-on' : ''}`} aria-hidden="true">
+                              {selected ? <span className="ss-layout-card-radio-check">✓</span> : null}
+                            </span>
+                            {selected ? <span className="ss-layout-card-current">Current</span> : null}
+                            {option.comingSoon ? <span className="ss-layout-card-current ss-layout-card-current--soon">Soon</span> : null}
+                            <LayoutThumb
+                              init={init}
+                              previewType={layoutConfig.previewType}
+                              layoutId={option.id}
+                              label={option.label}
+                              comingSoon={Boolean(option.comingSoon)}
+                            />
+                            <div className="ss-layout-card-body">
+                              <span className="ss-layout-card-name">{option.id}. {option.label}</span>
+                              {option.description ? (
+                                <p className="ss-layout-card-desc">{option.description}</p>
+                              ) : null}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
+                </div>
+              </section>
 
-                  <div className="ss-card ss-preview-pane">
-                    <div className="ss-preview-label">Document footer preview</div>
-                    <div className="ss-mock-footer">
-                      <div className="ss-mock-payment-header">Payment details</div>
-                      <div className="ss-mock-payment-body">
-                        {settings[`${fieldPrefix}_payment_details`] || 'Select a payment method...'}
-                      </div>
-                      <div className="ss-mock-meta">
-                        <div>{settings[`${fieldPrefix}_terms`]}</div>
-                        <div className="ss-mock-meta-strong">{settings[`${fieldPrefix}_validity`]}</div>
-                      </div>
-                      <div className="ss-mock-thanks">
-                        {settings[`${fieldPrefix}_thanks_note`] || 'Thank you'}
-                        <div className="ss-mock-policy">
-                          {settings[`${fieldPrefix}_return_policy`]}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="ss-preview-note">
-                      Preview updates as you type
-                    </div>
+              <section className="exp-create-section ss-form-section ss-doc-layout-page" id={`settings-${activeTab}-footer`}>
+                <div className="ss-doc-block ss-doc-block--footer">
+                  <div className="ss-doc-block-head">
+                    <SectionTitle icon={FileText} tone="footer">{layoutConfig.footerTitle || 'Document Footer Content'}</SectionTitle>
+                    <p className="ss-doc-block-sub">
+                      {layoutConfig.footerDescription || 'This content will be printed at the bottom of your quotations and invoices.'}
+                    </p>
                   </div>
-                </aside>
-              </div>
-            </section>
+
+                  <div className="ss-footer-grid">
+                    <div className="ss-field">
+                      <label className="ss-field-label" htmlFor={`${fieldPrefix}_payment_details`}>Payment Details</label>
+                      <textarea
+                        id={`${fieldPrefix}_payment_details`}
+                        name={`${fieldPrefix}_payment_details`}
+                        className="ss-field-input ss-field-textarea"
+                        rows={4}
+                        value={settings[`${fieldPrefix}_payment_details`] ?? ''}
+                        onChange={handleInputChange}
+                        placeholder="Synced from Company Settings → Finance when empty"
+                      />
+                      <p className="ss-field-help">
+                        Auto-filled from Company Settings → Finance (Payment details) when empty.
+                      </p>
+                    </div>
+
+                    <div className="ss-field">
+                      <label className="ss-field-label" htmlFor={`${fieldPrefix}_terms`}>Terms &amp; Conditions</label>
+                      <textarea
+                        id={`${fieldPrefix}_terms`}
+                        name={`${fieldPrefix}_terms`}
+                        className="ss-field-input ss-field-textarea"
+                        rows={4}
+                        value={settings[`${fieldPrefix}_terms`] ?? ''}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Payment terms, order conditions..."
+                      />
+                    </div>
+
+                    <div className="ss-field">
+                      <label className="ss-field-label" htmlFor={`${fieldPrefix}_validity`}>Validity Period</label>
+                      <textarea
+                        id={`${fieldPrefix}_validity`}
+                        name={`${fieldPrefix}_validity`}
+                        className="ss-field-input ss-field-textarea"
+                        rows={4}
+                        value={settings[`${fieldPrefix}_validity`] ?? ''}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Quotation valid for 30 days..."
+                      />
+                    </div>
+
+                    <div className="ss-field">
+                      <label className="ss-field-label" htmlFor={`${fieldPrefix}_thanks_note`}>Thank You Note</label>
+                      <textarea
+                        id={`${fieldPrefix}_thanks_note`}
+                        name={`${fieldPrefix}_thanks_note`}
+                        className="ss-field-input ss-field-textarea"
+                        rows={4}
+                        value={settings[`${fieldPrefix}_thanks_note`] ?? ''}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Thank you for your business..."
+                      />
+                    </div>
+
+                    <div className="ss-field">
+                      <label className="ss-field-label" htmlFor={`${fieldPrefix}_return_policy`}>Return Policy</label>
+                      <textarea
+                        id={`${fieldPrefix}_return_policy`}
+                        name={`${fieldPrefix}_return_policy`}
+                        className="ss-field-input ss-field-textarea"
+                        rows={4}
+                        value={settings[`${fieldPrefix}_return_policy`] ?? ''}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Returns and warranty policy..."
+                      />
+                    </div>
+
+                  </div>
+
+                  {layoutConfig.showTruckRemarks ? (
+                    <div className="ss-field ss-field--full" style={{ marginTop: '1rem' }}>
+                      <label className="ss-field-label" htmlFor="truck_remarks">Truck remarks</label>
+                      <textarea
+                        id="truck_remarks"
+                        name="truck_remarks"
+                        className="ss-field-input ss-field-textarea"
+                        rows={4}
+                        value={settings.truck_remarks ?? ''}
+                        onChange={handleInputChange}
+                        placeholder="Appears on the second page of truck documents..."
+                      />
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="ss-form-actions ss-form-actions--end">
+                  <button type="submit" className="ss-btn ss-btn--primary ss-btn--round" disabled={saving}>
+                    {saving && <Loader2 size={18} className="exp-create-spinner" aria-hidden="true" />}
+                    {saving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </div>
+              </section>
+            </>
           )}
 
-          {activeTab !== 'targets' && (
+          {activeTab !== 'targets' && !layoutConfig && (
           <div className="ss-form-actions">
             <button
               type="button"
@@ -1014,7 +1317,7 @@ export default function SalesSettingsPage() {
             >
               Cancel
             </button>
-            <button type="submit" className="ss-btn ss-btn--primary" disabled={saving}>
+            <button type="submit" className="ss-btn ss-btn--primary ss-btn--round" disabled={saving}>
               {saving && <Loader2 size={18} className="exp-create-spinner" aria-hidden="true" />}
               {saving ? 'Saving…' : 'Save changes'}
             </button>
@@ -1022,6 +1325,96 @@ export default function SalesSettingsPage() {
           )}
         </div>
       </form>
+
+      {layoutPreview ? (
+        <div
+          className="ss-layout-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ss-layout-modal-title"
+          onClick={closeLayoutPreview}
+        >
+          <div
+            className="ss-layout-modal-panel"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="ss-layout-modal-x"
+              onClick={closeLayoutPreview}
+              aria-label="Close layout preview"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+
+            <div className="ss-layout-modal-grid">
+              <div className="ss-layout-modal-media">
+                <div className="ss-layout-modal-media-frame">
+                  {layoutPreview.previewUrl ? (
+                    <iframe
+                      key={layoutPreview.previewUrl}
+                      className="ss-layout-modal-frame"
+                      src={layoutPreview.previewUrl}
+                      title={`${layoutPreview.label} layout preview`}
+                    />
+                  ) : (
+                    <div className="ss-layout-modal-empty">Preview unavailable</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="ss-layout-modal-info">
+                <p className="ss-layout-modal-eyebrow">Document layout</p>
+                <h3 id="ss-layout-modal-title" className="ss-layout-modal-title">
+                  {layoutPreview.label}
+                </h3>
+                <div className="ss-layout-modal-pill">
+                  {Number(selectedLayoutId) === Number(layoutPreview.id) ? 'Active layout' : 'Preview'}
+                </div>
+
+                {layoutPreview.description ? (
+                  <p className="ss-layout-modal-desc">{layoutPreview.description}</p>
+                ) : null}
+
+                <div className="ss-layout-modal-meta">
+                  <div className="ss-layout-modal-meta-row">
+                    <span>Applies to</span>
+                    <strong>{layoutPreview.documentLabel} documents</strong>
+                  </div>
+                  <div className="ss-layout-modal-meta-row">
+                    <span>Layout ID</span>
+                    <strong>{layoutPreview.id}</strong>
+                  </div>
+                  <div className="ss-layout-modal-meta-row">
+                    <span>Status</span>
+                    <strong className={Number(selectedLayoutId) === Number(layoutPreview.id) ? 'is-active' : ''}>
+                      {Number(selectedLayoutId) === Number(layoutPreview.id) ? 'In use' : 'Available'}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="ss-layout-modal-actions">
+                  <button
+                    type="button"
+                    className="ss-layout-modal-btn ss-layout-modal-btn--primary"
+                    onClick={useLayoutFromPreview}
+                    disabled={Number(selectedLayoutId) === Number(layoutPreview.id)}
+                  >
+                    {Number(selectedLayoutId) === Number(layoutPreview.id) ? 'Currently active' : 'Use this layout'}
+                  </button>
+                  <button
+                    type="button"
+                    className="ss-layout-modal-btn ss-layout-modal-btn--ghost"
+                    onClick={closeLayoutPreview}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

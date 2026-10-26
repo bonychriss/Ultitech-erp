@@ -1261,6 +1261,28 @@ function sales_document_font_import_css(array $companySettings = []): string
 }
 
 /**
+ * Payment / bank text for quotations and invoices.
+ * Prefer document-layout fields, then fall back to Tax & Finance bank_details.
+ *
+ * @param array<string, mixed> $companySettings
+ */
+function sales_document_payment_details(array $companySettings = [], bool $isTruck = false): string
+{
+    $keys = $isTruck
+        ? ['truck_payment_details', 'spare_payment_details', 'bank_details']
+        : ['spare_payment_details', 'truck_payment_details', 'bank_details'];
+
+    foreach ($keys as $key) {
+        $value = trim((string) ($companySettings[$key] ?? ''));
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    return '';
+}
+
+/**
  * Footer sections from Sales Settings → Document settings (Ultimate spare_* fields).
  *
  * @param array<string, mixed> $companySettings
@@ -1268,18 +1290,28 @@ function sales_document_font_import_css(array $companySettings = []): string
  */
 function sales_document_settings_second_page_sections(array $companySettings = []): array
 {
-    $sections = [];
-    $map = [
-        'spare_payment_details' => 'Payment instructions',
-        'spare_terms' => 'Terms & conditions',
-        'spare_validity' => 'Document validity',
-        'invoice_remarks' => 'Remarks',
-        'spare_return_policy' => 'Return policy',
-        'spare_thanks_note' => 'Closing note',
+    // Payment is printed on page 1 — do not duplicate it on a second sheet.
+    $pick = static function (string ...$keys) use ($companySettings): string {
+        foreach ($keys as $key) {
+            $body = trim((string) ($companySettings[$key] ?? ''));
+            if ($body !== '') {
+                return $body;
+            }
+        }
+
+        return '';
+    };
+
+    $pairs = [
+        ['Terms & conditions', $pick('spare_terms', 'truck_terms')],
+        ['Quote / document validity', $pick('spare_validity', 'truck_validity')],
+        ['Remarks', $pick('invoice_remarks', 'truck_remarks')],
+        ['Return policy', $pick('spare_return_policy', 'truck_return_policy')],
+        ['Thank you', $pick('spare_thanks_note', 'truck_thanks_note')],
     ];
 
-    foreach ($map as $key => $title) {
-        $body = trim((string) ($companySettings[$key] ?? ''));
+    $sections = [];
+    foreach ($pairs as [$title, $body]) {
         if ($body !== '') {
             $sections[] = ['title' => $title, 'body' => $body];
         }
@@ -1294,22 +1326,71 @@ function sales_document_has_settings_second_page(array $companySettings = []): b
 }
 
 /**
+ * Shared library invoice layouts (from sales/invoice-app), selectable for all brands.
+ * IDs 11–15: Purple Classic, Purple Brand Name, Navy & Orange, Pixel Mart, Yellow Bar.
+ */
+function sales_is_library_document_layout_id(int $layoutId): bool
+{
+    return $layoutId >= 11 && $layoutId <= 15;
+}
+
+/**
+ * @param array<string,mixed>|null $companySettings
+ */
+function sales_resolve_document_layout_id(bool $isTruck, ?array $companySettings = null): int
+{
+    if (!is_array($companySettings)) {
+        return 1;
+    }
+    if (function_exists('isUltimate') && isUltimate()) {
+        return (int) ($companySettings['spare_part_layout'] ?? 1);
+    }
+
+    return (int) ($isTruck
+        ? ($companySettings['truck_layout'] ?? 1)
+        : ($companySettings['spare_part_layout'] ?? 1));
+}
+
+function sales_library_document_layout_inner_path(): ?string
+{
+    $path = __DIR__ . '/layouts/library/invoice-layout-inner.php';
+
+    return is_file($path) ? $path : null;
+}
+
+/**
  * Resolve branded document layout inner path for Roadmaster / Ultimate documents.
  * Other tenants keep using view_sheet_inner.php in their view pages.
  *
  * Ultimate layout ids (sales_settings.spare_part_layout):
  * 1 = original Standard sheet (view_sheet_inner.php)
- * 2+ = branded Ultimate styles (Classic / Minimalist / Formal)
+ * 2–4 = branded Ultimate styles (Classic / Minimalist / Formal)
+ * 11–15 = shared library layouts (Purple Classic … Yellow Bar)
  *
  * @param array<string,mixed>|null $companySettings
  */
 function sales_branded_document_layout_inner_path(bool $isTruck, ?array &$companySettings = null, string $documentKind = 'invoice'): ?string
 {
-    if (function_exists('isUltimate') && isUltimate()) {
-        $layoutId = 1;
-        if (is_array($companySettings)) {
-            $layoutId = (int) ($companySettings['spare_part_layout'] ?? 1);
+    $layoutId = sales_resolve_document_layout_id($isTruck, $companySettings);
+    if (sales_is_library_document_layout_id($layoutId)) {
+        $libraryPath = sales_library_document_layout_inner_path();
+        if ($libraryPath !== null) {
+            // Ensure the library dispatcher knows truck vs spare without relying on caller scope.
+            $GLOBALS['__sales_library_is_truck'] = $isTruck;
+            if (is_array($companySettings)) {
+                // Keep selected id on the field the dispatcher reads.
+                if ($isTruck && !(function_exists('isUltimate') && isUltimate())) {
+                    $companySettings['truck_layout'] = $layoutId;
+                } else {
+                    $companySettings['spare_part_layout'] = $layoutId;
+                }
+            }
+
+            return $libraryPath;
         }
+    }
+
+    if (function_exists('isUltimate') && isUltimate()) {
         if ($layoutId <= 1) {
             return sales_standard_document_view_inner_path($documentKind);
         }

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  HiOutlineArrowLeft,
   HiOutlineArrowPath,
   HiOutlineBars3,
   HiOutlineChevronDown,
@@ -747,6 +748,10 @@ export default function ProductCreate({ data = {} }) {
         <div>
           <h1>{isEdit ? 'Edit Product' : 'Add Product'}</h1>
         </div>
+        <a href={listUrl} className="prod-create-btn-back">
+          <HiOutlineArrowLeft size={16} aria-hidden />
+          Back to Products
+        </a>
       </div>
 
       <form className="prod-create-layout" onSubmit={handleSubmit} noValidate>

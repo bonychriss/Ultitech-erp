@@ -802,20 +802,35 @@ if (!function_exists('stock_blade_brands_list_data')) {
         }
 
         $brandPayload = [];
-        foreach ($brands as $row) {
-            $logo = (string) ($row['logo'] ?? '');
-            $logoUrl = $logo !== '' && function_exists('stock_brand_image_url')
-                ? stock_brand_image_url($logo)
-                : '';
-            $brandPayload[] = [
-                'id' => (int) ($row['id'] ?? 0),
-                'name' => (string) ($row['name'] ?? ''),
-                'brand_type' => (string) ($row['brand_type'] ?? ($isUltimate ? 'general' : 'spare_part')),
-                'logo' => $logo,
-                'logo_url' => $logoUrl,
-                'meta_title' => (string) ($row['meta_title'] ?? ''),
-                'meta_description' => (string) ($row['meta_description'] ?? ''),
-            ];
+        if ($isUltimate && function_exists('stock_ultimate_brand_picker_rows')) {
+            foreach (stock_ultimate_brand_picker_rows($pdo, $brands) as $row) {
+                $logoUrl = (string) ($row['logo_url'] ?? $row['image_url'] ?? '');
+                $brandPayload[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'name' => (string) ($row['name'] ?? ''),
+                    'brand_type' => 'general',
+                    'logo' => $logoUrl !== '' ? basename(parse_url($logoUrl, PHP_URL_PATH) ?: '') : '',
+                    'logo_url' => $logoUrl,
+                    'meta_title' => '',
+                    'meta_description' => '',
+                ];
+            }
+        } else {
+            foreach ($brands as $row) {
+                $logo = (string) ($row['logo'] ?? '');
+                $logoUrl = $logo !== '' && function_exists('stock_brand_image_url')
+                    ? stock_brand_image_url($logo)
+                    : '';
+                $brandPayload[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'name' => (string) ($row['name'] ?? ''),
+                    'brand_type' => (string) ($row['brand_type'] ?? 'spare_part'),
+                    'logo' => $logo,
+                    'logo_url' => $logoUrl,
+                    'meta_title' => (string) ($row['meta_title'] ?? ''),
+                    'meta_description' => (string) ($row['meta_description'] ?? ''),
+                ];
+            }
         }
 
         $toast = '';
@@ -860,13 +875,35 @@ if (!function_exists('stock_blade_product_create_data')) {
         $suppliers = $pdo->query('SELECT id, name FROM suppliers ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $brands = [];
         try {
-            $brands = $pdo->query('SELECT id, name, brand_type FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $brands = $pdo->query('SELECT id, name, brand_type, logo FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (PDOException $e) {
             try {
-                $brands = $pdo->query('SELECT id, name FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $brands = $pdo->query('SELECT id, name, brand_type FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
             } catch (PDOException $e2) {
-                $brands = [];
+                try {
+                    $brands = $pdo->query('SELECT id, name FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                } catch (PDOException $e3) {
+                    $brands = [];
+                }
             }
+        }
+
+        if ($isUltimate && function_exists('stock_ultimate_brand_picker_rows')) {
+            $brandPayload = stock_ultimate_brand_picker_rows($pdo, $brands);
+        } else {
+            $brandPayload = array_map(static function ($b) {
+                $logo = trim((string) ($b['logo'] ?? ''));
+                $logoUrl = ($logo !== '' && function_exists('stock_brand_image_url'))
+                    ? (string) stock_brand_image_url($logo)
+                    : '';
+                return [
+                    'id' => (int) ($b['id'] ?? 0),
+                    'name' => (string) ($b['name'] ?? ''),
+                    'brand_type' => (string) ($b['brand_type'] ?? ''),
+                    'logo_url' => $logoUrl,
+                    'image_url' => $logoUrl,
+                ];
+            }, $brands);
         }
 
         $year = date('Y');
@@ -899,14 +936,8 @@ if (!function_exists('stock_blade_product_create_data')) {
             'suppliers' => array_map(static function ($s) {
                 return ['id' => (int) $s['id'], 'name' => (string) $s['name']];
             }, $suppliers),
-            'brands' => array_map(static function ($b) {
-                return [
-                    'id' => (int) ($b['id'] ?? 0),
-                    'name' => (string) ($b['name'] ?? ''),
-                    'brand_type' => (string) ($b['brand_type'] ?? ''),
-                ];
-            }, $brands),
-            'useBrandFreeText' => count($brands) === 0,
+            'brands' => $brandPayload,
+            'useBrandFreeText' => $isUltimate ? false : count($brandPayload) === 0,
             'previewCode' => $previewCode,
             'previewTruckCode' => $previewTruckCode,
             'currencies' => ['TZS', 'USD', 'EUR'],

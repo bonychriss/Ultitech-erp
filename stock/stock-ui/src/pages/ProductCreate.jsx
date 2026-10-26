@@ -1053,7 +1053,34 @@ export default function ProductCreate({ data = {} }) {
                         />
                       </FieldRow>
                     ) : (
-                      <div aria-hidden="true" />
+                      <FieldRow
+                        label="Shelf life"
+                        htmlFor="prod-shelf-life"
+                        help="Used to track batch expiry from receipt / opening stock."
+                      >
+                        <div className="prod-create-shelf-life">
+                          <input
+                            id="prod-shelf-life"
+                            type="number"
+                            min="0"
+                            className="prod-create-input"
+                            value={shelfLifeValue}
+                            onChange={(e) => setShelfLifeValue(e.target.value)}
+                            placeholder="e.g. 24"
+                          />
+                          <select
+                            id="prod-shelf-unit"
+                            className="prod-create-select"
+                            value={shelfLifeUnit}
+                            onChange={(e) => setShelfLifeUnit(e.target.value)}
+                            aria-label="Shelf life unit"
+                          >
+                            <option value="days">Days</option>
+                            <option value="months">Months</option>
+                            <option value="years">Years</option>
+                          </select>
+                        </div>
+                      </FieldRow>
                     )}
                   </div>
 
@@ -1466,6 +1493,37 @@ export default function ProductCreate({ data = {} }) {
                         />
                       </FieldRow>
                     </div>
+
+                    {!isUltimate ? (
+                      <FieldRow
+                        label="Shelf life"
+                        htmlFor="prod-shelf-life-more"
+                        help="Expiration duration from receipt. Leave blank if not tracked."
+                      >
+                        <div className="prod-create-shelf-life">
+                          <input
+                            id="prod-shelf-life-more"
+                            type="number"
+                            min="0"
+                            className="prod-create-input"
+                            value={shelfLifeValue}
+                            onChange={(e) => setShelfLifeValue(e.target.value)}
+                            placeholder="e.g. 24"
+                          />
+                          <select
+                            id="prod-shelf-unit-more"
+                            className="prod-create-select"
+                            value={shelfLifeUnit}
+                            onChange={(e) => setShelfLifeUnit(e.target.value)}
+                            aria-label="Shelf life unit"
+                          >
+                            <option value="days">Days</option>
+                            <option value="months">Months</option>
+                            <option value="years">Years</option>
+                          </select>
+                        </div>
+                      </FieldRow>
+                    ) : null}
                   </>
                 )}
               </div>

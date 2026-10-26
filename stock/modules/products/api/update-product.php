@@ -114,6 +114,22 @@ $curb_weight_kg = isset($_POST['curb_weight_kg']) && $_POST['curb_weight_kg'] !=
     ? (int) $_POST['curb_weight_kg']
     : null;
 
+$shelf_life_value = isset($_POST['shelf_life_value']) && $_POST['shelf_life_value'] !== ''
+    ? (int) $_POST['shelf_life_value']
+    : null;
+if ($shelf_life_value !== null && $shelf_life_value <= 0) {
+    $shelf_life_value = null;
+}
+$shelf_life_unit = function_exists('stock_shelf_life_normalize_unit')
+    ? stock_shelf_life_normalize_unit($_POST['shelf_life_unit'] ?? 'months')
+    : 'months';
+if ($shelf_life_value === null) {
+    $shelf_life_unit = null;
+}
+
+stock_products_update_ensure_column($pdo, 'shelf_life_value', 'INT NULL');
+stock_products_update_ensure_column($pdo, 'shelf_life_unit', "VARCHAR(16) NULL DEFAULT 'months'");
+
 if ($isUltimateStockSimple) {
     $item_type = 'general';
 } else {
@@ -269,6 +285,8 @@ try {
         'fuel_type' => ($fuel_type !== '' ? $fuel_type : null),
         'tire_model' => ($tire_model !== '' ? $tire_model : null),
         'curb_weight_kg' => $curb_weight_kg,
+        'shelf_life_value' => $shelf_life_value,
+        'shelf_life_unit' => $shelf_life_unit,
         'oem_number' => ($oem_number !== '' ? $oem_number : null),
         'item_type' => $item_type,
     ];

@@ -154,6 +154,15 @@ a.prod-create-btn-back:hover {
   align-items: start;
 }
 
+.prod-create-shelf-life {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
 .prod-create-pair .prod-create-row {
   display: flex;
   flex-direction: column;

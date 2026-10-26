@@ -194,6 +194,10 @@ $productPayload = [
     'fuel_type' => (string) ($product['fuel_type'] ?? ''),
     'tire_model' => (string) ($product['tire_model'] ?? ''),
     'curb_weight_kg' => isset($product['curb_weight_kg']) ? (int) $product['curb_weight_kg'] : null,
+    'shelf_life_value' => isset($product['shelf_life_value']) && (int) $product['shelf_life_value'] > 0
+        ? (int) $product['shelf_life_value']
+        : null,
+    'shelf_life_unit' => (string) ($product['shelf_life_unit'] ?? 'months'),
 ];
 
 $page_title = 'Edit Product';

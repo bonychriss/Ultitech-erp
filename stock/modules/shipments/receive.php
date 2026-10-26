@@ -115,7 +115,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                      $batchNo .= '-' . rand(100,999);
                 }
 
-                $expiryDate = date('Y-m-d', strtotime('+2 years')); 
+                $expiryDate = date('Y-m-d', strtotime('+2 years'));
+                try {
+                    $shelfStmt = $pdo->prepare(
+                        'SELECT shelf_life_value, shelf_life_unit FROM products WHERE id = ? LIMIT 1'
+                    );
+                    $shelfStmt->execute([$productId]);
+                    $shelfRow = $shelfStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                    $shelfVal = isset($shelfRow['shelf_life_value']) ? (int) $shelfRow['shelf_life_value'] : 0;
+                    if ($shelfVal > 0 && function_exists('stock_shelf_life_expiry_date')) {
+                        $computed = stock_shelf_life_expiry_date(
+                            date('Y-m-d'),
+                            $shelfVal,
+                            $shelfRow['shelf_life_unit'] ?? 'months'
+                        );
+                        if ($computed !== '') {
+                            $expiryDate = $computed;
+                        }
+                    }
+                } catch (Throwable $e) {
+                    /* keep default +2 years */
+                }
 
                 $stmtBatch = $pdo->prepare("INSERT INTO product_batches 
                     (product_id, shipment_id, batch_number, quantity, unit_cost, received_date, expiry_date, location, current_stock) 

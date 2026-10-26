@@ -492,8 +492,14 @@ body.page-products-desk button.prod-desk-btn.prod-desk-btn-pill {
 
 .prod-desk-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.85rem;
+}
+
+@media (max-width: 1100px) {
+  .prod-desk-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .prod-desk-kpi-card {
@@ -915,6 +921,44 @@ html[data-theme="dark"] .web-sync-changes {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+}
+
+.prod-desk-badge-expired,
+.prod-desk-badge-expiring {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.prod-desk-badge-expired {
+  color: #b91c1c;
+}
+
+.prod-desk-badge-expiring {
+  color: #d97706;
+}
+
+.prod-desk-kpi-card--link {
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.prod-desk-kpi-card--link:hover,
+.prod-desk-kpi-card--link.is-active {
+  border-color: #c4b5fd;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.12);
+}
+
+.prod-desk-table tbody tr.is-expired {
+  background: rgba(254, 226, 226, 0.45);
+}
+
+.prod-desk-table tbody tr.is-expiring {
+  background: rgba(254, 243, 199, 0.4);
 }
 
 .prod-desk-actions {

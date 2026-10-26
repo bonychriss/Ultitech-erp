@@ -90,6 +90,7 @@ export default function ProductsList({ data }) {
     filterItemType = '',
     filterSupplier = '',
     filterBrand = '',
+    filterHealth = '',
     totalDuplicateRows = 0,
     isFilteringDuplicates = false,
     bulkImportSuccess = false,
@@ -698,16 +699,34 @@ export default function ProductsList({ data }) {
             <div className="prod-desk-kpi-value">{stats.out_of_stock_count ?? 0}</div>
           </div>
         </div>
-        <div className="prod-desk-kpi-card">
-          <div className="prod-desk-kpi-icon prod-desk-kpi-icon--teal">
+        <a
+          href={listUrlWithQuery(filterHealth === 'expired' ? '' : 'health=expired')}
+          className={`prod-desk-kpi-card prod-desk-kpi-card--link${filterHealth === 'expired' ? ' is-active' : ''}`}
+        >
+          <div className="prod-desk-kpi-icon prod-desk-kpi-icon--rose">
+            <HiExclamationTriangle aria-hidden="true" />
+          </div>
+          <div>
+            <div className="prod-desk-kpi-label">expired</div>
+            <div className="prod-desk-kpi-value">{stats.expired_count ?? 0}</div>
+            <div className="prod-desk-kpi-helper">
+              {filterHealth === 'expired' ? 'click to clear' : 'click to filter'}
+            </div>
+          </div>
+        </a>
+        <a
+          href={listUrlWithQuery(filterHealth === 'expiring' ? '' : 'health=expiring')}
+          className={`prod-desk-kpi-card prod-desk-kpi-card--link${filterHealth === 'expiring' ? ' is-active' : ''}`}
+        >
+          <div className="prod-desk-kpi-icon prod-desk-kpi-icon--amber">
             <HiOutlineQueueList aria-hidden="true" />
           </div>
           <div>
-            <div className="prod-desk-kpi-label">listed now</div>
-            <div className="prod-desk-kpi-value">{stats.listed_count ?? products.length}</div>
-            <div className="prod-desk-kpi-helper">matching current filters</div>
+            <div className="prod-desk-kpi-label">expiring soon</div>
+            <div className="prod-desk-kpi-value">{stats.expiring_count ?? 0}</div>
+            <div className="prod-desk-kpi-helper">within 30 days</div>
           </div>
-        </div>
+        </a>
       </section>
 
       <section className="prod-desk-results">
@@ -750,6 +769,7 @@ export default function ProductsList({ data }) {
                 {products.map((product) => {
                   const qty = Number(product.quantity ?? 0);
                   const low = qty <= Number(product.reorder_level ?? 0);
+                  const health = String(product.health || 'none');
                   const isSelected = selectedIds.includes(product.id);
                   const glowing = glowIds.includes(product.id);
                   const img = imageSrc(product);
@@ -761,6 +781,8 @@ export default function ProductsList({ data }) {
                       className={[
                         isSelected ? 'is-selected' : '',
                         glowing ? 'is-glow' : '',
+                        health === 'expired' ? 'is-expired' : '',
+                        health === 'expiring' ? 'is-expiring' : '',
                       ]
                         .filter(Boolean)
                         .join(' ')}
@@ -845,6 +867,17 @@ export default function ProductsList({ data }) {
                       <td style={{ textAlign: 'center' }}>
                         <div className={`prod-desk-stock${low ? ' is-low' : ''}`}>{qty}</div>
                         {low && <span className="prod-desk-badge-low">Low stock</span>}
+                        {health === 'expired' ? (
+                          <span className="prod-desk-badge-expired">Expired</span>
+                        ) : null}
+                        {health === 'expiring' ? (
+                          <span className="prod-desk-badge-expiring">Expiring</span>
+                        ) : null}
+                        {product.nearest_expiry && (health === 'expired' || health === 'expiring') ? (
+                          <div className="prod-desk-muted" style={{ marginTop: 2, fontSize: '0.7rem' }}>
+                            {String(product.nearest_expiry).slice(0, 10)}
+                          </div>
+                        ) : null}
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div className="prod-desk-actions">

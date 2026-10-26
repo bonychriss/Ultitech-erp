@@ -127,7 +127,23 @@ $curb_weight_kg = isset($_POST['curb_weight_kg']) && $_POST['curb_weight_kg'] !=
     ? (int) $_POST['curb_weight_kg']
     : null;
 
+$shelf_life_value = isset($_POST['shelf_life_value']) && $_POST['shelf_life_value'] !== ''
+    ? (int) $_POST['shelf_life_value']
+    : null;
+if ($shelf_life_value !== null && $shelf_life_value <= 0) {
+    $shelf_life_value = null;
+}
+$shelf_life_unit = function_exists('stock_shelf_life_normalize_unit')
+    ? stock_shelf_life_normalize_unit($_POST['shelf_life_unit'] ?? 'months')
+    : 'months';
+if ($shelf_life_value === null) {
+    $shelf_life_unit = null;
+}
+
 $isTruckCreate = !$isUltimateStockSimple && ($type === 'truck' || $type === 'vehicle');
+
+stock_products_api_ensure_column($pdo, 'shelf_life_value', 'INT NULL');
+stock_products_api_ensure_column($pdo, 'shelf_life_unit', "VARCHAR(16) NULL DEFAULT 'months'");
 
 if ($isTruckCreate) {
     stock_products_api_ensure_column($pdo, 'drive_configuration', 'VARCHAR(50) NULL');
@@ -280,6 +296,8 @@ try {
         'fuel_type' => ($fuel_type !== '' ? $fuel_type : null),
         'tire_model' => ($tire_model !== '' ? $tire_model : null),
         'curb_weight_kg' => $curb_weight_kg,
+        'shelf_life_value' => $shelf_life_value,
+        'shelf_life_unit' => $shelf_life_unit,
         'item_type' => $item_type,
         'oem_number' => ($oem_number !== '' ? $oem_number : null),
         'status' => 'active',
@@ -364,6 +382,22 @@ try {
 
     $pdo->prepare('INSERT INTO stock (product_id, quantity, location) VALUES (?, ?, ?)')
         ->execute([$product_id, max(0, $current_stock), $location]);
+
+    if (
+        $shelf_life_value !== null
+        && max(0, $current_stock) > 0
+        && function_exists('stock_create_opening_stock_batch')
+    ) {
+        stock_create_opening_stock_batch(
+            $pdo,
+            $product_id,
+            max(0, $current_stock),
+            $buying_price > 0 ? $buying_price : $unit_price,
+            $location,
+            $shelf_life_value,
+            $shelf_life_unit ?: 'months'
+        );
+    }
 
     $pdo->commit();
 

@@ -478,6 +478,20 @@ if (!function_exists('stock_blade_products_list_data')) {
         $filterItemType = isset($_GET['item_type']) ? trim((string) $_GET['item_type']) : '';
         $filterSupplier = isset($_GET['supplier']) ? trim((string) $_GET['supplier']) : '';
         $filterBrand = isset($_GET['brand']) ? trim((string) $_GET['brand']) : '';
+        $filterHealth = strtolower(trim((string) ($_GET['health'] ?? '')));
+        if (!in_array($filterHealth, ['expired', 'expiring', 'healthy'], true)) {
+            $filterHealth = '';
+        }
+
+        $hasProductBatches = false;
+        try {
+            $hasProductBatches = (bool) $pdo->query("SHOW TABLES LIKE 'product_batches'")->fetchColumn();
+        } catch (Throwable $e) {
+            $hasProductBatches = false;
+        }
+        if ($hasProductBatches && function_exists('stock_ensure_product_batches_table')) {
+            stock_ensure_product_batches_table($pdo);
+        }
 
         if ($filterSearch !== '' && function_exists('stock_products_build_search_clause')) {
             $hasBrandCol = false;
@@ -509,6 +523,46 @@ if (!function_exists('stock_blade_products_list_data')) {
         if ($filterBrand !== '') {
             $whereClause .= ' AND p.brand = ?';
             $params[] = $filterBrand;
+        }
+        if ($hasProductBatches && $filterHealth === 'expired') {
+            $whereClause .= " AND EXISTS (
+                SELECT 1 FROM product_batches pb
+                WHERE pb.product_id = p.id
+                  AND IFNULL(pb.current_stock, 0) > 0
+                  AND pb.expiry_date IS NOT NULL
+                  AND pb.expiry_date < CURDATE()
+            )";
+        } elseif ($hasProductBatches && $filterHealth === 'expiring') {
+            $whereClause .= " AND EXISTS (
+                SELECT 1 FROM product_batches pb
+                WHERE pb.product_id = p.id
+                  AND IFNULL(pb.current_stock, 0) > 0
+                  AND pb.expiry_date IS NOT NULL
+                  AND pb.expiry_date >= CURDATE()
+                  AND pb.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM product_batches pb2
+                WHERE pb2.product_id = p.id
+                  AND IFNULL(pb2.current_stock, 0) > 0
+                  AND pb2.expiry_date IS NOT NULL
+                  AND pb2.expiry_date < CURDATE()
+            )";
+        } elseif ($hasProductBatches && $filterHealth === 'healthy') {
+            $whereClause .= " AND EXISTS (
+                SELECT 1 FROM product_batches pb
+                WHERE pb.product_id = p.id
+                  AND IFNULL(pb.current_stock, 0) > 0
+                  AND pb.expiry_date IS NOT NULL
+                  AND pb.expiry_date > DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM product_batches pb2
+                WHERE pb2.product_id = p.id
+                  AND IFNULL(pb2.current_stock, 0) > 0
+                  AND pb2.expiry_date IS NOT NULL
+                  AND pb2.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+            )";
         }
         if ($isFilteringDuplicates) {
             $whereClause .= " AND (p.product_code, p.name) IN (
@@ -589,11 +643,19 @@ if (!function_exists('stock_blade_products_list_data')) {
             $outOfStockCount = 0;
         }
 
+        $nearestExpiryExpr = $hasProductBatches
+            ? "(SELECT MIN(pb.expiry_date) FROM product_batches pb
+                WHERE pb.product_id = p.id
+                  AND IFNULL(pb.current_stock, 0) > 0
+                  AND pb.expiry_date IS NOT NULL)"
+            : 'NULL';
+
         $sql = "SELECT p.id, p.name, p.product_code, p.brand, p.currency, p.unit_price, p.buying_price,
                        p.reorder_level, p.main_image, {$itemTypeSelect},
                        {$mainImageExpr} AS resolved_main_image,
                        c.name AS category_name, s.name AS supplier_name,
-                       st.quantity, st.location
+                       st.quantity, st.location,
+                       {$nearestExpiryExpr} AS nearest_expiry
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 LEFT JOIN suppliers s ON p.supplier_id = s.id
@@ -645,6 +707,10 @@ if (!function_exists('stock_blade_products_list_data')) {
             $onWeb = function_exists('stock_product_is_on_web')
                 ? stock_product_is_on_web((int) $row['id'], $productCode, $productName)
                 : false;
+            $nearestExpiry = trim((string) ($row['nearest_expiry'] ?? ''));
+            $health = function_exists('stock_product_health_from_expiry')
+                ? stock_product_health_from_expiry($nearestExpiry, 30)
+                : 'none';
             $products[] = [
                 'id' => (int) $row['id'],
                 'name' => $productName,
@@ -663,8 +729,40 @@ if (!function_exists('stock_blade_products_list_data')) {
                 'supplier_name' => $row['supplier_name'] ?? null,
                 'quantity' => $qty,
                 'location' => $row['location'] ?? null,
+                'nearest_expiry' => $nearestExpiry !== '' ? $nearestExpiry : null,
+                'health' => $health,
                 'is_recent' => $isRecent || $isCreated,
             ];
+        }
+
+        $expiredCount = 0;
+        $expiringCount = 0;
+        if ($hasProductBatches) {
+            try {
+                $expiredCount = (int) ($pdo->query(
+                    "SELECT COUNT(DISTINCT product_id) FROM product_batches
+                     WHERE IFNULL(current_stock, 0) > 0
+                       AND expiry_date IS NOT NULL
+                       AND expiry_date < CURDATE()"
+                )->fetchColumn() ?: 0);
+                $expiringCount = (int) ($pdo->query(
+                    "SELECT COUNT(DISTINCT pb.product_id) FROM product_batches pb
+                     WHERE IFNULL(pb.current_stock, 0) > 0
+                       AND pb.expiry_date IS NOT NULL
+                       AND pb.expiry_date >= CURDATE()
+                       AND pb.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+                       AND NOT EXISTS (
+                         SELECT 1 FROM product_batches pb2
+                         WHERE pb2.product_id = pb.product_id
+                           AND IFNULL(pb2.current_stock, 0) > 0
+                           AND pb2.expiry_date IS NOT NULL
+                           AND pb2.expiry_date < CURDATE()
+                       )"
+                )->fetchColumn() ?: 0);
+            } catch (Throwable $e) {
+                $expiredCount = 0;
+                $expiringCount = 0;
+            }
         }
 
         $totalProductsAll = 0;
@@ -744,6 +842,7 @@ if (!function_exists('stock_blade_products_list_data')) {
             'filterItemType' => $filterItemType,
             'filterSupplier' => $filterSupplier,
             'filterBrand' => $filterBrand,
+            'filterHealth' => $filterHealth,
             'totalDuplicateRows' => $totalDuplicateRows,
             'isFilteringDuplicates' => $isFilteringDuplicates,
             'createdId' => $createdId,
@@ -763,6 +862,8 @@ if (!function_exists('stock_blade_products_list_data')) {
                 'listed_count' => $totalFiltered,
                 'low_stock_count' => $lowStockCount,
                 'out_of_stock_count' => $outOfStockCount,
+                'expired_count' => $expiredCount,
+                'expiring_count' => $expiringCount,
                 'missing_images_count' => $missingImagesCount,
             ],
             'missingImages' => [

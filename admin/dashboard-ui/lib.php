@@ -61,8 +61,11 @@ function adminDashboardUiLoadReactAssets(): ?array
 
     $cssPath = $distDir . '/assets/' . $cssFile;
     $jsPath = $distDir . '/assets/' . $jsFile;
-    $rootWeb = adminDashboardUiRootWebPath();
-    $assetBase = ($rootWeb === '' ? '' : $rootWeb) . '/employee/dashboard-ui/frontend/dist/assets/';
+    // Built files live at the app root. A /{company}/ prefix 404s because Apache
+    // only rewrites PHP under the company slug, not this static dist folder.
+    $assetBase = function_exists('app_url')
+        ? app_url('/employee/dashboard-ui/frontend/dist/assets/')
+        : '/employee/dashboard-ui/frontend/dist/assets/';
 
     return [
         'assetBase' => $assetBase,

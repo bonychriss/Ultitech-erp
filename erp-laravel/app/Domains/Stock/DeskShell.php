@@ -193,7 +193,7 @@ final class DeskShell
                 stock_blade_product_create_data(),
                 $assets,
                 [
-                    'employeeHeaderTitle' => 'Add Product',
+                    'employeeHeaderTitle' => null,
                     'extraHead' => $this->productCreateMobileCss(),
                 ]
             ),

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Check,
   ChevronRight,
@@ -22,8 +23,6 @@ import {
 import { approveCover, deleteCover, fetchCoverDesk, getBootData, saveCover } from '../api.js';
 import { documentNameWithoutFile } from '../utils/title.js';
 
-const RELOAD_GUARD_KEY = 'cover-page-stale-reload';
-
 function readUrlParam(key) {
   if (typeof window === 'undefined') return '';
   return new URL(window.location.href).searchParams.get(key) || '';
@@ -42,21 +41,15 @@ function writeUrlParams(values) {
   }
 }
 
-/**
- * A page opened before an update still points at the old PDF chunk, which the new build deleted.
- * Reload once (reopening the requested preview) instead of failing; the guard prevents a loop.
- */
-function loadCoverPdf(reopenPreviewId = 0) {
+/** Lazy-load the PDF helper; never auto-reload the page (that caused the preview flash). */
+function loadCoverPdf() {
   return import('../utils/coverPdf.js').catch((err) => {
-    const last = Number(window.sessionStorage?.getItem(RELOAD_GUARD_KEY) || 0);
-    if (Date.now() - last > 30000) {
-      window.sessionStorage?.setItem(RELOAD_GUARD_KEY, String(Date.now()));
-      writeUrlParams({ tab: 'saved', view: reopenPreviewId || '' });
-      window.location.reload();
-      return new Promise(() => {});
-    }
     throw new Error('The page is out of date. Refresh the page and try again.', { cause: err });
   });
+}
+
+function prefetchCoverPdf() {
+  loadCoverPdf().catch(() => {});
 }
 
 const MONTHS = [
@@ -224,27 +217,36 @@ function RowMenu({ disabled, canAttach, canEdit, canDelete, onAttach, onEdit, on
   );
 }
 
-function CoverPreview({ preview, busy, onClose, onDownload }) {
+function CoverPreview({ preview, busy, onClose, onDownload, ignoreCloseUntilRef }) {
   useEffect(() => {
     if (!preview) return undefined;
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      if (Date.now() < (ignoreCloseUntilRef?.current || 0)) return;
+      onClose();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [preview, onClose]);
+  }, [preview, onClose, ignoreCloseUntilRef]);
 
-  if (!preview) return null;
-  const { cover, url } = preview;
+  if (!preview || typeof document === 'undefined') return null;
+  const { cover, url, error } = preview;
   const allowed = cover.can_download !== false && isApproved(cover);
-  // Close only when the press starts on the backdrop — otherwise the same click
-  // that opened the preview (mouseup over the new modal) closes it immediately.
-  const closeIfBackdrop = (e) => {
-    if (e.target === e.currentTarget) onClose();
+  const requestClose = (e) => {
+    if (e && e.target !== e.currentTarget) return;
+    if (Date.now() < (ignoreCloseUntilRef?.current || 0)) return;
+    onClose();
   };
-  return (
-    <div className="cp-modal-backdrop" role="presentation" onMouseDown={closeIfBackdrop}>
-      <div className="cp-preview" role="dialog" aria-modal="true" aria-labelledby="cp-preview-title" onMouseDown={(e) => e.stopPropagation()}>
+
+  return createPortal(
+    <div className="cp-modal-backdrop" role="presentation" onMouseDown={requestClose}>
+      <div
+        className="cp-preview"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cp-preview-title"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <header className="cp-preview-head">
           <h2 id="cp-preview-title">
             {documentNameWithoutFile(cover.document_name)} — File {pad2(cover.file_no)} / {pad2(cover.file_total)}
@@ -256,6 +258,10 @@ function CoverPreview({ preview, busy, onClose, onDownload }) {
         <div className="cp-preview-body">
           {url ? (
             <iframe className="cp-preview-frame" src={`${url}#toolbar=0&navpanes=0&view=FitH`} title="Cover page preview" />
+          ) : error ? (
+            <div className="cp-preview-loading">
+              <span>{error}</span>
+            </div>
           ) : (
             <div className="cp-preview-loading">
               <LoaderCircle size={28} className="cp-spin" aria-hidden="true" />
@@ -277,7 +283,8 @@ function CoverPreview({ preview, busy, onClose, onDownload }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -296,10 +303,15 @@ export default function CoverPageDesk() {
   const [busyId, setBusyId] = useState(0);
   const [preview, setPreview] = useState(null);
   const previewTokenRef = useRef(0);
+  const ignorePreviewCloseUntilRef = useRef(0);
   const attachInputRef = useRef(null);
   const attachTargetRef = useRef(null);
   const [nameMenuOpen, setNameMenuOpen] = useState(false);
   const nameMenuRef = useRef(null);
+
+  useEffect(() => {
+    prefetchCoverPdf();
+  }, []);
 
   useEffect(() => {
     if (!nameMenuOpen) return undefined;
@@ -445,26 +457,35 @@ export default function CoverPageDesk() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
-  const openPreview = async (cover) => {
+  const closePreview = useCallback(() => {
+    previewTokenRef.current += 1;
+    setPreview(null);
+  }, []);
+
+  const openPreview = useCallback(async (cover) => {
+    if (!cover?.id) return;
     const token = ++previewTokenRef.current;
-    setPreview({ cover, url: null });
+    // Block backdrop/Escape from the same gesture that opened the modal.
+    ignorePreviewCloseUntilRef.current = Date.now() + 700;
+    setPreview({ cover, url: null, error: null });
     try {
-      const url = await (await loadCoverPdf(cover.id)).coverPreviewUrl(cover);
+      const mod = await loadCoverPdf();
+      const url = await mod.coverPreviewUrl(cover);
       if (token !== previewTokenRef.current) {
         URL.revokeObjectURL(url);
         return;
       }
-      setPreview({ cover, url });
+      setPreview({ cover, url, error: null });
     } catch (err) {
       if (token !== previewTokenRef.current) return;
-      setPreview(null);
+      // Keep the dialog open with the error — closing looked like a flash.
+      setPreview({
+        cover,
+        url: null,
+        error: err.message || 'Could not open the preview.',
+      });
       setToast({ kind: 'error', text: err.message || 'Could not open the preview.' });
     }
-  };
-
-  const closePreview = useCallback(() => {
-    previewTokenRef.current += 1;
-    setPreview(null);
   }, []);
 
   const pendingViewIdRef = useRef(Number(readUrlParam('view')) || 0);
@@ -476,7 +497,7 @@ export default function CoverPageDesk() {
     pendingViewIdRef.current = 0;
     writeUrlParams({ view: '' });
     openPreview(cover);
-  }, [covers]);
+  }, [covers, openPreview]);
 
   const pickDocument = (cover) => {
     attachTargetRef.current = cover;
@@ -800,7 +821,12 @@ export default function CoverPageDesk() {
                           className="cp-icon-btn cp-icon-btn--view"
                           title="View cover page"
                           aria-label="View cover page"
-                          onClick={() => openPreview(c)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openPreview(c);
+                          }}
                         >
                           <Eye size={15} aria-hidden="true" />
                         </button>
@@ -861,6 +887,7 @@ export default function CoverPageDesk() {
         busy={preview ? busyId === preview.cover.id : false}
         onClose={closePreview}
         onDownload={() => preview && downloadCover(preview.cover)}
+        ignoreCloseUntilRef={ignorePreviewCloseUntilRef}
       />
 
       <ConfirmDelete cover={pendingDelete} busy={deleting} onCancel={() => setPendingDelete(null)} onConfirm={confirmDelete} />

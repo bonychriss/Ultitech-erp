@@ -136,133 +136,78 @@ $productPayload = [
 ];
 
 $page_title = 'Edit Product';
-$employeeHeaderTitle = 'Edit Product';
+$employeeHeaderTitle = '';
 $hideHeaderCompanyBranding = true;
-$employeeHeaderExtraClass = 'employee-header--products-desk';
-$bodyExtraClass = 'page-products-desk';
+$employeeHeaderExtraClass = 'employee-header--product-create';
+$bodyExtraClass = 'page-product-create';
 
 include '../../includes/header.php';
 ?>
 <style>
-body.page-products-desk.dashboard .layout-main-wrapper { align-items: stretch; }
-body.page-products-desk.dashboard .layout-main-wrapper > .flex-grow-1 {
+:root { --bg-body: #f1f5f9; }
+body.page-product-create.dashboard { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
+body.page-product-create.dashboard .layout-main-wrapper { align-items: stretch; }
+body.page-product-create.dashboard .layout-main-wrapper > .flex-grow-1 {
     min-height: 0;
     display: flex;
     flex-direction: column;
 }
-body.page-products-desk,
-body.page-products-desk.dashboard,
-body.page-products-desk .layout-main-wrapper,
-body.page-products-desk .layout-main-wrapper > .flex-grow-1 {
-    background: #f8fafc !important;
+body.page-product-create,
+body.page-product-create.dashboard,
+body.page-product-create .layout-main-wrapper,
+body.page-product-create .layout-main-wrapper > .flex-grow-1 {
+    background: #f1f5f9 !important;
 }
-body.page-products-desk .employee-header.employee-header--products-desk {
-    background: #f8fafc !important;
+body.page-product-create .header,
+body.page-product-create .employee-header,
+body.page-product-create .employee-header.employee-header--product-create {
+    background: #f1f5f9 !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 1.25rem !important;
     margin-bottom: 0;
     height: auto !important;
     min-height: 0;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 1020 !important;
-    align-items: stretch !important;
 }
-body.page-products-desk .employee-header--products-desk::after { display: none !important; }
-body.page-products-desk .employee-header--products-desk .header-content {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-    padding: 0.75rem 0 0.5rem !important;
-    min-height: 0;
-    width: 100%;
+body.page-product-create .employee-header--product-create::after { display: none !important; }
+body.page-product-create .employee-header--product-create .header-content {
     background: transparent !important;
-    gap: 0.5rem 1rem;
+    padding: 0.5rem 0 !important;
 }
-body.page-products-desk .employee-header--products-desk .employee-header-page-heading {
-    margin-left: 0 !important;
-    min-width: 0;
+body.page-product-create .employee-header--product-create .employee-header-page-title:empty,
+body.page-product-create .employee-header--product-create .employee-header-page-heading:empty {
+    display: none !important;
+}
+main.main-content.product-create-react-root {
     flex: 1 1 auto;
-}
-body.page-products-desk .employee-header--products-desk .employee-header-page-title {
-    font-size: clamp(1.05rem, 2vw, 1.35rem) !important;
-    font-weight: 700 !important;
-    color: #0f172a !important;
-    letter-spacing: -0.02em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: min(42rem, 70vw);
-}
-body.page-products-desk .employee-header--products-desk .header-right.header-actions-tray {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-end !important;
-    margin-left: auto !important;
-    flex: 0 0 auto !important;
-    gap: 0.5rem !important;
-}
-main.main-content.products-desk-react-root {
-    flex: 0 0 auto !important;
     width: 100% !important;
     max-width: none !important;
     padding: 0 1.25rem 2rem !important;
-    overflow: visible !important;
     box-sizing: border-box;
-    background: #f8fafc !important;
-    height: auto !important;
-    min-height: 0 !important;
-    display: block !important;
+    background: #f1f5f9 !important;
+    overflow: auto !important;
 }
-main.main-content.products-desk-react-root #root {
+main.main-content.product-create-react-root #root {
     width: 100%;
     max-width: none;
     margin: 0;
-    height: auto !important;
-    min-height: 0 !important;
-    display: block;
-}
-main.main-content.products-desk-react-root #root .prod-create-shell {
-    height: auto !important;
-    min-height: 0 !important;
 }
 @media (max-width: 767.98px) {
-    body.page-products-desk .employee-header.employee-header--products-desk {
-        padding: 0 0.75rem !important;
-    }
-    body.page-products-desk .employee-header--products-desk .header-content {
-        padding: 0.65rem 0 0.4rem !important;
-        gap: 0.4rem !important;
-    }
-    body.page-products-desk .employee-header--products-desk .employee-header-page-title {
-        font-size: 1.1rem !important;
-        max-width: min(100%, 58vw) !important;
-    }
-    main.main-content.products-desk-react-root {
+    main.main-content.product-create-react-root {
         padding: 0 0.75rem 1.5rem !important;
         -webkit-overflow-scrolling: touch;
     }
 }
-html[data-theme="dark"] body.page-products-desk,
-html[data-theme="dark"] body.page-products-desk.dashboard,
-html[data-theme="dark"] body.page-products-desk .layout-main-wrapper,
-html[data-theme="dark"] body.page-products-desk .layout-main-wrapper > .flex-grow-1,
-html[data-theme="dark"] body.page-products-desk main.main-content.products-desk-react-root {
+html[data-theme="dark"] body.page-product-create,
+html[data-theme="dark"] body.page-product-create.dashboard,
+html[data-theme="dark"] body.page-product-create .layout-main-wrapper,
+html[data-theme="dark"] body.page-product-create .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body.page-product-create .employee-header,
+html[data-theme="dark"] main.main-content.product-create-react-root {
     background: #0f172a !important;
-}
-html[data-theme="dark"] body.page-products-desk .employee-header.employee-header--products-desk {
-    background: #0f172a !important;
-}
-html[data-theme="dark"] body.page-products-desk .employee-header--products-desk .employee-header-page-title {
-    color: #f8fafc !important;
-}
-body.page-products-desk a.prod-create-btn-cancel,
-body.page-products-desk button.prod-create-btn-save {
-    border-radius: 9999px !important;
 }
 </style>
-<main class="main-content products-desk-react-root">
+<main class="main-content product-create-react-root">
     <noscript>
         <div class="alert alert-warning m-3">JavaScript is required to edit a product.</div>
     </noscript>

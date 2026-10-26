@@ -467,74 +467,13 @@ export default function ProductCreate({ data = {} }) {
 
   return (
     <div className="prod-create-shell">
-      <style>{`
-        .prod-create-row {
-          display: grid !important;
-          grid-template-columns: 210px 1fr !important;
-          grid-auto-rows: min-content !important;
-          align-items: start !important;
-          align-content: start !important;
-          margin-bottom: 24px !important;
-          height: auto !important;
-          min-height: 0 !important;
-        }
-        .prod-create-pair {
-          display: grid !important;
-          grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) !important;
-          gap: 0 1.25rem !important;
-          align-items: start !important;
-          margin-bottom: 0 !important;
-        }
-        .prod-create-pair .prod-create-row {
-          display: flex !important;
-          flex-direction: column !important;
-          gap: 0.4rem !important;
-          grid-template-columns: none !important;
-          margin-bottom: 24px !important;
-        }
-        .prod-create-pair .prod-create-label {
-          padding-top: 0 !important;
-        }
-        .prod-create-pair .prod-create-help {
-          grid-column: auto !important;
-        }
-        .prod-create-help { grid-column: 2; margin-top: 6px !important; }
-        @media (max-width: 900px) {
-          body.dashboard .prod-create-pair {
-            grid-template-columns: 1fr !important;
-            gap: 0 !important;
-          }
-          body.dashboard .prod-create-row {
-            display: block !important;
-            margin-top: 0 !important;
-            margin-bottom: 16px !important;
-            height: auto !important;
-            min-height: 0 !important;
-          }
-          body.dashboard .prod-create-pair .prod-create-row {
-            display: block !important;
-          }
-          body.dashboard .prod-create-label {
-            display: block !important;
-            padding: 0 0 4px !important;
-            margin: 0 0 4px 0 !important;
-          }
-          body.dashboard .prod-create-help {
-            grid-column: auto;
-            display: block !important;
-            margin: 4px 0 0 0 !important;
-          }
-          body.dashboard .prod-create-input,
-          body.dashboard .prod-create-select,
-          body.dashboard .prod-create-textarea,
-          body.dashboard .prod-create-currency {
-            width: 100% !important;
-            max-width: none !important;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-          }
-        }
-      `}</style>
+      <div className="prod-create-topbar">
+        <div>
+          <h1>{isEdit ? 'Edit Product' : 'Add Product'}</h1>
+          <p>{isEdit ? 'Update product details and photos.' : 'Register a new product for stock.'}</p>
+        </div>
+      </div>
+
       <form className="prod-create-layout" onSubmit={handleSubmit} noValidate>
         <div className="prod-create-main">
           {successMsg ? (
@@ -557,29 +496,31 @@ export default function ProductCreate({ data = {} }) {
                 <h2>Product type</h2>
                 <p>Choose spare part or truck registration.</p>
               </div>
-              <div className="prod-create-row">
-                <span className="prod-create-label">Type<span className="req">*</span></span>
-                <div className="prod-create-type-toggle">
-                  <label className={registerType === 'spare_part' ? 'is-active' : ''}>
-                    <input
-                      type="radio"
-                      name="register_type"
-                      value="spare_part"
-                      checked={registerType === 'spare_part'}
-                      onChange={() => setRegisterType('spare_part')}
-                    />
-                    Spare part
-                  </label>
-                  <label className={registerType === 'truck' ? 'is-active' : ''}>
-                    <input
-                      type="radio"
-                      name="register_type"
-                      value="truck"
-                      checked={registerType === 'truck'}
-                      onChange={() => setRegisterType('truck')}
-                    />
-                    Truck
-                  </label>
+              <div className="prod-create-card">
+                <div className="prod-create-row">
+                  <span className="prod-create-label">Type<span className="req">*</span></span>
+                  <div className="prod-create-type-toggle">
+                    <label className={registerType === 'spare_part' ? 'is-active' : ''}>
+                      <input
+                        type="radio"
+                        name="register_type"
+                        value="spare_part"
+                        checked={registerType === 'spare_part'}
+                        onChange={() => setRegisterType('spare_part')}
+                      />
+                      Spare part
+                    </label>
+                    <label className={registerType === 'truck' ? 'is-active' : ''}>
+                      <input
+                        type="radio"
+                        name="register_type"
+                        value="truck"
+                        checked={registerType === 'truck'}
+                        onChange={() => setRegisterType('truck')}
+                      />
+                      Truck
+                    </label>
+                  </div>
                 </div>
               </div>
             </section>
@@ -590,7 +531,7 @@ export default function ProductCreate({ data = {} }) {
               <h2>Basics</h2>
               <p>Name, category, and identifying details.</p>
             </div>
-
+            <div className="prod-create-card">
             <FieldRow
               label="Product code"
               htmlFor="prod-code"

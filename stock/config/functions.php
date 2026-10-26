@@ -1815,39 +1815,128 @@ if (!function_exists('stock_brands_logo_map')) {
 }
 
 /**
- * Brands + logos shown on ultimate.co.tz/brands (fallback when live fetch is unavailable).
+ * Top Brands from ultimate.co.tz homepage (name => remote logo URL).
+ * TITAN uses a local SVG (site renders it inline).
  *
- * @return array<string, string> name => logo URL
+ * @return array<string, string>
  */
 if (!function_exists('stock_ultimate_website_brand_catalog')) {
     function stock_ultimate_website_brand_catalog()
     {
+        $base = 'https://ultimate.co.tz/public/assets/img/masumin/brands/';
         return [
-            'Carhartt' => 'https://www.ultimate.co.tz/public/uploads/all/dWp7ri3PhpLCd5yevebirxNMfV14y4U5hHkpd49e.jpg',
-            'Reflected' => 'https://www.ultimate.co.tz/public/uploads/all/w8hoIy3wFKkBfkkKKbwjeZ5iFnRqakdNDDemj63q.jpg',
-            'Honeywell' => 'https://www.ultimate.co.tz/public/uploads/all/JdIXVjydJ9G7wRW5TSc9rHTuac70j0ae7U4zFi2Q.jpg',
-            'Rock' => 'https://www.ultimate.co.tz/public/uploads/all/EQT8ye6uwcJuH6IaVHUV0n4NZEuAq1sCHfFjuSP3.jpg',
-            'Radiens' => 'https://www.ultimate.co.tz/public/uploads/all/OdE3hYkY2LqSywY5vvwO6GpTSfkVVyk3BWvSefve.jpg',
-            'Stryker' => 'https://www.ultimate.co.tz/public/uploads/all/GUnqrdlb0HBCNPPM39KvgRRsqLN3IAWVZPm2SnTr.jpg',
-            'Lakelo' => 'https://www.ultimate.co.tz/public/uploads/all/WmgHlbJyiw5ikJJKtseyT4qRVGEUIhth0CCfeHAW.jpg',
-            'North' => 'https://www.ultimate.co.tz/public/uploads/all/gItPozCRak4pf7qUoVHzKe2MkCqsPTxeUiDV05PD.jpg',
-            'Niker' => 'https://www.ultimate.co.tz/public/uploads/all/niArBIytrEikNTotRjd41BanS9F3Zd4T8lhCYkIf.jpg',
-            'Cat' => 'https://www.ultimate.co.tz/public/uploads/all/lQO81fgWGTdM1up2nKwg7ZiG0DcBvsMWFtKCrxt7.jpg',
-            'Zoll' => 'https://www.ultimate.co.tz/public/uploads/all/ecwYLXjfkgDclM7RXyijADV6dx6bf0Zl8y8h9mY5.jpg',
-            'Osha' => 'https://www.ultimate.co.tz/public/uploads/all/726zZODfc0ZgRlCjYxoOihqQagGAZGjVngzctoLT.jpg',
+            'TITAN' => 'local:titan.svg',
+            'Dromex' => $base . 'dromex.png',
+            'Jonsson' => $base . 'jonsson.svg',
+            'Safety Boy' => $base . 'safetyboy.png',
+            'Delta Plus' => $base . 'deltaplus.svg',
+            'Bisley' => $base . 'bisley.svg',
+            'Bova' => $base . 'bova.png',
+            'Portwest' => $base . 'portwest.png',
+            'JSP' => $base . 'jsp.png',
         ];
     }
 }
 
 /**
- * Pull brand name → logo map from ultimate.co.tz/brands when reachable.
+ * Download (or write) a brand logo into the stock brands upload dir.
+ * Returns stored filename (basename) or '' on failure.
+ */
+if (!function_exists('stock_ultimate_store_brand_logo')) {
+    function stock_ultimate_store_brand_logo($name, $logoSource)
+    {
+        $name = trim((string) $name);
+        $logoSource = trim((string) $logoSource);
+        if ($name === '' || $logoSource === '') {
+            return '';
+        }
+
+        $dir = function_exists('stock_brand_upload_dir')
+            ? stock_brand_upload_dir()
+            : (dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'brands');
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        if (!is_dir($dir) || !is_writable($dir)) {
+            return '';
+        }
+
+        $slug = preg_replace('/[^a-z0-9]+/i', '-', strtolower($name)) ?: 'brand';
+        $slug = trim($slug, '-');
+
+        // Inline / local SVG for TITAN
+        if ($logoSource === 'local:titan.svg' || strcasecmp($name, 'TITAN') === 0) {
+            $filename = 'ultimate-titan.svg';
+            $path = rtrim(str_replace('\\', '/', $dir), '/') . '/' . $filename;
+            if (!is_file($path) || @filesize($path) < 20) {
+                $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="9 9 82 82" role="img" aria-label="UG Titan">'
+                    . '<g fill="none" stroke="#F4C400" stroke-linejoin="round">'
+                    . '<circle cx="50" cy="50" r="37" stroke-width="6.4"/>'
+                    . '<path d="M30 29V60.8a11.2 11.2 0 0 0 22.4 0V38.4a6.8 6.8 0 0 1 13.6 0v6.1" stroke-width="7"/>'
+                    . '<path d="M56.4 52H66v12.3a6.8 6.8 0 0 1-13.6 0" stroke-width="7"/>'
+                    . '</g></svg>';
+                @file_put_contents($path, $svg);
+            }
+            return is_file($path) ? $filename : '';
+        }
+
+        if (!preg_match('#^https?://#i', $logoSource)) {
+            return '';
+        }
+
+        $ext = strtolower(pathinfo(parse_url($logoSource, PHP_URL_PATH) ?: '', PATHINFO_EXTENSION));
+        if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'], true)) {
+            $ext = 'png';
+        }
+        $filename = 'ultimate-' . $slug . '.' . $ext;
+        $path = rtrim(str_replace('\\', '/', $dir), '/') . '/' . $filename;
+        if (is_file($path) && @filesize($path) > 20) {
+            return $filename;
+        }
+
+        $bytes = false;
+        if (function_exists('curl_init')) {
+            $ch = curl_init($logoSource);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_CONNECTTIMEOUT => 4,
+                CURLOPT_TIMEOUT => 12,
+                CURLOPT_USERAGENT => 'UltiTechERP/1.0',
+            ]);
+            $bytes = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($code >= 400) {
+                $bytes = false;
+            }
+        } else {
+            $ctx = stream_context_create([
+                'http' => ['timeout' => 12, 'header' => "User-Agent: UltiTechERP/1.0\r\n"],
+                'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
+            ]);
+            $bytes = @file_get_contents($logoSource, false, $ctx);
+        }
+        if (!is_string($bytes) || strlen($bytes) < 20) {
+            return '';
+        }
+        if (@file_put_contents($path, $bytes) === false) {
+            return '';
+        }
+
+        return $filename;
+    }
+}
+
+/**
+ * Pull Top Brands from ultimate.co.tz homepage when reachable.
  *
  * @return array<string, string>
  */
 if (!function_exists('stock_ultimate_fetch_website_brands')) {
     function stock_ultimate_fetch_website_brands()
     {
-        $cacheFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ultitech_ultimate_brands_cache.json';
+        $cacheFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ultitech_ultimate_top_brands_v2.json';
         if (is_file($cacheFile) && (time() - (int) @filemtime($cacheFile)) < 86400) {
             $cached = json_decode((string) @file_get_contents($cacheFile), true);
             if (is_array($cached) && $cached !== []) {
@@ -1857,43 +1946,49 @@ if (!function_exists('stock_ultimate_fetch_website_brands')) {
 
         $html = '';
         if (function_exists('curl_init')) {
-            $ch = curl_init('https://www.ultimate.co.tz/brands');
+            $ch = curl_init('https://www.ultimate.co.tz/');
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_CONNECTTIMEOUT => 4,
-                CURLOPT_TIMEOUT => 8,
+                CURLOPT_TIMEOUT => 10,
                 CURLOPT_USERAGENT => 'UltiTechERP/1.0',
             ]);
             $html = (string) curl_exec($ch);
             curl_close($ch);
         } else {
             $ctx = stream_context_create([
-                'http' => ['timeout' => 8, 'header' => "User-Agent: UltiTechERP/1.0\r\n"],
+                'http' => ['timeout' => 10, 'header' => "User-Agent: UltiTechERP/1.0\r\n"],
                 'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
             ]);
-            $html = (string) @file_get_contents('https://www.ultimate.co.tz/brands', false, $ctx);
+            $html = (string) @file_get_contents('https://www.ultimate.co.tz/', false, $ctx);
         }
 
         $found = [];
-        if ($html !== '' && preg_match_all(
-            '#href=["\']https?://[^"\']*/brand/([A-Za-z0-9]+)-[A-Za-z0-9]+["\'][^>]*>.*?<(?:img|source)[^>]+(?:src|data-src)=["\']([^"\']+)["\']#is',
-            $html,
+        $pos = stripos($html, 'Top Brands');
+        $chunk = $pos !== false ? substr($html, $pos, 20000) : '';
+        if ($chunk !== '' && preg_match_all(
+            '#<a class="msm-br-cell"[^>]*>\s*<span class="msm-br-img[^"]*"[^>]*>\s*(?:<img[^>]+src=["\']([^"\']+)["\'][^>]*>|.*?)?\s*</span>\s*<strong>([^<]+)</strong>#is',
+            $chunk,
             $matches,
             PREG_SET_ORDER
         )) {
             foreach ($matches as $row) {
-                $name = trim((string) ($row[1] ?? ''));
-                $src = trim((string) ($row[2] ?? ''));
-                if ($name === '' || $src === '' || stripos($src, 'placeholder') !== false) {
+                $src = trim((string) ($row[1] ?? ''));
+                $name = trim(html_entity_decode((string) ($row[2] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                if ($name === '' || stripos($name, 'View All') !== false) {
                     continue;
                 }
-                if (strpos($src, '//') === 0) {
+                if ($src === '') {
+                    $src = strcasecmp($name, 'TITAN') === 0 ? 'local:titan.svg' : '';
+                } elseif (strpos($src, '//') === 0) {
                     $src = 'https:' . $src;
-                } elseif ($src[0] === '/') {
-                    $src = 'https://www.ultimate.co.tz' . $src;
+                } elseif (isset($src[0]) && $src[0] === '/') {
+                    $src = 'https://ultimate.co.tz' . $src;
                 }
-                $found[$name] = $src;
+                if ($src !== '') {
+                    $found[$name] = $src;
+                }
             }
         }
 
@@ -1907,7 +2002,7 @@ if (!function_exists('stock_ultimate_fetch_website_brands')) {
 }
 
 /**
- * Ensure Ultimate stock brands mirror ultimate.co.tz brands (with logos).
+ * Ensure Ultimate stock brands mirror ultimate.co.tz Top Brands (with local logos).
  */
 if (!function_exists('stock_ultimate_ensure_website_brands')) {
     function stock_ultimate_ensure_website_brands(PDO $pdo)
@@ -1916,13 +2011,10 @@ if (!function_exists('stock_ultimate_ensure_website_brands')) {
             ensureBrandsTable($pdo);
         }
 
-        static $done = false;
-        if ($done) {
-            return;
-        }
-        $done = true;
-
         $catalog = stock_ultimate_fetch_website_brands();
+        if ($catalog === []) {
+            $catalog = stock_ultimate_website_brand_catalog();
+        }
         if ($catalog === []) {
             return;
         }
@@ -1938,19 +2030,26 @@ if (!function_exists('stock_ultimate_ensure_website_brands')) {
         }
 
         $find = $pdo->prepare('SELECT id, logo FROM brands WHERE LOWER(name) = LOWER(?) LIMIT 1');
-        foreach ($catalog as $name => $logoUrl) {
+        foreach ($catalog as $name => $logoSource) {
             $name = trim((string) $name);
-            $logoUrl = trim((string) $logoUrl);
+            $logoSource = trim((string) $logoSource);
             if ($name === '') {
                 continue;
+            }
+            $storedLogo = $hasLogo
+                ? stock_ultimate_store_brand_logo($name, $logoSource)
+                : '';
+            // Fall back to remote URL if download failed (except local: markers)
+            if ($storedLogo === '' && $hasLogo && preg_match('#^https?://#i', $logoSource)) {
+                $storedLogo = $logoSource;
             }
             try {
                 $find->execute([$name]);
                 $existing = $find->fetch(PDO::FETCH_ASSOC);
                 if ($existing) {
-                    if ($hasLogo && $logoUrl !== '' && trim((string) ($existing['logo'] ?? '')) !== $logoUrl) {
+                    if ($hasLogo && $storedLogo !== '' && trim((string) ($existing['logo'] ?? '')) !== $storedLogo) {
                         $pdo->prepare('UPDATE brands SET logo = ? WHERE id = ?')->execute([
-                            $logoUrl,
+                            $storedLogo,
                             (int) $existing['id'],
                         ]);
                     }
@@ -1962,9 +2061,9 @@ if (!function_exists('stock_ultimate_ensure_website_brands')) {
                     $fields[] = 'brand_type';
                     $values[] = 'general';
                 }
-                if ($hasLogo && $logoUrl !== '') {
+                if ($hasLogo && $storedLogo !== '') {
                     $fields[] = 'logo';
-                    $values[] = $logoUrl;
+                    $values[] = $storedLogo;
                 }
                 $placeholders = implode(', ', array_fill(0, count($fields), '?'));
                 $pdo->prepare(
@@ -1974,6 +2073,69 @@ if (!function_exists('stock_ultimate_ensure_website_brands')) {
                 /* skip one brand; keep going */
             }
         }
+    }
+}
+
+/**
+ * Brand picker rows for Ultimate: Top Brands only, with logos.
+ *
+ * @param array<int, array<string, mixed>> $dbBrands
+ * @return array<int, array{id:int,name:string,brand_type:string,logo_url:string,image_url:string}>
+ */
+if (!function_exists('stock_ultimate_brand_picker_rows')) {
+    function stock_ultimate_brand_picker_rows(PDO $pdo, array $dbBrands = [])
+    {
+        if (function_exists('stock_ultimate_ensure_website_brands')) {
+            stock_ultimate_ensure_website_brands($pdo);
+        }
+
+        if ($dbBrands === []) {
+            try {
+                $dbBrands = $pdo->query(
+                    'SELECT id, name, brand_type, logo FROM brands ORDER BY name ASC'
+                )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (Throwable $e) {
+                $dbBrands = [];
+            }
+        }
+
+        $dbByName = [];
+        foreach ($dbBrands as $b) {
+            $name = trim((string) ($b['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $dbByName[strtolower($name)] = $b;
+        }
+
+        $catalog = function_exists('stock_ultimate_website_brand_catalog')
+            ? stock_ultimate_website_brand_catalog()
+            : [];
+        $rows = [];
+        foreach ($catalog as $name => $logoSource) {
+            $key = strtolower(trim((string) $name));
+            $db = $dbByName[$key] ?? null;
+            $logo = $db ? trim((string) ($db['logo'] ?? '')) : '';
+            if ($logo === '' && function_exists('stock_ultimate_store_brand_logo')) {
+                $logo = stock_ultimate_store_brand_logo($name, $logoSource);
+            }
+            $logoUrl = '';
+            if ($logo !== '' && function_exists('stock_brand_image_url')) {
+                $logoUrl = (string) stock_brand_image_url($logo);
+            }
+            if ($logoUrl === '' && preg_match('#^https?://#i', (string) $logoSource)) {
+                $logoUrl = (string) $logoSource;
+            }
+            $rows[] = [
+                'id' => $db ? (int) ($db['id'] ?? 0) : 0,
+                'name' => (string) $name,
+                'brand_type' => 'general',
+                'logo_url' => $logoUrl,
+                'image_url' => $logoUrl,
+            ];
+        }
+
+        return $rows;
     }
 }
 

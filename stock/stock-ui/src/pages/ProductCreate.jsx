@@ -597,9 +597,9 @@ export default function ProductCreate({ data = {} }) {
   }, [successMsg]);
 
   const brandOptions = useMemo(() => {
-    if (useBrandFreeText || !brands.length) return [];
-    return brands;
-  }, [brands, useBrandFreeText]);
+    if (!isUltimate && useBrandFreeText) return [];
+    return Array.isArray(brands) ? brands : [];
+  }, [brands, useBrandFreeText, isUltimate]);
 
   const visibleSavedImages = useMemo(
     () => savedImages.filter((img) => !deleteImageIds.includes(img.id)),
@@ -983,7 +983,7 @@ export default function ProductCreate({ data = {} }) {
                     </FieldRow>
 
                     <FieldRow label="Brand" htmlFor="prod-brand" required={isUltimate}>
-                      {useBrandFreeText || brandOptions.length === 0 ? (
+                      {(!isUltimate && (useBrandFreeText || brandOptions.length === 0)) ? (
                         <input
                           id="prod-brand"
                           className="prod-create-input"

@@ -330,20 +330,24 @@ html[data-theme="dark"] main.main-content.product-create-react-root {
                 'suppliers' => array_map(static function ($s) {
                     return ['id' => (int) $s['id'], 'name' => (string) $s['name']];
                 }, $suppliers),
-                'brands' => array_map(static function ($b) {
-                    $logo = trim((string) ($b['logo'] ?? ''));
-                    $logoUrl = ($logo !== '' && function_exists('stock_brand_image_url'))
-                        ? (string) stock_brand_image_url($logo)
-                        : '';
-                    return [
-                        'id' => (int) ($b['id'] ?? 0),
-                        'name' => (string) ($b['name'] ?? ''),
-                        'brand_type' => (string) ($b['brand_type'] ?? ''),
-                        'logo_url' => $logoUrl,
-                        'image_url' => $logoUrl,
-                    ];
-                }, $brands),
-                'useBrandFreeText' => count($brands) === 0,
+                'brands' => ($isUltimateStockSimple && function_exists('stock_ultimate_brand_picker_rows'))
+                    ? stock_ultimate_brand_picker_rows($pdo, $brands)
+                    : array_map(static function ($b) {
+                        $logo = trim((string) ($b['logo'] ?? ''));
+                        $logoUrl = ($logo !== '' && function_exists('stock_brand_image_url'))
+                            ? (string) stock_brand_image_url($logo)
+                            : '';
+                        return [
+                            'id' => (int) ($b['id'] ?? 0),
+                            'name' => (string) ($b['name'] ?? ''),
+                            'brand_type' => (string) ($b['brand_type'] ?? ''),
+                            'logo_url' => $logoUrl,
+                            'image_url' => $logoUrl,
+                        ];
+                    }, $brands),
+                'useBrandFreeText' => $isUltimateStockSimple
+                    ? false
+                    : count($brands) === 0,
                 'currencies' => ['TZS', 'USD', 'EUR'],
                 'defaultCurrency' => (string) ($product['currency'] ?? 'TZS'),
                 'listUrl' => function_exists('stock_desk_url')

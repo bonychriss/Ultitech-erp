@@ -19,7 +19,7 @@ import {
   User,
   X,
 } from 'lucide-react';
-import { deleteCover, getBootData, saveCover } from '../api.js';
+import { approveCover, deleteCover, getBootData, saveCover } from '../api.js';
 import { documentNameWithoutFile } from '../utils/title.js';
 
 const RELOAD_GUARD_KEY = 'cover-page-stale-reload';
@@ -75,9 +75,11 @@ function blankForm() {
     doc_to: '',
     period_month: String(now.getMonth() + 1),
     period_year: String(now.getFullYear()),
-    reviewed_by_name: '',
-    reviewed_by_designation: '',
   };
+}
+
+function isApproved(cover) {
+  return String(cover?.status || '').toLowerCase() === 'approved';
 }
 
 function pad2(n) {
@@ -121,10 +123,14 @@ function ConfirmDelete({ cover, busy, onCancel, onConfirm }) {
   );
 }
 
-function RowMenu({ disabled, onAttach, onEdit, onDelete }) {
+function RowMenu({ disabled, canAttach, canEdit, canDelete, onAttach, onEdit, onDelete }) {
   const [pos, setPos] = useState(null);
   const btnRef = useRef(null);
   const menuRef = useRef(null);
+  const showAttach = canAttach !== false;
+  const showEdit = canEdit !== false;
+  const showDelete = canDelete !== false;
+  if (!showAttach && !showEdit && !showDelete) return null;
 
   useEffect(() => {
     if (!pos) return undefined;
@@ -154,7 +160,7 @@ function RowMenu({ disabled, onAttach, onEdit, onDelete }) {
       return;
     }
     const r = btnRef.current.getBoundingClientRect();
-    const menuHeight = 132;
+    const menuHeight = 160;
     const openUp = r.bottom + menuHeight + 8 > window.innerHeight;
     setPos({
       right: Math.max(8, window.innerWidth - r.right),
@@ -183,25 +189,31 @@ function RowMenu({ disabled, onAttach, onEdit, onDelete }) {
       </button>
       {pos ? (
         <div ref={menuRef} className="cp-row-menu" role="menu" style={pos}>
-          <button
-            type="button"
-            role="menuitem"
-            className="cp-row-menu-item"
-            title="Choose a PDF; the cover page is added as its first page"
-            onClick={pick(onAttach)}
-            disabled={disabled}
-          >
-            <Paperclip size={15} aria-hidden="true" />
-            Attach to a PDF
-          </button>
-          <button type="button" role="menuitem" className="cp-row-menu-item" onClick={pick(onEdit)}>
-            <Pencil size={15} aria-hidden="true" />
-            Edit
-          </button>
-          <button type="button" role="menuitem" className="cp-row-menu-item cp-row-menu-item--danger" onClick={pick(onDelete)}>
-            <Trash2 size={15} aria-hidden="true" />
-            Delete
-          </button>
+          {showAttach ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="cp-row-menu-item"
+              title="Choose a PDF; the cover page is added as its first page"
+              onClick={pick(onAttach)}
+              disabled={disabled}
+            >
+              <Paperclip size={15} aria-hidden="true" />
+              Attach to a PDF
+            </button>
+          ) : null}
+          {showEdit ? (
+            <button type="button" role="menuitem" className="cp-row-menu-item" onClick={pick(onEdit)}>
+              <Pencil size={15} aria-hidden="true" />
+              Edit
+            </button>
+          ) : null}
+          {showDelete ? (
+            <button type="button" role="menuitem" className="cp-row-menu-item cp-row-menu-item--danger" onClick={pick(onDelete)}>
+              <Trash2 size={15} aria-hidden="true" />
+              Delete
+            </button>
+          ) : null}
         </div>
       ) : null}
     </>
@@ -220,6 +232,7 @@ function CoverPreview({ preview, busy, onClose, onDownload }) {
 
   if (!preview) return null;
   const { cover, url } = preview;
+  const allowed = cover.can_download !== false && isApproved(cover);
   return (
     <div className="cp-modal-backdrop" role="presentation" onClick={onClose}>
       <div className="cp-preview" role="dialog" aria-modal="true" aria-labelledby="cp-preview-title" onClick={(e) => e.stopPropagation()}>
@@ -243,9 +256,15 @@ function CoverPreview({ preview, busy, onClose, onDownload }) {
         </div>
         <div className="cp-modal-actions cp-preview-actions">
           <button type="button" className="cp-btn cp-btn--ghost" onClick={onClose}>Close</button>
-          <button type="button" className="cp-btn cp-btn--primary" onClick={onDownload} disabled={busy || !url}>
+          <button
+            type="button"
+            className="cp-btn cp-btn--primary"
+            onClick={onDownload}
+            disabled={busy || !url || !allowed}
+            title={allowed ? 'Download cover' : 'Waiting for another user to approve before download'}
+          >
             {busy ? <LoaderCircle size={15} className="cp-spin" aria-hidden="true" /> : <FileDown size={15} aria-hidden="true" />}
-            Download cover
+            {allowed ? 'Download cover' : 'Awaiting approval'}
           </button>
         </div>
       </div>
@@ -337,6 +356,10 @@ export default function CoverPageDesk() {
   };
 
   const startEdit = (cover) => {
+    if (cover.can_edit === false) {
+      setToast({ kind: 'error', text: 'You can only edit cover pages you created.' });
+      return;
+    }
     setForm({
       id: cover.id,
       document_name: documentNameWithoutFile(cover.document_name),
@@ -346,14 +369,16 @@ export default function CoverPageDesk() {
       doc_to: String(cover.doc_to),
       period_month: String(cover.period_month),
       period_year: String(cover.period_year),
-      reviewed_by_name: cover.reviewed_by_name || '',
-      reviewed_by_designation: cover.reviewed_by_designation || '',
     });
     setErrors({});
     setTab('new');
   };
 
   const runDownload = async (cover, task, successText) => {
+    if (cover.can_download === false || !isApproved(cover)) {
+      setToast({ kind: 'error', text: 'Another user must approve this cover page before download or print.' });
+      return;
+    }
     setBusyId(cover.id);
     try {
       await task();
@@ -370,6 +395,24 @@ export default function CoverPageDesk() {
     async () => (await loadCoverPdf()).downloadCoverPdf(cover),
     'Cover page downloaded.',
   );
+
+  const approve = async (cover) => {
+    if (!cover?.id) return;
+    setBusyId(cover.id);
+    try {
+      const res = await approveCover(cover.id);
+      setCovers(Array.isArray(res.covers) ? res.covers : []);
+      setToast({ kind: 'success', text: res.message || 'Approved.' });
+      if (preview?.cover?.id === cover.id) {
+        const updated = (Array.isArray(res.covers) ? res.covers : []).find((c) => c.id === cover.id);
+        if (updated) setPreview((p) => (p ? { ...p, cover: updated } : p));
+      }
+    } catch (err) {
+      setToast({ kind: 'error', text: err.message || 'Could not approve.' });
+    } finally {
+      setBusyId(0);
+    }
+  };
 
   const previewUrl = preview?.url;
   useEffect(() => () => {
@@ -601,7 +644,14 @@ export default function CoverPageDesk() {
               </header>
               <dl className="cp-readonly">
                 <div><dt>Name</dt><dd>{preparedName || '—'}</dd></div>
-                <div><dt>Designation</dt><dd>{preparedDesignation || '—'}</dd></div>
+                <div>
+                  <dt>Signature</dt>
+                  <dd>
+                    {editingCover?.prepared_signature_url || user.signature_url
+                      ? 'Your account signature is used on the cover'
+                      : (preparedDesignation || 'Add a signature in your profile to stamp the cover')}
+                  </dd>
+                </div>
                 <div><dt>Date</dt><dd>{formatDate(preparedDate) || '—'}</dd></div>
               </dl>
             </section>
@@ -610,18 +660,45 @@ export default function CoverPageDesk() {
               <header className="cp-card-head">
                 <span className="cp-card-icon cp-card-icon--purple"><ShieldCheck size={17} aria-hidden="true" /></span>
                 <div>
-                  <h2>Reviewed &amp; approved by</h2>
-                  <p>Optional. Leave blank to sign by hand.</p>
+                  <h2>Approval</h2>
+                  <p>After you save, another user must log in and approve before download or print.</p>
                 </div>
               </header>
-              <div className="cp-grid cp-grid--stack">
-                <Field label="Name" error={errors.reviewed_by_name}>
-                  <input type="text" value={form.reviewed_by_name} onChange={set('reviewed_by_name')} maxLength={150} />
-                </Field>
-                <Field label="Designation" error={errors.reviewed_by_designation}>
-                  <input type="text" value={form.reviewed_by_designation} onChange={set('reviewed_by_designation')} maxLength={150} />
-                </Field>
-              </div>
+              <dl className="cp-readonly">
+                <div>
+                  <dt>Status</dt>
+                  <dd>
+                    {editingCover && isApproved(editingCover) ? (
+                      <span className="cp-status cp-status--approved">Approved</span>
+                    ) : (
+                      <span className="cp-status cp-status--pending">Pending approval</span>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Reviewed &amp; approved by</dt>
+                  <dd>
+                    {editingCover && isApproved(editingCover)
+                      ? (editingCover.reviewed_by_name || '—')
+                      : 'Filled automatically when another user approves'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Signature</dt>
+                  <dd>
+                    {editingCover && isApproved(editingCover)
+                      ? (editingCover.reviewed_signature_url
+                        ? 'Approver signature stamped on the cover'
+                        : (editingCover.reviewed_by_designation || 'No signature on file — designation used'))
+                      : 'Approver’s account signature is stamped when they approve'}
+                  </dd>
+                </div>
+              </dl>
+              {editing && isApproved(editingCover) ? (
+                <p className="cp-field-hint cp-approval-note">
+                  Saving changes will clear the current approval and require a new approval.
+                </p>
+              ) : null}
             </section>
           </div>
 
@@ -662,12 +739,18 @@ export default function CoverPageDesk() {
                     <th>Documents</th>
                     <th>File period</th>
                     <th>Prepared by</th>
+                    <th>Status</th>
                     <th>Saved on</th>
                     <th className="cp-col-actions" aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
-                  {covers.map((c, i) => (
+                  {covers.map((c, i) => {
+                    const approved = isApproved(c);
+                    const canDownload = c.can_download !== false && approved;
+                    const canApprove = Boolean(c.can_approve);
+                    const rowBusy = busyId === c.id;
+                    return (
                     <tr key={c.id}>
                       <td className="cp-col-no">{i + 1}</td>
                       <td className="cp-col-doc">{documentNameWithoutFile(c.document_name)}</td>
@@ -675,6 +758,15 @@ export default function CoverPageDesk() {
                       <td>{pad2(c.doc_from)} – {pad2(c.doc_to)}</td>
                       <td>{MONTHS[c.period_month - 1] || ''} {c.period_year}</td>
                       <td>{c.prepared_by_name}</td>
+                      <td>
+                        {approved ? (
+                          <span className="cp-status cp-status--approved" title={c.reviewed_by_name ? `Approved by ${c.reviewed_by_name}` : 'Approved'}>
+                            Approved
+                          </span>
+                        ) : (
+                          <span className="cp-status cp-status--pending">Pending</span>
+                        )}
+                      </td>
                       <td>{formatDate(c.created_at)}</td>
                       <td className="cp-col-actions">
                         <button
@@ -686,24 +778,41 @@ export default function CoverPageDesk() {
                         >
                           <Eye size={15} aria-hidden="true" />
                         </button>
+                        {canApprove ? (
+                          <button
+                            type="button"
+                            className="cp-btn cp-btn--small cp-btn--approve"
+                            onClick={() => approve(c)}
+                            disabled={busyId !== 0}
+                            title="Approve so this cover can be downloaded and printed"
+                          >
+                            {rowBusy ? <LoaderCircle size={15} className="cp-spin" aria-hidden="true" /> : <ShieldCheck size={15} aria-hidden="true" />}
+                            Approve
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className="cp-btn cp-btn--small cp-btn--primary"
                           onClick={() => downloadCover(c)}
-                          disabled={busyId !== 0}
+                          disabled={busyId !== 0 || !canDownload}
+                          title={canDownload ? 'Download cover' : 'Waiting for another user to approve'}
                         >
-                          {busyId === c.id ? <LoaderCircle size={15} className="cp-spin" aria-hidden="true" /> : <FileDown size={15} aria-hidden="true" />}
-                          Download cover
+                          {rowBusy && canDownload ? <LoaderCircle size={15} className="cp-spin" aria-hidden="true" /> : canDownload ? <FileDown size={15} aria-hidden="true" /> : <Lock size={15} aria-hidden="true" />}
+                          {canDownload ? 'Download cover' : 'Locked'}
                         </button>
                         <RowMenu
                           disabled={busyId !== 0}
+                          canAttach={canDownload}
+                          canEdit={c.can_edit !== false}
+                          canDelete={c.can_delete !== false}
                           onAttach={() => pickDocument(c)}
                           onEdit={() => startEdit(c)}
                           onDelete={() => setPendingDelete(c)}
                         />
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -65,6 +65,22 @@ try {
         $respond(200, ['success' => true, 'message' => 'Cover page deleted.', 'covers' => coverPageList($pdo)]);
     }
 
+    if ($action === 'approve') {
+        $id = (int) ($jsonBody['id'] ?? 0);
+        if ($id <= 0) {
+            $respond(422, ['success' => false, 'message' => 'Cover page id is required.']);
+        }
+        $result = coverPageApprove($pdo, $id);
+        if (!$result['ok']) {
+            $respond(403, ['success' => false, 'message' => $result['message'] ?? 'Could not approve.']);
+        }
+        $respond(200, [
+            'success' => true,
+            'message' => $result['message'] ?? 'Approved.',
+            'covers' => coverPageList($pdo),
+        ]);
+    }
+
     $respond(400, ['success' => false, 'message' => 'Unknown action.']);
 } catch (Throwable $e) {
     error_log('cover-page api: ' . $e->getMessage());

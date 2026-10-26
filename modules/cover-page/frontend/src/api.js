@@ -36,3 +36,7 @@ export function saveCover(values) {
 export function deleteCover(id) {
   return post('delete', { id });
 }
+
+export function approveCover(id) {
+  return post('approve', { id });
+}

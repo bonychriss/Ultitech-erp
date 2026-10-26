@@ -115,13 +115,84 @@ function coverPageEnsureSchema(PDO $pdo): void
             prepared_date DATE NOT NULL,
             reviewed_by_name VARCHAR(150) NULL,
             reviewed_by_designation VARCHAR(150) NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            approved_by_user_id INT NULL,
+            approved_at DATETIME NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             KEY idx_cover_pages_company_user (company_id, user_id),
-            KEY idx_cover_pages_created (created_at)
+            KEY idx_cover_pages_created (created_at),
+            KEY idx_cover_pages_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
+    // Existing installs: add approval columns. Default status=approved so older rows stay downloadable.
+    $cols = [];
+    try {
+        $cols = $pdo->query('SHOW COLUMNS FROM cover_pages')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Throwable $e) {
+        $cols = [];
+    }
+    if ($cols !== [] && !in_array('status', $cols, true)) {
+        try {
+            $pdo->exec("ALTER TABLE cover_pages ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'approved' AFTER reviewed_by_designation");
+        } catch (Throwable $e) { /* ignore */ }
+    }
+    if ($cols !== [] && !in_array('approved_by_user_id', $cols, true)) {
+        try {
+            $pdo->exec('ALTER TABLE cover_pages ADD COLUMN approved_by_user_id INT NULL AFTER status');
+        } catch (Throwable $e) { /* ignore */ }
+    }
+    if ($cols !== [] && !in_array('approved_at', $cols, true)) {
+        try {
+            $pdo->exec('ALTER TABLE cover_pages ADD COLUMN approved_at DATETIME NULL AFTER approved_by_user_id');
+        } catch (Throwable $e) { /* ignore */ }
+    }
     $done = true;
+}
+
+function coverPageNormalizeStatus(?string $status): string
+{
+    $status = strtolower(trim((string) $status));
+
+    return $status === 'approved' ? 'approved' : 'pending';
+}
+
+function coverPageIsApproved(array $row): bool
+{
+    return coverPageNormalizeStatus($row['status'] ?? 'pending') === 'approved';
+}
+
+/**
+ * Public URL for a users.signature_path value (e.g. assets/signatures/foo.png).
+ */
+function coverPageSignaturePublicUrl(?string $path): string
+{
+    $path = trim(str_replace('\\', '/', (string) $path));
+    if ($path === '') {
+        return '';
+    }
+    $path = ltrim($path, '/');
+    if (function_exists('app_url')) {
+        return (string) app_url('/' . $path);
+    }
+
+    return '/' . $path;
+}
+
+function coverPageResolveSignatureUrl(int $userId, string $fallbackName = ''): string
+{
+    if ($userId <= 0 && $fallbackName === '') {
+        return '';
+    }
+    $path = null;
+    if ($userId > 0 && function_exists('getUserSignaturePathById')) {
+        $path = getUserSignaturePathById($userId);
+    }
+    if (($path === null || $path === '') && $fallbackName !== '' && function_exists('getUserSignaturePathByName')) {
+        $path = getUserSignaturePathByName($fallbackName);
+    }
+
+    return coverPageSignaturePublicUrl(is_string($path) ? $path : null);
 }
 
 function coverPageCompanyId(): int
@@ -165,10 +236,13 @@ function coverPageCurrentUser(): array
         $designation = ucwords(str_replace('_', ' ', trim((string) ($_SESSION['role'] ?? ''))));
     }
 
+    $id = (int) ($_SESSION['user_id'] ?? 0);
+
     return [
-        'id' => (int) ($_SESSION['user_id'] ?? 0),
+        'id' => $id,
         'name' => $name,
         'designation' => $designation,
+        'signature_url' => coverPageResolveSignatureUrl($id, $name),
     ];
 }
 
@@ -177,9 +251,19 @@ function coverPageCurrentUser(): array
  */
 function coverPageFormatRow(array $row): array
 {
+    $viewerId = (int) ($_SESSION['user_id'] ?? 0);
+    $ownerId = (int) ($row['user_id'] ?? 0);
+    $status = coverPageNormalizeStatus($row['status'] ?? 'pending');
+    $isOwner = $ownerId > 0 && $ownerId === $viewerId;
+    $isAdmin = coverPageIsAdmin();
+    $approved = $status === 'approved';
+    $preparedName = (string) ($row['prepared_by_name'] ?? '');
+    $reviewedName = (string) ($row['reviewed_by_name'] ?? '');
+    $approvedById = (int) ($row['approved_by_user_id'] ?? 0);
+
     return [
         'id' => (int) $row['id'],
-        'user_id' => (int) $row['user_id'],
+        'user_id' => $ownerId,
         'document_name' => (string) $row['document_name'],
         'file_no' => (int) $row['file_no'],
         'file_total' => (int) $row['file_total'],
@@ -187,17 +271,28 @@ function coverPageFormatRow(array $row): array
         'doc_to' => (int) $row['doc_to'],
         'period_month' => (int) $row['period_month'],
         'period_year' => (int) $row['period_year'],
-        'prepared_by_name' => (string) $row['prepared_by_name'],
+        'prepared_by_name' => $preparedName,
         'prepared_by_designation' => (string) ($row['prepared_by_designation'] ?? ''),
         'prepared_date' => (string) $row['prepared_date'],
-        'reviewed_by_name' => (string) ($row['reviewed_by_name'] ?? ''),
+        'prepared_signature_url' => coverPageResolveSignatureUrl($ownerId, $preparedName),
+        'reviewed_by_name' => $reviewedName,
         'reviewed_by_designation' => (string) ($row['reviewed_by_designation'] ?? ''),
+        'reviewed_signature_url' => $approved
+            ? coverPageResolveSignatureUrl($approvedById, $reviewedName)
+            : '',
+        'status' => $status,
+        'approved_by_user_id' => $approvedById,
+        'approved_at' => (string) ($row['approved_at'] ?? ''),
         'created_at' => (string) $row['created_at'],
+        'can_edit' => $isAdmin || $isOwner,
+        'can_delete' => $isAdmin || $isOwner,
+        'can_approve' => !$approved && !$isOwner && $viewerId > 0,
+        'can_download' => $approved,
     ];
 }
 
 /**
- * Users see their own cover pages; admins see every cover page in the company.
+ * Company-wide list so another user can find pending covers to approve.
  *
  * @return list<array<string,mixed>>
  */
@@ -205,12 +300,8 @@ function coverPageList(PDO $pdo): array
 {
     coverPageEnsureSchema($pdo);
     [$scopeSql, $params] = coverPageCompanyScope();
-    $sql = 'SELECT * FROM cover_pages WHERE ' . $scopeSql;
-    if (!coverPageIsAdmin()) {
-        $sql .= ' AND user_id = ?';
-        $params[] = (int) ($_SESSION['user_id'] ?? 0);
-    }
-    $sql .= ' ORDER BY created_at DESC, id DESC LIMIT 500';
+    $sql = 'SELECT * FROM cover_pages WHERE ' . $scopeSql
+        . ' ORDER BY FIELD(status, \'pending\', \'approved\'), created_at DESC, id DESC LIMIT 500';
     $st = $pdo->prepare($sql);
     $st->execute($params);
 
@@ -220,13 +311,23 @@ function coverPageList(PDO $pdo): array
 /**
  * @return array<string,mixed>|null
  */
-function coverPageFindEditable(PDO $pdo, int $id): ?array
+function coverPageFindInCompany(PDO $pdo, int $id): ?array
 {
     coverPageEnsureSchema($pdo);
     [$scopeSql, $scopeParams] = coverPageCompanyScope();
     $st = $pdo->prepare('SELECT * FROM cover_pages WHERE id = ? AND ' . $scopeSql . ' LIMIT 1');
     $st->execute(array_merge([$id], $scopeParams));
     $row = $st->fetch(PDO::FETCH_ASSOC);
+
+    return $row ?: null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function coverPageFindEditable(PDO $pdo, int $id): ?array
+{
+    $row = coverPageFindInCompany($pdo, $id);
     if (!$row) {
         return null;
     }
@@ -235,6 +336,46 @@ function coverPageFindEditable(PDO $pdo, int $id): ?array
     }
 
     return $row;
+}
+
+/**
+ * Another logged-in user (not the creator) may approve a pending cover page.
+ *
+ * @return array{ok:bool,message?:string,row?:array<string,mixed>}
+ */
+function coverPageApprove(PDO $pdo, int $id): array
+{
+    coverPageEnsureSchema($pdo);
+    $row = coverPageFindInCompany($pdo, $id);
+    if (!$row) {
+        return ['ok' => false, 'message' => 'Cover page not found.'];
+    }
+    if (coverPageIsApproved($row)) {
+        return ['ok' => false, 'message' => 'This cover page is already approved.'];
+    }
+    $viewer = coverPageCurrentUser();
+    if ($viewer['id'] <= 0) {
+        return ['ok' => false, 'message' => 'Please log in again.'];
+    }
+    if ((int) $row['user_id'] === $viewer['id']) {
+        return ['ok' => false, 'message' => 'Ask another user to approve this cover page. You cannot approve your own.'];
+    }
+
+    $st = $pdo->prepare(
+        'UPDATE cover_pages SET status = ?, reviewed_by_name = ?, reviewed_by_designation = ?,
+         approved_by_user_id = ?, approved_at = NOW() WHERE id = ?'
+    );
+    $st->execute([
+        'approved',
+        $viewer['name'] !== '' ? $viewer['name'] : 'Approver',
+        $viewer['designation'] !== '' ? $viewer['designation'] : null,
+        $viewer['id'],
+        $id,
+    ]);
+
+    $fresh = coverPageFindInCompany($pdo, $id);
+
+    return ['ok' => true, 'message' => 'Cover page approved. Download and print are now available.', 'row' => $fresh ?: $row];
 }
 
 /**
@@ -270,8 +411,6 @@ function coverPageValidate(array $input): array
         'doc_to' => $int('doc_to'),
         'period_month' => $int('period_month'),
         'period_year' => $int('period_year'),
-        'reviewed_by_name' => $text('reviewed_by_name', 150),
-        'reviewed_by_designation' => $text('reviewed_by_designation', 150),
     ];
 
     $chosenName = null;
@@ -315,15 +454,15 @@ function coverPageValidate(array $input): array
 function coverPageSave(PDO $pdo, array $data, ?int $id = null): int
 {
     coverPageEnsureSchema($pdo);
-    $reviewedName = $data['reviewed_by_name'] !== '' ? $data['reviewed_by_name'] : null;
-    $reviewedDesignation = $data['reviewed_by_designation'] !== '' ? $data['reviewed_by_designation'] : null;
 
     if ($id !== null) {
+        // Editing clears approval so a second person must approve again before download.
         $st = $pdo->prepare('UPDATE cover_pages SET document_name = ?, file_no = ?, file_total = ?, doc_from = ?, doc_to = ?,
-            period_month = ?, period_year = ?, reviewed_by_name = ?, reviewed_by_designation = ? WHERE id = ?');
+            period_month = ?, period_year = ?, reviewed_by_name = NULL, reviewed_by_designation = NULL,
+            status = ?, approved_by_user_id = NULL, approved_at = NULL WHERE id = ?');
         $st->execute([
             $data['document_name'], $data['file_no'], $data['file_total'], $data['doc_from'], $data['doc_to'],
-            $data['period_month'], $data['period_year'], $reviewedName, $reviewedDesignation, $id,
+            $data['period_month'], $data['period_year'], 'pending', $id,
         ]);
 
         return $id;
@@ -332,12 +471,12 @@ function coverPageSave(PDO $pdo, array $data, ?int $id = null): int
     $user = coverPageCurrentUser();
     $companyId = coverPageCompanyId();
     $st = $pdo->prepare('INSERT INTO cover_pages (company_id, user_id, document_name, file_no, file_total, doc_from, doc_to,
-        period_month, period_year, prepared_by_name, prepared_by_designation, prepared_date, reviewed_by_name, reviewed_by_designation)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?)');
+        period_month, period_year, prepared_by_name, prepared_by_designation, prepared_date, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?)');
     $st->execute([
         $companyId > 0 ? $companyId : null, $user['id'], $data['document_name'], $data['file_no'], $data['file_total'],
         $data['doc_from'], $data['doc_to'], $data['period_month'], $data['period_year'],
-        $user['name'], $user['designation'] !== '' ? $user['designation'] : null, $reviewedName, $reviewedDesignation,
+        $user['name'], $user['designation'] !== '' ? $user['designation'] : null, 'pending',
     ]);
 
     return (int) $pdo->lastInsertId();

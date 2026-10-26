@@ -39,10 +39,12 @@ const LOGO_XOBJECTS = new Set(['/Fm1']);
 
 const SIGN_LINES = {
   preparedName: { x0: 95.3, x1: 231.4, y: 969.0 },
-  preparedDesignation: { x0: 122.6, x1: 231.4, y: 995.6 },
+  // Template label says "Designation" — we stamp the user's signature image here.
+  preparedSignature: { x0: 122.6, x1: 231.4, y: 995.6 },
   preparedDate: { x0: 89.5, x1: 231.4, y: 1023.6 },
   reviewedName: { x0: 311.3, x1: 451.0, y: 970.4 },
-  reviewedDesignation: { x0: 339.4, x1: 451.0, y: 997.7 },
+  reviewedSignature: { x0: 339.4, x1: 451.0, y: 997.7 },
+  reviewedDate: { x0: 307.0, x1: 451.0, y: 1025.7 },
 };
 
 let templateBytesPromise = null;
@@ -217,6 +219,54 @@ function formatPreparedDate(value) {
   return `${m[3]} ${MONTHS[Number(m[2]) - 1]?.slice(0, 3) || ''} ${m[1]}`;
 }
 
+async function embedSignatureImage(doc, url) {
+  const src = String(url || '').trim();
+  if (!src) return null;
+  try {
+    const res = await fetch(src, { credentials: 'same-origin' });
+    if (!res.ok) return null;
+    const bytes = await res.arrayBuffer();
+    if (!bytes || bytes.byteLength < 24) return null;
+    const lower = src.toLowerCase();
+    const type = String(res.headers.get('content-type') || '').toLowerCase();
+    if (type.includes('png') || lower.includes('.png')) {
+      return doc.embedPng(bytes);
+    }
+    if (type.includes('jpeg') || type.includes('jpg') || lower.includes('.jpg') || lower.includes('.jpeg')) {
+      return doc.embedJpg(bytes);
+    }
+    // Try PNG then JPEG when the server omits a useful content-type.
+    try {
+      return await doc.embedPng(bytes);
+    } catch {
+      return doc.embedJpg(bytes);
+    }
+  } catch {
+    return null;
+  }
+}
+
+/** Draw the account signature on the Designation underline (falls back to designation text). */
+async function drawSignatureOrText(doc, page, { url, fallbackText }, line, font) {
+  const image = await embedSignatureImage(doc, url);
+  if (image) {
+    const maxW = Math.max(24, line.x1 - line.x0 - 4);
+    const maxH = 20;
+    const scale = Math.min(maxW / image.width, maxH / image.height);
+    const w = image.width * scale;
+    const h = image.height * scale;
+    const box = page.getCropBox();
+    page.drawImage(image, {
+      x: box.x + line.x0 + 2,
+      y: box.y + box.height - line.y - h + 3,
+      width: w,
+      height: h,
+    });
+    return;
+  }
+  drawOnLine(page, fallbackText, line, font);
+}
+
 async function buildCoverDocument(cover) {
   const doc = await PDFDocument.load(await loadTemplateBytes());
   const page = doc.getPage(0);
@@ -233,10 +283,23 @@ async function buildCoverDocument(cover) {
   drawDetail(page, `${(MONTHS[cover.period_month - 1] || '').toUpperCase()} ${cover.period_year}`, DETAILS.periodBaseline, bold);
 
   drawOnLine(page, cover.prepared_by_name, SIGN_LINES.preparedName, bold);
-  drawOnLine(page, cover.prepared_by_designation, SIGN_LINES.preparedDesignation, bold);
+  await drawSignatureOrText(
+    doc,
+    page,
+    { url: cover.prepared_signature_url, fallbackText: cover.prepared_by_designation },
+    SIGN_LINES.preparedSignature,
+    bold,
+  );
   drawOnLine(page, formatPreparedDate(cover.prepared_date), SIGN_LINES.preparedDate, bold);
   drawOnLine(page, cover.reviewed_by_name, SIGN_LINES.reviewedName, bold);
-  drawOnLine(page, cover.reviewed_by_designation, SIGN_LINES.reviewedDesignation, bold);
+  await drawSignatureOrText(
+    doc,
+    page,
+    { url: cover.reviewed_signature_url, fallbackText: cover.reviewed_by_designation },
+    SIGN_LINES.reviewedSignature,
+    bold,
+  );
+  drawOnLine(page, formatPreparedDate(cover.approved_at || ''), SIGN_LINES.reviewedDate, bold);
 
   doc.setTitle(`${coverTitle(cover.document_name)} - Cover Page`);
   doc.setCreator('Ultitech ERP');

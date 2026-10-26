@@ -431,6 +431,52 @@ html[data-theme="dark"] .cp-desk .cp-btn--primary:hover:not(:disabled) {
   color: #fff;
 }
 
+.cp-desk .cp-btn--approve {
+  background: #0f766e;
+  color: #fff;
+  border-color: #0f766e;
+}
+
+.cp-desk .cp-btn--approve:hover:not(:disabled) {
+  background: #0d9488;
+}
+
+.cp-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.cp-status--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.cp-status--approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+html[data-theme="dark"] .cp-status--pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+html[data-theme="dark"] .cp-status--approved {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.cp-approval-note {
+  margin: 0.75rem 0 0;
+  padding: 0 0.15rem;
+}
+
 .cp-desk .cp-btn--small {
   height: 2rem;
   padding: 0 0.7rem;

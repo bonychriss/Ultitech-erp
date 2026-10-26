@@ -71,25 +71,7 @@ function salesOrderViewLoadCompanySettings(PDO $salesDb): array
         ];
     }
 
-    if ($isRoadmaster) {
-        $roadmasterFooterDefaults = [
-            'truck_payment_details' => 'Payment details',
-            'truck_terms' => 'Terms and Conditions..',
-            'truck_validity' => 'Invoice is valid for 10 days',
-            'truck_thanks_note' => 'Thank you for your business',
-            'truck_return_policy' => 'Return policy be: Only unused, undamaged, and originally packaged items are accepted.',
-            'spare_payment_details' => 'Payment details',
-            'spare_terms' => 'Terms and Conditions..',
-            'spare_validity' => 'Invoice is valid for 10 days',
-            'spare_thanks_note' => 'Thank you for your business',
-            'spare_return_policy' => 'Return policy be: Only unused, undamaged, and originally packaged items are accepted.',
-        ];
-        foreach ($roadmasterFooterDefaults as $footerKey => $footerDefault) {
-            if (!isset($company_settings[$footerKey]) || trim((string) $company_settings[$footerKey]) === '') {
-                $company_settings[$footerKey] = $footerDefault;
-            }
-        }
-    }
+    // Do not inject placeholder Document Footer Content — empty settings must omit page 2.
 
     $company_settings['company_logo_url'] = getCompanyLogoUrl();
     foreach ([

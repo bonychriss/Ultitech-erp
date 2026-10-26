@@ -18,7 +18,7 @@ $map = [
 ];
 foreach ($map as $key => $title) {
     $body = trim((string) ($company_settings[$key] ?? ''));
-    if ($body !== '') {
+    if ($body !== '' && !(function_exists('sales_document_is_blank_footer_text') && sales_document_is_blank_footer_text($body))) {
         $footerBits[] = ['title' => $title, 'body' => $body];
     }
 }

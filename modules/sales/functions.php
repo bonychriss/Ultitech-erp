@@ -1274,16 +1274,50 @@ function sales_document_payment_details(array $companySettings = [], bool $isTru
 
     foreach ($keys as $key) {
         $value = trim((string) ($companySettings[$key] ?? ''));
-        if ($value !== '') {
-            return $value;
+        if ($value === '') {
+            continue;
         }
+        if (function_exists('sales_settings_is_blank_payment_text') && sales_settings_is_blank_payment_text($value)) {
+            continue;
+        }
+        if (function_exists('sales_document_is_blank_footer_text') && sales_document_is_blank_footer_text($value)) {
+            continue;
+        }
+
+        return $value;
     }
 
     return '';
 }
 
 /**
- * Footer sections from Sales Settings → Document settings (Ultimate spare_* fields).
+ * True when a Document Footer Content field is empty or still a stock placeholder.
+ */
+function sales_document_is_blank_footer_text($value): bool
+{
+    $text = trim((string) $value);
+    if ($text === '') {
+        return true;
+    }
+
+    static $placeholders = [
+        'payment details',
+        'terms and conditions..',
+        'terms and conditions.',
+        'terms and conditions',
+        'invoice is valid for 10 days',
+        'thank you for your business',
+        'thank you for your business.',
+        'return policy be: only unused, undamaged, and originally packaged items are accepted.',
+        'return policy be: only unused, undamaged, and originally packaged items are accepted',
+    ];
+
+    return in_array(strtolower($text), $placeholders, true);
+}
+
+/**
+ * Footer sections from Sales Settings Document Layout footer fields.
+ * Empty or placeholder values are skipped so an unfilled footer never creates page 2.
  *
  * @param array<string, mixed> $companySettings
  * @return list<array{title: string, body: string}>
@@ -1294,7 +1328,7 @@ function sales_document_settings_second_page_sections(array $companySettings = [
     $pick = static function (string ...$keys) use ($companySettings): string {
         foreach ($keys as $key) {
             $body = trim((string) ($companySettings[$key] ?? ''));
-            if ($body !== '') {
+            if ($body !== '' && !sales_document_is_blank_footer_text($body)) {
                 return $body;
             }
         }

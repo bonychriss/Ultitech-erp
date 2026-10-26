@@ -868,13 +868,21 @@ $docFontImport = function_exists('sales_document_font_import_css')
     } else {
         $docType = 'QUOTATION';
     }
-    $pick = static function (array $row, string $primary, string $fallback = ''): string {
+    $isBlankFooter = static function (string $value): bool {
+        return function_exists('sales_document_is_blank_footer_text')
+            ? sales_document_is_blank_footer_text($value)
+            : (trim($value) === '');
+    };
+    $pick = static function (array $row, string $primary, string $fallback = '') use ($isBlankFooter): string {
         $a = trim((string) ($row[$primary] ?? ''));
-        if ($a !== '') {
+        if ($a !== '' && !$isBlankFooter($a)) {
             return $a;
         }
         if ($fallback !== '') {
-            return trim((string) ($row[$fallback] ?? ''));
+            $b = trim((string) ($row[$fallback] ?? ''));
+            if ($b !== '' && !$isBlankFooter($b)) {
+                return $b;
+            }
         }
         return '';
     };
@@ -882,8 +890,11 @@ $docFontImport = function_exists('sales_document_font_import_css')
     $truckPay = function_exists('sales_document_payment_details')
         ? sales_document_payment_details($company_settings, true)
         : $pick($company_settings, 'truck_payment_details', 'spare_payment_details');
-    if ($truckPay === '') {
+    if ($truckPay === '' || $isBlankFooter($truckPay)) {
         $truckPay = trim((string) ($company_settings['bank_details'] ?? ''));
+    }
+    if ($isBlankFooter($truckPay)) {
+        $truckPay = '';
     }
     $truckTerms = $pick($company_settings, 'truck_terms', 'spare_terms');
     $truckValidity = $pick($company_settings, 'truck_validity', 'spare_validity');
@@ -892,19 +903,19 @@ $docFontImport = function_exists('sales_document_font_import_css')
     $truckRemarks = trim((string) ($company_settings['truck_remarks'] ?? ''));
     $invoiceRemarksGeneral = trim((string) ($company_settings['invoice_remarks'] ?? ''));
     $remarkParts = [];
-    if ($truckRemarks !== '') {
+    if ($truckRemarks !== '' && !$isBlankFooter($truckRemarks)) {
         $remarkParts[] = $truckRemarks;
     }
-    if ($invoiceRemarksGeneral !== '') {
+    if ($invoiceRemarksGeneral !== '' && !$isBlankFooter($invoiceRemarksGeneral)) {
         $remarkParts[] = $invoiceRemarksGeneral;
     }
     $invRemarks = implode("\n\n", $remarkParts);
 
     $bankDetails = '';
     $thanksSecond = $pick($company_settings, 'truck_thanks_note', 'spare_thanks_note');
-    // Page 2: extended terms only (payment + bank appear on page 1)
-    // Always show the Terms & remarks page for truck documents (signature lives on page 2).
-    $showTruckTermsPage = true;
+    // Page 2 only when Document Footer Content has real text (not empty/placeholder).
+    $showTruckTermsPage = ($truckTerms !== '' || $truckValidity !== '' || $invRemarks !== ''
+        || $truckReturn !== '' || $thanksSecond !== '');
     ?>
 
 

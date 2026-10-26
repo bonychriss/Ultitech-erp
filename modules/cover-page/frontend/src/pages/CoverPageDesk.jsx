@@ -19,7 +19,7 @@ import {
   User,
   X,
 } from 'lucide-react';
-import { approveCover, deleteCover, getBootData, saveCover } from '../api.js';
+import { approveCover, deleteCover, fetchCoverDesk, getBootData, saveCover } from '../api.js';
 import { documentNameWithoutFile } from '../utils/title.js';
 
 const RELOAD_GUARD_KEY = 'cover-page-stale-reload';
@@ -106,8 +106,12 @@ function Field({ label, hint, error, children, wide }) {
 function ConfirmDelete({ cover, busy, onCancel, onConfirm }) {
   if (!cover) return null;
   return (
-    <div className="cp-modal-backdrop" role="presentation" onClick={busy ? undefined : onCancel}>
-      <div className="cp-modal" role="dialog" aria-modal="true" aria-labelledby="cp-del-title" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="cp-modal-backdrop"
+      role="presentation"
+      onMouseDown={busy ? undefined : ((e) => { if (e.target === e.currentTarget) onCancel(); })}
+    >
+      <div className="cp-modal" role="dialog" aria-modal="true" aria-labelledby="cp-del-title" onMouseDown={(e) => e.stopPropagation()}>
         <h2 id="cp-del-title">Delete cover page?</h2>
         <p>
           <strong>{documentNameWithoutFile(cover.document_name)}</strong> (File {pad2(cover.file_no)} / {pad2(cover.file_total)}) will be removed. This cannot be undone.
@@ -233,9 +237,14 @@ function CoverPreview({ preview, busy, onClose, onDownload }) {
   if (!preview) return null;
   const { cover, url } = preview;
   const allowed = cover.can_download !== false && isApproved(cover);
+  // Close only when the press starts on the backdrop — otherwise the same click
+  // that opened the preview (mouseup over the new modal) closes it immediately.
+  const closeIfBackdrop = (e) => {
+    if (e.target === e.currentTarget) onClose();
+  };
   return (
-    <div className="cp-modal-backdrop" role="presentation" onClick={onClose}>
-      <div className="cp-preview" role="dialog" aria-modal="true" aria-labelledby="cp-preview-title" onClick={(e) => e.stopPropagation()}>
+    <div className="cp-modal-backdrop" role="presentation" onMouseDown={closeIfBackdrop}>
+      <div className="cp-preview" role="dialog" aria-modal="true" aria-labelledby="cp-preview-title" onMouseDown={(e) => e.stopPropagation()}>
         <header className="cp-preview-head">
           <h2 id="cp-preview-title">
             {documentNameWithoutFile(cover.document_name)} — File {pad2(cover.file_no)} / {pad2(cover.file_total)}
@@ -310,6 +319,23 @@ export default function CoverPageDesk() {
   useEffect(() => {
     writeUrlParams({ tab: tab === 'saved' ? 'saved' : '' });
   }, [tab]);
+
+  // Boot payload can be empty/stale; always refresh the saved list from the API on open.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchCoverDesk();
+        if (cancelled || !Array.isArray(data.covers)) return;
+        setCovers(data.covers);
+      } catch {
+        /* keep boot covers */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const editing = form.id > 0;
   const editingCover = editing ? covers.find((c) => c.id === form.id) : null;
@@ -441,16 +467,16 @@ export default function CoverPageDesk() {
     setPreview(null);
   }, []);
 
-  const reopenedRef = useRef(false);
+  const pendingViewIdRef = useRef(Number(readUrlParam('view')) || 0);
   useEffect(() => {
-    if (reopenedRef.current) return;
-    reopenedRef.current = true;
-    const id = Number(readUrlParam('view'));
-    if (!id) return;
-    writeUrlParams({ view: '' });
+    const id = pendingViewIdRef.current;
+    if (!id || covers.length === 0) return;
     const cover = covers.find((c) => c.id === id);
-    if (cover) openPreview(cover);
-  });
+    if (!cover) return;
+    pendingViewIdRef.current = 0;
+    writeUrlParams({ view: '' });
+    openPreview(cover);
+  }, [covers]);
 
   const pickDocument = (cover) => {
     attachTargetRef.current = cover;

@@ -185,11 +185,15 @@ function coverPageResolveSignatureUrl(int $userId, string $fallbackName = ''): s
         return '';
     }
     $path = null;
-    if ($userId > 0 && function_exists('getUserSignaturePathById')) {
-        $path = getUserSignaturePathById($userId);
-    }
-    if (($path === null || $path === '') && $fallbackName !== '' && function_exists('getUserSignaturePathByName')) {
-        $path = getUserSignaturePathByName($fallbackName);
+    try {
+        if ($userId > 0 && function_exists('getUserSignaturePathById')) {
+            $path = getUserSignaturePathById($userId);
+        }
+        if (($path === null || $path === '') && $fallbackName !== '' && function_exists('getUserSignaturePathByName')) {
+            $path = getUserSignaturePathByName($fallbackName);
+        }
+    } catch (Throwable $e) {
+        return '';
     }
 
     return coverPageSignaturePublicUrl(is_string($path) ? $path : null);
@@ -206,8 +210,12 @@ function coverPageCompanyId(): int
 function coverPageCompanyScope(): array
 {
     $companyId = coverPageCompanyId();
+    if ($companyId > 0) {
+        // Include legacy rows saved with NULL/0 company_id so Saved is not empty on first open.
+        return ['(company_id IS NULL OR company_id = 0 OR company_id = ?)', [$companyId]];
+    }
 
-    return $companyId > 0 ? ['company_id = ?', [$companyId]] : ['company_id IS NULL', []];
+    return ['1=1', []];
 }
 
 function coverPageIsAdmin(): bool
@@ -300,12 +308,26 @@ function coverPageList(PDO $pdo): array
 {
     coverPageEnsureSchema($pdo);
     [$scopeSql, $params] = coverPageCompanyScope();
-    $sql = 'SELECT * FROM cover_pages WHERE ' . $scopeSql
-        . ' ORDER BY FIELD(status, \'pending\', \'approved\'), created_at DESC, id DESC LIMIT 500';
-    $st = $pdo->prepare($sql);
-    $st->execute($params);
+    try {
+        $sql = 'SELECT * FROM cover_pages WHERE ' . $scopeSql
+            . ' ORDER BY CASE WHEN status = \'pending\' THEN 0 ELSE 1 END, created_at DESC, id DESC LIMIT 500';
+        $st = $pdo->prepare($sql);
+        $st->execute($params);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        // Older DBs mid-migration: fall back without status ordering.
+        error_log('coverPageList: ' . $e->getMessage());
+        try {
+            $st = $pdo->prepare('SELECT * FROM cover_pages WHERE ' . $scopeSql . ' ORDER BY created_at DESC, id DESC LIMIT 500');
+            $st->execute($params);
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e2) {
+            error_log('coverPageList fallback: ' . $e2->getMessage());
+            return [];
+        }
+    }
 
-    return array_map('coverPageFormatRow', $st->fetchAll(PDO::FETCH_ASSOC) ?: []);
+    return array_map('coverPageFormatRow', $rows);
 }
 
 /**

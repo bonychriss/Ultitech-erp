@@ -9,6 +9,19 @@ export function getBootData() {
   return (typeof window !== 'undefined' && window.__COVER_PAGE_BOOT__) || {};
 }
 
+export async function fetchCoverDesk() {
+  const res = await fetch(`${apiBase()}?action=list`, {
+    method: 'GET',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.message || `Request failed (${res.status})`);
+  }
+  return data.data || {};
+}
+
 async function post(action, body) {
   const res = await fetch(`${apiBase()}?action=${encodeURIComponent(action)}`, {
     method: 'POST',

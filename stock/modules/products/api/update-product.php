@@ -199,6 +199,18 @@ if (empty($category_id)) {
     exit;
 }
 
+if ($isUltimateStockSimple && $description === '') {
+    http_response_code(422);
+    echo json_encode(['ok' => false, 'error' => 'Description is required.']);
+    exit;
+}
+
+if ($isUltimateStockSimple && $brand === '') {
+    http_response_code(422);
+    echo json_encode(['ok' => false, 'error' => 'Brand is required.']);
+    exit;
+}
+
 if (!$isUltimateStockSimple && !$isTruckUpdate && $oem_number === '') {
     http_response_code(422);
     echo json_encode(['ok' => false, 'error' => 'OEM / Part no is required.']);

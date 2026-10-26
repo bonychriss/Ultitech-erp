@@ -192,6 +192,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+if (!empty($isUltimateStockSimple) && function_exists('stock_ultimate_ensure_website_brands')) {
+    stock_ultimate_ensure_website_brands($pdo);
+}
 $stmt = $pdo->query('SELECT * FROM brands ORDER BY name ASC');
 $brands = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 

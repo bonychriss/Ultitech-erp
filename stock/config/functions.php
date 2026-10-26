@@ -1815,6 +1815,169 @@ if (!function_exists('stock_brands_logo_map')) {
 }
 
 /**
+ * Brands + logos shown on ultimate.co.tz/brands (fallback when live fetch is unavailable).
+ *
+ * @return array<string, string> name => logo URL
+ */
+if (!function_exists('stock_ultimate_website_brand_catalog')) {
+    function stock_ultimate_website_brand_catalog()
+    {
+        return [
+            'Carhartt' => 'https://www.ultimate.co.tz/public/uploads/all/dWp7ri3PhpLCd5yevebirxNMfV14y4U5hHkpd49e.jpg',
+            'Reflected' => 'https://www.ultimate.co.tz/public/uploads/all/w8hoIy3wFKkBfkkKKbwjeZ5iFnRqakdNDDemj63q.jpg',
+            'Honeywell' => 'https://www.ultimate.co.tz/public/uploads/all/JdIXVjydJ9G7wRW5TSc9rHTuac70j0ae7U4zFi2Q.jpg',
+            'Rock' => 'https://www.ultimate.co.tz/public/uploads/all/EQT8ye6uwcJuH6IaVHUV0n4NZEuAq1sCHfFjuSP3.jpg',
+            'Radiens' => 'https://www.ultimate.co.tz/public/uploads/all/OdE3hYkY2LqSywY5vvwO6GpTSfkVVyk3BWvSefve.jpg',
+            'Stryker' => 'https://www.ultimate.co.tz/public/uploads/all/GUnqrdlb0HBCNPPM39KvgRRsqLN3IAWVZPm2SnTr.jpg',
+            'Lakelo' => 'https://www.ultimate.co.tz/public/uploads/all/WmgHlbJyiw5ikJJKtseyT4qRVGEUIhth0CCfeHAW.jpg',
+            'North' => 'https://www.ultimate.co.tz/public/uploads/all/gItPozCRak4pf7qUoVHzKe2MkCqsPTxeUiDV05PD.jpg',
+            'Niker' => 'https://www.ultimate.co.tz/public/uploads/all/niArBIytrEikNTotRjd41BanS9F3Zd4T8lhCYkIf.jpg',
+            'Cat' => 'https://www.ultimate.co.tz/public/uploads/all/lQO81fgWGTdM1up2nKwg7ZiG0DcBvsMWFtKCrxt7.jpg',
+            'Zoll' => 'https://www.ultimate.co.tz/public/uploads/all/ecwYLXjfkgDclM7RXyijADV6dx6bf0Zl8y8h9mY5.jpg',
+            'Osha' => 'https://www.ultimate.co.tz/public/uploads/all/726zZODfc0ZgRlCjYxoOihqQagGAZGjVngzctoLT.jpg',
+        ];
+    }
+}
+
+/**
+ * Pull brand name → logo map from ultimate.co.tz/brands when reachable.
+ *
+ * @return array<string, string>
+ */
+if (!function_exists('stock_ultimate_fetch_website_brands')) {
+    function stock_ultimate_fetch_website_brands()
+    {
+        $cacheFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ultitech_ultimate_brands_cache.json';
+        if (is_file($cacheFile) && (time() - (int) @filemtime($cacheFile)) < 86400) {
+            $cached = json_decode((string) @file_get_contents($cacheFile), true);
+            if (is_array($cached) && $cached !== []) {
+                return $cached;
+            }
+        }
+
+        $html = '';
+        if (function_exists('curl_init')) {
+            $ch = curl_init('https://www.ultimate.co.tz/brands');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_CONNECTTIMEOUT => 4,
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_USERAGENT => 'UltiTechERP/1.0',
+            ]);
+            $html = (string) curl_exec($ch);
+            curl_close($ch);
+        } else {
+            $ctx = stream_context_create([
+                'http' => ['timeout' => 8, 'header' => "User-Agent: UltiTechERP/1.0\r\n"],
+                'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
+            ]);
+            $html = (string) @file_get_contents('https://www.ultimate.co.tz/brands', false, $ctx);
+        }
+
+        $found = [];
+        if ($html !== '' && preg_match_all(
+            '#href=["\']https?://[^"\']*/brand/([A-Za-z0-9]+)-[A-Za-z0-9]+["\'][^>]*>.*?<(?:img|source)[^>]+(?:src|data-src)=["\']([^"\']+)["\']#is',
+            $html,
+            $matches,
+            PREG_SET_ORDER
+        )) {
+            foreach ($matches as $row) {
+                $name = trim((string) ($row[1] ?? ''));
+                $src = trim((string) ($row[2] ?? ''));
+                if ($name === '' || $src === '' || stripos($src, 'placeholder') !== false) {
+                    continue;
+                }
+                if (strpos($src, '//') === 0) {
+                    $src = 'https:' . $src;
+                } elseif ($src[0] === '/') {
+                    $src = 'https://www.ultimate.co.tz' . $src;
+                }
+                $found[$name] = $src;
+            }
+        }
+
+        if ($found === []) {
+            return stock_ultimate_website_brand_catalog();
+        }
+
+        @file_put_contents($cacheFile, json_encode($found));
+        return $found;
+    }
+}
+
+/**
+ * Ensure Ultimate stock brands mirror ultimate.co.tz brands (with logos).
+ */
+if (!function_exists('stock_ultimate_ensure_website_brands')) {
+    function stock_ultimate_ensure_website_brands(PDO $pdo)
+    {
+        if (function_exists('ensureBrandsTable')) {
+            ensureBrandsTable($pdo);
+        }
+
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+
+        $catalog = stock_ultimate_fetch_website_brands();
+        if ($catalog === []) {
+            return;
+        }
+
+        $hasBrandType = false;
+        $hasLogo = false;
+        try {
+            $cols = $pdo->query('SHOW COLUMNS FROM brands')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            $hasBrandType = in_array('brand_type', $cols, true);
+            $hasLogo = in_array('logo', $cols, true);
+        } catch (Throwable $e) {
+            return;
+        }
+
+        $find = $pdo->prepare('SELECT id, logo FROM brands WHERE LOWER(name) = LOWER(?) LIMIT 1');
+        foreach ($catalog as $name => $logoUrl) {
+            $name = trim((string) $name);
+            $logoUrl = trim((string) $logoUrl);
+            if ($name === '') {
+                continue;
+            }
+            try {
+                $find->execute([$name]);
+                $existing = $find->fetch(PDO::FETCH_ASSOC);
+                if ($existing) {
+                    if ($hasLogo && $logoUrl !== '' && trim((string) ($existing['logo'] ?? '')) !== $logoUrl) {
+                        $pdo->prepare('UPDATE brands SET logo = ? WHERE id = ?')->execute([
+                            $logoUrl,
+                            (int) $existing['id'],
+                        ]);
+                    }
+                    continue;
+                }
+                $fields = ['name'];
+                $values = [$name];
+                if ($hasBrandType) {
+                    $fields[] = 'brand_type';
+                    $values[] = 'general';
+                }
+                if ($hasLogo && $logoUrl !== '') {
+                    $fields[] = 'logo';
+                    $values[] = $logoUrl;
+                }
+                $placeholders = implode(', ', array_fill(0, count($fields), '?'));
+                $pdo->prepare(
+                    'INSERT INTO brands (' . implode(', ', $fields) . ') VALUES (' . $placeholders . ')'
+                )->execute($values);
+            } catch (Throwable $e) {
+                /* skip one brand; keep going */
+            }
+        }
+    }
+}
+
+/**
  * Resolve a brand logo URL for a product brand / category name.
  */
 if (!function_exists('stock_resolve_brand_logo_url')) {
@@ -2738,27 +2901,29 @@ if (!function_exists('stockIncrementProductStock')) {
 /**
  * Next PUR-YYYYMMDD-### number for today (avoids duplicate po_number on concurrent creates).
  */
-function stock_generate_purchase_order_number(PDO $pdo): string
-{
-    $datePrefix = date('Ymd');
-    $likePattern = 'PUR-' . $datePrefix . '-%';
+if (!function_exists('stock_generate_purchase_order_number')) {
+    function stock_generate_purchase_order_number(PDO $pdo): string
+    {
+        $datePrefix = date('Ymd');
+        $likePattern = 'PUR-' . $datePrefix . '-%';
 
-    $stmt = $pdo->prepare('
-        SELECT po_number
-        FROM stocks_purchase_orders
-        WHERE po_number LIKE ?
-        ORDER BY CAST(SUBSTRING_INDEX(po_number, "-", -1) AS UNSIGNED) DESC
-        LIMIT 1
-    ');
-    $stmt->execute([$likePattern]);
-    $last = $stmt->fetchColumn();
+        $stmt = $pdo->prepare('
+            SELECT po_number
+            FROM stocks_purchase_orders
+            WHERE po_number LIKE ?
+            ORDER BY CAST(SUBSTRING_INDEX(po_number, "-", -1) AS UNSIGNED) DESC
+            LIMIT 1
+        ');
+        $stmt->execute([$likePattern]);
+        $last = $stmt->fetchColumn();
 
-    $seq = 1;
-    if (is_string($last) && preg_match('/-(\d+)$/', $last, $m)) {
-        $seq = max(1, (int) $m[1] + 1);
+        $seq = 1;
+        if (is_string($last) && preg_match('/-(\d+)$/', $last, $m)) {
+            $seq = max(1, (int) $m[1] + 1);
+        }
+
+        return sprintf('PUR-%s-%03d', $datePrefix, $seq);
     }
-
-    return sprintf('PUR-%s-%03d', $datePrefix, $seq);
 }
 
 // End of functions.php

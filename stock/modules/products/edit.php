@@ -95,6 +95,9 @@ try {
     $categoryProductThumbs = [];
 }
 $suppliers = $pdo->query('SELECT id, name FROM suppliers ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC);
+if ($isUltimateStockSimple && function_exists('stock_ultimate_ensure_website_brands')) {
+    stock_ultimate_ensure_website_brands($pdo);
+}
 $brands = [];
 try {
     $brands = $pdo->query('SELECT id, name, brand_type, logo FROM brands ORDER BY name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];

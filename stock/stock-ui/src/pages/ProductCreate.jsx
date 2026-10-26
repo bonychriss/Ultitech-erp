@@ -637,6 +637,8 @@ export default function ProductCreate({ data = {} }) {
       if (!name.trim()) nextErrors.push('Product name is required.');
       if (!categoryId) nextErrors.push('Category is required.');
       if (!isUltimate && !oemNumber.trim()) nextErrors.push('OEM / Part no is required.');
+      if (isUltimate && !description.trim()) nextErrors.push('Description is required.');
+      if (isUltimate && !brand.trim()) nextErrors.push('Brand is required.');
     }
     if (unitPrice === '' || Number.isNaN(Number(unitPrice))) nextErrors.push('Selling price is required.');
     if (requireProductImage && !isEdit && images.length === 0) {
@@ -955,6 +957,20 @@ export default function ProductCreate({ data = {} }) {
                     />
                   </FieldRow>
 
+                  {isUltimate ? (
+                    <FieldRow label="Description" htmlFor="prod-desc" required>
+                      <textarea
+                        id="prod-desc"
+                        className="prod-create-textarea"
+                        rows={3}
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Enter product description"
+                        required
+                      />
+                    </FieldRow>
+                  ) : null}
+
                   <div className="prod-create-pair">
                     <FieldRow label="Category" htmlFor="prod-category" required>
                       <CategoryPicker
@@ -966,7 +982,7 @@ export default function ProductCreate({ data = {} }) {
                       />
                     </FieldRow>
 
-                    <FieldRow label="Brand" htmlFor="prod-brand">
+                    <FieldRow label="Brand" htmlFor="prod-brand" required={isUltimate}>
                       {useBrandFreeText || brandOptions.length === 0 ? (
                         <input
                           id="prod-brand"
@@ -974,6 +990,7 @@ export default function ProductCreate({ data = {} }) {
                           value={brand}
                           onChange={(e) => setBrand(e.target.value)}
                           placeholder="Select brand"
+                          required={isUltimate}
                         />
                       ) : (
                         <BrandPicker
@@ -1326,16 +1343,18 @@ export default function ProductCreate({ data = {} }) {
                   </>
                 ) : (
                   <>
-                    <FieldRow label="Description" htmlFor="prod-desc">
-                      <textarea
-                        id="prod-desc"
-                        className="prod-create-textarea"
-                        rows={3}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Short description"
-                      />
-                    </FieldRow>
+                    {!isUltimate ? (
+                      <FieldRow label="Description" htmlFor="prod-desc">
+                        <textarea
+                          id="prod-desc"
+                          className="prod-create-textarea"
+                          rows={3}
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="Short description"
+                        />
+                      </FieldRow>
+                    ) : null}
 
                     <div className="prod-create-pair">
                       <FieldRow label="Supplier" htmlFor="prod-supplier">

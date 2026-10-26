@@ -13106,6 +13106,18 @@ function viewerCanSeePrivateDraftVoucher(array $voucher, ?int $viewerId = null):
     if (!paymentVoucherIsPrivateDraft($voucher)) {
         return true;
     }
+    // Admins/finance must still open vouchers (including stuck is_draft flags).
+    if (function_exists('isAdmin') && isAdmin()) {
+        return true;
+    }
+    if (function_exists('isFinance') && isFinance()) {
+        return true;
+    }
+    // Confirming means the voucher entered the approval chain — do not hide it.
+    $status = strtolower(trim((string) ($voucher['status'] ?? '')));
+    if ($status === 'confirming') {
+        return true;
+    }
     $vid = $viewerId !== null ? (int) $viewerId : (int) ($_SESSION['user_id'] ?? 0);
     return $vid > 0 && (int) ($voucher['created_by'] ?? 0) === $vid;
 }

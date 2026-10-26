@@ -529,148 +529,161 @@ export default function ProductCreate({ data = {} }) {
           <section className="prod-create-section" id="product-basics">
             <div className="prod-create-section-header">
               <h2>Basics</h2>
-              <p>Name, category, and identifying details.</p>
+              <p>Name, category, and description.</p>
             </div>
             <div className="prod-create-card">
-            <FieldRow
-              label="Product code"
-              htmlFor="prod-code"
-              required={isEdit}
-              help={isEdit ? null : 'Assigned automatically when you save.'}
-            >
               {isEdit ? (
-                <input
-                  id="prod-code"
-                  className="prod-create-input"
-                  value={productCode}
-                  onChange={(e) => setProductCode(e.target.value)}
-                  required
-                />
-              ) : (
-                <input
-                  id="prod-code"
-                  className="prod-create-input prod-create-input--readonly"
-                  value={codePreview || '-'}
-                  readOnly
-                />
-              )}
-            </FieldRow>
+                <FieldRow label="Product code" htmlFor="prod-code" required>
+                  <input
+                    id="prod-code"
+                    className="prod-create-input"
+                    value={productCode}
+                    onChange={(e) => setProductCode(e.target.value)}
+                    required
+                  />
+                </FieldRow>
+              ) : null}
 
-            <div className="prod-create-pair">
-              <FieldRow label="Name" htmlFor="prod-name" required>
-                <input
-                  id="prod-name"
-                  className="prod-create-input"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter product name"
-                  required
-                />
-              </FieldRow>
+              <div className="prod-create-pair">
+                <FieldRow label="Name" htmlFor="prod-name" required>
+                  <input
+                    id="prod-name"
+                    className="prod-create-input"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter product name"
+                    required
+                  />
+                </FieldRow>
 
-              <FieldRow label="Category" htmlFor="prod-category" required>
-                <select
-                  id="prod-category"
-                  className="prod-create-select"
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  required
-                >
-                  <option value="">Select category</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </FieldRow>
-            </div>
-
-            <FieldRow label="Description" htmlFor="prod-desc">
-              <textarea
-                id="prod-desc"
-                className="prod-create-textarea"
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Short description"
-              />
-            </FieldRow>
-
-            <FieldRow label="Brand" htmlFor="prod-brand">
-              {useBrandFreeText || brandOptions.length === 0 ? (
-                <input
-                  id="prod-brand"
-                  className="prod-create-input"
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  placeholder="Brand"
-                />
-              ) : (
-                <select
-                  id="prod-brand"
-                  className="prod-create-select"
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                >
-                  <option value="">Select brand</option>
-                  {brandOptions.map((b) => (
-                    <option key={b.id || b.name} value={b.name}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </FieldRow>
-
-            <FieldRow label="Supplier" htmlFor="prod-supplier">
-              <select
-                id="prod-supplier"
-                className="prod-create-select"
-                value={supplierId}
-                onChange={(e) => setSupplierId(e.target.value)}
-              >
-                <option value="">None</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={String(s.id)}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </FieldRow>
-
-            {(isUltimate || isSpare || registerType === 'general') && (
-              <>
-                <FieldRow label="UOM" htmlFor="prod-uom">
+                <FieldRow label="Category" htmlFor="prod-category" required>
                   <select
-                    id="prod-uom"
+                    id="prod-category"
                     className="prod-create-select"
-                    value={uom}
-                    onChange={(e) => setUom(e.target.value)}
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    required
                   >
-                    {UOM_OPTIONS.map((u) => (
-                      <option key={u} value={u}>
-                        {u}
+                    <option value="">Select category</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={String(c.id)}>
+                        {c.name}
                       </option>
                     ))}
                   </select>
                 </FieldRow>
-                <FieldRow label="Condition" htmlFor="prod-condition">
+              </div>
+
+              <FieldRow label="Description" htmlFor="prod-desc">
+                <textarea
+                  id="prod-desc"
+                  className="prod-create-textarea"
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Short description"
+                />
+              </FieldRow>
+            </div>
+          </section>
+
+          <section className="prod-create-section" id="product-sourcing">
+            <div className="prod-create-section-header">
+              <h2>Brand &amp; supplier</h2>
+              <p>Who makes it and who you buy it from.</p>
+            </div>
+            <div className="prod-create-card">
+              <div className="prod-create-pair">
+                <FieldRow label="Brand" htmlFor="prod-brand">
+                  {useBrandFreeText || brandOptions.length === 0 ? (
+                    <input
+                      id="prod-brand"
+                      className="prod-create-input"
+                      value={brand}
+                      onChange={(e) => setBrand(e.target.value)}
+                      placeholder="Brand"
+                    />
+                  ) : (
+                    <select
+                      id="prod-brand"
+                      className="prod-create-select"
+                      value={brand}
+                      onChange={(e) => setBrand(e.target.value)}
+                    >
+                      <option value="">Select brand</option>
+                      {brandOptions.map((b) => (
+                        <option key={b.id || b.name} value={b.name}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </FieldRow>
+
+                <FieldRow label="Supplier" htmlFor="prod-supplier">
                   <select
-                    id="prod-condition"
+                    id="prod-supplier"
                     className="prod-create-select"
-                    value={partCondition}
-                    onChange={(e) => setPartCondition(e.target.value)}
+                    value={supplierId}
+                    onChange={(e) => setSupplierId(e.target.value)}
                   >
-                    <option value="new">New</option>
-                    <option value="used">Used</option>
+                    <option value="">None</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={String(s.id)}>
+                        {s.name}
+                      </option>
+                    ))}
                   </select>
                 </FieldRow>
-              </>
-            )}
+              </div>
+            </div>
+          </section>
 
-            {isSpare && (
-              <>
+          {(isUltimate || isSpare || registerType === 'general') && (
+            <section className="prod-create-section" id="product-unit">
+              <div className="prod-create-section-header">
+                <h2>Unit &amp; condition</h2>
+                <p>How the item is measured and its condition.</p>
+              </div>
+              <div className="prod-create-card">
+                <div className="prod-create-pair">
+                  <FieldRow label="UOM" htmlFor="prod-uom">
+                    <select
+                      id="prod-uom"
+                      className="prod-create-select"
+                      value={uom}
+                      onChange={(e) => setUom(e.target.value)}
+                    >
+                      {UOM_OPTIONS.map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldRow>
+                  <FieldRow label="Condition" htmlFor="prod-condition">
+                    <select
+                      id="prod-condition"
+                      className="prod-create-select"
+                      value={partCondition}
+                      onChange={(e) => setPartCondition(e.target.value)}
+                    >
+                      <option value="new">New</option>
+                      <option value="used">Used</option>
+                    </select>
+                  </FieldRow>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {isSpare && (
+            <section className="prod-create-section" id="product-compatibility">
+              <div className="prod-create-section-header">
+                <h2>Compatibility</h2>
+                <p>Models and OEM numbers this spare fits.</p>
+              </div>
+              <div className="prod-create-card">
                 <FieldRow label="Compatible model" htmlFor="prod-compat">
                   <input
                     id="prod-compat"
@@ -690,9 +703,9 @@ export default function ProductCreate({ data = {} }) {
                     />
                   </FieldRow>
                 )}
-              </>
-            )}
-          </section>
+              </div>
+            </section>
+          )}
 
           {isTruck && (
             <section className="prod-create-section" id="product-truck">
@@ -700,6 +713,7 @@ export default function ProductCreate({ data = {} }) {
                 <h2>Truck details</h2>
                 <p>Identification and specifications.</p>
               </div>
+              <div className="prod-create-card">
               <FieldRow label="VIN" htmlFor="prod-vin">
                 <input id="prod-vin" className="prod-create-input" value={vin} onChange={(e) => setVin(e.target.value)} />
               </FieldRow>
@@ -730,14 +744,16 @@ export default function ProductCreate({ data = {} }) {
               <FieldRow label="Transmission" htmlFor="prod-trans">
                 <input id="prod-trans" className="prod-create-input" value={transmission} onChange={(e) => setTransmission(e.target.value)} />
               </FieldRow>
+              </div>
             </section>
           )}
 
           <section className="prod-create-section" id="product-pricing">
             <div className="prod-create-section-header">
               <h2>Pricing</h2>
+              <p>Currency and unit prices.</p>
             </div>
-
+            <div className="prod-create-card">
             <FieldRow label="Currency" htmlFor="prod-currency" required>
               <CurrencyPicker value={currency} options={currencies} onChange={setCurrency} />
             </FieldRow>
@@ -783,6 +799,7 @@ export default function ProductCreate({ data = {} }) {
                 />
               </FieldRow>
             ) : null}
+            </div>
           </section>
 
           <section className="prod-create-section" id="product-stock">
@@ -790,7 +807,7 @@ export default function ProductCreate({ data = {} }) {
               <h2>Stock</h2>
               <p>{isEdit ? 'Reorder level and storage location.' : 'Opening quantity and reorder settings.'}</p>
             </div>
-
+            <div className="prod-create-card">
             {isEdit ? (
               <FieldRow label="In stock" htmlFor="prod-qty" help="Quantity is changed via stock movements.">
                 <input
@@ -833,6 +850,7 @@ export default function ProductCreate({ data = {} }) {
                 placeholder="Warehouse / shelf"
               />
             </FieldRow>
+            </div>
           </section>
 
           <section className="prod-create-section" id="product-images">
@@ -849,7 +867,7 @@ export default function ProductCreate({ data = {} }) {
                     : 'Upload one or more product photos. The first image is used as the primary photo.'}
               </p>
             </div>
-
+            <div className="prod-create-card">
             {isEdit && visibleSavedImages.length > 0 ? (
               <ul className="prod-create-preview-grid prod-create-existing-grid">
                 {visibleSavedImages.map((img) => (
@@ -884,22 +902,22 @@ export default function ProductCreate({ data = {} }) {
             ) : null}
 
             <ImageUpload images={images} onChange={onFiles} />
+            </div>
           </section>
 
           <div className="prod-create-actions">
             {isEdit && viewUrl ? (
-              <a href={viewUrl} className="prod-create-btn-cancel" style={{ borderRadius: 9999 }}>
+              <a href={viewUrl} className="prod-create-btn-cancel">
                 View
               </a>
             ) : null}
-            <a href={listUrl} className="prod-create-btn-cancel" style={{ borderRadius: 9999 }}>
+            <a href={listUrl} className="prod-create-btn-cancel">
               Cancel
             </a>
             <button
               type="submit"
               className="prod-create-btn-save"
               disabled={saving}
-              style={{ borderRadius: 9999 }}
             >
               {saving ? (
                 <>

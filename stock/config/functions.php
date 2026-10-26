@@ -3377,4 +3377,171 @@ if (!function_exists('stock_generate_purchase_order_number')) {
     }
 }
 
+/**
+ * Normalize shelf-life unit to days|months|years.
+ */
+if (!function_exists('stock_shelf_life_normalize_unit')) {
+    function stock_shelf_life_normalize_unit($unit)
+    {
+        $u = strtolower(trim((string) $unit));
+        if (in_array($u, ['day', 'days', 'd'], true)) {
+            return 'days';
+        }
+        if (in_array($u, ['year', 'years', 'y'], true)) {
+            return 'years';
+        }
+
+        return 'months';
+    }
+}
+
+/**
+ * Add shelf-life duration to a date. Returns Y-m-d or '' if invalid.
+ */
+if (!function_exists('stock_shelf_life_expiry_date')) {
+    function stock_shelf_life_expiry_date($fromDate, $value, $unit = 'months')
+    {
+        $value = (int) $value;
+        if ($value <= 0) {
+            return '';
+        }
+        $unit = stock_shelf_life_normalize_unit($unit);
+        $base = trim((string) $fromDate);
+        if ($base === '') {
+            $base = date('Y-m-d');
+        }
+        $ts = strtotime($base);
+        if ($ts === false) {
+            return '';
+        }
+        if ($unit === 'days') {
+            $mod = '+' . $value . ' days';
+        } elseif ($unit === 'years') {
+            $mod = '+' . $value . ' years';
+        } else {
+            $mod = '+' . $value . ' months';
+        }
+        $out = strtotime($mod, $ts);
+
+        return $out ? date('Y-m-d', $out) : '';
+    }
+}
+
+/**
+ * Product health from nearest batch expiry: healthy|expiring|expired|none.
+ */
+if (!function_exists('stock_product_health_from_expiry')) {
+    function stock_product_health_from_expiry($expiryDate, $warnDays = 30)
+    {
+        $expiryDate = trim((string) $expiryDate);
+        if ($expiryDate === '' || !preg_match('/^\d{4}-\d{2}-\d{2}/', $expiryDate)) {
+            return 'none';
+        }
+        $exp = strtotime(substr($expiryDate, 0, 10));
+        if ($exp === false) {
+            return 'none';
+        }
+        $today = strtotime(date('Y-m-d'));
+        if ($exp < $today) {
+            return 'expired';
+        }
+        $warnDays = max(1, (int) $warnDays);
+        if ($exp <= strtotime('+' . $warnDays . ' days', $today)) {
+            return 'expiring';
+        }
+
+        return 'healthy';
+    }
+}
+
+/**
+ * Ensure product_batches exists (minimal schema used by shelf-life tracking).
+ */
+if (!function_exists('stock_ensure_product_batches_table')) {
+    function stock_ensure_product_batches_table(PDO $pdo)
+    {
+        try {
+            $exists = (bool) $pdo->query("SHOW TABLES LIKE 'product_batches'")->fetchColumn();
+        } catch (Throwable $e) {
+            return false;
+        }
+        if ($exists) {
+            return true;
+        }
+        try {
+            $pdo->exec(
+                "CREATE TABLE IF NOT EXISTS product_batches (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    product_id INT NOT NULL,
+                    shipment_id INT NULL,
+                    batch_number VARCHAR(100) NOT NULL,
+                    quantity INT NOT NULL DEFAULT 0,
+                    current_stock INT NOT NULL DEFAULT 0,
+                    unit_cost DECIMAL(15,2) NOT NULL DEFAULT 0,
+                    manufacturing_date DATE NULL,
+                    expiry_date DATE NULL,
+                    received_date DATE NOT NULL,
+                    location VARCHAR(100) NULL,
+                    notes TEXT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_batch_number (batch_number),
+                    KEY idx_pb_product (product_id),
+                    KEY idx_pb_expiry (expiry_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+            );
+            return true;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+}
+
+/**
+ * Create an opening-stock batch with expiry when shelf life is set.
+ */
+if (!function_exists('stock_create_opening_stock_batch')) {
+    function stock_create_opening_stock_batch(
+        PDO $pdo,
+        int $productId,
+        int $qty,
+        float $unitCost,
+        string $location,
+        $shelfLifeValue,
+        $shelfLifeUnit
+    ) {
+        $qty = max(0, $qty);
+        if ($productId < 1 || $qty < 1) {
+            return false;
+        }
+        $expiry = stock_shelf_life_expiry_date(date('Y-m-d'), $shelfLifeValue, $shelfLifeUnit);
+        if ($expiry === '') {
+            return false;
+        }
+        if (!stock_ensure_product_batches_table($pdo)) {
+            return false;
+        }
+        $batchNo = 'OPEN-' . $productId . '-' . date('ymdHis');
+        try {
+            $pdo->prepare(
+                'INSERT INTO product_batches
+                    (product_id, shipment_id, batch_number, quantity, current_stock, unit_cost,
+                     received_date, expiry_date, location, notes)
+                 VALUES (?, NULL, ?, ?, ?, ?, CURDATE(), ?, ?, ?)'
+            )->execute([
+                $productId,
+                $batchNo,
+                $qty,
+                $qty,
+                max(0, $unitCost),
+                $expiry,
+                $location !== '' ? $location : null,
+                'Opening stock',
+            ]);
+            return true;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+}
+
 // End of functions.php

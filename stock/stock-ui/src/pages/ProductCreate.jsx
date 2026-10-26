@@ -570,6 +570,16 @@ export default function ProductCreate({ data = {} }) {
   const [curbWeight, setCurbWeight] = useState(
     product?.curb_weight_kg != null ? String(product.curb_weight_kg) : ''
   );
+  const [shelfLifeValue, setShelfLifeValue] = useState(
+    product?.shelf_life_value != null && Number(product.shelf_life_value) > 0
+      ? String(product.shelf_life_value)
+      : ''
+  );
+  const [shelfLifeUnit, setShelfLifeUnit] = useState(
+    ['days', 'months', 'years'].includes(String(product?.shelf_life_unit || '').toLowerCase())
+      ? String(product.shelf_life_unit).toLowerCase()
+      : 'months'
+  );
   const [images, setImages] = useState([]);
   const [savedImages, setSavedImages] = useState(() =>
     Array.isArray(existingImages) ? existingImages.filter((img) => img && img.id) : []
@@ -582,7 +592,9 @@ export default function ProductCreate({ data = {} }) {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState([]);
   const [successMsg, setSuccessMsg] = useState(updated ? 'Product updated successfully.' : '');
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(
+    () => !!(product?.shelf_life_value != null && Number(product.shelf_life_value) > 0)
+  );
 
   const isTruck = !isUltimate && registerType === 'truck';
   const isSpare = !isUltimate && registerType === 'spare_part';
@@ -708,6 +720,8 @@ export default function ProductCreate({ data = {} }) {
     fd.append('fuel_type', fuelType);
     fd.append('tire_model', tireModel);
     fd.append('curb_weight_kg', curbWeight);
+    fd.append('shelf_life_value', shelfLifeValue);
+    fd.append('shelf_life_unit', shelfLifeUnit);
     images.forEach((file) => fd.append('product_images[]', file));
     if (isEdit) {
       if (deleteImageIds.length) {

@@ -30,15 +30,31 @@ if (!isset($currency) || $currency === '') {
     $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'TZS');
 }
 if (!isset($logoUrl) || $logoUrl === '') {
-    $brandingLogo = function_exists('getCompanySetting') ? trim((string) getCompanySetting('company_logo', '')) : '';
-    if ($brandingLogo !== '') {
-        $logoUrl = function_exists('app_url') ? app_url('/' . ltrim($brandingLogo, '/')) : ('/' . ltrim($brandingLogo, '/'));
+    if (!empty($company_settings['company_logo_url'])) {
+        $logoUrl = trim((string) $company_settings['company_logo_url']);
+    } elseif (function_exists('getCompanyLogoUrl')) {
+        $logoUrl = trim((string) getCompanyLogoUrl());
     } else {
-        $logoFile = $company_settings['company_logo'] ?? 'Untitled.jpg';
-        $logoUrl = function_exists('app_url')
-            ? app_url('/assets/images/' . ltrim((string) $logoFile, '/'))
-            : ('/assets/images/' . ltrim((string) $logoFile, '/'));
+        $brandingLogo = function_exists('getCompanySetting') ? trim((string) getCompanySetting('company_logo', '')) : '';
+        if ($brandingLogo !== '') {
+            $logoUrl = function_exists('app_url') ? app_url('/' . ltrim($brandingLogo, '/')) : ('/' . ltrim($brandingLogo, '/'));
+        } else {
+            $logoFile = trim((string) ($company_settings['company_logo'] ?? ''));
+            $logoUrl = $logoFile !== ''
+                ? (function_exists('app_url')
+                    ? app_url('/assets/images/' . ltrim($logoFile, '/'))
+                    : ('/assets/images/' . ltrim($logoFile, '/')))
+                : '';
+        }
     }
+}
+if (
+    $logoUrl !== ''
+    && function_exists('isUltimate')
+    && !isUltimate()
+    && preg_match('/ultimate|ugt[_-]?logo|untitled\.jpg/i', $logoUrl)
+) {
+    $logoUrl = '';
 }
 if (!isset($signatureUrl) || $signatureUrl === '') {
     $signatureUrl = function_exists('sales_resolve_document_signature_url')
@@ -108,8 +124,23 @@ $companyName = trim((string) ($company_settings['company_name'] ?? ''));
 if ($companyName === '' && function_exists('getCompanySetting')) {
     $companyName = trim((string) getCompanySetting('company_name', ''));
 }
+if (
+    $companyName !== ''
+    && function_exists('isUltimate')
+    && !isUltimate()
+    && preg_match('/ultimate\s+general\s+trading/i', $companyName)
+) {
+    $companyName = function_exists('getCompanySetting')
+        ? trim((string) getCompanySetting('company_name', ''))
+        : '';
+    if ($companyName === '' && function_exists('isRoadmaster') && isRoadmaster()) {
+        $companyName = 'ROADMASTER SPARES LIMITED';
+    }
+}
 if ($companyName === '') {
-    $companyName = 'Company';
+    $companyName = function_exists('isRoadmaster') && isRoadmaster()
+        ? 'ROADMASTER SPARES LIMITED'
+        : 'Company';
 }
 $tagline = trim((string) (
     $company_settings['tagline']

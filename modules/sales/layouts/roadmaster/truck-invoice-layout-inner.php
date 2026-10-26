@@ -8,14 +8,15 @@ if (!isset($document_footer_closing)) {
     $document_footer_closing = true;
 }
 
-$layout = $company_settings['truck_layout'] ?? 1;
-// layout 1 is now the high-fidelity Watermark Mode matching Spare Part Layout 3
-$headerBg = ($layout == 1) ? '#003366' : '#dbd7d2'; 
-$headerColor = ($layout == 1) ? '#fff' : '#000';
-$tableBorder = 'none';
-$thBorder = 'none';
-$tdBorder = 'none';
-$tdVerticalBorder = 'none';
+$layout = (int) ($company_settings['truck_layout'] ?? 1);
+// 1 = Watermark (navy header, borderless), 2 = Classic (stone + boxed), 3 = Minimalist (navy + ruled)
+$headerBg = ($layout === 2) ? '#dbd7d2' : '#003366';
+$headerColor = ($layout === 2) ? '#000' : '#fff';
+$tableBorder = ($layout === 1) ? 'none' : '2px solid #000';
+$thBorder = ($layout === 1) ? 'none' : '2px solid #000';
+$tdBorder = ($layout === 1) ? 'none' : '1px solid #000';
+$tdVerticalBorder = ($layout === 1) ? 'none' : '2px solid #000';
+$rowSeparator = ($layout === 1) ? '1px solid #eee' : '1px solid #000';
 
 $isRoadmaster = isRoadmaster();
 $brandNavy = '#0D2A4A';
@@ -37,7 +38,7 @@ $isRoadmasterBrand = ($docBrand['brand'] ?? '') === 'roadmaster';
 $docBrandNavy = (string) ($docBrand['navy'] ?? $brandNavy);
 $docBrandAccent = (string) ($docBrand['accent'] ?? $brandYellow);
 
-if (!$isRoadmasterBrand && (int) $layout === 1) {
+if (!$isRoadmasterBrand && ($layout === 1 || $layout === 3)) {
     $headerBg = '#008784';
     $headerColor = '#fff';
 }
@@ -570,13 +571,18 @@ $docFontImport = function_exists('sales_document_font_import_css')
     }
 
     .truck-table td {
-        border-right: none;
-        border-left: none;
-        border-bottom: 1px solid #eee;
+        border-top: none;
+        border-bottom: <?= $rowSeparator ?>;
+        border-left: <?= $tdVerticalBorder ?>;
+        border-right: <?= $tdVerticalBorder ?>;
         padding: 15px 10px;
         font-size: 13px;
         vertical-align: top;
         height: auto;
+    }
+
+    .truck-table td:first-child {
+        border-left: <?= $tableBorder === 'none' ? 'none' : $tdVerticalBorder ?>;
     }
 
     .truck-table td.truck-line-img-cell {
@@ -862,6 +868,11 @@ $docFontImport = function_exists('sales_document_font_import_css')
 
 <div id="invoice-sheet" data-truck-layout="2026-06-26">
 <div class="truck-sheet">
+    <?php if ($layout === 1 || $layout === 3): ?>
+        <div class="truck-watermark">
+            <img src="<?= htmlspecialchars((string) $logoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="">
+        </div>
+    <?php endif; ?>
     <?php
     if (strpos($invoice['invoice_number'] ?? '', 'INV') !== false) {
         $docType = 'INVOICE';

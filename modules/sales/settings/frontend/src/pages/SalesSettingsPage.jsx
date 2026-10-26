@@ -296,7 +296,7 @@ function getLayoutOptions(init, catalogKey) {
     id,
     label: layoutLabel(catalogKey === 'truck' ? 'truck' : 'spare', id),
     description: '',
-    comingSoon: catalogKey === 'truck' && id > 1,
+    comingSoon: false,
   }));
 }
 

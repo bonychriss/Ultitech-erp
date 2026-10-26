@@ -249,15 +249,24 @@ function sales_settings_sync_products_schema(PDO $pdo): void
  */
 function sales_settings_default_row(): array
 {
+    $liveName = function_exists('getCompanySetting') ? trim((string) getCompanySetting('company_name', '')) : '';
+    $liveAddress = function_exists('getCompanySetting') ? trim((string) getCompanySetting('company_address', '')) : '';
+    $livePhone = function_exists('getCompanySetting') ? trim((string) getCompanySetting('company_phone', '')) : '';
+    $liveEmail = function_exists('getCompanySetting') ? trim((string) getCompanySetting('company_email', '')) : '';
+    $liveWebsite = function_exists('getCompanySetting') ? trim((string) getCompanySetting('company_website', '')) : '';
+    $liveTin = function_exists('getCompanySetting') ? trim((string) getCompanySetting('company_tin', '')) : '';
+    $liveVat = function_exists('getCompanySetting') ? trim((string) getCompanySetting('company_vat', '')) : '';
+    $liveLogo = function_exists('getCompanySetting') ? trim((string) getCompanySetting('company_logo', '')) : '';
+
     return [
-        'company_name' => 'Ultimate General Trading Company',
-        'company_address' => 'Mikocheni B, Dar es salaam Tanzania',
-        'company_logo' => 'Untitled.jpg',
-        'company_phone' => '',
-        'company_email' => '',
-        'company_website' => '',
-        'company_tin' => '',
-        'company_vat' => '',
+        'company_name' => $liveName,
+        'company_address' => $liveAddress,
+        'company_logo' => $liveLogo !== '' ? $liveLogo : '',
+        'company_phone' => $livePhone,
+        'company_email' => $liveEmail,
+        'company_website' => $liveWebsite,
+        'company_tin' => $liveTin,
+        'company_vat' => $liveVat,
         'bank_details' => '',
         'default_currency' => 'TZS',
         'invoice_remarks' => '',
@@ -348,6 +357,41 @@ function sales_settings_merge_company_finance(array $settings): array
     $vat = trim((string) getCompanySetting('company_vat', ''));
     $location = trim((string) getCompanySetting('company_location', ''));
     $taxMode = strtolower(trim((string) getCompanySetting('tax_calculation_mode', '')));
+
+    // Always prefer live company identity for the active tenant (avoids Ultimate defaults on Roadmaster).
+    foreach ([
+        'company_name' => 'company_name',
+        'company_address' => 'company_address',
+        'company_phone' => 'company_phone',
+        'company_email' => 'company_email',
+        'company_website' => 'company_website',
+        'company_logo' => 'company_logo',
+    ] as $settingKey => $field) {
+        $live = trim((string) getCompanySetting($settingKey, ''));
+        if ($live !== '') {
+            $settings[$field] = $live;
+        }
+    }
+
+    $currentName = trim((string) ($settings['company_name'] ?? ''));
+    $isUltimateTenant = function_exists('isUltimate') && isUltimate();
+    if (!$isUltimateTenant && preg_match('/ultimate\s+general\s+trading/i', $currentName)) {
+        $liveName = trim((string) getCompanySetting('company_name', ''));
+        if ($liveName !== '') {
+            $settings['company_name'] = $liveName;
+        } elseif (function_exists('isRoadmaster') && isRoadmaster()) {
+            $settings['company_name'] = 'ROADMASTER SPARES LIMITED';
+        } else {
+            $settings['company_name'] = '';
+        }
+    }
+
+    if (function_exists('getCompanyLogoUrl')) {
+        $logoUrl = trim((string) getCompanyLogoUrl());
+        if ($logoUrl !== '') {
+            $settings['company_logo_url'] = $logoUrl;
+        }
+    }
 
     if ($bank !== '') {
         $settings['bank_details'] = $bank;
@@ -604,13 +648,13 @@ function sales_settings_layout_catalog(): array
                     'id' => 2,
                     'label' => 'Classic',
                     'description' => 'Structured truck layout with boxed sections.',
-                    'comingSoon' => true,
+                    'comingSoon' => false,
                 ],
                 [
                     'id' => 3,
                     'label' => 'Minimalist',
                     'description' => 'Clean truck layout with simplified header styling.',
-                    'comingSoon' => true,
+                    'comingSoon' => false,
                 ],
             ],
             $library
@@ -1008,12 +1052,27 @@ function sales_settings_render_layout_preview_html(bool $isTruck, array $company
         $sample = sales_settings_sample_document_context($isTruck);
         $invoice = $sample['invoice'];
         $items = $sample['items'];
-        $company_settings = sales_settings_with_preview_footer_defaults($companySettings, $isTruck);
+        $company_settings = sales_settings_with_preview_footer_defaults(
+            sales_settings_merge_company_finance($companySettings),
+            $isTruck
+        );
         $currency = $company_settings['default_currency'] ?? 'TZS';
         $is_print = false;
         $isTruckOrder = $isTruck;
         $document_footer_closing = true;
-        $logoUrl = '';
+        $logoUrl = trim((string) ($company_settings['company_logo_url'] ?? ''));
+        if ($logoUrl === '' && function_exists('getCompanyLogoUrl')) {
+            $logoUrl = trim((string) getCompanyLogoUrl());
+        }
+        // Never show another tenant's / placeholder Ultimate logo on non-Ultimate previews.
+        if (
+            $logoUrl !== ''
+            && function_exists('isUltimate')
+            && !isUltimate()
+            && preg_match('/ultimate|ugt[_-]?logo|untitled\.jpg/i', $logoUrl)
+        ) {
+            $logoUrl = '';
+        }
         $signatureUrl = '';
         if (function_exists('sales_is_library_document_layout_id')) {
             $previewLayoutId = (int) ($isTruck

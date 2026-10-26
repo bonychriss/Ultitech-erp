@@ -7,10 +7,16 @@
   --cp-card: #fff;
   --cp-input-bg: #fff;
   --cp-input-border: #cbd5e1;
-  max-width: 1100px;
+  width: 100%;
+  max-width: none;
   padding-top: 0.5rem;
   color: var(--cp-text);
   font-family: var(--erp-font-family, system-ui, -apple-system, 'Segoe UI', sans-serif);
+}
+
+/* Keep the create form readable; let the saved table use the full width. */
+.cp-desk .cp-form {
+  max-width: 1100px;
 }
 
 html[data-theme="dark"] .cp-desk {
@@ -385,9 +391,11 @@ html[data-theme="dark"] .cp-desk .cp-select-option:focus-visible {
   gap: 0.6rem;
 }
 
-.cp-desk .cp-btn {
+/* Buttons — not scoped only under .cp-desk (preview modal is portaled to body). */
+.cp-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
   height: 2.5rem;
   padding: 0 1.1rem;
@@ -395,49 +403,65 @@ html[data-theme="dark"] .cp-desk .cp-select-option:focus-visible {
   border: 1px solid transparent;
   font-size: 0.9rem;
   font-weight: 650;
+  font-family: inherit;
+  line-height: 1;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
-.cp-desk .cp-btn:disabled {
-  opacity: 0.6;
+.cp-btn:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
-.cp-desk .cp-btn--primary {
-  background: var(--cp-navy);
+.cp-btn--primary {
+  background: #1e2a4a;
   color: #fff;
+  border-color: #1e2a4a;
 }
 
-.cp-desk .cp-btn--primary:hover:not(:disabled) {
+.cp-btn--primary:hover:not(:disabled) {
   background: #16203a;
 }
 
-html[data-theme="dark"] .cp-desk .cp-btn--primary {
+html[data-theme="dark"] .cp-btn--primary {
   background: #2563eb;
+  border-color: #2563eb;
 }
 
-html[data-theme="dark"] .cp-desk .cp-btn--primary:hover:not(:disabled) {
+html[data-theme="dark"] .cp-btn--primary:hover:not(:disabled) {
   background: #1d4ed8;
 }
 
-.cp-desk .cp-btn--ghost {
-  background: transparent;
-  border-color: var(--cp-input-border);
-  color: var(--cp-text);
+.cp-btn--ghost {
+  background: #fff;
+  border-color: #cbd5e1;
+  color: #0f172a;
 }
 
-.cp-desk .cp-btn--danger {
+.cp-btn--ghost:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+html[data-theme="dark"] .cp-btn--ghost {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.cp-btn--danger {
   background: #dc2626;
   color: #fff;
 }
 
-.cp-desk .cp-btn--approve {
+.cp-btn--approve {
   background: #0f766e;
   color: #fff;
   border-color: #0f766e;
 }
 
-.cp-desk .cp-btn--approve:hover:not(:disabled) {
+.cp-btn--approve:hover:not(:disabled) {
   background: #0d9488;
 }
 
@@ -477,7 +501,7 @@ html[data-theme="dark"] .cp-status--approved {
   padding: 0 0.15rem;
 }
 
-.cp-desk .cp-btn--small {
+.cp-btn--small {
   height: 2rem;
   padding: 0 0.7rem;
   margin-left: 0.25rem;
@@ -497,15 +521,19 @@ html[data-theme="dark"] .cp-status--approved {
 .cp-card--table {
   padding: 0;
   overflow: hidden;
+  width: 100%;
 }
 
 .cp-table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .cp-table {
   width: 100%;
+  min-width: 1180px;
   border-collapse: collapse;
+  table-layout: auto;
   font-size: 0.88rem;
 }
 
@@ -517,15 +545,16 @@ html[data-theme="dark"] .cp-status--approved {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   text-align: left;
-  padding: 0.75rem 0.9rem;
+  padding: 0.75rem 1rem;
   white-space: nowrap;
 }
 
 .cp-table tbody td {
-  padding: 0.7rem 0.9rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--cp-border);
   color: var(--cp-text);
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 .cp-table tbody tr:nth-child(even) td {
@@ -549,17 +578,24 @@ html[data-theme="dark"] .cp-table tbody tr:hover td {
 }
 
 .cp-col-no {
-  width: 3.5rem;
+  width: 3.25rem;
   color: var(--cp-muted);
 }
 
 .cp-col-doc {
   font-weight: 650;
+  min-width: 10rem;
 }
 
 .cp-col-actions {
+  min-width: 17rem;
   width: 1%;
   text-align: right;
+  white-space: nowrap;
+}
+
+.cp-col-actions .cp-btn--small {
+  margin-left: 0.35rem;
 }
 
 .cp-desk .cp-icon-btn {
@@ -624,7 +660,8 @@ html[data-theme="dark"] .cp-table tbody tr:hover td {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(15, 23, 42, 0.45);
+  /* Keep the desk readable — heavy dim made the preview feel washed out. */
+  background: rgba(15, 23, 42, 0.22);
 }
 
 .cp-modal {
@@ -733,13 +770,14 @@ html[data-theme="dark"] .cp-desk .cp-row-menu-item--danger:focus-visible {
 .cp-preview {
   display: flex;
   flex-direction: column;
-  width: min(720px, 100%);
+  width: min(760px, 100%);
   height: min(92vh, 1000px);
   padding: 1rem 1.1rem;
   border-radius: 14px;
-  background: var(--cp-card);
-  border: 1px solid var(--cp-border);
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.28);
+  opacity: 1;
 }
 
 .cp-preview-head {
@@ -759,10 +797,10 @@ html[data-theme="dark"] .cp-desk .cp-row-menu-item--danger:focus-visible {
 .cp-preview-body {
   flex: 1;
   min-height: 0;
-  border: 1px solid var(--cp-border);
+  border: 1px solid #cbd5e1;
   border-radius: 10px;
   overflow: hidden;
-  background: #e2e8f0;
+  background: #ffffff;
 }
 
 .cp-preview-frame {
@@ -770,6 +808,7 @@ html[data-theme="dark"] .cp-desk .cp-row-menu-item--danger:focus-visible {
   width: 100%;
   height: 100%;
   border: 0;
+  background: #ffffff;
 }
 
 .cp-preview-loading {

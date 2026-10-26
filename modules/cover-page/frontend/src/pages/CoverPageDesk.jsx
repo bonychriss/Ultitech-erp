@@ -271,16 +271,23 @@ function CoverPreview({ preview, busy, onClose, onDownload, ignoreCloseUntilRef 
         </div>
         <div className="cp-modal-actions cp-preview-actions">
           <button type="button" className="cp-btn cp-btn--ghost" onClick={onClose}>Close</button>
-          <button
-            type="button"
-            className="cp-btn cp-btn--primary"
-            onClick={onDownload}
-            disabled={busy || !url || !allowed}
-            title={allowed ? 'Download cover' : 'Waiting for another user to approve before download'}
-          >
-            {busy ? <LoaderCircle size={15} className="cp-spin" aria-hidden="true" /> : <FileDown size={15} aria-hidden="true" />}
-            {allowed ? 'Download cover' : 'Awaiting approval'}
-          </button>
+          {allowed ? (
+            <button
+              type="button"
+              className="cp-btn cp-btn--primary"
+              onClick={onDownload}
+              disabled={busy || !url}
+              title="Download cover"
+            >
+              {busy ? <LoaderCircle size={15} className="cp-spin" aria-hidden="true" /> : <FileDown size={15} aria-hidden="true" />}
+              Download cover
+            </button>
+          ) : (
+            <span className="cp-status cp-status--pending cp-preview-awaiting" title="Another user must approve before download">
+              <Lock size={14} aria-hidden="true" />
+              Awaiting approval
+            </span>
+          )}
         </div>
       </div>
     </div>,

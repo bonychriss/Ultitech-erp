@@ -37,14 +37,18 @@ function readBoot() {
   return {}
 }
 
-function SectionIcon({ id, iconUrl, title }) {
+function SectionIcon({ id, iconUrl, title, tone }) {
   const bootUrl = typeof iconUrl === 'string' ? iconUrl.trim() : ''
   const src = SECTION_ICONS[id] || bootUrl || ''
   if (!src) return null
+  const toneClass = typeof tone === 'string' && tone.trim() ? ` acct-ico--${tone.trim()}` : ''
   return (
-    <span className="acct-ico acct-ico--img" aria-hidden="true">
-      <img src={src} alt="" title={title || ''} />
-    </span>
+    <span
+      className={`acct-ico acct-ico--img${toneClass}`}
+      style={{ '--acct-ico-mask': `url(${src})` }}
+      title={title || ''}
+      aria-hidden="true"
+    />
   )
 }
 
@@ -96,8 +100,12 @@ export default function AccountingHubPage() {
       ) : (
         <section className="acct-grid" aria-label="Accounting sections">
           {filtered.map((s) => (
-            <a key={s.id || s.title} className="acct-card" href={s.href}>
-              <SectionIcon id={s.id} iconUrl={s.iconUrl} title={s.title} />
+            <a
+              key={s.id || s.title}
+              className={`acct-card${s.tone ? ` acct-card--${s.tone}` : ''}`}
+              href={s.href}
+            >
+              <SectionIcon id={s.id} iconUrl={s.iconUrl} title={s.title} tone={s.tone} />
               <h2 className="acct-card-label">{s.title}</h2>
             </a>
           ))}

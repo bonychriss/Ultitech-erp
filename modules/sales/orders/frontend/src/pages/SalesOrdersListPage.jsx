@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  CheckCircle2,
   Clock,
   EllipsisVertical,
   Download,
@@ -479,17 +478,25 @@ export default function SalesOrdersListPage() {
     return mineOk && matchesSearch && matchesStatus && matchesDate;
   }), [orders, search, statusFilter, myOrdersOnly, dateFrom, dateTo, currentUserId]);
 
+  /** Summary cards always match the rows currently shown in the table (like invoices). */
   const orderStats = useMemo(() => {
     const terminal = new Set(['paid', 'completed', 'delivered', 'cancelled', 'canceled']);
     let totalVal = 0;
     let pipeline = 0;
-    orders.forEach((o) => {
+    let invoiced = 0;
+    filteredOrders.forEach((o) => {
       totalVal += parseFloat(o.total_amount) || 0;
       const st = (o.status || '').toLowerCase().trim();
       if (!terminal.has(st)) pipeline += 1;
+      if (st === 'invoiced' || rowHasInvoice(o)) invoiced += 1;
     });
-    return { total: orders.length, totalVal, pipeline };
-  }, [orders]);
+    return {
+      total: filteredOrders.length,
+      totalVal,
+      pipeline,
+      invoiced,
+    };
+  }, [filteredOrders]);
 
   const selectedList = useMemo(
     () => filteredOrders.filter((o) => selectedIds.has(o.id)),
@@ -984,14 +991,14 @@ export default function SalesOrdersListPage() {
       )}
 
       <section className="exp-desk-kpi-grid so-kpi-grid so-kpi-grid--slim" aria-label="Summary">
-        <article className="so-kpi so-kpi--orders" title="All sales orders on record">
+        <article className="so-kpi so-kpi--orders" title="Orders matching current filters">
           <div className="so-kpi-top">
             <span className="so-kpi-label">Total orders</span>
             <span className="so-kpi-icon"><FileText size={16} aria-hidden="true" /></span>
           </div>
           <strong className="so-kpi-value">{fmtBig(orderStats.total)}</strong>
         </article>
-        <article className="so-kpi so-kpi--value" title="Sum of order totals">
+        <article className="so-kpi so-kpi--value" title="Sum of listed order totals">
           <div className="so-kpi-top">
             <span className="so-kpi-label">Total value</span>
             <span className="so-kpi-icon"><Wallet size={16} aria-hidden="true" /></span>
@@ -1000,19 +1007,19 @@ export default function SalesOrdersListPage() {
             {defaultCurrency} {formatCurrency(orderStats.totalVal)}
           </strong>
         </article>
-        <article className="so-kpi so-kpi--pipeline" title="Not yet completed, paid or cancelled">
+        <article className="so-kpi so-kpi--pipeline" title="Listed orders not yet completed, paid or cancelled">
           <div className="so-kpi-top">
             <span className="so-kpi-label">Pipeline</span>
             <span className="so-kpi-icon"><Clock size={16} aria-hidden="true" /></span>
           </div>
           <strong className="so-kpi-value">{fmtBig(orderStats.pipeline)}</strong>
         </article>
-        <article className="so-kpi so-kpi--listed" title="Matching current filters">
+        <article className="so-kpi so-kpi--listed" title="Listed orders that already have an invoice">
           <div className="so-kpi-top">
-            <span className="so-kpi-label">Listed now</span>
-            <span className="so-kpi-icon"><CheckCircle2 size={16} aria-hidden="true" /></span>
+            <span className="so-kpi-label">Invoiced</span>
+            <span className="so-kpi-icon"><Receipt size={16} aria-hidden="true" /></span>
           </div>
-          <strong className="so-kpi-value">{filteredOrders.length}</strong>
+          <strong className="so-kpi-value">{fmtBig(orderStats.invoiced)}</strong>
         </article>
       </section>
 

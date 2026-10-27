@@ -131,6 +131,45 @@ function isOutstandingInvoice(invoice) {
   return (Number(invoice.balance_due) || 0) > 0.005;
 }
 
+function parseDateOnly(dateStr) {
+  if (!dateStr) return null;
+  const raw = String(dateStr).trim();
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  }
+  const d = new Date(raw.includes('T') ? raw : raw.replace(' ', 'T'));
+  if (Number.isNaN(d.getTime())) return null;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function isInvoiceDueDateOverdue(invoice) {
+  const status = (invoice?.status || '').toLowerCase().trim();
+  if (['paid', 'cancelled', 'canceled', 'draft'].includes(status)) return false;
+  if ((Number(invoice?.balance_due) || 0) <= 0.005) return false;
+  const due = parseDateOnly(invoice?.due_date);
+  if (!due) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return due.getTime() <= today.getTime();
+}
+
+function hasActiveListFilters(filters = {}) {
+  return Boolean(
+    filters.search?.trim()
+    || filters.statusFilter
+    || filters.myInvoicesOnly
+    || filters.dateFrom
+    || filters.dateTo,
+  );
+}
+
+function filterFootnote(filters) {
+  return hasActiveListFilters(filters)
+    ? 'These figures follow your active search and filters only (same rows as the table).'
+    : 'These figures match the invoices currently shown in the table.';
+}
+
 function buildTrace({
   title,
   headline,
@@ -168,67 +207,43 @@ export function formatInvoiceKpiHeadline(trace) {
   return trace.headline;
 }
 
-function buildListedNowTrace(filteredInvoices, filters, defaultCurrency) {
-  const count = filteredInvoices.length;
-  const total = filteredInvoices.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
-  const hasFilters = Boolean(
-    filters.search?.trim()
-    || filters.statusFilter
-    || filters.myInvoicesOnly
-    || filters.dateFrom
-    || filters.dateTo,
-  );
-
-  return buildTrace({
-    title: 'Listed now',
-    headline: count,
-    mode: 'count',
-    rows: filteredInvoices,
-    defaultCurrency,
-    confirmation: count === 0
-      ? 'No invoices match your current search or filters.'
-      : `${formatCount(count)} listed invoice${count === 1 ? '' : 's'} worth ${formatMoney(total, defaultCurrency)}.`,
-    footnote: hasFilters
-      ? 'These figures follow your active search and filters only.'
-      : 'These figures match the invoices currently shown in the table.',
-  });
-}
-
-function buildTotalInvoicesTrace(invoices, defaultCurrency) {
-  const count = invoices.length;
-  const total = invoices.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
+function buildTotalInvoicesTrace(rows, filters, defaultCurrency) {
+  const count = rows.length;
+  const total = rows.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
 
   return buildTrace({
     title: 'Total invoices',
     headline: count,
     mode: 'count',
-    rows: invoices,
+    rows,
     defaultCurrency,
     confirmation: count === 0
-      ? 'There are no invoices saved yet.'
-      : `You have ${formatCount(count)} invoice${count === 1 ? '' : 's'} in total worth ${formatMoney(total, defaultCurrency)}.`,
-    footnote: 'Counts every invoice saved for this company.',
+      ? (hasActiveListFilters(filters)
+        ? 'No invoices match your current search or filters.'
+        : 'There are no invoices saved yet.')
+      : `${formatCount(count)} invoice${count === 1 ? '' : 's'} in this list worth ${formatMoney(total, defaultCurrency)}.`,
+    footnote: filterFootnote(filters),
   });
 }
 
-function buildTotalValueTrace(invoices, defaultCurrency) {
-  const total = invoices.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
+function buildTotalValueTrace(rows, filters, defaultCurrency) {
+  const total = rows.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
 
   return buildTrace({
     title: 'Total value',
     headline: total,
     mode: 'value',
-    rows: invoices,
+    rows,
     defaultCurrency,
-    confirmation: invoices.length === 0
-      ? 'No invoice amounts to total yet.'
-      : `Combined invoice value on the system is ${formatMoney(total, defaultCurrency)}.`,
-    footnote: `Amounts are shown in ${defaultCurrency}.`,
+    confirmation: rows.length === 0
+      ? 'No invoice amounts to total for the current list.'
+      : `Combined value of listed invoices is ${formatMoney(total, defaultCurrency)}.`,
+    footnote: `${filterFootnote(filters)} Amounts are shown in ${defaultCurrency}.`,
   });
 }
 
-function buildOutstandingTrace(invoices, defaultCurrency) {
-  const outstandingRows = invoices.filter(isOutstandingInvoice);
+function buildOutstandingTrace(rows, filters, defaultCurrency) {
+  const outstandingRows = rows.filter(isOutstandingInvoice);
   const count = outstandingRows.length;
   const totalBalance = outstandingRows.reduce((sum, row) => sum + (Number(row.balance_due) || 0), 0);
 
@@ -240,29 +255,53 @@ function buildOutstandingTrace(invoices, defaultCurrency) {
     defaultCurrency,
     amountField: 'balance_due',
     confirmation: count === 0
-      ? 'No invoices currently have an outstanding balance.'
-      : `${formatCount(count)} invoice${count === 1 ? '' : 's'} with outstanding balance totalling ${formatMoney(totalBalance, defaultCurrency)}.`,
-    footnote: 'Outstanding includes invoices with a balance due greater than zero.',
+      ? 'No listed invoices currently have an outstanding balance.'
+      : `${formatCount(count)} listed invoice${count === 1 ? '' : 's'} with outstanding balance totalling ${formatMoney(totalBalance, defaultCurrency)}.`,
+    footnote: `${filterFootnote(filters)} Outstanding includes invoices with a balance due greater than zero.`,
+  });
+}
+
+function buildOverdueTrace(rows, filters, defaultCurrency) {
+  const overdueRows = rows.filter(isInvoiceDueDateOverdue);
+  const count = overdueRows.length;
+  const totalBalance = overdueRows.reduce((sum, row) => sum + (Number(row.balance_due) || 0), 0);
+
+  return buildTrace({
+    title: 'Overdue',
+    headline: count,
+    mode: 'count',
+    rows: overdueRows,
+    defaultCurrency,
+    amountField: 'balance_due',
+    confirmation: count === 0
+      ? 'No listed invoices are past due with a balance remaining.'
+      : `${formatCount(count)} overdue invoice${count === 1 ? '' : 's'} with balance totalling ${formatMoney(totalBalance, defaultCurrency)}.`,
+    footnote: `${filterFootnote(filters)} Overdue means due date is today or earlier and a balance is still due.`,
   });
 }
 
 export function resolveInvoiceKpiTrace(key, context) {
   const {
-    invoices = [],
     filteredInvoices = [],
     filters = {},
     defaultCurrency = 'TZS',
   } = context;
 
+  // All KPI cards use the filtered list so they stay aligned with the table.
+  const rows = filteredInvoices;
+
   switch (key) {
     case 'totalInvoices':
-      return buildTotalInvoicesTrace(invoices, defaultCurrency);
+      return buildTotalInvoicesTrace(rows, filters, defaultCurrency);
     case 'totalValue':
-      return buildTotalValueTrace(invoices, defaultCurrency);
+      return buildTotalValueTrace(rows, filters, defaultCurrency);
     case 'outstanding':
-      return buildOutstandingTrace(invoices, defaultCurrency);
+      return buildOutstandingTrace(rows, filters, defaultCurrency);
+    case 'overdue':
     case 'listedNow':
-      return buildListedNowTrace(filteredInvoices, filters, defaultCurrency);
+      return key === 'listedNow'
+        ? buildTotalInvoicesTrace(rows, filters, defaultCurrency)
+        : buildOverdueTrace(rows, filters, defaultCurrency);
     default:
       return null;
   }

@@ -946,6 +946,14 @@ main.main-content.sales-catalogue-shell #root { width: 100%; min-height: 40vh; }
 
         $invoiceId = function_exists('invoicesViewParseId') ? invoicesViewParseId($_GET) : $this->parseId();
         if ($invoiceId <= 0) {
+            $missingNumber = trim((string) ($_GET['invoice_number'] ?? $_GET['number'] ?? $_GET['q'] ?? ''));
+            if ($missingNumber !== '' && function_exists('sales_module_url')) {
+                header('Location: ' . sales_module_url('invoices/index.php', [
+                    'module' => 'sales',
+                    'q' => $missingNumber,
+                ]));
+                exit;
+            }
             throw new \RuntimeException('Invoice id is required.');
         }
 

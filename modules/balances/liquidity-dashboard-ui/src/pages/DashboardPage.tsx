@@ -376,9 +376,9 @@ export default function DashboardPage() {
                                 title={tx.type === 'debit' ? 'Out' : 'In'}
                               >
                                 {tx.type === 'debit' ? (
-                                  <HiOutlineArrowUpRight size={14} aria-hidden="true" />
+                                  <HiOutlineArrowUpRight size={17} aria-hidden="true" />
                                 ) : (
-                                  <HiOutlineArrowDownLeft size={14} aria-hidden="true" />
+                                  <HiOutlineArrowDownLeft size={17} aria-hidden="true" />
                                 )}
                               </span>
                               <span className="ld-recent-desc">{tx.description}</span>

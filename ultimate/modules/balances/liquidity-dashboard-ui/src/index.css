@@ -299,8 +299,8 @@ button.ld-kpi-card {
 }
 
 .ld-recent-ico {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border-radius: 9999px;
   display: inline-flex;
   align-items: center;
@@ -851,6 +851,71 @@ button.ld-kpi-card {
   max-height: min(85vh, 900px);
   overflow: auto;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+
+.ld-modal--tx {
+  width: min(880px, 100%);
+  max-height: min(90vh, 960px);
+}
+
+.ld-tx-modal-heading {
+  min-width: 0;
+}
+
+.ld-tx-modal-heading h2 {
+  margin: 0;
+}
+
+.ld-tx-modal-sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.ld-tx-modal-b {
+  padding-top: 0.35rem;
+}
+
+.ld-tx-modal-b .ld-summary-grid {
+  margin-bottom: 0.85rem;
+}
+
+.ld-tx-modal-b .ld-detail-actions {
+  margin-top: 1rem;
+  padding-bottom: 0.25rem;
+}
+
+.ld-tx-modal-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.ld-tx-modal-hero-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.ld-tx-modal-hero-value {
+  margin-top: 0.2rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.15;
+}
+
+.ld-tx-modal-hero-value.is-neg {
+  color: #b91c1c;
 }
 
 .ld-modal-h {

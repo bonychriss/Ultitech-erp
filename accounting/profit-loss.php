@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includes/functions.php';
 if (file_exists(__DIR__ . '/setup_schema.php')) {
     require_once __DIR__ . '/setup_schema.php';

@@ -1,4 +1,4 @@
-﻿<?php require_once '../../includes/functions.php';  global $pdo;
+<?php require_once '../../includes/functions.php';  global $pdo;
 // Ensure table for account types
 $pdo->exec("CREATE TABLE IF NOT EXISTS erp_account_types (\n    id INT AUTO_INCREMENT PRIMARY KEY,\n    name VARCHAR(50) UNIQUE NOT NULL,\n    status VARCHAR(20) NOT NULL DEFAULT 'active',\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 // Seed defaults if empty

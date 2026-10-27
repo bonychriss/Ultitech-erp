@@ -7744,13 +7744,19 @@ function requireLogin()
             $needRegister = false;
         }
         if ($needRegister) {
-            header('Location: ' . app_url('/register.php'));
+            $loginTarget = app_url('/register.php');
+        } elseif ($requestedCompanySlug !== '') {
+            $loginTarget = $appendNext(company_login_url($requestedCompanySlug));
         } else {
-            if ($requestedCompanySlug !== '') {
-                header('Location: ' . $appendNext(company_login_url($requestedCompanySlug)));
-            } else {
-                header('Location: ' . $appendNext(app_url('/login.php')));
-            }
+            $loginTarget = $appendNext(app_url('/login.php'));
+        }
+        // BOM / early echo can mark headers sent (esp. when php.ini output_buffering=Off).
+        if (!headers_sent()) {
+            header('Location: ' . $loginTarget);
+        } else {
+            $safe = htmlspecialchars($loginTarget, ENT_QUOTES, 'UTF-8');
+            echo '<script>window.location.href=' . json_encode($loginTarget, JSON_UNESCAPED_SLASHES) . ';</script>';
+            echo '<noscript><meta http-equiv="refresh" content="0;url=' . $safe . '"></noscript>';
         }
         exit;
     }

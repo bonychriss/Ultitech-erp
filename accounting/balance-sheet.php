@@ -1,5 +1,6 @@
 <?php
 require_once '../includes/functions.php';
+requireLogin();
 if (file_exists(__DIR__ . '/setup_schema.php')) {
     require_once __DIR__ . '/setup_schema.php';
     if (function_exists('ensureAccountingSchema')) {

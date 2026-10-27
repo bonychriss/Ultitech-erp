@@ -1,5 +1,6 @@
-﻿<?php
+<?php
 require_once '../includes/functions.php';
+requireLogin();
 global $pdo;
 
 $journals = [];

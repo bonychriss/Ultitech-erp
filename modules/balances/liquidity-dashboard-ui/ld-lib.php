@@ -337,6 +337,66 @@ function ldBuildInitPayload(PDO $pdo): array
         $aiInsightsUrl .= '?' . http_build_query($qs);
     }
 
+    $moduleQs = http_build_query(array_filter([
+        'module' => $moduleParam !== '' ? $moduleParam : 'balances',
+    ]));
+    $transactionsUrl = ldDeskPublicUrl('transactions.php') . ($moduleQs !== '' ? '?' . $moduleQs : '');
+
+    $recentTransactions = [];
+    try {
+        $stmtRecent = $pdo->query("
+            SELECT
+                t.id,
+                t.account_id,
+                t.transaction_date,
+                t.description,
+                t.type,
+                t.amount,
+                t.reference_type,
+                t.reference_id,
+                a.name AS account_name,
+                u.full_name AS user_name
+            FROM account_transactions t
+            LEFT JOIN financial_accounts a ON a.id = t.account_id
+            LEFT JOIN users u ON u.id = t.created_by
+            ORDER BY t.transaction_date DESC, t.id DESC
+            LIMIT 10
+        ");
+        foreach ($stmtRecent->fetchAll(PDO::FETCH_ASSOC) as $tx) {
+            $isCredit = strtolower((string) ($tx['type'] ?? '')) === 'credit';
+            $amount = (float) ($tx['amount'] ?? 0);
+            $refType = (string) ($tx['reference_type'] ?? '');
+            $refId = isset($tx['reference_id']) ? (int) $tx['reference_id'] : 0;
+            $source = ldResolveTransactionSource($refType, $refId);
+            $accountId = (int) ($tx['account_id'] ?? 0);
+            $txId = (int) ($tx['id'] ?? 0);
+            $txDate = (string) ($tx['transaction_date'] ?? '');
+            $ym = $txDate !== '' ? date('Y-m', strtotime($txDate)) : date('Y-m');
+            $dateLabel = $txDate !== '' ? date('d M Y', strtotime($txDate)) : '—';
+
+            $recentTransactions[] = [
+                'id' => $txId,
+                'accountId' => $accountId,
+                'accountName' => (string) ($tx['account_name'] ?? 'Account'),
+                'transactionDate' => $txDate,
+                'dateLabel' => $dateLabel,
+                'ym' => $ym,
+                'description' => trim((string) ($tx['description'] ?? '')) !== ''
+                    ? (string) $tx['description']
+                    : ($source['label'] ?? ($refType !== '' ? ucwords(str_replace('_', ' ', $refType)) : 'Transaction')),
+                'type' => $isCredit ? 'credit' : 'debit',
+                'typeLabel' => $isCredit ? 'In' : 'Out',
+                'amount' => $amount,
+                'amountDisplay' => ldFormatValue($amount),
+                'referenceLabel' => $source['label'] ?? ($refType !== '' ? ucwords(str_replace('_', ' ', $refType)) : ''),
+                'createdBy' => (string) ($tx['user_name'] ?? 'System'),
+            ];
+        }
+    } catch (Throwable $e) {
+        error_log('balances liquidity-dashboard recent transactions: ' . $e->getMessage());
+        $recentTransactions = [];
+    }
+
     return [
         'todayLabel' => date('l, d M Y'),
         'companyDisplay' => $companyDisplay,
@@ -344,6 +404,7 @@ function ldBuildInitPayload(PDO $pdo): array
         'canManageAccount' => $canManageAccount,
         'coaCreateUrl' => $coaCreateUrl,
         'aiInsightsUrl' => $aiInsightsUrl,
+        'transactionsUrl' => $transactionsUrl,
         'kpis' => [
             'totalLiquidity' => $totalLiquidity,
             'totalLiquidityDisplay' => ldFormatValue($totalLiquidity),
@@ -385,6 +446,7 @@ function ldBuildInitPayload(PDO $pdo): array
             'hidden' => $insightHidden,
             'hiddenCount' => count($insightHidden),
         ],
+        'recentTransactions' => $recentTransactions,
     ];
 }
 

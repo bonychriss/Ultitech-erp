@@ -1,4 +1,4 @@
-# UltiTech Balances — Module Guide
+# UltiTech Balances ï¿½ Module Guide
 
 Guide to the **Balances** cash book: liquidity, financial accounts, transfers, and the transaction ledger.
 
@@ -6,8 +6,8 @@ Guide to the **Balances** cash book: liquidity, financial accounts, transfers, a
 **Accounting context:** [`ACCOUNTING-README.md`](ACCOUNTING-README.md)
 
 **Audience:** finance users and developers on Ultimate / Roadmaster tenants.  
-**Local base:** `http://localhost/public_html/{company_slug}/…` (example: `ultimate`)  
-**Live base:** `https://ultitech.io/{company_slug}/…`
+**Local base:** `http://localhost/public_html/{company_slug}/ï¿½` (example: `ultimate`)  
+**Live base:** `https://ultitech.io/{company_slug}/ï¿½`
 
 ---
 
@@ -159,15 +159,15 @@ Liquidity buckets (`cash` / `bank` / `mobile`) come from `balancesAccountLiquidi
 ## 9. Local URL examples (Ultimate)
 
 ```text
-…/ultimate/accounting?module=accounting
-…/ultimate/modules/balances/index?module=balances
-…/ultimate/modules/balances/accounts.php?module=balances
-…/ultimate/modules/balances/transactions.php?module=balances
-…/ultimate/modules/balances/transfer.php?module=balances
-…/ultimate/accounting/reconciliation.php?module=balances
+ï¿½/ultimate/accounting?module=accounting
+ï¿½/ultimate/modules/balances/index?module=balances
+ï¿½/ultimate/modules/balances/accounts.php?module=balances
+ï¿½/ultimate/modules/balances/transactions.php?module=balances
+ï¿½/ultimate/modules/balances/transfer.php?module=balances
+ï¿½/ultimate/accounting/reconciliation.php?module=balances
 ```
 
-Use `company_url('…')` in PHP so tenant prefixes stay correct.
+Use `company_url('ï¿½')` in PHP so tenant prefixes stay correct.
 
 ---
 

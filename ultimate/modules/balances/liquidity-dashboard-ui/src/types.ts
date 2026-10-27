@@ -5,6 +5,22 @@ export type InsightItem = {
   link?: string;
 };
 
+export type RecentTransactionRow = {
+  id: number;
+  accountId: number;
+  accountName: string;
+  transactionDate: string;
+  dateLabel: string;
+  ym: string;
+  description: string;
+  type: 'credit' | 'debit';
+  typeLabel: string;
+  amount: number;
+  amountDisplay: string;
+  referenceLabel: string;
+  createdBy: string;
+};
+
 export type DashboardInit = {
   success: boolean;
   todayLabel: string;
@@ -13,6 +29,7 @@ export type DashboardInit = {
   canManageAccount: boolean;
   coaCreateUrl: string;
   aiInsightsUrl: string;
+  transactionsUrl?: string;
   kpis: {
     totalLiquidity: number;
     totalLiquidityDisplay: string;
@@ -49,6 +66,7 @@ export type DashboardInit = {
     hidden: InsightItem[];
     hiddenCount: number;
   };
+  recentTransactions?: RecentTransactionRow[];
 };
 
 export type LiquidityAccountRow = {

@@ -96,7 +96,7 @@ html[data-theme='dark'] .acct-back:hover {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.65rem;
   background: var(--acct-surface);
   border: 1px solid var(--acct-border);
@@ -119,17 +119,8 @@ html[data-theme='dark'] .acct-card:hover {
   border-color: #38bdf8;
 }
 
-.acct-card h2 {
-  margin: 0;
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 0.9375rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
-}
-
 .acct-ico {
+  order: 1;
   width: 32px;
   height: 32px;
   border-radius: 9px;
@@ -138,6 +129,18 @@ html[data-theme='dark'] .acct-card:hover {
   justify-content: center;
   margin: 0;
   flex-shrink: 0;
+}
+
+.acct-card h2,
+.acct-card .acct-card-label {
+  margin: 0;
+  order: 2;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 .acct-ico svg {

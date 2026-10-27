@@ -76,8 +76,8 @@ export default function AccountingHubPage() {
         <section className="acct-grid" aria-label="Accounting sections">
           {sections.map((s) => (
             <a key={s.id || s.title} className="acct-card" href={s.href}>
-              <h2>{s.title}</h2>
               <SectionIcon icon={s.icon} iconUrl={s.iconUrl} tone={s.tone || 'blue'} />
+              <h2 className="acct-card-label">{s.title}</h2>
             </a>
           ))}
         </section>

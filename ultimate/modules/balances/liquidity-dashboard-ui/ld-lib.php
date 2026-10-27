@@ -298,26 +298,63 @@ function ldBuildInitPayload(PDO $pdo): array
     $insightSummaries = [];
     $insightMoreItems = [];
     foreach ($balInsights['highlights'] as $line) {
+        $text = (string) $line;
+        $lower = strtolower($text);
+        $class = 'success';
+        $label = 'Liquidity';
+        if (str_contains($lower, 'diversif') || str_contains($lower, 'account type')) {
+            $class = 'info';
+            $label = 'Account mix';
+        } elseif (str_contains($lower, 'balanced') || str_contains($lower, 'net inflow')) {
+            $class = 'success';
+            $label = 'Cash flow';
+        } elseif (str_contains($lower, 'available across')) {
+            $class = 'success';
+            $label = 'Liquidity';
+        }
         $insightSummaries[] = [
-            'label' => 'Summary',
-            'class' => 'highlight',
-            'text' => (string) $line,
+            'label' => $label,
+            'class' => $class,
+            'text' => $text,
             'link' => '',
         ];
     }
     foreach ($balInsights['suggestions'] as $line) {
+        $text = (string) $line;
+        $lower = strtolower($text);
+        $class = 'tip';
+        $label = 'Suggestion';
+        if (str_contains($lower, 'outflow') || str_contains($lower, 'zero balance') || str_contains($lower, 'spreading funds')) {
+            $class = 'warning';
+            $label = 'Attention';
+        } elseif (str_contains($lower, 'add a ') || str_contains($lower, 'add cash') || str_contains($lower, 'add a bank') || str_contains($lower, 'add mobile')) {
+            $class = 'info';
+            $label = 'Setup';
+        }
         $insightMoreItems[] = [
-            'label' => 'Suggestion',
-            'class' => 'tip',
-            'text' => (string) $line,
+            'label' => $label,
+            'class' => $class,
+            'text' => $text,
             'link' => '',
         ];
     }
     foreach ($balInsights['alerts'] as $alert) {
-        $alertType = $alert['type'] ?? 'alert';
+        $alertType = (string) ($alert['type'] ?? 'alert');
+        $class = 'danger';
+        $label = 'Alert';
+        if ($alertType === 'payment') {
+            $class = 'payment';
+            $label = 'Payment due';
+        } elseif ($alertType === 'warning') {
+            $class = 'warning';
+            $label = 'Balance alert';
+        } elseif ($alertType === 'approval') {
+            $class = 'warning';
+            $label = 'Pending approval';
+        }
         $insightMoreItems[] = [
-            'label' => $alertType === 'payment' ? 'Payment due' : ($alertType === 'warning' ? 'Balance alert' : 'Pending approval'),
-            'class' => $alertType === 'payment' ? 'payment' : 'alert',
+            'label' => $label,
+            'class' => $class,
             'text' => (string) ($alert['text'] ?? ''),
             'link' => (string) ($alert['link'] ?? ''),
         ];
@@ -360,7 +397,7 @@ function ldBuildInitPayload(PDO $pdo): array
             LEFT JOIN financial_accounts a ON a.id = t.account_id
             LEFT JOIN users u ON u.id = t.created_by
             ORDER BY t.transaction_date DESC, t.id DESC
-            LIMIT 10
+            LIMIT 5
         ");
         foreach ($stmtRecent->fetchAll(PDO::FETCH_ASSOC) as $tx) {
             $isCredit = strtolower((string) ($tx['type'] ?? '')) === 'credit';

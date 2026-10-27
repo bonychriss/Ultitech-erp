@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Plus, CircleHelp, X } from 'lucide-react';
 import {
   HiOutlineShieldCheck,
@@ -7,17 +7,66 @@ import {
   HiOutlineDeviceMobile,
   HiOutlineSparkles,
   HiOutlineClipboardList,
+  HiOutlineChartBar,
+  HiOutlineChartPie,
+  HiOutlineExclamation,
+  HiOutlineCreditCard,
+  HiChevronRight,
 } from 'react-icons/hi';
 import { HiOutlineArrowDownLeft, HiOutlineArrowUpRight } from 'react-icons/hi2';
 import { fetchInit } from '../api';
 import type { DashboardInit, InsightItem } from '../types';
 import { navigateLdView } from '../nav';
 
-function InsightMsg({ item }: { item: InsightItem }) {
+/** Semantic themes: success=green, danger=red, warning=amber, info=blue, tip=slate, payment=indigo, ai=violet */
+function insightTone(item: InsightItem): string {
+  const raw = String(item.class || '').toLowerCase();
+  if (['success', 'highlight'].includes(raw)) return 'success';
+  if (['danger', 'alert'].includes(raw)) return 'danger';
+  if (raw === 'warning') return 'warning';
+  if (['info', 'mix'].includes(raw)) return 'info';
+  if (raw === 'payment') return 'payment';
+  if (raw === 'tip') return 'tip';
+  if (raw === 'ai') return 'ai';
+  const text = item.text.toLowerCase();
+  if (text.includes('outflow') || text.includes('overdue') || text.includes('failed')) return 'danger';
+  if (text.includes('due') || text.includes('pending') || text.includes('zero balance')) return 'warning';
+  if (text.includes('diversif') || text.includes('account type') || text.includes('add a ')) return 'info';
+  if (text.includes('available across') || text.includes('net inflow') || text.includes('balanced')) return 'success';
+  return 'tip';
+}
+
+function insightTitle(item: InsightItem): string {
+  if (item.label && item.label !== 'Summary' && item.label !== 'Suggestion') return item.label;
+  const text = item.text.toLowerCase();
+  if (text.includes('available across') || text.includes('total liquidity')) return 'Liquidity';
+  if (text.includes('diversif') || text.includes('account type')) return 'Account mix';
+  if (text.includes('net inflow') || text.includes('net outflow') || text.includes('balanced')) return 'Cash flow';
+  return item.label || 'Insight';
+}
+
+function insightIcon(item: InsightItem, tone: string): ReactNode {
+  const title = insightTitle(item).toLowerCase();
+  if (tone === 'payment' || title.includes('payment')) return <HiOutlineCreditCard size={16} />;
+  if (tone === 'danger' || tone === 'warning') return <HiOutlineExclamation size={16} />;
+  if (title.includes('mix') || title.includes('account')) return <HiOutlineChartPie size={16} />;
+  if (title.includes('liquidity') || title.includes('cash flow') || tone === 'success') return <HiOutlineChartBar size={16} />;
+  return <HiOutlineSparkles size={16} />;
+}
+
+function InsightRow({ item }: { item: InsightItem }) {
+  const tone = insightTone(item);
+  const body = item.link ? <a href={item.link}>{item.text}</a> : item.text;
   return (
-    <div className={`ld-ai-msg ld-ai-msg--${item.class}`}>
-      <span className="ld-ai-msg-label">{item.label}</span>
-      {item.link ? <a href={item.link}>{item.text}</a> : item.text}
+    <div className={`ld-insight-row ld-insight-row--${tone}`}>
+      <span className="ld-insight-ico" aria-hidden="true">
+        {insightIcon(item, tone)}
+      </span>
+      <div className="ld-insight-copy">
+        <span className="ld-insight-kicker">{insightTitle(item)}</span>
+        <span className="ld-insight-text">{body}</span>
+      </div>
+      <HiChevronRight size={15} className="ld-insight-chevron" aria-hidden="true" />
     </div>
   );
 }
@@ -105,7 +154,9 @@ export default function DashboardPage() {
     <div className="ld-dash">
       <div className="ld-header">
         <div>
+          <div className="ld-kicker">Balances</div>
           <h1>Liquidity Dashboard</h1>
+          <p>Real-time view of your organization&apos;s liquidity and account balances.</p>
         </div>
         <div className="ld-header-actions">
           {data.canManageAccount && (
@@ -127,11 +178,11 @@ export default function DashboardPage() {
           title="Open Total Liquidity details"
         >
           <div className="ld-kpi-icon bg-blue-50 text-blue-600">
-            <HiOutlineShieldCheck size={16} aria-hidden="true" />
+            <HiOutlineShieldCheck size={18} aria-hidden="true" />
           </div>
           <div className="ld-kpi-body">
-            <div className="ld-kpi-value">{kpis.totalLiquidityDisplay}</div>
             <div className="ld-kpi-label">Total Liquidity</div>
+            <div className="ld-kpi-value">{kpis.totalLiquidityDisplay}</div>
             <div className="ld-kpi-sub">
               {kpis.accountCount} active account{kpis.accountCount === 1 ? '' : 's'}
             </div>
@@ -144,11 +195,11 @@ export default function DashboardPage() {
           title="Open Cash on Hand details"
         >
           <div className="ld-kpi-icon bg-green-50 text-green-600">
-            <HiOutlineCash size={16} aria-hidden="true" />
+            <HiOutlineCash size={18} aria-hidden="true" />
           </div>
           <div className="ld-kpi-body">
-            <div className="ld-kpi-value">{kpis.cashTotalDisplay}</div>
             <div className="ld-kpi-label">Cash on Hand</div>
+            <div className="ld-kpi-value">{kpis.cashTotalDisplay}</div>
             <div className="ld-kpi-sub">{kpis.hasCash ? 'Physical cash' : 'No cash accounts'}</div>
           </div>
         </button>
@@ -159,11 +210,11 @@ export default function DashboardPage() {
           title="Open Bank Accounts details"
         >
           <div className="ld-kpi-icon bg-indigo-50 text-indigo-600">
-            <HiOutlineOfficeBuilding size={16} aria-hidden="true" />
+            <HiOutlineOfficeBuilding size={18} aria-hidden="true" />
           </div>
           <div className="ld-kpi-body">
-            <div className="ld-kpi-value">{kpis.bankTotalDisplay}</div>
             <div className="ld-kpi-label">Bank Accounts</div>
+            <div className="ld-kpi-value">{kpis.bankTotalDisplay}</div>
             <div className="ld-kpi-sub">{kpis.hasBank ? 'Bank balances' : 'No bank accounts'}</div>
           </div>
         </button>
@@ -174,11 +225,11 @@ export default function DashboardPage() {
           title="Open Mobile Money details"
         >
           <div className="ld-kpi-icon bg-violet-50 text-violet-600">
-            <HiOutlineDeviceMobile size={16} aria-hidden="true" />
+            <HiOutlineDeviceMobile size={18} aria-hidden="true" />
           </div>
           <div className="ld-kpi-body">
-            <div className={`ld-kpi-value${kpis.mobileTotal < 0 ? ' is-neg' : ''}`}>{kpis.mobileTotalDisplay}</div>
             <div className="ld-kpi-label">Mobile Money</div>
+            <div className={`ld-kpi-value${kpis.mobileTotal < 0 ? ' is-neg' : ''}`}>{kpis.mobileTotalDisplay}</div>
             <div className="ld-kpi-sub">{kpis.hasMobile ? 'Mobile wallets' : 'No mobile accounts'}</div>
           </div>
         </button>
@@ -188,52 +239,52 @@ export default function DashboardPage() {
         <section className="ld-card">
           <div className="ld-card-h">
             <h3>
-              <HiOutlineSparkles size={16} className="text-violet-600" aria-hidden="true" /> AI Insights
+              <HiOutlineSparkles size={18} className="text-violet-500" aria-hidden="true" /> AI Insights
+              {insights.aiConnected ? <span className="ld-live-pill">Live</span> : null}
             </h3>
-            {insights.aiConnected && <span className="ld-live">Connected</span>}
+            {insights.aiConnected ? (
+              <span className="ld-connected">
+                <span className="ld-connected-dot" aria-hidden="true" /> Connected
+              </span>
+            ) : (
+              <span className="ld-connected is-offline">Offline</span>
+            )}
           </div>
-          <div className="ld-card-b">
-            <div className="ld-insights-chat">
-              <div className="ld-bot-wrap">
-                <div className={`ld-bot-avatar${insights.aiConnected ? ' is-live' : ''}`} aria-hidden="true">
-                  <HiOutlineSparkles size={20} />
-                </div>
-                <span className={`ld-bot-status${insights.aiConnected ? '' : ' is-offline'}`}>
-                  {insights.aiConnected ? 'Live' : 'Offline'}
+          <div className="ld-card-b ld-insights-body">
+            {insights.visible.length === 0 && insights.hidden.length === 0 && (
+              <div className="ld-insight-row ld-insight-row--tip">
+                <span className="ld-insight-ico" aria-hidden="true">
+                  <HiOutlineSparkles size={16} />
                 </span>
+                <div className="ld-insight-copy">
+                  <span className="ld-insight-kicker">Tip</span>
+                  <span className="ld-insight-text">Post transactions to see liquidity insights here.</span>
+                </div>
               </div>
-              <div className="ld-insights-messages">
-                {insights.visible.length === 0 && insights.hidden.length === 0 && (
-                  <div className="ld-ai-msg ld-ai-msg--tip">
-                    <span className="ld-ai-msg-label">Tip</span>
-                    Post transactions to see liquidity insights here.
-                  </div>
-                )}
-                {insights.visible.map((item, index) => (
-                  <InsightMsg key={`v-${index}`} item={item} />
+            )}
+            {insights.visible.map((item, index) => (
+              <InsightRow key={`v-${index}`} item={item} />
+            ))}
+            {hiddenCount > 0 && (
+              <div className={`ld-insights-more${insightsExpanded ? ' is-open' : ''}`}>
+                {insights.hidden.map((item, index) => (
+                  <InsightRow key={`h-${index}`} item={item} />
                 ))}
-                {hiddenCount > 0 && (
-                  <div className={`ld-insights-more${insightsExpanded ? ' is-open' : ''}`}>
-                    {insights.hidden.map((item, index) => (
-                      <InsightMsg key={`h-${index}`} item={item} />
-                    ))}
-                    {extraInsights.map((item, index) => (
-                      <InsightMsg key={`ai-${index}`} item={item} />
-                    ))}
-                    {extraLoading && <div className="ld-insights-note">Analyzing payments and liquidity...</div>}
-                  </div>
-                )}
-                {hiddenCount > 0 && (
-                  <button
-                    type="button"
-                    className="ld-insights-toggle"
-                    onClick={() => setInsightsExpanded((v) => !v)}
-                  >
-                    {insightsExpanded ? 'Show less' : `Show all insights (${hiddenCount})`}
-                  </button>
-                )}
+                {extraInsights.map((item, index) => (
+                  <InsightRow key={`ai-${index}`} item={item} />
+                ))}
+                {extraLoading && <div className="ld-insights-note">Analyzing payments and liquidity...</div>}
               </div>
-            </div>
+            )}
+            {hiddenCount > 0 && (
+              <button
+                type="button"
+                className="ld-insights-toggle"
+                onClick={() => setInsightsExpanded((v) => !v)}
+              >
+                {insightsExpanded ? 'Show less' : `Show all insights (${hiddenCount})`}
+              </button>
+            )}
             {!insights.aiConnected && (
               <p className="ld-insights-note">Connect AI in system settings for live AI recommendations.</p>
             )}
@@ -243,11 +294,11 @@ export default function DashboardPage() {
         <section className="ld-card">
           <div className="ld-card-h">
             <h3>
-              <HiOutlineClipboardList size={16} aria-hidden="true" /> Recent Transactions
+              <HiOutlineClipboardList size={18} aria-hidden="true" /> Recent Transactions
             </h3>
             {transactionsUrl ? (
               <a href={transactionsUrl} className="ld-card-link">
-                View all
+                View all →
               </a>
             ) : null}
           </div>
@@ -255,47 +306,70 @@ export default function DashboardPage() {
             {recentTransactions.length === 0 ? (
               <div className="ld-empty">No recent transactions yet.</div>
             ) : (
-              <ul className="ld-recent-list">
-                {recentTransactions.map((tx) => (
-                  <li key={tx.id}>
-                    <button
-                      type="button"
-                      className="ld-recent-row"
-                      onClick={() =>
-                        navigateLdView({
-                          name: 'transaction',
-                          accountId: tx.accountId,
-                          ym: tx.ym,
-                          txId: tx.id,
-                        })
-                      }
-                    >
-                      <span
-                        className={`ld-recent-ico${tx.type === 'debit' ? ' is-out' : ' is-in'}`}
-                        aria-label={tx.typeLabel}
-                        title={tx.type === 'debit' ? 'Out' : 'In'}
+              <div className="ld-recent-table-wrap">
+                <table className="ld-recent-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Account / Category</th>
+                      <th>Date</th>
+                      <th className="ld-recent-amt-h">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentTransactions.map((tx) => (
+                      <tr
+                        key={tx.id}
+                        tabIndex={0}
+                        onClick={() =>
+                          navigateLdView({
+                            name: 'transaction',
+                            accountId: tx.accountId,
+                            ym: tx.ym,
+                            txId: tx.id,
+                          })
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigateLdView({
+                              name: 'transaction',
+                              accountId: tx.accountId,
+                              ym: tx.ym,
+                              txId: tx.id,
+                            });
+                          }
+                        }}
                       >
-                        {tx.type === 'debit' ? (
-                          <HiOutlineArrowUpRight size={16} aria-hidden="true" />
-                        ) : (
-                          <HiOutlineArrowDownLeft size={16} aria-hidden="true" />
-                        )}
-                      </span>
-                      <div className="ld-recent-main">
-                        <span className="ld-recent-desc">{tx.description}</span>
-                        <span className="ld-recent-meta">
+                        <td>
+                          <span className="ld-recent-desc-cell">
+                            <span
+                              className={`ld-recent-ico${tx.type === 'debit' ? ' is-out' : ' is-in'}`}
+                              aria-label={tx.typeLabel}
+                              title={tx.type === 'debit' ? 'Out' : 'In'}
+                            >
+                              {tx.type === 'debit' ? (
+                                <HiOutlineArrowUpRight size={14} aria-hidden="true" />
+                              ) : (
+                                <HiOutlineArrowDownLeft size={14} aria-hidden="true" />
+                              )}
+                            </span>
+                            <span className="ld-recent-desc">{tx.description}</span>
+                          </span>
+                        </td>
+                        <td className="ld-recent-cat">
                           {tx.accountName}
                           {tx.referenceLabel ? ` · ${tx.referenceLabel}` : ''}
-                          {` · ${tx.dateLabel}`}
-                        </span>
-                      </div>
-                      <div className={`ld-recent-amt${tx.type === 'debit' ? ' is-out' : ' is-in'}`}>
-                        <span>{tx.amountDisplay}</span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                        </td>
+                        <td className="ld-recent-date">{tx.dateLabel}</td>
+                        <td className={`ld-recent-amt${tx.type === 'debit' ? ' is-out' : ' is-in'}`}>
+                          {tx.amountDisplay}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </section>
@@ -330,8 +404,43 @@ export default function DashboardPage() {
                 <li>
                   <strong>AI Insights:</strong> Smart summaries, payment alerts, and recommendations when AI is connected.
                 </li>
+                <li>
+                  <strong>Recent transactions:</strong> Latest money movements across your accounts, with in/out icons.
+                </li>
               </ul>
-              <h3>2. Managing accounts</h3>
+              <h3>2. AI Insights colors</h3>
+              <p>Insight cards use color by purpose so you can scan status quickly:</p>
+              <ul className="ld-manual-colors">
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--success" aria-hidden="true" />
+                  <strong>Green</strong> — success / healthy liquidity
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--info" aria-hidden="true" />
+                  <strong>Blue</strong> — info / account mix / setup
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--warning" aria-hidden="true" />
+                  <strong>Amber</strong> — warnings / attention
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--danger" aria-hidden="true" />
+                  <strong>Red</strong> — danger / critical alerts
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--payment" aria-hidden="true" />
+                  <strong>Indigo</strong> — payment due
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--tip" aria-hidden="true" />
+                  <strong>Slate</strong> — tips
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--ai" aria-hidden="true" />
+                  <strong>Violet</strong> — AI suggestions
+                </li>
+              </ul>
+              <h3>3. Managing accounts</h3>
               <p>Use the Accounts page to set up where you keep money.</p>
               <ul>
                 <li>
@@ -344,12 +453,12 @@ export default function DashboardPage() {
                   <strong>Opening balance:</strong> Enter the amount currently in the account once when creating it.
                 </li>
               </ul>
-              <h3>3. Transfers vs transactions</h3>
+              <h3>4. Transfers vs transactions</h3>
               <p>
                 <strong>Internal transfers</strong> move money between your own accounts. The{' '}
                 <strong>transactions ledger</strong> is the audit trail for all money movements.
               </p>
-              <h3>4. FAQ</h3>
+              <h3>5. FAQ</h3>
               <p>
                 Record customer payments in Sales (select receiving account). Pay expenses via vouchers (select source
                 account). Balances update automatically.

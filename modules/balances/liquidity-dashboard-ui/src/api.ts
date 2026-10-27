@@ -4,6 +4,7 @@ import type {
   AccountMonthsPayload,
   MonthTransactionsPayload,
   TransactionDetailPayload,
+  RecentTransactionsPayload,
 } from './types';
 
 function getApiBase(): string {
@@ -100,4 +101,14 @@ export async function fetchTransactionDetail(txId: number): Promise<TransactionD
     credentials: 'same-origin',
   });
   return parseJson<TransactionDetailPayload>(response);
+}
+
+export async function fetchRecentTransactions(
+  page = 1,
+  perPage = 5,
+): Promise<RecentTransactionsPayload> {
+  const response = await fetch(apiUrl('recent_transactions', { page, per_page: perPage }), {
+    credentials: 'same-origin',
+  });
+  return parseJson<RecentTransactionsPayload>(response);
 }

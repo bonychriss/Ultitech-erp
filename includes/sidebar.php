@@ -454,7 +454,7 @@ switch ($active_module) {
 
      case 'balances':
         addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $prefix . 'modules/balances/index.php');
-        addItem($menuItems, 'account-parent', 'Account', 'credit-card', $prefix . 'modules/balances/accounts.php');
+        addItem($menuItems, 'account-parent', 'Account', 'sack-dollar', $prefix . 'modules/balances/accounts.php');
         addItem($menuItems, 'transfer', 'Transfer', 'arrow-right', $prefix . 'modules/balances/transfer.php');
         addItem($menuItems, 'transactions', 'History', 'list', $prefix . 'modules/balances/transactions.php');
         break;
@@ -663,10 +663,12 @@ if (!function_exists('sidebar_link_is_current')) {
             }
             
             $activeClass = $isActive ? 'active' : 'text-muted';
-            $iconClass = isset($item['icon']) ? "fas fa-{$item['icon']}" : "fas fa-circle";
+            $iconName = (string) ($item['icon'] ?? 'circle');
+            $iconClass = "fas fa-{$iconName}";
             if ($item['id'] === 'logout') {
                  $activeClass = 'text-danger fw-bold';
             }
+            $sackDollarSvg = '<svg class="sidebar-nav-icon me-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:20px;height:20px;flex-shrink:0;"><path d="M8.4 8.4C6.9 9.5 6 11.4 6 13.6 6 17.4 8.7 21 12 21s6-3.6 6-7.4c0-2.2-.9-4.1-2.4-5.2"/><path d="M8.5 8.3C9.3 5.7 10.5 3.8 12 3.8s2.7 1.9 3.5 4.5"/><path d="M9.2 5.2 8.1 3.5h7.8L14.8 5.2"/><path d="M12 11.1v.5"/><path d="M12 13c-.75 0-1.25.45-1.25 1s.5.9 1.25.9 1.25.4 1.25.95-.5 1-1.25 1"/><path d="M12 13v4.1"/></svg>';
         ?>
         <?php
             $isCategoryHub = ($item['id'] ?? '') === 'account-category' && !empty($item['children']);
@@ -678,7 +680,11 @@ if (!function_exists('sidebar_link_is_current')) {
                class="nav-link <?php echo $activeClass; ?><?= $isCategoryHub ? ' sidebar-parent-toggle d-flex align-items-center' : '' ?><?= $isCategoryHub && $categoryChildrenOpen ? ' is-open' : '' ?><?= (($active_module ?? '') === 'letter' && ($item['id'] ?? '') === 'inbox') ? ' letter-inbox-nav' : '' ?>"
                aria-current="<?php echo $isActive ? 'page' : 'false'; ?>"
                <?= $isCategoryHub ? 'onclick="toggleSidebarSubmenu(this); return false;"' : '' ?>>
+                <?php if ($iconName === 'sack-dollar' || $iconName === 'money-bag'): ?>
+                <?= $sackDollarSvg ?>
+                <?php else: ?>
                 <i class="<?php echo $iconClass; ?> me-2" style="width: 20px; text-align: center;"></i>
+                <?php endif; ?>
                 <span class="<?= $isCategoryHub ? 'flex-grow-1' : '' ?>"><?php echo htmlspecialchars($item['label']); ?></span>
                 <?php if ($isCategoryHub): ?>
                 <i class="fas fa-chevron-right ms-auto" style="font-size: 0.75rem;" aria-hidden="true"></i>

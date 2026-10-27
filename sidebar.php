@@ -333,7 +333,7 @@ if (!function_exists('addParentItem')) {
 }
 
 // Module Header (All Modules)
-addItem($menuItems, 'all-modules', 'All Modules', 'grid', $selectModuleUrl);
+addItem($menuItems, 'all-modules', 'All Modules', 'house', $selectModuleUrl);
 
 // Attendance clock shortcut (pretty company URL)
 $attClockHref = function_exists('company_url')

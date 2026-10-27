@@ -1,8 +1,11 @@
 # Balances Module
 
-Operational **cash book** and **chart of accounts** for OmmyERP: track liquidity (cash, bank, mobile), record inflows/outflows on `financial_accounts`, and power the Liquidity dashboard, Transaction ledger, Internal transfer, and COA screens.
+Operational **cash book** and **chart of accounts** for UltiTech ERP: track liquidity (cash, bank, mobile), record inflows/outflows on `financial_accounts`, and power the Liquidity dashboard, Transaction ledger, Internal transfer, and COA screens.
 
-Balances is a **PHP + React** module under `modules/balances/`. There is no Laravel `Domains/Balances`. Other modules write the same ledger through `recordTransaction()` / `balancesRecordTransaction()`. Formal P&L / trial balance / balance sheet often use the **journal GL** (`erp_accounts` / `erp_journal_*`), optionally linked via `financial_accounts.gl_account_id`.
+**User / ops guide:** [`BALANCES-README.md`](../../BALANCES-README.md) (URLs, sidebar, getting started).  
+**Accounting hub context:** [`ACCOUNTING-README.md`](../../ACCOUNTING-README.md).
+
+Balances is a **PHP + React** module under `modules/balances/`. There is no Laravel `Domains/Balances`. Other modules write the same ledger through `recordTransaction()` / `balancesRecordTransaction()`. Formal P&L / trial balance / balance sheet use the **journal GL** (`erp_accounts` / `erp_journal_*`), optionally linked via `financial_accounts.gl_account_id`.
 
 ---
 
@@ -132,13 +135,14 @@ modules/balances/
 ??? transactions.php           # Transaction ledger React shell
 ??? transfer.php               # Internal transfer React shell
 ??? accounts.php / coa_*.php   # Account list + COA create/edit
+??? view_account.php / view-transaction.php
 ??? category_*.php / account_type*.php
 ??? liquidity-dashboard-ui/    # React + ld-lib.php + api/
 ??? transaction-ledger-ui/     # React + tl-lib.php + api/
 ??? transfer-ui/               # React + tf-lib.php + api/
 ```
 
-Partial tenant mirrors may exist under `ultimate/modules/balances/` (liquidity UI); the canonical library remains `modules/balances/`.
+Canonical library is `modules/balances/` (company stubs under `ultimate/` only rewrite into the app root).
 
 ---
 
@@ -152,22 +156,19 @@ Always keep `?module=balances` so the sidebar stays on Balances.
 | Transaction ledger | `/modules/balances/transactions.php?module=balances` |
 | Internal transfer | `/modules/balances/transfer.php?module=balances` |
 | Accounts | `/modules/balances/accounts.php?module=balances` |
+| Reconciliation (Accounting UI) | `/accounting/reconciliation.php?module=balances` |
 | COA create / edit | `coa_create.php`, `coa_edit.php` |
 | Categories / types | `account_categories.php`, `account_types.php`, … |
 
-**Local example:**
+**Local company slug:**
 
-```
-http://localhost/public_html/modules/balances/index.php?module=balances
-```
-
-**Company slug:**
-
-```
+```text
 http://localhost/public_html/{slug}/modules/balances/index.php?module=balances
 ```
 
-Linked from the Accounting hub card: `erp-laravel/app/Domains/Accounting/Nav.php` ? `modules/balances/index?module=balances`.
+Linked from the Accounting hub: `erp-laravel/app/Domains/Accounting/Nav.php` ? `modules/balances/index?module=balances`.
+
+**Sidebar** (`sidebar.php` case `balances`): Dashboard, Account, Transactions, Internal Transfer, Reconciliation. Stock purchase payment desk is not a Balances sidebar item.
 
 **React JSON APIs:**
 
@@ -234,7 +235,7 @@ DDL is ensured by helpers in `functions.php` / `config/database.php` (no `balanc
 
 ## Balance formula
 
-```
+```text
 current_balance = opening_balance + SUM(credits) ? SUM(debits)
 ```
 
@@ -266,6 +267,7 @@ current_balance = opening_balance + SUM(credits) ? SUM(debits)
 
 ## Related docs
 
+- Guide: `BALANCES-README.md`
 - Expenses ? Balances: `modules/expenses/README.md`
 - Sales payments: `modules/sales/payments/README.md`
 - Finance / stock payments: `modules/finance/README.md`

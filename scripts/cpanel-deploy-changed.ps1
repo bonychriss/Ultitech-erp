@@ -81,8 +81,8 @@ function Resolve-DeployUpload {
         }
 
         # Keep shared PHP/config/media on the parent app root, not under /ultimate/.
-        # erp/* is rewritten from /ultimate/erp/* to ../erp/* (see ultimate/.htaccess).
-        if ($rel -match '^(includes|erp|erp-laravel|modules|assets|vendor|letterhead|home-ui|weekly-tasks-ui|weekly_tasks|select-module-ui)/' -or $rel -match '^env(\.|$)') {
+        # accounting/* and erp/* are rewritten from /ultimate/... to ../... (see ultimate/.htaccess).
+        if ($rel -match '^(includes|accounting|erp|erp-laravel|modules|assets|vendor|letterhead|home-ui|weekly-tasks-ui|weekly_tasks|select-module-ui)/' -or $rel -match '^env(\.|$)') {
             return @(
                 @{ Local = $rel; RemoteBase = $parentBase; Remote = $rel }
             )

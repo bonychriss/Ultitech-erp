@@ -132,21 +132,31 @@ function ldBuildInitPayload(PDO $pdo): array
                 continue;
             }
 
-            $bal = isset($acc['live_balance']) ? (float) $acc['live_balance'] : (float) ($acc['current_balance'] ?? 0);
-            $totalLiquidity += $bal;
-
             $bucket = function_exists('balancesAccountLiquidityBucket')
                 ? balancesAccountLiquidityBucket((string) ($acc['type'] ?? ''))
                 : strtolower(trim((string) ($acc['type'] ?? '')));
 
+            // Total Liquidity = active cash + bank + mobile wallets only (never COA categories).
+            if (function_exists('balancesIsLiquidityBucket')
+                ? !balancesIsLiquidityBucket($bucket)
+                : !in_array($bucket, ['cash', 'bank', 'mobile'], true)) {
+                continue;
+            }
+
+            $bal = round(
+                isset($acc['live_balance']) ? (float) $acc['live_balance'] : (float) ($acc['current_balance'] ?? 0),
+                2
+            );
+            $totalLiquidity = round($totalLiquidity + $bal, 2);
+
             if ($bucket === 'cash') {
-                $cashTotal += $bal;
+                $cashTotal = round($cashTotal + $bal, 2);
                 $hasCash = true;
             } elseif ($bucket === 'bank') {
-                $bankTotal += $bal;
+                $bankTotal = round($bankTotal + $bal, 2);
                 $hasBank = true;
             } elseif ($bucket === 'mobile') {
-                $mobileTotal += $bal;
+                $mobileTotal = round($mobileTotal + $bal, 2);
                 $hasMobile = true;
             }
         }
@@ -160,10 +170,18 @@ function ldBuildInitPayload(PDO $pdo): array
         error_log('balances liquidity-dashboard init accounts: ' . $e->getMessage());
     }
 
-    $accountCount = count($accounts);
     $activeAccountRows = array_values(array_filter($accounts, static function ($acc) {
-        return strtolower((string) ($acc['status'] ?? 'inactive')) === 'active';
+        if (strtolower((string) ($acc['status'] ?? 'inactive')) !== 'active') {
+            return false;
+        }
+        $bucket = function_exists('balancesAccountLiquidityBucket')
+            ? balancesAccountLiquidityBucket((string) ($acc['type'] ?? ''))
+            : strtolower(trim((string) ($acc['type'] ?? '')));
+        return function_exists('balancesIsLiquidityBucket')
+            ? balancesIsLiquidityBucket($bucket)
+            : in_array($bucket, ['cash', 'bank', 'mobile'], true);
     }));
+    $accountCount = count($activeAccountRows);
 
     $monthStart = date('Y-m-01 00:00:00');
     $monthCredits = 0.0;
@@ -618,7 +636,6 @@ function ldBuildLiquidityAccountsPayload(PDO $pdo): array
             continue;
         }
 
-        $bal = isset($acc['live_balance']) ? (float) $acc['live_balance'] : (float) ($acc['current_balance'] ?? 0);
         $type = strtolower(trim((string) ($acc['type'] ?? '')));
         $bucket = function_exists('balancesAccountLiquidityBucket')
             ? balancesAccountLiquidityBucket($type)
@@ -626,6 +643,18 @@ function ldBuildLiquidityAccountsPayload(PDO $pdo): array
         if (!isset($groups[$bucket])) {
             $bucket = 'other';
         }
+
+        // Liquidity drill-down matches KPI cards: wallets only.
+        if (function_exists('balancesIsLiquidityBucket')
+            ? !balancesIsLiquidityBucket($bucket)
+            : !in_array($bucket, ['cash', 'bank', 'mobile'], true)) {
+            continue;
+        }
+
+        $bal = round(
+            isset($acc['live_balance']) ? (float) $acc['live_balance'] : (float) ($acc['current_balance'] ?? 0),
+            2
+        );
 
         $nameRaw = trim((string) ($acc['name'] ?? ''));
         $code = '';
@@ -654,8 +683,8 @@ function ldBuildLiquidityAccountsPayload(PDO $pdo): array
         ];
 
         $groups[$bucket]['accounts'][] = $row;
-        $groups[$bucket]['total'] += $bal;
-        $totalLiquidity += $bal;
+        $groups[$bucket]['total'] = round((float) $groups[$bucket]['total'] + $bal, 2);
+        $totalLiquidity = round($totalLiquidity + $bal, 2);
         $rows[] = $row;
     }
 
@@ -998,12 +1027,4 @@ function ldBuildTransactionDetailPayload(PDO $pdo, int $txId): array
             'referenceLabel' => $source['label'] ?? '',
             'sourceUrl' => $source['url'] ?? null,
             'createdBy' => (string) ($tx['user_name'] ?? 'System'),
-            'runningBalance' => $runningBalance,
-            'runningBalanceDisplay' => ldFormatValue($runningBalance),
-            'viewUrl' => 'view-transaction.php?id=' . $txId,
-            'whyIncluded' => $isCredit
-                ? 'This credit increases the account live balance (money in).'
-                : 'This debit decreases the account live balance (money out).',
-        ],
-    ];
-}
+     

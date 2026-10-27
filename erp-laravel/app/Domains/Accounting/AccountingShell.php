@@ -191,11 +191,24 @@ main.main-content.accounting-react-root #root {
     min-height: 320px;
 }
 @media (max-width: 767.98px) {
+    body.page-accounting-desk,
+    body.page-accounting-desk.dashboard,
+    body.page-accounting-desk .layout-main-wrapper,
+    body.page-accounting-desk .layout-main-wrapper > .flex-grow-1 {
+        overflow-x: hidden !important;
+    }
     body.page-accounting-desk .employee-header.employee-header--accounting-desk {
         padding: 0 0.75rem !important;
     }
     main.main-content.accounting-react-root {
-        padding: 0 0.75rem 1.5rem !important;
+        padding: 0.35rem 0.85rem 1.5rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+    main.main-content.accounting-react-root #root {
+        max-width: 100%;
+        overflow-x: hidden;
     }
 }
 html[data-theme="dark"] body.page-accounting-desk,

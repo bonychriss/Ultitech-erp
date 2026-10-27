@@ -118,18 +118,6 @@ html[data-theme='dark'] .acct-back:hover {
   gap: 0.65rem;
 }
 
-@media (max-width: 1100px) {
-  .acct-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 720px) {
-  .acct-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 .acct-card {
   display: flex;
   flex-direction: row;
@@ -196,4 +184,104 @@ html[data-theme='dark'] .acct-card:hover {
   padding: 1.5rem;
   color: var(--acct-muted);
   background: var(--acct-surface);
+}
+
+@media (max-width: 1100px) {
+  .acct-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767.98px) {
+  .acct-page {
+    padding: 0.15rem 0 6.5rem;
+    max-width: none;
+  }
+
+  .acct-hero {
+    margin-bottom: 0.75rem;
+  }
+
+  .acct-back {
+    margin-bottom: 0.55rem;
+    padding: 0.45rem 0.8rem;
+    min-height: 36px;
+  }
+
+  .acct-hero h1 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .acct-hero p {
+    margin-top: 0.3rem;
+    font-size: 0.85rem;
+  }
+
+  .acct-search {
+    margin-bottom: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 12px;
+  }
+
+  .acct-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .acct-card {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    min-height: 6.75rem;
+    padding: 0.8rem 0.7rem;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .acct-ico {
+    order: 0;
+    width: 34px;
+    height: 34px;
+  }
+
+  .acct-ico--img img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .acct-card h2,
+  .acct-card .acct-card-label {
+    order: 1;
+    flex: 0 1 auto;
+    width: 100%;
+    max-width: 100%;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .acct-empty {
+    padding: 1.15rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .acct-grid {
+    gap: 0.45rem;
+  }
+
+  .acct-card {
+    min-height: 6rem;
+    padding: 0.75rem 0.65rem;
+  }
+
+  .acct-card h2,
+  .acct-card .acct-card-label {
+    font-size: 0.8125rem;
+  }
 }

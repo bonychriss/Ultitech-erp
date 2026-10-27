@@ -181,6 +181,11 @@ function ldBuildInitPayload(PDO $pdo): array
             ? balancesIsLiquidityBucket($bucket)
             : in_array($bucket, ['cash', 'bank', 'mobile'], true);
     }));
+    usort($activeAccountRows, static function ($a, $b) {
+        $ba = isset($a['live_balance']) ? (float) $a['live_balance'] : (float) ($a['current_balance'] ?? 0);
+        $bb = isset($b['live_balance']) ? (float) $b['live_balance'] : (float) ($b['current_balance'] ?? 0);
+        return $bb <=> $ba;
+    });
     $accountCount = count($activeAccountRows);
 
     $monthStart = date('Y-m-01 00:00:00');
@@ -240,7 +245,7 @@ function ldBuildInitPayload(PDO $pdo): array
         $debitsTrend[] = $dailyMap[$d]['debits'] ?? 0.0;
     }
 
-    $topAccounts = array_slice($accounts, 0, 5);
+    $topAccounts = array_slice($activeAccountRows, 0, 5);
     $topAccountLabels = array_map(static fn($a) => (string) ($a['name'] ?? 'Account'), $topAccounts);
     $topAccountValues = array_map(static function ($a) {
         return isset($a['live_balance']) ? (float) $a['live_balance'] : (float) ($a['current_balance'] ?? 0);
@@ -1027,4 +1032,12 @@ function ldBuildTransactionDetailPayload(PDO $pdo, int $txId): array
             'referenceLabel' => $source['label'] ?? '',
             'sourceUrl' => $source['url'] ?? null,
             'createdBy' => (string) ($tx['user_name'] ?? 'System'),
-     
+            'runningBalance' => $runningBalance,
+            'runningBalanceDisplay' => ldFormatValue($runningBalance),
+            'viewUrl' => 'view-transaction.php?id=' . $txId,
+            'whyIncluded' => $isCredit
+                ? 'This credit increases the account live balance (money in).'
+                : 'This debit decreases the account live balance (money out).',
+        ],
+    ];
+}

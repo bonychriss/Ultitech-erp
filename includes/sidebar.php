@@ -668,7 +668,12 @@ if (!function_exists('sidebar_link_is_current')) {
             if ($item['id'] === 'logout') {
                  $activeClass = 'text-danger fw-bold';
             }
-            $sackDollarSvg = '<svg class="sidebar-nav-icon me-2" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:20px;height:20px;flex-shrink:0;"><path d="M8.4 8.4C6.9 9.5 6 11.4 6 13.6 6 17.4 8.7 21 12 21s6-3.6 6-7.4c0-2.2-.9-4.1-2.4-5.2"/><path d="M8.5 8.3C9.3 5.7 10.5 3.8 12 3.8s2.7 1.9 3.5 4.5"/><path d="M9.2 5.2 8.1 3.5h7.8L14.8 5.2"/><path d="M12 11.1v.5"/><path d="M12 13c-.75 0-1.25.45-1.25 1s.5.9 1.25.9 1.25.4 1.25.95-.5 1-1.25 1"/><path d="M12 13v4.1"/></svg>';
+            $moneyBagSrc = htmlspecialchars(
+                function_exists('app_url') ? app_url('assets/icons/money-bag.png') : '/assets/icons/money-bag.png',
+                ENT_QUOTES,
+                'UTF-8'
+            );
+            $sackDollarSvg = '<span class="sidebar-nav-icon sidebar-nav-icon--money-bag me-2" style="--sidebar-money-bag:url(\'' . $moneyBagSrc . '\');width:20px;height:20px;display:inline-block;flex-shrink:0;background-color:currentColor;-webkit-mask-image:var(--sidebar-money-bag);mask-image:var(--sidebar-money-bag);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;" aria-hidden="true"></span>';
         ?>
         <?php
             $isCategoryHub = ($item['id'] ?? '') === 'account-category' && !empty($item['children']);

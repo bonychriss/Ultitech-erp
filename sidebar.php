@@ -316,7 +316,13 @@ if (!function_exists('sidebar_render_nav_icon')) {
             return '<i class="bi bi-circle" aria-hidden="true"></i>';
         }
         if ($icon === 'sack-dollar' || $icon === 'money-bag') {
-            return '<svg class="sidebar-nav-icon" xmlns="http://www.w3.org/2000/svg" width="1.1em" height="1.1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.4 8.4C6.9 9.5 6 11.4 6 13.6 6 17.4 8.7 21 12 21s6-3.6 6-7.4c0-2.2-.9-4.1-2.4-5.2"/><path d="M8.5 8.3C9.3 5.7 10.5 3.8 12 3.8s2.7 1.9 3.5 4.5"/><path d="M9.2 5.2 8.1 3.5h7.8L14.8 5.2"/><path d="M12 11.1v.5"/><path d="M12 13c-.75 0-1.25.45-1.25 1s.5.9 1.25.9 1.25.4 1.25.95-.5 1-1.25 1"/><path d="M12 13v4.1"/></svg>';
+            // Exact artwork from provided Account icon screenshot.
+            $src = htmlspecialchars(
+                function_exists('app_url') ? app_url('assets/icons/money-bag.png') : '/assets/icons/money-bag.png',
+                ENT_QUOTES,
+                'UTF-8'
+            );
+            return '<span class="sidebar-nav-icon sidebar-nav-icon--money-bag" style="--sidebar-money-bag:url(\'' . $src . '\')" aria-hidden="true"></span>';
         }
         if (strpos($icon, 'fa-') !== false || str_contains($icon, ' ')) {
             return '<i class="' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '" aria-hidden="true"></i>';
@@ -1381,6 +1387,20 @@ if (!isset($_GET['print'])) {
         display: inline-block;
         vertical-align: -0.15em;
         flex-shrink: 0;
+    }
+    .nav-pills .nav-link .sidebar-nav-icon--money-bag {
+        width: 1.2rem;
+        height: 1.2rem;
+        min-width: 24px;
+        background-color: currentColor;
+        -webkit-mask-image: var(--sidebar-money-bag);
+        mask-image: var(--sidebar-money-bag);
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
     }
     .nav-pills .nav-link.active:not(.text-danger) .sidebar-nav-icon,
     .nav-pills .nav-link:not(.text-danger):hover .sidebar-nav-icon {

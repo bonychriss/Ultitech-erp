@@ -664,6 +664,7 @@ switch ($active_module) {
         addItem($menuItems, 'accounts', 'Account', 'sack-dollar', $prefix . 'modules/balances/accounts.php');
         addItem($menuItems, 'transactions', 'Transactions', 'transactions-coin', $prefix . 'modules/balances/transactions.php');
         addItem($menuItems, 'transfer', 'Internal Transfer', 'transfer-bag', $prefix . 'modules/balances/transfer.php');
+        addItem($menuItems, 'manual', 'Manual', 'question-circle', $prefix . 'modules/balances/index.php?manual=1');
         break;
 
     case 'payroll':

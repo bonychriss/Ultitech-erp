@@ -106,6 +106,15 @@
   color: #fff;
 }
 
+.ld-btn--icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  justify-content: center;
+  border-radius: 9999px !important;
+  flex-shrink: 0;
+}
+
 .ld-kpi-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1718,8 +1727,15 @@ button.ld-kpi-card {
 
 @media (max-width: 767.98px) {
   .ld-header {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .ld-header-actions {
+    margin-left: auto;
   }
 
   .ld-header-hero {

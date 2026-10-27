@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Plus, CircleHelp, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   HiOutlineShieldCheck,
   HiOutlineCash,
@@ -77,7 +77,13 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardInit | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [manualOpen, setManualOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('manual') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [insightsExpanded, setInsightsExpanded] = useState(false);
   const [extraInsights, setExtraInsights] = useState<InsightItem[]>([]);
   const [extraLoading, setExtraLoading] = useState(false);
@@ -110,6 +116,24 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!manualOpen) return;
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('manual') === '1') {
+        url.searchParams.delete('manual');
+        const next = `${url.pathname}${url.search}${url.hash}`;
+        window.history.replaceState({}, '', next);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [manualOpen]);
+
+  function closeManual() {
+    setManualOpen(false);
+  }
 
   async function loadTxPage(page: number) {
     if (page < 1 || page > txTotalPages || page === txPage || txLoading) return;
@@ -187,16 +211,18 @@ export default function DashboardPage() {
         <div>
           <h1>Liquidity Dashboard</h1>
         </div>
-        <div className="ld-header-actions">
-          {data.canManageAccount && (
-            <a href={data.coaCreateUrl} className="ld-btn ld-btn--purple">
-              <Plus className="w-4 h-4" aria-hidden="true" /> Create account
+        {data.canManageAccount ? (
+          <div className="ld-header-actions">
+            <a
+              href={data.coaCreateUrl}
+              className="ld-btn ld-btn--purple ld-btn--icon"
+              title="Create account"
+              aria-label="Create account"
+            >
+              <Plus className="w-5 h-5" aria-hidden="true" />
             </a>
-          )}
-          <button type="button" className="ld-btn ld-btn--outline" onClick={() => setManualOpen(true)}>
-            <CircleHelp className="w-4 h-4" aria-hidden="true" /> Manual
-          </button>
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="ld-kpi-grid">
@@ -507,7 +533,7 @@ export default function DashboardPage() {
       </div>
 
       {manualOpen && (
-        <div className="ld-modal-backdrop" role="presentation" onClick={() => setManualOpen(false)}>
+        <div className="ld-modal-backdrop" role="presentation" onClick={closeManual}>
           <div
             className="ld-modal"
             role="dialog"
@@ -517,7 +543,7 @@ export default function DashboardPage() {
           >
             <div className="ld-modal-h">
               <h2 id="ld-manual-title">Balances &amp; liquidity user manual</h2>
-              <button type="button" className="ld-modal-x" onClick={() => setManualOpen(false)} aria-label="Close">
+              <button type="button" className="ld-modal-x" onClick={closeManual} aria-label="Close">
                 <X className="w-4 h-4" />
               </button>
             </div>

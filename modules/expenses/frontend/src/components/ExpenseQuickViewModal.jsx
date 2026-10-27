@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, ExternalLink, Pencil, Trash2, X } from 'lucide-react';
 import ExpenseStatusBadge, { canDeleteDraftExpense, isVoucherExpense } from './ExpenseStatusBadge';
+import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
 
 function formatCurrency(value, currencyCode) {
   const code = String(currencyCode || 'TZS').replace(/^TSh$/i, 'TZS');
@@ -10,13 +11,7 @@ function formatCurrency(value, currencyCode) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  const normalized = dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`;
-  return new Date(normalized).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return formatDateDigits(dateStr);
 }
 
 function detailRow(label, value, { amount = false } = {}) {
@@ -52,6 +47,16 @@ export default function ExpenseQuickViewModal({
   const voucher = isVoucherExpense(expense);
   const voucherUrl = expense.voucher_url
     || (expense.pv_id ? `../../employee/view-voucher.php?id=${expense.pv_id}&module=voucher` : '');
+  const entryLabel = formatVoucherRef(
+    expense.voucher_entry || expense.expense_number,
+    expense.expense_number || `Expense #${expense.id}`,
+  );
+  const officialRef = String(expense.voucher_no_official || '').trim();
+  const officialRefLabel = officialRef
+    ? formatVoucherRef(officialRef, officialRef)
+    : '';
+  const showOfficialRef = voucher && officialRefLabel
+    && officialRefLabel !== entryLabel;
   const busy = deleting || posting;
 
   useEffect(() => {
@@ -81,7 +86,7 @@ export default function ExpenseQuickViewModal({
         <div className="exp-desk-quick-head">
           <div className="exp-desk-quick-head-main">
             <h2 id="exp-desk-quick-title" className="exp-desk-quick-title">
-              {expense.expense_number || `Expense #${expense.id}`}
+              {entryLabel}
             </h2>
             <p className="exp-desk-quick-subtitle">{expense.display_name || expense.payee || expense.description || '-'}</p>
             <div className="exp-desk-quick-meta">
@@ -104,6 +109,14 @@ export default function ExpenseQuickViewModal({
         <div className="exp-desk-quick-body">
           <dl className="exp-desk-quick-details">
             {detailRow('Amount', formatCurrency(expense.amount, expense.currency_code), { amount: true })}
+            {showOfficialRef && detailRow(
+              'Reference',
+              voucherUrl ? (
+                <a className="exp-desk-quick-ref-link" href={voucherUrl}>
+                  {officialRefLabel}
+                </a>
+              ) : officialRefLabel,
+            )}
             {detailRow(voucher ? 'Budget / account' : 'Account', accountLabel)}
             {detailRow(voucher ? 'Payment type' : 'Paid via', expense.payment_method_label)}
             {!voucher && detailRow('Bank / cash', expense.source_account_name)}

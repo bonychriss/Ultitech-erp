@@ -11,8 +11,9 @@ $vvEditHref = $vvEditHref ?? ('edit-voucher.php?id=' . (int) $voucher_id . $vvMo
 $vvShowEdit = isset($vvShowEdit)
     ? (bool) $vvShowEdit
     : (
-        (canEditVoucher($voucher_id, $_SESSION['user_id']) && in_array(strtolower((string) ($voucher['status'] ?? '')), ['pending', 'confirming'], true))
+        (canEditVoucher($voucher_id, $_SESSION['user_id']) && in_array(strtolower((string) ($voucher['status'] ?? '')), ['pending', 'confirming', 'draft'], true))
         || canLimitedEditApprovedVoucher($voucher_id, $_SESSION['user_id'])
+        || (!empty($voucher['is_draft']) && (int) $voucher['is_draft'] === 1 && canEditVoucher($voucher_id, $_SESSION['user_id']))
     );
 $canMarkPaid = !empty($canMarkPaid);
 $canPost = !empty($canPost);

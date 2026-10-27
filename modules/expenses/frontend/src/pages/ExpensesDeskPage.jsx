@@ -31,6 +31,7 @@ import {
   purchasesCreateVoucherUrl,
 } from '../api/expensesDesk';
 import { exportExpensesExcel, exportExpensesPdf } from '../utils/exportExpenses';
+import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
 import { resolveKpiTrace } from '../utils/kpiTrace';
 import { buildListedSummaryStats } from '../utils/summaryStats';
 
@@ -172,13 +173,7 @@ function KpiMoney({ amount, currencyCode = 'TZS' }) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  const normalized = dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`;
-  return new Date(normalized).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return formatDateDigits(dateStr);
 }
 
 function expenseDisplayName(expense) {
@@ -365,12 +360,16 @@ export default function ExpensesDeskPage() {
     try {
       const rows = await fetchExpensesForExport(range);
       if (isExcel) {
-        await exportExpensesExcel(rows);
+        await exportExpensesExcel(rows, { purchasesDesk });
       } else {
         const subtitle = range.allTime
           ? 'All time'
           : `${range.startDate} to ${range.endDate}`;
-        await exportExpensesPdf(rows, { title: 'Expenses report', subtitle });
+        await exportExpensesPdf(rows, {
+          title: purchasesDesk ? 'Purchases report' : 'Expenses report',
+          subtitle,
+          purchasesDesk,
+        });
       }
       setExportModalOpen(false);
     } catch (err) {
@@ -1332,7 +1331,7 @@ export default function ExpensesDeskPage() {
         <div className="exp-desk-table-wrap">
           <table className="exp-desk-table exp-desk-table--ledger">
             <colgroup>
-              <col className="col-ref" />
+              <col className={purchasesDesk ? 'col-voucher' : 'col-ref'} />
               <col className="col-date" />
               <col className="col-payee" />
               <col className="col-type" />
@@ -1344,7 +1343,9 @@ export default function ExpensesDeskPage() {
             </colgroup>
             <thead>
               <tr>
-                <th className="col-ref">Reference</th>
+                <th className={purchasesDesk ? 'col-voucher' : 'col-ref'}>
+                  {purchasesDesk ? 'Voucher Entry' : 'Reference'}
+                </th>
                 <th className="col-date">Date</th>
                 <th className="col-payee">Payee</th>
                 <th className="col-type">Type</th>
@@ -1376,6 +1377,12 @@ export default function ExpensesDeskPage() {
                   const vatAmt = Math.max(0, Math.min(totalAmt, Number(expense.tax_amount) || 0));
                   const exclusiveAmt = Math.max(0, totalAmt - vatAmt);
                   const accountLabel = expense.category_name || expense.main_account_name || '';
+                  const voucherLabel = purchasesDesk
+                    ? formatVoucherRef(
+                      expense.voucher_entry || expense.expense_number,
+                      `#${expense.id}`,
+                    )
+                    : (expense.expense_number || `#${expense.id}`);
                   return (
                     <tr
                       key={rowKey}
@@ -1391,9 +1398,12 @@ export default function ExpensesDeskPage() {
                         }
                       }}
                     >
-                      <td className="col-ref">
-                        <span className="exp-desk-ref" title={expense.expense_number || `#${expense.id}`}>
-                          {expense.expense_number || `#${expense.id}`}
+                      <td className={purchasesDesk ? 'col-voucher' : 'col-ref'}>
+                        <span
+                          className={purchasesDesk ? 'exp-desk-voucher' : 'exp-desk-ref'}
+                          title={voucherLabel}
+                        >
+                          {voucherLabel}
                         </span>
                       </td>
                       <td className="col-date">{formatDate(expense.date)}</td>

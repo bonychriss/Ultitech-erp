@@ -8256,9 +8256,15 @@ function canEditVoucherRow(array $voucher, $user_id): bool
         return true;
     }
 
-    // Any logged-in employee can edit vouchers that are still before final approval.
-    $status = strtolower((string) ($voucher['status'] ?? ''));
-    return in_array($status, ['pending', 'confirming'], true);
+    // Private Back/leave drafts: creator can keep editing until published.
+    if (!empty($voucher['is_draft']) && (int) $voucher['is_draft'] === 1) {
+        return (int) ($voucher['created_by'] ?? 0) === (int) $user_id;
+    }
+
+    // Any logged-in employee can edit vouchers that are still before final approval
+    // (including explicit draft status from save-as-draft).
+    $status = strtolower(trim((string) ($voucher['status'] ?? '')));
+    return in_array($status, ['pending', 'confirming', 'draft'], true);
 }
 
 function canEditVoucher($voucher_id, $user_id)
@@ -8273,9 +8279,11 @@ function canEditVoucher($voucher_id, $user_id)
     // Do not hard-fail when company context is missing — view pages still load the row by id.
     $hasRestricted = !function_exists('columnExists') || columnExists('payment_vouchers', 'is_restricted', $pdo);
     $restrictedSelect = $hasRestricted ? 'pv.is_restricted' : '0 AS is_restricted';
+    $hasIsDraft = !function_exists('columnExists') || columnExists('payment_vouchers', 'is_draft', $pdo);
+    $draftSelect = $hasIsDraft ? 'IFNULL(pv.is_draft,0) AS is_draft' : '0 AS is_draft';
 
     $selectSql = "
-        SELECT pv.status, pv.created_by, IFNULL(pv.is_posted,0) AS is_posted, {$restrictedSelect}, u.department AS creator_department
+        SELECT pv.status, pv.created_by, IFNULL(pv.is_posted,0) AS is_posted, {$restrictedSelect}, {$draftSelect}, u.department AS creator_department
         FROM payment_vouchers pv
         LEFT JOIN users u ON pv.created_by = u.id
         WHERE pv.id = ?";

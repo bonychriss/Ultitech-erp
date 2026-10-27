@@ -1343,28 +1343,41 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 .exp-desk-results .exp-desk-table--ledger th.col-ref,
-.exp-desk-results .exp-desk-table--ledger td.col-ref {
+.exp-desk-results .exp-desk-table--ledger td.col-ref,
+.exp-desk-results .exp-desk-table--ledger th.col-voucher,
+.exp-desk-results .exp-desk-table--ledger td.col-voucher {
   position: sticky;
   left: 0;
   z-index: 3;
   background: #fff;
   min-width: 9.5rem;
+  box-shadow: none;
 }
 
-.exp-desk-results .exp-desk-table--ledger thead th.col-ref {
+/* Match revenue desk voucher width for longer PV/UGT/… codes */
+.exp-desk-results .exp-desk-table--ledger th.col-voucher,
+.exp-desk-results .exp-desk-table--ledger td.col-voucher {
+  min-width: 11.5rem;
+}
+
+.exp-desk-results .exp-desk-table--ledger thead th.col-ref,
+.exp-desk-results .exp-desk-table--ledger thead th.col-voucher {
   z-index: 5;
   background: #f8fafc;
 }
 
-.exp-desk-results .exp-desk-table--ledger tbody tr:hover td.col-ref {
+.exp-desk-results .exp-desk-table--ledger tbody tr:hover td.col-ref,
+.exp-desk-results .exp-desk-table--ledger tbody tr:hover td.col-voucher {
   background: #fffbeb;
 }
 
-.exp-desk-results .exp-desk-table--ledger tbody tr.exp-desk-row-clickable.is-selected td.col-ref {
+.exp-desk-results .exp-desk-table--ledger tbody tr.exp-desk-row-clickable.is-selected td.col-ref,
+.exp-desk-results .exp-desk-table--ledger tbody tr.exp-desk-row-clickable.is-selected td.col-voucher {
   background: #c9d3df !important;
 }
 
-.exp-desk-results .exp-desk-table--ledger tbody tr.exp-desk-row-clickable.is-selected:hover td.col-ref {
+.exp-desk-results .exp-desk-table--ledger tbody tr.exp-desk-row-clickable.is-selected:hover td.col-ref,
+.exp-desk-results .exp-desk-table--ledger tbody tr.exp-desk-row-clickable.is-selected:hover td.col-voucher {
   background: #b8c4d2 !important;
 }
 
@@ -1413,6 +1426,13 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
   color: #0f172a;
   font-weight: 700;
   font-size: 0.78rem;
+}
+
+.exp-desk-voucher {
+  display: block;
+  color: #000;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .exp-desk-expense-name {
@@ -1777,6 +1797,17 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
   color: #16a34a;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+a.exp-desk-quick-ref-link {
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+a.exp-desk-quick-ref-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 
 .exp-desk-quick-actions {

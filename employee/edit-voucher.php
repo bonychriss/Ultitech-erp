@@ -23,8 +23,15 @@ if (!isset($_GET['id'])) {
 
 $voucher_id = intval($_GET['id']);
 
+$sessionUserId = function_exists('resolveVoucherSessionUserId')
+    ? resolveVoucherSessionUserId($pdo)
+    : (int) ($_SESSION['user_id'] ?? 0);
+
 // Check if user can edit this voucher (full or limited classification edit)
-if (!canEditVoucher($voucher_id, $_SESSION['user_id']) && !canLimitedEditApprovedVoucher($voucher_id, $_SESSION['user_id'])) {
+$canEditThis = function_exists('canEditVoucher') && canEditVoucher($voucher_id, $sessionUserId);
+$canLimitedEdit = function_exists('canLimitedEditApprovedVoucher')
+    && canLimitedEditApprovedVoucher($voucher_id, $sessionUserId);
+if (!$canEditThis && !$canLimitedEdit) {
     header('Location: ' . $dashboardUrl);
     exit();
 }

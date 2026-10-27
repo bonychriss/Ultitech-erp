@@ -630,7 +630,6 @@ switch ($active_module) {
         addItem($menuItems, 'accounts', 'Account', 'wallet2', $prefix . 'modules/balances/accounts.php');
         addItem($menuItems, 'transactions', 'Transactions', 'list-check', $prefix . 'modules/balances/transactions.php');
         addItem($menuItems, 'transfer', 'Internal Transfer', 'arrow-left-right', $prefix . 'modules/balances/transfer.php');
-        addItem($menuItems, 'reconciliation', 'Reconciliation', 'link-45deg', $prefix . 'accounting/reconciliation.php?module=balances');
         break;
 
     case 'payroll':

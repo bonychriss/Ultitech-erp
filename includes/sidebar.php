@@ -456,7 +456,6 @@ switch ($active_module) {
         addItem($menuItems, 'dashboard', 'Dashboard', 'chart-pie', $prefix . 'modules/balances/index.php');
         addItem($menuItems, 'account-parent', 'Account', 'credit-card', $prefix . 'modules/balances/accounts.php');
         addItem($menuItems, 'transfer', 'Transfer', 'arrow-right', $prefix . 'modules/balances/transfer.php');
-        addItem($menuItems, 'reconciliation', 'Reconciliation', 'balance-scale', $prefix . 'accounting/reconciliation.php?module=balances');
         addItem($menuItems, 'transactions', 'History', 'list', $prefix . 'modules/balances/transactions.php');
         break;
 

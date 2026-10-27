@@ -316,13 +316,13 @@ if (!function_exists('sidebar_render_nav_icon')) {
             return '<i class="bi bi-circle" aria-hidden="true"></i>';
         }
         if ($icon === 'sack-dollar' || $icon === 'money-bag') {
-            // Exact artwork from provided Account icon screenshot.
+            // Exact artwork provided by user (money-bag-euro).
             $src = htmlspecialchars(
                 function_exists('app_url') ? app_url('assets/icons/money-bag.png') : '/assets/icons/money-bag.png',
                 ENT_QUOTES,
                 'UTF-8'
             );
-            return '<span class="sidebar-nav-icon sidebar-nav-icon--money-bag" style="--sidebar-money-bag:url(\'' . $src . '\')" aria-hidden="true"></span>';
+            return '<img class="sidebar-nav-icon sidebar-nav-icon--money-bag" src="' . $src . '" alt="" width="22" height="22" aria-hidden="true">';
         }
         if (strpos($icon, 'fa-') !== false || str_contains($icon, ' ')) {
             return '<i class="' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '" aria-hidden="true"></i>';
@@ -1389,22 +1389,12 @@ if (!isset($_GET['print'])) {
         flex-shrink: 0;
     }
     .nav-pills .nav-link .sidebar-nav-icon--money-bag {
-        width: 1.2rem;
-        height: 1.2rem;
-        min-width: 24px;
-        background-color: currentColor;
-        -webkit-mask-image: var(--sidebar-money-bag);
-        mask-image: var(--sidebar-money-bag);
-        -webkit-mask-repeat: no-repeat;
-        mask-repeat: no-repeat;
-        -webkit-mask-position: center;
-        mask-position: center;
-        -webkit-mask-size: contain;
-        mask-size: contain;
-    }
-    .nav-pills .nav-link.active:not(.text-danger) .sidebar-nav-icon,
-    .nav-pills .nav-link:not(.text-danger):hover .sidebar-nav-icon {
-        color: var(--sidebar-nav-purple, #7c3aed) !important;
+        width: 1.45rem !important;
+        height: 1.45rem !important;
+        min-width: 26px;
+        object-fit: contain;
+        display: inline-block;
+        vertical-align: -0.2em;
     }
     .exp-module-update-badge {
         display: inline-flex;

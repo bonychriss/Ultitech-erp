@@ -673,7 +673,7 @@ if (!function_exists('sidebar_link_is_current')) {
                 ENT_QUOTES,
                 'UTF-8'
             );
-            $sackDollarSvg = '<span class="sidebar-nav-icon sidebar-nav-icon--money-bag me-2" style="--sidebar-money-bag:url(\'' . $moneyBagSrc . '\');width:20px;height:20px;display:inline-block;flex-shrink:0;background-color:currentColor;-webkit-mask-image:var(--sidebar-money-bag);mask-image:var(--sidebar-money-bag);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;" aria-hidden="true"></span>';
+            $sackDollarSvg = '<img class="sidebar-nav-icon sidebar-nav-icon--money-bag me-2" src="' . $moneyBagSrc . '" alt="" width="22" height="22" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" aria-hidden="true">';
         ?>
         <?php
             $isCategoryHub = ($item['id'] ?? '') === 'account-category' && !empty($item['children']);

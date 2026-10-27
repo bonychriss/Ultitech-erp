@@ -93,12 +93,22 @@ final class Nav
                 'tone' => 'violet',
             ],
             [
-                'id' => 'trial-balance',
-                'title' => 'Trial Balance',
-                'desc' => 'Generate trial balance for a period.',
-                'href' => $u('accounting/trial-balance') . '?module=accounting',
-                'icon' => 'table',
+                'id' => 'financial-statements',
+                'title' => 'Financial Statements',
+                'desc' => 'Trial balance and other period financial reports.',
+                'href' => '#financial-statements',
+                'icon' => 'statements',
                 'tone' => 'green',
+                'children' => [
+                    [
+                        'id' => 'trial-balance',
+                        'title' => 'Trial Balance',
+                        'desc' => 'Generate trial balance for a period.',
+                        'href' => $u('accounting/trial-balance') . '?module=accounting',
+                        'icon' => 'table',
+                        'tone' => 'green',
+                    ],
+                ],
             ],
             [
                 'id' => 'reconciliation',

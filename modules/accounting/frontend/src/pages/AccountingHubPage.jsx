@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Search } from 'lucide-react'
 import balancesIcon from '../assets/balances-icon.png'
 import revenueIcon from '../assets/revenue-icon.png'
@@ -20,6 +20,7 @@ const SECTION_ICONS = {
   'vat-control': vatIcon,
   settings: settingsIcon,
   'journal-configuration': journalConfigIcon,
+  'financial-statements': trialBalanceIcon,
   'trial-balance': trialBalanceIcon,
   reconciliation: reconciliationIcon,
 }
@@ -37,6 +38,16 @@ function readBoot() {
   return {}
 }
 
+function readHashFolder() {
+  if (typeof window === 'undefined') return ''
+  const raw = String(window.location.hash || '').replace(/^#/, '').trim()
+  return raw
+}
+
+function hasChildren(section) {
+  return Array.isArray(section?.children) && section.children.length > 0
+}
+
 function SectionIcon({ id, iconUrl, title, tone }) {
   const bootUrl = typeof iconUrl === 'string' ? iconUrl.trim() : ''
   const src = SECTION_ICONS[id] || bootUrl || ''
@@ -52,62 +63,111 @@ function SectionIcon({ id, iconUrl, title, tone }) {
   )
 }
 
+function SectionCard({ section }) {
+  const folder = hasChildren(section)
+  const href = folder ? `#${section.id}` : section.href
+  return (
+    <a
+      key={section.id || section.title}
+      className={`acct-card${section.tone ? ` acct-card--${section.tone}` : ''}`}
+      href={href || '#'}
+    >
+      <SectionIcon
+        id={section.id}
+        iconUrl={section.iconUrl}
+        title={section.title}
+        tone={section.tone}
+      />
+      <h2 className="acct-card-label">{section.title}</h2>
+    </a>
+  )
+}
+
 export default function AccountingHubPage() {
   const boot = readBoot()
   const sections = Array.isArray(boot.sections) ? boot.sections : []
   const backUrl = typeof boot.backUrl === 'string' ? boot.backUrl.trim() : ''
   const [query, setQuery] = useState('')
+  const [folderId, setFolderId] = useState(readHashFolder)
+
+  useEffect(() => {
+    const onHash = () => setFolderId(readHashFolder())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  const activeFolder = useMemo(
+    () => sections.find((s) => s.id === folderId && hasChildren(s)) || null,
+    [sections, folderId]
+  )
+
+  const visibleSections = activeFolder ? activeFolder.children : sections
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return sections
-    return sections.filter((s) => {
-      const hay = [s.title, s.desc, s.id].filter(Boolean).join(' ').toLowerCase()
+    if (!q) return visibleSections
+    return visibleSections.filter((s) => {
+      const childHay = hasChildren(s)
+        ? s.children.map((c) => [c.title, c.desc, c.id].filter(Boolean).join(' ')).join(' ')
+        : ''
+      const hay = [s.title, s.desc, s.id, childHay].filter(Boolean).join(' ').toLowerCase()
       return hay.includes(q)
     })
-  }, [sections, query])
+  }, [visibleSections, query])
+
+  const pageBackHref = activeFolder ? '#' : backUrl
+  const pageBackLabel = activeFolder ? 'Back' : 'Back'
+  const pageTitle = activeFolder ? activeFolder.title : 'Accounting'
+  const searchPlaceholder = activeFolder
+    ? `Search ${activeFolder.title.toLowerCase()}…`
+    : 'Search sections…'
+  const gridLabel = activeFolder ? activeFolder.title : 'Accounting sections'
 
   return (
     <div className="acct-page">
       <header className="acct-hero">
-        {backUrl ? (
-          <a className="acct-back" href={backUrl}>
+        {pageBackHref ? (
+          <a
+            className="acct-back"
+            href={pageBackHref || '#'}
+            onClick={(e) => {
+              if (activeFolder) {
+                e.preventDefault()
+                window.location.hash = ''
+                setFolderId('')
+                setQuery('')
+              }
+            }}
+          >
             <ArrowLeft size={16} strokeWidth={2.25} aria-hidden="true" />
-            Back
+            {pageBackLabel}
           </a>
         ) : null}
-        <h1>Accounting</h1>
+        <h1>{pageTitle}</h1>
       </header>
 
-      {sections.length > 0 ? (
+      {visibleSections.length > 0 ? (
         <label className="acct-search">
           <Search size={16} strokeWidth={2.25} aria-hidden="true" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search sections…"
-            aria-label="Search accounting sections"
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
             autoComplete="off"
           />
         </label>
       ) : null}
 
-      {sections.length === 0 ? (
+      {visibleSections.length === 0 ? (
         <div className="acct-empty">No accounting sections available.</div>
       ) : filtered.length === 0 ? (
         <div className="acct-empty">No sections match “{query.trim()}”.</div>
       ) : (
-        <section className="acct-grid" aria-label="Accounting sections">
+        <section className="acct-grid" aria-label={gridLabel}>
           {filtered.map((s) => (
-            <a
-              key={s.id || s.title}
-              className={`acct-card${s.tone ? ` acct-card--${s.tone}` : ''}`}
-              href={s.href}
-            >
-              <SectionIcon id={s.id} iconUrl={s.iconUrl} title={s.title} tone={s.tone} />
-              <h2 className="acct-card-label">{s.title}</h2>
-            </a>
+            <SectionCard key={s.id || s.title} section={s} />
           ))}
         </section>
       )}

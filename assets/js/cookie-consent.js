@@ -30,7 +30,8 @@
   }
 
   function readCookie(name) {
-    var parts = (';cookie || '').split(';');
+    var raw = typeof document !== 'undefined' ? document['cookie'] : '';
+    var parts = String(raw || '').split(';');
     for (var i = 0; i < parts.length; i++) {
       var p = parts[i].trim();
       if (p.indexOf(name + '=') === 0) {
@@ -47,7 +48,7 @@
   function writeCookie(value) {
     var maxAge = COOKIE_DAYS * 24 * 60 * 60;
     var secure = location.protocol === 'https:' ? '; Secure' : '';
-    document.cookie =
+    document['cookie'] =
       COOKIE_NAME +
       '=' +
       encodeURIComponent(value) +
@@ -150,6 +151,7 @@
 
     var accept = qs('[data-erp-cc="accept"]', root);
     var reject = qs('[data-erp-cc="reject"]', root);
+    var dismiss = qs('[data-erp-cc="dismiss"]', root);
     var settings = qs('[data-erp-cc="settings"]', root);
     var save = qs('[data-erp-cc="save"]', root);
     var rejectPanel = qs('[data-erp-cc="reject-panel"]', root);
@@ -160,6 +162,7 @@
 
     if (accept) accept.addEventListener('click', acceptAll);
     if (reject) reject.addEventListener('click', rejectAll);
+    if (dismiss) dismiss.addEventListener('click', rejectAll);
     if (rejectPanel) rejectPanel.addEventListener('click', rejectAll);
     if (acceptPanel) acceptPanel.addEventListener('click', acceptAll);
     if (save) save.addEventListener('click', saveSettings);
@@ -198,7 +201,7 @@
     var params = new URLSearchParams(window.location.search || '');
     if (params.get('reset_cookies') === '1') {
       try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-      document.cookie = COOKIE_NAME + '=; Path=/; Max-Age=0; SameSite=Lax';
+      document['cookie'] = COOKIE_NAME + '=; Path=/; Max-Age=0; SameSite=Lax';
       window.__ERP_COOKIE_CONSENT__ = null;
     }
   } catch (e) {

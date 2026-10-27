@@ -628,9 +628,6 @@ switch ($active_module) {
         }
         addItem($menuItems, 'dashboard', 'Dashboard', 'speedometer2', $prefix . 'modules/balances/index.php');
         addItem($menuItems, 'accounts', 'Account', 'wallet2', $prefix . 'modules/balances/accounts.php');
-        if (function_exists('isFinanceOrAdmin') && isFinanceOrAdmin()) {
-            addItem($menuItems, 'stock-purchase-payments', 'Stock Purchase Payments', 'cart-check', $prefix . 'modules/finance/stock-purchase-payment-desk.php?module=balances');
-        }
         addItem($menuItems, 'transactions', 'Transactions', 'list-check', $prefix . 'modules/balances/transactions.php');
         addItem($menuItems, 'transfer', 'Internal Transfer', 'arrow-left-right', $prefix . 'modules/balances/transfer.php');
         addItem($menuItems, 'reconciliation', 'Reconciliation', 'link-45deg', $prefix . 'accounting/reconciliation.php?module=balances');

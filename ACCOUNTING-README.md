@@ -1,12 +1,12 @@
-# UltiTech Accounting ó Modules Guide
+# UltiTech Accounting ù Modules Guide
 
 Guide to the **Accounting** area and the modules that post money, invoices, and journals in UltiTech ERP.
 
 **Screenshots:** [`docs/accounting-screenshots/`](docs/accounting-screenshots/) (full-page PNGs of every accounting desk).
 
 **Audience:** finance users and developers working on Ultimate / Roadmaster tenants.  
-**Local base:** `http://localhost/public_html/{company_slug}/Ö` (example: `ultimate`)  
-**Live base:** `https://ultitech.io/{company_slug}/Ö`
+**Local base:** `http://localhost/public_html/{company_slug}/ù` (example: `ultimate`)  
+**Live base:** `https://ultitech.io/{company_slug}/ù`
 
 ---
 
@@ -241,7 +241,8 @@ Use `company_url('ù')` in PHP so tenant prefixes stay correct.
 | `README.md` | ERP overview, tenants, local paths |
 | `README_DEVELOPER.md` | GL schema, `accounting/` map |
 | `accounting/README.md` | Journals, P&L, sales auto-JE concepts |
-| `modules/balances/README.md` | Cash book integrations |
+| `BALANCES-README.md` | Balances ops guide (URLs, sidebar, desks) |
+| `modules/balances/README.md` | Cash book integrations & API |
 | `modules/expenses/README.md` | Expenses desk & API |
 | `modules/finance/README.md` | SPPD ? Balances ? GL |
 | `modules/payroll/README.md` | Payroll ? ledger |

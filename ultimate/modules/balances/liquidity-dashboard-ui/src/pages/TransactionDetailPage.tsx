@@ -1,25 +1,56 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { X } from 'lucide-react';
+import { HiOutlineArrowDownLeft, HiOutlineArrowUpRight } from 'react-icons/hi2';
 import { fetchTransactionDetail } from '../api';
 import type { TransactionDetailPayload } from '../types';
-import { buildCrumbs, navigateLdView } from '../nav';
-import Breadcrumbs from '../components/Breadcrumbs';
+import { navigateLdView } from '../nav';
+
+function formatTxDate(raw: string): string {
+  if (!raw) return '—';
+  const d = new Date(raw.includes('T') || raw.includes(' ') ? raw : `${raw}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return raw;
+  const day = d.toLocaleString('en-GB', { day: '2-digit' });
+  const mon = d.toLocaleString('en-GB', { month: 'short' });
+  const year = d.getFullYear();
+  const time = d.toLocaleTimeString('en-GB', { hour12: false });
+  return `${day} ${mon} ${year}, ${time}`;
+}
 
 export default function TransactionDetailPage({
   accountId,
   ym,
   txId,
+  onClose,
 }: {
   accountId: number;
   ym: string;
   txId: number;
+  onClose?: () => void;
 }) {
   const [data, setData] = useState<TransactionDetailPayload | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
+  function closeModal() {
+    if (onClose) {
+      onClose();
+      return;
+    }
+    if (ym) {
+      navigateLdView({ name: 'month', accountId, ym }, true);
+      return;
+    }
+    if (accountId > 0) {
+      navigateLdView({ name: 'account', accountId }, true);
+      return;
+    }
+    navigateLdView({ name: 'dashboard' }, true);
+  }
+
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError('');
     (async () => {
       try {
         const payload = await fetchTransactionDetail(txId);
@@ -35,166 +66,96 @@ export default function TransactionDetailPage({
     };
   }, [txId]);
 
-  if (loading) return <div className="ld-boot">Loading transaction...</div>;
-  if (error || !data) {
-    return (
-      <div className="ld-boot-error" role="alert">
-        <strong>Could not load transaction</strong>
-        <p>{error || 'Unknown error'}</p>
-        <button
-          type="button"
-          className="ld-btn ld-btn--outline"
-          onClick={() =>
-            ym
-              ? navigateLdView({ name: 'month', accountId, ym })
-              : navigateLdView({ name: 'account', accountId })
-          }
-        >
-          Back
-        </button>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeModal();
+    };
+    window.addEventListener('keydown', onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [accountId, ym, onClose]);
 
-  const tx = data.transaction;
-  const backYm = ym || tx.ym;
-  const crumbs = buildCrumbs(
-    { name: 'transaction', accountId: tx.accountId || accountId, ym: backYm, txId },
-    {
-      accountName: tx.accountName,
-      monthLabel: tx.monthLabel,
-      txLabel: `Transaction #${tx.id}`,
-    },
-  );
-
+  const tx = data?.transaction;
+  const title = tx ? `Transaction #${tx.id}` : `Transaction #${txId}`;
+  const isOut = tx?.type === 'debit';
+  const flowLabel = isOut ? 'Money Out' : 'Money In';
   return (
-    <div className="ld-page">
-      <Breadcrumbs items={crumbs} />
-
-      <div className="ld-header">
-        <div>
-          <button
-            type="button"
-            className="ld-back-link"
-            onClick={() =>
-              navigateLdView({
-                name: 'month',
-                accountId: tx.accountId || accountId,
-                ym: backYm,
-              })
-            }
-          >
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Back
+    <div className="ld-modal-backdrop" role="presentation" onClick={closeModal}>
+      <div
+        className="ld-modal ld-modal--tx"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ld-tx-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="ld-tx-modal-top">
+          <h2 id="ld-tx-modal-title">{title}</h2>
+          <button type="button" className="ld-modal-x" aria-label="Close" onClick={closeModal}>
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
-          <h1>Transaction #{tx.id}</h1>
-          <p className="ld-header-sub">
-            {tx.accountName}
-            {tx.monthLabel ? ` - ${tx.monthLabel}` : ''}
-          </p>
         </div>
-        <div className="ld-header-hero">
-          <div className="ld-header-hero-label">{tx.typeLabel}</div>
-          <div className={`ld-header-hero-value${tx.type === 'debit' ? ' is-neg' : ''}`}>
-            {tx.amountDisplay}
-          </div>
-        </div>
-      </div>
 
-      <div className="ld-summary-grid ld-summary-grid--4">
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Date</div>
-          <div className="ld-summary-value">{tx.transactionDate || '-'}</div>
-        </div>
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Type</div>
-          <div className="ld-summary-value">
-            <span className={`ld-pill ld-pill--${tx.type}`}>{tx.typeLabel}</span>
-          </div>
-        </div>
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Amount</div>
-          <div className={`ld-summary-value ${tx.type === 'debit' ? 'is-out' : 'is-in'}`}>{tx.amountDisplay}</div>
-        </div>
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Balance After</div>
-          <div className="ld-summary-value">{tx.runningBalanceDisplay}</div>
-        </div>
-      </div>
-
-      <section className="ld-drill-section">
-        <div className="ld-drill-section-h">
-          <h3>Transaction Details</h3>
-        </div>
-        <div className="ld-ledger-wrap">
-          <table className="ld-ledger ld-ledger--static ld-ledger--kv">
-            <colgroup>
-              <col className="ld-ledger-col-label" />
-              <col />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Detail</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="ld-ledger-label">Transaction No.</td>
-                <td>
-                  <span className="ld-ledger-name">#{tx.id}</span>
-                </td>
-              </tr>
-              <tr>
-                <td className="ld-ledger-label">Account</td>
-                <td>{tx.accountName}</td>
-              </tr>
-              <tr>
-                <td className="ld-ledger-label">Month</td>
-                <td>{tx.monthLabel || '-'}</td>
-              </tr>
-              <tr>
-                <td className="ld-ledger-label">Description</td>
-                <td>{tx.description || '-'}</td>
-              </tr>
-              <tr>
-                <td className="ld-ledger-label">Reference</td>
-                <td>
-                  {tx.sourceUrl ? (
-                    <a href={tx.sourceUrl} className="ld-source-link" target="_blank" rel="noreferrer">
-                      {tx.referenceLabel || 'Open'} <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                    </a>
+        <div className="ld-tx-modal-body">
+          {loading && <div className="ld-boot">Loading transaction...</div>}
+          {!loading && (error || !tx) && (
+            <div className="ld-boot-error" role="alert">
+              <strong>Could not load transaction</strong>
+              <p>{error || 'Unknown error'}</p>
+            </div>
+          )}
+          {!loading && tx && (
+            <>
+              <div className="ld-tx-modal-flow">
+                <span className={`ld-tx-modal-flow-ico${isOut ? ' is-out' : ' is-in'}`} aria-hidden="true">
+                  {isOut ? (
+                    <HiOutlineArrowUpRight size={22} />
                   ) : (
-                    tx.referenceLabel || '-'
+                    <HiOutlineArrowDownLeft size={22} />
                   )}
-                </td>
-              </tr>
-              <tr>
-                <td className="ld-ledger-label">Created By</td>
-                <td>{tx.createdBy || '-'}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+                </span>
+                <div className="ld-tx-modal-flow-copy">
+                  <div className="ld-tx-modal-flow-label">{flowLabel}</div>
+                  <div className={`ld-tx-modal-flow-amount${isOut ? ' is-out' : ' is-in'}`}>
+                    {tx.amountDisplay}
+                  </div>
+                </div>
+              </div>
 
-      <section className="ld-card">
-        <div className="ld-card-h">
-          <h3>Why this amount is included</h3>
+              <dl className="ld-tx-modal-kv">
+                <div className="ld-tx-modal-row">
+                  <dt>Date</dt>
+                  <dd>{formatTxDate(tx.transactionDate)}</dd>
+                </div>
+                <div className="ld-tx-modal-row">
+                  <dt>Account</dt>
+                  <dd>{tx.accountName || '—'}</dd>
+                </div>
+                <div className="ld-tx-modal-row">
+                  <dt>Description</dt>
+                  <dd>{tx.description || '—'}</dd>
+                </div>
+                <div className="ld-tx-modal-row">
+                  <dt>Month</dt>
+                  <dd>{tx.monthLabel || '—'}</dd>
+                </div>
+                <div className="ld-tx-modal-row">
+                  <dt>Balance After</dt>
+                  <dd>{tx.runningBalanceDisplay || '—'}</dd>
+                </div>
+              </dl>
+            </>
+          )}
         </div>
-        <div className="ld-card-b">
-          <p className="ld-explain">{tx.whyIncluded}</p>
-        </div>
-      </section>
 
-      <div className="ld-detail-actions ld-detail-actions--page">
-        {tx.sourceUrl && (
-          <a className="ld-btn ld-btn--purple" href={tx.sourceUrl} target="_blank" rel="noreferrer">
-            Open source document <ExternalLink className="w-4 h-4" aria-hidden="true" />
-          </a>
-        )}
-        <a className="ld-btn ld-btn--outline" href={tx.viewUrl}>
-          Open classic transaction view
-        </a>
+        <div className="ld-tx-modal-foot">
+          <button type="button" className="ld-btn ld-btn--outline" onClick={closeModal}>
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

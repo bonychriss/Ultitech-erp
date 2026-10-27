@@ -1,60 +1,74 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Plus, CircleHelp, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
-  Chart,
-  LineController,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  Filler,
-  DoughnutController,
-  ArcElement,
-  BarController,
-  BarElement,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import {
-  Shield,
-  Banknote,
-  Landmark,
-  Smartphone,
-  Plus,
-  CircleHelp,
-  Bot,
-  X,
-} from 'lucide-react';
-import { fetchInit } from '../api';
-import type { DashboardInit, InsightItem } from '../types';
+  HiOutlineShieldCheck,
+  HiOutlineCash,
+  HiOutlineOfficeBuilding,
+  HiOutlineDeviceMobile,
+  HiOutlineSparkles,
+  HiOutlineClipboardList,
+  HiOutlineChartBar,
+  HiOutlineChartPie,
+  HiOutlineExclamation,
+  HiOutlineCreditCard,
+  HiChevronRight,
+} from 'react-icons/hi';
+import { HiOutlineArrowDownLeft, HiOutlineArrowUpRight } from 'react-icons/hi2';
+import { fetchInit, fetchRecentTransactions } from '../api';
+import type { DashboardInit, InsightItem, RecentTransactionRow } from '../types';
 import { navigateLdView } from '../nav';
 
-Chart.register(
-  LineController,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  Filler,
-  DoughnutController,
-  ArcElement,
-  BarController,
-  BarElement,
-  Tooltip,
-  Legend,
-);
+const RECENT_TX_PER_PAGE = 100;
 
-function moneyTick(v: string | number) {
-  const n = typeof v === 'string' ? Number(v) : v;
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
-  return String(n);
+/** Semantic themes: success=green, danger=red, warning=amber, info=blue, tip=slate, payment=indigo, ai=violet */
+function insightTone(item: InsightItem): string {
+  const raw = String(item.class || '').toLowerCase();
+  if (['success', 'highlight'].includes(raw)) return 'success';
+  if (['danger', 'alert'].includes(raw)) return 'danger';
+  if (raw === 'warning') return 'warning';
+  if (['info', 'mix'].includes(raw)) return 'info';
+  if (raw === 'payment') return 'payment';
+  if (raw === 'tip') return 'tip';
+  if (raw === 'ai') return 'ai';
+  const text = item.text.toLowerCase();
+  if (text.includes('outflow') || text.includes('overdue') || text.includes('failed')) return 'danger';
+  if (text.includes('due') || text.includes('pending') || text.includes('zero balance')) return 'warning';
+  if (text.includes('diversif') || text.includes('account type') || text.includes('add a ')) return 'info';
+  if (text.includes('available across') || text.includes('net inflow') || text.includes('balanced')) return 'success';
+  return 'tip';
 }
 
-function InsightMsg({ item }: { item: InsightItem }) {
+function insightTitle(item: InsightItem): string {
+  if (item.label && item.label !== 'Summary' && item.label !== 'Suggestion') return item.label;
+  const text = item.text.toLowerCase();
+  if (text.includes('available across') || text.includes('total liquidity')) return 'Liquidity';
+  if (text.includes('diversif') || text.includes('account type')) return 'Account mix';
+  if (text.includes('net inflow') || text.includes('net outflow') || text.includes('balanced')) return 'Cash flow';
+  return item.label || 'Insight';
+}
+
+function insightIcon(item: InsightItem, tone: string): ReactNode {
+  const title = insightTitle(item).toLowerCase();
+  if (tone === 'payment' || title.includes('payment')) return <HiOutlineCreditCard size={16} />;
+  if (tone === 'danger' || tone === 'warning') return <HiOutlineExclamation size={16} />;
+  if (title.includes('mix') || title.includes('account')) return <HiOutlineChartPie size={16} />;
+  if (title.includes('liquidity') || title.includes('cash flow') || tone === 'success') return <HiOutlineChartBar size={16} />;
+  return <HiOutlineSparkles size={16} />;
+}
+
+function InsightRow({ item }: { item: InsightItem }) {
+  const tone = insightTone(item);
+  const body = item.link ? <a href={item.link}>{item.text}</a> : item.text;
   return (
-    <div className={`ld-ai-msg ld-ai-msg--${item.class}`}>
-      <span className="ld-ai-msg-label">{item.label}</span>
-      {item.link ? <a href={item.link}>{item.text}</a> : item.text}
+    <div className={`ld-insight-row ld-insight-row--${tone}`}>
+      <span className="ld-insight-ico" aria-hidden="true">
+        {insightIcon(item, tone)}
+      </span>
+      <div className="ld-insight-copy">
+        <span className="ld-insight-kicker">{insightTitle(item)}</span>
+        <span className="ld-insight-text">{body}</span>
+      </div>
+      <HiChevronRight size={15} className="ld-insight-chevron" aria-hidden="true" />
     </div>
   );
 }
@@ -67,18 +81,25 @@ export default function DashboardPage() {
   const [insightsExpanded, setInsightsExpanded] = useState(false);
   const [extraInsights, setExtraInsights] = useState<InsightItem[]>([]);
   const [extraLoading, setExtraLoading] = useState(false);
-
-  const flowRef = useRef<HTMLCanvasElement | null>(null);
-  const statsRef = useRef<HTMLCanvasElement | null>(null);
-  const topRef = useRef<HTMLCanvasElement | null>(null);
-  const chartsRef = useRef<Chart[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<RecentTransactionRow[]>([]);
+  const [txPage, setTxPage] = useState(1);
+  const [txTotalPages, setTxTotalPages] = useState(1);
+  const [txTotal, setTxTotal] = useState(0);
+  const [txLoading, setTxLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const init = await fetchInit();
-        if (!cancelled) setData(init);
+        if (!cancelled) {
+          setData(init);
+          setRecentTransactions(Array.isArray(init.recentTransactions) ? init.recentTransactions : []);
+          const meta = init.recentTransactionsMeta;
+          setTxPage(meta?.page ?? 1);
+          setTxTotalPages(meta?.totalPages ?? 1);
+          setTxTotal(meta?.total ?? (Array.isArray(init.recentTransactions) ? init.recentTransactions.length : 0));
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load dashboard.');
       } finally {
@@ -90,140 +111,21 @@ export default function DashboardPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!data) return;
-
-    chartsRef.current.forEach((c) => c.destroy());
-    chartsRef.current = [];
-
-    const chartDefaults = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-    };
-
-    if (flowRef.current) {
-      chartsRef.current.push(
-        new Chart(flowRef.current, {
-          type: 'line',
-          data: {
-            labels: data.trend.labels,
-            datasets: [
-              {
-                label: 'Inflow',
-                data: data.trend.credits,
-                borderColor: '#16a34a',
-                backgroundColor: 'rgba(22, 163, 74, 0.08)',
-                fill: true,
-                tension: 0.35,
-                borderWidth: 2,
-                pointRadius: 2,
-              },
-              {
-                label: 'Outflow',
-                data: data.trend.debits,
-                borderColor: '#f87171',
-                backgroundColor: 'rgba(248, 113, 113, 0.06)',
-                fill: true,
-                tension: 0.35,
-                borderWidth: 2,
-                pointRadius: 2,
-              },
-            ],
-          },
-          options: {
-            ...chartDefaults,
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-              x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 } } },
-              y: {
-                beginAtZero: true,
-                ticks: { font: { size: 10 }, callback: moneyTick },
-              },
-            },
-          },
-        }),
-      );
+  async function loadTxPage(page: number) {
+    if (page < 1 || page > txTotalPages || page === txPage || txLoading) return;
+    setTxLoading(true);
+    try {
+      const payload = await fetchRecentTransactions(page, RECENT_TX_PER_PAGE);
+      setRecentTransactions(payload.transactions);
+      setTxPage(payload.page);
+      setTxTotalPages(payload.totalPages);
+      setTxTotal(payload.total);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load transactions.');
+    } finally {
+      setTxLoading(false);
     }
-
-    if (statsRef.current) {
-      chartsRef.current.push(
-        new Chart(statsRef.current, {
-          type: 'doughnut',
-          data: {
-            labels: ['Cash', 'Bank', 'Mobile'],
-            datasets: [
-              {
-                data: [
-                  data.accountStats.counts.cash,
-                  data.accountStats.counts.bank,
-                  data.accountStats.counts.mobile,
-                ],
-                backgroundColor: ['#22c55e', '#f97316', '#ef4444'],
-                borderWidth: 0,
-                hoverOffset: 4,
-              },
-            ],
-          },
-          options: {
-            ...chartDefaults,
-            cutout: '68%',
-            plugins: {
-              legend: { display: false },
-              tooltip: { enabled: true },
-            },
-          },
-        }),
-      );
-    }
-
-    if (topRef.current) {
-      chartsRef.current.push(
-        new Chart(topRef.current, {
-          type: 'bar',
-          data: {
-            labels: data.topAccounts.labels,
-            datasets: [
-              {
-                data: data.topAccounts.values,
-                backgroundColor: data.topAccounts.colors,
-                borderRadius: 6,
-                barThickness: 18,
-              },
-            ],
-          },
-          options: {
-            ...chartDefaults,
-            indexAxis: 'y',
-            scales: {
-              x: {
-                beginAtZero: true,
-                ticks: { font: { size: 10 }, callback: moneyTick },
-                grid: { color: '#f1f5f9' },
-              },
-              y: { grid: { display: false }, ticks: { font: { size: 11 } } },
-            },
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label(ctx) {
-                    const i = ctx.dataIndex;
-                    return data.topAccounts.displays[i] || String(ctx.raw);
-                  },
-                },
-              },
-            },
-          },
-        }),
-      );
-    }
-
-    return () => {
-      chartsRef.current.forEach((c) => c.destroy());
-      chartsRef.current = [];
-    };
-  }, [data]);
+  }
 
   useEffect(() => {
     if (!data?.insights.aiConnected || !insightsExpanded || extraInsights.length > 0 || extraLoading) {
@@ -273,8 +175,11 @@ export default function DashboardPage() {
     return <div className="ld-error">{error || 'Dashboard unavailable.'}</div>;
   }
 
-  const { kpis, insights, accountStats } = data;
+  const { kpis, insights } = data;
   const hiddenCount = insights.hiddenCount;
+  const transactionsUrl = typeof data.transactionsUrl === 'string' ? data.transactionsUrl : '';
+  const txFrom = txTotal === 0 ? 0 : (txPage - 1) * RECENT_TX_PER_PAGE + 1;
+  const txTo = Math.min(txPage * RECENT_TX_PER_PAGE, txTotal);
 
   return (
     <div className="ld-dash">
@@ -302,12 +207,14 @@ export default function DashboardPage() {
           title="Open Total Liquidity details"
         >
           <div className="ld-kpi-icon bg-blue-50 text-blue-600">
-            <Shield className="w-5 h-5" />
+            <HiOutlineShieldCheck size={18} aria-hidden="true" />
           </div>
-          <div className="ld-kpi-value">{kpis.totalLiquidityDisplay}</div>
-          <div className="ld-kpi-label">Total Liquidity</div>
-          <div className="ld-kpi-sub">
-            {kpis.accountCount} active account{kpis.accountCount === 1 ? '' : 's'} - Click for details
+          <div className="ld-kpi-body">
+            <div className="ld-kpi-label">Total Liquidity</div>
+            <div className="ld-kpi-value">{kpis.totalLiquidityDisplay}</div>
+            <div className="ld-kpi-sub">
+              {kpis.accountCount} active account{kpis.accountCount === 1 ? '' : 's'}
+            </div>
           </div>
         </button>
         <button
@@ -317,12 +224,12 @@ export default function DashboardPage() {
           title="Open Cash on Hand details"
         >
           <div className="ld-kpi-icon bg-green-50 text-green-600">
-            <Banknote className="w-5 h-5" />
+            <HiOutlineCash size={18} aria-hidden="true" />
           </div>
-          <div className="ld-kpi-value">{kpis.cashTotalDisplay}</div>
-          <div className="ld-kpi-label">Cash on Hand</div>
-          <div className="ld-kpi-sub">
-            {kpis.hasCash ? 'Physical cash - Click for details' : 'No cash accounts'}
+          <div className="ld-kpi-body">
+            <div className="ld-kpi-label">Cash on Hand</div>
+            <div className="ld-kpi-value">{kpis.cashTotalDisplay}</div>
+            <div className="ld-kpi-sub">{kpis.hasCash ? 'Physical cash' : 'No cash accounts'}</div>
           </div>
         </button>
         <button
@@ -332,12 +239,12 @@ export default function DashboardPage() {
           title="Open Bank Accounts details"
         >
           <div className="ld-kpi-icon bg-indigo-50 text-indigo-600">
-            <Landmark className="w-5 h-5" />
+            <HiOutlineOfficeBuilding size={18} aria-hidden="true" />
           </div>
-          <div className="ld-kpi-value">{kpis.bankTotalDisplay}</div>
-          <div className="ld-kpi-label">Bank Accounts</div>
-          <div className="ld-kpi-sub">
-            {kpis.hasBank ? 'Bank balances - Click for details' : 'No bank accounts'}
+          <div className="ld-kpi-body">
+            <div className="ld-kpi-label">Bank Accounts</div>
+            <div className="ld-kpi-value">{kpis.bankTotalDisplay}</div>
+            <div className="ld-kpi-sub">{kpis.hasBank ? 'Bank balances' : 'No bank accounts'}</div>
           </div>
         </button>
         <button
@@ -347,131 +254,203 @@ export default function DashboardPage() {
           title="Open Mobile Money details"
         >
           <div className="ld-kpi-icon bg-violet-50 text-violet-600">
-            <Smartphone className="w-5 h-5" />
+            <HiOutlineDeviceMobile size={18} aria-hidden="true" />
           </div>
-          <div className={`ld-kpi-value${kpis.mobileTotal < 0 ? ' is-neg' : ''}`}>{kpis.mobileTotalDisplay}</div>
-          <div className="ld-kpi-label">Mobile Money</div>
-          <div className="ld-kpi-sub">
-            {kpis.hasMobile ? 'Mobile wallets - Click for details' : 'No mobile accounts'}
+          <div className="ld-kpi-body">
+            <div className="ld-kpi-label">Mobile Money</div>
+            <div className={`ld-kpi-value${kpis.mobileTotal < 0 ? ' is-neg' : ''}`}>{kpis.mobileTotalDisplay}</div>
+            <div className="ld-kpi-sub">{kpis.hasMobile ? 'Mobile wallets' : 'No mobile accounts'}</div>
           </div>
         </button>
       </div>
 
-      <div className="ld-grid">
+      <div className="ld-grid ld-grid--single">
         <section className="ld-card">
           <div className="ld-card-h">
-            <h3>Cash Flow Trend (30 days)</h3>
+            <h3>
+              <HiOutlineSparkles size={18} className="text-violet-500" aria-hidden="true" /> AI Insights
+            </h3>
+            {insights.aiConnected ? (
+              <span className="ld-live-pill">Live</span>
+            ) : (
+              <span className="ld-connected is-offline">Offline</span>
+            )}
           </div>
-          <div className="ld-card-b">
-            <div className="ld-chart-wrap">
-              <canvas ref={flowRef} />
-            </div>
-            <div className="ld-legend">
-              <span>
-                <span className="ld-legend-dot" style={{ background: '#16a34a' }} />
-                Inflow (credits)
-              </span>
-              <span>
-                <span className="ld-legend-dot" style={{ background: '#f87171' }} />
-                Outflow (debits)
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <section className="ld-card">
-          <div className="ld-card-h">
-            <h3>Accounts Statistics</h3>
-          </div>
-          <div className="ld-card-b">
-            <div className="ld-chart-wrap ld-chart-wrap--donut">
-              <canvas ref={statsRef} />
-              <div className="ld-donut-center">
-                <span className="n">{accountStats.total.toLocaleString()}</span>
-                <span className="l">Total Accounts</span>
+          <div className="ld-card-b ld-insights-body">
+            {insights.visible.length === 0 && insights.hidden.length === 0 && (
+              <div className="ld-insight-row ld-insight-row--tip">
+                <span className="ld-insight-ico" aria-hidden="true">
+                  <HiOutlineSparkles size={16} />
+                </span>
+                <div className="ld-insight-copy">
+                  <span className="ld-insight-kicker">Tip</span>
+                  <span className="ld-insight-text">Post transactions to see liquidity insights here.</span>
+                </div>
               </div>
-            </div>
-            <div className="ld-legend">
-              <span>
-                <span className="ld-legend-dot" style={{ background: '#22c55e' }} /> Cash {accountStats.counts.cash} (
-                {accountStats.pct.cash}%)
-              </span>
-              <span>
-                <span className="ld-legend-dot" style={{ background: '#f97316' }} /> Bank {accountStats.counts.bank} (
-                {accountStats.pct.bank}%)
-              </span>
-              <span>
-                <span className="ld-legend-dot" style={{ background: '#ef4444' }} /> Mobile {accountStats.counts.mobile} (
-                {accountStats.pct.mobile}%)
-              </span>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div className="ld-grid">
-        <section className="ld-card">
-          <div className="ld-card-h">
-            <h3>Top Accounts by Balance</h3>
-          </div>
-          <div className="ld-card-b">
-            <div className="ld-chart-wrap ld-chart-wrap--tall">
-              <canvas ref={topRef} />
-            </div>
+            )}
+            {insights.visible.map((item, index) => (
+              <InsightRow key={`v-${index}`} item={item} />
+            ))}
+            {hiddenCount > 0 && (
+              <div className={`ld-insights-more${insightsExpanded ? ' is-open' : ''}`}>
+                {insights.hidden.map((item, index) => (
+                  <InsightRow key={`h-${index}`} item={item} />
+                ))}
+                {extraInsights.map((item, index) => (
+                  <InsightRow key={`ai-${index}`} item={item} />
+                ))}
+                {extraLoading && <div className="ld-insights-note">Analyzing payments and liquidity...</div>}
+              </div>
+            )}
+            {hiddenCount > 0 && (
+              <button
+                type="button"
+                className="ld-insights-toggle"
+                onClick={() => setInsightsExpanded((v) => !v)}
+              >
+                {insightsExpanded ? 'Show less' : `Show all insights (${hiddenCount})`}
+              </button>
+            )}
+            {!insights.aiConnected && (
+              <p className="ld-insights-note">Connect AI in system settings for live AI recommendations.</p>
+            )}
           </div>
         </section>
 
         <section className="ld-card">
           <div className="ld-card-h">
             <h3>
-              <Bot className="w-4 h-4 text-violet-600" aria-hidden="true" /> AI Insights
+              <HiOutlineClipboardList size={18} aria-hidden="true" /> Transactions
             </h3>
-            {insights.aiConnected && <span className="ld-live">Connected</span>}
+            {transactionsUrl ? (
+              <a href={transactionsUrl} className="ld-card-link">
+                Open ledger →
+              </a>
+            ) : null}
           </div>
-          <div className="ld-card-b">
-            <div className="ld-insights-chat">
-              <div className="ld-bot-wrap">
-                <div className={`ld-bot-avatar${insights.aiConnected ? ' is-live' : ''}`} aria-hidden="true">
-                  <Bot className="w-5 h-5" />
+          <div className={`ld-card-b ld-card-b--flush${txLoading ? ' is-tx-loading' : ''}`}>
+            {recentTransactions.length === 0 ? (
+              <div className="ld-empty">No transactions yet.</div>
+            ) : (
+              <>
+                <div className="ld-recent-table-wrap">
+                  <table className="ld-recent-table">
+                    <thead>
+                      <tr>
+                        <th>Description</th>
+                        <th>Account / Category</th>
+                        <th>Date</th>
+                        <th className="ld-recent-amt-h">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentTransactions.map((tx) => (
+                        <tr
+                          key={tx.id}
+                          tabIndex={0}
+                          onClick={() =>
+                            navigateLdView({
+                              name: 'transaction',
+                              accountId: tx.accountId,
+                              ym: tx.ym,
+                              txId: tx.id,
+                            })
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              navigateLdView({
+                                name: 'transaction',
+                                accountId: tx.accountId,
+                                ym: tx.ym,
+                                txId: tx.id,
+                              });
+                            }
+                          }}
+                        >
+                          <td>
+                            <span className="ld-recent-desc-cell">
+                              <span
+                                className={`ld-recent-ico${tx.type === 'debit' ? ' is-out' : ' is-in'}`}
+                                aria-label={tx.typeLabel}
+                                title={tx.type === 'debit' ? 'Out' : 'In'}
+                              >
+                                {tx.type === 'debit' ? (
+                                  <HiOutlineArrowUpRight size={17} aria-hidden="true" />
+                                ) : (
+                                  <HiOutlineArrowDownLeft size={17} aria-hidden="true" />
+                                )}
+                              </span>
+                              <span className="ld-recent-desc">{tx.description}</span>
+                            </span>
+                          </td>
+                          <td className="ld-recent-cat">
+                            {tx.accountName}
+                            {tx.referenceLabel ? ` · ${tx.referenceLabel}` : ''}
+                          </td>
+                          <td className="ld-recent-date">{tx.dateLabel}</td>
+                          <td className={`ld-recent-amt${tx.type === 'debit' ? ' is-out' : ' is-in'}`}>
+                            {tx.amountDisplay}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <span className={`ld-bot-status${insights.aiConnected ? '' : ' is-offline'}`}>
-                  {insights.aiConnected ? 'Live' : 'Offline'}
-                </span>
-              </div>
-              <div className="ld-insights-messages">
-                {insights.visible.length === 0 && insights.hidden.length === 0 && (
-                  <div className="ld-ai-msg ld-ai-msg--tip">
-                    <span className="ld-ai-msg-label">Tip</span>
-                    Post transactions to see liquidity insights here.
+                {txTotalPages > 1 && (
+                  <div className="ld-tx-pager">
+                    <span className="ld-tx-pager-meta">
+                      Showing {txFrom}–{txTo} of {txTotal}
+                    </span>
+                    <div className="ld-tx-pager-bar" role="navigation" aria-label="Transactions pages">
+                      <button
+                        type="button"
+                        className="ld-tx-pager-nav"
+                        disabled={txPage <= 1 || txLoading}
+                        aria-label="Previous page"
+                        onClick={() => loadTxPage(txPage - 1)}
+                      >
+                        <ChevronLeft size={16} strokeWidth={2.5} aria-hidden="true" />
+                      </button>
+                      {(() => {
+                        const windowSize = Math.min(5, txTotalPages);
+                        const start = Math.max(1, Math.min(txPage - 2, txTotalPages - windowSize + 1));
+                        const end = start + windowSize - 1;
+                        const items: (number | 'gap')[] = [];
+                        for (let p = start; p <= end; p += 1) items.push(p);
+                        if (end < txTotalPages) items.push('gap');
+                        return items.map((item, idx) =>
+                          item === 'gap' ? (
+                            <span key={`gap-${idx}`} className="ld-tx-pager-gap">
+                              ...
+                            </span>
+                          ) : (
+                            <button
+                              key={item}
+                              type="button"
+                              className={`ld-tx-pager-page${item === txPage ? ' is-active' : ''}`}
+                              aria-current={item === txPage ? 'page' : undefined}
+                              disabled={txLoading}
+                              onClick={() => loadTxPage(item)}
+                            >
+                              {item}
+                            </button>
+                          ),
+                        );
+                      })()}
+                      <button
+                        type="button"
+                        className="ld-tx-pager-nav is-next"
+                        disabled={txPage >= txTotalPages || txLoading}
+                        aria-label="Next page"
+                        onClick={() => loadTxPage(txPage + 1)}
+                      >
+                        <ChevronRight size={16} strokeWidth={2.5} aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
                 )}
-                {insights.visible.map((item, index) => (
-                  <InsightMsg key={`v-${index}`} item={item} />
-                ))}
-                {hiddenCount > 0 && (
-                  <div className={`ld-insights-more${insightsExpanded ? ' is-open' : ''}`}>
-                    {insights.hidden.map((item, index) => (
-                      <InsightMsg key={`h-${index}`} item={item} />
-                    ))}
-                    {extraInsights.map((item, index) => (
-                      <InsightMsg key={`ai-${index}`} item={item} />
-                    ))}
-                    {extraLoading && <div className="ld-insights-note">Analyzing payments and liquidity...</div>}
-                  </div>
-                )}
-                {hiddenCount > 0 && (
-                  <button
-                    type="button"
-                    className="ld-insights-toggle"
-                    onClick={() => setInsightsExpanded((v) => !v)}
-                  >
-                    {insightsExpanded ? 'Show less' : `Show all insights (${hiddenCount})`}
-                  </button>
-                )}
-              </div>
-            </div>
-            {!insights.aiConnected && (
-              <p className="ld-insights-note">Connect AI in system settings for live AI recommendations.</p>
+              </>
             )}
           </div>
         </section>
@@ -504,13 +483,45 @@ export default function DashboardPage() {
                   <strong>Breakdowns:</strong> Quick cards showing totals for cash, bank, and mobile money.
                 </li>
                 <li>
-                  <strong>Charts:</strong> 30-day cash flow trend, accounts statistics, and top accounts by balance.
-                </li>
-                <li>
                   <strong>AI Insights:</strong> Smart summaries, payment alerts, and recommendations when AI is connected.
                 </li>
+                <li>
+                  <strong>Recent transactions:</strong> Latest money movements across your accounts, with in/out icons.
+                </li>
               </ul>
-              <h3>2. Managing accounts</h3>
+              <h3>2. AI Insights colors</h3>
+              <p>Insight cards use color by purpose so you can scan status quickly:</p>
+              <ul className="ld-manual-colors">
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--success" aria-hidden="true" />
+                  <strong>Green</strong> — success / healthy liquidity
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--info" aria-hidden="true" />
+                  <strong>Blue</strong> — info / account mix / setup
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--warning" aria-hidden="true" />
+                  <strong>Amber</strong> — warnings / attention
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--danger" aria-hidden="true" />
+                  <strong>Red</strong> — danger / critical alerts
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--payment" aria-hidden="true" />
+                  <strong>Indigo</strong> — payment due
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--tip" aria-hidden="true" />
+                  <strong>Slate</strong> — tips
+                </li>
+                <li>
+                  <span className="ld-manual-swatch ld-manual-swatch--ai" aria-hidden="true" />
+                  <strong>Violet</strong> — AI suggestions
+                </li>
+              </ul>
+              <h3>3. Managing accounts</h3>
               <p>Use the Accounts page to set up where you keep money.</p>
               <ul>
                 <li>
@@ -523,12 +534,12 @@ export default function DashboardPage() {
                   <strong>Opening balance:</strong> Enter the amount currently in the account once when creating it.
                 </li>
               </ul>
-              <h3>3. Transfers vs transactions</h3>
+              <h3>4. Transfers vs transactions</h3>
               <p>
                 <strong>Internal transfers</strong> move money between your own accounts. The{' '}
                 <strong>transactions ledger</strong> is the audit trail for all money movements.
               </p>
-              <h3>4. FAQ</h3>
+              <h3>5. FAQ</h3>
               <p>
                 Record customer payments in Sales (select receiving account). Pay expenses via vouchers (select source
                 account). Balances update automatically.

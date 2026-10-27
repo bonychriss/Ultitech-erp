@@ -539,17 +539,21 @@ function balances_fetch_child_rows_for_parent(PDO $pdo, int $parentId, array $ac
 }
 
 /**
- * Map financial_accounts.type to cash / bank / mobile for dashboard statistics.
+ * Map financial_accounts.type to cash / bank / mobile for liquidity KPIs.
+ * Pure COA categories (asset/liability/equity/revenue/expense) are not liquid wallets.
  */
 function balancesAccountLiquidityBucket(string $type): string
 {
     $t = strtolower(trim($type));
 
-    static $cash = ['cash', 'cod', 'revenue', 'expense'];
+    if ($t === '' || (function_exists('balancesCoaOnlyAccountTypes') && in_array($t, balancesCoaOnlyAccountTypes(), true))) {
+        return 'other';
+    }
+
+    static $cash = ['cash', 'cod'];
     static $bank = [
         'bank', 'bank_transfer', 'wire_transfer', 'online_banking', 'cheque',
         'standing_order', 'direct_debit', 'debit_card', 'credit_card', 'prepaid_card',
-        'asset', 'liability', 'equity',
         'installment', 'bnpl', 'invoice_postpaid',
     ];
     static $mobile = [
@@ -566,7 +570,15 @@ function balancesAccountLiquidityBucket(string $type): string
         return 'bank';
     }
 
-    return 'bank';
+    return 'other';
+}
+
+/**
+ * Whether a liquidity bucket contributes to Total Liquidity KPIs.
+ */
+function balancesIsLiquidityBucket(string $bucket): bool
+{
+    return in_array(strtolower(trim($bucket)), ['cash', 'bank', 'mobile'], true);
 }
 
 /**

@@ -19,7 +19,11 @@ $employeeHeaderExtraClass = 'employee-header--ld-desk';
 $employeeHeaderRightHtml = '';
 $bodyExtraClass = 'page-ld-desk';
 
-$uiDir = __DIR__ . '/liquidity-dashboard-ui';
+// Prefer canonical modules/balances UI so company mirror cannot drift.
+$canonicalUi = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'modules' . DIRECTORY_SEPARATOR . 'balances' . DIRECTORY_SEPARATOR . 'liquidity-dashboard-ui';
+$uiDir = (is_file($canonicalUi . DIRECTORY_SEPARATOR . 'dist' . DIRECTORY_SEPARATOR . 'index.html')
+    ? $canonicalUi
+    : (__DIR__ . '/liquidity-dashboard-ui'));
 $distIndex = $uiDir . '/dist/index.html';
 
 if (!is_file($distIndex)) {
@@ -43,8 +47,13 @@ if ($jsFile === '' || $cssFile === '') {
     die('Built assets not found. Run npm run build in modules/balances/liquidity-dashboard-ui/.');
 }
 
-$assetBase = ldDeskPublicUrl('liquidity-dashboard-ui/dist/assets/');
-$apiUrl = ldDeskPublicUrl('liquidity-dashboard-ui/api/index.php');
+// Assets must come from app-root modules/balances (canonical), not the ultimate mirror.
+$assetBase = function_exists('app_url')
+    ? rtrim((string) app_url('modules/balances/liquidity-dashboard-ui/dist/assets/'), '/') . '/'
+    : ldDeskPublicUrl('liquidity-dashboard-ui/dist/assets/');
+$apiUrl = function_exists('app_url')
+    ? (string) app_url('modules/balances/liquidity-dashboard-ui/api/index.php')
+    : ldDeskPublicUrl('liquidity-dashboard-ui/api/index.php');
 
 $cssPath = $uiDir . '/dist/assets/' . $cssFile;
 $jsPath = $uiDir . '/dist/assets/' . $jsFile;

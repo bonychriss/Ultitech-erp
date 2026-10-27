@@ -132,21 +132,31 @@ function ldBuildInitPayload(PDO $pdo): array
                 continue;
             }
 
-            $bal = isset($acc['live_balance']) ? (float) $acc['live_balance'] : (float) ($acc['current_balance'] ?? 0);
-            $totalLiquidity += $bal;
-
             $bucket = function_exists('balancesAccountLiquidityBucket')
                 ? balancesAccountLiquidityBucket((string) ($acc['type'] ?? ''))
                 : strtolower(trim((string) ($acc['type'] ?? '')));
 
+            // Total Liquidity = active cash + bank + mobile wallets only (never COA categories).
+            if (function_exists('balancesIsLiquidityBucket')
+                ? !balancesIsLiquidityBucket($bucket)
+                : !in_array($bucket, ['cash', 'bank', 'mobile'], true)) {
+                continue;
+            }
+
+            $bal = round(
+                isset($acc['live_balance']) ? (float) $acc['live_balance'] : (float) ($acc['current_balance'] ?? 0),
+                2
+            );
+            $totalLiquidity = round($totalLiquidity + $bal, 2);
+
             if ($bucket === 'cash') {
-                $cashTotal += $bal;
+                $cashTotal = round($cashTotal + $bal, 2);
                 $hasCash = true;
             } elseif ($bucket === 'bank') {
-                $bankTotal += $bal;
+                $bankTotal = round($bankTotal + $bal, 2);
                 $hasBank = true;
             } elseif ($bucket === 'mobile') {
-                $mobileTotal += $bal;
+                $mobileTotal = round($mobileTotal + $bal, 2);
                 $hasMobile = true;
             }
         }
@@ -160,10 +170,23 @@ function ldBuildInitPayload(PDO $pdo): array
         error_log('balances liquidity-dashboard init accounts: ' . $e->getMessage());
     }
 
-    $accountCount = count($accounts);
     $activeAccountRows = array_values(array_filter($accounts, static function ($acc) {
-        return strtolower((string) ($acc['status'] ?? 'inactive')) === 'active';
+        if (strtolower((string) ($acc['status'] ?? 'inactive')) !== 'active') {
+            return false;
+        }
+        $bucket = function_exists('balancesAccountLiquidityBucket')
+            ? balancesAccountLiquidityBucket((string) ($acc['type'] ?? ''))
+            : strtolower(trim((string) ($acc['type'] ?? '')));
+        return function_exists('balancesIsLiquidityBucket')
+            ? balancesIsLiquidityBucket($bucket)
+            : in_array($bucket, ['cash', 'bank', 'mobile'], true);
     }));
+    usort($activeAccountRows, static function ($a, $b) {
+        $ba = isset($a['live_balance']) ? (float) $a['live_balance'] : (float) ($a['current_balance'] ?? 0);
+        $bb = isset($b['live_balance']) ? (float) $b['live_balance'] : (float) ($b['current_balance'] ?? 0);
+        return $bb <=> $ba;
+    });
+    $accountCount = count($activeAccountRows);
 
     $monthStart = date('Y-m-01 00:00:00');
     $monthCredits = 0.0;
@@ -222,7 +245,7 @@ function ldBuildInitPayload(PDO $pdo): array
         $debitsTrend[] = $dailyMap[$d]['debits'] ?? 0.0;
     }
 
-    $topAccounts = array_slice($accounts, 0, 5);
+    $topAccounts = array_slice($activeAccountRows, 0, 5);
     $topAccountLabels = array_map(static fn($a) => (string) ($a['name'] ?? 'Account'), $topAccounts);
     $topAccountValues = array_map(static function ($a) {
         return isset($a['live_balance']) ? (float) $a['live_balance'] : (float) ($a['current_balance'] ?? 0);
@@ -298,26 +321,63 @@ function ldBuildInitPayload(PDO $pdo): array
     $insightSummaries = [];
     $insightMoreItems = [];
     foreach ($balInsights['highlights'] as $line) {
+        $text = (string) $line;
+        $lower = strtolower($text);
+        $class = 'success';
+        $label = 'Liquidity';
+        if (str_contains($lower, 'diversif') || str_contains($lower, 'account type')) {
+            $class = 'info';
+            $label = 'Account mix';
+        } elseif (str_contains($lower, 'balanced') || str_contains($lower, 'net inflow')) {
+            $class = 'success';
+            $label = 'Cash flow';
+        } elseif (str_contains($lower, 'available across')) {
+            $class = 'success';
+            $label = 'Liquidity';
+        }
         $insightSummaries[] = [
-            'label' => 'Summary',
-            'class' => 'highlight',
-            'text' => (string) $line,
+            'label' => $label,
+            'class' => $class,
+            'text' => $text,
             'link' => '',
         ];
     }
     foreach ($balInsights['suggestions'] as $line) {
+        $text = (string) $line;
+        $lower = strtolower($text);
+        $class = 'tip';
+        $label = 'Suggestion';
+        if (str_contains($lower, 'outflow') || str_contains($lower, 'zero balance') || str_contains($lower, 'spreading funds')) {
+            $class = 'warning';
+            $label = 'Attention';
+        } elseif (str_contains($lower, 'add a ') || str_contains($lower, 'add cash') || str_contains($lower, 'add a bank') || str_contains($lower, 'add mobile')) {
+            $class = 'info';
+            $label = 'Setup';
+        }
         $insightMoreItems[] = [
-            'label' => 'Suggestion',
-            'class' => 'tip',
-            'text' => (string) $line,
+            'label' => $label,
+            'class' => $class,
+            'text' => $text,
             'link' => '',
         ];
     }
     foreach ($balInsights['alerts'] as $alert) {
-        $alertType = $alert['type'] ?? 'alert';
+        $alertType = (string) ($alert['type'] ?? 'alert');
+        $class = 'danger';
+        $label = 'Alert';
+        if ($alertType === 'payment') {
+            $class = 'payment';
+            $label = 'Payment due';
+        } elseif ($alertType === 'warning') {
+            $class = 'warning';
+            $label = 'Balance alert';
+        } elseif ($alertType === 'approval') {
+            $class = 'warning';
+            $label = 'Pending approval';
+        }
         $insightMoreItems[] = [
-            'label' => $alertType === 'payment' ? 'Payment due' : ($alertType === 'warning' ? 'Balance alert' : 'Pending approval'),
-            'class' => $alertType === 'payment' ? 'payment' : 'alert',
+            'label' => $label,
+            'class' => $class,
             'text' => (string) ($alert['text'] ?? ''),
             'link' => (string) ($alert['link'] ?? ''),
         ];
@@ -337,6 +397,13 @@ function ldBuildInitPayload(PDO $pdo): array
         $aiInsightsUrl .= '?' . http_build_query($qs);
     }
 
+    $moduleQs = http_build_query(array_filter([
+        'module' => $moduleParam !== '' ? $moduleParam : 'balances',
+    ]));
+    $transactionsUrl = ldDeskPublicUrl('transactions.php') . ($moduleQs !== '' ? '?' . $moduleQs : '');
+
+    $recentPage = ldBuildRecentTransactionsPayload($pdo, 1, 100);
+
     return [
         'todayLabel' => date('l, d M Y'),
         'companyDisplay' => $companyDisplay,
@@ -344,6 +411,7 @@ function ldBuildInitPayload(PDO $pdo): array
         'canManageAccount' => $canManageAccount,
         'coaCreateUrl' => $coaCreateUrl,
         'aiInsightsUrl' => $aiInsightsUrl,
+        'transactionsUrl' => $transactionsUrl,
         'kpis' => [
             'totalLiquidity' => $totalLiquidity,
             'totalLiquidityDisplay' => ldFormatValue($totalLiquidity),
@@ -385,6 +453,112 @@ function ldBuildInitPayload(PDO $pdo): array
             'hidden' => $insightHidden,
             'hiddenCount' => count($insightHidden),
         ],
+        'recentTransactions' => $recentPage['transactions'],
+        'recentTransactionsMeta' => [
+            'page' => $recentPage['page'],
+            'perPage' => $recentPage['perPage'],
+            'total' => $recentPage['total'],
+            'totalPages' => $recentPage['totalPages'],
+        ],
+    ];
+}
+
+/**
+ * Map a raw account_transactions join row into the dashboard recent-tx shape.
+ *
+ * @param array<string, mixed> $tx
+ * @return array<string, mixed>
+ */
+function ldMapRecentTransactionRow(array $tx): array
+{
+    $isCredit = strtolower((string) ($tx['type'] ?? '')) === 'credit';
+    $amount = (float) ($tx['amount'] ?? 0);
+    $refType = (string) ($tx['reference_type'] ?? '');
+    $refId = isset($tx['reference_id']) ? (int) $tx['reference_id'] : 0;
+    $source = ldResolveTransactionSource($refType, $refId);
+    $accountId = (int) ($tx['account_id'] ?? 0);
+    $txId = (int) ($tx['id'] ?? 0);
+    $txDate = (string) ($tx['transaction_date'] ?? '');
+    $ym = $txDate !== '' ? date('Y-m', strtotime($txDate)) : date('Y-m');
+    $dateLabel = $txDate !== '' ? date('d M Y', strtotime($txDate)) : '—';
+
+    return [
+        'id' => $txId,
+        'accountId' => $accountId,
+        'accountName' => (string) ($tx['account_name'] ?? 'Account'),
+        'transactionDate' => $txDate,
+        'dateLabel' => $dateLabel,
+        'ym' => $ym,
+        'description' => trim((string) ($tx['description'] ?? '')) !== ''
+            ? (string) $tx['description']
+            : ($source['label'] ?? ($refType !== '' ? ucwords(str_replace('_', ' ', $refType)) : 'Transaction')),
+        'type' => $isCredit ? 'credit' : 'debit',
+        'typeLabel' => $isCredit ? 'In' : 'Out',
+        'amount' => $amount,
+        'amountDisplay' => ldFormatValue($amount),
+        'referenceLabel' => $source['label'] ?? ($refType !== '' ? ucwords(str_replace('_', ' ', $refType)) : ''),
+        'createdBy' => (string) ($tx['user_name'] ?? 'System'),
+    ];
+}
+
+/**
+ * Paginated recent transactions for the liquidity dashboard card.
+ *
+ * @return array{transactions: list<array<string, mixed>>, page: int, perPage: int, total: int, totalPages: int}
+ */
+function ldBuildRecentTransactionsPayload(PDO $pdo, int $page = 1, int $perPage = 100): array
+{
+    $perPage = max(1, min(100, $perPage));
+    $page = max(1, $page);
+    $total = 0;
+    $transactions = [];
+
+    try {
+        $total = (int) $pdo->query('SELECT COUNT(*) FROM account_transactions')->fetchColumn();
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+        }
+        $offset = ($page - 1) * $perPage;
+
+        $stmt = $pdo->prepare("
+            SELECT
+                t.id,
+                t.account_id,
+                t.transaction_date,
+                t.description,
+                t.type,
+                t.amount,
+                t.reference_type,
+                t.reference_id,
+                a.name AS account_name,
+                u.full_name AS user_name
+            FROM account_transactions t
+            LEFT JOIN financial_accounts a ON a.id = t.account_id
+            LEFT JOIN users u ON u.id = t.created_by
+            ORDER BY t.transaction_date DESC, t.id DESC
+            LIMIT :limit OFFSET :offset
+        ");
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $tx) {
+            $transactions[] = ldMapRecentTransactionRow($tx);
+        }
+    } catch (Throwable $e) {
+        error_log('balances liquidity-dashboard recent transactions: ' . $e->getMessage());
+        $total = 0;
+        $totalPages = 1;
+        $page = 1;
+        $transactions = [];
+    }
+
+    return [
+        'transactions' => $transactions,
+        'page' => $page,
+        'perPage' => $perPage,
+        'total' => $total,
+        'totalPages' => $totalPages,
     ];
 }
 
@@ -467,7 +641,6 @@ function ldBuildLiquidityAccountsPayload(PDO $pdo): array
             continue;
         }
 
-        $bal = isset($acc['live_balance']) ? (float) $acc['live_balance'] : (float) ($acc['current_balance'] ?? 0);
         $type = strtolower(trim((string) ($acc['type'] ?? '')));
         $bucket = function_exists('balancesAccountLiquidityBucket')
             ? balancesAccountLiquidityBucket($type)
@@ -475,6 +648,18 @@ function ldBuildLiquidityAccountsPayload(PDO $pdo): array
         if (!isset($groups[$bucket])) {
             $bucket = 'other';
         }
+
+        // Liquidity drill-down matches KPI cards: wallets only.
+        if (function_exists('balancesIsLiquidityBucket')
+            ? !balancesIsLiquidityBucket($bucket)
+            : !in_array($bucket, ['cash', 'bank', 'mobile'], true)) {
+            continue;
+        }
+
+        $bal = round(
+            isset($acc['live_balance']) ? (float) $acc['live_balance'] : (float) ($acc['current_balance'] ?? 0),
+            2
+        );
 
         $nameRaw = trim((string) ($acc['name'] ?? ''));
         $code = '';
@@ -503,8 +688,8 @@ function ldBuildLiquidityAccountsPayload(PDO $pdo): array
         ];
 
         $groups[$bucket]['accounts'][] = $row;
-        $groups[$bucket]['total'] += $bal;
-        $totalLiquidity += $bal;
+        $groups[$bucket]['total'] = round((float) $groups[$bucket]['total'] + $bal, 2);
+        $totalLiquidity = round($totalLiquidity + $bal, 2);
         $rows[] = $row;
     }
 
@@ -813,7 +998,6 @@ function ldBuildTransactionDetailPayload(PDO $pdo, int $txId): array
     $accountId = (int) ($tx['account_id'] ?? 0);
     $txDate = (string) ($tx['transaction_date'] ?? '');
     $ym = $txDate !== '' ? date('Y-m', strtotime($txDate)) : date('Y-m');
-
     // Running balance after this transaction on the account.
     $balStmt = $pdo->prepare("
         SELECT
@@ -840,7 +1024,7 @@ function ldBuildTransactionDetailPayload(PDO $pdo, int $txId): array
             'monthLabel' => date('F Y', strtotime($ym . '-01')),
             'description' => (string) ($tx['description'] ?? ''),
             'type' => $isCredit ? 'credit' : 'debit',
-            'typeLabel' => $isCredit ? 'Credit (Money In)' : 'Debit (Money Out)',
+            'typeLabel' => $isCredit ? 'Money In' : 'Money Out',
             'amount' => $amount,
             'amountDisplay' => ldFormatValue($amount),
             'referenceType' => $refType,

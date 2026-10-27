@@ -9317,6 +9317,36 @@ function erp_get_theme_toggle_script_html(): string
     return '<script src="' . htmlspecialchars(erp_theme_toggle_js_url(), ENT_QUOTES, 'UTF-8') . '" defer></script>' . "\n";
 }
 
+/**
+ * Cookie consent banner + settings panel (sitewide).
+ * Injected before &lt;/body&gt; via the global HTML output buffers.
+ * Must not call ob_start() — this runs inside an OB display handler.
+ */
+function erp_get_cookie_consent_body_html(): string
+{
+    if (defined('ERP_SKIP_COOKIE_CONSENT') && ERP_SKIP_COOKIE_CONSENT) {
+        return '';
+    }
+    static $html = null;
+    if ($html !== null) {
+        return $html;
+    }
+    $partial = dirname(__DIR__) . '/includes/partials/cookie_consent.php';
+    if (!is_file($partial)) {
+        $html = '';
+
+        return $html;
+    }
+    if (!function_exists('erp_cookie_consent_markup')) {
+        require_once $partial;
+    }
+    $html = function_exists('erp_cookie_consent_markup')
+        ? (string) erp_cookie_consent_markup()
+        : '';
+
+    return $html;
+}
+
 /** Stylesheet link for glass theme toggle (once per response). */
 function erp_get_theme_toggle_css_link_html(): string
 {
@@ -9820,6 +9850,13 @@ function erp_inject_system_font_into_html_buffer(string $buffer): string
         if (stripos($buffer, 'nav-back.js') === false && stripos($buffer, '__ERP_NAV_BACK_CFG__') === false) {
             $bodyMarkup .= erp_get_nav_back_script_html();
         }
+        // Cookie consent banner on every HTML page (login, modules, public).
+        if (stripos($buffer, 'id="erp-cookie-consent"') === false
+            && stripos($buffer, 'cookie-consent.js') === false
+            && function_exists('erp_get_cookie_consent_body_html')
+        ) {
+            $bodyMarkup .= erp_get_cookie_consent_body_html();
+        }
         if ($bodyMarkup !== '') {
             // Use the last </body> so a literal tag inside an earlier inlined <style> cannot win.
             $pos = strripos($buffer, '</body>');
@@ -9853,6 +9890,58 @@ function erp_bootstrap_system_font_output_buffer(): void
     define('ERP_SYSTEM_FONT_OB_STARTED', true);
     if (function_exists('erp_inject_system_font_into_html_buffer')) {
         ob_start('erp_inject_system_font_into_html_buffer');
+    }
+}
+
+/**
+ * Inject cookie consent into HTML pages that skip the system-font OB
+ * (login, home, pricing, register, etc.).
+ */
+function erp_inject_cookie_consent_into_html_buffer(string $buffer): string
+{
+    if ($buffer === '' || (stripos($buffer, '<html') === false && stripos($buffer, '<!DOCTYPE') === false)) {
+        return $buffer;
+    }
+    if (stripos($buffer, '</body>') === false) {
+        return $buffer;
+    }
+    if (stripos($buffer, 'id="erp-cookie-consent"') !== false || stripos($buffer, 'cookie-consent.js') !== false) {
+        return $buffer;
+    }
+    if (!function_exists('erp_get_cookie_consent_body_html')) {
+        return $buffer;
+    }
+    $markup = erp_get_cookie_consent_body_html();
+    if ($markup === '') {
+        return $buffer;
+    }
+    $pos = strripos($buffer, '</body>');
+    if ($pos === false) {
+        return $buffer;
+    }
+
+    return substr($buffer, 0, $pos) . $markup . substr($buffer, $pos);
+}
+
+/** Start a dedicated OB so cookie consent works even when system-font OB is skipped. */
+function erp_bootstrap_cookie_consent_output_buffer(): void
+{
+    if (defined('ERP_COOKIE_CONSENT_OB_STARTED') || PHP_SAPI === 'cli') {
+        return;
+    }
+    if (defined('ERP_SKIP_COOKIE_CONSENT') && ERP_SKIP_COOKIE_CONSENT) {
+        return;
+    }
+    if (defined('ULTITECH_DIAGNOSTIC_SCRIPT') && ULTITECH_DIAGNOSTIC_SCRIPT) {
+        return;
+    }
+    // When the main system-font OB is active it already injects the banner.
+    if (defined('ERP_SYSTEM_FONT_OB_STARTED') && ERP_SYSTEM_FONT_OB_STARTED) {
+        return;
+    }
+    define('ERP_COOKIE_CONSENT_OB_STARTED', true);
+    if (function_exists('erp_inject_cookie_consent_into_html_buffer')) {
+        ob_start('erp_inject_cookie_consent_into_html_buffer');
     }
 }
 
@@ -17715,4 +17804,8 @@ if (isset($control_pdo) && $control_pdo instanceof PDO) {
 // Pages that include functions.php without config.php (e.g. login) still get global font injection.
 if (function_exists('erp_bootstrap_system_font_output_buffer')) {
     erp_bootstrap_system_font_output_buffer();
+}
+// Cookie consent on every HTML page, including those that skip the system-font OB.
+if (function_exists('erp_bootstrap_cookie_consent_output_buffer')) {
+    erp_bootstrap_cookie_consent_output_buffer();
 }

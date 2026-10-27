@@ -765,3 +765,6 @@ if (!defined('STATUS_DRAFT')) define('STATUS_DRAFT', 'draft');
 if (function_exists('erp_bootstrap_system_font_output_buffer')) {
     erp_bootstrap_system_font_output_buffer();
 }
+if (function_exists('erp_bootstrap_cookie_consent_output_buffer')) {
+    erp_bootstrap_cookie_consent_output_buffer();
+}

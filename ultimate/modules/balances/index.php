@@ -146,6 +146,26 @@ main.main-content.ld-react-root #root {
         padding: 0 0.75rem 1.5rem !important;
     }
 }
+
+html[data-theme="dark"] body.page-ld-desk,
+html[data-theme="dark"] body.page-ld-desk.dashboard,
+html[data-theme="dark"] body.page-ld-desk.dashboard .layout-main-wrapper,
+html[data-theme="dark"] body.page-ld-desk.dashboard .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body.page-ld-desk main.main-content.ld-react-root,
+html[data-theme="dark"] body.page-ld-desk main.main-content.ld-react-root #root {
+    background: #000000 !important;
+    background-color: #000000 !important;
+    color: #f5f5f5 !important;
+}
+
+html[data-theme="dark"] body.page-ld-desk .employee-header.employee-header--ld-desk {
+    background: #000000 !important;
+    border-bottom-color: #1a1a1a !important;
+}
+
+html[data-theme="dark"] body.page-ld-desk .employee-header--ld-desk .employee-header-page-title {
+    color: #f5f5f5 !important;
+}
 </style>
 
 <main class="main-content ld-react-root">

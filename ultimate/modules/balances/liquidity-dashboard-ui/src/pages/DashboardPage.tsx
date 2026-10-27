@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { Plus, CircleHelp, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   HiOutlineShieldCheck,
   HiOutlineCash,
@@ -77,8 +77,15 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardInit | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [manualOpen, setManualOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('manual') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [insightsExpanded, setInsightsExpanded] = useState(false);
+  const [insightSlide, setInsightSlide] = useState(0);
   const [extraInsights, setExtraInsights] = useState<InsightItem[]>([]);
   const [extraLoading, setExtraLoading] = useState(false);
   const [recentTransactions, setRecentTransactions] = useState<RecentTransactionRow[]>([]);
@@ -110,6 +117,24 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!manualOpen) return;
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('manual') === '1') {
+        url.searchParams.delete('manual');
+        const next = `${url.pathname}${url.search}${url.hash}`;
+        window.history.replaceState({}, '', next);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [manualOpen]);
+
+  function closeManual() {
+    setManualOpen(false);
+  }
 
   async function loadTxPage(page: number) {
     if (page < 1 || page > txTotalPages || page === txPage || txLoading) return;
@@ -162,6 +187,35 @@ export default function DashboardPage() {
     };
   }, [data, insightsExpanded, extraInsights.length, extraLoading]);
 
+  const rotatingInsights = useMemo(() => {
+    // Primary curated list (visible) already filters filler; rotate those first.
+    // Important alerts may be fewer than 3; otherwise backend pads to ≥3.
+    const visible = data?.insights.visible ?? [];
+    if (visible.length > 0) return visible;
+    const hidden = data?.insights.hidden ?? [];
+    if (hidden.length > 0) return hidden;
+    return [
+      {
+        label: 'Tip',
+        class: 'tip',
+        text: 'Post transactions to see liquidity insights here.',
+        link: '',
+      } satisfies InsightItem,
+    ];
+  }, [data?.insights.visible, data?.insights.hidden]);
+
+  useEffect(() => {
+    setInsightSlide(0);
+  }, [rotatingInsights.length]);
+
+  useEffect(() => {
+    if (insightsExpanded || rotatingInsights.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setInsightSlide((current) => (current + 1) % rotatingInsights.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [insightsExpanded, rotatingInsights.length]);
+
   if (loading) {
     return (
       <div className="ld-loading" role="status" aria-live="polite">
@@ -180,6 +234,7 @@ export default function DashboardPage() {
   const transactionsUrl = typeof data.transactionsUrl === 'string' ? data.transactionsUrl : '';
   const txFrom = txTotal === 0 ? 0 : (txPage - 1) * RECENT_TX_PER_PAGE + 1;
   const txTo = Math.min(txPage * RECENT_TX_PER_PAGE, txTotal);
+  const activeInsight = rotatingInsights[insightSlide % rotatingInsights.length] ?? rotatingInsights[0];
 
   return (
     <div className="ld-dash">
@@ -187,16 +242,18 @@ export default function DashboardPage() {
         <div>
           <h1>Liquidity Dashboard</h1>
         </div>
-        <div className="ld-header-actions">
-          {data.canManageAccount && (
-            <a href={data.coaCreateUrl} className="ld-btn ld-btn--purple">
-              <Plus className="w-4 h-4" aria-hidden="true" /> Create account
+        {data.canManageAccount ? (
+          <div className="ld-header-actions">
+            <a
+              href={data.coaCreateUrl}
+              className="ld-btn ld-btn--purple ld-btn--icon"
+              title="Create account"
+              aria-label="Create account"
+            >
+              <Plus className="w-5 h-5" aria-hidden="true" />
             </a>
-          )}
-          <button type="button" className="ld-btn ld-btn--outline" onClick={() => setManualOpen(true)}>
-            <CircleHelp className="w-4 h-4" aria-hidden="true" /> Manual
-          </button>
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="ld-kpi-grid">
@@ -277,24 +334,31 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="ld-card-b ld-insights-body">
-            {insights.visible.length === 0 && insights.hidden.length === 0 && (
-              <div className="ld-insight-row ld-insight-row--tip">
-                <span className="ld-insight-ico" aria-hidden="true">
-                  <HiOutlineSparkles size={16} />
-                </span>
-                <div className="ld-insight-copy">
-                  <span className="ld-insight-kicker">Tip</span>
-                  <span className="ld-insight-text">Post transactions to see liquidity insights here.</span>
+            {!insightsExpanded ? (
+              <div className="ld-insights-rotate" aria-live="polite">
+                <div key={insightSlide} className="ld-insights-rotate-slide">
+                  <InsightRow item={activeInsight} />
                 </div>
+                {rotatingInsights.length > 1 ? (
+                  <div className="ld-insights-dots" role="tablist" aria-label="Insight slides">
+                    {rotatingInsights.map((_, index) => (
+                      <button
+                        key={`dot-${index}`}
+                        type="button"
+                        role="tab"
+                        aria-selected={index === insightSlide}
+                        aria-label={`Show insight ${index + 1}`}
+                        className={`ld-insights-dot${index === insightSlide ? ' is-active' : ''}`}
+                        onClick={() => setInsightSlide(index)}
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </div>
-            )}
-            {insights.visible.map((item, index) => (
-              <InsightRow key={`v-${index}`} item={item} />
-            ))}
-            {hiddenCount > 0 && (
-              <div className={`ld-insights-more${insightsExpanded ? ' is-open' : ''}`}>
-                {insights.hidden.map((item, index) => (
-                  <InsightRow key={`h-${index}`} item={item} />
+            ) : (
+              <div className="ld-insights-more is-open">
+                {[...insights.visible, ...insights.hidden].map((item, index) => (
+                  <InsightRow key={`all-${index}`} item={item} />
                 ))}
                 {extraInsights.map((item, index) => (
                   <InsightRow key={`ai-${index}`} item={item} />
@@ -302,13 +366,15 @@ export default function DashboardPage() {
                 {extraLoading && <div className="ld-insights-note">Analyzing payments and liquidity...</div>}
               </div>
             )}
-            {hiddenCount > 0 && (
+            {(hiddenCount > 0 || rotatingInsights.length > 1 || insights.aiConnected) && (
               <button
                 type="button"
                 className="ld-insights-toggle"
                 onClick={() => setInsightsExpanded((v) => !v)}
               >
-                {insightsExpanded ? 'Show less' : `Show all insights (${hiddenCount})`}
+                {insightsExpanded
+                  ? 'Show less'
+                  : `Show all insights (${insights.visible.length + insights.hidden.length})`}
               </button>
             )}
             {!insights.aiConnected && (
@@ -507,7 +573,7 @@ export default function DashboardPage() {
       </div>
 
       {manualOpen && (
-        <div className="ld-modal-backdrop" role="presentation" onClick={() => setManualOpen(false)}>
+        <div className="ld-modal-backdrop" role="presentation" onClick={closeManual}>
           <div
             className="ld-modal"
             role="dialog"
@@ -517,7 +583,7 @@ export default function DashboardPage() {
           >
             <div className="ld-modal-h">
               <h2 id="ld-manual-title">Balances &amp; liquidity user manual</h2>
-              <button type="button" className="ld-modal-x" onClick={() => setManualOpen(false)} aria-label="Close">
+              <button type="button" className="ld-modal-x" onClick={closeManual} aria-label="Close">
                 <X className="w-4 h-4" />
               </button>
             </div>

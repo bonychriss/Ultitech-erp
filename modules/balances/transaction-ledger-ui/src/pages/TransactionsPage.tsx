@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowDownCircle,
+  ArrowDownLeft,
   ArrowLeftRight,
   ArrowUpCircle,
+  ArrowUpRight,
+  ClipboardList,
   Inbox,
   ListChecks,
   Loader2,
@@ -12,9 +15,8 @@ import {
 } from 'lucide-react';
 import { fetchAiSearch, fetchInit, fetchTransactions } from '../api';
 import KpiTraceModal from '../components/KpiTraceModal';
-import RowActionsMenu from '../components/RowActionsMenu';
 import type { LedgerTransaction, TxFilters, TxInit, TxPagination, TxSummary } from '../types';
-import { amountClass, formatDateTime, formatMoney, typeBadgeClass } from '../utils/format';
+import { formatDateLabel, formatMoney } from '../utils/format';
 import { resolveKpiTrace, type KpiTrace, type KpiTraceKey } from '../utils/kpiTrace';
 
 const defaultFilters: TxFilters = {
@@ -28,13 +30,12 @@ const defaultFilters: TxFilters = {
   per_page: 'all',
 };
 
-function isRowActionTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) return false;
-  return Boolean(target.closest('a, button, input, select, textarea, label, [data-tl-row-ignore]'));
-}
-
 function preserveQueryParams(extra: Record<string, string | number | null>): string {
   const params = new URLSearchParams(window.location.search);
+  // Keep desk context only — never reuse API params on the page URL.
+  ['action', 'page', 'per_page', 'date_from', 'date_to', 'type', 'amount_min', 'amount_max'].forEach((key) => {
+    params.delete(key);
+  });
   Object.entries(extra).forEach(([key, value]) => {
     if (value === null || value === '') params.delete(key);
     else params.set(key, String(value));
@@ -89,6 +90,23 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Clean polluted API params left on the page URL (e.g. action=list).
+    const params = new URLSearchParams(window.location.search);
+    let dirty = false;
+    ['action', 'page', 'per_page'].forEach((key) => {
+      if (params.has(key)) {
+        params.delete(key);
+        dirty = true;
+      }
+    });
+    if (dirty) {
+      const qs = params.toString();
+      const next = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', next);
     }
   }, []);
 
@@ -168,19 +186,6 @@ export default function TransactionsPage() {
 
   function goToPage(page: number) {
     setFilters((current) => ({ ...current, page }));
-  }
-
-  function toggleViewAll() {
-    setFilters((current) => ({
-      ...current,
-      per_page: current.per_page === 'all' ? '25' : 'all',
-      page: 1,
-    }));
-  }
-
-  function handleRowClick(event: MouseEvent<HTMLTableRowElement>, tx: LedgerTransaction) {
-    if (isRowActionTarget(event.target)) return;
-    window.location.href = tx.viewUrl;
   }
 
   function openKpiTrace(key: KpiTraceKey) {
@@ -347,25 +352,21 @@ export default function TransactionsPage() {
       </section>
 
       <section className="tl-entries">
-        <div className="tl-entries-head">
-          <div className="tl-card-head-main">
-            <h2>Entries</h2>
-            <span className="tl-entries-count">
-              {totalRows} row{totalRows === 1 ? '' : 's'}
-              {searching ? ' matching filters' : ''}
-            </span>
-          </div>
-          <div className="tl-entries-meta">
-            {(refreshing || aiSearching) && <Loader2 className="tl-inline-spinner" aria-hidden="true" />}
-            {totalRows > 25 && (
-              <button type="button" className="tl-view-toggle" onClick={toggleViewAll}>
-                {pagination?.viewAll ? 'Show 25 per page' : 'View all'}
-              </button>
-            )}
-          </div>
-        </div>
-
         <div className={`tl-card tl-entries-card${refreshing || aiSearching ? ' is-refreshing' : ''}`}>
+          <div className="tl-entries-card-head">
+            <div className="tl-entries-card-title">
+              <ClipboardList className="tl-entries-card-ico" aria-hidden="true" />
+              <h2>Transactions</h2>
+              <span className="tl-entries-count">
+                {totalRows} row{totalRows === 1 ? '' : 's'}
+                {searching ? ' matching' : ''}
+              </span>
+            </div>
+            <div className="tl-entries-meta">
+              {(refreshing || aiSearching) && <Loader2 className="tl-inline-spinner" aria-hidden="true" />}
+            </div>
+          </div>
+
           {transactions.length === 0 ? (
             <div className="tl-empty">
               <Inbox className="tl-empty-icon" aria-hidden="true" />
@@ -375,68 +376,114 @@ export default function TransactionsPage() {
               </p>
             </div>
           ) : (
-            <div className="tl-table-wrap">
-              <table className="tl-table">
-                <colgroup>
-                  <col className="tl-col-no" />
-                  <col className="tl-col-date" />
-                  <col className="tl-col-account" />
-                  <col className="tl-col-description" />
-                  <col className="tl-col-reference" />
-                  <col className="tl-col-user" />
-                  <col className="tl-col-amount" />
-                  <col className="tl-col-type" />
-                  <col className="tl-col-actions" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th className="tl-th-no">No.</th>
-                    <th>Date</th>
-                    <th>Account</th>
-                    <th>Description</th>
-                    <th>Reference</th>
-                    <th>User</th>
-                    <th className="tl-th-amount">Amount</th>
-                    <th>Type</th>
-                    <th className="tl-th-actions">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((tx, index) => (
-                    <tr
-                      key={tx.id}
-                      className="tl-table-row-clickable"
-                      onClick={(event) => handleRowClick(event, tx)}
-                      tabIndex={0}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          window.location.href = tx.viewUrl;
-                        }
+            <>
+              <div className="tl-recent-cards" aria-label="Transactions">
+                {transactions.map((tx) => {
+                  const accountLine =
+                    [tx.accountName, tx.referenceLabel].filter(Boolean).join(' · ') || '—';
+                  const isOut = tx.type === 'debit';
+                  return (
+                    <button
+                      key={`m-${tx.id}`}
+                      type="button"
+                      className="tl-recent-card"
+                      onClick={() => {
+                        window.location.href = tx.viewUrl;
                       }}
                     >
-                      <td className="tl-td-no">
-                        {(pagination && !pagination.viewAll ? Math.max(pagination.showingFrom, 1) : 1) + index}
-                      </td>
-                      <td className="tl-td-date">{formatDateTime(tx.transactionDate)}</td>
-                      <td className="tl-td-account">{tx.accountName}</td>
-                      <td className="tl-td-description">{tx.description || '-'}</td>
-                      <td className="tl-td-reference">{tx.referenceLabel || '-'}</td>
-                      <td className="tl-td-user">{tx.userName}</td>
-                      <td className={`tl-td-amount ${amountClass(tx.type)}`}>{tx.amountDisplay}</td>
-                      <td className="tl-td-type">
-                        <span className={typeBadgeClass(tx.typeClass)}>{tx.typeLabel}</span>
-                      </td>
-                      <td className="tl-td-actions">
-                        <RowActionsMenu transaction={tx} />
-                      </td>
+                      <div className="tl-recent-card-top">
+                        <span className="tl-recent-desc-cell">
+                          <span
+                            className={`tl-recent-ico${isOut ? ' is-out' : ' is-in'}`}
+                            aria-label={tx.typeLabel}
+                            title={isOut ? 'Out' : 'In'}
+                          >
+                            {isOut ? (
+                              <ArrowUpRight size={17} aria-hidden="true" />
+                            ) : (
+                              <ArrowDownLeft size={17} aria-hidden="true" />
+                            )}
+                          </span>
+                          <span className="tl-recent-desc">{tx.description || '—'}</span>
+                        </span>
+                        <span className={`tl-recent-amt${isOut ? ' is-out' : ' is-in'}`}>
+                          {tx.amountDisplay}
+                        </span>
+                      </div>
+                      <div className="tl-recent-card-meta">
+                        <div className="tl-recent-card-row">
+                          <span className="tl-recent-card-label">Account</span>
+                          <span className="tl-recent-card-value">{accountLine}</span>
+                        </div>
+                        <div className="tl-recent-card-row">
+                          <span className="tl-recent-card-label">Date</span>
+                          <span className="tl-recent-card-value">
+                            {formatDateLabel(tx.transactionDate)}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="tl-recent-table-wrap">
+                <table className="tl-recent-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Account / Category</th>
+                      <th>Date</th>
+                      <th className="tl-recent-amt-h">Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {transactions.map((tx) => {
+                      const accountLine =
+                        [tx.accountName, tx.referenceLabel].filter(Boolean).join(' · ') || '—';
+                      const isOut = tx.type === 'debit';
+                      return (
+                        <tr
+                          key={tx.id}
+                          tabIndex={0}
+                          onClick={() => {
+                            window.location.href = tx.viewUrl;
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              window.location.href = tx.viewUrl;
+                            }
+                          }}
+                        >
+                          <td>
+                            <span className="tl-recent-desc-cell">
+                              <span
+                                className={`tl-recent-ico${isOut ? ' is-out' : ' is-in'}`}
+                                aria-label={tx.typeLabel}
+                                title={isOut ? 'Out' : 'In'}
+                              >
+                                {isOut ? (
+                                  <ArrowUpRight size={17} aria-hidden="true" />
+                                ) : (
+                                  <ArrowDownLeft size={17} aria-hidden="true" />
+                                )}
+                              </span>
+                              <span className="tl-recent-desc">{tx.description || '—'}</span>
+                            </span>
+                          </td>
+                          <td className="tl-recent-cat">{accountLine}</td>
+                          <td className="tl-recent-date">{formatDateLabel(tx.transactionDate)}</td>
+                          <td className={`tl-recent-amt${isOut ? ' is-out' : ' is-in'}`}>
+                            {tx.amountDisplay}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           {pagination && totalRows > 0 && (

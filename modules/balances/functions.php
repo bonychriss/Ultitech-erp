@@ -2721,19 +2721,17 @@ function balances_build_insights(array $metrics, ?PDO $pdo = null): array
         ];
     }
 
-    if ($totalLiquidity > 0) {
-        $highlights[] = $fmt($totalLiquidity) . ' available across ' . $activeCount . ' active account' . ($activeCount === 1 ? '' : 's') . '.';
-    } else {
+    // Keep only actionable / material insights — skip KPI restatements and filler.
+    if ($totalLiquidity <= 0) {
         $suggestions[] = 'Active accounts have zero balance. Record opening balances or post transactions.';
     }
 
     if ($monthTxCount > 0) {
-        if ($monthNet > 0) {
-            $highlights[] = 'Net inflow of ' . $fmt($monthNet) . ' this month from ' . number_format($monthTxCount) . ' transaction' . ($monthTxCount === 1 ? '' : 's') . '.';
-        } elseif ($monthNet < 0) {
+        if ($monthNet < 0) {
             $suggestions[] = 'Net outflow of ' . $fmt(abs($monthNet)) . ' this month. Review recent debits and expenses.';
-        } else {
-            $highlights[] = 'Inflows and outflows are balanced this month (' . number_format($monthTxCount) . ' transactions).';
+        } elseif ($monthNet > 0 && abs($monthNet) >= max(1.0, abs($monthDebits) * 0.15)) {
+            // Only highlight inflow when it is a meaningful share of movement.
+            $highlights[] = 'Net inflow of ' . $fmt($monthNet) . ' this month from ' . number_format($monthTxCount) . ' transaction' . ($monthTxCount === 1 ? '' : 's') . '.';
         }
     } else {
         $suggestions[] = 'No transactions recorded this month. Post sales receipts or expense payments to keep ledgers current.';
@@ -2747,25 +2745,22 @@ function balances_build_insights(array $metrics, ?PDO $pdo = null): array
     }
 
     $typesUsed = (int) (($accountStats['cash'] ?? 0) > 0) + (int) (($accountStats['bank'] ?? 0) > 0) + (int) (($accountStats['mobile'] ?? 0) > 0);
-    if ($typesUsed >= 2) {
-        $highlights[] = 'Liquidity is diversified across ' . $typesUsed . ' account type' . ($typesUsed === 1 ? '' : 's') . '.';
-    } else {
-        if (!$hasCash) {
-            $suggestions[] = 'Add a cash account for petty cash and daily collections.';
-        }
+    if ($typesUsed < 2) {
+        // One setup tip max — avoid stacking three "add account" lines.
         if (!$hasBank) {
             $suggestions[] = 'Add a bank account to separate deposits from cash on hand.';
-        }
-        if (!$hasMobile) {
+        } elseif (!$hasCash) {
+            $suggestions[] = 'Add a cash account for petty cash and daily collections.';
+        } elseif (!$hasMobile) {
             $suggestions[] = 'Add mobile money if you accept M-Pesa or similar payments.';
         }
     }
 
-    if ($highlights === []) {
-        $highlights[] = 'Liquidity dashboard is ready. Use transfers to move funds between your own accounts.';
+    if (count($highlights) > 3) {
+        $highlights = array_slice($highlights, 0, 3);
     }
-    if (count($highlights) > 4) {
-        $highlights = array_slice($highlights, 0, 4);
+    if (count($suggestions) > 4) {
+        $suggestions = array_slice($suggestions, 0, 4);
     }
 
     $activeAccounts = $metrics['active_accounts'] ?? [];

@@ -142,6 +142,26 @@ main.main-content.tl-react-root #root {
         padding: 0 0.75rem 1.5rem !important;
     }
 }
+
+html[data-theme="dark"] body.page-tl-desk,
+html[data-theme="dark"] body.page-tl-desk.dashboard,
+html[data-theme="dark"] body.page-tl-desk.dashboard .layout-main-wrapper,
+html[data-theme="dark"] body.page-tl-desk.dashboard .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body.page-tl-desk main.main-content.tl-react-root,
+html[data-theme="dark"] body.page-tl-desk main.main-content.tl-react-root #root {
+    background: #000000 !important;
+    background-color: #000000 !important;
+    color: #f5f5f5 !important;
+}
+
+html[data-theme="dark"] body.page-tl-desk .employee-header.employee-header--tl-desk {
+    background: #000000 !important;
+    border-bottom-color: #1a1a1a !important;
+}
+
+html[data-theme="dark"] body.page-tl-desk .employee-header--tl-desk .employee-header-page-title {
+    color: #f5f5f5 !important;
+}
 </style>
 
 <main class="main-content tl-react-root">

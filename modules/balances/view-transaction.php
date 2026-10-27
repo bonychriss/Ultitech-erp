@@ -20,8 +20,19 @@ $qsNoId = function (array $extra = []) {
     return $qs === '' ? '' : ('?' . $qs);
 };
 
+$tlLedgerReturnQs = static function () use ($qsNoId): string {
+    $q = [];
+    parse_str(ltrim($qsNoId(), '?'), $q);
+    // Drop API/list params that must not pollute the ledger URL.
+    foreach (['action', 'page', 'per_page', 'q', 'date_from', 'date_to', 'type', 'amount_min', 'amount_max'] as $drop) {
+        unset($q[$drop]);
+    }
+    $qs = http_build_query($q);
+    return $qs === '' ? '' : ('?' . $qs);
+};
+
 if (!isset($_GET['id']) || (int) $_GET['id'] <= 0) {
-    header('Location: transactions.php' . $qsNoId());
+    header('Location: transactions.php' . $tlLedgerReturnQs());
     exit;
 }
 
@@ -39,7 +50,7 @@ $tx = $stmt->fetch();
 
 if (!$tx) {
     $_SESSION['error'] = 'Transaction not found.';
-    header('Location: transactions.php' . $qsNoId());
+    header('Location: transactions.php' . $tlLedgerReturnQs());
     exit;
 }
 

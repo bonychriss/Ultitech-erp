@@ -95,6 +95,114 @@ function ldDeskPublicUrl(string $relativePath): string
     return $relativePath;
 }
 
+/**
+ * Drop KPI restatements / filler so insights stay useful.
+ *
+ * @param array{label?: string, class?: string, text?: string, link?: string} $item
+ */
+function ldInsightIsNonMeaningful(array $item): bool
+{
+    $text = trim((string) ($item['text'] ?? ''));
+    if ($text === '') {
+        return true;
+    }
+    $lower = strtolower($text);
+    $filler = [
+        'available across',
+        'diversified across',
+        'dashboard is ready',
+        'inflows and outflows are balanced',
+        'liquidity is diversified',
+    ];
+    foreach ($filler as $needle) {
+        if (str_contains($lower, $needle)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Urgent / material insights that may be shown alone (no need to pad to 3).
+ *
+ * @param array{label?: string, class?: string, text?: string, link?: string} $item
+ */
+function ldInsightIsImportant(array $item): bool
+{
+    $class = strtolower(trim((string) ($item['class'] ?? '')));
+    if (in_array($class, ['danger', 'payment', 'warning', 'alert'], true)) {
+        return true;
+    }
+    $lower = strtolower((string) ($item['text'] ?? ''));
+    $urgent = [
+        'negative balance',
+        'awaiting approval',
+        'ready to pay',
+        'net outflow',
+        'zero balance',
+        '% of liquidity sits',
+        'no active accounts',
+        'overdue',
+    ];
+    foreach ($urgent as $needle) {
+        if (str_contains($lower, $needle)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Curate insights: skip filler; show important instantly, otherwise at least 3.
+ *
+ * @param list<array{label: string, class: string, text: string, link: string}> $items
+ * @return array{0: list<array{label: string, class: string, text: string, link: string}>, 1: list<array{label: string, class: string, text: string, link: string}>}
+ */
+function ldCurateInsights(array $items): array
+{
+    $meaningful = [];
+    $seen = [];
+    foreach ($items as $item) {
+        if (!is_array($item) || ldInsightIsNonMeaningful($item)) {
+            continue;
+        }
+        $key = strtolower(trim((string) ($item['text'] ?? '')));
+        if ($key === '' || isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $meaningful[] = $item;
+    }
+
+    $important = [];
+    $other = [];
+    foreach ($meaningful as $item) {
+        if (ldInsightIsImportant($item)) {
+            $important[] = $item;
+        } else {
+            $other[] = $item;
+        }
+    }
+
+    if ($important !== []) {
+        // Important instant(s) first — do not pad with filler just to reach 3.
+        $primary = array_slice($important, 0, 5);
+        $rest = array_merge(array_slice($important, 5), $other);
+    } else {
+        $min = 3;
+        $primary = array_slice($other, 0, max($min, min(5, count($other))));
+        // If fewer than 3 exist, show what we have.
+        if (count($primary) < $min) {
+            $primary = $other;
+        }
+        $rest = array_slice($other, count($primary));
+    }
+
+    return [$primary, $rest];
+}
+
 function ldFormatValue(float $n): string
 {
     $sign = $n < 0 ? '-' : '';
@@ -318,24 +426,17 @@ function ldBuildInitPayload(PDO $pdo): array
         ], $pdo)
         : ['highlights' => [], 'suggestions' => [], 'alerts' => [], 'ai_connected' => false];
 
-    $insightSummaries = [];
-    $insightMoreItems = [];
+    $insightCandidates = [];
     foreach ($balInsights['highlights'] as $line) {
         $text = (string) $line;
         $lower = strtolower($text);
         $class = 'success';
-        $label = 'Liquidity';
-        if (str_contains($lower, 'diversif') || str_contains($lower, 'account type')) {
-            $class = 'info';
-            $label = 'Account mix';
-        } elseif (str_contains($lower, 'balanced') || str_contains($lower, 'net inflow')) {
+        $label = 'Cash flow';
+        if (str_contains($lower, 'net inflow')) {
             $class = 'success';
             $label = 'Cash flow';
-        } elseif (str_contains($lower, 'available across')) {
-            $class = 'success';
-            $label = 'Liquidity';
         }
-        $insightSummaries[] = [
+        $insightCandidates[] = [
             'label' => $label,
             'class' => $class,
             'text' => $text,
@@ -353,8 +454,11 @@ function ldBuildInitPayload(PDO $pdo): array
         } elseif (str_contains($lower, 'add a ') || str_contains($lower, 'add cash') || str_contains($lower, 'add a bank') || str_contains($lower, 'add mobile')) {
             $class = 'info';
             $label = 'Setup';
+        } elseif (str_contains($lower, 'no transactions')) {
+            $class = 'info';
+            $label = 'Activity';
         }
-        $insightMoreItems[] = [
+        $insightCandidates[] = [
             'label' => $label,
             'class' => $class,
             'text' => $text,
@@ -375,7 +479,7 @@ function ldBuildInitPayload(PDO $pdo): array
             $class = 'warning';
             $label = 'Pending approval';
         }
-        $insightMoreItems[] = [
+        $insightCandidates[] = [
             'label' => $label,
             'class' => $class,
             'text' => (string) ($alert['text'] ?? ''),
@@ -383,8 +487,7 @@ function ldBuildInitPayload(PDO $pdo): array
         ];
     }
 
-    $insightVisible = array_slice($insightSummaries, 0, 4);
-    $insightHidden = array_merge(array_slice($insightSummaries, 4), $insightMoreItems);
+    [$insightVisible, $insightHidden] = ldCurateInsights($insightCandidates);
 
     $aiInsightsUrl = ldDeskPublicUrl('api/ai_insights.php');
     $qs = [];

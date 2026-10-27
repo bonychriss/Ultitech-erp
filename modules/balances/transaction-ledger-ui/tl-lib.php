@@ -35,17 +35,10 @@ function tlDeskPublicUrl(string $relativePath): string
 {
     $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
     $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    $suffix = tlDeskShellScriptSuffix();
-    if ($script !== '' && substr($script, -strlen($suffix)) === $suffix) {
-        return rtrim(dirname($script), '/') . '/' . $relativePath;
-    }
 
-    // Ultimate/company rewrite may omit ".php" (/transactions) or alter SCRIPT_NAME.
-    if ($script !== '' && preg_match('#/modules/balances(?:/transactions(?:\.php)?)?$#', $script) === 1) {
-        $base = preg_replace('#/modules/balances(?:/transactions(?:\.php)?)?$#', '/modules/balances', $script);
-        if (is_string($base) && $base !== '') {
-            return rtrim($base, '/') . '/' . $relativePath;
-        }
+    // Map any balances script (ultimate alias, ledger API, shell) to /modules/balances/{path}.
+    if ($script !== '' && preg_match('#^(.*?)/(?:ultimate/)?modules/balances(?:/.*)?$#', $script, $m) === 1) {
+        return rtrim($m[1], '/') . '/modules/balances/' . $relativePath;
     }
 
     if (function_exists('app_url')) {
@@ -57,9 +50,12 @@ function tlDeskPublicUrl(string $relativePath): string
 
 function tlPreserveQueryKeys(array $base = []): array
 {
-    $out = $base;
+    // Only allowlisted desk params  never copy action/page/per_page from API $_GET.
+    $out = [];
     foreach (['module', 'company_slug'] as $key) {
-        if (!empty($_GET[$key])) {
+        if (!empty($base[$key])) {
+            $out[$key] = (string) $base[$key];
+        } elseif (!empty($_GET[$key])) {
             $out[$key] = (string) $_GET[$key];
         }
     }
@@ -68,7 +64,7 @@ function tlPreserveQueryKeys(array $base = []): array
 
 function tlBuildQuery(array $extra = []): string
 {
-    $qs = tlPreserveQueryKeys($_GET ?: []);
+    $qs = tlPreserveQueryKeys();
     foreach ($extra as $key => $value) {
         if ($value === null || $value === '') {
             unset($qs[$key]);
@@ -385,7 +381,7 @@ function tlMapTransactionRow(array $tx): array
         'typeLabel' => $typeLabel,
         'typeClass' => $typeClass,
         'amountDisplay' => $sign . ' ' . tlFormatAmount($amount),
-        'viewUrl' => 'view-transaction.php' . tlBuildQuery(['id' => (int) ($tx['id'] ?? 0)]),
+        'viewUrl' => tlDeskPublicUrl('view-transaction.php') . tlBuildQuery(['id' => (int) ($tx['id'] ?? 0)]),
     ];
 }
 
@@ -446,7 +442,7 @@ function tlBuildInitPayload(PDO $pdo, $filtersOrQ = ''): array
     return [
         'summary' => $stats,
         'insights' => tlBuildInsights($stats, $filters['q']),
-        'transferUrl' => 'transfer.php' . tlBuildQuery(),
+        'transferUrl' => tlDeskPublicUrl('transfer.php') . tlBuildQuery(),
         'companyName' => (string) $companyDisplay,
         'dateLabel' => date('l, d M Y'),
         'aiConnected' => tlAiIsConnected(),

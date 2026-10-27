@@ -532,10 +532,13 @@ if ($searchQ !== '') {
     }));
 }
 
+$selectedExplicit = isset($_GET['selected']) && (int) ($_GET['selected'] ?? 0) > 0;
 $selectedId = (int) ($_GET['selected'] ?? 0);
 if ($selectedId <= 0 && !empty($allParentAccounts)) {
     $selectedId = (int) $allParentAccounts[0]['id'];
 }
+// On mobile, only show the detail pane when the user explicitly opened an account.
+$mobileShowDetail = $selectedExplicit;
 
 $selectedParent = null;
 foreach ($allParentAccounts as $parentRow) {
@@ -603,6 +606,52 @@ $assignableAccounts = function_exists('balances_list_assignable_accounts')
     ? balances_list_assignable_accounts($accountRows, $selectedParent, $childrenByParent)
     : [];
 
+// Mobile accordion: children + assignable options per parent account.
+$mobileParentMeta = [];
+foreach ($parentAccounts as $parentRow) {
+    $pid = (int) ($parentRow['id'] ?? 0);
+    if ($pid <= 0) {
+        continue;
+    }
+    $parentRaw = is_array($parentRow['raw'] ?? null) ? $parentRow['raw'] : null;
+    if ($parentRaw === null) {
+        try {
+            $rawStmt = $pdo->prepare('SELECT * FROM financial_accounts WHERE id = ? LIMIT 1');
+            $rawStmt->execute([$pid]);
+            $parentRaw = $rawStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (Throwable $e) {
+            $parentRaw = null;
+        }
+    }
+    $showsPayment = is_array($parentRaw)
+        && function_exists('balances_parent_is_payment_wallet_group')
+        && balances_parent_is_payment_wallet_group($parentRaw);
+    $assignRows = function_exists('balances_list_assignable_accounts')
+        ? balances_list_assignable_accounts($accountRows, $parentRow, $childrenByParent)
+        : [];
+    $assignOptions = [];
+    foreach ($assignRows as $assignRow) {
+        $label = trim((string) ($assignRow['name'] ?? ''));
+        if (($assignRow['code'] ?? '-') !== '-' && ($assignRow['code'] ?? '') !== '') {
+            $label = $assignRow['code'] . ' - ' . $label;
+        }
+        $balanceLabel = number_format((float) ($assignRow['balance'] ?? 0), 2) . ' ' . (string) ($assignRow['currency'] ?? 'TZS');
+        $assignOptions[] = [
+            'id' => (int) ($assignRow['id'] ?? 0),
+            'label' => $label . ' (' . $balanceLabel . ')',
+        ];
+    }
+    $mobileParentMeta[$pid] = [
+        'id' => $pid,
+        'name' => (string) ($parentRow['name'] ?? ''),
+        'shows_payment_type' => $showsPayment,
+        'default_payment_type' => $showsPayment && function_exists('balances_infer_payment_wallet_type') && is_array($parentRaw)
+            ? balances_infer_payment_wallet_type($parentRaw)
+            : 'cash',
+        'assignable' => $assignOptions,
+    ];
+}
+
 $moveParentTargets = [];
 if (function_exists('balances_list_target_parent_accounts')) {
     foreach ($allParentAccounts as $parentRow) {
@@ -647,11 +696,53 @@ $accountsPageUrl = function_exists('balances_accounts_redirect_url')
 $accountsGetAction = function_exists('balances_accounts_redirect_url')
     ? balances_accounts_redirect_url(array_filter(['module' => $moduleParam !== '' ? $moduleParam : null]))
     : 'accounts.php';
+$accountsListUrl = function_exists('balances_accounts_redirect_url')
+    ? balances_accounts_redirect_url(array_filter([
+        'module' => $moduleParam !== '' ? $moduleParam : null,
+        'search' => $searchQ !== '' ? $searchQ : null,
+    ]))
+    : ('accounts.php?' . http_build_query(array_filter([
+        'module' => $moduleParam !== '' ? $moduleParam : null,
+        'search' => $searchQ !== '' ? $searchQ : null,
+    ])));
 $selectedQs = http_build_query($accountsPageQuery);
 
 $hideHeaderCompanyBranding = true;
 $employeeHeaderExtraClass = 'employee-header--balances-accounts';
 $bodyExtraClass = 'page-balances-accounts';
+
+$rayResolveParentIcon = static function (array $parentRow): array {
+    $iconKey = strtolower(trim((string) ($parentRow['name'] ?? '') . ' ' . (string) ($parentRow['type'] ?? '') . ' ' . (string) ($parentRow['type_label'] ?? '')));
+    $iconTone = 'slate';
+    $iconClass = 'fa-wallet';
+    if (str_contains($iconKey, 'expense')) {
+        $iconTone = 'violet';
+        $iconClass = 'fa-file-invoice';
+    } elseif (str_contains($iconKey, 'revenue') || str_contains($iconKey, 'income')) {
+        $iconTone = 'purple';
+        $iconClass = 'fa-chart-line';
+    } elseif (str_contains($iconKey, 'cogs') || str_contains($iconKey, 'cost of goods') || str_contains($iconKey, 'inventory')) {
+        $iconTone = 'orange';
+        $iconClass = 'fa-box';
+    } elseif (str_contains($iconKey, 'asset')) {
+        $iconTone = 'green';
+        $iconClass = 'fa-coins';
+    } elseif (str_contains($iconKey, 'bank') || str_contains($iconKey, 'uba') || str_contains($iconKey, 'crdb') || str_contains($iconKey, 'nmb')) {
+        $iconTone = 'blue';
+        $iconClass = 'fa-university';
+    } elseif (str_contains($iconKey, 'cash') || str_contains($iconKey, 'petty') || str_contains($iconKey, 'mobile')) {
+        $iconTone = 'rose';
+        $iconClass = 'fa-wallet';
+    } elseif (str_contains($iconKey, 'liabilit')) {
+        $iconTone = 'amber';
+        $iconClass = 'fa-balance-scale';
+    } elseif (str_contains($iconKey, 'equity') || str_contains($iconKey, 'capital')) {
+        $iconTone = 'indigo';
+        $iconClass = 'fa-landmark';
+    }
+
+    return [$iconTone, $iconClass];
+};
 
 include __DIR__ . '/includes/header.php';
 ?>
@@ -692,6 +783,12 @@ include __DIR__ . '/includes/header.php';
     }
     @media (max-width: 1100px) {
         .ray-accounts-grid { grid-template-columns: 1fr; }
+    }
+    .ray-mobile-back {
+        display: none;
+    }
+    .ray-accounts-mobile {
+        display: none;
     }
     .ray-panel {
         background: #fff;
@@ -777,6 +874,12 @@ include __DIR__ . '/includes/header.php';
         padding: 0.85rem 1.25rem 1rem;
         border-bottom: 1px solid #f8fafc;
     }
+    .ray-search-field {
+        position: relative;
+    }
+    .ray-search-icon {
+        display: none;
+    }
     .ray-search input {
         width: 100%;
         padding: 0.65rem 0.85rem;
@@ -791,6 +894,13 @@ include __DIR__ . '/includes/header.php';
         outline: none;
         border-color: #94a3b8;
         box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.15);
+    }
+    .ray-mobile-icon,
+    .ray-mobile-card-main {
+        display: contents;
+    }
+    .ray-mobile-card-copy {
+        display: contents;
     }
     .ray-table { width: 100%; border-collapse: collapse; }
     .ray-table thead th {
@@ -1119,10 +1229,391 @@ include __DIR__ . '/includes/header.php';
     html[data-theme="dark"] body.page-balances-accounts .ray-account-name span {
         color: inherit;
     }
+
+    /* Mobile: dedicated card list (no table) */
+    @media (max-width: 767.98px) {
+        body.page-balances-accounts,
+        body.page-balances-accounts.dashboard .layout-main-wrapper,
+        body.page-balances-accounts.dashboard .layout-main-wrapper > .flex-grow-1,
+        body.page-balances-accounts .main-content {
+            background: #f1f5f9 !important;
+            overflow-x: hidden !important;
+        }
+        body.page-balances-accounts .employee-header.employee-header--balances-accounts {
+            padding: 0 1rem !important;
+        }
+        body.page-balances-accounts .main-content {
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box;
+        }
+        .ray-accounts-wrap {
+            padding: 0.35rem 1rem 6.5rem;
+            max-width: 100%;
+            width: 100%;
+            margin: 0;
+            box-sizing: border-box;
+            overflow: visible;
+        }
+        .ray-accounts-grid {
+            display: block;
+            width: 100%;
+        }
+        .ray-accounts-wrap .ray-detail-column,
+        .ray-accounts-wrap > .ray-accounts-grid > .ray-panel[aria-label="Sub-accounts"] {
+            display: none !important;
+        }
+
+        .ray-panel[aria-label="My accounts"] {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            overflow: visible !important;
+            min-height: 0 !important;
+            width: 100%;
+            max-width: 100%;
+        }
+        .ray-panel[aria-label="My accounts"] .ray-panel-head {
+            padding: 0.15rem 0 0.75rem;
+            border-bottom: none;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .ray-panel[aria-label="My accounts"] .ray-panel-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: #0f172a;
+        }
+        .ray-panel[aria-label="My accounts"] .ray-btn-new-account {
+            padding: 0.5rem 0.9rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            box-shadow: 0 8px 18px rgba(124, 58, 237, 0.28);
+            white-space: nowrap;
+        }
+        .ray-panel[aria-label="My accounts"] .ray-search {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 0 0 0.95rem;
+            border-bottom: none;
+            margin: 0;
+        }
+        .ray-panel[aria-label="My accounts"] .ray-panel-body {
+            overflow: visible !important;
+            width: 100%;
+            max-width: 100%;
+            scrollbar-gutter: auto;
+        }
+
+        .ray-panel[aria-label="My accounts"] .ray-search-field {
+            position: relative;
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .ray-panel[aria-label="My accounts"] .ray-search-icon {
+            display: block !important;
+            position: absolute;
+            left: 1.1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 1rem;
+            pointer-events: none;
+            z-index: 2;
+            line-height: 1;
+        }
+        .ray-panel[aria-label="My accounts"] .ray-search input[name="search"],
+        .ray-panel[aria-label="My accounts"] .ray-search-field > input[type="text"] {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+            min-height: 3.25rem !important;
+            height: 3.25rem !important;
+            padding: 0 1.1rem 0 3.1rem !important;
+            border-radius: 16px !important;
+            border: 1px solid #e2e8f0 !important;
+            background: #fff !important;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+            font-size: 1rem !important;
+            line-height: 1.25 !important;
+            color: #0f172a !important;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .ray-accounts-desktop { display: none !important; }
+        .ray-accounts-mobile {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 0;
+            margin: 0;
+        }
+        .ray-m-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+
+        .ray-m-card {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 1rem 1.05rem;
+            border: 1px solid #e8edf3;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+            box-sizing: border-box;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .ray-m-card.is-selected,
+        .ray-m-card.is-open {
+            border-color: #ddd6fe;
+            box-shadow: 0 4px 14px rgba(124, 58, 237, 0.12);
+        }
+        .ray-m-card-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            width: 100%;
+            min-width: 0;
+        }
+        .ray-m-icon {
+            width: 2.6rem;
+            height: 2.6rem;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 2.6rem;
+            font-size: 1rem;
+        }
+        .ray-m-icon--violet { background: #f3e8ff; color: #7c3aed; }
+        .ray-m-icon--purple { background: #ede9fe; color: #6d28d9; }
+        .ray-m-icon--orange { background: #ffedd5; color: #ea580c; }
+        .ray-m-icon--green { background: #dcfce7; color: #16a34a; }
+        .ray-m-icon--blue { background: #dbeafe; color: #2563eb; }
+        .ray-m-icon--rose { background: #ffe4e6; color: #e11d48; }
+        .ray-m-icon--amber { background: #fef3c7; color: #d97706; }
+        .ray-m-icon--indigo { background: #e0e7ff; color: #4338ca; }
+        .ray-m-icon--slate { background: #f1f5f9; color: #475569; }
+
+        .ray-m-copy {
+            flex: 1 1 0;
+            min-width: 0;
+            max-width: 100%;
+        }
+        .ray-m-title {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.3rem 0.4rem;
+            min-width: 0;
+            width: 100%;
+        }
+        .ray-m-name {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+        .ray-m-lock {
+            color: #94a3b8;
+            font-size: 0.72rem;
+        }
+        .ray-m-desc {
+            margin: 0.35rem 0 0;
+            padding: 0;
+            font-size: 0.78rem;
+            color: #94a3b8;
+            line-height: 1.45;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            word-break: break-word;
+            max-width: 100%;
+        }
+        .ray-m-chevron { display: none !important; }
+        .ray-accounts-mobile .ray-badge {
+            border-radius: 999px;
+            padding: 0.18rem 0.52rem;
+            font-size: 0.68rem;
+            flex-shrink: 0;
+            line-height: 1.2;
+        }
+        .ray-accounts-mobile .ray-badge-code {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .ray-m-accordion {
+            display: none !important;
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            height: 0;
+            overflow: hidden;
+        }
+        .ray-m-accordion.is-open {
+            display: block !important;
+            height: auto;
+            overflow: visible;
+            margin: 0;
+        }
+        .ray-m-accordion-panel {
+            padding: 0.9rem 1rem;
+            border: 1px solid #e8edf3;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 100%;
+            overflow: visible;
+        }
+        .ray-m-accordion-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .ray-m-accordion-actions .ray-btn-new,
+        .ray-m-accordion-actions .ray-btn-new-account {
+            flex: 1 1 calc(50% - 0.25rem);
+            justify-content: center;
+            min-height: 2.4rem;
+            font-size: 0.78rem;
+        }
+        .ray-m-sub-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            overflow: visible;
+        }
+        .ray-m-sub-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.55rem;
+            padding: 0.85rem 0.85rem;
+            border: 1px solid #eef2f7;
+            border-radius: 12px;
+            background: #f8fafc;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 100%;
+            overflow: visible;
+            position: relative;
+        }
+        .ray-m-sub-copy { min-width: 0; flex: 1 1 auto; overflow: hidden; }
+        .ray-m-sub-actions {
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+        }
+        .ray-m-floating-menu {
+            position: fixed;
+            z-index: 10950;
+            min-width: 12.5rem;
+            padding: 0.4rem 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.2);
+            display: none;
+        }
+        .ray-m-floating-menu.is-open {
+            display: block;
+        }
+        .ray-m-floating-menu a,
+        .ray-m-floating-menu button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.72rem 1rem;
+            border: 0;
+            background: transparent;
+            color: #0f172a;
+            font-size: 0.9rem;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .ray-m-floating-menu a:active,
+        .ray-m-floating-menu button:active {
+            background: #f8fafc;
+        }
+        .ray-m-floating-menu .is-danger {
+            color: #dc2626;
+        }
+        .ray-m-floating-menu .ray-m-menu-sep {
+            height: 1px;
+            margin: 0.3rem 0;
+            background: #f1f5f9;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-floating-menu {
+            background: #1e293b;
+            border-color: #334155;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-floating-menu a,
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-floating-menu button {
+            color: #f8fafc;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-floating-menu .is-danger {
+            color: #fca5a5;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-floating-menu .ray-m-menu-sep {
+            background: #334155;
+        }
+        .ray-m-sub-empty {
+            padding: 0.75rem 0.15rem;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-card,
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-accordion-panel,
+        html[data-theme="dark"] body.page-balances-accounts .ray-search input {
+            background: #1e293b;
+            border-color: #334155;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-item {
+            background: #0f172a;
+            border-color: #334155;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-panel-title,
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-name {
+            color: #f8fafc !important;
+        }
+    }
+
 </style>
 
 <main class="main-content">
-    <div class="ray-accounts-wrap">
+    <div class="ray-accounts-wrap ray-mobile-list">
         <?php if ($sessionError !== ''): ?>
             <div class="ray-alert"><?= htmlspecialchars($sessionError, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endif; ?>
@@ -1145,7 +1636,10 @@ include __DIR__ . '/includes/header.php';
                     <?php if ($selectedId > 0): ?>
                         <input type="hidden" name="selected" value="<?= (int) $selectedId ?>">
                     <?php endif; ?>
-                    <input type="text" name="search" value="<?= htmlspecialchars($searchQ, ENT_QUOTES, 'UTF-8') ?>" placeholder="Search account">
+                    <div class="ray-search-field">
+                        <i class="fas fa-search ray-search-icon" aria-hidden="true"></i>
+                        <input type="text" name="search" value="<?= htmlspecialchars($searchQ, ENT_QUOTES, 'UTF-8') ?>" placeholder="Search account">
+                    </div>
                 </form>
                 <div class="ray-panel-body">
                     <?php if (empty($parentAccounts)): ?>
@@ -1157,6 +1651,7 @@ include __DIR__ . '/includes/header.php';
                             <?php endif; ?>
                         </div>
                     <?php else: ?>
+                        <div class="ray-accounts-desktop">
                         <table class="ray-table">
                             <thead>
                                 <tr>
@@ -1168,19 +1663,20 @@ include __DIR__ . '/includes/header.php';
                             </thead>
                             <tbody>
                                 <?php foreach ($parentAccounts as $index => $parentRow):
-                                    $isSelected = (int) $parentRow['id'] === $selectedId;
+                                    $parentId = (int) $parentRow['id'];
+                                    $isSelected = $parentId === $selectedId;
                                     $rowUrl = function_exists('balances_accounts_redirect_url')
                                         ? balances_accounts_redirect_url(array_filter([
                                             'module' => $moduleParam,
-                                            'selected' => (int) $parentRow['id'],
+                                            'selected' => $parentId,
                                             'search' => $searchQ !== '' ? $searchQ : null,
                                         ]))
                                         : ('accounts.php?' . http_build_query(array_filter([
                                             'module' => $moduleParam,
-                                            'selected' => (int) $parentRow['id'],
-                                            'search' => $searchQ !== '' ? $searchQ : null,
+                                            'selected' => $parentId,
+                                          'search' => $searchQ !== '' ? $searchQ : null,
                                         ])));
-                                    $editUrl = 'coa_edit.php?id=' . (int) $parentRow['id'] . ($moduleParam !== '' ? '&module=' . rawurlencode($moduleParam) : '');
+                                    $editUrl = 'coa_edit.php?id=' . $parentId . ($moduleParam !== '' ? '&module=' . rawurlencode($moduleParam) : '');
                                 ?>
                                 <tr class="ray-parent-row<?= $isSelected ? ' is-selected' : '' ?>"
                                     data-parent-url="<?= htmlspecialchars($rowUrl, ENT_QUOTES, 'UTF-8') ?>"
@@ -1207,12 +1703,12 @@ include __DIR__ . '/includes/header.php';
                                                     <i class="fas fa-ellipsis-v"></i>
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                                    <li><a class="dropdown-item" href="<?= htmlspecialchars('view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => (int) $parentRow['id']]), ENT_QUOTES, 'UTF-8') ?>">View</a></li>
+                                                    <li><a class="dropdown-item" href="<?= htmlspecialchars('view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => $parentId]), ENT_QUOTES, 'UTF-8') ?>">View</a></li>
                                                     <?php if ($canManage): ?>
                                                         <li>
                                                             <button type="button"
                                                                     class="dropdown-item"
-                                                                    onclick="openMoveParentModal(<?= (int) $parentRow['id'] ?>)">
+                                                                    onclick="openMoveParentModal(<?= $parentId ?>)">
                                                                 Move under parent account
                                                             </button>
                                                         </li>
@@ -1220,7 +1716,7 @@ include __DIR__ . '/includes/header.php';
                                                     <?php if (isAdmin()): ?>
                                                         <li><a class="dropdown-item" href="<?= htmlspecialchars($editUrl, ENT_QUOTES, 'UTF-8') ?>">Edit</a></li>
                                                         <li><hr class="dropdown-divider"></li>
-                                                        <li><button type="button" class="dropdown-item text-danger" onclick="deleteAccount(<?= (int) $parentRow['id'] ?>)">Delete</button></li>
+                                                        <li><button type="button" class="dropdown-item text-danger" onclick="deleteAccount(<?= $parentId ?>)">Delete</button></li>
                                                     <?php endif; ?>
                                                 </ul>
                                             </div>
@@ -1230,6 +1726,105 @@ include __DIR__ . '/includes/header.php';
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+                        </div>
+
+                        <div class="ray-accounts-mobile" aria-label="Accounts list">
+                            <?php foreach ($parentAccounts as $parentRow):
+                                $parentId = (int) $parentRow['id'];
+                                $isSelected = $parentId === $selectedId;
+                                [$iconTone, $iconClass] = $rayResolveParentIcon($parentRow);
+                                $rowChildren = function_exists('balances_fetch_child_rows_for_parent')
+                                    ? balances_fetch_child_rows_for_parent($pdo, $parentId, $accountRowsById, true)
+                                    : ($childrenByParent[$parentId] ?? []);
+                                $parentMeta = $mobileParentMeta[$parentId] ?? ['assignable' => []];
+                                $hasAssignable = !empty($parentMeta['assignable']);
+                                $descText = trim((string) ($parentRow['description'] ?? ''));
+                            ?>
+                            <div class="ray-m-item">
+                                <article class="ray-m-card<?= $isSelected ? ' is-selected' : '' ?>"
+                                         data-parent-id="<?= $parentId ?>"
+                                         onclick="rayParentRowClick(event, this)">
+                                    <div class="ray-m-card-main">
+                                        <span class="ray-m-icon ray-m-icon--<?= htmlspecialchars($iconTone, ENT_QUOTES, 'UTF-8') ?>" aria-hidden="true">
+                                            <i class="fas <?= htmlspecialchars($iconClass, ENT_QUOTES, 'UTF-8') ?>"></i>
+                                        </span>
+                                        <div class="ray-m-copy">
+                                            <div class="ray-m-title">
+                                                <span class="ray-m-name"><?= htmlspecialchars($parentRow['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                <?php if (!empty($parentRow['is_system'])): ?>
+                                                    <i class="fas fa-lock ray-m-lock" title="System Account" aria-label="System account"></i>
+                                                <?php endif; ?>
+                                                <span class="ray-badge ray-badge-code"><?= htmlspecialchars($parentRow['code'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                <span class="ray-badge <?= $parentRow['normal_balance_short'] === 'Cr' ? 'ray-badge-cr' : 'ray-badge-dr' ?>"><?= htmlspecialchars($parentRow['normal_balance_short'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            </div>
+                                            <?php if ($descText !== ''): ?>
+                                                <p class="ray-m-desc"><?= htmlspecialchars($descText, ENT_QUOTES, 'UTF-8') ?></p>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </article>
+                                <div class="ray-m-accordion" id="ray-accordion-<?= $parentId ?>" data-parent-id="<?= $parentId ?>">
+                                    <div class="ray-m-accordion-panel">
+                                        <?php if ($canManage): ?>
+                                            <div class="ray-m-accordion-actions">
+                                                <?php if ($hasAssignable): ?>
+                                                    <button type="button" class="ray-btn-new ray-btn-new-account" onclick="event.stopPropagation(); openAssignForParent(<?= $parentId ?>)">
+                                                        <i class="fas fa-link text-xs"></i> Assign existing
+                                                    </button>
+                                                <?php endif; ?>
+                                                <button type="button" class="ray-btn-new ray-btn-new-account" onclick="event.stopPropagation(); openSubForParent(<?= $parentId ?>)">
+                                                    <i class="fas fa-plus text-xs"></i> New Sub-account
+                                                </button>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (empty($rowChildren)): ?>
+                                            <div class="ray-m-sub-empty">No sub-accounts yet</div>
+                                        <?php else: ?>
+                                            <div class="ray-m-sub-list">
+                                                <?php foreach ($rowChildren as $childRow):
+                                                    $childViewUrl = 'view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => (int) $childRow['id']]);
+                                                    $childEditUrl = 'coa_edit.php?id=' . (int) $childRow['id'] . ($moduleParam !== '' ? '&module=' . rawurlencode($moduleParam) : '');
+                                                ?>
+                                                <div class="ray-m-sub-item">
+                                                    <div class="ray-m-sub-copy">
+                                                        <div class="ray-m-title">
+                                                            <span class="ray-m-name"><?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                            <?php if (!empty($childRow['is_system'])): ?>
+                                                                <i class="fas fa-lock ray-m-lock" title="System Account"></i>
+                                                            <?php endif; ?>
+                                                            <span class="ray-badge ray-badge-code"><?= htmlspecialchars($childRow['code'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                            <span class="ray-badge <?= $childRow['normal_balance_short'] === 'Cr' ? 'ray-badge-cr' : 'ray-badge-dr' ?>"><?= htmlspecialchars($childRow['normal_balance_short'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="ray-m-sub-actions">
+                                                        <?php if (!empty($childRow['is_system'])): ?>
+                                                            <span class="text-xs text-gray-400 font-medium">System</span>
+                                                        <?php else: ?>
+                                                            <button type="button"
+                                                                    class="ray-action-btn ray-m-sub-menu-btn"
+                                                                    aria-haspopup="menu"
+                                                                    aria-expanded="false"
+                                                                    aria-label="Sub-account actions"
+                                                                    data-view-url="<?= htmlspecialchars($childViewUrl, ENT_QUOTES, 'UTF-8') ?>"
+                                                                    data-edit-url="<?= isAdmin() ? htmlspecialchars($childEditUrl, ENT_QUOTES, 'UTF-8') : '' ?>"
+                                                                    data-child-id="<?= (int) $childRow['id'] ?>"
+                                                                    data-parent-id="<?= $parentId ?>"
+                                                                    data-can-edit="<?= isAdmin() ? '1' : '0' ?>"
+                                                                    data-can-manage="<?= $canManage ? '1' : '0' ?>"
+                                                                    data-can-delete="<?= isAdmin() ? '1' : '0' ?>">
+                                                                <i class="fas fa-ellipsis-v"></i>
+                                                            </button>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
                     <?php endif; ?>
                 </div>
             </section>
@@ -1237,6 +1832,9 @@ include __DIR__ . '/includes/header.php';
             <!-- Right: Sub-accounts -->
             <?php if ($selectedParent): ?>
             <div class="ray-detail-column" aria-label="Sub-accounts">
+                <a class="ray-mobile-back" href="<?= htmlspecialchars($accountsListUrl, ENT_QUOTES, 'UTF-8') ?>">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i> All accounts
+                </a>
                 <div class="ray-detail-head">
                     <div>
                         <div class="ray-detail-title">
@@ -1421,15 +2019,16 @@ include __DIR__ . '/includes/header.php';
 </div>
 <?php endif; ?>
 
-<?php if ($selectedParent && $canManage): ?>
+<?php if ($canManage): ?>
 <div class="sub-modal-backdrop" id="subAccountModal" role="presentation">
     <div class="sub-modal" role="dialog" aria-modal="true" aria-labelledby="subAccountModalTitle">
-        <form method="POST" action="">
+        <form method="POST" action="" id="subAccountForm">
             <input type="hidden" name="action" value="create_sub_account">
-            <input type="hidden" name="parent_id" value="<?= (int) $selectedParent['id'] ?>">
+            <input type="hidden" name="parent_id" id="subParentId" value="<?= (int) ($selectedParent['id'] ?? 0) ?>">
             <input type="hidden" name="module" value="<?= htmlspecialchars($moduleParam, ENT_QUOTES, 'UTF-8') ?>">
+            <input type="hidden" name="selected" id="subSelectedId" value="<?= (int) ($selectedParent['id'] ?? $selectedId) ?>">
             <div class="sub-modal-head">
-                <h2 id="subAccountModalTitle">Add New Sub-account to <?= htmlspecialchars($selectedParent['name'], ENT_QUOTES, 'UTF-8') ?></h2>
+                <h2 id="subAccountModalTitle">Add New Sub-account</h2>
                 <button type="button" class="sub-modal-close" id="closeSubAccountModal" aria-label="Close">&times;</button>
             </div>
             <div class="sub-modal-label-row">
@@ -1444,19 +2043,19 @@ include __DIR__ . '/includes/header.php';
                    required
                    placeholder="Enter sub-account name"
                    autocomplete="off">
-            <?php if ($selectedParentShowsPaymentType): ?>
-            <div class="sub-modal-label-row" style="margin-top:14px;">
-                <label for="subPaymentWalletType">Payment type</label>
+            <div id="subPaymentTypeWrap"<?= $selectedParentShowsPaymentType ? '' : ' hidden' ?>>
+                <div class="sub-modal-label-row" style="margin-top:14px;">
+                    <label for="subPaymentWalletType">Payment type</label>
+                </div>
+                <select class="sub-modal-select" id="subPaymentWalletType" name="payment_wallet_type"<?= $selectedParentShowsPaymentType ? ' required' : '' ?>>
+                    <?php foreach (balances_payment_wallet_types() as $walletSlug => $walletLabel): ?>
+                        <option value="<?= htmlspecialchars($walletSlug, ENT_QUOTES, 'UTF-8') ?>"<?= $walletSlug === $selectedParentDefaultPaymentType ? ' selected' : '' ?>>
+                            <?= htmlspecialchars($walletLabel, ENT_QUOTES, 'UTF-8') ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="sub-modal-hint">How this wallet is treated on expenses and transfers (cash, bank, or mobile money).</p>
             </div>
-            <select class="sub-modal-select" id="subPaymentWalletType" name="payment_wallet_type" required>
-                <?php foreach (balances_payment_wallet_types() as $walletSlug => $walletLabel): ?>
-                    <option value="<?= htmlspecialchars($walletSlug, ENT_QUOTES, 'UTF-8') ?>"<?= $walletSlug === $selectedParentDefaultPaymentType ? ' selected' : '' ?>>
-                        <?= htmlspecialchars($walletLabel, ENT_QUOTES, 'UTF-8') ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <p class="sub-modal-hint">How this wallet is treated on expenses and transfers (cash, bank, or mobile money).</p>
-            <?php endif; ?>
             <div class="sub-modal-actions">
                 <button type="button" class="sub-modal-btn sub-modal-btn-cancel" id="cancelSubAccountModal">Cancel</button>
                 <button type="submit" class="sub-modal-btn sub-modal-btn-save">Save</button>
@@ -1464,17 +2063,16 @@ include __DIR__ . '/includes/header.php';
         </form>
     </div>
 </div>
-<?php endif; ?>
 
-<?php if ($selectedParent && $canManage && !empty($assignableAccounts)): ?>
 <div class="sub-modal-backdrop" id="assignAccountModal" role="presentation">
     <div class="sub-modal" role="dialog" aria-modal="true" aria-labelledby="assignAccountModalTitle">
-        <form method="POST" action="">
+        <form method="POST" action="" id="assignAccountForm">
             <input type="hidden" name="action" value="assign_existing_sub_account">
-            <input type="hidden" name="parent_id" value="<?= (int) $selectedParent['id'] ?>">
+            <input type="hidden" name="parent_id" id="assignParentId" value="<?= (int) ($selectedParent['id'] ?? 0) ?>">
             <input type="hidden" name="module" value="<?= htmlspecialchars($moduleParam, ENT_QUOTES, 'UTF-8') ?>">
+            <input type="hidden" name="selected" id="assignSelectedId" value="<?= (int) ($selectedParent['id'] ?? $selectedId) ?>">
             <div class="sub-modal-head">
-                <h2 id="assignAccountModalTitle">Assign existing account to <?= htmlspecialchars($selectedParent['name'], ENT_QUOTES, 'UTF-8') ?></h2>
+                <h2 id="assignAccountModalTitle">Assign existing account</h2>
                 <button type="button" class="sub-modal-close" id="closeAssignAccountModal" aria-label="Close">&times;</button>
             </div>
             <div class="sub-modal-label-row">
@@ -1511,6 +2109,8 @@ include __DIR__ . '/includes/header.php';
     <input type="hidden" name="module" value="<?= htmlspecialchars($moduleParam, ENT_QUOTES, 'UTF-8') ?>">
 </form>
 
+<div id="rayMobileSubMenu" class="ray-m-floating-menu" role="menu" aria-hidden="true" hidden></div>
+
 <form id="deleteForm" method="POST" class="d-none">
     <input type="hidden" name="action" id="deleteAction" value="deactivate">
     <input type="hidden" name="id" id="deleteId">
@@ -1529,6 +2129,172 @@ include __DIR__ . '/includes/header.php';
 
 <script>
 var moveParentTargets = <?= json_encode($moveParentTargets, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+var mobileParentMeta = <?= json_encode($mobileParentMeta, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+function rayIsMobileAccounts() {
+    return window.matchMedia('(max-width: 767.98px)').matches;
+}
+
+function rayParentRowClick(event, row) {
+    if (!row) return;
+    if (rayIsMobileAccounts()) {
+        if (event) event.preventDefault();
+        rayToggleParentAccordion(row);
+        return;
+    }
+    var url = row.getAttribute('data-parent-url');
+    if (url) window.location.href = url;
+}
+
+function rayCloseMobileSubMenu() {
+    var menu = document.getElementById('rayMobileSubMenu');
+    if (!menu) return;
+    menu.classList.remove('is-open');
+    menu.setAttribute('hidden', 'hidden');
+    menu.setAttribute('aria-hidden', 'true');
+    menu.innerHTML = '';
+    document.querySelectorAll('.ray-m-sub-menu-btn[aria-expanded="true"]').forEach(function (btn) {
+        btn.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function rayOpenMobileSubMenu(btn) {
+    var menu = document.getElementById('rayMobileSubMenu');
+    if (!menu || !btn) return;
+
+    var viewUrl = btn.getAttribute('data-view-url') || '';
+    var editUrl = btn.getAttribute('data-edit-url') || '';
+    var childId = parseInt(btn.getAttribute('data-child-id') || '0', 10);
+    var parentId = parseInt(btn.getAttribute('data-parent-id') || '0', 10);
+    var canEdit = btn.getAttribute('data-can-edit') === '1';
+    var canManage = btn.getAttribute('data-can-manage') === '1';
+    var canDelete = btn.getAttribute('data-can-delete') === '1';
+
+    var html = '';
+    if (viewUrl) {
+        html += '<a role="menuitem" href="' + viewUrl.replace(/"/g, '&quot;') + '">View</a>';
+    }
+    if (canEdit && editUrl) {
+        html += '<a role="menuitem" href="' + editUrl.replace(/"/g, '&quot;') + '">Edit</a>';
+    }
+    if (canManage && childId > 0 && parentId > 0) {
+        html += '<button type="button" role="menuitem" data-ray-action="unassign" data-child-id="' + childId + '" data-parent-id="' + parentId + '">Move to main accounts</button>';
+    }
+    if (canDelete && childId > 0) {
+        html += '<div class="ray-m-menu-sep" role="separator"></div>';
+        html += '<button type="button" role="menuitem" class="is-danger" data-ray-action="delete" data-child-id="' + childId + '">Delete</button>';
+    }
+    if (!html) return;
+
+    rayCloseMobileSubMenu();
+    menu.innerHTML = html;
+    menu.removeAttribute('hidden');
+    menu.setAttribute('aria-hidden', 'false');
+    menu.classList.add('is-open');
+    btn.setAttribute('aria-expanded', 'true');
+
+    var rect = btn.getBoundingClientRect();
+    var menuWidth = 200;
+    var left = Math.min(window.innerWidth - menuWidth - 12, Math.max(12, rect.right - menuWidth));
+    menu.style.left = left + 'px';
+    menu.style.top = '0px';
+    menu.style.visibility = 'hidden';
+    var menuHeight = menu.offsetHeight || 160;
+    var top = rect.bottom + 6;
+    if (top + menuHeight > window.innerHeight - 12) {
+        top = Math.max(12, rect.top - menuHeight - 6);
+    }
+    menu.style.top = top + 'px';
+    menu.style.visibility = '';
+}
+
+function rayToggleParentAccordion(row) {
+    var parentId = row.getAttribute('data-parent-id');
+    if (!parentId) return;
+    var panel = document.getElementById('ray-accordion-' + parentId);
+    var willOpen = panel && !panel.classList.contains('is-open');
+
+    rayCloseMobileSubMenu();
+
+    document.querySelectorAll('.ray-m-card.is-open, .ray-m-card.is-selected').forEach(function (el) {
+        el.classList.remove('is-open', 'is-selected');
+    });
+    document.querySelectorAll('.ray-m-accordion.is-open').forEach(function (el) {
+        el.classList.remove('is-open');
+    });
+
+    if (willOpen && panel) {
+        row.classList.add('is-open', 'is-selected');
+        panel.classList.add('is-open');
+        try {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (e) {}
+    }
+}
+
+function openSubForParent(parentId) {
+    var meta = mobileParentMeta[String(parentId)] || mobileParentMeta[parentId] || {};
+    var modal = document.getElementById('subAccountModal');
+    var parentInput = document.getElementById('subParentId');
+    var selectedInput = document.getElementById('subSelectedId');
+    var title = document.getElementById('subAccountModalTitle');
+    var payWrap = document.getElementById('subPaymentTypeWrap');
+    var paySelect = document.getElementById('subPaymentWalletType');
+    if (!modal || !parentInput) return;
+
+    parentInput.value = String(parentId);
+    if (selectedInput) selectedInput.value = String(parentId);
+    if (title) {
+        title.textContent = 'Add New Sub-account to ' + (meta.name || 'account');
+    }
+    if (payWrap && paySelect) {
+        if (meta.shows_payment_type) {
+            payWrap.hidden = false;
+            paySelect.required = true;
+            if (meta.default_payment_type) {
+                paySelect.value = meta.default_payment_type;
+            }
+        } else {
+            payWrap.hidden = true;
+            paySelect.required = false;
+        }
+    }
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    var nameInput = document.getElementById('subAccountName');
+    var nameCount = document.getElementById('subNameCount');
+    if (nameInput) {
+        nameInput.value = '';
+        if (nameCount) nameCount.textContent = '0';
+        setTimeout(function () { nameInput.focus(); }, 50);
+    }
+}
+
+function openAssignForParent(parentId) {
+    var meta = mobileParentMeta[String(parentId)] || mobileParentMeta[parentId] || {};
+    var modal = document.getElementById('assignAccountModal');
+    var parentInput = document.getElementById('assignParentId');
+    var selectedInput = document.getElementById('assignSelectedId');
+    var title = document.getElementById('assignAccountModalTitle');
+    var select = document.getElementById('assignAccountId');
+    if (!modal || !parentInput || !select) return;
+
+    parentInput.value = String(parentId);
+    if (selectedInput) selectedInput.value = String(parentId);
+    if (title) {
+        title.textContent = 'Assign existing account to ' + (meta.name || 'account');
+    }
+    select.innerHTML = '<option value="">Select an account</option>';
+    (meta.assignable || []).forEach(function (opt) {
+        var option = document.createElement('option');
+        option.value = String(opt.id);
+        option.textContent = opt.label;
+        select.appendChild(option);
+    });
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(function () { select.focus(); }, 50);
+}
 
 function openMoveParentModal(sourceId) {
     var modal = document.getElementById('moveParentModal');
@@ -1692,6 +2458,11 @@ document.addEventListener('DOMContentLoaded', function () {
     var subNameCount = document.getElementById('subNameCount');
 
     function openSubModal() {
+        var selectedParentId = <?= (int) ($selectedParent['id'] ?? $selectedId) ?>;
+        if (selectedParentId > 0) {
+            openSubForParent(selectedParentId);
+            return;
+        }
         if (!subModal) return;
         subModal.classList.add('is-open');
         document.body.style.overflow = 'hidden';
@@ -1729,6 +2500,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var assignModal = document.getElementById('assignAccountModal');
     function openAssignModal() {
+        var selectedParentId = <?= (int) ($selectedParent['id'] ?? $selectedId) ?>;
+        if (selectedParentId > 0) {
+            openAssignForParent(selectedParentId);
+            return;
+        }
         if (!assignModal) return;
         assignModal.classList.add('is-open');
         document.body.style.overflow = 'hidden';
@@ -1794,6 +2570,56 @@ document.addEventListener('DOMContentLoaded', function () {
         subBulkDeleteBtn.addEventListener('click', deleteSelectedSubAccounts);
     }
     updateSubBulkBar();
+
+    // Mobile: if URL has an explicit selection, open that accordion on load.
+    if (rayIsMobileAccounts()) {
+        var explicitSelected = <?= $selectedExplicit ? 'true' : 'false' ?>;
+        var selectedId = <?= (int) $selectedId ?>;
+        if (explicitSelected && selectedId > 0) {
+            var selectedRow = document.querySelector('.ray-m-card[data-parent-id="' + selectedId + '"]');
+            if (selectedRow) rayToggleParentAccordion(selectedRow);
+        }
+    }
+
+    // One shared floating ⋮ menu (avoids stacked Bootstrap dropdowns).
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('.ray-m-sub-menu-btn') : null;
+        var menu = document.getElementById('rayMobileSubMenu');
+        var inMenu = menu && menu.contains(e.target);
+
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (btn.getAttribute('aria-expanded') === 'true') {
+                rayCloseMobileSubMenu();
+            } else {
+                rayOpenMobileSubMenu(btn);
+            }
+            return;
+        }
+
+        if (inMenu) {
+            var actionBtn = e.target.closest ? e.target.closest('[data-ray-action]') : null;
+            if (actionBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                var action = actionBtn.getAttribute('data-ray-action');
+                var childId = parseInt(actionBtn.getAttribute('data-child-id') || '0', 10);
+                var parentId = parseInt(actionBtn.getAttribute('data-parent-id') || '0', 10);
+                rayCloseMobileSubMenu();
+                if (action === 'unassign' && childId > 0 && parentId > 0) {
+                    unassignSubAccount(childId, parentId);
+                } else if (action === 'delete' && childId > 0) {
+                    deleteAccount(childId);
+                }
+            }
+            return;
+        }
+
+        rayCloseMobileSubMenu();
+    });
+    window.addEventListener('scroll', rayCloseMobileSubMenu, { passive: true });
+    window.addEventListener('resize', rayCloseMobileSubMenu);
 });
 </script>
 

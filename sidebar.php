@@ -307,6 +307,9 @@ if (!function_exists('sidebar_normalize_icon')) {
         if ($icon === 'transactions-coin' || $icon === 'tx-exchange') {
             return 'transactions-coin';
         }
+        if ($icon === 'transfer-bag' || $icon === 'internal-transfer') {
+            return 'transfer-bag';
+        }
 
         return $icon;
     }
@@ -334,6 +337,14 @@ if (!function_exists('sidebar_render_nav_icon')) {
                 'UTF-8'
             );
             return '<img class="sidebar-nav-icon sidebar-nav-icon--transactions" src="' . $src . '" alt="" width="22" height="22" aria-hidden="true">';
+        }
+        if ($icon === 'transfer-bag' || $icon === 'internal-transfer') {
+            $src = htmlspecialchars(
+                function_exists('app_url') ? app_url('assets/icons/transfer.png') : '/assets/icons/transfer.png',
+                ENT_QUOTES,
+                'UTF-8'
+            );
+            return '<img class="sidebar-nav-icon sidebar-nav-icon--transfer" src="' . $src . '" alt="" width="22" height="22" aria-hidden="true">';
         }
         if (strpos($icon, 'fa-') !== false || str_contains($icon, ' ')) {
             return '<i class="' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '" aria-hidden="true"></i>';
@@ -652,7 +663,7 @@ switch ($active_module) {
         addItem($menuItems, 'dashboard', 'Dashboard', 'layout-wtf', $prefix . 'modules/balances/index.php');
         addItem($menuItems, 'accounts', 'Account', 'sack-dollar', $prefix . 'modules/balances/accounts.php');
         addItem($menuItems, 'transactions', 'Transactions', 'transactions-coin', $prefix . 'modules/balances/transactions.php');
-        addItem($menuItems, 'transfer', 'Internal Transfer', 'arrow-left-right', $prefix . 'modules/balances/transfer.php');
+        addItem($menuItems, 'transfer', 'Internal Transfer', 'transfer-bag', $prefix . 'modules/balances/transfer.php');
         break;
 
     case 'payroll':
@@ -1400,7 +1411,8 @@ if (!isset($_GET['print'])) {
         flex-shrink: 0;
     }
     .nav-pills .nav-link .sidebar-nav-icon--money-bag,
-    .nav-pills .nav-link .sidebar-nav-icon--transactions {
+    .nav-pills .nav-link .sidebar-nav-icon--transactions,
+    .nav-pills .nav-link .sidebar-nav-icon--transfer {
         width: 1.45rem !important;
         height: 1.45rem !important;
         min-width: 26px;

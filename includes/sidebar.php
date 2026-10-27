@@ -455,7 +455,7 @@ switch ($active_module) {
      case 'balances':
         addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $prefix . 'modules/balances/index.php');
         addItem($menuItems, 'account-parent', 'Account', 'sack-dollar', $prefix . 'modules/balances/accounts.php');
-        addItem($menuItems, 'transfer', 'Transfer', 'arrow-right', $prefix . 'modules/balances/transfer.php');
+        addItem($menuItems, 'transfer', 'Transfer', 'transfer-bag', $prefix . 'modules/balances/transfer.php');
         addItem($menuItems, 'transactions', 'History', 'transactions-coin', $prefix . 'modules/balances/transactions.php');
         break;
 
@@ -678,8 +678,14 @@ if (!function_exists('sidebar_link_is_current')) {
                 ENT_QUOTES,
                 'UTF-8'
             );
+            $transferSrc = htmlspecialchars(
+                function_exists('app_url') ? app_url('assets/icons/transfer.png') : '/assets/icons/transfer.png',
+                ENT_QUOTES,
+                'UTF-8'
+            );
             $sackDollarSvg = '<img class="sidebar-nav-icon sidebar-nav-icon--money-bag me-2" src="' . $moneyBagSrc . '" alt="" width="22" height="22" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" aria-hidden="true">';
             $transactionsSvg = '<img class="sidebar-nav-icon sidebar-nav-icon--transactions me-2" src="' . $transactionsSrc . '" alt="" width="22" height="22" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" aria-hidden="true">';
+            $transferSvg = '<img class="sidebar-nav-icon sidebar-nav-icon--transfer me-2" src="' . $transferSrc . '" alt="" width="22" height="22" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" aria-hidden="true">';
         ?>
         <?php
             $isCategoryHub = ($item['id'] ?? '') === 'account-category' && !empty($item['children']);
@@ -695,6 +701,8 @@ if (!function_exists('sidebar_link_is_current')) {
                 <?= $sackDollarSvg ?>
                 <?php elseif ($iconName === 'transactions-coin' || $iconName === 'tx-exchange'): ?>
                 <?= $transactionsSvg ?>
+                <?php elseif ($iconName === 'transfer-bag' || $iconName === 'internal-transfer'): ?>
+                <?= $transferSvg ?>
                 <?php else: ?>
                 <i class="<?php echo $iconClass; ?> me-2" style="width: 20px; text-align: center;"></i>
                 <?php endif; ?>

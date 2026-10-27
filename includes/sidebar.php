@@ -456,7 +456,7 @@ switch ($active_module) {
         addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $prefix . 'modules/balances/index.php');
         addItem($menuItems, 'account-parent', 'Account', 'sack-dollar', $prefix . 'modules/balances/accounts.php');
         addItem($menuItems, 'transfer', 'Transfer', 'arrow-right', $prefix . 'modules/balances/transfer.php');
-        addItem($menuItems, 'transactions', 'History', 'list', $prefix . 'modules/balances/transactions.php');
+        addItem($menuItems, 'transactions', 'History', 'transactions-coin', $prefix . 'modules/balances/transactions.php');
         break;
 
      case 'expenses':
@@ -673,7 +673,13 @@ if (!function_exists('sidebar_link_is_current')) {
                 ENT_QUOTES,
                 'UTF-8'
             );
+            $transactionsSrc = htmlspecialchars(
+                function_exists('app_url') ? app_url('assets/icons/transactions.png') : '/assets/icons/transactions.png',
+                ENT_QUOTES,
+                'UTF-8'
+            );
             $sackDollarSvg = '<img class="sidebar-nav-icon sidebar-nav-icon--money-bag me-2" src="' . $moneyBagSrc . '" alt="" width="22" height="22" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" aria-hidden="true">';
+            $transactionsSvg = '<img class="sidebar-nav-icon sidebar-nav-icon--transactions me-2" src="' . $transactionsSrc . '" alt="" width="22" height="22" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" aria-hidden="true">';
         ?>
         <?php
             $isCategoryHub = ($item['id'] ?? '') === 'account-category' && !empty($item['children']);
@@ -687,6 +693,8 @@ if (!function_exists('sidebar_link_is_current')) {
                <?= $isCategoryHub ? 'onclick="toggleSidebarSubmenu(this); return false;"' : '' ?>>
                 <?php if ($iconName === 'sack-dollar' || $iconName === 'money-bag'): ?>
                 <?= $sackDollarSvg ?>
+                <?php elseif ($iconName === 'transactions-coin' || $iconName === 'tx-exchange'): ?>
+                <?= $transactionsSvg ?>
                 <?php else: ?>
                 <i class="<?php echo $iconClass; ?> me-2" style="width: 20px; text-align: center;"></i>
                 <?php endif; ?>

@@ -304,6 +304,9 @@ if (!function_exists('sidebar_normalize_icon')) {
         if ($icon === 'money-bag' || $icon === 'sack-dollar') {
             return 'sack-dollar';
         }
+        if ($icon === 'transactions-coin' || $icon === 'tx-exchange') {
+            return 'transactions-coin';
+        }
 
         return $icon;
     }
@@ -323,6 +326,14 @@ if (!function_exists('sidebar_render_nav_icon')) {
                 'UTF-8'
             );
             return '<img class="sidebar-nav-icon sidebar-nav-icon--money-bag" src="' . $src . '" alt="" width="22" height="22" aria-hidden="true">';
+        }
+        if ($icon === 'transactions-coin' || $icon === 'tx-exchange') {
+            $src = htmlspecialchars(
+                function_exists('app_url') ? app_url('assets/icons/transactions.png') : '/assets/icons/transactions.png',
+                ENT_QUOTES,
+                'UTF-8'
+            );
+            return '<img class="sidebar-nav-icon sidebar-nav-icon--transactions" src="' . $src . '" alt="" width="22" height="22" aria-hidden="true">';
         }
         if (strpos($icon, 'fa-') !== false || str_contains($icon, ' ')) {
             return '<i class="' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '" aria-hidden="true"></i>';
@@ -640,7 +651,7 @@ switch ($active_module) {
         }
         addItem($menuItems, 'dashboard', 'Dashboard', 'layout-wtf', $prefix . 'modules/balances/index.php');
         addItem($menuItems, 'accounts', 'Account', 'sack-dollar', $prefix . 'modules/balances/accounts.php');
-        addItem($menuItems, 'transactions', 'Transactions', 'list-check', $prefix . 'modules/balances/transactions.php');
+        addItem($menuItems, 'transactions', 'Transactions', 'transactions-coin', $prefix . 'modules/balances/transactions.php');
         addItem($menuItems, 'transfer', 'Internal Transfer', 'arrow-left-right', $prefix . 'modules/balances/transfer.php');
         break;
 
@@ -1388,7 +1399,8 @@ if (!isset($_GET['print'])) {
         vertical-align: -0.15em;
         flex-shrink: 0;
     }
-    .nav-pills .nav-link .sidebar-nav-icon--money-bag {
+    .nav-pills .nav-link .sidebar-nav-icon--money-bag,
+    .nav-pills .nav-link .sidebar-nav-icon--transactions {
         width: 1.45rem !important;
         height: 1.45rem !important;
         min-width: 26px;

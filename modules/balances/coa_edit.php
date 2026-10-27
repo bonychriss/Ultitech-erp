@@ -746,28 +746,28 @@ try {
         background: rgba(2, 6, 23, 0.75);
     }
     html[data-theme="dark"] .coa-simple-modal {
-        background: #1e293b;
-        border: 1px solid #334155;
+        background: #111b21;
+        border: 1px solid #2a3942;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
-        color: #e2e8f0;
+        color: #e9edef;
     }
     html[data-theme="dark"] .coa-simple-head h1 {
-        color: #f8fafc !important;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] .coa-simple-close {
-        color: #94a3b8;
+        color: #8696a0;
     }
     html[data-theme="dark"] .coa-simple-close:hover {
-        color: #e2e8f0;
+        color: #e9edef;
     }
     html[data-theme="dark"] .coa-field label,
     html[data-theme="dark"] .coa-field-top label {
-        color: #f8fafc !important;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] .coa-char-count,
     html[data-theme="dark"] .coa-image-hint,
     html[data-theme="dark"] .coa-parent-banner-hint {
-        color: #94a3b8 !important;
+        color: #8696a0 !important;
     }
     html[data-theme="dark"] .coa-simple-alert {
         background: rgba(127, 29, 29, 0.35);
@@ -785,25 +785,25 @@ try {
     html[data-theme="dark"] .coa-input,
     html[data-theme="dark"] .coa-select,
     html[data-theme="dark"] .currency-picker-trigger {
-        background-color: #0f172a;
-        border-color: #475569;
-        color: #f8fafc !important;
+        background-color: #0b141a;
+        border-color: #3b4a54;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] .coa-select {
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E");
-        background-color: #0f172a;
+        background-color: #0b141a;
         background-repeat: no-repeat;
         background-position: right 12px center;
     }
     html[data-theme="dark"] .currency-picker-trigger {
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E");
-        background-color: #0f172a;
+        background-color: #0b141a;
         background-repeat: no-repeat;
         background-position: right 10px center;
     }
     html[data-theme="dark"] .coa-input::placeholder,
     html[data-theme="dark"] .coa-select:invalid {
-        color: #64748b !important;
+        color: #8696a0 !important;
     }
     html[data-theme="dark"] .coa-input:focus,
     html[data-theme="dark"] .coa-select:focus,
@@ -812,50 +812,50 @@ try {
         box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
     }
     html[data-theme="dark"] .coa-select option {
-        color: #f8fafc;
-        background: #1e293b;
+        color: #e9edef;
+        background: #111b21;
     }
     html[data-theme="dark"] .coa-field-locked .coa-select,
     html[data-theme="dark"] .coa-field-locked .currency-picker-trigger {
-        background-color: #0f172a;
-        color: #94a3b8 !important;
+        background-color: #0b141a;
+        color: #8696a0 !important;
         opacity: 0.85;
     }
     html[data-theme="dark"] .coa-image-thumb {
-        background: #0f172a;
-        border-color: #475569;
+        background: #0b141a;
+        border-color: #3b4a54;
         color: #93c5fd;
     }
     html[data-theme="dark"] .coa-image-thumb.has-image {
-        border-color: #64748b;
+        border-color: #8696a0;
     }
     html[data-theme="dark"] .currency-picker-label .code {
-        color: #f8fafc !important;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] .currency-picker-label .name,
     html[data-theme="dark"] .currency-picker-option .name {
-        color: #94a3b8 !important;
+        color: #8696a0 !important;
     }
     html[data-theme="dark"] .currency-picker-menu {
-        background: #0f172a;
-        border-color: #475569;
+        background: #0b141a;
+        border-color: #3b4a54;
         box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
     }
     html[data-theme="dark"] .currency-picker-option .code {
-        color: #f8fafc !important;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] .currency-picker-option:hover,
     html[data-theme="dark"] .currency-picker-option.is-selected {
-        background: #334155;
+        background: #2a3942;
     }
     html[data-theme="dark"] .coa-btn-cancel {
-        background: #334155;
-        border-color: #475569;
-        color: #e2e8f0 !important;
+        background: #2a3942;
+        border-color: #3b4a54;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] .coa-btn-cancel:hover {
-        background: #475569;
-        color: #f8fafc !important;
+        background: #3b4a54;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] .coa-btn-save,
     html[data-theme="dark"] .coa-btn-save:hover {

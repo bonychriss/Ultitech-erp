@@ -420,7 +420,7 @@ export default function DashboardPage() {
                           <span className="ld-recent-desc-cell">
                             <span
                               className={`ld-recent-ico${tx.type === 'debit' ? ' is-out' : ' is-in'}`}
-                              aria-label={tx.typeLabel}
+                              aria-label={tx.typeLabel || (tx.type === 'debit' ? 'Money out' : 'Money in')}
                               title={tx.type === 'debit' ? 'Out' : 'In'}
                             >
                               {tx.type === 'debit' ? (
@@ -488,7 +488,7 @@ export default function DashboardPage() {
                             <span className="ld-recent-desc-cell">
                               <span
                                 className={`ld-recent-ico${tx.type === 'debit' ? ' is-out' : ' is-in'}`}
-                                aria-label={tx.typeLabel}
+                                aria-label={tx.typeLabel || (tx.type === 'debit' ? 'Money out' : 'Money in')}
                                 title={tx.type === 'debit' ? 'Out' : 'In'}
                               >
                                 {tx.type === 'debit' ? (

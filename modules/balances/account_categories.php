@@ -135,6 +135,46 @@ include __DIR__ . '/includes/header.php';
         .page-shell { padding-left: 0; }
         .editor-topbar { flex-direction: column; align-items: flex-start; }
     }
+
+    html[data-theme="dark"] body.page-balances {
+        background: #0b141a !important;
+        color: #e9edef !important;
+    }
+    html[data-theme="dark"] body.page-balances .cat-list-title {
+        color: #e9edef !important;
+    }
+    html[data-theme="dark"] body.page-balances .editor-topbar {
+        border-bottom-color: #2a3942 !important;
+    }
+    html[data-theme="dark"] body.page-balances .cat-search {
+        background: #0b141a;
+        border-color: #2a3942;
+        color: #e9edef;
+    }
+    html[data-theme="dark"] body.page-balances .cat-table-card {
+        background: #111b21;
+        border-color: #2a3942;
+    }
+    html[data-theme="dark"] body.page-balances .cat-table th,
+    html[data-theme="dark"] body.page-balances .cat-table td {
+        border-bottom-color: #2a3942;
+    }
+    html[data-theme="dark"] body.page-balances .cat-table th {
+        background: #0b141a;
+        color: #8696a0;
+    }
+    html[data-theme="dark"] body.page-balances .cat-table td {
+        color: #e9edef;
+    }
+    html[data-theme="dark"] body.page-balances .cat-action-btn {
+        background: #111b21;
+        border-color: #2a3942;
+        color: #8696a0;
+    }
+    html[data-theme="dark"] body.page-balances .pill-inactive {
+        background: #202c33;
+        color: #8696a0;
+    }
 </style>
 
 <div class="main-content-wrapper">

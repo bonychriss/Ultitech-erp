@@ -149,18 +149,54 @@ html[data-theme="dark"] body.page-tl-desk.dashboard .layout-main-wrapper,
 html[data-theme="dark"] body.page-tl-desk.dashboard .layout-main-wrapper > .flex-grow-1,
 html[data-theme="dark"] body.page-tl-desk main.main-content.tl-react-root,
 html[data-theme="dark"] body.page-tl-desk main.main-content.tl-react-root #root {
-    background: #000000 !important;
-    background-color: #000000 !important;
-    color: #f5f5f5 !important;
+    background: #0b141a !important;
+    background-color: #0b141a !important;
+    color: #e9edef !important;
 }
 
 html[data-theme="dark"] body.page-tl-desk .employee-header.employee-header--tl-desk {
-    background: #000000 !important;
-    border-bottom-color: #1a1a1a !important;
+    background: #0b141a !important;
+    border-bottom-color: #2a3942 !important;
 }
 
 html[data-theme="dark"] body.page-tl-desk .employee-header--tl-desk .employee-header-page-title {
-    color: #f5f5f5 !important;
+    color: #e9edef !important;
+}
+
+/* Match sidebar to WhatsApp teal-night page (not global slate-blue). */
+html[data-theme="dark"] body.page-tl-desk .sidebar,
+html[data-theme="dark"] body.page-tl-desk #native-sidebar,
+html[data-theme="dark"] body.page-tl-desk .sidebar-container {
+    --sidebar-bg: #0b141a !important;
+    --sidebar-text: #e9edef !important;
+    --sidebar-hover-bg: #202c33 !important;
+    --sidebar-hover-text: #ffffff !important;
+    --sidebar-active-bg: #202c33 !important;
+    --sidebar-active-text: #ffffff !important;
+    --sidebar-border: #2a3942 !important;
+    --sidebar-icon-color: #8696a0 !important;
+    --sidebar-hover-icon: #e9edef !important;
+    background: #0b141a !important;
+    background-color: #0b141a !important;
+    color: #e9edef !important;
+    border-right-color: #2a3942 !important;
+}
+
+html[data-theme="dark"] body.page-tl-desk #native-sidebar .user-profile-link .sidebar-text,
+html[data-theme="dark"] body.page-tl-desk #native-sidebar .user-profile-link .sidebar-text div,
+html[data-theme="dark"] body.page-tl-desk #native-sidebar .nav-link .sidebar-text {
+    color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-tl-desk #native-sidebar .nav-link:not(.active):hover,
+html[data-theme="dark"] body.page-tl-desk #native-sidebar .nav-link.active {
+    background: #202c33 !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] body.page-tl-desk #native-sidebar hr,
+html[data-theme="dark"] body.page-tl-desk #native-sidebar .border-start {
+    border-color: #2a3942 !important;
 }
 </style>
 

@@ -386,3 +386,102 @@ body.page-tf-desk button.tf-btn-save {
     justify-content: center;
   }
 }
+
+/* WhatsApp-style dark (teal-night) */
+html[data-theme="dark"] .tf-shell {
+  --tf-border: #2a3942;
+  color: #e9edef;
+}
+
+html[data-theme="dark"] .tf-boot-loading {
+  color: #8696a0;
+}
+
+html[data-theme="dark"] .tf-topbar h1,
+html[data-theme="dark"] .tf-section-header h2 {
+  color: #e9edef;
+}
+
+html[data-theme="dark"] .tf-btn-back,
+html[data-theme="dark"] a.tf-btn-back,
+html[data-theme="dark"] body.page-tf-desk a.tf-btn-back {
+  background: #111b21;
+  border-color: #2a3942;
+  color: #e9edef;
+}
+
+html[data-theme="dark"] .tf-btn-back:hover,
+html[data-theme="dark"] a.tf-btn-back:hover {
+  background: #202c33;
+  border-color: #3b4a54;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .tf-card {
+  background: #111b21;
+  border-color: #2a3942;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .tf-label {
+  color: #e9edef;
+}
+
+html[data-theme="dark"] .tf-help,
+html[data-theme="dark"] .tf-route-arrow {
+  color: #8696a0;
+}
+
+html[data-theme="dark"] .tf-shell .tf-input,
+html[data-theme="dark"] .tf-shell input.tf-input,
+html[data-theme="dark"] .tf-shell select.tf-input,
+html[data-theme="dark"] body.page-tf-desk .tf-input,
+html[data-theme="dark"] body.page-tf-desk input.tf-input,
+html[data-theme="dark"] body.page-tf-desk select.tf-input {
+  background: #0b141a !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] .tf-input::placeholder,
+html[data-theme="dark"] .tf-shell .tf-input.is-placeholder,
+html[data-theme="dark"] .tf-shell .tf-input.is-empty,
+html[data-theme="dark"] body.page-tf-desk .tf-input.is-placeholder,
+html[data-theme="dark"] body.page-tf-desk .tf-input.is-empty {
+  color: #8696a0;
+}
+
+html[data-theme="dark"] .tf-shell .tf-input--readonly,
+html[data-theme="dark"] body.page-tf-desk .tf-input--readonly {
+  background: #202c33 !important;
+  color: #8696a0;
+}
+
+html[data-theme="dark"] .tf-shell .tf-input:hover,
+html[data-theme="dark"] body.page-tf-desk .tf-input:hover {
+  border-color: #3b4a54 !important;
+}
+
+html[data-theme="dark"] .tf-btn-cancel,
+html[data-theme="dark"] a.tf-btn-cancel,
+html[data-theme="dark"] body.page-tf-desk a.tf-btn-cancel {
+  background: #111b21;
+  border-color: #2a3942;
+  color: #e9edef;
+}
+
+html[data-theme="dark"] .tf-btn-cancel:hover {
+  background: #202c33;
+}
+
+html[data-theme="dark"] .tf-alert--error {
+  background: rgba(127, 29, 29, 0.35);
+  border-color: #991b1b;
+  color: #fecaca;
+}
+
+html[data-theme="dark"] .tf-alert--success {
+  background: rgba(22, 163, 74, 0.15);
+  border-color: rgba(52, 211, 153, 0.35);
+  color: #86efac;
+}

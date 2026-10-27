@@ -81,7 +81,11 @@
     </script>
 <?php
 require __DIR__ . '/lottie-form-overlay.php';
+$balancesDarkCss = __DIR__ . '/../assets/balances-dark.css';
+$balancesDarkVer = is_file($balancesDarkCss) ? (string) filemtime($balancesDarkCss) : (string) time();
 ?>
+    <!-- Late load: must beat global dark-theme.css + sidebar.php slate sidebar -->
+    <link rel="stylesheet" href="/modules/balances/assets/balances-dark.css?v=<?= htmlspecialchars($balancesDarkVer, ENT_QUOTES, 'UTF-8') ?>">
     <script>
         window.balInstallToastMobileGuard();
     </script>

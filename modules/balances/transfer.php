@@ -124,6 +124,22 @@ main.main-content.tf-react-root #root {
         padding: 0 0.75rem 1.5rem !important;
     }
 }
+
+html[data-theme="dark"] body.page-tf-desk,
+html[data-theme="dark"] body.page-tf-desk.dashboard,
+html[data-theme="dark"] body.page-tf-desk.dashboard .layout-main-wrapper,
+html[data-theme="dark"] body.page-tf-desk.dashboard .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body.page-tf-desk main.main-content.tf-react-root,
+html[data-theme="dark"] body.page-tf-desk main.main-content.tf-react-root #root {
+    background: #0b141a !important;
+    background-color: #0b141a !important;
+    color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-tf-desk .employee-header.employee-header--tf-desk {
+    background: #0b141a !important;
+    border-bottom-color: #2a3942 !important;
+}
 </style>
 
 <main class="main-content tf-react-root">

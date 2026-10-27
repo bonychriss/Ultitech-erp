@@ -395,7 +395,7 @@ export default function TransactionsPage() {
                         <span className="tl-recent-desc-cell">
                           <span
                             className={`tl-recent-ico${isOut ? ' is-out' : ' is-in'}`}
-                            aria-label={tx.typeLabel}
+                            aria-label={tx.typeLabel || (isOut ? 'Money out' : 'Money in')}
                             title={isOut ? 'Out' : 'In'}
                           >
                             {isOut ? (
@@ -460,7 +460,7 @@ export default function TransactionsPage() {
                             <span className="tl-recent-desc-cell">
                               <span
                                 className={`tl-recent-ico${isOut ? ' is-out' : ' is-in'}`}
-                                aria-label={tx.typeLabel}
+                                aria-label={tx.typeLabel || (isOut ? 'Money out' : 'Money in')}
                                 title={isOut ? 'Out' : 'In'}
                               >
                                 {isOut ? (

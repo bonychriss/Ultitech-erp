@@ -1099,24 +1099,24 @@ include __DIR__ . '/includes/header.php';
     html[data-theme="dark"] body.page-balances-accounts.dashboard .layout-main-wrapper,
     html[data-theme="dark"] body.page-balances-accounts.dashboard .layout-main-wrapper > .flex-grow-1,
     html[data-theme="dark"] body.page-balances-accounts .main-content {
-        background: #0f172a !important;
-        color: #e2e8f0 !important;
+        background: #0b141a !important;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .employee-header.employee-header--balances-accounts {
-        background: #0f172a !important;
-        border-bottom-color: #1e293b !important;
+        background: #0b141a !important;
+        border-bottom-color: #2a3942 !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-badge {
         color: inherit;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-panel {
-        background: #1e293b;
-        border-color: #334155;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+        background: #111b21 !important;
+        border-color: #2a3942 !important;
+        box-shadow: none !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-panel-head,
     html[data-theme="dark"] body.page-balances-accounts .ray-search {
-        border-bottom-color: #334155;
+        border-bottom-color: #2a3942;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-panel-title,
     html[data-theme="dark"] body.page-balances-accounts .ray-detail-title,
@@ -1125,7 +1125,7 @@ include __DIR__ . '/includes/header.php';
     html[data-theme="dark"] body.page-balances-accounts .ray-table tbody td,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-head h2,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-label-row label {
-        color: #f8fafc !important;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-account-desc,
     html[data-theme="dark"] body.page-balances-accounts .ray-sub-bulk-count,
@@ -1133,27 +1133,52 @@ include __DIR__ . '/includes/header.php';
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-hint,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-count,
     html[data-theme="dark"] body.page-balances-accounts .ray-table thead th {
-        color: #94a3b8 !important;
+        color: #8696a0 !important;
     }
-    html[data-theme="dark"] body.page-balances-accounts .ray-table thead th {
-        background: #0f172a;
-        border-bottom-color: #334155;
+    html[data-theme="dark"] body.page-balances-accounts .ray-table,
+    html[data-theme="dark"] body.page-balances-accounts table.ray-table {
+        background: #111b21 !important;
+        background-color: #111b21 !important;
+        color: #e9edef !important;
     }
-    html[data-theme="dark"] body.page-balances-accounts .ray-table tbody td {
-        border-bottom-color: #334155;
+    html[data-theme="dark"] body.page-balances-accounts .ray-table thead th,
+    html[data-theme="dark"] body.page-balances-accounts .ray-table th {
+        background: #111b21 !important;
+        background-color: #111b21 !important;
+        color: #8696a0 !important;
+        border-bottom-color: #2a3942 !important;
     }
-    html[data-theme="dark"] body.page-balances-accounts .ray-parent-row:hover {
-        background: #334155;
+    html[data-theme="dark"] body.page-balances-accounts .ray-table tbody td,
+    html[data-theme="dark"] body.page-balances-accounts .ray-table td {
+        background: #111b21 !important;
+        background-color: #111b21 !important;
+        border-bottom-color: #2a3942 !important;
+        color: #e9edef !important;
     }
-    html[data-theme="dark"] body.page-balances-accounts .ray-parent-row.is-selected {
-        background: rgba(124, 58, 237, 0.18);
+    html[data-theme="dark"] body.page-balances-accounts .ray-panel-head,
+    html[data-theme="dark"] body.page-balances-accounts .ray-search,
+    html[data-theme="dark"] body.page-balances-accounts .ray-panel-body {
+        background: #111b21 !important;
+        border-bottom-color: #2a3942 !important;
     }
-    html[data-theme="dark"] body.page-balances-accounts .ray-table tbody tr.is-sub-selected {
-        background: rgba(185, 28, 28, 0.18);
+    html[data-theme="dark"] body.page-balances-accounts .ray-parent-row:hover,
+    html[data-theme="dark"] body.page-balances-accounts .ray-parent-row:hover td {
+        background: #202c33 !important;
+        background-color: #202c33 !important;
+    }
+    html[data-theme="dark"] body.page-balances-accounts .ray-parent-row.is-selected,
+    html[data-theme="dark"] body.page-balances-accounts .ray-parent-row.is-selected td {
+        background: #202c33 !important;
+        background-color: #202c33 !important;
+    }
+    html[data-theme="dark"] body.page-balances-accounts .ray-table tbody tr.is-sub-selected,
+    html[data-theme="dark"] body.page-balances-accounts .ray-table tbody tr.is-sub-selected td {
+        background: rgba(251, 113, 133, 0.12) !important;
+        background-color: rgba(251, 113, 133, 0.12) !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-badge-code {
-        background: #334155;
-        color: #e2e8f0 !important;
+        background: #2a3942;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-badge-dr {
         background: rgba(59, 130, 246, 0.22);
@@ -1166,12 +1191,12 @@ include __DIR__ . '/includes/header.php';
     html[data-theme="dark"] body.page-balances-accounts .ray-search input,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-input,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-select {
-        background: #0f172a;
-        border-color: #475569;
-        color: #f8fafc !important;
+        background: #0b141a !important;
+        border-color: #2a3942 !important;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-search input::placeholder {
-        color: #64748b;
+        color: #8696a0;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-search input:focus,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-input:focus {
@@ -1181,15 +1206,15 @@ include __DIR__ . '/includes/header.php';
     html[data-theme="dark"] body.page-balances-accounts .ray-btn-new,
     html[data-theme="dark"] body.page-balances-accounts .ray-btn-secondary,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-btn-cancel {
-        background: #334155;
-        border-color: #475569;
-        color: #e2e8f0 !important;
+        background: #2a3942;
+        border-color: #3b4a54;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-btn-new:hover,
     html[data-theme="dark"] body.page-balances-accounts .ray-btn-secondary:hover,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-btn-cancel:hover {
-        background: #475569;
-        color: #f8fafc !important;
+        background: #3b4a54;
+        color: #e9edef !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-btn-new-account,
     html[data-theme="dark"] body.page-balances-accounts .ray-btn-new-account:hover {
@@ -1198,15 +1223,15 @@ include __DIR__ . '/includes/header.php';
         color: #fff !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-action-btn {
-        color: #94a3b8;
+        color: #8696a0;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-action-btn:hover {
-        background: #334155;
-        color: #e2e8f0;
+        background: #2a3942;
+        color: #e9edef;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-empty-icon {
-        background: #0f172a;
-        color: #64748b;
+        background: #0b141a;
+        color: #8696a0;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-alert {
         background: rgba(127, 29, 29, 0.35);
@@ -1214,16 +1239,16 @@ include __DIR__ . '/includes/header.php';
         border: 1px solid #991b1b;
     }
     html[data-theme="dark"] body.page-balances-accounts .sub-modal {
-        background: #1e293b;
-        border: 1px solid #334155;
+        background: #111b21;
+        border: 1px solid #2a3942;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
     }
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-close {
-        color: #94a3b8;
+        color: #8696a0;
     }
     html[data-theme="dark"] body.page-balances-accounts .text-gray-400,
     html[data-theme="dark"] body.page-balances-accounts .text-xs.text-gray-400 {
-        color: #94a3b8 !important;
+        color: #8696a0 !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-panel-head span,
     html[data-theme="dark"] body.page-balances-accounts .ray-account-name span {
@@ -1238,6 +1263,12 @@ include __DIR__ . '/includes/header.php';
         body.page-balances-accounts .main-content {
             background: #f1f5f9 !important;
             overflow-x: hidden !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts,
+        html[data-theme="dark"] body.page-balances-accounts.dashboard .layout-main-wrapper,
+        html[data-theme="dark"] body.page-balances-accounts.dashboard .layout-main-wrapper > .flex-grow-1,
+        html[data-theme="dark"] body.page-balances-accounts .main-content {
+            background: #0b141a !important;
         }
         body.page-balances-accounts .employee-header.employee-header--balances-accounts {
             padding: 0 1rem !important;
@@ -1323,7 +1354,7 @@ include __DIR__ . '/includes/header.php';
             left: 1.1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #94a3b8;
+            color: #8696a0;
             font-size: 1rem;
             pointer-events: none;
             z-index: 2;
@@ -1340,7 +1371,7 @@ include __DIR__ . '/includes/header.php';
             height: 3.25rem !important;
             padding: 0 1.1rem 0 3.1rem !important;
             border-radius: 16px !important;
-            border: 1px solid #e2e8f0 !important;
+            border: 1px solid #e9edef !important;
             background: #fff !important;
             box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
             font-size: 1rem !important;
@@ -1438,14 +1469,14 @@ include __DIR__ . '/includes/header.php';
             word-break: break-word;
         }
         .ray-m-lock {
-            color: #94a3b8;
+            color: #8696a0;
             font-size: 0.72rem;
         }
         .ray-m-desc {
             margin: 0.35rem 0 0;
             padding: 0;
             font-size: 0.78rem;
-            color: #94a3b8;
+            color: #8696a0;
             line-height: 1.45;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -1465,7 +1496,7 @@ include __DIR__ . '/includes/header.php';
         }
         .ray-accounts-mobile .ray-badge-code {
             background: #f1f5f9;
-            color: #64748b;
+            color: #8696a0;
         }
 
         .ray-m-accordion {
@@ -1539,7 +1570,7 @@ include __DIR__ . '/includes/header.php';
             z-index: 10950;
             min-width: 12.5rem;
             padding: 0.4rem 0;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #e9edef;
             border-radius: 12px;
             background: #fff;
             box-shadow: 0 14px 32px rgba(15, 23, 42, 0.2);
@@ -1574,22 +1605,22 @@ include __DIR__ . '/includes/header.php';
             background: #f1f5f9;
         }
         html[data-theme="dark"] body.page-balances-accounts .ray-m-floating-menu {
-            background: #1e293b;
-            border-color: #334155;
+            background: #111b21;
+            border-color: #2a3942;
         }
         html[data-theme="dark"] body.page-balances-accounts .ray-m-floating-menu a,
         html[data-theme="dark"] body.page-balances-accounts .ray-m-floating-menu button {
-            color: #f8fafc;
+            color: #e9edef;
         }
         html[data-theme="dark"] body.page-balances-accounts .ray-m-floating-menu .is-danger {
             color: #fca5a5;
         }
         html[data-theme="dark"] body.page-balances-accounts .ray-m-floating-menu .ray-m-menu-sep {
-            background: #334155;
+            background: #2a3942;
         }
         .ray-m-sub-empty {
             padding: 0.75rem 0.15rem;
-            color: #94a3b8;
+            color: #8696a0;
             font-size: 0.8rem;
             text-align: center;
         }
@@ -1597,19 +1628,28 @@ include __DIR__ . '/includes/header.php';
         html[data-theme="dark"] body.page-balances-accounts .ray-m-card,
         html[data-theme="dark"] body.page-balances-accounts .ray-m-accordion-panel,
         html[data-theme="dark"] body.page-balances-accounts .ray-search input {
-            background: #1e293b;
-            border-color: #334155;
+            background: #111b21;
+            border-color: #2a3942;
         }
         html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-item {
-            background: #0f172a;
-            border-color: #334155;
+            background: #0b141a;
+            border-color: #2a3942;
         }
         html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-panel-title,
         html[data-theme="dark"] body.page-balances-accounts .ray-m-name {
-            color: #f8fafc !important;
+            color: #e9edef !important;
         }
     }
 
+    html[data-theme="dark"] body.page-balances-accounts .sidebar,
+    html[data-theme="dark"] body.page-balances-accounts #native-sidebar,
+    html[data-theme="dark"] body.page-balances-accounts .sidebar-container {
+        --sidebar-bg: #0b141a !important;
+        background: #0b141a !important;
+        background-color: #0b141a !important;
+        border-right-color: #2a3942 !important;
+        color: #e9edef !important;
+    }
 </style>
 
 <main class="main-content">

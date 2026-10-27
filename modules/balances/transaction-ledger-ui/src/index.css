@@ -1369,13 +1369,13 @@ button.tl-kpi-card--clickable:focus-visible,
   line-height: 1.45;
 }
 
-/* Phone-style true dark (near-black) */
+/* WhatsApp-style dark (teal-night) */
 html[data-theme="dark"] {
-  --tl-bg: #000000;
-  --tl-surface: #121212;
-  --tl-text: #f5f5f5;
-  --tl-muted: #a1a1aa;
-  --tl-border: #2a2a2a;
+  --tl-bg: #0b141a;
+  --tl-surface: #111b21;
+  --tl-text: #e9edef;
+  --tl-muted: #8696a0;
+  --tl-border: #2a3942;
 }
 
 html[data-theme="dark"] .tl-page {
@@ -1434,12 +1434,12 @@ html[data-theme="dark"] .tl-recent-table thead th {
 }
 
 html[data-theme="dark"] .tl-recent-table tbody tr:hover td {
-  background: #1a1a1a !important;
+  background: #202c33 !important;
 }
 
 html[data-theme="dark"] .tl-recent-table th,
 html[data-theme="dark"] .tl-recent-table td {
-  border-bottom-color: #2a2a2a !important;
+  border-bottom-color: #2a3942 !important;
 }
 
 html[data-theme="dark"] .tl-search-input {
@@ -1448,12 +1448,12 @@ html[data-theme="dark"] .tl-search-input {
 }
 
 html[data-theme="dark"] .tl-search-input::placeholder {
-  color: #71717a !important;
+  color: #667781 !important;
 }
 
 html[data-theme="dark"] .tl-search-icon,
 html[data-theme="dark"] .tl-search-clear {
-  color: #a1a1aa !important;
+  color: #8696a0 !important;
 }
 
 html[data-theme="dark"] .tl-btn-primary {
@@ -1463,24 +1463,24 @@ html[data-theme="dark"] .tl-btn-primary {
 }
 
 html[data-theme="dark"] .tl-recent-ico.is-in {
-  background: rgba(22, 163, 74, 0.2);
-  color: #4ade80;
+  background: #12382f;
+  color: #34d399;
 }
 
 html[data-theme="dark"] .tl-recent-ico.is-out {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  background: #3b1d26;
+  color: #fb7185;
 }
 
 html[data-theme="dark"] .tl-recent-amt.is-in,
 html[data-theme="dark"] .tl-amt--in {
-  color: #4ade80 !important;
+  color: #34d399 !important;
 }
 
 html[data-theme="dark"] .tl-recent-amt.is-out,
 html[data-theme="dark"] .tl-amt--out,
 html[data-theme="dark"] .tl-kpi-value.is-negative {
-  color: #f87171 !important;
+  color: #fb7185 !important;
 }
 
 html[data-theme="dark"] .tl-flash-error {

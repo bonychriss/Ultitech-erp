@@ -143,6 +143,7 @@ if (!$isSubAccountView && function_exists('balancesFetchAccountsWithLiveBalance'
 }
 
 $page_title = $displayName;
+$bodyExtraClass = 'page-balances-account-view';
 include __DIR__ . '/includes/header.php';
 ?>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -323,6 +324,43 @@ include __DIR__ . '/includes/header.php';
     @media (max-width: 992px) {
         .acc-view { padding: 1rem; }
         .acc-hero { padding: 1.25rem; }
+    }
+
+    html[data-theme="dark"] body.page-balances-account-view .main-content,
+    html[data-theme="dark"] body.page-balances-account-view .bg-gray-50 {
+        background: #0b141a !important;
+        color: #e9edef !important;
+    }
+    html[data-theme="dark"] body.page-balances-account-view .acc-hero,
+    html[data-theme="dark"] body.page-balances-account-view .acc-kpi,
+    html[data-theme="dark"] body.page-balances-account-view .acc-card {
+        background: #111b21 !important;
+        border-color: #2a3942 !important;
+        box-shadow: none !important;
+        color: #e9edef !important;
+    }
+    html[data-theme="dark"] body.page-balances-account-view .acc-kpi-value,
+    html[data-theme="dark"] body.page-balances-account-view .acc-card-head,
+    html[data-theme="dark"] body.page-balances-account-view .text-gray-800 {
+        color: #e9edef !important;
+    }
+    html[data-theme="dark"] body.page-balances-account-view .acc-kpi-label,
+    html[data-theme="dark"] body.page-balances-account-view .acc-info-label,
+    html[data-theme="dark"] body.page-balances-account-view .text-gray-500 {
+        color: #8696a0 !important;
+    }
+    html[data-theme="dark"] body.page-balances-account-view .acc-card-head,
+    html[data-theme="dark"] body.page-balances-account-view .acc-info-item {
+        border-color: #2a3942 !important;
+    }
+    html[data-theme="dark"] body.page-balances-account-view .acc-btn-outline {
+        background: #111b21;
+        border-color: #2a3942;
+        color: #e9edef;
+    }
+    html[data-theme="dark"] body.page-balances-account-view .acc-btn-outline:hover {
+        background: #202c33;
+        color: #ffffff;
     }
 </style>
 

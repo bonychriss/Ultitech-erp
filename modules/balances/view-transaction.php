@@ -64,6 +64,7 @@ if ($tx['reference_type'] === 'payment_voucher' || $tx['reference_type'] === 'vo
 }
 
 $page_title = 'Transaction #' . $tx['id'];
+$bodyExtraClass = 'page-balances-tx-view';
 
 include __DIR__ . '/includes/header.php';
 ?>
@@ -120,6 +121,58 @@ include __DIR__ . '/includes/header.php';
         z-index: 10;
     }
     .stamp-watermark img { width: 300px; height: auto; }
+
+    html[data-theme="dark"] body.page-balances-tx-view .bal-shell,
+    html[data-theme="dark"] body.page-balances-tx-view main.main-content.bal-shell {
+        background: #0b141a !important;
+        color: #e9edef !important;
+    }
+    html[data-theme="dark"] body.page-balances-tx-view .bal-shell .bg-white,
+    html[data-theme="dark"] body.page-balances-tx-view .dash-card {
+        background: #111b21 !important;
+        border-color: #2a3942 !important;
+        color: #e9edef !important;
+        box-shadow: none !important;
+    }
+    html[data-theme="dark"] body.page-balances-tx-view .bal-shell .bg-gray-50\/80,
+    html[data-theme="dark"] body.page-balances-tx-view .bal-shell [class*="bg-gray-50"] {
+        background: #202c33 !important;
+        color: #8696a0 !important;
+        border-color: #2a3942 !important;
+    }
+    html[data-theme="dark"] body.page-balances-tx-view .tx-detail-label,
+    html[data-theme="dark"] body.page-balances-tx-view .text-muted,
+    html[data-theme="dark"] body.page-balances-tx-view .text-gray-500,
+    html[data-theme="dark"] body.page-balances-tx-view .text-gray-600 {
+        color: #8696a0 !important;
+    }
+    html[data-theme="dark"] body.page-balances-tx-view .tx-detail-value,
+    html[data-theme="dark"] body.page-balances-tx-view .text-gray-900,
+    html[data-theme="dark"] body.page-balances-tx-view h1,
+    html[data-theme="dark"] body.page-balances-tx-view .fw-bold {
+        color: #e9edef !important;
+    }
+    html[data-theme="dark"] body.page-balances-tx-view .border-b,
+    html[data-theme="dark"] body.page-balances-tx-view .border-bottom,
+    html[data-theme="dark"] body.page-balances-tx-view .border-gray-100,
+    html[data-theme="dark"] body.page-balances-tx-view .border-gray-200 {
+        border-color: #2a3942 !important;
+    }
+    html[data-theme="dark"] body.page-balances-tx-view .breadcrumb-item a {
+        color: #5eead4 !important;
+    }
+    html[data-theme="dark"] body.page-balances-tx-view .breadcrumb-item.active {
+        color: #8696a0 !important;
+    }
+    html[data-theme="dark"] body.page-balances-tx-view .btn-outline-secondary {
+        background: #111b21 !important;
+        border-color: #2a3942 !important;
+        color: #e9edef !important;
+    }
+    html[data-theme="dark"] body.page-balances-tx-view .voucher-container {
+        background: #fff;
+        color: #111827;
+    }
 </style>
 
 <main class="main-content bal-shell bg-[#F9F9F9] min-h-[50vh] pb-8">

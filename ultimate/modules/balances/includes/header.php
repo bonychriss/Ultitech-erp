@@ -26,7 +26,10 @@
     <?php if (!empty($tfHeadMarkup)) { echo $tfHeadMarkup . "\n"; } ?>
     <?php if (!empty($rcHeadMarkup)) { echo $rcHeadMarkup . "\n"; } ?>
 </head>
-<body class="dashboard<?= !empty($bodyExtraClass) ? ' ' . htmlspecialchars((string) $bodyExtraClass, ENT_QUOTES, 'UTF-8') : '' ?>">
+<?php
+$bodyExtraClass = trim('page-balances ' . (string) ($bodyExtraClass ?? ''));
+?>
+<body class="dashboard <?= htmlspecialchars($bodyExtraClass, ENT_QUOTES, 'UTF-8') ?>">
 <?php
 // Capture the success flash before header_employee's global handler fires a SweetAlert toast.
 // The balances Lottie overlay (footer) consumes this instead.

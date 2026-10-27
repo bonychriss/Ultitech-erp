@@ -333,6 +333,56 @@ export default function DashboardPage() {
               <div className="ld-empty">No transactions yet.</div>
             ) : (
               <>
+                <div className="ld-recent-cards" aria-label="Recent transactions">
+                  {recentTransactions.map((tx) => {
+                    const openTx = () =>
+                      navigateLdView({
+                        name: 'transaction',
+                        accountId: tx.accountId,
+                        ym: tx.ym,
+                        txId: tx.id,
+                      });
+                    const accountLine = [tx.accountName, tx.referenceLabel].filter(Boolean).join(' · ') || '—';
+                    return (
+                      <button
+                        key={`m-${tx.id}`}
+                        type="button"
+                        className="ld-recent-card"
+                        onClick={openTx}
+                      >
+                        <div className="ld-recent-card-top">
+                          <span className="ld-recent-desc-cell">
+                            <span
+                              className={`ld-recent-ico${tx.type === 'debit' ? ' is-out' : ' is-in'}`}
+                              aria-label={tx.typeLabel}
+                              title={tx.type === 'debit' ? 'Out' : 'In'}
+                            >
+                              {tx.type === 'debit' ? (
+                                <HiOutlineArrowUpRight size={17} aria-hidden="true" />
+                              ) : (
+                                <HiOutlineArrowDownLeft size={17} aria-hidden="true" />
+                              )}
+                            </span>
+                            <span className="ld-recent-desc">{tx.description}</span>
+                          </span>
+                          <span className={`ld-recent-amt${tx.type === 'debit' ? ' is-out' : ' is-in'}`}>
+                            {tx.amountDisplay}
+                          </span>
+                        </div>
+                        <div className="ld-recent-card-meta">
+                          <div className="ld-recent-card-row">
+                            <span className="ld-recent-card-label">Account</span>
+                            <span className="ld-recent-card-value">{accountLine}</span>
+                          </div>
+                          <div className="ld-recent-card-row">
+                            <span className="ld-recent-card-label">Date</span>
+                            <span className="ld-recent-card-value">{tx.dateLabel || '—'}</span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
                 <div className="ld-recent-table-wrap">
                   <table className="ld-recent-table">
                     <thead>

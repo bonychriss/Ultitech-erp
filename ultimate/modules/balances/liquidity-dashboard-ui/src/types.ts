@@ -67,6 +67,21 @@ export type DashboardInit = {
     hiddenCount: number;
   };
   recentTransactions?: RecentTransactionRow[];
+  recentTransactionsMeta?: {
+    page: number;
+    perPage: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export type RecentTransactionsPayload = {
+  success: boolean;
+  transactions: RecentTransactionRow[];
+  page: number;
+  perPage: number;
+  total: number;
+  totalPages: number;
 };
 
 export type LiquidityAccountRow = {

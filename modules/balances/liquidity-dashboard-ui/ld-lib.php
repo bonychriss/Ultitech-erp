@@ -379,7 +379,7 @@ function ldBuildInitPayload(PDO $pdo): array
     ]));
     $transactionsUrl = ldDeskPublicUrl('transactions.php') . ($moduleQs !== '' ? '?' . $moduleQs : '');
 
-    $recentPage = ldBuildRecentTransactionsPayload($pdo, 1, 5);
+    $recentPage = ldBuildRecentTransactionsPayload($pdo, 1, 100);
 
     return [
         'todayLabel' => date('l, d M Y'),
@@ -483,9 +483,9 @@ function ldMapRecentTransactionRow(array $tx): array
  *
  * @return array{transactions: list<array<string, mixed>>, page: int, perPage: int, total: int, totalPages: int}
  */
-function ldBuildRecentTransactionsPayload(PDO $pdo, int $page = 1, int $perPage = 5): array
+function ldBuildRecentTransactionsPayload(PDO $pdo, int $page = 1, int $perPage = 100): array
 {
-    $perPage = max(1, min(50, $perPage));
+    $perPage = max(1, min(100, $perPage));
     $page = max(1, $page);
     $total = 0;
     $transactions = [];

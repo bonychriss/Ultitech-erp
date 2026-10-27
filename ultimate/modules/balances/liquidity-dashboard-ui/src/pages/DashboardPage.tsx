@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Plus, CircleHelp, X } from 'lucide-react';
+import { Plus, CircleHelp, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   HiOutlineShieldCheck,
   HiOutlineCash,
@@ -14,9 +14,11 @@ import {
   HiChevronRight,
 } from 'react-icons/hi';
 import { HiOutlineArrowDownLeft, HiOutlineArrowUpRight } from 'react-icons/hi2';
-import { fetchInit } from '../api';
-import type { DashboardInit, InsightItem } from '../types';
+import { fetchInit, fetchRecentTransactions } from '../api';
+import type { DashboardInit, InsightItem, RecentTransactionRow } from '../types';
 import { navigateLdView } from '../nav';
+
+const RECENT_TX_PER_PAGE = 100;
 
 /** Semantic themes: success=green, danger=red, warning=amber, info=blue, tip=slate, payment=indigo, ai=violet */
 function insightTone(item: InsightItem): string {
@@ -79,13 +81,25 @@ export default function DashboardPage() {
   const [insightsExpanded, setInsightsExpanded] = useState(false);
   const [extraInsights, setExtraInsights] = useState<InsightItem[]>([]);
   const [extraLoading, setExtraLoading] = useState(false);
+  const [recentTransactions, setRecentTransactions] = useState<RecentTransactionRow[]>([]);
+  const [txPage, setTxPage] = useState(1);
+  const [txTotalPages, setTxTotalPages] = useState(1);
+  const [txTotal, setTxTotal] = useState(0);
+  const [txLoading, setTxLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const init = await fetchInit();
-        if (!cancelled) setData(init);
+        if (!cancelled) {
+          setData(init);
+          setRecentTransactions(Array.isArray(init.recentTransactions) ? init.recentTransactions : []);
+          const meta = init.recentTransactionsMeta;
+          setTxPage(meta?.page ?? 1);
+          setTxTotalPages(meta?.totalPages ?? 1);
+          setTxTotal(meta?.total ?? (Array.isArray(init.recentTransactions) ? init.recentTransactions.length : 0));
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load dashboard.');
       } finally {
@@ -96,6 +110,22 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  async function loadTxPage(page: number) {
+    if (page < 1 || page > txTotalPages || page === txPage || txLoading) return;
+    setTxLoading(true);
+    try {
+      const payload = await fetchRecentTransactions(page, RECENT_TX_PER_PAGE);
+      setRecentTransactions(payload.transactions);
+      setTxPage(payload.page);
+      setTxTotalPages(payload.totalPages);
+      setTxTotal(payload.total);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load transactions.');
+    } finally {
+      setTxLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!data?.insights.aiConnected || !insightsExpanded || extraInsights.length > 0 || extraLoading) {
@@ -147,16 +177,15 @@ export default function DashboardPage() {
 
   const { kpis, insights } = data;
   const hiddenCount = insights.hiddenCount;
-  const recentTransactions = Array.isArray(data.recentTransactions) ? data.recentTransactions : [];
   const transactionsUrl = typeof data.transactionsUrl === 'string' ? data.transactionsUrl : '';
+  const txFrom = txTotal === 0 ? 0 : (txPage - 1) * RECENT_TX_PER_PAGE + 1;
+  const txTo = Math.min(txPage * RECENT_TX_PER_PAGE, txTotal);
 
   return (
     <div className="ld-dash">
       <div className="ld-header">
         <div>
-          <div className="ld-kicker">Balances</div>
           <h1>Liquidity Dashboard</h1>
-          <p>Real-time view of your organization&apos;s liquidity and account balances.</p>
         </div>
         <div className="ld-header-actions">
           {data.canManageAccount && (
@@ -240,12 +269,9 @@ export default function DashboardPage() {
           <div className="ld-card-h">
             <h3>
               <HiOutlineSparkles size={18} className="text-violet-500" aria-hidden="true" /> AI Insights
-              {insights.aiConnected ? <span className="ld-live-pill">Live</span> : null}
             </h3>
             {insights.aiConnected ? (
-              <span className="ld-connected">
-                <span className="ld-connected-dot" aria-hidden="true" /> Connected
-              </span>
+              <span className="ld-live-pill">Live</span>
             ) : (
               <span className="ld-connected is-offline">Offline</span>
             )}
@@ -294,82 +320,137 @@ export default function DashboardPage() {
         <section className="ld-card">
           <div className="ld-card-h">
             <h3>
-              <HiOutlineClipboardList size={18} aria-hidden="true" /> Recent Transactions
+              <HiOutlineClipboardList size={18} aria-hidden="true" /> Transactions
             </h3>
             {transactionsUrl ? (
               <a href={transactionsUrl} className="ld-card-link">
-                View all →
+                Open ledger →
               </a>
             ) : null}
           </div>
-          <div className="ld-card-b ld-card-b--flush">
+          <div className={`ld-card-b ld-card-b--flush${txLoading ? ' is-tx-loading' : ''}`}>
             {recentTransactions.length === 0 ? (
-              <div className="ld-empty">No recent transactions yet.</div>
+              <div className="ld-empty">No transactions yet.</div>
             ) : (
-              <div className="ld-recent-table-wrap">
-                <table className="ld-recent-table">
-                  <thead>
-                    <tr>
-                      <th>Description</th>
-                      <th>Account / Category</th>
-                      <th>Date</th>
-                      <th className="ld-recent-amt-h">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentTransactions.map((tx) => (
-                      <tr
-                        key={tx.id}
-                        tabIndex={0}
-                        onClick={() =>
-                          navigateLdView({
-                            name: 'transaction',
-                            accountId: tx.accountId,
-                            ym: tx.ym,
-                            txId: tx.id,
-                          })
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
+              <>
+                <div className="ld-recent-table-wrap">
+                  <table className="ld-recent-table">
+                    <thead>
+                      <tr>
+                        <th>Description</th>
+                        <th>Account / Category</th>
+                        <th>Date</th>
+                        <th className="ld-recent-amt-h">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentTransactions.map((tx) => (
+                        <tr
+                          key={tx.id}
+                          tabIndex={0}
+                          onClick={() =>
                             navigateLdView({
                               name: 'transaction',
                               accountId: tx.accountId,
                               ym: tx.ym,
                               txId: tx.id,
-                            });
+                            })
                           }
-                        }}
-                      >
-                        <td>
-                          <span className="ld-recent-desc-cell">
-                            <span
-                              className={`ld-recent-ico${tx.type === 'debit' ? ' is-out' : ' is-in'}`}
-                              aria-label={tx.typeLabel}
-                              title={tx.type === 'debit' ? 'Out' : 'In'}
-                            >
-                              {tx.type === 'debit' ? (
-                                <HiOutlineArrowUpRight size={14} aria-hidden="true" />
-                              ) : (
-                                <HiOutlineArrowDownLeft size={14} aria-hidden="true" />
-                              )}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              navigateLdView({
+                                name: 'transaction',
+                                accountId: tx.accountId,
+                                ym: tx.ym,
+                                txId: tx.id,
+                              });
+                            }
+                          }}
+                        >
+                          <td>
+                            <span className="ld-recent-desc-cell">
+                              <span
+                                className={`ld-recent-ico${tx.type === 'debit' ? ' is-out' : ' is-in'}`}
+                                aria-label={tx.typeLabel}
+                                title={tx.type === 'debit' ? 'Out' : 'In'}
+                              >
+                                {tx.type === 'debit' ? (
+                                  <HiOutlineArrowUpRight size={14} aria-hidden="true" />
+                                ) : (
+                                  <HiOutlineArrowDownLeft size={14} aria-hidden="true" />
+                                )}
+                              </span>
+                              <span className="ld-recent-desc">{tx.description}</span>
                             </span>
-                            <span className="ld-recent-desc">{tx.description}</span>
-                          </span>
-                        </td>
-                        <td className="ld-recent-cat">
-                          {tx.accountName}
-                          {tx.referenceLabel ? ` · ${tx.referenceLabel}` : ''}
-                        </td>
-                        <td className="ld-recent-date">{tx.dateLabel}</td>
-                        <td className={`ld-recent-amt${tx.type === 'debit' ? ' is-out' : ' is-in'}`}>
-                          {tx.amountDisplay}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          </td>
+                          <td className="ld-recent-cat">
+                            {tx.accountName}
+                            {tx.referenceLabel ? ` · ${tx.referenceLabel}` : ''}
+                          </td>
+                          <td className="ld-recent-date">{tx.dateLabel}</td>
+                          <td className={`ld-recent-amt${tx.type === 'debit' ? ' is-out' : ' is-in'}`}>
+                            {tx.amountDisplay}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {txTotalPages > 1 && (
+                  <div className="ld-tx-pager">
+                    <span className="ld-tx-pager-meta">
+                      Showing {txFrom}–{txTo} of {txTotal}
+                    </span>
+                    <div className="ld-tx-pager-bar" role="navigation" aria-label="Transactions pages">
+                      <button
+                        type="button"
+                        className="ld-tx-pager-nav"
+                        disabled={txPage <= 1 || txLoading}
+                        aria-label="Previous page"
+                        onClick={() => loadTxPage(txPage - 1)}
+                      >
+                        <ChevronLeft size={16} strokeWidth={2.5} aria-hidden="true" />
+                      </button>
+                      {(() => {
+                        const windowSize = Math.min(5, txTotalPages);
+                        const start = Math.max(1, Math.min(txPage - 2, txTotalPages - windowSize + 1));
+                        const end = start + windowSize - 1;
+                        const items: (number | 'gap')[] = [];
+                        for (let p = start; p <= end; p += 1) items.push(p);
+                        if (end < txTotalPages) items.push('gap');
+                        return items.map((item, idx) =>
+                          item === 'gap' ? (
+                            <span key={`gap-${idx}`} className="ld-tx-pager-gap">
+                              ...
+                            </span>
+                          ) : (
+                            <button
+                              key={item}
+                              type="button"
+                              className={`ld-tx-pager-page${item === txPage ? ' is-active' : ''}`}
+                              aria-current={item === txPage ? 'page' : undefined}
+                              disabled={txLoading}
+                              onClick={() => loadTxPage(item)}
+                            >
+                              {item}
+                            </button>
+                          ),
+                        );
+                      })()}
+                      <button
+                        type="button"
+                        className="ld-tx-pager-nav is-next"
+                        disabled={txPage >= txTotalPages || txLoading}
+                        aria-label="Next page"
+                        onClick={() => loadTxPage(txPage + 1)}
+                      >
+                        <ChevronRight size={16} strokeWidth={2.5} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </section>

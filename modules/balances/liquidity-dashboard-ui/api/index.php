@@ -83,7 +83,7 @@ try {
 
         case 'recent_transactions':
             $page = (int) ($_GET['page'] ?? 1);
-            $perPage = (int) ($_GET['per_page'] ?? 5);
+            $perPage = (int) ($_GET['per_page'] ?? 100);
             ld_api_json([
                 'success' => true,
                 ...ldBuildRecentTransactionsPayload($pdo, $page, $perPage),

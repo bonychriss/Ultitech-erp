@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Plus, CircleHelp, X } from 'lucide-react';
+import { Plus, CircleHelp, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   HiOutlineShieldCheck,
   HiOutlineCash,
@@ -18,7 +18,7 @@ import { fetchInit, fetchRecentTransactions } from '../api';
 import type { DashboardInit, InsightItem, RecentTransactionRow } from '../types';
 import { navigateLdView } from '../nav';
 
-const RECENT_TX_PER_PAGE = 5;
+const RECENT_TX_PER_PAGE = 100;
 
 /** Semantic themes: success=green, danger=red, warning=amber, info=blue, tip=slate, payment=indigo, ai=violet */
 function insightTone(item: InsightItem): string {
@@ -185,9 +185,7 @@ export default function DashboardPage() {
     <div className="ld-dash">
       <div className="ld-header">
         <div>
-          <div className="ld-kicker">Balances</div>
           <h1>Liquidity Dashboard</h1>
-          <p>Real-time view of your organization&apos;s liquidity and account balances.</p>
         </div>
         <div className="ld-header-actions">
           {data.canManageAccount && (
@@ -271,12 +269,9 @@ export default function DashboardPage() {
           <div className="ld-card-h">
             <h3>
               <HiOutlineSparkles size={18} className="text-violet-500" aria-hidden="true" /> AI Insights
-              {insights.aiConnected ? <span className="ld-live-pill">Live</span> : null}
             </h3>
             {insights.aiConnected ? (
-              <span className="ld-connected">
-                <span className="ld-connected-dot" aria-hidden="true" /> Connected
-              </span>
+              <span className="ld-live-pill">Live</span>
             ) : (
               <span className="ld-connected is-offline">Offline</span>
             )}
@@ -407,50 +402,50 @@ export default function DashboardPage() {
                     <span className="ld-tx-pager-meta">
                       Showing {txFrom}–{txTo} of {txTotal}
                     </span>
-                    <div className="ld-tx-pager-controls">
+                    <div className="ld-tx-pager-bar" role="navigation" aria-label="Transactions pages">
                       <button
                         type="button"
-                        className="ld-tx-pager-btn"
+                        className="ld-tx-pager-nav"
                         disabled={txPage <= 1 || txLoading}
+                        aria-label="Previous page"
                         onClick={() => loadTxPage(txPage - 1)}
                       >
-                        ← Prev
+                        <ChevronLeft size={16} strokeWidth={2.5} aria-hidden="true" />
                       </button>
-                      {Array.from({ length: txTotalPages }, (_, i) => i + 1)
-                        .filter((p) => {
-                          if (txTotalPages <= 7) return true;
-                          if (p === 1 || p === txTotalPages) return true;
-                          return Math.abs(p - txPage) <= 1;
-                        })
-                        .reduce<(number | 'gap')[]>((acc, p, idx, arr) => {
-                          if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('gap');
-                          acc.push(p);
-                          return acc;
-                        }, [])
-                        .map((item, idx) =>
+                      {(() => {
+                        const windowSize = Math.min(5, txTotalPages);
+                        const start = Math.max(1, Math.min(txPage - 2, txTotalPages - windowSize + 1));
+                        const end = start + windowSize - 1;
+                        const items: (number | 'gap')[] = [];
+                        for (let p = start; p <= end; p += 1) items.push(p);
+                        if (end < txTotalPages) items.push('gap');
+                        return items.map((item, idx) =>
                           item === 'gap' ? (
                             <span key={`gap-${idx}`} className="ld-tx-pager-gap">
-                              …
+                              ...
                             </span>
                           ) : (
                             <button
                               key={item}
                               type="button"
-                              className={`ld-tx-pager-btn${item === txPage ? ' is-active' : ''}`}
+                              className={`ld-tx-pager-page${item === txPage ? ' is-active' : ''}`}
+                              aria-current={item === txPage ? 'page' : undefined}
                               disabled={txLoading}
                               onClick={() => loadTxPage(item)}
                             >
                               {item}
                             </button>
                           ),
-                        )}
+                        );
+                      })()}
                       <button
                         type="button"
-                        className="ld-tx-pager-btn"
+                        className="ld-tx-pager-nav is-next"
                         disabled={txPage >= txTotalPages || txLoading}
+                        aria-label="Next page"
                         onClick={() => loadTxPage(txPage + 1)}
                       >
-                        Next →
+                        <ChevronRight size={16} strokeWidth={2.5} aria-hidden="true" />
                       </button>
                     </div>
                   </div>

@@ -105,7 +105,7 @@ export async function fetchTransactionDetail(txId: number): Promise<TransactionD
 
 export async function fetchRecentTransactions(
   page = 1,
-  perPage = 5,
+  perPage = 100,
 ): Promise<RecentTransactionsPayload> {
   const response = await fetch(apiUrl('recent_transactions', { page, per_page: perPage }), {
     credentials: 'same-origin',

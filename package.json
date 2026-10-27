@@ -1,0 +1,24 @@
+{
+  "name": "public_html",
+  "version": "1.0.0",
+  "description": "Multi-company PHP ERP for **Ultimate General Trading** and **Roadmaster**, running on XAMPP locally and on StackCP in production. This document describes how databases, environments, and login are wired together.",
+  "main": "chatbot-bootstrap.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bonychriss/Ultitech-erp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/bonychriss/Ultitech-erp/issues"
+  },
+  "homepage": "https://github.com/bonychriss/Ultitech-erp#readme"
+}

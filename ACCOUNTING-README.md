@@ -2,6 +2,8 @@
 
 Guide to the **Accounting** area and the modules that post money, invoices, and journals in UltiTech ERP.
 
+**Screenshots:** [`docs/accounting-screenshots/`](docs/accounting-screenshots/) (full-page PNGs of every accounting desk).
+
 **Audience:** finance users and developers working on Ultimate / Roadmaster tenants.  
 **Local base:** `http://localhost/public_html/{company_slug}/Ö` (example: `ultimate`)  
 **Live base:** `https://ultitech.io/{company_slug}/Ö`
@@ -16,7 +18,7 @@ Accounting sits on **three layers**:
 |-------|------------|--------------------|
 | **Cash book (sub-ledger)** | Bank / cash / mobile money balances and movements | `modules/balances/` ? `financial_accounts`, `account_transactions` |
 | **General ledger (GL)** | Double-entry journals and formal reports | `accounting/` ? `erp_accounts`, `erp_journal_entries`, `erp_journal_items` |
-| **Operational desks** | Day-to-day capture (expenses, purchases, revenue, payroll, sales payments) | `modules/expenses`, `modules/purchases`, `revenue_entries.php`, `modules/payroll`, `modules/sales`, Ö |
+| **Operational desks** | Day-to-day capture (expenses, purchases, revenue, payroll, sales payments) | `modules/expenses`, `modules/purchases`, `revenue_entries.php`, `modules/payroll`, `modules/sales`, ù |
 
 ```text
   Sales / Expenses / Purchases / Payroll / SPPD
@@ -40,7 +42,7 @@ Accounting sits on **three layers**:
 
 1. Sign in as Finance or Admin for the company (e.g. Ultimate).
 2. Open **Select module** ? **Accounting**.
-3. Use the hub cards (Balances, Revenue, Expenses, Ö) or the sidebar with `?module=Ö`.
+3. Use the hub cards (Balances, Revenue, Expenses, ù) or the sidebar with `?module=ù`.
 
 Example hub URL (local):
 
@@ -99,7 +101,7 @@ Thin desk that **reuses the Expenses UI** with purchases mode:
 
 - `__EXPENSES_DESK_MODE__ = purchases` / `desk=purchases`  
 - Only **Stock Purchases** (`stock_purchase`) payment vouchers  
-- Create link typically: `employee/create-voucher.php?Ö&purpose=stock_purchase`  
+- Create link typically: `employee/create-voucher.php?ù&purpose=stock_purchase`  
 
 ### 4.4 Finance & stock PO payments (`modules/finance/`)
 
@@ -118,7 +120,7 @@ Thin desk that **reuses the Expenses UI** with purchases mode:
 
 ### 4.6 Sales (AR touchpoints)
 
-Not ìAccounting-onlyî, but drives receivables:
+Not ùAccounting-onlyù, but drives receivables:
 
 - Invoice post ? revenue sync (and target auto JE)  
 - Record payment ? Balances credit + revenue sync (`modules/sales/payments/`)  
@@ -128,7 +130,7 @@ Not ìAccounting-onlyî, but drives receivables:
 ### 4.7 Payment Vouchers (approval)
 
 - Employee / Admin voucher workflow (`?module=voucher`)  
-- **Purpose** routes which accounting desk owns the voucher (see ß5)  
+- **Purpose** routes which accounting desk owns the voucher (see ù5)  
 
 ### 4.8 Payroll (`modules/payroll/`)
 
@@ -153,7 +155,7 @@ Not ìAccounting-onlyî, but drives receivables:
 ### 4.11 Stock (costing adjacency)
 
 - POs, receiving, weighted-average cost live under `stock/`  
-- Paid via SPPD + stock-purchase PVs ó not the Expenses desk  
+- Paid via SPPD + stock-purchase PVs ù not the Expenses desk  
 
 ---
 
@@ -175,9 +177,9 @@ Cursor rule: `.cursor/rules/pv-purpose-module-routing.mdc`
 
 ## 6. Stock purchase money flow (three documents)
 
-1. **Vendor / supplier bill** ó increases payable (no cash yet).  
-2. **Payment voucher** (`purpose=stock_purchase`) ó internal approval only while pending.  
-3. **Supplier payment** (SPPD) ó cash leaves Balances; optional GL journal.
+1. **Vendor / supplier bill** ù increases payable (no cash yet).  
+2. **Payment voucher** (`purpose=stock_purchase`) ù internal approval only while pending.  
+3. **Supplier payment** (SPPD) ù cash leaves Balances; optional GL journal.
 
 Full design: `README-STOCK-PURCHASE-PAYMENT-WORKFLOW.md`
 
@@ -216,19 +218,19 @@ Optional link cash ? GL: `financial_accounts.gl_account_id`, `accounting/fa-gl-s
 ## 9. Local URL examples (Ultimate)
 
 ```text
-Ö/ultimate/select-module
-Ö/ultimate/accounting?module=accounting
-Ö/ultimate/modules/balances/index?module=balances
-Ö/ultimate/modules/expenses/index?module=expenses
-Ö/ultimate/modules/purchases/index?module=purchases
-Ö/ultimate/revenue_entries?module=revenue
-Ö/ultimate/accounting/journal-entries?module=accounting
-Ö/ultimate/accounting/vat-control?module=accounting
-Ö/ultimate/modules/finance/stock-purchase-payment-desk.php?module=balances
-Ö/ultimate/modules/petty-cash/index?module=petty_cash
+ù/ultimate/select-module
+ù/ultimate/accounting?module=accounting
+ù/ultimate/modules/balances/index?module=balances
+ù/ultimate/modules/expenses/index?module=expenses
+ù/ultimate/modules/purchases/index?module=purchases
+ù/ultimate/revenue_entries?module=revenue
+ù/ultimate/accounting/journal-entries?module=accounting
+ù/ultimate/accounting/vat-control?module=accounting
+ù/ultimate/modules/finance/stock-purchase-payment-desk.php?module=balances
+ù/ultimate/modules/petty-cash/index?module=petty_cash
 ```
 
-Use `company_url('Ö')` in PHP so tenant prefixes stay correct.
+Use `company_url('ù')` in PHP so tenant prefixes stay correct.
 
 ---
 
@@ -254,5 +256,5 @@ Use `company_url('Ö')` in PHP so tenant prefixes stay correct.
 
 - Many desks are **React** builds under `modules/*/frontend` or `*-ui/`; run `npm run build` in the relevant folder after UI changes.  
 - Hub / revenue / cash book / payroll often load through **`erp-laravel/bootstrap/erp-bridge.php`**.  
-- Git deploy does **not** run DB migrations ó apply schema changes manually when needed.  
+- Git deploy does **not** run DB migrations ù apply schema changes manually when needed.  
 - Prefer **local** (`localhost` / XAMPP) for fixes; deploy to live only when asked.

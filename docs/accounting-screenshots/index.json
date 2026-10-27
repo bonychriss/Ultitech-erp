@@ -1,0 +1,209 @@
+[
+  {
+    "id": "00-accounting-hub",
+    "file": "00-accounting-hub.png",
+    "url": "/ultimate/accounting?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting?module=accounting",
+    "status": 200,
+    "title": "Accounting - ERP",
+    "loggedOut": false
+  },
+  {
+    "id": "01-balances",
+    "file": "01-balances.png",
+    "url": "/ultimate/modules/balances/index?module=balances",
+    "finalUrl": "http://localhost/public_html/ultimate/modules/balances/index?module=balances",
+    "status": 200,
+    "title": "Liquidity Dashboard - Balances",
+    "loggedOut": false
+  },
+  {
+    "id": "02-revenue",
+    "file": "02-revenue.png",
+    "url": "/ultimate/revenue_entries?module=revenue",
+    "finalUrl": "http://localhost/public_html/ultimate/revenue_entries?module=revenue&date_from=2026-10-01&date_to=2026-10-27",
+    "status": 200,
+    "title": "Revenues - ERP",
+    "loggedOut": false
+  },
+  {
+    "id": "03-expenses",
+    "file": "03-expenses.png",
+    "url": "/ultimate/modules/expenses/index?module=expenses",
+    "finalUrl": "http://localhost/public_html/ultimate/modules/expenses/index?module=expenses",
+    "status": 200,
+    "title": "Expenses - ERP",
+    "loggedOut": false
+  },
+  {
+    "id": "04-purchases",
+    "file": "04-purchases.png",
+    "url": "/ultimate/modules/purchases/index?module=purchases",
+    "finalUrl": "http://localhost/public_html/ultimate/modules/purchases/index?module=purchases",
+    "status": 200,
+    "title": "Purchases - ERP",
+    "loggedOut": false
+  },
+  {
+    "id": "05-journal-entries",
+    "file": "05-journal-entries.png",
+    "url": "/ultimate/accounting/journal-entries?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/journal-entries?module=accounting",
+    "status": 200,
+    "title": "Journal Entries - Balances",
+    "loggedOut": false
+  },
+  {
+    "id": "06-vat-control",
+    "file": "06-vat-control.png",
+    "url": "/ultimate/accounting/vat-control?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/vat-control?module=accounting",
+    "status": 200,
+    "title": "VAT Control - Balances",
+    "loggedOut": false
+  },
+  {
+    "id": "07-accounting-settings",
+    "file": "07-accounting-settings.png",
+    "url": "/ultimate/accounting/settings?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/settings?module=accounting",
+    "status": 200,
+    "title": "Accounting Settings",
+    "loggedOut": false
+  },
+  {
+    "id": "08-journal-configuration",
+    "file": "08-journal-configuration.png",
+    "url": "/ultimate/accounting/journal-configuration?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/journal-configuration?module=accounting",
+    "status": 200,
+    "title": "Journal Configuration - Balances",
+    "loggedOut": false
+  },
+  {
+    "id": "09-trial-balance",
+    "file": "09-trial-balance.png",
+    "url": "/ultimate/accounting/trial-balance?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/trial-balance?module=accounting",
+    "status": 200,
+    "title": "Trial Balance - Balances",
+    "loggedOut": false
+  },
+  {
+    "id": "10-reconciliation",
+    "file": "10-reconciliation.png",
+    "url": "/ultimate/accounting/reconciliation?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/reconciliation?module=accounting",
+    "status": 200,
+    "title": "Bank Reconciliation - Balances",
+    "loggedOut": false
+  },
+  {
+    "id": "11-profit-loss",
+    "file": "11-profit-loss.png",
+    "url": "/ultimate/accounting/profit-loss?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/profit-loss?module=accounting",
+    "status": 200,
+    "title": "Balances | Staff",
+    "loggedOut": false
+  },
+  {
+    "id": "12-balance-sheet",
+    "file": "12-balance-sheet.png",
+    "url": "/ultimate/accounting/balance-sheet?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/balance-sheet?module=accounting",
+    "status": 200,
+    "title": "Balance Sheet - ERP",
+    "loggedOut": false
+  },
+  {
+    "id": "13-cash-flow",
+    "file": "13-cash-flow.png",
+    "url": "/ultimate/accounting/cash-flow?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/cash-flow?module=accounting",
+    "status": 200,
+    "title": "",
+    "loggedOut": false
+  },
+  {
+    "id": "14-chart-of-accounts",
+    "file": "14-chart-of-accounts.png",
+    "url": "/ultimate/accounting/chart-of-accounts?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/chart-of-accounts?module=accounting",
+    "status": 200,
+    "title": "Chart of Accounts - ERP",
+    "loggedOut": false
+  },
+  {
+    "id": "15-ledger",
+    "file": "15-ledger.png",
+    "url": "/ultimate/accounting/ledger?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/ledger?module=accounting",
+    "status": 200,
+    "title": "",
+    "loggedOut": false
+  },
+  {
+    "id": "16-posting-approvals",
+    "file": "16-posting-approvals.png",
+    "url": "/ultimate/accounting/posting-approvals?module=accounting",
+    "finalUrl": "http://localhost/public_html/ultimate/accounting/posting-approvals?module=accounting",
+    "status": 200,
+    "title": "Posting / Approval Workflow - Balances",
+    "loggedOut": false
+  },
+  {
+    "id": "17-stock-purchase-payment-desk",
+    "file": "17-stock-purchase-payment-desk.png",
+    "url": "/ultimate/modules/finance/stock-purchase-payment-desk.php?module=balances",
+    "finalUrl": "http://localhost/public_html/ultimate/modules/finance/stock-purchase-payment-desk.php?module=balances",
+    "status": 200,
+    "title": "Purchase Payment - Finance",
+    "loggedOut": false
+  },
+  {
+    "id": "18-cash-book",
+    "file": "18-cash-book.png",
+    "url": "/ultimate/modules/petty-cash/index?module=petty_cash",
+    "finalUrl": "http://localhost/public_html/ultimate/modules/petty-cash/index?module=petty_cash",
+    "status": 200,
+    "title": "Cash Book - ERP",
+    "loggedOut": false
+  },
+  {
+    "id": "19-budgets",
+    "file": "19-budgets.png",
+    "url": "/ultimate/modules/finance/budgets/index?module=finance",
+    "finalUrl": "http://localhost/public_html/ultimate/modules/finance/budgets/index?module=finance",
+    "status": 200,
+    "title": "Budgets - Finance",
+    "loggedOut": false
+  },
+  {
+    "id": "20-balances-transactions",
+    "file": "20-balances-transactions.png",
+    "url": "/ultimate/modules/balances/transactions.php?module=balances",
+    "finalUrl": "http://localhost/public_html/ultimate/modules/balances/transactions.php?module=balances",
+    "status": 200,
+    "title": "Transaction Ledger - Balances",
+    "loggedOut": false
+  },
+  {
+    "id": "21-balances-transfer",
+    "file": "21-balances-transfer.png",
+    "url": "/ultimate/modules/balances/transfer.php?module=balances",
+    "finalUrl": "http://localhost/public_html/ultimate/modules/balances/transfer.php?module=balances",
+    "status": 200,
+    "title": "Internal Transfer - Balances",
+    "loggedOut": false
+  },
+  {
+    "id": "22-balances-accounts",
+    "file": "22-balances-accounts.png",
+    "url": "/ultimate/modules/balances/accounts.php?module=balances",
+    "finalUrl": "http://localhost/public_html/ultimate/modules/balances/accounts.php?module=balances",
+    "status": 200,
+    "title": "Accounts - Balances",
+    "loggedOut": false
+  }
+]

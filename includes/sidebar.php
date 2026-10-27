@@ -196,16 +196,16 @@ if ($active_module === 'deliveries') {
         ? company_url('deliveries/index', $__sidebarSlug !== '' ? $__sidebarSlug : null)
         : ($prefix . 'deliveries/index');
     $dlvDashSepEarly = (strpos($deliveriesDashboardUrlEarly, '?') !== false) ? '&' : '?';
-    addItem($menuItems, 'dashboard', 'Dashboard', 'truck', $deliveriesDashboardUrlEarly . $dlvDashSepEarly . $dlvDashQsEarly);
+    addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $deliveriesDashboardUrlEarly . $dlvDashSepEarly . $dlvDashQsEarly);
 }
 
 if (stripos($path_to_check, '/dispatch/') !== false) {
-    addItem($menuItems, 'quick-dispatch-dashboard', 'Dashboard', 'chart-bar', $prefix . 'dispatch/index.php?module=dispatch');
+    addItem($menuItems, 'quick-dispatch-dashboard', 'Dashboard', 'th-large', $prefix . 'dispatch/index.php?module=dispatch');
 }
 
 switch ($active_module) {
     case 'stocks':
-        addItem($menuItems, 'dashboard', 'Dashboard', 'chart-bar', $prefix . 'stock');
+        addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $prefix . 'stock');
         addItem($menuItems, 'catalogue', 'Catalogue', 'clipboard', $prefix . 'stock/catalogue');
         addItem($menuItems, 'products', 'Products', 'archive', $prefix . 'stock/products', null, [
             [
@@ -228,7 +228,7 @@ switch ($active_module) {
         break;
 
     case 'website':
-        addItem($menuItems, 'website-dashboard', 'Dashboard', 'chart-bar', $prefix . 'website/dashboard');
+        addItem($menuItems, 'website-dashboard', 'Dashboard', 'th-large', $prefix . 'website/dashboard');
         addItem($menuItems, 'web-services', 'webServices', 'globe', $prefix . 'website');
         $quoteAccessLib = dirname(__DIR__) . '/modules/sales/quote-requests/includes/quote-requests-lib.php';
         if (is_file($quoteAccessLib)) {
@@ -264,7 +264,7 @@ switch ($active_module) {
         $crmMarketSep = (strpos($crmMarketHref, '?') !== false) ? '&' : '?';
         $crmMarketHref = $crmMarketHref . $crmMarketSep . 'module=crm';
         $crmNewLeadsHref = $crmMarketHref . '&view=new-leads';
-        addItem($menuItems, 'dashboard', 'Dashboard', 'chart-bar', $crmDashboardHref);
+        addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $crmDashboardHref);
         addItem($menuItems, 'my-customers', 'My Customers', 'users', $crmCustomersHref);
         addItem($menuItems, 'new-leads', 'New Leads', 'bolt', $crmNewLeadsHref);
         $crmMarketChildren = function_exists('crmMarketSidebarChildren')
@@ -274,7 +274,7 @@ switch ($active_module) {
         break;
 
     case 'sales':
-        addItem($menuItems, 'dashboard', 'Dashboard', 'chart-bar', $prefix . 'modules/sales/dashboard/index.php?module=sales');
+        addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $prefix . 'modules/sales/dashboard/index.php?module=sales');
         addItem($menuItems, 'my-sales', 'My Sales', 'user', $prefix . 'modules/sales/my-sales/index.php?module=sales');
         addItem($menuItems, 'sales-catalogue', 'Sales Catalogue', 'clipboard', $prefix . 'modules/sales/catalogue.php?module=sales');
         addItem($menuItems, 'pricelist', 'Pricelist', 'tags', $prefix . 'modules/sales/pricelist.php?module=sales');
@@ -329,7 +329,7 @@ switch ($active_module) {
         break;
 
     case 'payroll':
-        addItem($menuItems, 'dashboard', 'Dashboard', 'chart-bar', $prefix . 'modules/payroll/index.php?module=payroll');
+        addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $prefix . 'modules/payroll/index.php?module=payroll');
         addItem($menuItems, 'salaries', 'Employees', 'users', $prefix . 'modules/payroll/salaries.php?module=payroll');
         addItem($menuItems, 'settings', 'Settings', 'cog', $prefix . 'modules/payroll/settings.php?module=payroll');
         addItem($menuItems, 'help', 'User Manual', 'question-circle', $prefix . 'modules/payroll/help.php?module=payroll');
@@ -359,7 +359,7 @@ switch ($active_module) {
         break;
 
     case 'dispatch':
-        addItem($menuItems, 'dispatch-dashboard', 'Dashboard', 'chart-bar', $prefix . 'dispatch/index.php?module=dispatch');
+        addItem($menuItems, 'dispatch-dashboard', 'Dashboard', 'th-large', $prefix . 'dispatch/index.php?module=dispatch');
         addItem($menuItems, 'dispatch-notes', 'Dispatch Notes', 'truck', $prefix . 'dispatch/index.php?module=dispatch');
         addItem($menuItems, 'routes', 'Routes', 'map', $prefix . 'dispatch/routes.php?module=dispatch');
         addItem($menuItems, 'saved-routes', 'Saved Routes', 'table', $prefix . 'dispatch/saved_routes.php?module=dispatch');
@@ -369,7 +369,7 @@ switch ($active_module) {
 
     case 'voucher':
         $dashUrl = $is_admin ? 'admin/dashboard.php' : 'employee/dashboard.php';
-        addItem($menuItems, 'dashboard', 'Dashboard', 'ticket', $prefix . $dashUrl . '?module=voucher');
+        addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $prefix . $dashUrl . '?module=voucher');
         addItem($menuItems, 'user-manual', 'User Manual', 'book-open', $prefix . 'employee/user-manual.php?module=voucher');
         
         if ($is_admin) {
@@ -416,7 +416,7 @@ switch ($active_module) {
         break;
 
     case 'tracking':
-        addItem($menuItems, 'dashboard', 'Dashboard', 'search', $prefix . 'order-tracking/index.php?module=tracking');
+        addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $prefix . 'order-tracking/index.php?module=tracking');
         break;
 
     case 'outstanding':
@@ -453,7 +453,7 @@ switch ($active_module) {
         break;
 
      case 'balances':
-        addItem($menuItems, 'dashboard', 'Dashboard', 'chart-pie', $prefix . 'modules/balances/index.php');
+        addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $prefix . 'modules/balances/index.php');
         addItem($menuItems, 'account-parent', 'Account', 'credit-card', $prefix . 'modules/balances/accounts.php');
         addItem($menuItems, 'transfer', 'Transfer', 'arrow-right', $prefix . 'modules/balances/transfer.php');
         addItem($menuItems, 'transactions', 'History', 'list', $prefix . 'modules/balances/transactions.php');
@@ -511,7 +511,7 @@ switch ($active_module) {
 
     default:
         $dashUrl = $is_admin ? 'admin/dashboard.php' : 'employee/dashboard.php';
-        addItem($menuItems, 'dashboard', 'Dashboard', 'home', $prefix . $dashUrl);
+        addItem($menuItems, 'dashboard', 'Dashboard', 'th-large', $prefix . $dashUrl);
         if ($is_admin) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'robot', $prefix . 'admin/ai_assistant.php');
         } else {

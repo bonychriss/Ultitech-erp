@@ -611,101 +611,13 @@ switch ($active_module) {
         break;
 
     case 'accounting':
+        // Module cards on the hub cover Balances / Revenues / Expenses / Purchases /
+        // Cash Book / Journal / Reconciliation — hide those sidebar duplicates.
         if ($is_admin) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=accounting');
         } else {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=accounting');
         }
-        addItem($menuItems, 'dashboard', 'Dashboard', 'calculator', $prefix . 'modules/accounting/index.php?module=accounting');
-        addParentItem($menuItems, 'balances-parent', 'Balances', 'scale-balanced', [
-            [
-                'id' => 'balances-dashboard',
-                'label' => 'Liquidity',
-                'icon' => 'speedometer2',
-                'path' => $prefix . 'modules/balances/index.php?module=balances',
-            ],
-            [
-                'id' => 'balances-accounts',
-                'label' => 'Accounts',
-                'icon' => 'wallet2',
-                'path' => $prefix . 'modules/balances/accounts.php',
-            ],
-            [
-                'id' => 'balances-transfer',
-                'label' => 'Internal Transfer',
-                'icon' => 'arrow-left-right',
-                'path' => $prefix . 'modules/balances/transfer.php',
-            ],
-            [
-                'id' => 'balances-transactions',
-                'label' => 'Transactions',
-                'icon' => 'list-check',
-                'path' => $prefix . 'modules/balances/transactions.php',
-            ],
-        ]);
-        addItem($menuItems, 'revenue-list', 'Revenues', 'fas fa-coins', $prefix . 'revenue_entries.php?module=revenue', null, 'sidebar-revenue-link');
-        addParentItem($menuItems, 'expenses-parent', 'Expenses', 'receipt', [
-            [
-                'id' => 'expenses-dashboard',
-                'label' => 'Expenses',
-                'icon' => 'bar-chart',
-                'path' => $prefix . 'modules/expenses/index.php?module=expenses',
-            ],
-            [
-                'id' => 'expenses-new',
-                'label' => 'New Expense',
-                'icon' => 'file-earmark-plus',
-                'path' => $prefix . 'modules/expenses/create.php?module=expenses',
-            ],
-            [
-                'id' => 'expenses-view',
-                'label' => 'View Expenses',
-                'icon' => 'list-ul',
-                'path' => $prefix . 'modules/expenses/view.php?module=expenses',
-            ],
-        ], $__expensesModuleUpdateBadge);
-        addItem($menuItems, 'purchases', 'Purchases', 'cart', $prefix . 'modules/purchases/index.php?module=purchases');
-        addParentItem($menuItems, 'petty-cash-parent', 'Cash Book', 'wallet2', [
-            [
-                'id' => 'petty-cash-dashboard',
-                'label' => 'Cash Books',
-                'icon' => 'journal-bookmark',
-                'path' => $prefix . 'modules/petty-cash/index.php?module=petty_cash',
-            ],
-            [
-                'id' => 'petty-cash-import',
-                'label' => 'Import Excel',
-                'icon' => 'upload',
-                'path' => $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=import',
-            ],
-            [
-                'id' => 'petty-cash-categories',
-                'label' => 'Categories',
-                'icon' => 'tags',
-                'path' => $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=categories',
-            ],
-            [
-                'id' => 'petty-cash-reports',
-                'label' => 'Reports',
-                'icon' => 'bar-chart',
-                'path' => $prefix . 'modules/petty-cash/desk.php?module=petty_cash&desk=reports',
-            ],
-        ]);
-        addParentItem($menuItems, 'journal-parent', 'Journal', 'journal-text', [
-            [
-                'id' => 'journal-entries',
-                'label' => 'Journal Entries',
-                'icon' => 'journal-text',
-                'path' => $prefix . 'accounting/journal-entries.php?module=accounting',
-            ],
-            [
-                'id' => 'journal-config',
-                'label' => 'Journal Configuration',
-                'icon' => 'gear',
-                'path' => $prefix . 'accounting/journal-configuration.php?module=accounting',
-            ],
-        ]);
-        addItem($menuItems, 'reconciliation', 'Reconciliation', 'link-45deg', $prefix . 'accounting/reconciliation.php?module=accounting');
         break;
 
     case 'balances':

@@ -447,27 +447,9 @@ switch ($active_module) {
         break;
 
      case 'accounting':
-        addItem($menuItems, 'dashboard', 'Dashboard', 'calculator', $prefix . 'modules/accounting/index.php?module=accounting');
-        addItem($menuItems, 'balances', 'Balances', 'balance-scale', $prefix . 'modules/balances/index.php?module=balances');
+        // Hub cards cover Balances / Revenue / Expenses / Purchases / Journal / etc.
+        // Keep only Accounts here so the hub page sidebar stays lean.
         addItem($menuItems, 'accounts', 'Accounts', 'credit-card', $prefix . 'modules/balances/accounts.php');
-        addItem($menuItems, 'revenue', 'Revenue', 'fas fa-coins', $prefix . 'revenue_entries.php?module=revenue', null, 'sidebar-revenue-link');
-        addItem($menuItems, 'expenses', 'Expenses', 'receipt', $prefix . 'modules/expenses/index.php?module=expenses', $__expensesModuleUpdateBadge);
-        addItem($menuItems, 'purchases', 'Purchases', 'shopping-cart', $prefix . 'modules/purchases/index.php?module=purchases');
-        addParentItem($menuItems, 'journal-parent', 'Journal', 'journal-text', [
-            [
-                'id' => 'journal-entries',
-                'label' => 'Journal Entries',
-                'icon' => 'book',
-                'path' => $prefix . 'accounting/journal-entries.php?module=accounting',
-            ],
-            [
-                'id' => 'journal-config',
-                'label' => 'Journal Configuration',
-                'icon' => 'cog',
-                'path' => $prefix . 'accounting/journal-configuration.php?module=accounting',
-            ],
-        ]);
-        addItem($menuItems, 'reconciliation', 'Reconciliation', 'balance-scale', $prefix . 'accounting/reconciliation.php?module=accounting');
         break;
 
      case 'balances':

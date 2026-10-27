@@ -68,7 +68,7 @@ final class AccountingShell
             'footerScripts' => $footerScripts,
             'employeeHeaderTitle' => $headerTitle,
             'hideHeaderCompanyBranding' => true,
-            'hideSidebar' => true,
+            'hideSidebar' => false,
             'employeeHeaderExtraClass' => 'employee-header--accounting-desk',
             'mainRootClass' => 'accounting-react-root',
         ];
@@ -133,10 +133,6 @@ final class AccountingShell
         return <<<'CSS'
 <style>
 body.page-accounting-desk .employee-header.employee-header--accounting-desk {
-    display: none !important;
-}
-body.page-accounting-desk .sidebar,
-body.page-accounting-desk #native-sidebar {
     display: none !important;
 }
 body.page-accounting-desk.dashboard .layout-main-wrapper { align-items: stretch; }

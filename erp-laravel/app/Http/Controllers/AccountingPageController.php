@@ -40,12 +40,14 @@ class AccountingPageController extends Controller
         $page_title = $viewData['pageTitle'];
         $employeeHeaderTitle = $viewData['employeeHeaderTitle'];
         $hideHeaderCompanyBranding = $viewData['hideHeaderCompanyBranding'];
+        $hideSidebar = !empty($viewData['hideSidebar']);
         $employeeHeaderExtraClass = $viewData['employeeHeaderExtraClass'];
 
         return view('erp.react-shell', $viewData + [
             'page_title' => $page_title,
             'employeeHeaderTitle' => $employeeHeaderTitle,
             'hideHeaderCompanyBranding' => $hideHeaderCompanyBranding,
+            'hideSidebar' => $hideSidebar,
             'employeeHeaderExtraClass' => $employeeHeaderExtraClass,
         ]);
     }

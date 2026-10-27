@@ -29,6 +29,34 @@ html[data-theme='dark'] {
   margin-bottom: 1.1rem;
 }
 
+.acct-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.85rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid var(--acct-border);
+  background: var(--acct-surface);
+  color: var(--acct-muted) !important;
+  text-decoration: none !important;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.acct-back:hover {
+  border-color: #94a3b8;
+  color: var(--acct-text) !important;
+  background: #fff;
+}
+
+html[data-theme='dark'] .acct-back:hover {
+  background: #334155;
+  border-color: #64748b;
+}
+
 .acct-hero h1 {
   margin: 0;
   font-size: clamp(1.75rem, 3vw, 2.125rem);

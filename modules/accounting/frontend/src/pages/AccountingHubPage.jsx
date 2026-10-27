@@ -1,4 +1,5 @@
 import {
+  ArrowLeft,
   BookOpen,
   Coins,
   Link2,
@@ -54,10 +55,17 @@ function SectionIcon({ icon, iconUrl, tone }) {
 export default function AccountingHubPage() {
   const boot = readBoot()
   const sections = Array.isArray(boot.sections) ? boot.sections : []
+  const backUrl = typeof boot.backUrl === 'string' ? boot.backUrl.trim() : ''
 
   return (
     <div className="acct-page">
       <header className="acct-hero">
+        {backUrl ? (
+          <a className="acct-back" href={backUrl}>
+            <ArrowLeft size={16} strokeWidth={2.25} aria-hidden="true" />
+            Back
+          </a>
+        ) : null}
         <h1>Accounting</h1>
         <p>Choose a section to configure or work with balances, revenue, VAT, journals, and reports.</p>
       </header>

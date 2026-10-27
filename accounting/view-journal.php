@@ -23,7 +23,6 @@ if (isset($_GET['download_attachment'])) {
         exit;
     }
 
-    // Serve real file if it exists, otherwise provide demo content download.
     $safeName = basename($requested);
     $candidate = __DIR__ . '/../uploads/journal-attachments/' . $safeName;
     if (is_file($candidate)) {
@@ -43,8 +42,17 @@ if (isset($_GET['download_attachment'])) {
     exit;
 }
 
-$journalStmt = $pdo->prepare('SELECT * FROM erp_journal_entries WHERE id = ? AND company_id = ?');
-$journalStmt->execute([$id, $company_id]);
+$jeHasCompany = function_exists('columnExists') && columnExists('erp_journal_entries', 'company_id', $pdo);
+$jiHasCompany = function_exists('columnExists') && columnExists('erp_journal_items', 'company_id', $pdo);
+$acctHasCompany = function_exists('columnExists') && columnExists('erp_accounts', 'company_id', $pdo);
+
+if ($jeHasCompany && $company_id > 0) {
+    $journalStmt = $pdo->prepare('SELECT * FROM erp_journal_entries WHERE id = ? AND company_id = ?');
+    $journalStmt->execute([$id, $company_id]);
+} else {
+    $journalStmt = $pdo->prepare('SELECT * FROM erp_journal_entries WHERE id = ?');
+    $journalStmt->execute([$id]);
+}
 $journal = $journalStmt->fetch(PDO::FETCH_ASSOC);
 if (!$journal) {
     http_response_code(404);
@@ -56,8 +64,19 @@ $items = [];
 $totalDebit = 0.0;
 $totalCredit = 0.0;
 try {
-    $itemsStmt = $pdo->prepare('SELECT ji.*, a.code, a.name FROM erp_journal_items ji JOIN erp_accounts a ON ji.account_id = a.id AND a.company_id = ji.company_id WHERE ji.journal_id = ? AND ji.company_id = ? ORDER BY ji.id ASC');
-    $itemsStmt->execute([$id, $company_id]);
+    $joinOn = 'ji.account_id = a.id';
+    if ($jiHasCompany && $acctHasCompany) {
+        $joinOn .= ' AND a.company_id = ji.company_id';
+    }
+    $itemsSql = "SELECT ji.*, a.code, a.name FROM erp_journal_items ji JOIN erp_accounts a ON {$joinOn} WHERE ji.journal_id = ?";
+    $itemsParams = [$id];
+    if ($jiHasCompany && $company_id > 0) {
+        $itemsSql .= ' AND ji.company_id = ?';
+        $itemsParams[] = $company_id;
+    }
+    $itemsSql .= ' ORDER BY ji.id ASC';
+    $itemsStmt = $pdo->prepare($itemsSql);
+    $itemsStmt->execute($itemsParams);
     $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     foreach ($items as $it) {
         $totalDebit += (float) ($it['debit'] ?? 0);
@@ -82,12 +101,190 @@ if (strpos($descLower, 'payroll') !== false) {
     $journalType = 'Payment Voucher';
 }
 
+if (!function_exists('sales_module_url')) {
+    $salesFn = __DIR__ . '/../modules/sales/functions.php';
+    if (is_file($salesFn)) {
+        require_once $salesFn;
+    }
+}
+
+$jeInvoiceViewUrl = static function (int $invoiceId): string {
+    if ($invoiceId <= 0) {
+        return '';
+    }
+    if (function_exists('sales_module_url')) {
+        return sales_module_url('invoices/view.php', ['id' => $invoiceId, 'module' => 'sales']);
+    }
+    if (function_exists('company_url')) {
+        return company_url('sales/invoice/' . $invoiceId) . '?module=sales';
+    }
+    $path = '/modules/sales/invoices/view.php?id=' . $invoiceId . '&module=sales';
+
+    return function_exists('app_url') ? app_url($path) : $path;
+};
+
+/** @var array<string,int> */
+$jeInvoiceIdByNumber = [];
+$jeResolveInvoiceId = static function (string $invoiceNumber) use ($pdo, &$jeInvoiceIdByNumber): int {
+    $key = strtoupper(trim($invoiceNumber));
+    if ($key === '') {
+        return 0;
+    }
+    if (array_key_exists($key, $jeInvoiceIdByNumber)) {
+        return $jeInvoiceIdByNumber[$key];
+    }
+    $jeInvoiceIdByNumber[$key] = 0;
+    try {
+        if (function_exists('tableExists') && !tableExists('invoices', $pdo)) {
+            return 0;
+        }
+        $st = $pdo->prepare('SELECT id FROM invoices WHERE invoice_number = ? LIMIT 1');
+        $st->execute([$invoiceNumber]);
+        $jeInvoiceIdByNumber[$key] = (int) ($st->fetchColumn() ?: 0);
+    } catch (Throwable $e) {
+        $jeInvoiceIdByNumber[$key] = 0;
+    }
+
+    return $jeInvoiceIdByNumber[$key];
+};
+
+$jeLinkifyInvoiceRefs = static function (string $text) use ($jeResolveInvoiceId, $jeInvoiceViewUrl): string {
+    $text = trim($text);
+    if ($text === '' || $text === '-') {
+        return htmlspecialchars($text !== '' ? $text : '-', ENT_QUOTES, 'UTF-8');
+    }
+    $parts = preg_split('/\b(INV-\d{4}-\d+)\b/i', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+    if ($parts === false || count($parts) === 1) {
+        return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    }
+    $html = '';
+    foreach ($parts as $part) {
+        if ($part === '') {
+            continue;
+        }
+        if (preg_match('/^INV-\d{4}-\d+$/i', $part)) {
+            $invId = $jeResolveInvoiceId($part);
+            $label = htmlspecialchars($part, ENT_QUOTES, 'UTF-8');
+            if ($invId > 0) {
+                $href = $jeInvoiceViewUrl($invId);
+            } elseif (function_exists('sales_module_url')) {
+                $href = sales_module_url('invoices/index.php', [
+                    'module' => 'sales',
+                    'q' => $part,
+                ]);
+            } elseif (function_exists('app_url')) {
+                $href = app_url('/modules/sales/invoices/index.php?module=sales&q=' . rawurlencode($part));
+            } else {
+                $href = '/modules/sales/invoices/index.php?module=sales&q=' . rawurlencode($part);
+            }
+            $html .= '<a class="jed-inv-link" href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '">' . $label . '</a>';
+        } else {
+            $html .= htmlspecialchars($part, ENT_QUOTES, 'UTF-8');
+        }
+    }
+
+    return $html !== '' ? $html : htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+};
+
+$jeVoucherViewUrl = static function (int $voucherId): string {
+    if ($voucherId <= 0) {
+        return '';
+    }
+    $path = 'view-voucher.php?id=' . $voucherId . '&module=voucher';
+    if (function_exists('company_url')) {
+        return company_url($path);
+    }
+
+    return function_exists('app_url') ? app_url('/' . $path) : '/' . $path;
+};
+
+$jeResolveVoucherId = static function (string $voucherNo) use ($pdo): int {
+    $voucherNo = trim($voucherNo);
+    if ($voucherNo === '') {
+        return 0;
+    }
+    try {
+        if (function_exists('tableExists') && !tableExists('payment_vouchers', $pdo)) {
+            return 0;
+        }
+        $st = $pdo->prepare('SELECT id FROM payment_vouchers WHERE voucher_no = ? LIMIT 1');
+        $st->execute([$voucherNo]);
+        $found = (int) ($st->fetchColumn() ?: 0);
+        if ($found > 0) {
+            return $found;
+        }
+        $alt = str_replace('-', '/', $voucherNo);
+        if ($alt !== $voucherNo) {
+            $st->execute([$alt]);
+            $found = (int) ($st->fetchColumn() ?: 0);
+            if ($found > 0) {
+                return $found;
+            }
+        }
+    } catch (Throwable $e) {
+        return 0;
+    }
+
+    return 0;
+};
+
+/** @var list<array{key:string,label:string,href:string,type:string}> */
+$relatedDocs = [];
+$relatedSeen = [];
+$jeAddRelated = static function (string $key, string $label, string $href, string $type) use (&$relatedDocs, &$relatedSeen): void {
+    $k = strtoupper(trim($key));
+    if ($k === '' || isset($relatedSeen[$k]) || $href === '') {
+        return;
+    }
+    $relatedSeen[$k] = true;
+    $relatedDocs[] = [
+        'key' => $k,
+        'label' => $label,
+        'href' => $href,
+        'type' => $type,
+    ];
+};
+
+$scanText = trim($desc . ' ' . (string) ($journal['reference'] ?? '') . ' ' . (string) ($journal['entry_number'] ?? ''));
+if (preg_match_all('/\b(INV-\d{4}-\d+)\b/i', $scanText, $invMatches)) {
+    foreach (array_unique($invMatches[1]) as $invNo) {
+        $invId = $jeResolveInvoiceId((string) $invNo);
+        if ($invId > 0) {
+            $href = $jeInvoiceViewUrl($invId);
+        } elseif (function_exists('sales_module_url')) {
+            $href = sales_module_url('invoices/index.php', ['module' => 'sales', 'q' => $invNo]);
+        } else {
+            $href = function_exists('app_url')
+                ? app_url('/modules/sales/invoices/index.php?module=sales&q=' . rawurlencode((string) $invNo))
+                : '/modules/sales/invoices/index.php?module=sales&q=' . rawurlencode((string) $invNo);
+        }
+        $jeAddRelated((string) $invNo, strtoupper((string) $invNo) . ' (Invoice)', $href, 'invoice');
+    }
+}
+if (preg_match_all('/\b(PV[\/\-][A-Z0-9][A-Z0-9\/\-]*)\b/i', $scanText, $pvMatches)) {
+    foreach (array_unique($pvMatches[1]) as $pvNo) {
+        $pvId = $jeResolveVoucherId((string) $pvNo);
+        if ($pvId > 0) {
+            $jeAddRelated((string) $pvNo, (string) $pvNo . ' (Payment Voucher)', $jeVoucherViewUrl($pvId), 'voucher');
+        }
+    }
+}
+
 $page_title = 'Journal Entry Details';
 include __DIR__ . '/../modules/balances/includes/header.php';
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 .employee-header{display:none!important}
+.jed-inv-link{color:#2563eb;font-weight:700;text-decoration:none}
+.jed-inv-link:hover{text-decoration:underline}
+.jed-rel-list{display:flex;flex-direction:column;gap:8px}
+.jed-rel-list a{font-size:12px;color:#2563eb;text-decoration:none;font-weight:700}
+.jed-rel-list a:hover{text-decoration:underline}
+.jed-rel-empty{font-size:12px;color:#94a3b8}
+.jed-rel-more{display:none;margin-top:8px;padding-top:8px;border-top:1px solid #eef2f7}
+.jed-rel-more.is-open{display:block}
+.jed-btn[aria-expanded="true"]{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
 .main-content.jed-shell{margin-top:0!important;padding:14px 0 26px!important;background:#f9fafb;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;color:#0f172a}
 .jed-wrap{padding:0 16px}
 .jed-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px}
@@ -113,7 +310,9 @@ include __DIR__ . '/../modules/balances/includes/header.php';
 .jed-tabs{display:flex;gap:4px;flex-wrap:wrap;padding:0 12px;border-bottom:1px solid #eef2f7}
 .jed-tabs button{border:0;background:transparent;padding:11px 12px;font-size:13px;font-weight:600;color:#64748b;border-bottom:2px solid transparent;cursor:pointer}
 .jed-tabs button.active{color:#2563eb;border-bottom-color:#2563eb}
-.jed-pan{padding:14px 15px}
+.jed-tabs button:hover{color:#2563eb}
+.jed-pan{padding:14px 15px;display:none}
+.jed-pan.is-active{display:block}
 .jed-split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .jed-table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px}
 .jed-table th,.jed-table td{padding:9px 8px;border-bottom:1px solid #eef2f7;vertical-align:middle}
@@ -151,17 +350,13 @@ include __DIR__ . '/../modules/balances/includes/header.php';
     <div class="jed-top">
       <div>
         <h1 class="jed-title">Journal Entry Details</h1>
-        <p class="jed-sub">View and manage journal entry</p>
-        <nav class="jed-bc">
-          <a href="../index.php">Home</a><i class="fas fa-chevron-right"></i>
-          <a href="#">Finance &amp; Accounting</a><i class="fas fa-chevron-right"></i>
+        <p class="jed-sub"><?= htmlspecialchars((string) ($journal['entry_number'] ?? 'JE')) ?> · <?= htmlspecialchars($journalType) ?></p>
+        <div class="jed-bc">
           <a href="journal-entries.php?module=<?= $jeModule ?>">Journal Entries</a><i class="fas fa-chevron-right"></i>
           <span><?= htmlspecialchars((string) ($journal['entry_number'] ?? 'JE')) ?></span>
-        </nav>
+        </div>
       </div>
       <div class="jed-actions">
-        <a class="jed-btn" href="journal-entries.php?module=<?= $jeModule ?>"><i class="fas fa-arrow-left"></i> Back</a>
-        <button type="button" class="jed-btn"><i class="fas fa-print"></i> Print</button>
         <button type="button" class="jed-btn"><i class="fas fa-download"></i> Download</button>
         <button type="button" class="jed-btn warn"><i class="fas fa-rotate-left"></i> Reverse Entry</button>
       </div>
@@ -178,7 +373,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
                   <span class="jed-tag">Posted</span>
                   <div class="jed-ref"><?= htmlspecialchars((string) ($journal['entry_number'] ?? 'JE-000001')) ?></div>
                   <div class="jed-v muted" style="margin-top:6px;"><?= htmlspecialchars($journalType) ?></div>
-                  <div class="jed-v muted"><?= htmlspecialchars($desc !== '' ? $desc : 'Journal entry') ?></div>
+                  <div class="jed-v muted"><?= $desc !== '' ? $jeLinkifyInvoiceRefs($desc) : 'Journal entry' ?></div>
                 </div>
               </div>
             </div>
@@ -191,86 +386,80 @@ include __DIR__ . '/../modules/balances/includes/header.php';
           </div>
         </section>
 
-        <section class="jed-card">
-          <div class="jed-tabs">
-            <button class="active" type="button">Overview</button>
-            <button type="button">Journal Lines</button>
-            <button type="button">Attachments (2)</button>
-            <button type="button">Audit Trail</button>
+        <section class="jed-card" id="jedTabsCard">
+          <div class="jed-tabs" role="tablist" aria-label="Journal details">
+            <button class="active" type="button" role="tab" aria-selected="true" data-jed-tab="overview">Overview</button>
+            <button type="button" role="tab" aria-selected="false" data-jed-tab="lines">Journal Lines</button>
+            <button type="button" role="tab" aria-selected="false" data-jed-tab="attachments">Attachments (<?= count($attachments) ?>)</button>
+            <button type="button" role="tab" aria-selected="false" data-jed-tab="audit">Audit Trail</button>
           </div>
-          <div class="jed-pan">
+
+          <div class="jed-pan is-active" data-jed-panel="overview" role="tabpanel">
             <div class="jed-split">
-              <div><div class="jed-k">Description</div><div class="jed-v muted"><?= htmlspecialchars($desc !== '' ? $desc : '—') ?></div></div>
+              <div><div class="jed-k">Description</div><div class="jed-v muted"><?= $desc !== '' ? $jeLinkifyInvoiceRefs($desc) : '—' ?></div></div>
               <div><div class="jed-k">Notes</div><div class="jed-v muted">Payment details and supporting remarks captured on post.</div></div>
             </div>
           </div>
-        </section>
 
-        <section class="jed-card">
-          <div class="jed-hd">Journal Lines</div>
-          <div class="jed-bd" style="overflow:auto;">
-            <table class="jed-table">
-              <thead>
-                <tr>
-                  <th>#</th><th>Account Code</th><th>Account Name</th><th>Description</th><th>Department</th><th>Project</th><th class="num">Debit (TZS)</th><th class="num">Credit (TZS)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php if (empty($items)): ?>
-                  <tr><td colspan="8" style="text-align:center;color:#64748b;padding:22px;">No journal lines found.</td></tr>
-                <?php else: ?>
-                  <?php foreach ($items as $idx => $item): ?>
-                    <tr>
-                      <td><?= $idx + 1 ?></td>
-                      <td><?= htmlspecialchars((string) ($item['code'] ?? '-')) ?></td>
-                      <td><?= htmlspecialchars((string) ($item['name'] ?? '-')) ?></td>
-                      <td><?= htmlspecialchars((string) ($item['line_desc'] ?? ($desc !== '' ? $desc : '-'))) ?></td>
-                      <td><?= htmlspecialchars((string) ($item['department'] ?? 'Administration')) ?></td>
-                      <td><?= htmlspecialchars((string) ($item['project'] ?? '-')) ?></td>
-                      <td class="num"><?= (float)($item['debit'] ?? 0) > 0 ? number_format((float)$item['debit'], 2) : '0.00' ?></td>
-                      <td class="num"><?= (float)($item['credit'] ?? 0) > 0 ? number_format((float)$item['credit'], 2) : '0.00' ?></td>
-                    </tr>
-                  <?php endforeach; ?>
-                <?php endif; ?>
-              </tbody>
-            </table>
-            <div class="jed-footer-tot jed-footer-tot-right">
-              <div><div class="n">Total Debit (TZS)</div><div class="v"><?= number_format($totalDebit, 2) ?></div></div>
-              <div><div class="n">Total Credit (TZS)</div><div class="v"><?= number_format($totalCredit, 2) ?></div></div>
-              <div><div class="n">Difference</div><div class="v ok"><?= number_format($totalDebit - $totalCredit, 2) ?></div></div>
+          <div class="jed-pan" data-jed-panel="lines" role="tabpanel" hidden>
+            <div style="overflow:auto;">
+              <table class="jed-table">
+                <thead>
+                  <tr>
+                    <th>No.</th><th>Account Code</th><th>Account Name</th><th>Description</th><th>Department</th><th>Project</th><th class="num">Debit (TZS)</th><th class="num">Credit (TZS)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (empty($items)): ?>
+                    <tr><td colspan="8" style="text-align:center;color:#64748b;padding:22px;">No journal lines found.</td></tr>
+                  <?php else: ?>
+                    <?php foreach ($items as $idx => $item): ?>
+                      <tr>
+                        <td><?= $idx + 1 ?></td>
+                        <td><?= htmlspecialchars((string) ($item['code'] ?? '-')) ?></td>
+                        <td><?= htmlspecialchars((string) ($item['name'] ?? '-')) ?></td>
+                        <td><?= $jeLinkifyInvoiceRefs((string) ($item['line_desc'] ?? ($desc !== '' ? $desc : '-'))) ?></td>
+                        <td><?= htmlspecialchars((string) ($item['department'] ?? 'Administration')) ?></td>
+                        <td><?= htmlspecialchars((string) ($item['project'] ?? '-')) ?></td>
+                        <td class="num"><?= (float)($item['debit'] ?? 0) > 0 ? number_format((float)$item['debit'], 2) : '0.00' ?></td>
+                        <td class="num"><?= (float)($item['credit'] ?? 0) > 0 ? number_format((float)$item['credit'], 2) : '0.00' ?></td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+              <div class="jed-footer-tot jed-footer-tot-right">
+                <div><div class="n">Total Debit (TZS)</div><div class="v"><?= number_format($totalDebit, 2) ?></div></div>
+                <div><div class="n">Total Credit (TZS)</div><div class="v"><?= number_format($totalCredit, 2) ?></div></div>
+                <div><div class="n">Difference</div><div class="v ok"><?= number_format($totalDebit - $totalCredit, 2) ?></div></div>
+              </div>
+              <div class="jed-ok"><i class="far fa-circle-check"></i> Debits and credits are balanced.</div>
             </div>
-            <div class="jed-ok"><i class="far fa-circle-check"></i> Debits and credits are balanced.</div>
+          </div>
+
+          <div class="jed-pan" data-jed-panel="attachments" role="tabpanel" hidden>
+            <?php foreach ($attachments as $att): ?>
+              <div class="jed-att-row">
+                <div class="jed-att-main">
+                  <div class="jed-att-name"><?= htmlspecialchars((string) $att['name']) ?></div>
+                  <div class="jed-att-meta"><?= htmlspecialchars((string) $att['size']) ?></div>
+                </div>
+                <div class="jed-att-actions">
+                  <a class="jed-dl" href="?id=<?= (int) $id ?>&module=<?= urlencode((string) $jeModule) ?>&download_attachment=<?= urlencode((string) $att['name']) ?>"><i class="fas fa-download"></i> Download</a>
+                </div>
+              </div>
+            <?php endforeach; ?>
+            <?php if (empty($attachments)): ?>
+              <div class="jed-v muted">No attachments.</div>
+            <?php endif; ?>
+          </div>
+
+          <div class="jed-pan" data-jed-panel="audit" role="tabpanel" hidden>
+            <div class="jed-kv"><span>Posted</span><span><?= htmlspecialchars(date('d/m/Y h:i A')) ?></span></div>
+            <div class="jed-kv"><span>Approved</span><span><?= htmlspecialchars(date('d/m/Y h:i A')) ?></span></div>
+            <div class="jed-kv" style="margin-bottom:0;"><span>Reviewed</span><span><?= htmlspecialchars(date('d/m/Y h:i A')) ?></span></div>
           </div>
         </section>
-
-        <div class="jed-split">
-          <section class="jed-card">
-            <div class="jed-hd">Attachments (<?= count($attachments) ?>)</div>
-            <div class="jed-bd">
-              <?php foreach ($attachments as $att): ?>
-                <div class="jed-att-row">
-                  <div class="jed-att-main">
-                    <div class="jed-att-name"><?= htmlspecialchars((string) $att['name']) ?></div>
-                    <div class="jed-att-meta"><?= htmlspecialchars((string) $att['size']) ?></div>
-                  </div>
-                  <div class="jed-att-actions">
-                    <a class="jed-dl" href="?id=<?= (int) $id ?>&module=<?= urlencode((string) $jeModule) ?>&download_attachment=<?= urlencode((string) $att['name']) ?>"><i class="fas fa-download"></i> Download</a>
-                  </div>
-                </div>
-              <?php endforeach; ?>
-              <button class="jed-btn" type="button" style="padding:6px 10px;font-size:12px;">View All</button>
-            </div>
-          </section>
-          <section class="jed-card">
-            <div class="jed-hd">Audit Trail (Latest 3)</div>
-            <div class="jed-bd">
-              <div class="jed-kv"><span>Posted</span><span><?= htmlspecialchars(date('d/m/Y h:i A')) ?></span></div>
-              <div class="jed-kv"><span>Approved</span><span><?= htmlspecialchars(date('d/m/Y h:i A')) ?></span></div>
-              <div class="jed-kv" style="margin-bottom:0;"><span>Reviewed</span><span><?= htmlspecialchars(date('d/m/Y h:i A')) ?></span></div>
-              <button class="jed-btn" type="button" style="padding:6px 10px;font-size:12px;margin-top:8px;">View Full Audit Trail</button>
-            </div>
-          </section>
-        </div>
       </div>
 
       <aside>
@@ -311,16 +500,91 @@ include __DIR__ . '/../modules/balances/includes/header.php';
           </div>
         </section>
 
-        <section class="jed-card jed-rel">
+        <section class="jed-card jed-rel" id="jedRelatedCard">
           <div class="jed-hd"><i class="fas fa-link"></i> Related Documents</div>
           <div class="jed-bd">
-            <a href="#">PV-2026-00045 (Payment Voucher)</a>
-            <div style="margin-top:10px;"><button type="button" class="jed-btn" style="padding:6px 10px;font-size:12px;">View All Related</button></div>
+            <?php if (empty($relatedDocs)): ?>
+              <div class="jed-rel-empty">No related documents linked to this journal entry.</div>
+            <?php else: ?>
+              <?php
+              $primary = $relatedDocs[0];
+              $extraDocs = array_slice($relatedDocs, 1);
+              ?>
+              <div class="jed-rel-list">
+                <a href="<?= htmlspecialchars($primary['href'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($primary['label'], ENT_QUOTES, 'UTF-8') ?></a>
+              </div>
+              <?php if (!empty($extraDocs)): ?>
+                <div class="jed-rel-more" id="jedRelatedMore" hidden>
+                  <div class="jed-rel-list">
+                    <?php foreach ($extraDocs as $doc): ?>
+                      <a href="<?= htmlspecialchars($doc['href'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($doc['label'], ENT_QUOTES, 'UTF-8') ?></a>
+                    <?php endforeach; ?>
+                  </div>
+                </div>
+              <?php endif; ?>
+              <div style="margin-top:10px;">
+                <button
+                  type="button"
+                  class="jed-btn"
+                  id="jedRelatedToggle"
+                  style="padding:6px 10px;font-size:12px;"
+                  aria-expanded="false"
+                  aria-controls="jedRelatedMore"
+                  data-related-count="<?= (int) count($relatedDocs) ?>"
+                >View All Related<?= count($relatedDocs) > 1 ? ' (' . count($relatedDocs) . ')' : '' ?></button>
+              </div>
+            <?php endif; ?>
           </div>
         </section>
       </aside>
     </div>
   </div>
 </main>
+<script>
+(function () {
+  var card = document.getElementById('jedTabsCard');
+  if (card) {
+    var tabs = card.querySelectorAll('[data-jed-tab]');
+    var panels = card.querySelectorAll('[data-jed-panel]');
+    function activate(name) {
+      tabs.forEach(function (btn) {
+        var on = btn.getAttribute('data-jed-tab') === name;
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      panels.forEach(function (panel) {
+        var on = panel.getAttribute('data-jed-panel') === name;
+        panel.classList.toggle('is-active', on);
+        if (on) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
+      });
+    }
+    tabs.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activate(btn.getAttribute('data-jed-tab') || 'overview');
+      });
+    });
+  }
+
+  var toggle = document.getElementById('jedRelatedToggle');
+  var more = document.getElementById('jedRelatedMore');
+  if (toggle) {
+    toggle.addEventListener('click', function () {
+      if (more) {
+        var open = more.classList.toggle('is-open');
+        if (open) more.removeAttribute('hidden');
+        else more.setAttribute('hidden', '');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        toggle.textContent = open ? 'Hide Related' : ('View All Related (' + (toggle.getAttribute('data-related-count') || '') + ')');
+        return;
+      }
+      var first = document.querySelector('#jedRelatedCard .jed-rel-list a');
+      if (first && first.href) {
+        window.location.href = first.href;
+      }
+    });
+  }
+})();
+</script>
 
 <?php include __DIR__ . '/../modules/balances/includes/footer.php'; ?>

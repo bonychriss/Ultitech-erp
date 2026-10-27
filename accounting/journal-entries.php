@@ -24,7 +24,11 @@ $totalEntries = count($journals);
 $draftEntries = 0;
 $postedEntries = 0;
 $lockedEntries = 0;
-$totalAmount = 0.0;
+$unbalancedEntries = 0;
+$thisMonthEntries = 0;
+$totalDebitSum = 0.0;
+$totalCreditSum = 0.0;
+$monthKey = date('Y-m');
 
 foreach ($journals as &$je) {
     $status = strtolower((string) ($je['status'] ?? 'posted'));
@@ -33,6 +37,13 @@ foreach ($journals as &$je) {
     }
     $je['_status'] = $status;
 
+    $debit = (float) ($je['total_debit'] ?? 0);
+    $credit = (float) ($je['total_credit'] ?? 0);
+    $je['_debit'] = $debit;
+    $je['_credit'] = $credit;
+    $je['_diff'] = $debit - $credit;
+    $je['_unbalanced'] = abs($debit - $credit) >= 0.01;
+
     if ($status === 'draft') {
         $draftEntries++;
     } elseif ($status === 'locked') {
@@ -40,670 +51,454 @@ foreach ($journals as &$je) {
     } else {
         $postedEntries++;
     }
+    if ($je['_unbalanced']) {
+        $unbalancedEntries++;
+        if ($status !== 'draft') {
+            $je['_status'] = 'unbalanced';
+        }
+    }
 
-    $totalAmount += (float) ($je['total_debit'] ?? 0);
+    $totalDebitSum += $debit;
+    $totalCreditSum += $credit;
+
+    $jeDate = (string) ($je['date'] ?? '');
+    if ($jeDate !== '' && str_starts_with($jeDate, $monthKey)) {
+        $thisMonthEntries++;
+    }
+
+    $desc = trim((string) ($je['description'] ?? ''));
+    $journalType = 'General Journal';
+    if (preg_match('/^\[([^\]]+)\]/', $desc, $tagMatch)) {
+        $tag = trim($tagMatch[1]);
+        $tagMap = [
+            'General Journal' => 'General Journal',
+            'Sales Journal' => 'Sales Journal',
+            'Bank Journal' => 'Bank Journal',
+            'Purchase Journal' => 'Purchase Journal',
+            'Payment Voucher' => 'Payment Voucher',
+            'Payroll Journal' => 'Payroll Journal',
+        ];
+        if (isset($tagMap[$tag])) {
+            $journalType = $tagMap[$tag];
+        }
+    } elseif ($desc !== '') {
+        $descLower = strtolower($desc);
+        if (strpos($descLower, 'sale') !== false) {
+            $journalType = 'Sales Journal';
+        } elseif (strpos($descLower, 'bank') !== false || strpos($descLower, 'payment') !== false) {
+            $journalType = 'Bank Journal';
+        } elseif (strpos($descLower, 'purchase') !== false || strpos($descLower, 'supplier') !== false) {
+            $journalType = 'Purchase Journal';
+        } elseif (strpos($descLower, 'voucher') !== false) {
+            $journalType = 'Payment Voucher';
+        } elseif (strpos($descLower, 'payroll') !== false) {
+            $journalType = 'Payroll Journal';
+        }
+    }
+    $je['_journal_type'] = $journalType;
+    $je['_desc'] = $desc !== '' ? $desc : '—';
 }
 unset($je);
 
-$company_display = $_SESSION['company_name'] ?? (defined('COMPANY_NAME') ? COMPANY_NAME : 'Company');
 $jeModule = isset($_GET['module']) ? (string) $_GET['module'] : 'balances';
 $jeModuleEsc = htmlspecialchars($jeModule, ENT_QUOTES, 'UTF-8');
+$createUrl = 'create-journal.php?module=' . rawurlencode($jeModule);
 
-if (!function_exists('je_format_amount')) {
-    function je_format_amount(float $n): string
+if (!function_exists('je_format_money')) {
+    function je_format_money(float $n): string
     {
-        if ($n >= 1000000) {
-            return 'TZS ' . number_format($n / 1000000, 1) . 'M';
-        }
-        if ($n >= 1000) {
-            return 'TZS ' . number_format($n / 1000, 1) . 'K';
-        }
-
-        return 'TZS ' . number_format($n, 0);
+        return 'TZS ' . number_format($n, 2);
     }
 }
-?>
-<?php
+if (!function_exists('je_money_size_class')) {
+    function je_money_size_class(string $formatted): string
+    {
+        $digits = preg_replace('/\D/', '', $formatted) ?? '';
+        $len = strlen($digits);
+        if ($len >= 13) {
+            return ' is-xxl';
+        }
+        if ($len >= 11) {
+            return ' is-xl';
+        }
+        if ($len >= 9) {
+            return ' is-lg';
+        }
+        return '';
+    }
+}
+
 $page_title = 'Journal Entries';
 include __DIR__ . '/../modules/balances/includes/header.php';
 ?>
-<script src="https://cdn.tailwindcss.com"></script>
 <style>
-    .stock-dash {
-        max-width: 1600px;
-        margin: 0 auto;
-        padding: 1.25rem 1.5rem 2rem;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    }
-    .stock-dash .dash-header h1 {
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: #0f172a;
-        letter-spacing: -0.02em;
-        margin: 0;
-    }
-    .stock-dash .dash-header p { color: #64748b; font-size: 0.875rem; margin: 0; }
-    .stock-dash .dash-header--ledger {
-        display: grid;
-        grid-template-columns: minmax(0, auto) minmax(180px, 1fr) auto;
-        align-items: center;
-        gap: 1rem 1.25rem;
-    }
-    .stock-dash .dash-header--ledger .dash-header-title { min-width: 0; flex-shrink: 0; }
-    .stock-dash .dash-header--ledger .dash-header-actions {
-        flex-shrink: 0;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        justify-content: flex-end;
-    }
-    .stock-dash .dash-alert {
-        margin-top: 0.75rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: #fff7ed;
-        color: #c2410c;
-        padding: 0.375rem 0.75rem;
-        border-radius: 0.5rem;
-        border: 1px solid #ffedd5;
-        font-size: 0.8125rem;
-        font-weight: 600;
-    }
-    @media (max-width: 992px) {
-        .stock-dash { padding: 1rem; }
-        .stock-dash .dash-header--ledger {
-            grid-template-columns: 1fr;
-            align-items: stretch;
-        }
-        .stock-dash .dash-header--ledger .dash-header-actions { justify-self: start; }
-    }
-    .stock-dash .btn-outline {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.5rem 1rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-        background: #fff;
-        color: #334155;
-        font-size: 0.8125rem;
-        font-weight: 600;
-        text-decoration: none;
-        transition: background 0.15s;
-        cursor: pointer;
-        font-family: inherit;
-    }
-    .stock-dash .btn-outline:hover { background: #f8fafc; color: #334155; }
-    .stock-dash .btn-blue {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.5rem 1rem;
-        border-radius: 0.5rem;
-        background: #2563eb;
-        color: #fff;
-        font-size: 0.8125rem;
-        font-weight: 600;
-        text-decoration: none;
-        border: 1px solid #2563eb;
-    }
-    .stock-dash .btn-blue:hover { background: #1d4ed8; color: #fff; }
-    .stock-dash .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    @media (min-width: 768px) {
-        .stock-dash .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    }
-    @media (min-width: 1200px) {
-        .stock-dash .kpi-grid--five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-    }
-    .stock-dash .kpi-card {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 1.25rem 1.5rem;
-        min-height: 148px;
-        height: 100%;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-        display: flex;
-        flex-direction: column;
-    }
-    .stock-dash .kpi-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
-        margin-bottom: 1rem;
-        flex-shrink: 0;
-    }
-    .stock-dash .kpi-icon--total { background: #dbeafe; color: #2563eb; }
-    .stock-dash .kpi-icon--draft { background: #ffedd5; color: #ea580c; }
-    .stock-dash .kpi-icon--posted { background: #dcfce7; color: #16a34a; }
-    .stock-dash .kpi-icon--locked { background: #ede9fe; color: #7c3aed; }
-    .stock-dash .kpi-icon--amount { background: #e0f2fe; color: #0284c7; }
-    .stock-dash .kpi-value {
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: #0f172a;
-        line-height: 1.1;
-    }
-    .stock-dash .kpi-value--sm { font-size: 1.35rem; }
-    .stock-dash .kpi-value--money {
-        font-size: clamp(0.875rem, 2.2vw, 1.2rem);
-        line-height: 1.25;
-        word-break: break-word;
-    }
-    .stock-dash .kpi-label {
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: #64748b;
-        margin-top: 0.35rem;
-    }
-    .stock-dash .kpi-sub {
-        font-size: 0.75rem;
-        color: #94a3b8;
-        margin-top: auto;
-        padding-top: 0.75rem;
-    }
-    .stock-dash .dash-card {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-        margin-bottom: 1.25rem;
-    }
-    .stock-dash .dash-card-h {
-        padding: 0.875rem 1.25rem;
-        border-bottom: 1px solid #f1f5f9;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-    }
-    .stock-dash .dash-card-h h3 {
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: #0f172a;
-        margin: 0;
-    }
-    .stock-dash .dash-card-b { padding: 1rem 1.25rem; }
-    .stock-dash .filter-grid {
-        display: grid;
-        grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr)) auto;
-        gap: 0.75rem;
-        align-items: end;
-    }
-    .stock-dash .filter-grid label {
-        display: block;
-        margin-bottom: 0.35rem;
-        font-size: 0.75rem;
-        color: #64748b;
-        font-weight: 600;
-    }
-    .stock-dash .filter-control {
-        width: 100%;
-        height: 38px;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-        padding: 0 0.65rem;
-        font-size: 0.8125rem;
-        color: #0f172a;
-        background: #fff;
-        font-family: inherit;
-    }
-    .stock-dash .filter-panel:not(.is-open) { display: none; }
-    .stock-dash .tx-search-form {
-        width: 100%;
-        min-width: 0;
-        max-width: 520px;
-        justify-self: center;
-    }
-    .stock-dash .tx-search-wrap {
-        display: flex;
-        align-items: stretch;
-        gap: 0;
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 999px;
-        padding: 0 0 0 0.875rem;
-        min-height: 44px;
-        overflow: hidden;
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-        transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        font-family: inherit;
-    }
-    .stock-dash .tx-search-wrap:focus-within {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
-    }
-    .stock-dash .tx-search-wrap > i {
-        color: #94a3b8;
-        font-size: 1rem;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        margin-right: 0.5rem;
-    }
-    .stock-dash .tx-search-input {
-        flex: 1;
-        min-width: 0;
-        border: none;
-        outline: none;
-        background: transparent;
-        font-family: inherit;
-        font-size: 0.875rem;
-        color: #0f172a;
-        padding: 0.625rem 0.5rem 0.625rem 0;
-        line-height: 1.25;
-    }
-    .stock-dash .tx-search-input::placeholder { color: #94a3b8; }
-    .stock-dash .tx-search-kbd {
-        flex-shrink: 0;
-        display: inline-flex;
-        align-items: center;
-        font-size: 0.6875rem;
-        font-weight: 600;
-        color: #64748b;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.375rem;
-        padding: 0.15rem 0.4rem;
-        margin-right: 0.65rem;
-        background: #f8fafc;
-    }
-    .stock-dash .ledger-table { width: 100%; margin: 0; font-size: 0.8125rem; min-width: 1100px; }
-    .stock-dash .ledger-table thead th {
-        background: #f8fafc;
-        color: #475569;
-        font-weight: 700;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        border-bottom: 1px solid #e2e8f0;
-        white-space: nowrap;
-        padding: 0.65rem 0.75rem;
-    }
-    .stock-dash .ledger-table td {
-        padding: 0.65rem 0.75rem;
-        border-bottom: 1px solid #f1f5f9;
-        color: #334155;
-        vertical-align: middle;
-        white-space: nowrap;
-    }
-    .stock-dash .ledger-table tbody tr:hover { background: #f8fafc; }
-    .stock-dash .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .stock-dash .je-ref { color: #2563eb; font-weight: 700; }
-    .stock-dash .status-pill {
-        border-radius: 999px;
-        font-size: 0.6875rem;
-        font-weight: 700;
-        padding: 0.2rem 0.55rem;
-        display: inline-flex;
-    }
-    .stock-dash .status-posted { background: #dcfce7; color: #15803d; }
-    .stock-dash .status-draft { background: #fef3c7; color: #b45309; }
-    .stock-dash .status-locked { background: #ede9fe; color: #6d28d9; }
-    .stock-dash .diff-ok { color: #16a34a; font-weight: 700; }
-    .stock-dash .diff-bad { color: #dc2626; font-weight: 700; }
-    .stock-dash .action-btn {
-        width: 28px;
-        height: 28px;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.375rem;
-        background: #fff;
-        color: #2563eb;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
-    }
-    .stock-dash .action-btn:hover { background: #eff6ff; }
-    .stock-dash .ledger-footer {
-        padding: 0.75rem 1.25rem;
-        border-top: 1px solid #f1f5f9;
-        font-size: 0.75rem;
-        color: #64748b;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-    }
-    .stock-dash .ledger-pager {
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-        flex-wrap: wrap;
-    }
-    .stock-dash .ledger-pager span {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 32px;
-        height: 32px;
-        padding: 0 0.5rem;
-        border-radius: 0.5rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-        border: 1px solid #e2e8f0;
-        background: #fff;
-        color: #475569;
-    }
-    .stock-dash .ledger-pager .is-active {
-        background: #2563eb;
-        border-color: #2563eb;
-        color: #fff;
-    }
-    @media (max-width: 1200px) {
-        .stock-dash .filter-grid { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 640px) {
-        .stock-dash .filter-grid { grid-template-columns: 1fr; }
-    }
+.je-desk{--je-blue:#2563eb;--je-ink:#0f172a;--je-muted:#64748b;--je-line:#e2e8f0;--je-soft:#f8fafc;--je-kpi-radius:14px;max-width:1600px;margin:0 auto;padding:1.25rem 1.5rem 2rem;font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--je-ink)}
+.je-desk *{box-sizing:border-box}
+.je-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem}
+.je-hero h1{margin:0;font-size:1.85rem;font-weight:800;letter-spacing:-.03em;line-height:1.15}
+.je-hero p{margin:.35rem 0 0;color:var(--je-muted);font-size:.9rem}
+.je-hero-actions{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.je-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem 1rem;border-radius:.65rem;font-size:.8125rem;font-weight:650;text-decoration:none;border:1px solid var(--je-line);background:#fff;color:#334155;cursor:pointer;font-family:inherit}
+.je-btn:hover{background:var(--je-soft);color:#0f172a}
+.je-btn-primary{background:var(--je-blue);border-color:var(--je-blue);color:#fff}
+.je-btn-primary:hover{background:#1d4ed8;color:#fff}
+.je-kpi-grid{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:stretch;gap:.55rem;width:100%;margin-bottom:1rem}
+.je-kpi-grid>.je-kpi-card{flex:1 1 0;min-width:0}
+.je-kpi-card{width:100%;min-height:0;padding:.5rem .7rem;border:1px solid #e8edf3;border-radius:var(--je-kpi-radius);background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04);display:flex;align-items:center;gap:.5rem;text-align:left;overflow:hidden}
+.je-kpi-icon{width:1.75rem;height:1.75rem;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.8rem}
+.je-kpi-icon--blue{background:#eef2ff;color:#4f46e5}
+.je-kpi-icon--green{background:#ecfdf5;color:#059669}
+.je-kpi-icon--teal{background:#ecfdf5;color:#059669}
+.je-kpi-icon--orange{background:#fffbeb;color:#d97706}
+.je-kpi-icon--red{background:#fef2f2;color:#dc2626}
+.je-kpi-icon--purple{background:#f5f3ff;color:#7c3aed}
+.je-kpi-body{min-width:0;flex:1 1 auto}
+.je-kpi-label{font-size:.7rem;font-weight:500;color:#94a3b8;line-height:1.2}
+.je-kpi-value{font-size:clamp(.95rem,1.4vw,1.15rem);font-weight:600;line-height:1.1;margin-top:.05rem;color:#0f172a;min-width:0;max-width:100%;overflow:hidden}
+.je-kpi-value--money{font-size:clamp(.78rem,1.2vw,.95rem);font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.je-kpi-value--money.is-lg{font-size:clamp(.7rem,1.05vw,.85rem)}
+.je-kpi-value--money.is-xl{font-size:clamp(.64rem,.95vw,.78rem);letter-spacing:-.02em}
+.je-kpi-value--money.is-xxl{font-size:clamp(.56rem,.85vw,.7rem);letter-spacing:-.03em}
+.je-kpi-value--warn{color:#dc2626}
+.je-kpi-foot{display:block;margin-top:0;font-size:.6rem;font-weight:400;color:#94a3b8;line-height:1.2}
+.je-toolbar{display:flex;gap:.65rem;flex-wrap:wrap;align-items:center;margin-bottom:.9rem;background:#fff;border:1px solid var(--je-line);border-radius:.9rem;padding:.7rem .8rem;box-shadow:0 1px 2px rgba(15,23,42,.03)}
+.je-search{position:relative;flex:1 1 240px;min-width:200px}
+.je-search i{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.8rem}
+.je-search input{width:100%;border:1px solid var(--je-line);border-radius:.6rem;padding:.55rem .75rem .55rem 2.1rem;font-size:.8125rem;background:var(--je-soft);color:var(--je-ink)}
+.je-search input:focus{outline:none;border-color:#93c5fd;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.je-search .kbd{position:absolute;right:.55rem;top:50%;transform:translateY(-50%);font-size:.65rem;color:#94a3b8;border:1px solid #e2e8f0;border-radius:.35rem;padding:.1rem .35rem;background:#fff}
+.je-select,.je-date{border:1px solid var(--je-line);border-radius:.6rem;padding:.55rem .75rem;font-size:.8125rem;background:#fff;color:#334155;min-width:120px}
+.je-results-head{display:flex;align-items:center;justify-content:space-between;padding:0 0 .55rem}
+.je-results-count{font-size:.9rem;font-weight:700;color:#64748b}
+.je-table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:14px;background:#fff;width:100%;max-width:100%;overscroll-behavior:contain;scrollbar-width:thin}
+.je-table-wrap::-webkit-scrollbar{width:10px;height:10px}
+.je-table-wrap::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px}
+.je-table{width:max-content;min-width:100%;table-layout:auto;border-collapse:separate;border-spacing:0;font-size:.78rem}
+.je-table th{text-align:left;padding:.55rem .45rem;background:#f8fafc;color:#0f172a;font-size:.75rem;font-weight:600;border-bottom:1px solid #e2e8f0;white-space:nowrap;vertical-align:middle}
+.je-table th:first-child,.je-table td:first-child{padding-left:.75rem}
+.je-table th:last-child,.je-table td:last-child{padding-right:.75rem}
+.je-table thead th{position:sticky;top:0;z-index:4;background:#f8fafc;box-shadow:inset 0 -1px 0 #e2e8f0}
+.je-table th.col-ref,.je-table td.col-ref{position:sticky;left:0;z-index:3;background:#fff;width:7.25rem;min-width:7.25rem;max-width:7.25rem;padding-right:.3rem}
+.je-table th.col-date,.je-table td.col-date{width:6.25rem;min-width:6.25rem;max-width:6.25rem;padding-left:.25rem;padding-right:.35rem}
+.je-table thead th.col-ref{z-index:5;background:#f8fafc}
+.je-table tbody tr:hover td.col-ref{background:#fffbeb}
+.je-table td{padding:.55rem .45rem;border-bottom:1px solid #f1f5f9;vertical-align:middle;color:#334155}
+.je-table tbody tr:hover{background:#fffbeb}
+.je-table th.col-debit,.je-table th.col-credit,.je-table td.col-debit,.je-table td.col-credit{text-align:right;font-variant-numeric:tabular-nums;padding-left:.35rem;padding-right:.45rem}
+.je-table th.col-status,.je-table td.col-status{text-align:center;padding-left:.3rem;padding-right:.3rem}
+.je-table th.col-actions,.je-table td.col-actions{text-align:right;white-space:nowrap;padding-left:.35rem}
+.je-table td.col-ref,.je-table td.col-date,.je-table td.col-journal,.je-table td.col-debit,.je-table td.col-credit,.je-table td.col-status{white-space:nowrap}
+.je-table td.col-desc{max-width:22rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#475569}
+.je-row-clickable{cursor:pointer}
+.je-row-clickable:focus-visible{outline:2px solid #d97706;outline-offset:-2px}
+.je-ref{display:block;color:#000;font-weight:700;white-space:nowrap;text-decoration:none}
+.je-ref:hover{color:#0f172a}
+.je-amt{display:inline-block;font-size:.72rem;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.02em;color:#16a34a}
+.je-amt-muted{color:#475569;font-weight:600}
+.je-type{display:inline-flex;font-size:.75rem;font-weight:700;line-height:1.3;white-space:nowrap;color:#c2410c}
+.je-type-sales{color:#2563eb}
+.je-type-bank{color:#0284c7}
+.je-type-purchase{color:#7c3aed}
+.je-type-payroll{color:#0f766e}
+.je-status{display:inline-flex;padding:.12rem .4rem;border-radius:9999px;font-size:.68rem;font-weight:700}
+.je-status-posted{background:#dcfce7;color:#166534}
+.je-status-draft{background:#dbeafe;color:#1d4ed8}
+.je-status-locked{background:#ede9fe;color:#6d28d9}
+.je-status-unbalanced{background:#ffedd5;color:#c2410c}
+.je-actions-btn{width:2rem;height:2rem;border:1px solid #e2e8f0;border-radius:.55rem;background:#fff;color:#64748b;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.je-actions-btn:hover{background:#f8fafc;color:#0f172a;border-color:#cbd5e1}
+.je-footer{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.85rem 0 0;color:var(--je-muted);font-size:.78rem}
+.je-pager{display:flex;gap:.35rem;align-items:center}
+.je-pager span{min-width:1.85rem;height:1.85rem;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--je-line);border-radius:.45rem;background:#fff;font-weight:600;font-size:.75rem}
+.je-pager .is-active{background:var(--je-blue);border-color:var(--je-blue);color:#fff}
+.je-empty{text-align:center;padding:2.5rem 1rem;color:#94a3b8}
+@media (max-width:920px){
+  .je-kpi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+  .je-kpi-grid>.je-kpi-card{flex:none;width:100%}
+  .je-kpi-card{padding:.65rem .7rem}
+  .je-kpi-value{font-size:1rem}
+  .je-kpi-value--money{font-size:.78rem}
+}
+@media (max-width:768px){
+  .je-desk{padding:1rem}
+  .je-hero h1{font-size:1.5rem}
+}
 </style>
 
 <main class="main-content">
-<div class="stock-dash">
-    <div class="dash-header dash-header--ledger mb-5">
-        <div class="dash-header-title">
-            <h1>Journal Entries</h1>
-            <p class="mt-1"><?= date('l, d M Y') ?> · <?= htmlspecialchars($company_display) ?></p>
-            <?php if ($draftEntries > 0): ?>
-            <div class="dash-alert">
-                <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
-                <?= number_format($draftEntries) ?> draft entr<?= $draftEntries === 1 ? 'y' : 'ies' ?> pending review
-            </div>
-            <?php endif; ?>
-        </div>
-        <div class="tx-search-form">
-            <div class="tx-search-wrap">
-                <i class="fas fa-search" aria-hidden="true"></i>
-                <input id="topSearchInput" type="search" class="tx-search-input" placeholder="Search journal entries…" autocomplete="off" aria-label="Search journal entries">
-                <span class="tx-search-kbd">Ctrl+K</span>
-            </div>
-        </div>
-        <div class="dash-header-actions">
-            <button type="button" class="btn-outline" id="jrnlFiltersToggle" title="Filters"><i class="fas fa-sliders-h"></i> Filters</button>
-            <a href="#" class="btn-outline"><i class="fas fa-upload"></i> Import</a>
-            <a href="#" class="btn-outline"><i class="fas fa-download"></i> Export</a>
-            <a href="create-journal.php?module=<?= $jeModuleEsc ?>" class="btn-blue"><i class="fas fa-plus"></i> New Journal Entry</a>
-        </div>
+  <div class="je-desk">
+    <div class="je-hero">
+      <div>
+        <h1>Journal Entries</h1>
+        <p>Keep debits and credits balanced.</p>
+      </div>
+      <div class="je-hero-actions">
+        <a class="je-btn je-btn-primary" href="<?= htmlspecialchars($createUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-plus"></i> Create Entry</a>
+        <button type="button" class="je-btn" id="jeMoreActionsBtn"><i class="fas fa-ellipsis"></i> More Actions</button>
+      </div>
     </div>
 
-    <div class="kpi-grid kpi-grid--five">
-        <div class="kpi-card">
-            <div class="kpi-icon kpi-icon--total"><i class="far fa-file-lines"></i></div>
-            <div class="kpi-value"><?= number_format($totalEntries) ?></div>
-            <div class="kpi-label">Total Entries</div>
-            <div class="kpi-sub">All journal records</div>
+    <div class="je-kpi-grid" aria-label="Journal summary">
+      <div class="je-kpi-card" title="<?= number_format($totalEntries) ?> entries">
+        <div class="je-kpi-icon je-kpi-icon--blue" aria-hidden="true"><i class="far fa-file-lines"></i></div>
+        <div class="je-kpi-body">
+          <div class="je-kpi-label">Total Entries</div>
+          <div class="je-kpi-value"><?= number_format($totalEntries) ?></div>
+          <div class="je-kpi-foot"><?= number_format($postedEntries) ?> posted · <?= number_format($draftEntries) ?> draft</div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-icon kpi-icon--draft"><i class="far fa-pen-to-square"></i></div>
-            <div class="kpi-value"><?= number_format($draftEntries) ?></div>
-            <div class="kpi-label">Draft Entries</div>
-            <div class="kpi-sub">Awaiting posting</div>
+      </div>
+      <?php
+        $debitLabel = je_format_money($totalDebitSum);
+        $creditLabel = je_format_money($totalCreditSum);
+      ?>
+      <div class="je-kpi-card" title="<?= htmlspecialchars($debitLabel, ENT_QUOTES, 'UTF-8') ?>">
+        <div class="je-kpi-icon je-kpi-icon--green" aria-hidden="true"><i class="fas fa-arrow-down"></i></div>
+        <div class="je-kpi-body">
+          <div class="je-kpi-label">Total Debit</div>
+          <div class="je-kpi-value je-kpi-value--money<?= je_money_size_class($debitLabel) ?>"><?= htmlspecialchars($debitLabel, ENT_QUOTES, 'UTF-8') ?></div>
+          <div class="je-kpi-foot">Sum of line debits</div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-icon kpi-icon--posted"><i class="far fa-circle-check"></i></div>
-            <div class="kpi-value"><?= number_format($postedEntries) ?></div>
-            <div class="kpi-label">Posted Entries</div>
-            <div class="kpi-sub">Finalized in ledger</div>
+      </div>
+      <div class="je-kpi-card" title="<?= htmlspecialchars($creditLabel, ENT_QUOTES, 'UTF-8') ?>">
+        <div class="je-kpi-icon je-kpi-icon--teal" aria-hidden="true"><i class="fas fa-arrow-up"></i></div>
+        <div class="je-kpi-body">
+          <div class="je-kpi-label">Total Credit</div>
+          <div class="je-kpi-value je-kpi-value--money<?= je_money_size_class($creditLabel) ?>"><?= htmlspecialchars($creditLabel, ENT_QUOTES, 'UTF-8') ?></div>
+          <div class="je-kpi-foot">Sum of line credits</div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-icon kpi-icon--locked"><i class="fas fa-lock"></i></div>
-            <div class="kpi-value"><?= number_format($lockedEntries) ?></div>
-            <div class="kpi-label">Locked Entries</div>
-            <div class="kpi-sub">Closed for editing</div>
+      </div>
+      <div class="je-kpi-card" title="<?= number_format($unbalancedEntries) ?> unbalanced">
+        <div class="je-kpi-icon je-kpi-icon--<?= $unbalancedEntries > 0 ? 'red' : 'orange' ?>" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="je-kpi-body">
+          <div class="je-kpi-label">Unbalanced</div>
+          <div class="je-kpi-value<?= $unbalancedEntries > 0 ? ' je-kpi-value--warn' : '' ?>"><?= number_format($unbalancedEntries) ?></div>
+          <div class="je-kpi-foot"><?= $unbalancedEntries > 0 ? 'Requires attention' : 'All balanced' ?></div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-icon kpi-icon--amount"><i class="fas fa-coins"></i></div>
-            <div class="kpi-value kpi-value--sm kpi-value--money"><?= je_format_amount($totalAmount) ?></div>
-            <div class="kpi-label">Total Amount (TZS)</div>
-            <div class="kpi-sub">Sum of debits shown</div>
+      </div>
+      <div class="je-kpi-card" title="<?= number_format($thisMonthEntries) ?> this month">
+        <div class="je-kpi-icon je-kpi-icon--purple" aria-hidden="true"><i class="far fa-calendar"></i></div>
+        <div class="je-kpi-body">
+          <div class="je-kpi-label">This Month</div>
+          <div class="je-kpi-value"><?= number_format($thisMonthEntries) ?></div>
+          <div class="je-kpi-foot"><?= htmlspecialchars(date('F Y'), ENT_QUOTES, 'UTF-8') ?></div>
         </div>
+      </div>
     </div>
 
-    <div class="dash-card filter-panel" id="jrnlFilterPanel">
-        <div class="dash-card-h">
-            <h3><i class="fas fa-filter text-blue-600 me-1"></i> Filters</h3>
-            <button type="button" class="btn-outline" id="resetFiltersBtn" style="padding:0.35rem 0.75rem;font-size:0.75rem;"><i class="fas fa-rotate-left"></i> Reset</button>
-        </div>
-        <div class="dash-card-b">
-            <div class="filter-grid">
-                <div>
-                    <label for="tableSearchInput">Search</label>
-                    <input id="tableSearchInput" class="filter-control" type="text" placeholder="Reference, description, note…">
-                </div>
-                <div>
-                    <label for="statusFilter">Status</label>
-                    <select id="statusFilter" class="filter-control">
-                        <option value="all">All Statuses</option>
-                        <option value="posted">Posted</option>
-                        <option value="draft">Draft</option>
-                        <option value="locked">Locked</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="dateFilter">Date</label>
-                    <input id="dateFilter" class="filter-control" type="date">
-                </div>
-                <div>
-                    <label for="journalTypeFilter">Journal</label>
-                    <select id="journalTypeFilter" class="filter-control">
-                        <option value="all">All Journals</option>
-                        <option value="sales">Sales Journal</option>
-                        <option value="bank">Bank Journal</option>
-                        <option value="general">General Journal</option>
-                        <option value="payment">Payment Voucher</option>
-                        <option value="purchase">Purchase Journal</option>
-                        <option value="payroll">Payroll Journal</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="postedByFilter">Posted By</label>
-                    <select id="postedByFilter" class="filter-control">
-                        <option value="all">All Users</option>
-                        <option value="finance user">Finance User</option>
-                    </select>
-                </div>
-            </div>
-        </div>
+    <div class="je-toolbar">
+      <div class="je-search">
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <input id="jeSearchInput" type="search" placeholder="Search journal entries..." autocomplete="off" aria-label="Search journal entries">
+        <span class="kbd">Ctrl+K</span>
+      </div>
+      <select id="jeStatusFilter" class="je-select" aria-label="Status">
+        <option value="all">Status</option>
+        <option value="posted">Posted</option>
+        <option value="draft">Draft</option>
+        <option value="locked">Locked</option>
+        <option value="unbalanced">Unbalanced</option>
+      </select>
+      <select id="jeJournalFilter" class="je-select" aria-label="Journal">
+        <option value="all">Journal</option>
+        <option value="general">General Journal</option>
+        <option value="sales">Sales Journal</option>
+        <option value="purchase">Purchase Journal</option>
+        <option value="bank">Bank Journal</option>
+        <option value="payroll">Payroll Journal</option>
+        <option value="payment">Payment Voucher</option>
+      </select>
+      <input id="jeDateFilter" class="je-date" type="date" aria-label="Date">
+      <button type="button" class="je-btn" id="jeResetFilters"><i class="fas fa-filter"></i> More Filters</button>
     </div>
 
-    <div class="dash-card" style="margin-bottom:0;">
-        <div class="dash-card-h">
-            <h3><i class="fas fa-book text-blue-600 me-1"></i> Journal Entries</h3>
-            <span class="text-xs font-semibold text-slate-500"><?= number_format($totalEntries) ?> row<?= $totalEntries === 1 ? '' : 's' ?></span>
-        </div>
-        <div class="table-wrap">
-            <table class="table ledger-table mb-0" id="journalTable">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Reference</th>
-                        <th>Date</th>
-                        <th>Journal</th>
-                        <th>Description</th>
-                        <th>Status</th>
-                        <th class="text-end">Debit (TZS)</th>
-                        <th class="text-end">Credit (TZS)</th>
-                        <th class="text-end">Difference</th>
-                        <th>Posted By</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php if (empty($journals)): ?>
-                    <tr><td colspan="11" class="text-center py-5 text-muted">No journal entries yet.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($journals as $i => $je): ?>
-                        <?php
-                        $desc = trim((string) ($je['description'] ?? '-'));
-                        $journalType = 'General Journal';
-                        $tagMap = [
-                            'General Journal' => 'General Journal',
-                            'Sales Journal' => 'Sales Journal',
-                            'Bank Journal' => 'Bank Journal',
-                            'Purchase Journal' => 'Purchase Journal',
-                            'Payment Voucher' => 'Payment Voucher',
-                            'Payroll Journal' => 'Payroll Journal',
-                        ];
-                        if (preg_match('/^\[([^\]]+)\]/', $desc, $tagMatch)) {
-                            $tag = trim($tagMatch[1]);
-                            if (isset($tagMap[$tag])) {
-                                $journalType = $tagMap[$tag];
-                            }
-                        }
-                        if ($journalType === 'General Journal' && $desc !== '') {
-                            $descLower = strtolower($desc);
-                            if (strpos($descLower, 'sale') !== false) {
-                                $journalType = 'Sales Journal';
-                            } elseif (strpos($descLower, 'bank') !== false || strpos($descLower, 'payment') !== false) {
-                                $journalType = 'Bank Journal';
-                            } elseif (strpos($descLower, 'purchase') !== false || strpos($descLower, 'supplier') !== false) {
-                                $journalType = 'Purchase Journal';
-                            } elseif (strpos($descLower, 'voucher') !== false) {
-                                $journalType = 'Payment Voucher';
-                            } elseif (strpos($descLower, 'payroll') !== false) {
-                                $journalType = 'Payroll Journal';
-                            }
-                        }
-                        $status = $je['_status'];
-                        $totalDebit = (float) ($je['total_debit'] ?? 0);
-                        $totalCredit = (float) ($je['total_credit'] ?? 0);
-                        $difference = $totalDebit - $totalCredit;
-                        $postedBy = 'Finance User';
-                        $viewUrl = 'view-journal.php?id=' . (int) ($je['id'] ?? 0) . '&module=' . urlencode($jeModule);
-                        ?>
-                        <tr data-status="<?= htmlspecialchars($status) ?>" data-journal="<?= htmlspecialchars(strtolower(str_replace(' Journal', '', $journalType))) ?>" data-posted-by="<?= htmlspecialchars(strtolower($postedBy)) ?>">
-                            <td><?= $i + 1 ?></td>
-                            <td class="je-ref"><?= htmlspecialchars((string) ($je['entry_number'] ?? '-')) ?></td>
-                            <td><?= !empty($je['date']) ? htmlspecialchars(date('j/n/Y', strtotime((string) $je['date']))) : '-' ?></td>
-                            <td><?= htmlspecialchars($journalType) ?></td>
-                            <td style="max-width:240px;white-space:normal;"><?= htmlspecialchars($desc !== '' ? $desc : '-') ?></td>
-                            <td>
-                                <?php if ($status === 'draft'): ?>
-                                    <span class="status-pill status-draft">Draft</span>
-                                <?php elseif ($status === 'locked'): ?>
-                                    <span class="status-pill status-locked">Locked</span>
-                                <?php else: ?>
-                                    <span class="status-pill status-posted">Posted</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-end"><?= number_format($totalDebit, 2) ?></td>
-                            <td class="text-end"><?= number_format($totalCredit, 2) ?></td>
-                            <td class="text-end <?= abs($difference) < 0.01 ? 'diff-ok' : 'diff-bad' ?>"><?= number_format($difference, 2) ?></td>
-                            <td><?= htmlspecialchars($postedBy) ?></td>
-                            <td class="text-end">
-                                <a href="<?= htmlspecialchars($viewUrl) ?>" class="action-btn" title="View"><i class="far fa-eye"></i></a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-        <div class="ledger-footer">
-            <div>Showing 1 to <?= min(10, $totalEntries) ?> of <?= number_format($totalEntries) ?> entries</div>
-            <div class="ledger-pager">
-                <span><i class="fas fa-angle-left"></i></span>
-                <span class="is-active">1</span>
-                <span>2</span>
-                <span>3</span>
-                <span><i class="fas fa-angle-right"></i></span>
-            </div>
-        </div>
+    <div class="je-results-head">
+      <div class="je-results-count" id="jeShowingLabel"><?= number_format(min(100, $totalEntries)) ?> entries</div>
     </div>
-</div>
+
+    <div class="je-table-wrap">
+      <table class="je-table" id="jeTable">
+        <colgroup>
+          <col class="col-ref">
+          <col class="col-date">
+          <col class="col-desc">
+          <col class="col-journal">
+          <col class="col-debit">
+          <col class="col-credit">
+          <col class="col-status">
+          <col class="col-actions">
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="col-ref">JE Number</th>
+            <th class="col-date">Date</th>
+            <th class="col-desc">Description</th>
+            <th class="col-journal">Journal</th>
+            <th class="col-debit">Debit</th>
+            <th class="col-credit">Credit</th>
+            <th class="col-status">Status</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php if (empty($journals)): ?>
+            <tr><td colspan="8"><div class="je-empty">No journal entries yet.</div></td></tr>
+          <?php else: ?>
+            <?php foreach ($journals as $je): ?>
+              <?php
+              $viewUrl = 'view-journal.php?id=' . (int) ($je['id'] ?? 0) . '&module=' . rawurlencode($jeModule);
+              $status = (string) ($je['_status'] ?? 'posted');
+              $statusClass = 'je-status-posted';
+              $pillLabel = 'Posted';
+              if ($status === 'draft') {
+                  $statusClass = 'je-status-draft';
+                  $pillLabel = 'Draft';
+              } elseif ($status === 'locked') {
+                  $statusClass = 'je-status-locked';
+                  $pillLabel = 'Locked';
+              } elseif ($status === 'unbalanced' || !empty($je['_unbalanced'])) {
+                  $statusClass = 'je-status-unbalanced';
+                  $pillLabel = 'Unbalanced';
+                  $status = 'unbalanced';
+              }
+              $journalType = (string) ($je['_journal_type'] ?? 'General Journal');
+              $journalKey = strtolower(str_replace([' Journal', ' Voucher'], '', $journalType));
+              $typeClass = 'je-type';
+              if ($journalKey === 'sales') {
+                  $typeClass .= ' je-type-sales';
+              } elseif ($journalKey === 'bank') {
+                  $typeClass .= ' je-type-bank';
+              } elseif ($journalKey === 'purchase') {
+                  $typeClass .= ' je-type-purchase';
+              } elseif ($journalKey === 'payroll') {
+                  $typeClass .= ' je-type-payroll';
+              }
+              $entryNo = trim((string) ($je['entry_number'] ?? ''));
+              if ($entryNo === '') {
+                  $entryNo = 'JE-' . str_pad((string) ((int) ($je['id'] ?? 0)), 6, '0', STR_PAD_LEFT);
+              }
+              $dateLabel = '—';
+              if (!empty($je['date'])) {
+                  $ts = strtotime((string) $je['date']);
+                  if ($ts !== false) {
+                      $dateLabel = date('d/m/Y', $ts);
+                  }
+              }
+              ?>
+              <tr
+                class="je-row-clickable"
+                data-status="<?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?>"
+                data-journal="<?= htmlspecialchars($journalKey, ENT_QUOTES, 'UTF-8') ?>"
+                data-date="<?= htmlspecialchars((string) ($je['date'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
+                data-href="<?= htmlspecialchars($viewUrl, ENT_QUOTES, 'UTF-8') ?>"
+                tabindex="0"
+              >
+                <td class="col-ref">
+                  <a class="je-ref" href="<?= htmlspecialchars($viewUrl, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($entryNo, ENT_QUOTES, 'UTF-8') ?></a>
+                </td>
+                <td class="col-date"><?= htmlspecialchars($dateLabel, ENT_QUOTES, 'UTF-8') ?></td>
+                <td class="col-desc" title="<?= htmlspecialchars((string) $je['_desc'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) $je['_desc'], ENT_QUOTES, 'UTF-8') ?></td>
+                <td class="col-journal"><span class="<?= htmlspecialchars($typeClass, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($journalType, ENT_QUOTES, 'UTF-8') ?></span></td>
+                <td class="col-debit"><span class="je-amt"><?= number_format((float) $je['_debit'], 2) ?></span></td>
+                <td class="col-credit"><span class="je-amt je-amt-muted"><?= number_format((float) $je['_credit'], 2) ?></span></td>
+                <td class="col-status"><span class="je-status <?= $statusClass ?>"><?= htmlspecialchars($pillLabel, ENT_QUOTES, 'UTF-8') ?></span></td>
+                <td class="col-actions">
+                  <a class="je-actions-btn" href="<?= htmlspecialchars($viewUrl, ENT_QUOTES, 'UTF-8') ?>" title="View" data-je-ignore><i class="fas fa-ellipsis-vertical"></i></a>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+    <div class="je-footer">
+      <div id="jeShowingFooter">Showing <?= number_format(min(100, $totalEntries)) ?> of <?= number_format($totalEntries) ?> entries</div>
+      <div class="je-pager">
+        <span><i class="fas fa-angle-left"></i></span>
+        <span class="is-active">1</span>
+        <span>2</span>
+        <span>3</span>
+        <span><i class="fas fa-angle-right"></i></span>
+      </div>
+    </div>
+  </div>
 </main>
 
 <script>
-(() => {
-    const topSearch = document.getElementById('topSearchInput');
-    const tableSearch = document.getElementById('tableSearchInput');
-    const statusFilter = document.getElementById('statusFilter');
-    const journalTypeFilter = document.getElementById('journalTypeFilter');
-    const postedByFilter = document.getElementById('postedByFilter');
-    const dateFilter = document.getElementById('dateFilter');
-    const resetBtn = document.getElementById('resetFiltersBtn');
-    const rows = document.querySelectorAll('#journalTable tbody tr');
+(function () {
+  var search = document.getElementById('jeSearchInput');
+  var statusFilter = document.getElementById('jeStatusFilter');
+  var journalFilter = document.getElementById('jeJournalFilter');
+  var dateFilter = document.getElementById('jeDateFilter');
+  var resetBtn = document.getElementById('jeResetFilters');
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#jeTable tbody tr'));
+  var showing = document.getElementById('jeShowingLabel');
+  var showingFooter = document.getElementById('jeShowingFooter');
 
-    const applyFilters = () => {
-        const q1 = (topSearch?.value || '').toLowerCase().trim();
-        const q2 = (tableSearch?.value || '').toLowerCase().trim();
-        const status = statusFilter?.value || 'all';
-        const journal = journalTypeFilter?.value || 'all';
-        const postedBy = postedByFilter?.value || 'all';
-        const dateVal = dateFilter?.value || '';
+  function applyFilters() {
+    var q = (search && search.value || '').toLowerCase().trim();
+    var status = statusFilter && statusFilter.value || 'all';
+    var journal = journalFilter && journalFilter.value || 'all';
+    var dateVal = dateFilter && dateFilter.value || '';
+    var visible = 0;
 
-        rows.forEach((row) => {
-            if (row.children.length < 4) return;
-            const text = row.textContent.toLowerCase();
-            const rowStatus = row.getAttribute('data-status') || '';
-            const rowJournal = row.getAttribute('data-journal') || '';
-            const rowPostedBy = row.getAttribute('data-posted-by') || '';
-            const rowDate = row.children[2] ? row.children[2].textContent.trim() : '';
-            const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('en-GB').replace(/\//g, '/') : '';
-
-            const matchSearch = (!q1 || text.includes(q1)) && (!q2 || text.includes(q2));
-            const matchStatus = status === 'all' || rowStatus === status;
-            const matchJournal = journal === 'all' || rowJournal.includes(journal);
-            const matchUser = postedBy === 'all' || rowPostedBy.includes(postedBy);
-            const matchDate = !dateVal || rowDate === formattedDate;
-
-            row.style.display = matchSearch && matchStatus && matchJournal && matchUser && matchDate ? '' : 'none';
-        });
-    };
-
-    [topSearch, tableSearch, statusFilter, journalTypeFilter, postedByFilter, dateFilter].forEach((el) => {
-        if (!el) return;
-        el.addEventListener('input', applyFilters);
-        el.addEventListener('change', applyFilters);
+    rows.forEach(function (row) {
+      if (!row.getAttribute('data-status')) return;
+      var text = (row.textContent || '').toLowerCase();
+      var rowStatus = row.getAttribute('data-status') || '';
+      var rowJournal = row.getAttribute('data-journal') || '';
+      var rowDate = row.getAttribute('data-date') || '';
+      var ok = (!q || text.indexOf(q) !== -1)
+        && (status === 'all' || rowStatus === status)
+        && (journal === 'all' || rowJournal.indexOf(journal) !== -1)
+        && (!dateVal || rowDate === dateVal);
+      row.style.display = ok ? '' : 'none';
+      if (ok) visible += 1;
     });
 
-    if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
-            if (topSearch) topSearch.value = '';
-            if (tableSearch) tableSearch.value = '';
-            if (statusFilter) statusFilter.value = 'all';
-            if (journalTypeFilter) journalTypeFilter.value = 'all';
-            if (postedByFilter) postedByFilter.value = 'all';
-            if (dateFilter) dateFilter.value = '';
-            applyFilters();
-        });
-    }
+    if (showing) showing.textContent = visible + ' entries';
+    if (showingFooter) showingFooter.textContent = 'Showing ' + visible + ' of <?= (int) $totalEntries ?> entries';
+  }
 
-    const filtersToggle = document.getElementById('jrnlFiltersToggle');
-    const filterPanel = document.getElementById('jrnlFilterPanel');
-    if (filtersToggle && filterPanel) {
-        filtersToggle.addEventListener('click', () => {
-            filterPanel.classList.toggle('is-open');
-            if (filterPanel.classList.contains('is-open')) {
-                const first = filterPanel.querySelector('input, select');
-                if (first) setTimeout(() => first.focus(), 150);
-            }
-        });
-    }
+  [search, statusFilter, journalFilter, dateFilter].forEach(function (el) {
+    if (!el) return;
+    el.addEventListener('input', applyFilters);
+    el.addEventListener('change', applyFilters);
+  });
 
-    document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-            const ts = document.getElementById('topSearchInput');
-            if (ts) {
-                e.preventDefault();
-                ts.focus();
-                ts.select();
-            }
-        }
+  if (resetBtn) {
+    resetBtn.addEventListener('click', function () {
+      if (search) search.value = '';
+      if (statusFilter) statusFilter.value = 'all';
+      if (journalFilter) journalFilter.value = 'all';
+      if (dateFilter) dateFilter.value = '';
+      applyFilters();
+      if (search) search.focus();
     });
+  }
+
+  rows.forEach(function (row) {
+    var href = row.getAttribute('data-href');
+    if (!href) return;
+    row.addEventListener('click', function (e) {
+      if (e.target.closest('[data-je-ignore], a, button')) return;
+      window.location.href = href;
+    });
+    row.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        window.location.href = href;
+      }
+    });
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      if (!search) return;
+      e.preventDefault();
+      search.focus();
+      search.select();
+    }
+  });
 })();
 </script>
 <?php include __DIR__ . '/../modules/balances/includes/footer.php'; ?>
-

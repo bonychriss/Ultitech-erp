@@ -964,7 +964,6 @@ function ldBuildTransactionDetailPayload(PDO $pdo, int $txId): array
     $accountId = (int) ($tx['account_id'] ?? 0);
     $txDate = (string) ($tx['transaction_date'] ?? '');
     $ym = $txDate !== '' ? date('Y-m', strtotime($txDate)) : date('Y-m');
-
     // Running balance after this transaction on the account.
     $balStmt = $pdo->prepare("
         SELECT
@@ -991,7 +990,7 @@ function ldBuildTransactionDetailPayload(PDO $pdo, int $txId): array
             'monthLabel' => date('F Y', strtotime($ym . '-01')),
             'description' => (string) ($tx['description'] ?? ''),
             'type' => $isCredit ? 'credit' : 'debit',
-            'typeLabel' => $isCredit ? 'Credit (Money In)' : 'Debit (Money Out)',
+            'typeLabel' => $isCredit ? 'Money In' : 'Money Out',
             'amount' => $amount,
             'amountDisplay' => ldFormatValue($amount),
             'referenceType' => $refType,

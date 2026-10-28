@@ -1,5 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+@php
+    $bodyClassEarly = trim((string) ($bodyClass ?? 'page-exp-desk exp-dashboard-page'));
+    $deskScrollLock = str_contains($bodyClassEarly, 'page-orders-desk')
+        || str_contains($bodyClassEarly, 'page-invoices-desk');
+    $htmlLockClass = '';
+    if (str_contains($bodyClassEarly, 'page-orders-desk')) {
+        $htmlLockClass = 'page-orders-desk-lock';
+    } elseif (str_contains($bodyClassEarly, 'page-invoices-desk')) {
+        $htmlLockClass = 'page-invoices-desk-lock';
+    }
+@endphp
+<html lang="en"@if ($htmlLockClass !== '') class="{{ $htmlLockClass }}"@endif>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +26,9 @@
     (function() {
         var t = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
+        @if ($htmlLockClass !== '')
+        document.documentElement.classList.add(@json($htmlLockClass));
+        @endif
     })();
     </script>
     @if (!empty($headMarkup))
@@ -32,7 +46,7 @@
     @endphp
 </head>
 @php
-    $bodyClass = trim((string) ($bodyClass ?? 'page-exp-desk exp-dashboard-page'));
+    $bodyClass = $bodyClassEarly;
     $mainRootClass = trim((string) ($mainRootClass ?? 'exp-desk-react-root'));
 @endphp
 <body class="dashboard {{ $bodyClass }}">
@@ -46,6 +60,111 @@
     }
 @endphp
 <style>
+@if ($deskScrollLock)
+/* No outer page scrollbar — only the desk table scrolls (match legacy invoices/orders shells). */
+html.page-orders-desk-lock,
+html.page-invoices-desk-lock,
+html.page-orders-desk-lock body,
+html.page-invoices-desk-lock body,
+body.page-orders-desk,
+body.page-orders-desk.dashboard,
+body.page-invoices-desk,
+body.page-invoices-desk.dashboard {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    scrollbar-gutter: auto !important;
+}
+html.page-orders-desk-lock::-webkit-scrollbar,
+html.page-invoices-desk-lock::-webkit-scrollbar,
+html.page-orders-desk-lock body::-webkit-scrollbar,
+html.page-invoices-desk-lock body::-webkit-scrollbar,
+body.page-orders-desk .layout-main-wrapper::-webkit-scrollbar,
+body.page-invoices-desk .layout-main-wrapper::-webkit-scrollbar,
+body.page-orders-desk .flex-grow-1::-webkit-scrollbar,
+body.page-invoices-desk .flex-grow-1::-webkit-scrollbar,
+body.page-orders-desk main.main-content.exp-desk-react-root::-webkit-scrollbar,
+body.page-invoices-desk main.main-content.exp-desk-react-root::-webkit-scrollbar,
+body.page-orders-desk main.main-content.exp-desk-react-root #root::-webkit-scrollbar,
+body.page-invoices-desk main.main-content.exp-desk-react-root #root::-webkit-scrollbar,
+body.page-orders-desk main.main-content.exp-desk-react-root .exp-desk-page::-webkit-scrollbar,
+body.page-invoices-desk main.main-content.exp-desk-react-root .exp-desk-page::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+    background: transparent !important;
+}
+body.page-orders-desk .layout-main-wrapper,
+body.page-orders-desk .layout-main-wrapper.min-vh-100,
+body.page-invoices-desk .layout-main-wrapper,
+body.page-invoices-desk .layout-main-wrapper.min-vh-100 {
+    align-items: stretch !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    scrollbar-width: none !important;
+}
+body.page-orders-desk .layout-main-wrapper > .flex-grow-1,
+body.page-orders-desk .flex-grow-1.d-flex.flex-column,
+body.page-invoices-desk .layout-main-wrapper > .flex-grow-1,
+body.page-invoices-desk .flex-grow-1.d-flex.flex-column {
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    scrollbar-width: none !important;
+}
+body.page-orders-desk .employee-header.employee-header--exp-desk,
+body.page-orders-desk .employee-header,
+body.page-invoices-desk .employee-header.employee-header--exp-desk,
+body.page-invoices-desk .employee-header {
+    flex: 0 0 auto !important;
+    position: relative !important;
+}
+body.page-orders-desk main.main-content.exp-desk-react-root,
+body.page-invoices-desk main.main-content.exp-desk-react-root {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 1.25rem 1rem !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    background: #f8fafc !important;
+    display: flex !important;
+    flex-direction: column !important;
+    scrollbar-width: none !important;
+    box-sizing: border-box;
+}
+body.page-orders-desk main.main-content.exp-desk-react-root #root,
+body.page-orders-desk main.main-content.exp-desk-react-root .exp-desk-page,
+body.page-invoices-desk main.main-content.exp-desk-react-root #root,
+body.page-invoices-desk main.main-content.exp-desk-react-root .exp-desk-page {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+}
+@media (max-width: 767.98px) {
+    body.page-orders-desk main.main-content.exp-desk-react-root,
+    body.page-invoices-desk main.main-content.exp-desk-react-root {
+        padding: 0 0.75rem 1.5rem !important;
+    }
+}
+@endif
 body.page-exp-desk.dashboard .layout-main-wrapper,
 body.page-inv-desk.dashboard .layout-main-wrapper,
 body.page-order-view .layout-main-wrapper,

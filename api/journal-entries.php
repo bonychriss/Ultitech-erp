@@ -69,6 +69,62 @@ try {
         $pdo->commit();
         
         echo json_encode(['success' => true, 'message' => 'Journal entry created successfully', 'id' => $jeId]);
+
+    } elseif ($action === 'update') {
+        $jeId = (int) ($_POST['id'] ?? 0);
+        if ($jeId <= 0) {
+            throw new Exception('Journal entry id is required');
+        }
+        if (empty($_POST['date']) || empty($_POST['items']) || !is_array($_POST['items'])) {
+            throw new Exception('Date and items are required');
+        }
+        if (!$journalAccountCol) {
+            throw new Exception('Journal items account column not found in database.');
+        }
+
+        $existing = $pdo->prepare('SELECT * FROM erp_journal_entries WHERE id = ? LIMIT 1');
+        $existing->execute([$jeId]);
+        $row = $existing->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            throw new Exception('Journal entry not found');
+        }
+        if (strtolower((string) ($row['status'] ?? '')) === 'locked') {
+            throw new Exception('Locked journal entries cannot be edited');
+        }
+
+        $pdo->beginTransaction();
+
+        $upd = $pdo->prepare('UPDATE erp_journal_entries SET date = ?, description = ? WHERE id = ?');
+        $upd->execute([
+            $_POST['date'],
+            $_POST['description'] ?? null,
+            $jeId,
+        ]);
+
+        $pdo->prepare('DELETE FROM erp_journal_items WHERE journal_id = ?')->execute([$jeId]);
+
+        $totalDebit = 0;
+        $totalCredit = 0;
+        $stmt = $pdo->prepare("INSERT INTO erp_journal_items (journal_id, {$journalAccountCol}, debit, credit) VALUES (?, ?, ?, ?)");
+        foreach ($_POST['items'] as $item) {
+            $debit = floatval($item['debit'] ?? 0);
+            $credit = floatval($item['credit'] ?? 0);
+            $stmt->execute([
+                $jeId,
+                $item['account_id'],
+                $debit,
+                $credit,
+            ]);
+            $totalDebit += $debit;
+            $totalCredit += $credit;
+        }
+
+        if (abs($totalDebit - $totalCredit) > 0.01) {
+            throw new Exception('Debits must equal credits');
+        }
+
+        $pdo->commit();
+        echo json_encode(['success' => true, 'message' => 'Journal entry updated successfully', 'id' => $jeId]);
         
     } else {
         throw new Exception('Invalid action');

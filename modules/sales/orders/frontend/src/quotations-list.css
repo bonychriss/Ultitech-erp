@@ -888,10 +888,35 @@ html[data-theme="dark"] .so-kpi-icon { background: rgba(15, 23, 42, 0.45); }
   vertical-align: middle;
 }
 
+.so-orders-table .so-desk-table .so-col-number .so-number-type {
+  flex-shrink: 0;
+}
+
 .so-orders-table .so-desk-table .so-col-number .exp-desk-ref {
   font-size: 0.78rem;
   font-weight: 600;
   color: #0f172a;
+  text-decoration: none;
+  color: #0f172a;
+}
+
+.so-orders-table .so-desk-table .so-col-number .exp-desk-ref:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.so-orders-table .so-desk-table th.so-col-check,
+.so-orders-table .so-desk-table td.so-col-check {
+  text-align: center;
+  width: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.so-orders-table .so-desk-table td.so-col-check input[type="checkbox"],
+.so-orders-table .so-desk-table th.so-col-check input[type="checkbox"] {
+  margin: 0;
+  vertical-align: middle;
+  cursor: pointer;
 }
 
 .so-orders-table .so-desk-table .so-col-customer .exp-desk-cell-main,

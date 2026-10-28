@@ -87,6 +87,152 @@ try {
 }
 
 $desc = trim((string) ($journal['description'] ?? ''));
+$entryNumber = trim((string) ($journal['entry_number'] ?? ('JE-' . $id)));
+$journalReference = trim((string) ($journal['reference'] ?? ''));
+$isReversalEntry = (stripos($desc, 'Reversal of ') === 0)
+    || (stripos($journalReference, 'REV:') === 0);
+$existingReversalId = 0;
+try {
+    $revCheck = $pdo->prepare(
+        "SELECT id FROM erp_journal_entries
+         WHERE reference = ?
+            OR description LIKE ?
+         ORDER BY id DESC
+         LIMIT 1"
+    );
+    $revCheck->execute(['REV:' . $entryNumber, 'Reversal of ' . $entryNumber . '%']);
+    $existingReversalId = (int) ($revCheck->fetchColumn() ?: 0);
+} catch (Throwable $e) {
+    $existingReversalId = 0;
+}
+$canReverse = !$isReversalEntry && $existingReversalId <= 0 && !empty($items);
+
+// CSV download of this journal entry
+if (isset($_GET['download']) && (string) $_GET['download'] === 'journal') {
+    $safeFile = preg_replace('/[^A-Za-z0-9_-]+/', '_', $entryNumber) ?: ('journal_' . $id);
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $safeFile . '.csv"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    $out = fopen('php://output', 'w');
+    if ($out) {
+        fputcsv($out, ['Entry Number', 'Date', 'Description', 'Reference', 'Status']);
+        fputcsv($out, [
+            $entryNumber,
+            (string) ($journal['date'] ?? ''),
+            $desc,
+            $journalReference,
+            (string) ($journal['status'] ?? ''),
+        ]);
+        fputcsv($out, []);
+        fputcsv($out, ['No.', 'Account Code', 'Account Name', 'Debit', 'Credit']);
+        foreach ($items as $idx => $item) {
+            fputcsv($out, [
+                $idx + 1,
+                (string) ($item['code'] ?? ''),
+                (string) ($item['name'] ?? ''),
+                number_format((float) ($item['debit'] ?? 0), 2, '.', ''),
+                number_format((float) ($item['credit'] ?? 0), 2, '.', ''),
+            ]);
+        }
+        fputcsv($out, []);
+        fputcsv($out, ['Total Debit', number_format($totalDebit, 2, '.', '')]);
+        fputcsv($out, ['Total Credit', number_format($totalCredit, 2, '.', '')]);
+        fclose($out);
+    }
+    exit;
+}
+
+// Create reversing journal entry (swap debits/credits)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reverse_entry'])) {
+    if (!$canReverse) {
+        $_SESSION['error_msg'] = $isReversalEntry
+            ? 'This entry is already a reversal and cannot be reversed again.'
+            : ($existingReversalId > 0
+                ? 'A reversal already exists for this journal entry.'
+                : 'This journal entry has no lines to reverse.');
+        header('Location: view-journal.php?id=' . $id . '&module=' . rawurlencode((string) ($_GET['module'] ?? $jeModule)));
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+        $accountCol = function_exists('resolveExistingColumn')
+            ? resolveExistingColumn('erp_journal_items', 'account_id', ['gl_account_id', 'account'])
+            : 'account_id';
+        if (!$accountCol) {
+            throw new RuntimeException('Journal items account column not found.');
+        }
+
+        $lastNum = (int) ($pdo->query(
+            "SELECT MAX(CAST(SUBSTRING(entry_number, 4) AS UNSIGNED)) FROM erp_journal_entries"
+        )->fetchColumn() ?: 0);
+        $newNumber = 'JE-' . str_pad((string) ($lastNum + 1), 6, '0', STR_PAD_LEFT);
+        $revDate = date('Y-m-d');
+        $revDesc = 'Reversal of ' . $entryNumber
+            . ($desc !== '' ? (': ' . $desc) : '');
+        if (strlen($revDesc) > 250) {
+            $revDesc = substr($revDesc, 0, 247) . '...';
+        }
+        $revRef = 'REV:' . $entryNumber;
+
+        $hasReference = function_exists('columnExists') && columnExists('erp_journal_entries', 'reference', $pdo);
+        $hasStatus = function_exists('columnExists') && columnExists('erp_journal_entries', 'status', $pdo);
+        $cols = ['entry_number', 'date', 'description', 'created_by'];
+        $vals = [$newNumber, $revDate, $revDesc, (int) ($_SESSION['user_id'] ?? 0) ?: null];
+        if ($hasReference) {
+            $cols[] = 'reference';
+            $vals[] = $revRef;
+        }
+        if ($hasStatus) {
+            $cols[] = 'status';
+            $vals[] = 'posted';
+        }
+        $placeholders = implode(', ', array_fill(0, count($cols), '?'));
+        $pdo->prepare(
+            'INSERT INTO erp_journal_entries (' . implode(', ', $cols) . ') VALUES (' . $placeholders . ')'
+        )->execute($vals);
+        $newId = (int) $pdo->lastInsertId();
+
+        $insItem = $pdo->prepare(
+            "INSERT INTO erp_journal_items (journal_id, {$accountCol}, debit, credit) VALUES (?, ?, ?, ?)"
+        );
+        $revDebit = 0.0;
+        $revCredit = 0.0;
+        foreach ($items as $item) {
+            $debit = (float) ($item['debit'] ?? 0);
+            $credit = (float) ($item['credit'] ?? 0);
+            $accountId = (int) ($item[$accountCol] ?? ($item['account_id'] ?? 0));
+            if ($accountId <= 0) {
+                throw new RuntimeException('Missing account on a journal line.');
+            }
+            // Swap debit/credit for the reversing entry.
+            $insItem->execute([$newId, $accountId, $credit, $debit]);
+            $revDebit += $credit;
+            $revCredit += $debit;
+        }
+        if (abs($revDebit - $revCredit) > 0.01) {
+            throw new RuntimeException('Reversal would not balance.');
+        }
+        $pdo->commit();
+
+        $_SESSION['success_msg'] = 'Reversal posted as ' . $newNumber . '.';
+        header(
+            'Location: view-journal.php?id=' . $newId
+            . '&module=' . rawurlencode((string) ($_GET['module'] ?? $jeModule))
+            . '&reversed=1'
+        );
+        exit;
+    } catch (Throwable $e) {
+        if ($pdo instanceof PDO && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $_SESSION['error_msg'] = 'Could not reverse entry: ' . $e->getMessage();
+        header('Location: view-journal.php?id=' . $id . '&module=' . rawurlencode((string) ($_GET['module'] ?? $jeModule)));
+        exit;
+    }
+}
+
 $journalType = 'General Journal';
 $descLower = strtolower($desc);
 if (strpos($descLower, 'payroll') !== false) {
@@ -295,6 +441,33 @@ include __DIR__ . '/../modules/balances/includes/header.php';
 .jed-actions{display:flex;gap:10px;flex-wrap:wrap}
 .jed-btn{border:1px solid #dbe2ea;background:#fff;color:#0f172a;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:7px;cursor:pointer}
 .jed-btn.warn{color:#f97316}
+.jed-btn:disabled{opacity:.55;cursor:not-allowed}
+.jed-flash{margin:0 0 12px;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:600}
+.jed-flash--ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#047857}
+.jed-flash--err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c}
+.jed-dl-wrap{position:relative;display:inline-flex}
+.jed-dl-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:180px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.12);padding:6px;z-index:40;display:none}
+.jed-dl-menu.is-open{display:block}
+.jed-dl-menu a,.jed-dl-menu button{width:100%;border:0;background:transparent;display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;color:#0f172a;text-decoration:none;cursor:pointer;text-align:left}
+.jed-dl-menu a:hover,.jed-dl-menu button:hover{background:#f8fafc}
+.jed-dl-menu i{width:16px;color:#2563eb}
+.jed-print-sheet{position:fixed;left:0;top:0;width:794px;background:#fff;color:#0f172a;padding:28px 32px;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;opacity:0;pointer-events:none;z-index:-1}
+.jed-print-sheet.is-exporting{opacity:1;z-index:2147483000;pointer-events:none}
+.jed-print-sheet h1{margin:0 0 4px;font-size:22px;font-weight:800}
+.jed-print-sheet .sub{margin:0 0 18px;color:#64748b;font-size:12px}
+.jed-print-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin-bottom:18px;font-size:12px}
+.jed-print-meta .k{color:#64748b;font-weight:600}
+.jed-print-meta .v{color:#0f172a;font-weight:700}
+.jed-print-sheet table{width:100%;border-collapse:collapse;font-size:11px}
+.jed-print-sheet th,.jed-print-sheet td{border:1px solid #e2e8f0;padding:7px 8px;text-align:left}
+.jed-print-sheet th{background:#f8fafc;font-weight:700}
+.jed-print-sheet .num{text-align:right;font-variant-numeric:tabular-nums}
+.jed-print-tot{margin-top:12px;display:flex;justify-content:flex-end;gap:18px;font-size:12px;font-weight:700}
+@media print{
+  body *{visibility:hidden!important}
+  .jed-print-sheet,.jed-print-sheet *{visibility:visible!important}
+  .jed-print-sheet{position:static!important;left:auto!important;width:auto!important;padding:0!important}
+}
 .jed-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px;align-items:start}
 .jed-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 2px rgba(15,23,42,.05);overflow:hidden;margin-bottom:12px}
 .jed-hd{padding:12px 15px;border-bottom:1px solid #eef2f7;font-size:15px;font-weight:700;color:#0f172a}
@@ -357,10 +530,45 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         </div>
       </div>
       <div class="jed-actions">
-        <button type="button" class="jed-btn"><i class="fas fa-download"></i> Download</button>
-        <button type="button" class="jed-btn warn"><i class="fas fa-rotate-left"></i> Reverse Entry</button>
+        <?php
+          $jeStatusLower = strtolower((string) ($journal['status'] ?? 'posted'));
+          $canEditEntry = $jeStatusLower !== 'locked';
+          $editUrl = 'create-journal.php?id=' . (int) $id . '&module=' . rawurlencode((string) $jeModule);
+        ?>
+        <?php if ($canEditEntry): ?>
+          <a class="jed-btn" href="<?= htmlspecialchars($editUrl, ENT_QUOTES, 'UTF-8') ?>" title="Edit this journal entry"><i class="fas fa-pen"></i> Edit</a>
+        <?php else: ?>
+          <button type="button" class="jed-btn" disabled title="Locked entries cannot be edited" style="opacity:.55;cursor:not-allowed;"><i class="fas fa-pen"></i> Edit</button>
+        <?php endif; ?>
+        <div class="jed-dl-wrap" id="jedDownloadWrap">
+          <button type="button" class="jed-btn" id="jedDownloadBtn" aria-haspopup="true" aria-expanded="false" title="Choose download format">
+            <i class="fas fa-download"></i> Download <i class="fas fa-chevron-down" style="font-size:10px;opacity:.7;"></i>
+          </button>
+          <div class="jed-dl-menu" id="jedDownloadMenu" role="menu">
+            <button type="button" role="menuitem" id="jedDownloadPdf"><i class="fas fa-file-pdf"></i> PDF</button>
+            <a role="menuitem" href="?id=<?= (int) $id ?>&module=<?= urlencode((string) $jeModule) ?>&download=journal"><i class="fas fa-file-csv"></i> CSV</a>
+          </div>
+        </div>
+        <?php if ($canReverse): ?>
+          <form method="post" action="?id=<?= (int) $id ?>&module=<?= urlencode((string) $jeModule) ?>" style="margin:0;" onsubmit="return confirm('Post a reversing journal entry for <?= htmlspecialchars($entryNumber, ENT_QUOTES, 'UTF-8') ?>? Debits and credits will be swapped.');">
+            <input type="hidden" name="reverse_entry" value="1">
+            <button type="submit" class="jed-btn warn" title="Create a reversing journal entry"><i class="fas fa-rotate-left"></i> Reverse Entry</button>
+          </form>
+        <?php elseif ($existingReversalId > 0): ?>
+          <a class="jed-btn warn" href="?id=<?= (int) $existingReversalId ?>&module=<?= urlencode((string) $jeModule) ?>" title="Open the existing reversal"><i class="fas fa-rotate-left"></i> View Reversal</a>
+        <?php else: ?>
+          <button type="button" class="jed-btn warn" disabled title="<?= $isReversalEntry ? 'This entry is already a reversal' : 'Nothing to reverse' ?>" style="opacity:.55;cursor:not-allowed;"><i class="fas fa-rotate-left"></i> Reverse Entry</button>
+        <?php endif; ?>
       </div>
     </div>
+    <?php if (!empty($_SESSION['success_msg'])): ?>
+      <div class="jed-flash jed-flash--ok"><?= htmlspecialchars((string) $_SESSION['success_msg']) ?></div>
+      <?php unset($_SESSION['success_msg']); ?>
+    <?php endif; ?>
+    <?php if (!empty($_SESSION['error_msg'])): ?>
+      <div class="jed-flash jed-flash--err"><?= htmlspecialchars((string) $_SESSION['error_msg']) ?></div>
+      <?php unset($_SESSION['error_msg']); ?>
+    <?php endif; ?>
 
     <div class="jed-grid">
       <div>
@@ -540,6 +748,49 @@ include __DIR__ . '/../modules/balances/includes/header.php';
     </div>
   </div>
 </main>
+
+<div class="jed-print-sheet" id="jedPrintSheet" aria-hidden="true">
+  <h1>Journal Entry</h1>
+  <p class="sub"><?= htmlspecialchars($entryNumber) ?> · <?= htmlspecialchars($journalType) ?></p>
+  <div class="jed-print-meta">
+    <div><div class="k">Transaction Date</div><div class="v"><?= !empty($journal['date']) ? htmlspecialchars(date('d/m/Y', strtotime((string) $journal['date']))) : '-' ?></div></div>
+    <div><div class="k">Reference</div><div class="v"><?= htmlspecialchars($journalReference !== '' ? $journalReference : $entryNumber) ?></div></div>
+    <div style="grid-column:1 / -1;"><div class="k">Description</div><div class="v"><?= htmlspecialchars($desc !== '' ? $desc : '—') ?></div></div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>No.</th>
+        <th>Account Code</th>
+        <th>Account Name</th>
+        <th class="num">Debit (TZS)</th>
+        <th class="num">Credit (TZS)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php if (empty($items)): ?>
+        <tr><td colspan="5" style="text-align:center;color:#64748b;">No journal lines.</td></tr>
+      <?php else: ?>
+        <?php foreach ($items as $idx => $item): ?>
+          <tr>
+            <td><?= (int) ($idx + 1) ?></td>
+            <td><?= htmlspecialchars((string) ($item['code'] ?? '-')) ?></td>
+            <td><?= htmlspecialchars((string) ($item['name'] ?? '-')) ?></td>
+            <td class="num"><?= number_format((float) ($item['debit'] ?? 0), 2) ?></td>
+            <td class="num"><?= number_format((float) ($item['credit'] ?? 0), 2) ?></td>
+          </tr>
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </tbody>
+  </table>
+  <div class="jed-print-tot">
+    <span>Total Debit: <?= number_format($totalDebit, 2) ?></span>
+    <span>Total Credit: <?= number_format($totalCredit, 2) ?></span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function () {
   var card = document.getElementById('jedTabsCard');
@@ -584,6 +835,199 @@ include __DIR__ . '/../modules/balances/includes/header.php';
       }
     });
   }
+
+  var wrap = document.getElementById('jedDownloadWrap');
+  var btn = document.getElementById('jedDownloadBtn');
+  var menu = document.getElementById('jedDownloadMenu');
+  var pdfBtn = document.getElementById('jedDownloadPdf');
+  var pdfName = <?= json_encode(preg_replace('/[^A-Za-z0-9_-]+/', '_', $entryNumber) ?: ('journal_' . $id), JSON_UNESCAPED_SLASHES) ?>;
+  var pdfData = <?= json_encode([
+      'entry' => $entryNumber,
+      'type' => $journalType,
+      'date' => !empty($journal['date']) ? date('d/m/Y', strtotime((string) $journal['date'])) : '-',
+      'reference' => $journalReference !== '' ? $journalReference : $entryNumber,
+      'description' => $desc !== '' ? $desc : '—',
+      'totalDebit' => number_format($totalDebit, 2),
+      'totalCredit' => number_format($totalCredit, 2),
+      'lines' => array_map(static function ($item, $idx) {
+          return [
+              'no' => $idx + 1,
+              'code' => (string) ($item['code'] ?? '-'),
+              'name' => (string) ($item['name'] ?? '-'),
+              'debit' => number_format((float) ($item['debit'] ?? 0), 2),
+              'credit' => number_format((float) ($item['credit'] ?? 0), 2),
+          ];
+      }, $items, array_keys($items)),
+  ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+  function closeMenu() {
+    if (!menu || !btn) return;
+    menu.classList.remove('is-open');
+    btn.setAttribute('aria-expanded', 'false');
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function buildPdfNode() {
+    var linesHtml = (pdfData.lines || []).map(function (line) {
+      return '<tr>'
+        + '<td style="border:1px solid #94a3b8;padding:7px 8px;color:#000;">' + esc(line.no) + '</td>'
+        + '<td style="border:1px solid #94a3b8;padding:7px 8px;color:#000;">' + esc(line.code) + '</td>'
+        + '<td style="border:1px solid #94a3b8;padding:7px 8px;color:#000;">' + esc(line.name) + '</td>'
+        + '<td style="border:1px solid #94a3b8;padding:7px 8px;color:#000;text-align:right;">' + esc(line.debit) + '</td>'
+        + '<td style="border:1px solid #94a3b8;padding:7px 8px;color:#000;text-align:right;">' + esc(line.credit) + '</td>'
+        + '</tr>';
+    }).join('');
+    if (!linesHtml) {
+      linesHtml = '<tr><td colspan="5" style="border:1px solid #94a3b8;padding:10px;text-align:center;color:#000;">No journal lines.</td></tr>';
+    }
+
+    var node = document.createElement('div');
+    node.setAttribute('data-theme', 'light');
+    node.innerHTML = ''
+      + '<h1 style="margin:0 0 4px;font-size:22px;font-weight:800;color:#000;font-family:Arial,Helvetica,sans-serif;">Journal Entry</h1>'
+      + '<p style="margin:0 0 16px;font-size:12px;color:#334155;font-family:Arial,Helvetica,sans-serif;">' + esc(pdfData.entry) + ' · ' + esc(pdfData.type) + '</p>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin-bottom:16px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000;">'
+      +   '<div><div style="color:#475569;font-weight:600;">Transaction Date</div><div style="font-weight:700;color:#000;">' + esc(pdfData.date) + '</div></div>'
+      +   '<div><div style="color:#475569;font-weight:600;">Reference</div><div style="font-weight:700;color:#000;">' + esc(pdfData.reference) + '</div></div>'
+      +   '<div style="grid-column:1 / -1;"><div style="color:#475569;font-weight:600;">Description</div><div style="font-weight:700;color:#000;">' + esc(pdfData.description) + '</div></div>'
+      + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;">'
+      +   '<thead><tr>'
+      +     '<th style="border:1px solid #94a3b8;padding:7px 8px;background:#f1f5f9;color:#000;text-align:left;">No.</th>'
+      +     '<th style="border:1px solid #94a3b8;padding:7px 8px;background:#f1f5f9;color:#000;text-align:left;">Account Code</th>'
+      +     '<th style="border:1px solid #94a3b8;padding:7px 8px;background:#f1f5f9;color:#000;text-align:left;">Account Name</th>'
+      +     '<th style="border:1px solid #94a3b8;padding:7px 8px;background:#f1f5f9;color:#000;text-align:right;">Debit (TZS)</th>'
+      +     '<th style="border:1px solid #94a3b8;padding:7px 8px;background:#f1f5f9;color:#000;text-align:right;">Credit (TZS)</th>'
+      +   '</tr></thead>'
+      +   '<tbody>' + linesHtml + '</tbody>'
+      + '</table>'
+      + '<div style="margin-top:12px;display:flex;justify-content:flex-end;gap:18px;font-size:12px;font-weight:700;color:#000;font-family:Arial,Helvetica,sans-serif;">'
+      +   '<span>Total Debit: ' + esc(pdfData.totalDebit) + '</span>'
+      +   '<span>Total Credit: ' + esc(pdfData.totalCredit) + '</span>'
+      + '</div>';
+
+    Object.assign(node.style, {
+      position: 'fixed',
+      left: '0',
+      top: '0',
+      width: '794px',
+      padding: '28px 32px',
+      background: '#ffffff',
+      color: '#000000',
+      zIndex: '2147483000',
+      pointerEvents: 'none',
+      boxSizing: 'border-box',
+      fontFamily: 'Arial, Helvetica, sans-serif'
+    });
+    return node;
+  }
+
+  if (btn && menu) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = menu.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) {
+      if (wrap && !wrap.contains(e.target)) closeMenu();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeMenu();
+    });
+  }
+
+  function runPdfDownload() {
+      closeMenu();
+      var hasCanvas = typeof html2canvas === 'function';
+      var JsPDF = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : null;
+      if (!hasCanvas || !JsPDF) {
+        window.print();
+        return;
+      }
+
+      var node = buildPdfNode();
+      document.body.appendChild(node);
+      if (pdfBtn) pdfBtn.disabled = true;
+
+      var done = function () {
+        if (node && node.parentNode) node.parentNode.removeChild(node);
+        if (pdfBtn) pdfBtn.disabled = false;
+      };
+
+      html2canvas(node, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        scrollX: 0,
+        scrollY: 0
+      }).then(function (canvas) {
+        var img = canvas.toDataURL('image/jpeg', 0.98);
+        var pdf = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        var pageWidth = pdf.internal.pageSize.getWidth();
+        var pageHeight = pdf.internal.pageSize.getHeight();
+        var margin = 10;
+        var imgWidth = pageWidth - (margin * 2);
+        var imgHeight = (canvas.height * imgWidth) / canvas.width;
+        var y = margin;
+        var remaining = imgHeight;
+        var srcY = 0;
+        // One page for typical journals; split if content is taller than a page.
+        if (imgHeight <= pageHeight - (margin * 2)) {
+          pdf.addImage(img, 'JPEG', margin, margin, imgWidth, imgHeight);
+        } else {
+          var pageCanvas = document.createElement('canvas');
+          var pageCtx = pageCanvas.getContext('2d');
+          var ratio = canvas.width / imgWidth;
+          var pageImgHeightPx = (pageHeight - (margin * 2)) * ratio;
+          pageCanvas.width = canvas.width;
+          while (remaining > 0) {
+            var sliceHeight = Math.min(pageImgHeightPx, canvas.height - srcY);
+            pageCanvas.height = sliceHeight;
+            pageCtx.fillStyle = '#ffffff';
+            pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            pageCtx.drawImage(canvas, 0, srcY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+            var sliceImg = pageCanvas.toDataURL('image/jpeg', 0.98);
+            var sliceMm = sliceHeight / ratio;
+            pdf.addImage(sliceImg, 'JPEG', margin, margin, imgWidth, sliceMm);
+            remaining -= (pageHeight - (margin * 2));
+            srcY += sliceHeight;
+            if (remaining > 1) pdf.addPage();
+          }
+        }
+        pdf.save(pdfName + '.pdf');
+        done();
+      }).catch(function () {
+        done();
+        window.print();
+      });
+  }
+
+  if (pdfBtn) {
+    pdfBtn.addEventListener('click', runPdfDownload);
+  }
+
+  try {
+    var params = new URLSearchParams(window.location.search || '');
+    if (params.get('auto_pdf') === '1') {
+      // Give CDN scripts a tick, then download and strip the query flag.
+      setTimeout(function () {
+        runPdfDownload();
+        params.delete('auto_pdf');
+        var next = window.location.pathname + (params.toString() ? ('?' + params.toString()) : '');
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, '', next);
+        }
+      }, 250);
+    }
+  } catch (e) {}
 })();
 </script>
 

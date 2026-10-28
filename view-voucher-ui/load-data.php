@@ -273,6 +273,11 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         return ['ok' => false, 'error' => 'Voucher not found', 'code' => 404];
     }
 
+    // Publish leftovers: confirming/pending rows should not keep is_draft=1.
+    if (function_exists('healPublishedVoucherStuckIsDraft')) {
+        healPublishedVoucherStuckIsDraft($pdo, $voucher);
+    }
+
     $isRestricted = !empty($voucher['is_restricted']) && (int) $voucher['is_restricted'] === 1;
     $isCreator = ((int) ($voucher['created_by'] ?? 0)) === (int) $sessionUserId;
     if ($isRestricted && !isAdmin() && !isFinance() && !$isCreator) {
@@ -619,6 +624,18 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     $canEditRow = function_exists('canEditVoucherRow')
         ? canEditVoucherRow($voucher, $sessionUserId)
         : (function_exists('canEditVoucher') && canEditVoucher($voucherId, $sessionUserId));
+    // Fallback: UI may show Confirming/Pending from approvals while DB status is blank.
+    if (!$canEditRow && !$isPosted && !$returnFinance && is_array($statusResolved)) {
+        $derivedKey = strtolower((string) ($statusResolved['key'] ?? ''));
+        if (in_array($derivedKey, ['confirming', 'pending', 'draft', 'signed'], true)) {
+            $restrictedBlock = !empty($voucher['is_restricted']) && (int) $voucher['is_restricted'] === 1
+                && !(function_exists('isFinance') && isFinance())
+                && ((int) ($voucher['created_by'] ?? 0) !== (int) $sessionUserId);
+            if (!$restrictedBlock) {
+                $canEditRow = true;
+            }
+        }
+    }
     $vvShowEdit = ($canEditRow && !$isPosted && !$returnFinance)
         || (function_exists('canLimitedEditApprovedVoucher') && canLimitedEditApprovedVoucher($voucherId, $sessionUserId));
     $canDeleteAttachment = (bool) $canEditRow;

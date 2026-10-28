@@ -97,6 +97,52 @@ foreach ($journals as &$je) {
     }
     $je['_journal_type'] = $journalType;
     $je['_desc'] = $desc !== '' ? $desc : '—';
+
+    $entryNo = trim((string) ($je['entry_number'] ?? ''));
+    $ref = trim((string) ($je['reference'] ?? ''));
+    $je['_is_reversal'] = (stripos($desc, 'Reversal of ') === 0) || (stripos($ref, 'REV:') === 0);
+    $je['_reversal_id'] = 0;
+}
+unset($je);
+
+// Map original entry_number → reversal journal id (for Actions menu)
+$reversalBySource = [];
+try {
+    $hasReferenceCol = function_exists('columnExists') && columnExists('erp_journal_entries', 'reference', $pdo);
+    $revSelect = $hasReferenceCol
+        ? 'SELECT id, reference, description, entry_number FROM erp_journal_entries WHERE reference LIKE \'REV:%\' OR description LIKE \'Reversal of %\' ORDER BY id DESC'
+        : 'SELECT id, description, entry_number FROM erp_journal_entries WHERE description LIKE \'Reversal of %\' ORDER BY id DESC';
+    $revRows = $pdo->query($revSelect)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    foreach ($revRows as $rr) {
+        $src = '';
+        if ($hasReferenceCol) {
+            $ref = trim((string) ($rr['reference'] ?? ''));
+            if (stripos($ref, 'REV:') === 0) {
+                $src = trim(substr($ref, 4));
+            }
+        }
+        if ($src === '') {
+            $d = (string) ($rr['description'] ?? '');
+            if (preg_match('/^Reversal of\s+(JE-[\w-]+)/i', $d, $m)) {
+                $src = trim($m[1]);
+            }
+        }
+        if ($src !== '' && !isset($reversalBySource[$src])) {
+            $reversalBySource[$src] = (int) ($rr['id'] ?? 0);
+        }
+    }
+} catch (Throwable $e) {
+    $reversalBySource = [];
+}
+foreach ($journals as &$je) {
+    $entryNo = trim((string) ($je['entry_number'] ?? ''));
+    if ($entryNo === '') {
+        $entryNo = 'JE-' . str_pad((string) ((int) ($je['id'] ?? 0)), 6, '0', STR_PAD_LEFT);
+    }
+    $revId = (int) ($reversalBySource[$entryNo] ?? 0);
+    $je['_reversal_id'] = $revId;
+    $hasLines = ((float) ($je['_debit'] ?? 0) + (float) ($je['_credit'] ?? 0)) > 0.00001;
+    $je['_can_reverse'] = empty($je['_is_reversal']) && $revId <= 0 && $hasLines;
 }
 unset($je);
 
@@ -137,7 +183,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
 .je-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem}
 .je-hero h1{margin:0;font-size:1.85rem;font-weight:800;letter-spacing:-.03em;line-height:1.15}
 .je-hero p{margin:.35rem 0 0;color:var(--je-muted);font-size:.9rem}
-.je-hero-actions{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.je-hero-actions{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;position:relative}
 .je-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem 1rem;border-radius:.65rem;font-size:.8125rem;font-weight:650;text-decoration:none;border:1px solid var(--je-line);background:#fff;color:#334155;cursor:pointer;font-family:inherit}
 .je-btn:hover{background:var(--je-soft);color:#0f172a}
 .je-btn-primary{background:var(--je-blue);border-color:var(--je-blue);color:#fff}
@@ -205,8 +251,19 @@ include __DIR__ . '/../modules/balances/includes/header.php';
 .je-status-draft{background:#dbeafe;color:#1d4ed8}
 .je-status-locked{background:#ede9fe;color:#6d28d9}
 .je-status-unbalanced{background:#ffedd5;color:#c2410c}
-.je-actions-btn{width:2rem;height:2rem;border:1px solid #e2e8f0;border-radius:.55rem;background:#fff;color:#64748b;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
-.je-actions-btn:hover{background:#f8fafc;color:#0f172a;border-color:#cbd5e1}
+.je-actions-btn{width:2rem;height:2rem;border:1px solid #e2e8f0;border-radius:.55rem;background:#fff;color:#64748b;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer;padding:0;font:inherit}
+.je-actions-btn:hover,.je-actions-btn[aria-expanded="true"]{background:#f8fafc;color:#0f172a;border-color:#cbd5e1}
+.je-row-actions{position:relative;display:inline-flex;justify-content:flex-end}
+.je-actions-menu,.je-more-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:200px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,.14);padding:6px;z-index:80;display:none}
+.je-actions-menu.is-open,.je-more-menu.is-open{display:block}
+.je-actions-menu.is-fixed{position:fixed;top:auto;right:auto;z-index:10050}
+.je-actions-menu a,.je-actions-menu button,.je-more-menu a,.je-more-menu button{width:100%;border:0;background:transparent;display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;color:#0f172a;text-decoration:none;cursor:pointer;text-align:left;font-family:inherit}
+.je-actions-menu a:hover,.je-actions-menu button:hover,.je-more-menu a:hover,.je-more-menu button:hover{background:#f8fafc}
+.je-actions-menu i,.je-more-menu i{width:16px;color:#2563eb;text-align:center}
+.je-actions-menu .is-danger{color:#b91c1c}
+.je-actions-menu .is-danger i{color:#dc2626}
+.je-actions-menu form{margin:0}
+.je-more-wrap{position:relative;display:inline-flex}
 .je-footer{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;padding:.85rem 0 0;color:var(--je-muted);font-size:.78rem}
 .je-pager{display:flex;gap:.35rem;align-items:center}
 .je-pager span{min-width:1.85rem;height:1.85rem;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--je-line);border-radius:.45rem;background:#fff;font-weight:600;font-size:.75rem}
@@ -234,7 +291,14 @@ include __DIR__ . '/../modules/balances/includes/header.php';
       </div>
       <div class="je-hero-actions">
         <a class="je-btn je-btn-primary" href="<?= htmlspecialchars($createUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-plus"></i> Create Entry</a>
-        <button type="button" class="je-btn" id="jeMoreActionsBtn"><i class="fas fa-ellipsis"></i> More Actions</button>
+        <div class="je-more-wrap" id="jeMoreWrap">
+          <button type="button" class="je-btn" id="jeMoreActionsBtn" aria-haspopup="true" aria-expanded="false"><i class="fas fa-ellipsis"></i> More Actions</button>
+          <div class="je-more-menu" id="jeMoreMenu" role="menu" hidden>
+            <a role="menuitem" href="<?= htmlspecialchars($createUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-plus"></i> Create Entry</a>
+            <button type="button" role="menuitem" id="jeExportCsvBtn"><i class="fas fa-file-csv"></i> Export CSV</button>
+            <button type="button" role="menuitem" id="jeResetFiltersMenu"><i class="fas fa-filter-circle-xmark"></i> Clear Filters</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -383,6 +447,15 @@ include __DIR__ . '/../modules/balances/includes/header.php';
                       $dateLabel = date('d/m/Y', $ts);
                   }
               }
+              $csvUrl = $viewUrl . '&download=journal';
+              $pdfUrl = $viewUrl . '&auto_pdf=1';
+              $editUrl = 'create-journal.php?id=' . (int) ($je['id'] ?? 0) . '&module=' . rawurlencode($jeModule);
+              $canEdit = $status !== 'locked';
+              $canReverse = !empty($je['_can_reverse']);
+              $reversalId = (int) ($je['_reversal_id'] ?? 0);
+              $reversalUrl = $reversalId > 0
+                  ? ('view-journal.php?id=' . $reversalId . '&module=' . rawurlencode($jeModule))
+                  : '';
               ?>
               <tr
                 class="je-row-clickable"
@@ -390,6 +463,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
                 data-journal="<?= htmlspecialchars($journalKey, ENT_QUOTES, 'UTF-8') ?>"
                 data-date="<?= htmlspecialchars((string) ($je['date'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
                 data-href="<?= htmlspecialchars($viewUrl, ENT_QUOTES, 'UTF-8') ?>"
+                data-entry="<?= htmlspecialchars($entryNo, ENT_QUOTES, 'UTF-8') ?>"
                 tabindex="0"
               >
                 <td class="col-ref">
@@ -402,7 +476,31 @@ include __DIR__ . '/../modules/balances/includes/header.php';
                 <td class="col-credit"><span class="je-amt je-amt-muted"><?= number_format((float) $je['_credit'], 2) ?></span></td>
                 <td class="col-status"><span class="je-status <?= $statusClass ?>"><?= htmlspecialchars($pillLabel, ENT_QUOTES, 'UTF-8') ?></span></td>
                 <td class="col-actions">
-                  <a class="je-actions-btn" href="<?= htmlspecialchars($viewUrl, ENT_QUOTES, 'UTF-8') ?>" title="View" data-je-ignore><i class="fas fa-ellipsis-vertical"></i></a>
+                  <div class="je-row-actions" data-je-ignore>
+                    <button type="button" class="je-actions-btn" aria-haspopup="true" aria-expanded="false" title="Actions" aria-label="Actions for <?= htmlspecialchars($entryNo, ENT_QUOTES, 'UTF-8') ?>">
+                      <i class="fas fa-ellipsis-vertical" aria-hidden="true"></i>
+                    </button>
+                    <div class="je-actions-menu" role="menu" hidden>
+                      <a role="menuitem" href="<?= htmlspecialchars($viewUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-eye"></i> View</a>
+                      <?php if ($canEdit): ?>
+                        <a role="menuitem" href="<?= htmlspecialchars($editUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-pen"></i> Edit</a>
+                      <?php else: ?>
+                        <button type="button" role="menuitem" disabled style="opacity:.5;cursor:not-allowed;" title="Locked entries cannot be edited"><i class="fas fa-pen"></i> Edit</button>
+                      <?php endif; ?>
+                      <a role="menuitem" href="<?= htmlspecialchars($csvUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-file-csv"></i> Download CSV</a>
+                      <a role="menuitem" href="<?= htmlspecialchars($pdfUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-file-pdf"></i> Download PDF</a>
+                      <?php if ($canReverse): ?>
+                        <form method="post" action="<?= htmlspecialchars($viewUrl, ENT_QUOTES, 'UTF-8') ?>" data-je-reverse>
+                          <input type="hidden" name="reverse_entry" value="1">
+                          <button type="submit" role="menuitem" class="is-danger"><i class="fas fa-rotate-left"></i> Reverse Entry</button>
+                        </form>
+                      <?php elseif ($reversalUrl !== ''): ?>
+                        <a role="menuitem" href="<?= htmlspecialchars($reversalUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-rotate-left"></i> View Reversal</a>
+                      <?php else: ?>
+                        <button type="button" role="menuitem" disabled style="opacity:.5;cursor:not-allowed;" title="<?= !empty($je['_is_reversal']) ? 'Already a reversal' : 'Nothing to reverse' ?>"><i class="fas fa-rotate-left"></i> Reverse Entry</button>
+                      <?php endif; ?>
+                    </div>
+                  </div>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -433,6 +531,17 @@ include __DIR__ . '/../modules/balances/includes/header.php';
   var rows = Array.prototype.slice.call(document.querySelectorAll('#jeTable tbody tr'));
   var showing = document.getElementById('jeShowingLabel');
   var showingFooter = document.getElementById('jeShowingFooter');
+  var openMenu = null;
+  var openBtn = null;
+  var openHome = null;
+
+  function clearFilters() {
+    if (search) search.value = '';
+    if (statusFilter) statusFilter.value = 'all';
+    if (journalFilter) journalFilter.value = 'all';
+    if (dateFilter) dateFilter.value = '';
+    applyFilters();
+  }
 
   function applyFilters() {
     var q = (search && search.value || '').toLowerCase().trim();
@@ -459,6 +568,51 @@ include __DIR__ . '/../modules/balances/includes/header.php';
     if (showingFooter) showingFooter.textContent = 'Showing ' + visible + ' of <?= (int) $totalEntries ?> entries';
   }
 
+  function closeOpenMenu() {
+    if (!openMenu) return;
+    openMenu.classList.remove('is-open', 'is-fixed');
+    openMenu.setAttribute('hidden', '');
+    openMenu.style.left = '';
+    openMenu.style.top = '';
+    if (openHome && openMenu.parentNode !== openHome) {
+      openHome.appendChild(openMenu);
+    }
+    if (openBtn) openBtn.setAttribute('aria-expanded', 'false');
+    openMenu = null;
+    openBtn = null;
+    openHome = null;
+  }
+
+  function positionFixedMenu(btn, menu) {
+    var rect = btn.getBoundingClientRect();
+    var menuWidth = Math.max(200, menu.offsetWidth || 200);
+    var left = rect.right - menuWidth;
+    if (left < 8) left = 8;
+    if (left + menuWidth > window.innerWidth - 8) {
+      left = Math.max(8, window.innerWidth - menuWidth - 8);
+    }
+    var top = rect.bottom + 6;
+    menu.classList.add('is-fixed');
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    var mh = menu.offsetHeight || 0;
+    if (top + mh > window.innerHeight - 8 && rect.top > mh + 12) {
+      menu.style.top = (rect.top - mh - 6) + 'px';
+    }
+  }
+
+  function openActionsMenu(btn, menu, home) {
+    closeOpenMenu();
+    openBtn = btn;
+    openMenu = menu;
+    openHome = home;
+    menu.removeAttribute('hidden');
+    menu.classList.add('is-open');
+    btn.setAttribute('aria-expanded', 'true');
+    document.body.appendChild(menu);
+    positionFixedMenu(btn, menu);
+  }
+
   [search, statusFilter, journalFilter, dateFilter].forEach(function (el) {
     if (!el) return;
     el.addEventListener('input', applyFilters);
@@ -467,11 +621,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
 
   if (resetBtn) {
     resetBtn.addEventListener('click', function () {
-      if (search) search.value = '';
-      if (statusFilter) statusFilter.value = 'all';
-      if (journalFilter) journalFilter.value = 'all';
-      if (dateFilter) dateFilter.value = '';
-      applyFilters();
+      clearFilters();
       if (search) search.focus();
     });
   }
@@ -480,18 +630,126 @@ include __DIR__ . '/../modules/balances/includes/header.php';
     var href = row.getAttribute('data-href');
     if (!href) return;
     row.addEventListener('click', function (e) {
-      if (e.target.closest('[data-je-ignore], a, button')) return;
+      if (e.target.closest('[data-je-ignore], a, button, .je-actions-menu, .je-more-menu')) return;
       window.location.href = href;
     });
     row.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') {
+        if (e.target.closest('[data-je-ignore], a, button')) return;
         e.preventDefault();
         window.location.href = href;
       }
     });
   });
 
+  document.querySelectorAll('.je-row-actions').forEach(function (wrap) {
+    var btn = wrap.querySelector('.je-actions-btn');
+    var menu = wrap.querySelector('.je-actions-menu');
+    if (!btn || !menu) return;
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (openMenu === menu) {
+        closeOpenMenu();
+        return;
+      }
+      openActionsMenu(btn, menu, wrap);
+    });
+  });
+
+  document.querySelectorAll('form[data-je-reverse]').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      var entry = '';
+      var row = form.closest('tr');
+      if (row) entry = row.getAttribute('data-entry') || '';
+      var msg = entry
+        ? ('Create a reversing journal entry for ' + entry + '? Debits and credits will be swapped.')
+        : 'Create a reversing journal entry? Debits and credits will be swapped.';
+      if (!window.confirm(msg)) {
+        e.preventDefault();
+      }
+    });
+  });
+
+  var moreBtn = document.getElementById('jeMoreActionsBtn');
+  var moreMenu = document.getElementById('jeMoreMenu');
+  var moreWrap = document.getElementById('jeMoreWrap');
+  if (moreBtn && moreMenu && moreWrap) {
+    moreMenu.removeAttribute('hidden');
+    moreBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var open = moreMenu.classList.toggle('is-open');
+      moreBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) closeOpenMenu();
+    });
+  }
+
+  var exportBtn = document.getElementById('jeExportCsvBtn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', function () {
+      if (moreMenu) moreMenu.classList.remove('is-open');
+      if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
+      var lines = [['JE Number', 'Date', 'Description', 'Journal', 'Debit', 'Credit', 'Status']];
+      rows.forEach(function (row) {
+        if (!row.getAttribute('data-status') || row.style.display === 'none') return;
+        var cells = row.querySelectorAll('td');
+        if (cells.length < 7) return;
+        lines.push([
+          (cells[0].textContent || '').trim(),
+          (cells[1].textContent || '').trim(),
+          (cells[2].textContent || '').trim(),
+          (cells[3].textContent || '').trim(),
+          (cells[4].textContent || '').trim().replace(/,/g, ''),
+          (cells[5].textContent || '').trim().replace(/,/g, ''),
+          (cells[6].textContent || '').trim()
+        ]);
+      });
+      var csv = lines.map(function (cols) {
+        return cols.map(function (c) {
+          var v = String(c == null ? '' : c);
+          if (/[",\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+          return v;
+        }).join(',');
+      }).join('\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'journal-entries.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  var resetMenuBtn = document.getElementById('jeResetFiltersMenu');
+  if (resetMenuBtn) {
+    resetMenuBtn.addEventListener('click', function () {
+      if (moreMenu) moreMenu.classList.remove('is-open');
+      if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
+      clearFilters();
+      if (search) search.focus();
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    if (openMenu && !e.target.closest('.je-actions-menu') && !e.target.closest('.je-actions-btn')) {
+      closeOpenMenu();
+    }
+    if (moreMenu && moreWrap && !moreWrap.contains(e.target)) {
+      moreMenu.classList.remove('is-open');
+      if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      closeOpenMenu();
+      if (moreMenu) moreMenu.classList.remove('is-open');
+      if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
+    }
     if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
       if (!search) return;
       e.preventDefault();
@@ -499,6 +757,11 @@ include __DIR__ . '/../modules/balances/includes/header.php';
       search.select();
     }
   });
+
+  window.addEventListener('scroll', function () {
+    if (openMenu && openBtn) positionFixedMenu(openBtn, openMenu);
+  }, true);
+  window.addEventListener('resize', closeOpenMenu);
 })();
 </script>
 <?php include __DIR__ . '/../modules/balances/includes/footer.php'; ?>

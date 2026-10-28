@@ -8256,15 +8256,19 @@ function canEditVoucherRow(array $voucher, $user_id): bool
         return true;
     }
 
-    // Private Back/leave drafts: creator can keep editing until published.
-    if (!empty($voucher['is_draft']) && (int) $voucher['is_draft'] === 1) {
+    $status = strtolower(trim((string) ($voucher['status'] ?? '')));
+
+    // Private Back/leave drafts: creator-only only for explicit draft status.
+    // Do not treat empty status + leftover is_draft as private — live rows often
+    // show Confirming from approvals while payment_vouchers.status is blank.
+    if (!empty($voucher['is_draft']) && (int) $voucher['is_draft'] === 1
+        && $status === 'draft') {
         return (int) ($voucher['created_by'] ?? 0) === (int) $user_id;
     }
 
-    // Any logged-in employee can edit vouchers that are still before final approval
-    // (including explicit draft status from save-as-draft).
-    $status = strtolower(trim((string) ($voucher['status'] ?? '')));
-    return in_array($status, ['pending', 'confirming', 'draft'], true);
+    // Any logged-in employee can edit vouchers that are still before final approval.
+    // Empty status = legacy/unset in-progress (same as confirming for Edit).
+    return in_array($status, ['pending', 'confirming', 'draft', ''], true);
 }
 
 function canEditVoucher($voucher_id, $user_id)
@@ -13131,7 +13135,13 @@ function paymentVoucherHideOthersPrivateDraftsSql(string $alias, array &$params,
     $vid = $viewerId !== null ? (int) $viewerId : (int) ($_SESSION['user_id'] ?? 0);
     $a = $alias !== '' ? rtrim($alias, '.') . '.' : '';
     $params[] = $vid;
-    return " AND (IFNULL({$a}is_draft, 0) = 0 OR {$a}created_by = ?)";
+    // Only hide real private drafts (status draft/empty + is_draft). Leftover is_draft on
+    // confirming/pending must stay visible to colleagues.
+    return " AND ("
+        . "IFNULL({$a}is_draft, 0) = 0 "
+        . "OR LOWER(TRIM(COALESCE({$a}status, ''))) NOT IN ('', 'draft') "
+        . "OR {$a}created_by = ?"
+        . ")";
 }
 
 function paymentVoucherIsPrivateDraft(array $voucher): bool
@@ -13151,13 +13161,57 @@ function viewerCanSeePrivateDraftVoucher(array $voucher, ?int $viewerId = null):
     if (function_exists('isFinance') && isFinance()) {
         return true;
     }
-    // Confirming means the voucher entered the approval chain — do not hide it.
+    // Once in the approval chain (or finished), do not hide behind a leftover is_draft flag.
     $status = strtolower(trim((string) ($voucher['status'] ?? '')));
-    if ($status === 'confirming') {
+    if (in_array($status, ['confirming', 'pending', 'approved', 'rejected'], true)) {
         return true;
     }
     $vid = $viewerId !== null ? (int) $viewerId : (int) ($_SESSION['user_id'] ?? 0);
     return $vid > 0 && (int) ($voucher['created_by'] ?? 0) === $vid;
+}
+
+/**
+ * Clear leftover is_draft / blank status once a voucher is clearly in the workflow.
+ *
+ * @param array<string,mixed> $voucher
+ */
+function healPublishedVoucherStuckIsDraft(PDO $pdo, array &$voucher): void
+{
+    $id = (int) ($voucher['id'] ?? 0);
+    if ($id <= 0 || !($pdo instanceof PDO)) {
+        return;
+    }
+    $status = strtolower(trim((string) ($voucher['status'] ?? '')));
+    $isDraft = (int) ($voucher['is_draft'] ?? 0) === 1;
+    $sets = [];
+    // Blank status on a non-draft row → confirming (matches UI derived label).
+    if ($status === '' && !$isDraft) {
+        $sets[] = 'status = ' . $pdo->quote(defined('STATUS_CONFIRMING') ? STATUS_CONFIRMING : 'confirming');
+        $voucher['status'] = defined('STATUS_CONFIRMING') ? STATUS_CONFIRMING : 'confirming';
+        $status = 'confirming';
+    }
+    if ($isDraft && in_array($status, ['confirming', 'pending', 'approved', 'rejected'], true)) {
+        try {
+            if (function_exists('ensurePaymentVoucherIsDraftColumn')) {
+                ensurePaymentVoucherIsDraftColumn($pdo);
+            }
+            if (!function_exists('columnExists') || columnExists('payment_vouchers', 'is_draft', $pdo)) {
+                $sets[] = 'is_draft = 0';
+                $voucher['is_draft'] = 0;
+            }
+        } catch (Throwable $e) {
+            // ignore column ensure failures
+        }
+    }
+    if ($sets === []) {
+        return;
+    }
+    try {
+        $pdo->prepare('UPDATE payment_vouchers SET ' . implode(', ', $sets) . ' WHERE id = ?')
+            ->execute([$id]);
+    } catch (Throwable $e) {
+        // Non-fatal: Edit rules above already tolerate leftover flags.
+    }
 }
 
 // -------------- Voucher attachments schema & helpers --------------
@@ -13539,9 +13593,15 @@ function ensurePurchasingSchema()
     $ensured = true;
 }
 
-function ensureVoucherUploadsDir()
+function ensureVoucherUploadsDir(?int $companyId = null)
 {
-    $dir = dirname(__DIR__) . '/assets/uploads/vouchers';
+    $cid = $companyId !== null
+        ? (int) $companyId
+        : (function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0);
+    // Prefer tenant storage so company voucher ids cannot collide on shared hosting.
+    $dir = $cid > 0
+        ? (dirname(__DIR__) . '/storage/tenant_' . $cid . '/vouchers')
+        : (dirname(__DIR__) . '/assets/uploads/vouchers');
     if (!is_dir($dir)) {
         @mkdir($dir, 0775, true);
     }
@@ -13633,21 +13693,36 @@ function getVoucherAttachments($voucherId)
     }
     unset($row);
 
-    // Recover files stored under this company only.
-    // assets/uploads/vouchers/{id} is shared by every company, and voucher ids
-    // collide across tenant databases, so scanning it shows another company's files.
+    // Recover files stored under this company (tenant path). Also scan the legacy
+    // assets/uploads/vouchers/{id} folder when the DB has no rows for this voucher —
+    // edit used to save there, and orphan files otherwise stay invisible.
     $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
-    $diskDir = $companyId > 0
-        ? dirname(__DIR__) . '/storage/tenant_' . $companyId . '/vouchers/' . $voucherId
-        : '';
-    if ($diskDir !== '' && is_dir($diskDir)) {
+    $scanDirs = [];
+    if ($companyId > 0) {
+        $scanDirs[] = [
+            'abs' => dirname(__DIR__) . '/storage/tenant_' . $companyId . '/vouchers/' . $voucherId,
+            'relPrefix' => 'storage/tenant_' . $companyId . '/vouchers/' . $voucherId . '/',
+        ];
+    }
+    if ($rows === []) {
+        $scanDirs[] = [
+            'abs' => dirname(__DIR__) . '/assets/uploads/vouchers/' . $voucherId,
+            'relPrefix' => 'assets/uploads/vouchers/' . $voucherId . '/',
+        ];
+    }
+    $syntheticId = -1;
+    foreach ($scanDirs as $scanSpec) {
+        $diskDir = (string) ($scanSpec['abs'] ?? '');
+        $relPrefix = (string) ($scanSpec['relPrefix'] ?? '');
+        if ($diskDir === '' || !is_dir($diskDir)) {
+            continue;
+        }
         $known = [];
         foreach ($rows as $row) {
             $known[strtolower(basename((string) ($row['file_path'] ?? '')))] = true;
             $known[strtolower((string) ($row['original_name'] ?? ''))] = true;
         }
         $scan = @scandir($diskDir) ?: [];
-        $syntheticId = -1;
         foreach ($scan as $fileName) {
             if ($fileName === '.' || $fileName === '..') {
                 continue;
@@ -13664,7 +13739,7 @@ function getVoucherAttachments($voucherId)
             if (isset($known[$baseKey])) {
                 continue;
             }
-            $rel = 'storage/tenant_' . $companyId . '/vouchers/' . $voucherId . '/' . $fileName;
+            $rel = $relPrefix . $fileName;
             $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             $mime = 'application/octet-stream';
             if (in_array($ext, ['jpg', 'jpeg'], true)) {
@@ -14320,7 +14395,7 @@ function processVoucherSupportingFileUploads($voucherId, $userId, $files = null)
     global $pdo;
     $voucherId = (int) $voucherId;
     $userId = (int) $userId;
-    if ($voucherId <= 0 || $userId <= 0) {
+    if ($voucherId <= 0) {
         return 0;
     }
 
@@ -14329,8 +14404,9 @@ function processVoucherSupportingFileUploads($voucherId, $userId, $files = null)
         return 0;
     }
 
+    $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
     ensureVoucherAttachmentsSchema();
-    $baseDir = ensureVoucherUploadsDir();
+    $baseDir = ensureVoucherUploadsDir($companyId > 0 ? $companyId : null);
     $voucherDir = $baseDir . DIRECTORY_SEPARATOR . $voucherId;
     if (!is_dir($voucherDir)) {
         @mkdir($voucherDir, 0775, true);
@@ -14387,10 +14463,13 @@ function processVoucherSupportingFileUploads($voucherId, $userId, $files = null)
         }
         $unique = $safeBase . '_' . date('YmdHis') . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
         $destAbs = $voucherDir . DIRECTORY_SEPARATOR . $unique;
-        $destRel = 'assets/uploads/vouchers/' . $voucherId . '/' . $unique;
+        $destRel = $companyId > 0
+            ? ('storage/tenant_' . $companyId . '/vouchers/' . $voucherId . '/' . $unique)
+            : ('assets/uploads/vouchers/' . $voucherId . '/' . $unique);
         if (@move_uploaded_file($tmp, $destAbs)) {
-            addVoucherAttachment($voucherId, $destRel, $orig, $mime, $size, $userId);
-            $newUploads++;
+            if (addVoucherAttachment($voucherId, $destRel, $orig, $mime, $size, $userId)) {
+                $newUploads++;
+            }
         }
     }
 
@@ -14414,12 +14493,37 @@ function addVoucherAttachment($voucherId, $storedPath, $originalName, $mimeType,
 {
     global $pdo;
     ensureVoucherAttachmentsSchema();
-    // Ensure we store relative to assets folder if possible, or normalize.
-    // Ideally we store 'uploads/vouchers/...'
-    // If incoming path has assets/, strip it?
-    // For now, just store what is passed, usually 'uploads/vouchers/...'
-    $stmt = $pdo->prepare("INSERT INTO voucher_attachments (voucher_id, file_path, original_name, mime_type, size_bytes, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)");
-    return $stmt->execute([(int) $voucherId, $storedPath, $originalName, $mimeType, (int) $sizeBytes, (int) $uploadedBy]);
+    $voucherId = (int) $voucherId;
+    $sizeBytes = (int) $sizeBytes;
+    $uploadedBy = (int) $uploadedBy;
+    $stmt = $pdo->prepare(
+        'INSERT INTO voucher_attachments (voucher_id, file_path, original_name, mime_type, size_bytes, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    try {
+        return $stmt->execute([
+            $voucherId,
+            $storedPath,
+            $originalName,
+            $mimeType,
+            $sizeBytes,
+            $uploadedBy > 0 ? $uploadedBy : null,
+        ]);
+    } catch (Throwable $e) {
+        // Session user id may not exist in the tenant users table (FK) — still keep the file row.
+        try {
+            return $stmt->execute([
+                $voucherId,
+                $storedPath,
+                $originalName,
+                $mimeType,
+                $sizeBytes,
+                null,
+            ]);
+        } catch (Throwable $e2) {
+            error_log('addVoucherAttachment: ' . $e2->getMessage());
+            return false;
+        }
+    }
 }
 
 /**

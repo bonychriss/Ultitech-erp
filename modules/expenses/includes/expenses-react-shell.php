@@ -187,6 +187,11 @@ body.page-exp-desk .employee-header--exp-desk .exp-desk-header-tools {
 body.page-exp-desk .employee-header--exp-desk .exp-desk-header-tools:empty {
     display: none;
 }
+@media (max-width: 767.98px) {
+    body.page-exp-desk .employee-header--exp-desk .exp-desk-header-tools {
+        display: none !important;
+    }
+}
 body.page-exp-desk .employee-header--exp-desk .header-actions-tray .notif {
     order: 1;
     position: relative;

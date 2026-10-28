@@ -45,32 +45,30 @@
 }
 
 .exp-desk-page-header {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
-  gap: 0.45rem 0.65rem;
-  min-height: 0;
+  display: none;
   flex: 0 0 auto;
   position: relative;
   z-index: 35;
-  padding: 0 0 0.15rem;
-  margin-top: -0.15rem;
+}
+
+.exp-desk-page-header-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  min-width: 0;
 }
 
 .exp-desk-page-header-search {
-  grid-column: 2;
-  grid-row: 1;
-  width: 16.5rem;
-  max-width: 16.5rem;
-  min-width: 0;
-  justify-self: end;
+  width: min(22rem, 34vw);
+  max-width: 22rem;
+  min-width: 12rem;
+  flex: 0 1 22rem;
   position: relative;
   z-index: 40;
 }
 
 .exp-desk-page-header-actions {
-  grid-column: 3;
-  grid-row: 1;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -78,16 +76,42 @@
   flex-wrap: wrap;
 }
 
-@media (min-width: 768px) {
-  .exp-desk-page-header-search .exp-desk-search-input {
-    padding-top: 0.4rem;
-    padding-bottom: 0.4rem;
-    font-size: 0.8125rem;
-  }
+.exp-desk-page-header-tools .exp-desk-search-input {
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  font-size: 0.8125rem;
+}
+
+.exp-desk-page-header-tools .exp-desk-filter-btn,
+body.page-exp-desk .exp-desk-page-header-tools button.exp-desk-filter-btn {
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.7rem !important;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.exp-desk-page-header-tools .exp-desk-filter-btn:hover,
+.exp-desk-page-header-tools .exp-desk-filter-btn.is-active,
+body.page-exp-desk .exp-desk-page-header-tools button.exp-desk-filter-btn:hover,
+body.page-exp-desk .exp-desk-page-header-tools button.exp-desk-filter-btn.is-active {
+  border-color: #c7d2fe !important;
+  color: #4f46e5;
+  background: #fff;
+}
+
+.exp-desk-page-header-tools .exp-desk-btn-create {
+  min-height: 2.35rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 0.75rem !important;
+  gap: 0.35rem;
 }
 
 .exp-desk-filter-dropdown {
   position: relative;
+  flex: 0 0 auto;
 }
 
 .exp-export-menu {
@@ -497,6 +521,7 @@ body.page-exp-desk .exp-desk-hero button.exp-desk-btn-create {
   cursor: pointer;
   box-shadow: none;
   padding: 0;
+  flex-shrink: 0;
 }
 
 .exp-desk-filter-btn:hover,
@@ -1322,7 +1347,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 @media (max-width: 767.98px) {
-  /* Purchases: match balances mobile visibility Ã¢ÂÂ cards instead of wide table */
+  /* Purchases: match balances mobile visibility ÃÂ¢ÃÂÃÂ cards instead of wide table */
   .exp-desk-page--purchases .exp-desk-table-wrap {
     display: none !important;
   }
@@ -1342,7 +1367,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
     width: 100%;
     min-width: 0;
   }
-  /* Total Payables is the odd last card â span the full row */
+  /* Total Payables is the odd last card Ã¢ÂÂ span the full row */
   .exp-desk-page--purchases .exp-desk-kpi-grid--dash > .exp-desk-kpi-card:last-child {
     grid-column: 1 / -1;
   }
@@ -4040,11 +4065,13 @@ body.page-exp-desk button.exp-desk-row-action {
     min-width: 0;
   }
 
-  .exp-desk-page-header {
+  .exp-desk-page-header,
+  .exp-desk-page-header--mobile {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 0.45rem;
+    padding: 0 0 0.15rem;
   }
 
   .exp-desk-page-header-actions {
@@ -4066,6 +4093,10 @@ body.page-exp-desk button.exp-desk-row-action {
     flex: 0 0 auto;
     min-width: 0;
     justify-self: stretch;
+  }
+
+  .exp-desk-page-header--mobile .exp-desk-btn-create {
+    display: none;
   }
 
   .exp-desk-page-header-search .exp-desk-search-field {

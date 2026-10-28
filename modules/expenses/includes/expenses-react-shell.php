@@ -7,6 +7,10 @@
  */
 $expensesPage = $expensesPage ?? 'list';
 $expensesDeskScrollable = !empty($expensesDeskScrollable);
+if ($expensesPage === 'list') {
+    $employeeHeaderRightHtml = ($employeeHeaderRightHtml ?? '')
+        . '<div id="exp-desk-header-tools" class="exp-desk-header-tools"></div>';
+}
 $GLOBALS['_erp_header_style_linked'] = true;
 $htmlLockClass = $expensesDeskScrollable ? 'page-exp-desk-lock page-exp-desk-scroll' : 'page-exp-desk-lock';
 $bodyDeskClass = $expensesDeskScrollable
@@ -168,10 +172,20 @@ body.page-exp-desk .employee-header--exp-desk .header-right.header-actions-tray 
     justify-content: flex-end !important;
     margin-left: auto !important;
     flex: 0 0 auto !important;
-    gap: 0.5rem !important;
-    align-self: flex-start;
+    gap: 0.55rem !important;
+    align-self: center;
     overflow: visible;
     flex-shrink: 0;
+}
+body.page-exp-desk .employee-header--exp-desk .exp-desk-header-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    min-width: 0;
+}
+body.page-exp-desk .employee-header--exp-desk .exp-desk-header-tools:empty {
+    display: none;
 }
 body.page-exp-desk .employee-header--exp-desk .header-actions-tray .notif {
     order: 1;

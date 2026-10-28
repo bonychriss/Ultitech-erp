@@ -364,6 +364,10 @@ export default function ExpensesDeskPage() {
   const [filterPanelStyle, setFilterPanelStyle] = useState(null);
   const searchInputRef = useRef(null);
   const appliedSearchRef = useRef((initialFilters.search || '').trim());
+  const [headerToolsEl, setHeaderToolsEl] = useState(null);
+  const [isDesktopHeader, setIsDesktopHeader] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  ));
 
   const loadData = useCallback(async (activeFilters, silent = false) => {
     if (!silent) setLoading(true);
@@ -516,6 +520,17 @@ export default function ExpensesDeskPage() {
       window.removeEventListener('scroll', syncFilterPanelPosition, true);
     };
   }, [filtersOpen]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const sync = () => {
+      setIsDesktopHeader(mq.matches);
+      setHeaderToolsEl(document.getElementById('exp-desk-header-tools'));
+    };
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   useEffect(() => {
     const next = (draftFilters.search || '').trim();
@@ -1119,52 +1134,71 @@ export default function ExpensesDeskPage() {
       )}
       {renderFiltersPanel()}
 
-      <div className="exp-desk-page-header">
-        <div className="exp-desk-page-header-search">
-          {renderSearchField(searchInputRef, 'exp-desk-search')}
-        </div>
-
-        <div className="exp-desk-page-header-actions">
-          <div className="exp-desk-toolbar-secondary">
-            <div className={`exp-desk-filter-dropdown${filtersOpen ? ' is-open' : ''}`} ref={filterDropdownRef}>
-              <button
-                ref={filterBtnRef}
-                type="button"
-                className={`exp-desk-filter-btn${filtersOpen ? ' is-active' : ''}`}
-                onClick={toggleFilters}
-                aria-expanded={filtersOpen}
-                aria-haspopup="dialog"
-                title="Filters"
-              >
-                <SlidersHorizontal size={18} strokeWidth={2.25} aria-hidden="true" />
-                {hasAdvancedFilters(filters) && <span className="exp-desk-filter-dot" aria-hidden="true" />}
-              </button>
-            </div>
-            {purchasesDesk ? (
-              <a
-                href={purchasesCreateVoucherUrl()}
-                className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
-                aria-label="Create purchase"
-              >
-                <Plus size={16} aria-hidden="true" />
-                <span className="exp-desk-btn-label-desktop">Create purchase</span>
-                <span className="exp-desk-btn-label-mobile">New</span>
-              </a>
-            ) : (
-              <button
-                type="button"
-                className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
-                aria-label="Record expense"
-                onClick={() => setRecordModal({ editId: null })}
-              >
-                <Plus size={16} aria-hidden="true" />
-                <span className="exp-desk-btn-label-desktop">Record expense</span>
-                <span className="exp-desk-btn-label-mobile">New</span>
-              </button>
-            )}
+      {(() => {
+        const filterControl = (
+          <div className={`exp-desk-filter-dropdown${filtersOpen ? ' is-open' : ''}`} ref={filterDropdownRef}>
+            <button
+              ref={filterBtnRef}
+              type="button"
+              className={`exp-desk-filter-btn${filtersOpen ? ' is-active' : ''}`}
+              onClick={toggleFilters}
+              aria-expanded={filtersOpen}
+              aria-haspopup="dialog"
+              title="Filters"
+            >
+              <SlidersHorizontal size={18} strokeWidth={2.25} aria-hidden="true" />
+              {hasAdvancedFilters(filters) && <span className="exp-desk-filter-dot" aria-hidden="true" />}
+            </button>
           </div>
-        </div>
-      </div>
+        );
+
+        const createControl = purchasesDesk ? (
+          <a
+            href={purchasesCreateVoucherUrl()}
+            className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
+            aria-label="Create purchase"
+          >
+            <Plus size={16} aria-hidden="true" />
+            <span className="exp-desk-btn-label-desktop">Create purchase</span>
+            <span className="exp-desk-btn-label-mobile">New</span>
+          </a>
+        ) : (
+          <button
+            type="button"
+            className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
+            aria-label="Record expense"
+            onClick={() => setRecordModal({ editId: null })}
+          >
+            <Plus size={16} aria-hidden="true" />
+            <span className="exp-desk-btn-label-desktop">Record expense</span>
+            <span className="exp-desk-btn-label-mobile">New</span>
+          </button>
+        );
+
+        if (isDesktopHeader && headerToolsEl) {
+          return createPortal(
+            <div className="exp-desk-page-header-tools">
+              <div className="exp-desk-page-header-search">
+                {renderSearchField(searchInputRef, 'exp-desk-search')}
+              </div>
+              {filterControl}
+              {createControl}
+            </div>,
+            headerToolsEl,
+          );
+        }
+
+        return (
+          <div className="exp-desk-page-header exp-desk-page-header--mobile">
+            <div className="exp-desk-page-header-actions">
+              {filterControl}
+            </div>
+            <div className="exp-desk-page-header-search">
+              {renderSearchField(searchInputRef, 'exp-desk-search')}
+            </div>
+          </div>
+        );
+      })()}
 
       {error && (
         <div className="exp-desk-flash exp-desk-flash-error" role="alert">{error}</div>

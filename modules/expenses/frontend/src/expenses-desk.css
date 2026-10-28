@@ -46,27 +46,31 @@
 
 .exp-desk-page-header {
   display: grid;
-  grid-template-columns: 1fr minmax(16rem, 36rem) 1fr;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 1rem 1.25rem;
-  min-height: 40px;
+  gap: 0.45rem 0.65rem;
+  min-height: 0;
   flex: 0 0 auto;
   position: relative;
   z-index: 35;
-  padding: 0.15rem 0 0.25rem;
+  padding: 0 0 0.15rem;
+  margin-top: -0.15rem;
 }
 
 .exp-desk-page-header-search {
   grid-column: 2;
-  width: 100%;
+  grid-row: 1;
+  width: 16.5rem;
+  max-width: 16.5rem;
   min-width: 0;
-  justify-self: center;
+  justify-self: end;
   position: relative;
   z-index: 40;
 }
 
 .exp-desk-page-header-actions {
   grid-column: 3;
+  grid-row: 1;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -74,12 +78,15 @@
   flex-wrap: wrap;
 }
 
-.exp-desk-toolbar-secondary {
-  display: contents;
+@media (min-width: 768px) {
+  .exp-desk-page-header-search .exp-desk-search-input {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+    font-size: 0.8125rem;
+  }
 }
 
 .exp-desk-filter-dropdown {
-  order: 1;
   position: relative;
 }
 
@@ -483,7 +490,7 @@ body.page-exp-desk .exp-desk-hero button.exp-desk-btn-create {
   border: none;
   border-radius: 0;
   background: transparent;
-  color: #475569;
+  color: #0f172a;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -923,22 +930,25 @@ body.page-exp-desk .exp-desk-filters-close {
   .exp-desk-page-header {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 0.65rem 0.75rem;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 0.45rem 0.55rem;
   }
 
   .exp-desk-page-header-search {
-    flex: 1 1 14rem;
+    flex: 0 1 15rem;
+    width: 15rem;
+    max-width: 15rem;
     min-width: 0;
     grid-column: auto;
-    justify-self: stretch;
+    justify-self: end;
   }
 
   .exp-desk-page-header-actions {
     flex: 0 0 auto;
     grid-column: auto;
     justify-self: end;
-    margin-left: auto;
+    margin-left: 0;
   }
 }
 
@@ -1312,7 +1322,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 @media (max-width: 767.98px) {
-  /* Purchases: match balances mobile visibility â cards instead of wide table */
+  /* Purchases: match balances mobile visibility Ã¢ÂÂ cards instead of wide table */
   .exp-desk-page--purchases .exp-desk-table-wrap {
     display: none !important;
   }
@@ -1332,7 +1342,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
     width: 100%;
     min-width: 0;
   }
-  /* Total Payables is the odd last card — span the full row */
+  /* Total Payables is the odd last card â span the full row */
   .exp-desk-page--purchases .exp-desk-kpi-grid--dash > .exp-desk-kpi-card:last-child {
     grid-column: 1 / -1;
   }
@@ -3964,22 +3974,25 @@ body.page-exp-desk button.exp-desk-row-action {
     .exp-desk-page-header {
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 0.65rem 0.75rem;
+      justify-content: flex-end;
+      flex-wrap: nowrap;
+      gap: 0.45rem 0.55rem;
     }
 
     .exp-desk-page-header-search {
-      flex: 1 1 14rem;
+      flex: 0 1 15rem;
+      width: 15rem;
+      max-width: 15rem;
       min-width: 0;
       grid-column: auto;
-      justify-self: stretch;
+      justify-self: end;
     }
 
     .exp-desk-page-header-actions {
       flex: 0 0 auto;
       grid-column: auto;
       justify-self: end;
-      margin-left: auto;
+      margin-left: 0;
     }
   }
 }
@@ -3988,14 +4001,17 @@ body.page-exp-desk button.exp-desk-row-action {
   .exp-desk-page-header {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    justify-content: flex-end;
+    gap: 0.45rem;
   }
 
   .exp-desk-page-header-search {
-    flex: 1 1 auto;
+    flex: 0 1 14.5rem;
+    width: 14.5rem;
+    max-width: 14.5rem;
     min-width: 0;
     grid-column: auto;
-    justify-self: stretch;
+    justify-self: end;
   }
 
   .exp-desk-page-header-actions {
@@ -4025,16 +4041,31 @@ body.page-exp-desk button.exp-desk-row-action {
   }
 
   .exp-desk-page-header {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 0.5rem;
+    gap: 0.45rem;
+  }
+
+  .exp-desk-page-header-actions {
+    order: 1;
+    display: flex;
+    width: 100%;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    align-items: center;
+    margin-left: 0;
+    min-height: 2rem;
   }
 
   .exp-desk-page-header-search {
+    order: 2;
     display: block;
     width: 100%;
-    flex: 1 1 100%;
+    max-width: none;
+    flex: 0 0 auto;
     min-width: 0;
+    justify-self: stretch;
   }
 
   .exp-desk-page-header-search .exp-desk-search-field {
@@ -4046,56 +4077,15 @@ body.page-exp-desk button.exp-desk-row-action {
     min-height: 2.35rem;
   }
 
-  .exp-desk-page-header-actions {
-    width: 100%;
-  }
-
-  .exp-desk-toolbar-secondary {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    width: 100%;
-  }
-
-  .exp-desk-toolbar-secondary .exp-desk-filter-dropdown {
-    flex: 0 0 auto;
-  }
-
-  .exp-desk-toolbar-secondary .exp-export-menu,
-  .exp-desk-toolbar-secondary .exp-desk-btn-create {
-    flex: 0 0 auto;
-    min-width: 0;
-  }
-
-  .exp-desk-btn-create {
-    padding: 0.45rem 0.7rem;
-    font-size: 0.75rem;
-    white-space: nowrap;
-    min-height: 2.25rem;
-  }
-
-  .exp-desk-btn-label-desktop {
-    display: none;
-  }
-
-  .exp-desk-btn-label-mobile {
-    display: inline;
-  }
-
   .exp-desk-search-input {
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
     font-size: 0.8125rem;
   }
 
-  .exp-desk-btn {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
-  }
-
   .exp-desk-filter-btn {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.35rem;
+    height: 2.35rem;
   }
 
   .exp-desk-filters-sub {

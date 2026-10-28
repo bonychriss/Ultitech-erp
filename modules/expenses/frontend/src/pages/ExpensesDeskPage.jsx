@@ -4,7 +4,10 @@ import {
   ArrowLeftRight,
   CalendarDays,
   ChevronRight,
+  CreditCard,
   Eye,
+  FileText,
+  Layers,
   LayoutGrid,
   Loader2,
   MoreVertical,
@@ -47,6 +50,7 @@ const emptyAdvancedFilters = {
   payment_method: '',
   amount_min: '',
   amount_max: '',
+  only_unpaid: '',
 };
 
 const emptyFilters = { search: '', ...emptyAdvancedFilters };
@@ -93,6 +97,40 @@ function isThisMonthRange(filters, now = new Date()) {
   return (
     String(filters?.date_from || '') === month.date_from
     && String(filters?.date_to || '') === month.date_to
+  );
+}
+
+function last30DaysRange(now = new Date()) {
+  const from = new Date(now);
+  from.setDate(from.getDate() - 30);
+  return {
+    date_from: toInputDate(from),
+    date_to: toInputDate(now),
+  };
+}
+
+function thisQuarterDateRange(now = new Date()) {
+  const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+  const from = new Date(now.getFullYear(), quarterStartMonth, 1);
+  return {
+    date_from: toInputDate(from),
+    date_to: toInputDate(now),
+  };
+}
+
+function isLast30DaysRange(filters, now = new Date()) {
+  const range = last30DaysRange(now);
+  return (
+    String(filters?.date_from || '') === range.date_from
+    && String(filters?.date_to || '') === range.date_to
+  );
+}
+
+function isThisQuarterRange(filters, now = new Date()) {
+  const range = thisQuarterDateRange(now);
+  return (
+    String(filters?.date_from || '') === range.date_from
+    && String(filters?.date_to || '') === range.date_to
   );
 }
 
@@ -501,12 +539,11 @@ export default function ExpensesDeskPage() {
       }
 
       const panelWidth = Math.min(384, window.innerWidth - margin * 2);
-      let left = rect.right - panelWidth;
-      left = Math.max(margin, Math.min(left, window.innerWidth - panelWidth - margin));
 
       setFilterPanelStyle({
         top: `${top}px`,
-        left: `${left}px`,
+        left: 'auto',
+        right: `${margin}px`,
         width: `${panelWidth}px`,
         maxHeight: `${maxHeight}px`,
       });
@@ -633,24 +670,16 @@ export default function ExpensesDeskPage() {
   }
 
   function setDatePreset(preset) {
-    const now = new Date();
     if (preset === 'month') {
-      const from = new Date(now.getFullYear(), now.getMonth(), 1);
-      setDraftFilters((current) => ({
-        ...current,
-        date_from: toInputDate(from),
-        date_to: toInputDate(now),
-      }));
+      setDraftFilters((current) => ({ ...current, ...thisMonthDateRange() }));
       return;
     }
     if (preset === '30d') {
-      const from = new Date(now);
-      from.setDate(from.getDate() - 30);
-      setDraftFilters((current) => ({
-        ...current,
-        date_from: toInputDate(from),
-        date_to: toInputDate(now),
-      }));
+      setDraftFilters((current) => ({ ...current, ...last30DaysRange() }));
+      return;
+    }
+    if (preset === 'quarter') {
+      setDraftFilters((current) => ({ ...current, ...thisQuarterDateRange() }));
       return;
     }
     setDraftFilters((current) => ({ ...current, date_from: '', date_to: '' }));
@@ -699,6 +728,13 @@ export default function ExpensesDeskPage() {
       chips.push({
         key: 'amount_min',
         label: `Amount: ${min} - ${max}`,
+      });
+    }
+
+    if (String(activeFilters.only_unpaid || '') === '1') {
+      chips.push({
+        key: 'only_unpaid',
+        label: purchasesDesk ? 'Unpaid only' : 'Unpaid only',
       });
     }
 
@@ -930,6 +966,7 @@ export default function ExpensesDeskPage() {
   function renderFiltersPanel() {
     if (!filtersOpen || !filterPanelStyle) return null;
 
+    const unpaidOn = String(draftFilters.only_unpaid || '') === '1';
     const panel = (
       <div
         ref={filterPanelRef}
@@ -941,7 +978,6 @@ export default function ExpensesDeskPage() {
         <div className="exp-desk-filters-head">
           <div>
             <h2 className="exp-desk-filters-title">Filters</h2>
-            <p className="exp-desk-filters-sub">Narrow the list by date, status, account, and amount.</p>
           </div>
           <button
             type="button"
@@ -954,7 +990,10 @@ export default function ExpensesDeskPage() {
         </div>
 
         <div className="exp-desk-filters-section">
-          <div className="exp-desk-filters-section-label">Date range</div>
+          <div className="exp-desk-filters-section-label">
+            <CalendarDays size={15} aria-hidden="true" />
+            <span>Date range</span>
+          </div>
           <div className="exp-desk-date-presets" role="group" aria-label="Quick date ranges">
             <button
               type="button"
@@ -963,11 +1002,26 @@ export default function ExpensesDeskPage() {
             >
               This month
             </button>
-            <button type="button" className="exp-desk-date-preset" onClick={() => setDatePreset('30d')}>
+            <button
+              type="button"
+              className={`exp-desk-date-preset${isLast30DaysRange(draftFilters) ? ' is-active' : ''}`}
+              onClick={() => setDatePreset('30d')}
+            >
               Last 30 days
             </button>
-            <button type="button" className="exp-desk-date-preset" onClick={() => setDatePreset('clear')}>
-              Clear dates
+            <button
+              type="button"
+              className={`exp-desk-date-preset${isThisQuarterRange(draftFilters) ? ' is-active' : ''}`}
+              onClick={() => setDatePreset('quarter')}
+            >
+              This quarter
+            </button>
+            <button
+              type="button"
+              className="exp-desk-date-preset-clear"
+              onClick={() => setDatePreset('clear')}
+            >
+              Clear
             </button>
           </div>
           <div className="exp-desk-filters-grid exp-desk-filters-grid--dates">
@@ -993,7 +1047,10 @@ export default function ExpensesDeskPage() {
         </div>
 
         <div className="exp-desk-filters-section">
-          <div className="exp-desk-filters-section-label">Details</div>
+          <div className="exp-desk-filters-section-label">
+            <FileText size={15} aria-hidden="true" />
+            <span>Details</span>
+          </div>
           <div className="exp-desk-filters-grid">
             <div className="exp-desk-field">
               <label htmlFor="filterStatus">Status</label>
@@ -1003,14 +1060,14 @@ export default function ExpensesDeskPage() {
                 onChange={(e) => setDraftFilters((f) => ({ ...f, status: e.target.value }))}
               >
                 <option value="">All statuses</option>
-                          <option value="posted">Posted</option>
-                          <option value="unposted">Unposted</option>
-                          <option value="draft">Draft</option>
-                          <option value="rejected">Rejected</option>
+                <option value="posted">Posted</option>
+                <option value="unposted">Unposted</option>
+                <option value="draft">Draft</option>
+                <option value="rejected">Rejected</option>
               </select>
             </div>
             <div className="exp-desk-field">
-              <label htmlFor="filterPayment">Payment</label>
+              <label htmlFor="filterPayment">Payment method</label>
               <select
                 id="filterPayment"
                 value={draftFilters.payment_method}
@@ -1022,24 +1079,34 @@ export default function ExpensesDeskPage() {
                 ))}
               </select>
             </div>
-            <div className="exp-desk-field exp-desk-field--full">
-              <label htmlFor="filterCategory">Account</label>
-              <select
-                id="filterCategory"
-                value={draftFilters.category}
-                onChange={(e) => setDraftFilters((f) => ({ ...f, category: e.target.value }))}
-              >
-                <option value="">All accounts</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
           </div>
         </div>
 
         <div className="exp-desk-filters-section">
-          <div className="exp-desk-filters-section-label">Amount</div>
+          <div className="exp-desk-filters-section-label">
+            <Layers size={15} aria-hidden="true" />
+            <span>Account</span>
+          </div>
+          <div className="exp-desk-field">
+            <label htmlFor="filterCategory">Account</label>
+            <select
+              id="filterCategory"
+              value={draftFilters.category}
+              onChange={(e) => setDraftFilters((f) => ({ ...f, category: e.target.value }))}
+            >
+              <option value="">All accounts</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="exp-desk-filters-section">
+          <div className="exp-desk-filters-section-label">
+            <CreditCard size={15} aria-hidden="true" />
+            <span>Amount</span>
+          </div>
           <div className="exp-desk-filters-grid exp-desk-filters-grid--amounts">
             <div className="exp-desk-field">
               <label htmlFor="filterAmountMin">Min</label>
@@ -1066,11 +1133,30 @@ export default function ExpensesDeskPage() {
               />
             </div>
           </div>
+          <label className={`exp-desk-unpaid-toggle${unpaidOn ? ' is-on' : ''}`}>
+            <input
+              type="checkbox"
+              checked={unpaidOn}
+              onChange={(e) => setDraftFilters((f) => ({
+                ...f,
+                only_unpaid: e.target.checked ? '1' : '',
+              }))}
+            />
+            <span className="exp-desk-unpaid-toggle-switch" aria-hidden="true" />
+            <span className="exp-desk-unpaid-toggle-copy">
+              <span className="exp-desk-unpaid-toggle-title">Show only unpaid</span>
+              <span className="exp-desk-unpaid-toggle-sub">
+                {purchasesDesk
+                  ? 'Display purchases with pending payments only.'
+                  : 'Display expenses that are not paid yet.'}
+              </span>
+            </span>
+          </label>
         </div>
 
         <div className="exp-desk-filters-footer">
-          <button type="button" className="exp-desk-btn exp-desk-btn-ghost" onClick={resetDraftFilters}>
-            Clear
+          <button type="button" className="exp-desk-btn exp-desk-btn-secondary" onClick={resetDraftFilters}>
+            Reset
           </button>
           <button
             type="button"

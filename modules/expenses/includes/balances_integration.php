@@ -1609,6 +1609,9 @@ function expenses_soft_delete_draft(PDO $pdo, int $id): bool
  */
 function expenses_parse_list_filters(array $get): array
 {
+    $onlyUnpaidRaw = strtolower(trim((string) ($get['only_unpaid'] ?? '')));
+    $onlyUnpaid = in_array($onlyUnpaidRaw, ['1', 'true', 'yes', 'on'], true) ? '1' : '';
+
     return [
         'search' => trim((string) ($get['search'] ?? '')),
         'status' => strtolower(trim((string) ($get['status'] ?? ''))),
@@ -1619,6 +1622,7 @@ function expenses_parse_list_filters(array $get): array
         'amount_min' => trim((string) ($get['amount_min'] ?? '')),
         'amount_max' => trim((string) ($get['amount_max'] ?? '')),
         'source_type' => trim((string) ($get['source_type'] ?? '')),
+        'only_unpaid' => $onlyUnpaid,
     ];
 }
 
@@ -1679,6 +1683,10 @@ function expenses_build_list_where(array $filters, array &$params): string
     if ($filters['amount_max'] !== '' && is_numeric($filters['amount_max'])) {
         $where .= ' AND e.amount <= ?';
         $params[] = (float) $filters['amount_max'];
+    }
+
+    if (($filters['only_unpaid'] ?? '') === '1') {
+        $where .= ' AND IFNULL(e.is_posted, 0) = 0';
     }
 
     if ($filters['source_type'] !== '') {
@@ -2325,6 +2333,10 @@ function expenses_fetch_vouchers_as_list_rows(PDO $pdo, array $filters = [], str
     if (($filters['amount_max'] ?? '') !== '' && is_numeric($filters['amount_max'])) {
         $where[] = 'pv.total_amount <= ?';
         $params[] = (float) $filters['amount_max'];
+    }
+
+    if (($filters['only_unpaid'] ?? '') === '1') {
+        $where[] = 'IFNULL(pv.is_paid, 0) = 0';
     }
 
     $whereSql = implode(' AND ', $where) . ($companyWhere !== '' ? ' ' . $companyWhere : '');

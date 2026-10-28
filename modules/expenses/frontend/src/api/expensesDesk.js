@@ -58,6 +58,7 @@ export async function fetchDeskExpenses(filters = {}) {
   if (filters.payment_method) params.set('payment_method', filters.payment_method);
   if (filters.amount_min) params.set('amount_min', filters.amount_min);
   if (filters.amount_max) params.set('amount_max', filters.amount_max);
+  if (String(filters.only_unpaid || '') === '1') params.set('only_unpaid', '1');
 
   const qs = params.toString();
   const url = `${getApiBase()}/expenses.php${qs ? `?${qs}` : ''}`;
@@ -133,6 +134,7 @@ export function exportUrl(filters = {}) {
   if (filters.payment_method) params.set('payment_method', filters.payment_method);
   if (filters.amount_min) params.set('amount_min', filters.amount_min);
   if (filters.amount_max) params.set('amount_max', filters.amount_max);
+  if (String(filters.only_unpaid || '') === '1') params.set('only_unpaid', '1');
   return `./export.php?${params.toString()}`;
 }
 

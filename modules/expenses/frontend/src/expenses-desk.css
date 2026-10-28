@@ -550,9 +550,9 @@ body.page-exp-desk .exp-desk-page button.exp-desk-filter-btn {
   box-sizing: border-box;
   padding: 0;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 14px;
   background: #fff;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -564,6 +564,13 @@ body.page-exp-desk .exp-desk-page button.exp-desk-filter-btn {
   position: fixed;
   z-index: 1100;
   width: min(24rem, calc(100vw - 1.5rem));
+}
+
+@media (min-width: 768px) {
+  .exp-desk-filters-panel--fixed {
+    left: auto;
+    right: 12px;
+  }
 }
 
 @keyframes exp-desk-filter-drop {
@@ -579,32 +586,30 @@ body.page-exp-desk .exp-desk-page button.exp-desk-filter-btn {
 
 .exp-desk-filters-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.95rem 1rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem 0.55rem;
   border-bottom: 1px solid #f1f5f9;
-  background: linear-gradient(180deg, #fafbff 0%, #fff 100%);
+  background: #fff;
 }
 
 .exp-desk-filters-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
 .exp-desk-filters-sub {
-  margin: 0.2rem 0 0;
-  font-size: 0.75rem;
-  color: #64748b;
-  line-height: 1.35;
+  display: none;
 }
 
 .exp-desk-filters-close {
   flex-shrink: 0;
-  width: 1.85rem;
-  height: 1.85rem;
+  width: 1.65rem;
+  height: 1.65rem;
   border: 1px solid #e2e8f0;
   border-radius: 9999px;
   background: #fff;
@@ -622,37 +627,48 @@ body.page-exp-desk .exp-desk-page button.exp-desk-filter-btn {
 }
 
 .exp-desk-filters-section {
-  padding: 0.8rem 1rem 0;
+  padding: 0.55rem 0.85rem 0;
 }
 
 .exp-desk-filters-section + .exp-desk-filters-section {
-  margin-top: 0.15rem;
+  margin-top: 0.05rem;
 }
 
 .exp-desk-filters-section-label {
-  font-size: 0.68rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.76rem;
   font-weight: 700;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.55rem;
+  color: #0f172a;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: 0.4rem;
+}
+
+.exp-desk-filters-section-label svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  color: #6366f1;
+  flex-shrink: 0;
 }
 
 .exp-desk-date-presets {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.65rem;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.45rem;
 }
 
 .exp-desk-date-preset {
   border: 1px solid #e2e8f0;
-  border-radius: 9999px;
-  background: #f8fafc;
+  border-radius: 0.45rem;
+  background: #fff;
   color: #475569;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  padding: 0.28rem 0.65rem;
+  padding: 0.22rem 0.5rem;
   cursor: pointer;
 }
 
@@ -663,46 +679,63 @@ body.page-exp-desk .exp-desk-page button.exp-desk-filter-btn {
 }
 
 .exp-desk-date-preset.is-active {
-  border-color: #6366f1;
+  border-color: #c7d2fe;
   color: #4338ca;
-  background: #e0e7ff;
+  background: #eef2ff;
+}
+
+.exp-desk-date-preset-clear {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: #6366f1;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.1rem;
+  cursor: pointer;
+}
+
+.exp-desk-date-preset-clear:hover {
+  color: #4338ca;
+  text-decoration: underline;
 }
 
 .exp-desk-filters-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 0.45rem;
 }
 
 .exp-desk-filters-grid--dates,
 .exp-desk-filters-grid--amounts {
-  gap: 0.65rem;
+  gap: 0.45rem;
 }
 
 .exp-desk-field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.2rem;
 }
 
 .exp-desk-field--full { grid-column: 1 / -1; }
 
 .exp-desk-field label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .exp-desk-field select,
 .exp-desk-field input[type="date"],
 .exp-desk-field input[type="number"] {
   width: 100%;
-  padding: 0.45rem 0.65rem;
+  min-height: 1.95rem;
+  padding: 0.28rem 0.55rem;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.8125rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
   background: #fff;
   font-family: inherit;
 }
@@ -717,32 +750,105 @@ body.page-exp-desk .exp-desk-page button.exp-desk-filter-btn {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  padding-right: 2.25rem;
-  border-radius: 8px !important;
+  padding-right: 1.85rem;
+  border-radius: 0.5rem !important;
   background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 0.65rem center;
-  background-size: 1.1rem;
+  background-position: right 0.5rem center;
+  background-size: 0.95rem;
+}
+
+.exp-desk-unpaid-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.exp-desk-unpaid-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.exp-desk-unpaid-toggle-switch {
+  flex: 0 0 auto;
+  width: 2.05rem;
+  height: 1.15rem;
+  margin-top: 0;
+  border-radius: 9999px;
+  background: #cbd5e1;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.exp-desk-unpaid-toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 0.12rem;
+  left: 0.12rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.exp-desk-unpaid-toggle.is-on .exp-desk-unpaid-toggle-switch {
+  background: #6366f1;
+}
+
+.exp-desk-unpaid-toggle.is-on .exp-desk-unpaid-toggle-switch::after {
+  transform: translateX(0.9rem);
+}
+
+.exp-desk-unpaid-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.exp-desk-unpaid-toggle-title {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.exp-desk-unpaid-toggle-sub {
+  display: none;
 }
 
 .exp-desk-filters-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 0.5rem;
-  margin-top: 0.85rem;
-  padding: 0.85rem 1rem 1rem;
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.85rem 0.7rem;
   border-top: 1px solid #f1f5f9;
-  background: #fafbfc;
+  background: #fff;
 }
 
 body.page-exp-desk .exp-desk-filters-footer .exp-desk-btn {
-  border-radius: 10px !important;
-  min-height: 2.25rem;
-  padding: 0.45rem 1.05rem;
+  border-radius: 0.55rem !important;
+  min-height: 2rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.75rem;
+}
+
+body.page-exp-desk .exp-desk-filters-footer .exp-desk-btn-secondary {
+  background: #fff;
+  border-color: #e2e8f0;
+  color: #334155 !important;
 }
 
 body.page-exp-desk .exp-desk-filters-close {
-  border-radius: 10px !important;
+  border-radius: 9999px !important;
 }
 
 .exp-desk-btn-ghost {
@@ -1347,7 +1453,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 @media (max-width: 767.98px) {
-  /* Purchases: match balances mobile visibility ÃÂ¢ÃÂÃÂ cards instead of wide table */
+  /* Purchases: match balances mobile visibility ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ cards instead of wide table */
   .exp-desk-page--purchases .exp-desk-table-wrap {
     display: none !important;
   }
@@ -1367,7 +1473,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
     width: 100%;
     min-width: 0;
   }
-  /* Total Payables is the odd last card Ã¢ÂÂ span the full row */
+  /* Total Payables is the odd last card ÃÂ¢ÃÂÃÂ span the full row */
   .exp-desk-page--purchases .exp-desk-kpi-grid--dash > .exp-desk-kpi-card:last-child {
     grid-column: 1 / -1;
   }
@@ -4117,22 +4223,6 @@ body.page-exp-desk button.exp-desk-row-action {
   .exp-desk-filter-btn {
     width: 2.35rem;
     height: 2.35rem;
-  }
-
-  .exp-desk-filters-sub {
-    display: none;
-  }
-
-  .exp-desk-filters-head {
-    padding: 0.8rem 0.9rem 0.65rem;
-  }
-
-  .exp-desk-filters-section {
-    padding: 0.65rem 0.9rem 0;
-  }
-
-  .exp-desk-filters-footer {
-    padding: 0.75rem 0.9rem 0.9rem;
   }
 
   .exp-desk-kpi-card {

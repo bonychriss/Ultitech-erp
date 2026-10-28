@@ -39,7 +39,7 @@ import {
   purchasesVoucherViewUrl,
 } from '../api/expensesDesk';
 import { exportExpensesExcel, exportExpensesPdf } from '../utils/exportExpenses';
-<<<<<<< HEAD
+import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
 import { isPurchasesKpiKey, resolveKpiTrace } from '../utils/kpiTrace';
 import { buildListedSummaryStats, buildPurchasesSummaryStats } from '../utils/summaryStats';
 
@@ -62,11 +62,6 @@ function writePurchasesKpiToLocation(key) {
   if (next === current) return;
   window.history.replaceState(window.history.state, '', next);
 }
-=======
-import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
-import { resolveKpiTrace } from '../utils/kpiTrace';
-import { buildListedSummaryStats } from '../utils/summaryStats';
->>>>>>> origin/main
 
 const emptyAdvancedFilters = {
   status: '',
@@ -256,47 +251,6 @@ function KpiMoney({ amount, currencyCode = 'TZS' }) {
 
 function formatDate(dateStr) {
   return formatDateDigits(dateStr);
-}
-
-const MONTH_ABBR = {
-  jan: '1', feb: '2', mar: '3', apr: '4', may: '5', jun: '6',
-  jul: '7', aug: '8', sep: '9', oct: '10', nov: '11', dec: '12',
-};
-
-/**
- * Match revenue desk voucher refs: digit months, no leading zeros on sequences.
- * Supports PUR-2026-10-01, REV-2026-Oct-004, and PV/UGT/2026/00455.
- */
-function formatVoucherRef(value, fallback = '-') {
-  const raw = String(value || '').trim();
-  if (!raw) return fallback;
-
-  const sep = raw.includes('/') ? '/' : (raw.includes('-') ? '-' : '');
-  if (!sep) return raw;
-
-  const parts = raw.split(sep);
-  if (parts.length < 2) return raw;
-
-  const out = parts.map((part) => {
-    const p = String(part || '').trim();
-    if (!p) return p;
-
-    const monthKey = p.toLowerCase();
-    if (MONTH_ABBR[monthKey]) {
-      return MONTH_ABBR[monthKey];
-    }
-
-    if (/^\d+$/.test(p)) {
-      if (p.length === 4 && Number(p) >= 1900 && Number(p) <= 2100) {
-        return p;
-      }
-      return String(parseInt(p, 10));
-    }
-
-    return p;
-  });
-
-  return out.join(sep);
 }
 
 function expenseReferenceLabel(expense) {
@@ -1683,9 +1637,8 @@ export default function ExpensesDeskPage() {
 
         <div className="exp-desk-table-wrap">
           <table className="exp-desk-table exp-desk-table--ledger">
-<<<<<<< HEAD
-              <colgroup>
-              <col className="col-ref" style={{ width: purchasesDesk ? '14%' : undefined }} />
+            <colgroup>
+              <col className={purchasesDesk ? 'col-voucher' : 'col-ref'} style={{ width: purchasesDesk ? '14%' : undefined }} />
               <col className="col-date" style={{ width: purchasesDesk ? '9%' : undefined }} />
               <col className="col-payee" style={{ width: purchasesDesk ? '18%' : undefined }} />
               <col className="col-type" style={{ width: purchasesDesk ? '12%' : undefined }} />
@@ -1694,18 +1647,6 @@ export default function ExpensesDeskPage() {
               <col className="col-vat" style={{ width: purchasesDesk ? '8%' : undefined }} />
               <col className="col-status" style={{ width: purchasesDesk ? '9%' : undefined }} />
               <col className="col-actions" style={{ width: purchasesDesk ? '8%' : undefined }} />
-=======
-            <colgroup>
-              <col className={purchasesDesk ? 'col-voucher' : 'col-ref'} />
-              <col className="col-date" />
-              <col className="col-payee" />
-              <col className="col-type" />
-              <col className="col-total" />
-              <col className="col-exclusive" />
-              <col className="col-vat" />
-              <col className="col-status" />
-              <col className="col-actions" />
->>>>>>> origin/main
             </colgroup>
             <thead>
               <tr>
@@ -1743,17 +1684,14 @@ export default function ExpensesDeskPage() {
                   const vatAmt = Math.max(0, Math.min(totalAmt, Number(expense.tax_amount) || 0));
                   const exclusiveAmt = Math.max(0, totalAmt - vatAmt);
                   const accountLabel = expense.category_name || expense.main_account_name || '';
-<<<<<<< HEAD
                   const methodLabel = String(expense.payment_method_label || '').trim() || '—';
                   const TypeIcon = paymentTypeIcon(expense);
-=======
                   const voucherLabel = purchasesDesk
                     ? formatVoucherRef(
                       expense.voucher_entry || expense.expense_number,
                       `#${expense.id}`,
                     )
-                    : (expense.expense_number || `#${expense.id}`);
->>>>>>> origin/main
+                    : expenseReferenceLabel(expense);
                   return (
                     <tr
                       key={rowKey}
@@ -1768,18 +1706,12 @@ export default function ExpensesDeskPage() {
                         }
                       }}
                     >
-<<<<<<< HEAD
-                      <td className="col-ref">
-                        <span className="exp-desk-ref" title={expense.expense_number || `#${expense.id}`}>
-                          {expenseReferenceLabel(expense)}
-=======
                       <td className={purchasesDesk ? 'col-voucher' : 'col-ref'}>
                         <span
                           className={purchasesDesk ? 'exp-desk-voucher' : 'exp-desk-ref'}
                           title={voucherLabel}
                         >
                           {voucherLabel}
->>>>>>> origin/main
                         </span>
                       </td>
                       <td className="col-date">{formatDate(expense.date)}</td>

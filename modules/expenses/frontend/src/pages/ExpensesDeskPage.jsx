@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  ArrowLeftRight,
+  CalendarDays,
+  ChevronRight,
   Eye,
   LayoutGrid,
   Loader2,
@@ -10,6 +13,7 @@ import {
   Search,
   SlidersHorizontal,
   Trash2,
+  Wallet,
   X,
 } from 'lucide-react';
 import ExpenseQuickViewModal from '../components/ExpenseQuickViewModal';
@@ -337,7 +341,6 @@ export default function ExpensesDeskPage() {
   const [filters, setFilters] = useState(initialFilters);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [previewExpense, setPreviewExpense] = useState(null);
   const [deletingDraftId, setDeletingDraftId] = useState(null);
   const [postingDraftId, setPostingDraftId] = useState(null);
@@ -359,9 +362,7 @@ export default function ExpensesDeskPage() {
   const filterBtnRef = useRef(null);
   const filterPanelRef = useRef(null);
   const [filterPanelStyle, setFilterPanelStyle] = useState(null);
-  const searchExpandRef = useRef(null);
   const searchInputRef = useRef(null);
-  const mobileSearchInputRef = useRef(null);
   const appliedSearchRef = useRef((initialFilters.search || '').trim());
 
   const loadData = useCallback(async (activeFilters, silent = false) => {
@@ -517,12 +518,6 @@ export default function ExpensesDeskPage() {
   }, [filtersOpen]);
 
   useEffect(() => {
-    if (filters.search.trim() !== '') {
-      setSearchOpen(true);
-    }
-  }, [filters.search]);
-
-  useEffect(() => {
     const next = (draftFilters.search || '').trim();
     if (next === appliedSearchRef.current) return undefined;
     const timer = window.setTimeout(() => {
@@ -533,34 +528,6 @@ export default function ExpensesDeskPage() {
     }, 280);
     return () => window.clearTimeout(timer);
   }, [draftFilters.search]);
-
-  useEffect(() => {
-    if (!searchOpen) return undefined;
-
-    function handlePointerDown(event) {
-      if (!searchExpandRef.current?.contains(event.target)) {
-        if (draftFilters.search.trim() === '' && filters.search.trim() === '') {
-          setSearchOpen(false);
-        }
-      }
-    }
-
-    function handleKeyDown(event) {
-      if (event.key === 'Escape') setSearchOpen(false);
-    }
-
-    const focusTimer = window.setTimeout(() => {
-      mobileSearchInputRef.current?.focus();
-    }, 180);
-
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.clearTimeout(focusTimer);
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [searchOpen, draftFilters.search, filters.search]);
 
   const stats = init?.stats;
   const categories = init?.categories ?? [];
@@ -731,14 +698,9 @@ export default function ExpensesDeskPage() {
     setFilters((current) => (
       current.search === '' ? current : { ...current, search: '' }
     ));
-    setSearchOpen(false);
     if (inputRef?.current) {
       inputRef.current.focus();
     }
-  }
-
-  function toggleMobileSearch() {
-    setSearchOpen((open) => !open);
   }
 
   function closeRowMenu() {
@@ -950,8 +912,6 @@ export default function ExpensesDeskPage() {
     );
   }
 
-  const hasSearchValue = filters.search.trim() !== '' || draftFilters.search.trim() !== '';
-
   function renderFiltersPanel() {
     if (!filtersOpen || !filterPanelStyle) return null;
 
@@ -1160,33 +1120,12 @@ export default function ExpensesDeskPage() {
       {renderFiltersPanel()}
 
       <div className="exp-desk-page-header">
-        <div className="exp-desk-page-header-search exp-desk-page-header-search--desktop">
-          {renderSearchField(searchInputRef, 'exp-desk-search-desktop')}
+        <div className="exp-desk-page-header-search">
+          {renderSearchField(searchInputRef, 'exp-desk-search')}
         </div>
 
         <div className="exp-desk-page-header-actions">
           <div className="exp-desk-toolbar-secondary">
-            <div
-              className={`exp-desk-search-expand${searchOpen ? ' is-open' : ''}`}
-              ref={searchExpandRef}
-            >
-              <button
-                type="button"
-                className={`exp-desk-search-toggle${searchOpen ? ' is-active' : ''}${hasSearchValue ? ' has-value' : ''}`}
-                onClick={toggleMobileSearch}
-                aria-expanded={searchOpen}
-                aria-controls="exp-desk-search-mobile-panel"
-                title={purchasesDesk ? 'Search purchases' : 'Search expenses'}
-              >
-                <Search size={18} aria-hidden="true" />
-              </button>
-              <div
-                id="exp-desk-search-mobile-panel"
-                className={`exp-desk-search-panel${searchOpen ? ' is-open' : ''}`}
-              >
-                {renderSearchField(mobileSearchInputRef, 'exp-desk-search-mobile')}
-              </div>
-            </div>
             <div className={`exp-desk-filter-dropdown${filtersOpen ? ' is-open' : ''}`} ref={filterDropdownRef}>
               <button
                 ref={filterBtnRef}
@@ -1403,6 +1342,9 @@ export default function ExpensesDeskPage() {
                 const rowKey = expense.row_key || `exp-${expense.id}`;
                 const totalAmt = Math.max(0, Number(expense.amount) || 0);
                 const accountLabel = expense.category_name || expense.main_account_name || '';
+                const methodLabel = String(expense.payment_method_label || '').trim() || '—';
+                const methodLower = methodLabel.toLowerCase();
+                const TypeIcon = methodLower.includes('cash') ? Wallet : ArrowLeftRight;
                 return (
                   <button
                     key={`m-${rowKey}`}
@@ -1427,27 +1369,38 @@ export default function ExpensesDeskPage() {
                           </div>
                         </div>
                       </div>
-                      <span className="exp-desk-amt exp-desk-mobile-card-amt">
-                        {formatCurrency(totalAmt, expense.currency_code)}
-                      </span>
+                      <div className="exp-desk-mobile-card-aside">
+                        <span className="exp-desk-amt exp-desk-mobile-card-amt">
+                          {formatCurrency(totalAmt, expense.currency_code)}
+                        </span>
+                        <ExpenseStatusBadge expense={expense} />
+                      </div>
                     </div>
-                    <div className="exp-desk-mobile-card-meta">
-                      <div className="exp-desk-mobile-card-row">
-                        <span className="exp-desk-mobile-card-label">Date</span>
-                        <span className="exp-desk-mobile-card-value">{formatDate(expense.date)}</span>
-                      </div>
-                      <div className="exp-desk-mobile-card-row">
-                        <span className="exp-desk-mobile-card-label">Type</span>
-                        <span className="exp-desk-mobile-card-value">
-                          {[expense.payment_method_label, accountLabel].filter(Boolean).join(' · ') || '—'}
+                    <div className="exp-desk-mobile-card-foot">
+                      <div className="exp-desk-mobile-card-fact">
+                        <span className="exp-desk-mobile-card-fact-ico" aria-hidden="true">
+                          <CalendarDays size={14} strokeWidth={2} />
+                        </span>
+                        <span className="exp-desk-mobile-card-fact-body">
+                          <span className="exp-desk-mobile-card-fact-label">Date</span>
+                          <span className="exp-desk-mobile-card-fact-value">{formatDate(expense.date)}</span>
                         </span>
                       </div>
-                      <div className="exp-desk-mobile-card-row">
-                        <span className="exp-desk-mobile-card-label">Status</span>
-                        <span className="exp-desk-mobile-card-value">
-                          <ExpenseStatusBadge expense={expense} />
+                      <div className="exp-desk-mobile-card-fact">
+                        <span className="exp-desk-mobile-card-fact-ico" aria-hidden="true">
+                          <TypeIcon size={14} strokeWidth={2} />
+                        </span>
+                        <span className="exp-desk-mobile-card-fact-body">
+                          <span className="exp-desk-mobile-card-fact-label">Type</span>
+                          <span className="exp-desk-mobile-card-fact-value">{methodLabel}</span>
+                          {accountLabel ? (
+                            <span className="exp-desk-mobile-card-fact-sub">{accountLabel}</span>
+                          ) : null}
                         </span>
                       </div>
+                      <span className="exp-desk-mobile-card-chevron" aria-hidden="true">
+                        <ChevronRight size={18} strokeWidth={2} />
+                      </span>
                     </div>
                   </button>
                 );

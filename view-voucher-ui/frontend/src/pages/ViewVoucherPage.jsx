@@ -6,6 +6,7 @@ import VoucherPreview from '../components/VoucherPreview.jsx'
 import VoucherActions from '../components/VoucherActions.jsx'
 import ApprovalFlowCard from '../components/ApprovalFlowCard.jsx'
 import DocumentsCard from '../components/DocumentsCard.jsx'
+import LinkedPurchaseOrdersCard from '../components/LinkedPurchaseOrdersCard.jsx'
 import { MarkPaidModal, AdminApprovalModal, DocPreviewModal, ApproveModal } from '../components/Modals.jsx'
 
 export default function ViewVoucherPage() {
@@ -181,6 +182,8 @@ export default function ViewVoucherPage() {
               <VoucherPreview data={data} />
             </div>
           </div>
+
+          <LinkedPurchaseOrdersCard data={data} />
 
           <ApprovalFlowCard data={data} />
 

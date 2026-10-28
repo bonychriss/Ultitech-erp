@@ -177,12 +177,15 @@ function GmailAttachCard({
 }
 
 export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
-  const { attachments, purchaseOrderDocs, salesOrderDocs, swiftProxy, documents, permissions } = data
-  const poDocs = Array.isArray(purchaseOrderDocs) ? purchaseOrderDocs : []
+  const { attachments, salesOrderDocs, swiftProxy, documents, permissions } = data
+  // Linked POs render in LinkedPurchaseOrdersCard (full preview), not as mini cards here.
   const soDocs = Array.isArray(salesOrderDocs) ? salesOrderDocs : []
-  if (!documents.hasSupporting && !documents.mismatch) return null
+  const fileCount = (Array.isArray(attachments) ? attachments.length : 0)
+    + soDocs.length
+    + (swiftProxy ? 1 : 0)
+  if (fileCount === 0 && !documents?.mismatch) return null
 
-  const count = Number(documents.headerCount) || 0
+  const count = fileCount
   const countLabel = count === 1 ? '1 attachment' : `${count} attachments`
 
   return (
@@ -229,21 +232,6 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
               previewUrl={att.missing ? undefined : att.proxyLink}
               canDelete={permissions.canDeleteAttachment && att.id > 0}
               onDelete={() => onDeleteAttachment(att.id)}
-            />
-          ))}
-
-          {poDocs.map((po) => (
-            <GmailAttachCard
-              key={`po-${po.id}`}
-              iconClass="fa-file-invoice"
-              name={`${po.poNumber}.pdf`}
-              sub={po.createdBy
-                ? `Purchase Order · Created by ${po.createdBy}`
-                : 'Purchase Order'}
-              viewHref={po.viewLink}
-              downloadHref={po.viewLink}
-              previewUrl={po.viewLink}
-              htmlEmbed
             />
           ))}
 

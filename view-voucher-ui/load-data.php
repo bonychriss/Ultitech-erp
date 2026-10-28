@@ -95,6 +95,85 @@ function vv_allowed_sales_order_ids(array $voucher): array
 }
 
 /**
+ * Stock POs that point at this payment voucher (reverse link).
+ * Used for stock_purchase vouchers when linked_stock_po_* was not saved on the PV.
+ *
+ * @return list<int>
+ */
+function vv_stock_po_ids_linked_from_po_table(PDO $pdo, int $voucherId): array
+{
+    if ($voucherId <= 0) {
+        return [];
+    }
+
+    $ids = [];
+    try {
+        $cols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Throwable $e) {
+        return [];
+    }
+    if (!is_array($cols) || $cols === []) {
+        return [];
+    }
+
+    if (in_array('payment_voucher_id', $cols, true)) {
+        try {
+            $st = $pdo->prepare('SELECT id FROM stocks_purchase_orders WHERE payment_voucher_id = ?');
+            $st->execute([$voucherId]);
+            foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $id) {
+                $id = (int) $id;
+                if ($id > 0) {
+                    $ids[$id] = $id;
+                }
+            }
+        } catch (Throwable $e) {
+            // ignore
+        }
+    }
+
+    if (in_array('payment_voucher_ids', $cols, true)) {
+        try {
+            $st = $pdo->query(
+                "SELECT id, payment_voucher_ids FROM stocks_purchase_orders
+                 WHERE payment_voucher_ids IS NOT NULL
+                   AND TRIM(payment_voucher_ids) <> ''
+                   AND TRIM(payment_voucher_ids) NOT IN ('[]', 'null', 'NULL')"
+            );
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $poId = (int) ($row['id'] ?? 0);
+                if ($poId <= 0) {
+                    continue;
+                }
+                $linked = [];
+                if (function_exists('parsePaymentVoucherIdsFromPoRow')) {
+                    $linked = parsePaymentVoucherIdsFromPoRow($row);
+                } else {
+                    $raw = trim((string) ($row['payment_voucher_ids'] ?? ''));
+                    $decoded = json_decode($raw, true);
+                    $parts = is_array($decoded) ? $decoded : preg_split('/\s*,\s*/', $raw);
+                    foreach ($parts ?: [] as $part) {
+                        $part = (int) $part;
+                        if ($part > 0) {
+                            $linked[] = $part;
+                        }
+                    }
+                }
+                foreach ($linked as $pv) {
+                    if ((int) $pv === $voucherId) {
+                        $ids[$poId] = $poId;
+                        break;
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            // ignore
+        }
+    }
+
+    return array_values($ids);
+}
+
+/**
  * Linked purchase orders for the supporting-documents row.
  * Uses the same connection that loaded the voucher. The shared helper reads the
  * global connection, which can be a different database and then returns nothing.
@@ -103,9 +182,38 @@ function vv_allowed_sales_order_ids(array $voucher): array
  */
 function vv_purchase_order_docs(PDO $pdo, array $voucher, int $voucherId): array
 {
-    // Allowlist only — never auto-pull via payment_voucher_id reverse lookup.
-    // $voucherId is intentionally unused for document discovery.
-    $ids = vv_allowed_stock_po_ids($voucher);
+    // Prefer explicit links on the voucher; for stock-purchase PVs also include
+    // POs that reference this voucher (covers older rows missing linked_stock_po_*).
+    $idMap = [];
+    foreach (vv_allowed_stock_po_ids($voucher) as $id) {
+        $id = (int) $id;
+        if ($id > 0) {
+            $idMap[$id] = $id;
+        }
+    }
+
+    $purpose = function_exists('resolvePaymentVoucherPurposeFromRow')
+        ? (string) resolvePaymentVoucherPurposeFromRow($voucher)
+        : '';
+    if ($purpose === '') {
+        foreach (['purpose', 'payment_purpose', 'voucher_purpose'] as $col) {
+            $raw = strtolower(trim((string) ($voucher[$col] ?? '')));
+            if ($raw === 'stock_purchase' || str_replace(' ', '_', $raw) === 'stock_purchase') {
+                $purpose = 'stock_purchase';
+                break;
+            }
+        }
+    }
+    if ($purpose === 'stock_purchase') {
+        foreach (vv_stock_po_ids_linked_from_po_table($pdo, $voucherId) as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $idMap[$id] = $id;
+            }
+        }
+    }
+
+    $ids = array_values($idMap);
 
     $poDocBase = function_exists('company_url')
         ? company_url('employee/create-voucher-ui/po-document.php')
@@ -609,6 +717,13 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         $backLink = function_exists('company_url')
             ? company_url('modules/finance/my_expenses.php')
             : app_url('modules/finance/my_expenses.php');
+    }
+    $fromDesk = strtolower(trim((string) ($_GET['from'] ?? '')));
+    if ($fromDesk === 'purchases') {
+        $purchasesBack = function_exists('company_url')
+            ? company_url('modules/purchases/index')
+            : (function_exists('app_url') ? app_url('/modules/purchases/index.php') : '/modules/purchases/index.php');
+        $backLink = $vvJoinQs((string) $purchasesBack, 'module=purchases');
     }
     $approvedByAdmin = !empty($voucher['approved_by']) && (isset($voucher['approver_role']) && defined('ROLE_ADMIN') && $voucher['approver_role'] === ROLE_ADMIN);
     $canMarkPaid = !$isPaid && $statusLower === 'approved' && (

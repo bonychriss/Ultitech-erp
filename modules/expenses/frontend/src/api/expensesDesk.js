@@ -94,10 +94,22 @@ export function purchasesCreateVoucherUrl() {
 export function purchasesVoucherViewUrl(expense) {
   if (!expense || typeof expense !== 'object') return '';
   const boot = typeof expense.voucher_url === 'string' ? expense.voucher_url.trim() : '';
-  if (boot !== '') return boot;
+  const withFrom = (url) => {
+    if (!url) return '';
+    try {
+      const u = new URL(url, window.location.href);
+      u.searchParams.set('from', 'purchases');
+      if (!u.searchParams.get('module')) u.searchParams.set('module', 'voucher');
+      return u.pathname + u.search + u.hash;
+    } catch {
+      const join = String(url).includes('?') ? '&' : '?';
+      return `${url}${join}from=purchases`;
+    }
+  };
+  if (boot !== '') return withFrom(boot);
   const pvId = Number(expense.pv_id || 0);
   if (pvId <= 0) return '';
-  return `../../employee/view-voucher.php?id=${pvId}&module=voucher`;
+  return withFrom(`../../employee/view-voucher.php?id=${pvId}&module=voucher`);
 }
 
 export function exportUrl(filters = {}) {

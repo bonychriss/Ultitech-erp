@@ -404,3 +404,85 @@
 .vv-gmail-card--missing .vv-gmail-type {
   background: #f9ab00;
 }
+
+/* Linked purchase orders — full preview under the payment voucher */
+.vv-react-root .vv-card-linked-pos {
+  margin-top: 1.25rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.vv-react-root .vv-card-linked-pos .vv-card-head {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+.vv-react-root .vv-linked-po-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+.vv-react-root .vv-linked-po {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+.vv-react-root .vv-linked-po-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.75rem 0.9rem;
+  background: #fafafa;
+  border-bottom: 1px solid #eef2f7;
+}
+.vv-react-root .vv-linked-po-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+.vv-react-root .vv-linked-po-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+.vv-react-root .vv-linked-po-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none !important;
+}
+.vv-react-root .vv-linked-po-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.vv-react-root .vv-linked-po-frame-wrap {
+  background: #f8fafc;
+  min-height: 420px;
+}
+.vv-react-root .vv-linked-po-frame {
+  display: block;
+  width: 100%;
+  height: min(70vh, 640px);
+  border: 0;
+  background: #fff;
+}
+@media (max-width: 767.98px) {
+  .vv-react-root .vv-linked-po-frame-wrap {
+    min-height: 320px;
+  }
+  .vv-react-root .vv-linked-po-frame {
+    height: 55vh;
+  }
+}

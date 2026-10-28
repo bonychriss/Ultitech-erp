@@ -2375,6 +2375,10 @@ function expenses_fetch_vouchers_as_list_rows(PDO $pdo, array $filters = [], str
             $row['main_account_name'] = 'Stock Purchase';
             $row['voucher_purpose'] = 'stock_purchase';
             $row['purpose_tag'] = 'STK';
+            $vu = trim((string) ($row['voucher_url'] ?? ''));
+            if ($vu !== '' && stripos($vu, 'from=purchases') === false) {
+                $row['voucher_url'] = $vu . (str_contains($vu, '?') ? '&' : '?') . 'from=purchases';
+            }
         }
         $out[] = $row;
     }

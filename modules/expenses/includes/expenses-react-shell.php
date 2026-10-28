@@ -282,9 +282,19 @@ main.main-content.exp-desk-react-root .exp-desk-page {
         padding-right: 0.25rem !important;
     }
     body.page-exp-desk .employee-header--exp-desk .employee-header-page-title {
-        font-size: 1rem !important;
+        font-size: 1.25rem !important;
+        line-height: 1.25 !important;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+    body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb,
+    body.page-exp-desk .employee-header--exp-desk .exp-desk-breadcrumb {
+        font-size: 0.875rem !important;
+        gap: 0.3rem;
+        line-height: 1.35;
+    }
+    body.page-exp-desk .employee-header--exp-desk .employee-header-page-subtitle {
+        font-size: 0.875rem !important;
     }
     body.page-exp-desk .employee-header--exp-desk .header-right.header-actions-tray {
         order: 3;
@@ -389,10 +399,14 @@ body.page-exp-desk.page-exp-desk--scroll .employee-header.employee-header--exp-d
     body.page-exp-desk.page-exp-desk--scroll .employee-header.employee-header--exp-desk {
         padding: 0 0.75rem !important;
     }
+    body.page-exp-desk.page-exp-desk--scroll .employee-header--exp-desk .employee-header-page-title {
+        font-size: 1.25rem !important;
+        line-height: 1.25 !important;
+    }
     body.page-exp-desk.page-exp-desk--scroll .employee-header--exp-desk .vv-breadcrumb,
     body.page-exp-desk.page-exp-desk--scroll .employee-header--exp-desk .exp-desk-breadcrumb {
-        font-size: 0.72rem;
-        gap: 0.25rem;
+        font-size: 0.875rem !important;
+        gap: 0.3rem;
     }
 }
 </style>

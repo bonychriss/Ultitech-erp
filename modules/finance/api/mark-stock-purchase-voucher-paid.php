@@ -545,6 +545,26 @@ try {
         balancesRecalculateAccount($pdo, $accountId, $companyId > 0 ? $companyId : null);
     }
 
+    // Sync linked purchase order payment_status (+ supplier_payments mirror without a second bank debit).
+    if (function_exists('syncLinkedStockPurchasesAfterVoucherPaid')) {
+        try {
+            syncLinkedStockPurchasesAfterVoucherPaid($pdo, $voucherId, [
+                'amount' => $paymentAmount,
+                'fully_paid' => $markFullyPaid,
+                'account_id' => $accountId,
+                'payment_date' => $paymentDate,
+                'swift_path' => $swiftToSave,
+                'payment_method' => $paymentMethod,
+                'reference_no' => $paymentReference !== '' ? $paymentReference : $voucherNo,
+                'notes' => $paymentNotes,
+                'user_id' => $userId,
+                'record_supplier_payment' => true,
+            ]);
+        } catch (Throwable $e) {
+            error_log('mark-stock-purchase-voucher-paid purchase sync: ' . $e->getMessage());
+        }
+    }
+
     $postedAccountName = '';
     try {
         $accNameStmt = $pdo->prepare('SELECT name FROM financial_accounts WHERE id = ? LIMIT 1');

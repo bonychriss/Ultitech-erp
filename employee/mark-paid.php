@@ -28,15 +28,28 @@ try {
     ensurePaidColumnsOnPaymentVouchers();
     ensureSwiftDocumentColumn();
 
-    // Verify voucher exists and fetch all required metadata for Balances
-    $stmt = $pdo->prepare('SELECT id, voucher_no, payee_name, total_amount, currency, is_paid, status, approved_by FROM payment_vouchers WHERE id = ? LIMIT 1');
+    // Verify voucher exists and fetch all required metadata for Balances & purchase sync
+    $pvCols = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    $selectCols = ['id', 'voucher_no', 'payee_name', 'total_amount', 'currency', 'is_paid', 'status', 'approved_by'];
+    foreach (['purpose', 'payment_purpose', 'voucher_purpose', 'linked_stock_po_id', 'linked_stock_po_ids', 'payment_execution_status'] as $col) {
+        if (in_array($col, $pvCols, true)) {
+            $selectCols[] = $col;
+        }
+    }
+    $stmt = $pdo->prepare(
+        'SELECT ' . implode(', ', array_map(static fn ($c) => '`' . str_replace('`', '', (string) $c) . '`', $selectCols))
+        . ' FROM payment_vouchers WHERE id = ? LIMIT 1'
+    );
     $stmt->execute([$voucher_id]);
-    $v = $stmt->fetch();
+    $v = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$v) {
         http_response_code(404);
         echo 'Voucher not found';
         exit;
     }
+    $voucherPurpose = function_exists('resolvePaymentVoucherPurposeFromRow')
+        ? resolvePaymentVoucherPurposeFromRow($v)
+        : 'general';
 
     // Enforce: voucher must be approved by an admin before finance can mark paid (mirror strict logic)
     $statusLower = strtolower((string)($v['status'] ?? ''));
@@ -150,8 +163,15 @@ try {
     // Balances: Record Transaction before marking paid
     $pay_account_id = isset($_POST['account_id']) ? (int)$_POST['account_id'] : 0;
     $amount = (float)($v['total_amount'] ?? 0);
+    if ($voucherPurpose === 'stock_purchase' && $pay_account_id <= 0) {
+        http_response_code(400);
+        echo 'Select a payment account so the stock purchase payment updates Balances.';
+        exit;
+    }
     if ($pay_account_id > 0) {
-        $desc = "Payment for Voucher #{$v['voucher_no']} to {$v['payee_name']}";
+        $desc = $voucherPurpose === 'stock_purchase'
+            ? "Stock Purchase Payment Voucher #{$v['voucher_no']} to {$v['payee_name']}"
+            : "Payment for Voucher #{$v['voucher_no']} to {$v['payee_name']}";
         // Outflow = 'debit' in the Balances module logic
         $success = recordTransaction($pay_account_id, 'debit', $amount, $desc, 'payment_voucher', $voucher_id);
         if (!$success) {
@@ -162,6 +182,20 @@ try {
     // Persist swift_document path and mark as paid
     $upd = $pdo->prepare('UPDATE payment_vouchers SET swift_document = ?, is_paid = 1, paid_by = ?, payment_account_id = ?, paid_at = NOW(), updated_at = NOW() WHERE id = ?');
     $upd->execute([$relPath, (int)$_SESSION['user_id'], $pay_account_id > 0 ? $pay_account_id : null, $voucher_id]);
+
+    // Stock purchase PVs: update linked purchase payment_status (+ supplier_payments mirror, no second bank debit)
+    if ($voucherPurpose === 'stock_purchase' && function_exists('syncLinkedStockPurchasesAfterVoucherPaid')) {
+        syncLinkedStockPurchasesAfterVoucherPaid($pdo, $voucher_id, [
+            'amount' => $amount,
+            'fully_paid' => true,
+            'account_id' => $pay_account_id,
+            'swift_path' => $relPath,
+            'user_id' => (int) ($_SESSION['user_id'] ?? 0),
+            'reference_no' => (string) ($v['voucher_no'] ?? ('PV-' . $voucher_id)),
+            'payment_method' => trim((string) ($_POST['payment_method'] ?? 'Bank Transfer')),
+            'record_supplier_payment' => true,
+        ]);
+    }
 
     // Fetch new balance for the toast
     $newBal = 0;
@@ -181,13 +215,16 @@ try {
         createNotification([
             'user_id' => null,
             'audience' => 'user',
-            'title' => 'Voucher paid',
+            'title' => $voucherPurpose === 'stock_purchase' ? 'Stock purchase voucher paid' : 'Voucher paid',
             'message' => "Voucher has been marked as paid. Deducted: {$currency} " . number_format($amount, 2) . ". New Balance: {$currency} " . number_format($newBal, 2),
             'voucher_id' => $voucher_id,
         ]);
     } catch (Throwable $e) { /* ignore */ }
 
     $_SESSION['success_msg'] = "Voucher marked as paid. Deducted: {$currency} " . number_format($amount, 2) . ". New Balance: {$currency} " . number_format($newBal, 2);
+    if ($voucherPurpose === 'stock_purchase') {
+        $_SESSION['success_msg'] .= ' Linked purchase payment status updated.';
+    }
     
     $redirectUrl = 'view-voucher.php?id=' . $voucher_id . '&paid=1&deducted=' . $amount . '&balance=' . $newBal . '&currency=' . urlencode($currency);
     header('Location: ' . $redirectUrl);

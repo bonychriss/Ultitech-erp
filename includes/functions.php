@@ -8775,6 +8775,17 @@ function markVoucherPaidStrict($voucher_id, $user_id)
         }
         return ['ok' => false, 'error' => $e->getMessage()];
     }
+    // Stock purchase: sync linked PO payment_status (Balances may already be posted by the caller).
+    if (function_exists('syncLinkedStockPurchasesAfterVoucherPaid')) {
+        try {
+            syncLinkedStockPurchasesAfterVoucherPaid($pdo, (int) $voucher_id, [
+                'fully_paid' => true,
+                'user_id' => (int) $user_id,
+                'record_supplier_payment' => true,
+            ]);
+        } catch (Throwable $eSync) { /* ignore */
+        }
+    }
     // Best-effort notify the creator
     try {
         notifyUserVoucherStatus($voucher_id, 'paid');
@@ -13932,6 +13943,259 @@ function parseLinkedStockPoIdsFromVoucher(array $voucher): array
         }
     }
     return array_values($linkedIds);
+}
+
+/**
+ * After a stock-purchase payment voucher is marked paid (Balances already posted),
+ * sync linked purchase order payment_status and optionally mirror a supplier_payments
+ * row so Purchases / SPPD stay consistent — without debiting the bank again.
+ *
+ * @param array{
+ *   amount?: float|int|string,
+ *   fully_paid?: bool,
+ *   account_id?: int,
+ *   payment_date?: string,
+ *   swift_path?: string,
+ *   payment_method?: string,
+ *   reference_no?: string,
+ *   notes?: string,
+ *   user_id?: int,
+ *   record_supplier_payment?: bool
+ * } $opts
+ * @return array{ok: bool, purpose: string, updated_po_ids: int[], message: string}
+ */
+function syncLinkedStockPurchasesAfterVoucherPaid(PDO $pdo, int $voucherId, array $opts = []): array
+{
+    $empty = ['ok' => true, 'purpose' => 'general', 'updated_po_ids' => [], 'message' => ''];
+    if ($voucherId <= 0 || !tableExists('payment_vouchers', $pdo)) {
+        return $empty;
+    }
+
+    try {
+        $pvCols = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $select = ['id', 'voucher_no', 'payee_name', 'total_amount', 'currency', 'is_paid'];
+        foreach (['purpose', 'payment_purpose', 'voucher_purpose', 'linked_stock_po_id', 'linked_stock_po_ids', 'company_id', 'payment_account_id', 'swift_document'] as $col) {
+            if (in_array($col, $pvCols, true)) {
+                $select[] = $col;
+            }
+        }
+        $stmt = $pdo->prepare(
+            'SELECT ' . implode(', ', array_map(static fn ($c) => '`' . str_replace('`', '', (string) $c) . '`', $select))
+            . ' FROM payment_vouchers WHERE id = ? LIMIT 1'
+        );
+        $stmt->execute([$voucherId]);
+        $voucher = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$voucher) {
+            return ['ok' => false, 'purpose' => 'general', 'updated_po_ids' => [], 'message' => 'Voucher not found'];
+        }
+
+        $purpose = function_exists('resolvePaymentVoucherPurposeFromRow')
+            ? resolvePaymentVoucherPurposeFromRow($voucher)
+            : 'general';
+        if ($purpose !== 'stock_purchase') {
+            return $empty;
+        }
+
+        $poIds = parseLinkedStockPoIdsFromVoucher($voucher);
+        if ($poIds === []) {
+            return [
+                'ok' => true,
+                'purpose' => $purpose,
+                'updated_po_ids' => [],
+                'message' => 'Stock purchase voucher has no linked purchase order',
+            ];
+        }
+
+        $amount = isset($opts['amount']) ? round((float) $opts['amount'], 2) : round((float) ($voucher['total_amount'] ?? 0), 2);
+        $fullyPaid = array_key_exists('fully_paid', $opts) ? (bool) $opts['fully_paid'] : ((int) ($voucher['is_paid'] ?? 0) === 1);
+        $paymentStatus = $fullyPaid ? 'paid' : 'partially_paid';
+        $accountId = (int) ($opts['account_id'] ?? ($voucher['payment_account_id'] ?? 0));
+        $userId = (int) ($opts['user_id'] ?? ($_SESSION['user_id'] ?? 0));
+        $paymentDate = trim((string) ($opts['payment_date'] ?? ''));
+        if ($paymentDate === '' || !preg_match('/^\d{4}-\d{2}-\d{2}/', $paymentDate)) {
+            $paymentDate = date('Y-m-d');
+        } else {
+            $paymentDate = substr($paymentDate, 0, 10);
+        }
+        $swiftPath = trim((string) ($opts['swift_path'] ?? ($voucher['swift_document'] ?? '')));
+        $paymentMethod = trim((string) ($opts['payment_method'] ?? 'Bank Transfer'));
+        if ($paymentMethod === '') {
+            $paymentMethod = 'Bank Transfer';
+        }
+        $referenceNo = trim((string) ($opts['reference_no'] ?? ($voucher['voucher_no'] ?? ('PV-' . $voucherId))));
+        $notes = trim((string) ($opts['notes'] ?? ''));
+        $recordSupplierPayment = array_key_exists('record_supplier_payment', $opts)
+            ? (bool) $opts['record_supplier_payment']
+            : true;
+        $companyId = (int) ($voucher['company_id'] ?? (currentCompanyId() ?? 0));
+        $updated = [];
+
+        $hasModernPo = tableExists('stocks_purchase_orders', $pdo);
+        $hasLegacyPo = tableExists('purchases', $pdo);
+        $hasSupplierPayments = tableExists('supplier_payments', $pdo);
+        $poHasPaymentStatus = false;
+        if ($hasModernPo) {
+            $poCols = $pdo->query('SHOW COLUMNS FROM stocks_purchase_orders')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            $poHasPaymentStatus = in_array('payment_status', $poCols, true);
+            if (!$poHasPaymentStatus) {
+                try {
+                    $pdo->exec("ALTER TABLE stocks_purchase_orders ADD COLUMN payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid'");
+                    $poHasPaymentStatus = true;
+                } catch (Throwable $e) {
+                    $poHasPaymentStatus = false;
+                }
+            }
+        }
+
+        $spCols = $hasSupplierPayments
+            ? ($pdo->query('SHOW COLUMNS FROM supplier_payments')->fetchAll(PDO::FETCH_COLUMN) ?: [])
+            : [];
+
+        foreach ($poIds as $poId) {
+            $poId = (int) $poId;
+            if ($poId <= 0) {
+                continue;
+            }
+
+            $po = null;
+            $isLegacy = false;
+            if ($hasModernPo) {
+                $poStmt = $pdo->prepare('SELECT * FROM stocks_purchase_orders WHERE id = ? LIMIT 1');
+                $poStmt->execute([$poId]);
+                $po = $poStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            }
+            if (!$po && $hasLegacyPo) {
+                $poStmt = $pdo->prepare('SELECT * FROM purchases WHERE id = ? LIMIT 1');
+                $poStmt->execute([$poId]);
+                $po = $poStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+                $isLegacy = (bool) $po;
+            }
+            if (!$po) {
+                continue;
+            }
+
+            if (!$isLegacy && $poHasPaymentStatus) {
+                $upd = $pdo->prepare('UPDATE stocks_purchase_orders SET payment_status = ? WHERE id = ?');
+                $upd->execute([$paymentStatus, $poId]);
+            }
+
+            if ($recordSupplierPayment && $hasSupplierPayments && $amount > 0 && in_array('purchase_order_id', $spCols, true)) {
+                // Avoid duplicate mirror rows for the same voucher+PO+amount on re-runs.
+                $dupSql = "SELECT id FROM supplier_payments
+                           WHERE purchase_order_id = ?
+                             AND ABS(amount - ?) < 0.009
+                             AND (
+                               reference_no = ?
+                               OR notes LIKE ?
+                             )
+                           LIMIT 1";
+                $dupNotes = '%PV#' . $voucherId . '%';
+                try {
+                    $dup = $pdo->prepare($dupSql);
+                    $dup->execute([$poId, $amount, $referenceNo, $dupNotes]);
+                    $alreadyMirrored = (int) ($dup->fetchColumn() ?: 0) > 0;
+                } catch (Throwable $e) {
+                    // notes column may be missing — fall back to reference only
+                    $dup = $pdo->prepare(
+                        'SELECT id FROM supplier_payments WHERE purchase_order_id = ? AND ABS(amount - ?) < 0.009 AND reference_no = ? LIMIT 1'
+                    );
+                    $dup->execute([$poId, $amount, $referenceNo]);
+                    $alreadyMirrored = (int) ($dup->fetchColumn() ?: 0) > 0;
+                }
+
+                if (!$alreadyMirrored) {
+                    $poCompanyId = (int) ($po['company_id'] ?? $companyId);
+                    $supplierId = (int) ($po['supplier_id'] ?? 0);
+                    $currency = trim((string) ($po['currency'] ?? ($voucher['currency'] ?? 'TZS'))) ?: 'TZS';
+                    $exchangeRate = (float) ($po['exchange_rate'] ?? 1.0);
+                    if ($exchangeRate <= 0) {
+                        $exchangeRate = 1.0;
+                    }
+                    $year = (int) date('Y', strtotime($paymentDate) ?: time());
+                    $payCount = 1;
+                    try {
+                        $payCount = (int) $pdo->query(
+                            'SELECT COUNT(*) FROM supplier_payments WHERE YEAR(payment_date) = ' . $year
+                        )->fetchColumn() + 1;
+                    } catch (Throwable $e) {
+                        $payCount = (int) time() % 10000;
+                    }
+                    $paymentNumber = sprintf('PAY-%s-%04d', $year, $payCount);
+                    $mirrorNotes = trim(
+                        ($notes !== '' ? $notes . ' ' : '')
+                        . 'Synced from stock purchase voucher PV#' . $voucherId
+                        . ' (' . trim((string) ($voucher['voucher_no'] ?? '')) . '). Balances already posted on the voucher.'
+                    );
+
+                    $insertCols = [];
+                    $insertVals = [];
+                    $add = static function (string $col, $val) use ($spCols, &$insertCols, &$insertVals): void {
+                        if (in_array($col, $spCols, true)) {
+                            $insertCols[] = $col;
+                            $insertVals[] = $val;
+                        }
+                    };
+                    $add('company_id', $poCompanyId > 0 ? $poCompanyId : null);
+                    $add('payment_number', $paymentNumber);
+                    $add('supplier_id', $supplierId > 0 ? $supplierId : null);
+                    $add('purchase_order_id', $poId);
+                    $add('payment_date', $paymentDate);
+                    $add('amount', $amount);
+                    $add('currency', $currency);
+                    $add('exchange_rate', $exchangeRate);
+                    $add('bank_or_cash_account_id', $accountId > 0 ? $accountId : null);
+                    $add('payment_method', $paymentMethod);
+                    $add('reference_no', $referenceNo !== '' ? $referenceNo : $paymentNumber);
+                    $add('swift_document', $swiftPath !== '' ? $swiftPath : null);
+                    $add('status', 'posted');
+                    $add('notes', $mirrorNotes);
+                    $add('created_by', $userId > 0 ? $userId : null);
+                    if (in_array('created_at', $spCols, true)) {
+                        $insertCols[] = 'created_at';
+                        $insertVals[] = date('Y-m-d H:i:s');
+                    }
+                    if (in_array('updated_at', $spCols, true)) {
+                        $insertCols[] = 'updated_at';
+                        $insertVals[] = date('Y-m-d H:i:s');
+                    }
+
+                    if ($insertCols !== []) {
+                        $placeholders = implode(', ', array_fill(0, count($insertCols), '?'));
+                        $ins = $pdo->prepare(
+                            'INSERT INTO supplier_payments (`' . implode('`, `', $insertCols) . '`) VALUES (' . $placeholders . ')'
+                        );
+                        $ins->execute($insertVals);
+                    }
+                }
+            }
+
+            $updated[] = $poId;
+        }
+
+        // Stamp execution status on the voucher when the column exists.
+        if (in_array('payment_execution_status', $pvCols, true)) {
+            $exec = $fullyPaid ? 'paid' : 'partially_paid';
+            $pdo->prepare('UPDATE payment_vouchers SET payment_execution_status = ? WHERE id = ?')
+                ->execute([$exec, $voucherId]);
+        }
+
+        return [
+            'ok' => true,
+            'purpose' => $purpose,
+            'updated_po_ids' => $updated,
+            'message' => $updated === []
+                ? 'No linked purchases were updated'
+                : ('Updated purchase payment status to ' . $paymentStatus . ' for PO(s): ' . implode(', ', $updated)),
+        ];
+    } catch (Throwable $e) {
+        error_log('syncLinkedStockPurchasesAfterVoucherPaid: ' . $e->getMessage());
+        return [
+            'ok' => false,
+            'purpose' => 'stock_purchase',
+            'updated_po_ids' => [],
+            'message' => $e->getMessage(),
+        ];
+    }
 }
 
 /**

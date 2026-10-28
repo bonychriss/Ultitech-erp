@@ -1996,6 +1996,26 @@ function sppdPayPurchaseOrder(PDO $pdo, array $data, ?array $uploadedFile = null
                 $stmt = $pdo->prepare('UPDATE stocks_purchase_orders SET payment_status = ? WHERE id = ?');
                 $stmt->execute([$newPaymentStatus, $realId]);
             }
+            // Keep linked modern stock-purchase vouchers in sync with PO payment.
+            if ($markFullyPaid && sppdTableExists($pdo, 'payment_vouchers')) {
+                try {
+                    $pvCols = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                    $sets = ['is_paid = 1', 'paid_at = NOW()', 'paid_by = ?'];
+                    $vals = [$userId];
+                    if (in_array('payment_execution_status', $pvCols, true)) {
+                        $sets[] = "payment_execution_status = 'paid'";
+                    }
+                    if (in_array('linked_stock_po_id', $pvCols, true)) {
+                        $sqlVb = 'UPDATE payment_vouchers SET ' . implode(', ', $sets)
+                            . ' WHERE linked_stock_po_id = ? AND COALESCE(is_paid, 0) = 0';
+                        $vals[] = $realId;
+                        $stmtVb = $pdo->prepare($sqlVb);
+                        $stmtVb->execute($vals);
+                    }
+                } catch (Throwable $ePvSync) {
+                    error_log('sppdPayPurchaseOrder PV sync: ' . $ePvSync->getMessage());
+                }
+            }
         }
 
         $stmt = $pdo->prepare('UPDATE financial_accounts SET current_balance = current_balance - ? WHERE id = ?');

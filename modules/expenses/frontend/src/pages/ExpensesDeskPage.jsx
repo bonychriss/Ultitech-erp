@@ -186,6 +186,51 @@ function formatDate(dateStr) {
   });
 }
 
+const MONTH_ABBR = {
+  jan: '1', feb: '2', mar: '3', apr: '4', may: '5', jun: '6',
+  jul: '7', aug: '8', sep: '9', oct: '10', nov: '11', dec: '12',
+};
+
+/**
+ * Match revenue desk voucher refs: digit months, no leading zeros on sequences.
+ * Supports both hyphen and slash codes (REV-2026-Oct-004, PV/UGT/2026/00455).
+ */
+function formatVoucherRef(value, fallback = '-') {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+
+  const sep = raw.includes('/') ? '/' : (raw.includes('-') ? '-' : '');
+  if (!sep) return raw;
+
+  const parts = raw.split(sep);
+  if (parts.length < 2) return raw;
+
+  const out = parts.map((part) => {
+    const p = String(part || '').trim();
+    if (!p) return p;
+
+    const monthKey = p.toLowerCase();
+    if (MONTH_ABBR[monthKey]) {
+      return MONTH_ABBR[monthKey];
+    }
+
+    if (/^\d+$/.test(p)) {
+      if (p.length === 4 && Number(p) >= 1900 && Number(p) <= 2100) {
+        return p;
+      }
+      return String(parseInt(p, 10));
+    }
+
+    return p;
+  });
+
+  return out.join(sep);
+}
+
+function expenseReferenceLabel(expense) {
+  return formatVoucherRef(expense?.expense_number, expense?.id ? `#${expense.id}` : '-');
+}
+
 function expenseDisplayName(expense) {
   const payee = String(expense?.payee ?? '').trim();
   if (payee) return payee;
@@ -1345,6 +1390,71 @@ export default function ExpensesDeskPage() {
           </div>
         ) : null}
 
+        {purchasesDesk ? (
+          <div className="exp-desk-mobile-cards" aria-label="Stock purchase vouchers">
+            {expenses.length === 0 ? (
+              <div className="exp-desk-empty exp-desk-empty--mobile">
+                No Stock Purchase vouchers match your filters.
+              </div>
+            ) : (
+              expenses.map((expense) => {
+                const payeeName = expenseDisplayName(expense) || '-';
+                const rowKey = expense.row_key || `exp-${expense.id}`;
+                const totalAmt = Math.max(0, Number(expense.amount) || 0);
+                const accountLabel = expense.category_name || expense.main_account_name || '';
+                return (
+                  <button
+                    key={`m-${rowKey}`}
+                    type="button"
+                    className="exp-desk-mobile-card"
+                    onClick={(event) => handleExpenseRowClick(event, expense)}
+                  >
+                    <div className="exp-desk-mobile-card-top">
+                      <div className="exp-desk-mobile-card-main">
+                        <div className="exp-desk-party">
+                          <span
+                            className={`exp-desk-party-av exp-desk-party-av--tone-${partyAvatarTone(payeeName)}`}
+                            aria-hidden="true"
+                          >
+                            {partyInitials(payeeName)}
+                          </span>
+                          <div className="exp-desk-party-body">
+                            <span className="exp-desk-ref" title={expense.expense_number || `#${expense.id}`}>
+                              {expenseReferenceLabel(expense)}
+                            </span>
+                            <span className="exp-desk-party-name" title={payeeName}>{payeeName}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="exp-desk-amt exp-desk-mobile-card-amt">
+                        {formatCurrency(totalAmt, expense.currency_code)}
+                      </span>
+                    </div>
+                    <div className="exp-desk-mobile-card-meta">
+                      <div className="exp-desk-mobile-card-row">
+                        <span className="exp-desk-mobile-card-label">Date</span>
+                        <span className="exp-desk-mobile-card-value">{formatDate(expense.date)}</span>
+                      </div>
+                      <div className="exp-desk-mobile-card-row">
+                        <span className="exp-desk-mobile-card-label">Type</span>
+                        <span className="exp-desk-mobile-card-value">
+                          {[expense.payment_method_label, accountLabel].filter(Boolean).join(' · ') || '—'}
+                        </span>
+                      </div>
+                      <div className="exp-desk-mobile-card-row">
+                        <span className="exp-desk-mobile-card-label">Status</span>
+                        <span className="exp-desk-mobile-card-value">
+                          <ExpenseStatusBadge expense={expense} />
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        ) : null}
+
         <div className="exp-desk-table-wrap">
           <table className="exp-desk-table exp-desk-table--ledger">
               <colgroup>
@@ -1408,7 +1518,7 @@ export default function ExpensesDeskPage() {
                     >
                       <td className="col-ref">
                         <span className="exp-desk-ref" title={expense.expense_number || `#${expense.id}`}>
-                          {expense.expense_number || `#${expense.id}`}
+                          {expenseReferenceLabel(expense)}
                         </span>
                       </td>
                       <td className="col-date">{formatDate(expense.date)}</td>

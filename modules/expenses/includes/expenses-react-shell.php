@@ -357,6 +357,25 @@ body.page-exp-desk.page-exp-desk--scroll .employee-header.employee-header--exp-d
     top: 0 !important;
     z-index: 1020 !important;
 }
+/* Mobile: match balances — readable padding + natural content scroll */
+@media (max-width: 767.98px) {
+    body.page-exp-desk.page-exp-desk--scroll .layout-main-wrapper > .flex-grow-1,
+    body.page-exp-desk.page-exp-desk--scroll .flex-grow-1.d-flex.flex-column {
+        -webkit-overflow-scrolling: touch !important;
+    }
+    body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root {
+        padding: 0 0.75rem 1.5rem !important;
+        overflow: visible !important;
+    }
+    body.page-exp-desk.page-exp-desk--scroll .employee-header.employee-header--exp-desk {
+        padding: 0 0.75rem !important;
+    }
+    body.page-exp-desk.page-exp-desk--scroll .employee-header--exp-desk .vv-breadcrumb,
+    body.page-exp-desk.page-exp-desk--scroll .employee-header--exp-desk .exp-desk-breadcrumb {
+        font-size: 0.72rem;
+        gap: 0.25rem;
+    }
+}
 </style>
 
 <main class="main-content exp-desk-react-root">

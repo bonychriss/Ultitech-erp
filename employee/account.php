@@ -7,6 +7,26 @@ requireLogin();
 $userId = $_SESSION['user_id'];
 $feedback = '';
 
+// Handle profile photo removal
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove_profile_photo'])) {
+    try {
+        $stmt = $pdo->prepare('SELECT profile_photo FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+        $oldPhoto = (string) ($stmt->fetchColumn() ?: '');
+        $stmt = $pdo->prepare('UPDATE users SET profile_photo = NULL WHERE id = ?');
+        $stmt->execute([$userId]);
+        if ($oldPhoto !== '') {
+            $abs = __DIR__ . '/../' . ltrim(str_replace('\\', '/', $oldPhoto), '/');
+            if (is_file($abs)) {
+                @unlink($abs);
+            }
+        }
+        $feedback = 'Profile photo removed successfully.';
+    } catch (Throwable $e) {
+        $feedback = 'Error: Failed to remove profile photo.';
+    }
+}
+
 // Handle profile photo upload
 if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
     $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -250,6 +270,24 @@ $selectArrow = "background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csv
 $saveEmailApiUrl = function_exists('company_url')
     ? company_url('api/save_user_email_settings.php')
     : (function_exists('app_url') ? app_url('api/save_user_email_settings.php') : '../api/save_user_email_settings.php');
+$joinedLabel = date('M Y', strtotime((string) ($user['created_at'] ?? 'now')));
+$lastLoginTs = strtotime((string) ($user['updated_at'] ?? ''));
+if ($lastLoginTs) {
+    $lastLoginDay = date('Y-m-d', $lastLoginTs);
+    $today = date('Y-m-d');
+    $yesterday = date('Y-m-d', strtotime('-1 day'));
+    if ($lastLoginDay === $today) {
+        $lastLoginLabel = 'Today, ' . date('g:i A', $lastLoginTs);
+    } elseif ($lastLoginDay === $yesterday) {
+        $lastLoginLabel = 'Yesterday, ' . date('g:i A', $lastLoginTs);
+    } else {
+        $lastLoginLabel = date('M j, Y g:i A', $lastLoginTs);
+    }
+} else {
+    $lastLoginLabel = '—';
+}
+$roleLabel = ucfirst((string) ($user['role'] ?? 'user'));
+$isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
 ?>
 
 <!DOCTYPE html>

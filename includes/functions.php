@@ -8054,6 +8054,160 @@ if (!function_exists('getFlash')) {
     }
 }
 
+/**
+ * Stock purchase payment voucher numbers: PUR-{year}-{month}-{seq}
+ * e.g. PUR-2026-10-1 (1st stock-purchase PV in Oct 2026 for the company).
+ * Month and sequence are unpadded (like revenue display refs).
+ */
+/**
+ * Remap existing stock-purchase payment vouchers to PUR-{year}-{month}-{seq}.
+ * Idempotent: skips rows already matching their assigned PUR number.
+ *
+ * @return int Number of voucher_no values updated
+ */
+function ensureStockPurchaseVoucherNumbersUsePurFormat(?PDO $pdoOverride = null): int
+{
+    $db = $pdoOverride instanceof PDO ? $pdoOverride : ($GLOBALS['pdo'] ?? null);
+    if (!($db instanceof PDO) || !tableExists('payment_vouchers', $db)) {
+        return 0;
+    }
+
+    try {
+        $pvCols = $db->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $purposeSql = buildPaymentVoucherStockPurchasePurposeWhereSql('pv', $pvCols);
+        if ($purposeSql === '1 = 0') {
+            // No purpose columns — treat linked stock POs / PUR- prefix as stock purchase rows.
+            $purposeSql = '(pv.voucher_no LIKE \'PUR-%\'';
+            if (in_array('linked_stock_po_id', $pvCols, true)) {
+                $purposeSql .= ' OR COALESCE(pv.linked_stock_po_id, 0) > 0';
+            }
+            $purposeSql .= ')';
+        }
+
+        $dateExpr = in_array('date_created', $pvCols, true)
+            ? 'COALESCE(pv.date_created, pv.created_at, NOW())'
+            : (in_array('created_at', $pvCols, true) ? 'COALESCE(pv.created_at, NOW())' : 'NOW()');
+
+        $sql = "SELECT pv.id, pv.voucher_no, {$dateExpr} AS ref_date
+                FROM payment_vouchers pv
+                WHERE {$purposeSql}
+                ORDER BY {$dateExpr} ASC, pv.id ASC";
+        $rows = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if ($rows === []) {
+            return 0;
+        }
+
+        // Assign PUR numbers globally per year-month (voucher_no is unique DB-wide).
+        $plan = [];
+        $counters = [];
+        foreach ($rows as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $ts = strtotime((string) ($row['ref_date'] ?? '')) ?: time();
+            $year = (int) date('Y', $ts);
+            $month = (int) date('n', $ts);
+            $bucket = $year . ':' . $month;
+            if (!isset($counters[$bucket])) {
+                $counters[$bucket] = 0;
+            }
+            $counters[$bucket]++;
+            $newNo = sprintf('PUR-%d-%d-%d', $year, $month, $counters[$bucket]);
+            $oldNo = trim((string) ($row['voucher_no'] ?? ''));
+            // Always include every stock-purchase row so phase-1 frees occupied PUR numbers.
+            $plan[] = ['id' => $id, 'old' => $oldNo, 'new' => $newNo];
+        }
+
+        if ($plan === []) {
+            return 0;
+        }
+
+        $changed = 0;
+        foreach ($plan as $item) {
+            if ($item['old'] !== $item['new']) {
+                $changed++;
+            }
+        }
+        if ($changed === 0) {
+            return 0;
+        }
+
+        $db->beginTransaction();
+        $upd = $db->prepare('UPDATE payment_vouchers SET voucher_no = ? WHERE id = ?');
+        foreach ($plan as $item) {
+            $upd->execute(['__TMP_PUR_' . $item['id'], $item['id']]);
+        }
+        foreach ($plan as $item) {
+            $upd->execute([$item['new'], $item['id']]);
+        }
+        $db->commit();
+
+        return $changed;
+    } catch (Throwable $e) {
+        if ($db instanceof PDO && $db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log('ensureStockPurchaseVoucherNumbersUsePurFormat: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+function generateStockPurchaseVoucherNumber(?DateTimeInterface $when = null): string
+{
+    global $pdo;
+
+    $now = $when instanceof DateTimeInterface ? $when : new DateTimeImmutable('now');
+    $year = (int) $now->format('Y');
+    $month = (int) $now->format('n'); // 1..12, no leading zero
+    $companyId = (int) (currentCompanyId() ?? 0);
+    $prefix = sprintf('PUR-%d-%d-', $year, $month);
+
+    try {
+        $maxSeq = 0;
+        $like = $prefix . '%';
+        if ($companyId > 0 && columnExists('payment_vouchers', 'company_id', $pdo)) {
+            $stmt = $pdo->prepare(
+                "SELECT voucher_no FROM payment_vouchers
+                 WHERE voucher_no LIKE ?
+                   AND company_id = ?
+                 ORDER BY CAST(SUBSTRING_INDEX(voucher_no, '-', -1) AS UNSIGNED) DESC
+                 LIMIT 1"
+            );
+            $stmt->execute([$like, $companyId]);
+        } else {
+            $stmt = $pdo->prepare(
+                "SELECT voucher_no FROM payment_vouchers
+                 WHERE voucher_no LIKE ?
+                 ORDER BY CAST(SUBSTRING_INDEX(voucher_no, '-', -1) AS UNSIGNED) DESC
+                 LIMIT 1"
+            );
+            $stmt->execute([$like]);
+        }
+        $last = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($last) {
+            $parts = explode('-', (string) ($last['voucher_no'] ?? ''));
+            $maxSeq = isset($parts[3]) ? (int) $parts[3] : 0;
+        }
+
+        $next = max(1, $maxSeq + 1);
+        $checkStmt = $pdo->prepare('SELECT COUNT(*) FROM payment_vouchers WHERE voucher_no = ?');
+        for ($i = 0; $i < 1000; $i++) {
+            $candidate = $prefix . $next;
+            $checkStmt->execute([$candidate]);
+            if ((int) $checkStmt->fetchColumn() === 0) {
+                return $candidate;
+            }
+            $next++;
+        }
+
+        return $prefix . (time() % 100000);
+    } catch (Throwable $e) {
+        error_log('generateStockPurchaseVoucherNumber: ' . $e->getMessage());
+        return $prefix . (time() % 100000);
+    }
+}
+
 function generateVoucherNumber()
 {
     global $pdo, $control_pdo;

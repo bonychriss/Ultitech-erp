@@ -193,7 +193,7 @@ const MONTH_ABBR = {
 
 /**
  * Match revenue desk voucher refs: digit months, no leading zeros on sequences.
- * Supports both hyphen and slash codes (REV-2026-Oct-004, PV/UGT/2026/00455).
+ * Supports PUR-2026-10-01, REV-2026-Oct-004, and PV/UGT/2026/00455.
  */
 function formatVoucherRef(value, fallback = '-') {
   const raw = String(value || '').trim();
@@ -228,6 +228,7 @@ function formatVoucherRef(value, fallback = '-') {
 }
 
 function expenseReferenceLabel(expense) {
+  // Prefer native PUR-YYYY-M-N for purchases; otherwise clean PV/... refs.
   return formatVoucherRef(expense?.expense_number, expense?.id ? `#${expense.id}` : '-');
 }
 

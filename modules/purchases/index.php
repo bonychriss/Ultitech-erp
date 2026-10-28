@@ -11,6 +11,15 @@ if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
     $_GET['module'] = 'purchases';
 }
 
+// One-time (idempotent) remap of stock-purchase PV numbers to PUR-YYYY-M-N.
+if (function_exists('ensureStockPurchaseVoucherNumbersUsePurFormat')) {
+    try {
+        ensureStockPurchaseVoucherNumbersUsePurFormat();
+    } catch (Throwable $e) {
+        error_log('purchases index PUR remap: ' . $e->getMessage());
+    }
+}
+
 $page_title = 'Purchases';
 $employeeHeaderTitle = 'Purchases';
 $hideHeaderCompanyBranding = true;

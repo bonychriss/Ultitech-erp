@@ -73,12 +73,20 @@ export function deskPageUrl(file, extraParams = {}) {
   const module = isPurchasesDesk() ? 'purchases' : 'expenses';
   const params = new URLSearchParams({ module, ...extraParams });
   if (isPurchasesDesk()) {
-    // Purchases list lives at modules/purchases; create/import stay on expenses if ever used.
-    if (String(file || '').toLowerCase() === 'index.php') {
-      return `../purchases/index.php?${params.toString()}`;
+    // Purchases list + voucher preview live at modules/purchases; create/import stay on expenses if ever used.
+    const name = String(file || '').toLowerCase();
+    if (name === 'index.php' || name === 'voucher.php') {
+      return `../purchases/${name}?${params.toString()}`;
     }
   }
   return `./${file}?${params.toString()}`;
+}
+
+/** Purchases desk: in-app voucher preview page (not the employee view-voucher screen). */
+export function purchasesVoucherPreviewUrl(expense) {
+  const pvId = Number(expense?.pv_id || 0);
+  if (pvId <= 0) return '';
+  return deskPageUrl('voucher.php', { pv_id: String(pvId) });
 }
 
 export function purchasesCreateVoucherUrl() {
@@ -91,6 +99,17 @@ export function purchasesCreateVoucherUrl() {
 /**
  * Full payment-voucher detail URL (POs + attachments live on view-voucher).
  */
+export async function fetchPurchasesVoucherPreview(pvId) {
+  const id = Number(pvId || 0);
+  if (id <= 0) throw new Error('Missing voucher id.');
+  const res = await fetch(`${getApiBase()}/voucher-preview.php?pv_id=${encodeURIComponent(String(id))}`);
+  const data = await parseJson(res);
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 export function purchasesVoucherViewUrl(expense) {
   if (!expense || typeof expense !== 'object') return '';
   const boot = typeof expense.voucher_url === 'string' ? expense.voucher_url.trim() : '';

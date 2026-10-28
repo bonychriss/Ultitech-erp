@@ -312,20 +312,92 @@ html[data-theme="dark"] body.page-exp-desk,
 html[data-theme="dark"] body.page-exp-desk.dashboard,
 html[data-theme="dark"] body.page-exp-desk .layout-main-wrapper,
 html[data-theme="dark"] body.page-exp-desk .layout-main-wrapper > .flex-grow-1,
-html[data-theme="dark"] body.page-exp-desk main.main-content.exp-desk-react-root {
-    background: #0f172a !important;
+html[data-theme="dark"] body.page-exp-desk .flex-grow-1.d-flex.flex-column,
+html[data-theme="dark"] body.page-exp-desk main.main-content.exp-desk-react-root,
+html[data-theme="dark"] body.page-exp-desk main.main-content.exp-desk-react-root #root {
+    background: #0b141a !important;
+    background-color: #0b141a !important;
+    color: #e9edef !important;
 }
 
 html[data-theme="dark"] body.page-exp-desk .employee-header.employee-header--exp-desk {
-    background: #0f172a !important;
+    background: #0b141a !important;
+    background-color: #0b141a !important;
+    border-bottom-color: #2a3942 !important;
 }
 
 html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-header-page-title {
-    color: #f8fafc !important;
+    color: #e9edef !important;
 }
 
 html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-header-menu-btn {
-    color: #e2e8f0 !important;
+    color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link {
+    color: #53bdeb !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-sep,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-current {
+    color: #8696a0 !important;
+}
+
+/* Match sidebar to WhatsApp teal-night (balances). */
+html[data-theme="dark"] body.page-exp-desk .sidebar,
+html[data-theme="dark"] body.page-exp-desk #native-sidebar,
+html[data-theme="dark"] body.page-exp-desk .sidebar-container,
+html[data-theme="dark"] body.page-exp-desk.dashboard #native-sidebar,
+html[data-theme="dark"] body.page-exp-desk.dashboard .sidebar-container {
+    --sidebar-bg: #0b141a !important;
+    --sidebar-text: #e9edef !important;
+    --sidebar-hover-bg: #202c33 !important;
+    --sidebar-hover-text: #ffffff !important;
+    --sidebar-active-bg: #202c33 !important;
+    --sidebar-active-text: #ffffff !important;
+    --sidebar-border: #2a3942 !important;
+    --sidebar-icon-color: #8696a0 !important;
+    --sidebar-hover-icon: #e9edef !important;
+    background: #0b141a !important;
+    background-color: #0b141a !important;
+    color: #e9edef !important;
+    border-right: 1px solid #2a3942 !important;
+    border-right-color: #2a3942 !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .user-profile-link .sidebar-text,
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .user-profile-link .sidebar-text div,
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .nav-link,
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .nav-link .sidebar-text,
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .sidebar-text {
+    color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .nav-link i,
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .nav-link .bi {
+    color: #8696a0 !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .nav-link:not(.active):hover,
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .nav-link.active {
+    background: #202c33 !important;
+    background-color: #202c33 !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .nav-link:not(.active):hover i,
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .nav-link.active i {
+    color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk #native-sidebar hr,
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .border-start {
+    border-color: #2a3942 !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .text-muted,
+html[data-theme="dark"] body.page-exp-desk #native-sidebar .sidebar-label {
+    color: #8696a0 !important;
 }
 
 /*

@@ -1,8 +1,25 @@
-/** Display helpers for revenue desk (digit dates, clean voucher refs). */
+/** Display helpers for revenue desk (digit dates, month-abbr voucher refs). */
 
-const MONTH_ABBR = {
-  jan: '1', feb: '2', mar: '3', apr: '4', may: '5', jun: '6',
-  jul: '7', aug: '8', sep: '9', oct: '10', nov: '11', dec: '12',
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const MONTH_FROM_ABBR = Object.fromEntries(
+  MONTH_NAMES.map((name) => [name.toLowerCase(), name]),
+);
+
+/** Roman month tokens sometimes used in older voucher refs. */
+const MONTH_FROM_ROMAN = {
+  i: 'Jan',
+  ii: 'Feb',
+  iii: 'Mar',
+  iv: 'Apr',
+  v: 'May',
+  vi: 'Jun',
+  vii: 'Jul',
+  viii: 'Aug',
+  ix: 'Sep',
+  x: 'Oct',
+  xi: 'Nov',
+  xii: 'Dec',
 };
 
 /**
@@ -21,8 +38,49 @@ export function formatDateDigits(dateStr) {
 }
 
 /**
- * Display voucher / ref codes with digit months and no leading zeros on the sequence.
- * e.g. REV-2026-Oct-004 ? REV-2026-10-4
+ * Normalize one voucher-ref segment for display.
+ * Months become Jan–Dec; years stay 4-digit; sequence digits drop leading zeros.
+ * @param {string} part
+ * @param {string|undefined} prev
+ * @param {string|undefined} next
+ */
+function formatRefPart(part, prev, next) {
+  const p = String(part || '').trim();
+  if (!p) return p;
+
+  const lower = p.toLowerCase();
+  if (MONTH_FROM_ABBR[lower]) {
+    return MONTH_FROM_ABBR[lower];
+  }
+  if (MONTH_FROM_ROMAN[lower]) {
+    return MONTH_FROM_ROMAN[lower];
+  }
+
+  if (/^\d+$/.test(p)) {
+    // Keep 4-digit years intact
+    if (p.length === 4 && Number(p) >= 1900 && Number(p) <= 2100) {
+      return p;
+    }
+    const n = parseInt(p, 10);
+    const prevIsYear = prev
+      && /^\d{4}$/.test(String(prev).trim())
+      && Number(prev) >= 1900
+      && Number(prev) <= 2100;
+    const nextIsSeq = next != null && /^\d+$/.test(String(next).trim());
+    // REV-2026-10-1 → month slot between year and sequence
+    if (prevIsYear && nextIsSeq && n >= 1 && n <= 12) {
+      return MONTH_NAMES[n - 1];
+    }
+    // Strip leading zeros: 004 → 4
+    return String(n);
+  }
+
+  return p;
+}
+
+/**
+ * Display voucher / ref codes with Jan–Dec months and no leading zeros on the sequence.
+ * e.g. REV-2026-10-004 → REV-2026-Oct-4 ; REV-2026-X-1 → REV-2026-Oct-1
  * @param {string|null|undefined} value
  * @param {string} [fallback]
  */
@@ -30,29 +88,13 @@ export function formatVoucherRef(value, fallback = '-') {
   const raw = String(value || '').trim();
   if (!raw) return fallback;
 
-  const parts = raw.split('-');
+  const sep = raw.includes('/') ? '/' : '-';
+  if (!raw.includes(sep)) return raw;
+
+  const parts = raw.split(sep);
   if (parts.length < 2) return raw;
 
-  const out = parts.map((part) => {
-    const p = String(part || '').trim();
-    if (!p) return p;
-
-    const monthKey = p.toLowerCase();
-    if (MONTH_ABBR[monthKey]) {
-      return MONTH_ABBR[monthKey];
-    }
-
-    if (/^\d+$/.test(p)) {
-      // Keep 4-digit years intact
-      if (p.length === 4 && Number(p) >= 1900 && Number(p) <= 2100) {
-        return p;
-      }
-      // Strip leading zeros: 004 ? 4, 0238 ? 238
-      return String(parseInt(p, 10));
-    }
-
-    return p;
-  });
-
-  return out.join('-');
+  return parts
+    .map((part, i) => formatRefPart(part, parts[i - 1], parts[i + 1]))
+    .join(sep);
 }

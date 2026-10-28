@@ -22,11 +22,35 @@ function invoicesViewDeskRequireAccess(): void
 function invoicesViewParseId(array $query = []): int
 {
     $id = $query['id'] ?? null;
-    if (is_scalar($id) && ctype_digit((string) $id)) {
+    if (is_scalar($id) && ctype_digit((string) $id) && (int) $id > 0) {
         return (int) $id;
     }
 
-    return 0;
+    $number = trim((string) ($query['invoice_number'] ?? $query['number'] ?? ''));
+    if ($number === '') {
+        return 0;
+    }
+
+    global $pdo;
+    $db = $pdo instanceof PDO ? $pdo : null;
+    if (!$db instanceof PDO && function_exists('getSalesDbConnection')) {
+        try {
+            $db = getSalesDbConnection();
+        } catch (Throwable $e) {
+            $db = null;
+        }
+    }
+    if (!$db instanceof PDO) {
+        return 0;
+    }
+
+    try {
+        $st = $db->prepare('SELECT id FROM invoices WHERE invoice_number = ? LIMIT 1');
+        $st->execute([$number]);
+        return (int) ($st->fetchColumn() ?: 0);
+    } catch (Throwable $e) {
+        return 0;
+    }
 }
 
 function invoicesViewModuleQuery(): string

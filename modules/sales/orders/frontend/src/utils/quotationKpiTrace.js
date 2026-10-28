@@ -1,4 +1,13 @@
 const PENDING_STATUSES = ['quotation', 'draft', 'sent'];
+const CONVERTED_STATUSES = [
+  'confirmed',
+  'invoiced',
+  'processing',
+  'shipped',
+  'delivered',
+  'paid',
+  'completed',
+];
 
 function formatMoney(value, currency = 'TZS') {
   const code = String(currency || 'TZS').toUpperCase();
@@ -108,8 +117,8 @@ function buildPeriodBreakdown(rows, defaultCurrency) {
     },
     {
       key: 'all',
-      label: 'Since start',
-      sublabel: 'All quotations on system',
+      label: 'In this list',
+      sublabel: 'Matching current filters',
       count: allCount,
       value: allValue,
       countDisplay: formatCount(allCount),
@@ -120,6 +129,20 @@ function buildPeriodBreakdown(rows, defaultCurrency) {
 
 function isPendingStatus(status) {
   return PENDING_STATUSES.includes(String(status || '').toLowerCase().trim());
+}
+
+function isConvertedStatus(status) {
+  return CONVERTED_STATUSES.includes(String(status || '').toLowerCase().trim());
+}
+
+function hasActiveListFilters(filters = {}) {
+  return Boolean(filters.search?.trim() || filters.statusFilter || filters.myQuotationsOnly);
+}
+
+function filterFootnote(filters) {
+  return hasActiveListFilters(filters)
+    ? 'These figures follow your active search and filters only (same rows as the table).'
+    : 'These figures match the quotations currently shown in the table.';
 }
 
 function buildTrace({
@@ -154,61 +177,43 @@ export function formatQuotationKpiHeadline(trace) {
   return trace.headline;
 }
 
-function buildListedNowTrace(filteredQuotations, filters, defaultCurrency) {
-  const count = filteredQuotations.length;
-  const total = filteredQuotations.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
-  const hasFilters = Boolean(filters.search?.trim() || filters.statusFilter || filters.myQuotationsOnly);
-
-  return buildTrace({
-    title: 'Listed now',
-    headline: count,
-    mode: 'count',
-    rows: filteredQuotations,
-    defaultCurrency,
-    confirmation: count === 0
-      ? 'No quotations match your current search or filters.'
-      : `${formatCount(count)} listed quotation${count === 1 ? '' : 's'} worth ${formatMoney(total, defaultCurrency)}.`,
-    footnote: hasFilters
-      ? 'These figures follow your active search and filters only.'
-      : 'These figures match the quotations currently shown in the table.',
-  });
-}
-
-function buildTotalQuotationsTrace(quotations, defaultCurrency) {
-  const count = quotations.length;
-  const total = quotations.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
+function buildTotalQuotationsTrace(rows, filters, defaultCurrency) {
+  const count = rows.length;
+  const total = rows.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
 
   return buildTrace({
     title: 'Total quotations',
     headline: count,
     mode: 'count',
-    rows: quotations,
+    rows,
     defaultCurrency,
     confirmation: count === 0
-      ? 'There are no quotations saved yet.'
-      : `You have ${formatCount(count)} quotation${count === 1 ? '' : 's'} in total worth ${formatMoney(total, defaultCurrency)}.`,
-    footnote: 'Counts every quotation saved for this company.',
+      ? (hasActiveListFilters(filters)
+        ? 'No quotations match your current search or filters.'
+        : 'There are no quotations saved yet.')
+      : `${formatCount(count)} quotation${count === 1 ? '' : 's'} in this list worth ${formatMoney(total, defaultCurrency)}.`,
+    footnote: filterFootnote(filters),
   });
 }
 
-function buildTotalValueTrace(quotations, defaultCurrency) {
-  const total = quotations.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
+function buildTotalValueTrace(rows, filters, defaultCurrency) {
+  const total = rows.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
 
   return buildTrace({
     title: 'Total value',
     headline: total,
     mode: 'value',
-    rows: quotations,
+    rows,
     defaultCurrency,
-    confirmation: quotations.length === 0
-      ? 'No quotation amounts to total yet.'
-      : `Combined quotation value on the system is ${formatMoney(total, defaultCurrency)}.`,
-    footnote: `Amounts are shown in ${defaultCurrency}.`,
+    confirmation: rows.length === 0
+      ? 'No quotation amounts to total for the current list.'
+      : `Combined value of listed quotations is ${formatMoney(total, defaultCurrency)}.`,
+    footnote: `${filterFootnote(filters)} Amounts are shown in ${defaultCurrency}.`,
   });
 }
 
-function buildPendingTrace(quotations, defaultCurrency) {
-  const pendingRows = quotations.filter((row) => isPendingStatus(row.status));
+function buildPendingTrace(rows, filters, defaultCurrency) {
+  const pendingRows = rows.filter((row) => isPendingStatus(row.status));
   const count = pendingRows.length;
   const total = pendingRows.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
 
@@ -219,29 +224,51 @@ function buildPendingTrace(quotations, defaultCurrency) {
     rows: pendingRows,
     defaultCurrency,
     confirmation: count === 0
-      ? 'No quotations are waiting in Quotation, Draft, or Sent status.'
+      ? 'No listed quotations are waiting in Quotation, Draft, or Sent status.'
       : `${formatCount(count)} pending quotation${count === 1 ? '' : 's'} worth ${formatMoney(total, defaultCurrency)}.`,
-    footnote: 'Pending includes Quotation, Draft, and Sent statuses.',
+    footnote: `${filterFootnote(filters)} Pending includes Quotation, Draft, and Sent statuses.`,
+  });
+}
+
+function buildConvertedTrace(rows, filters, defaultCurrency) {
+  const convertedRows = rows.filter((row) => isConvertedStatus(row.status));
+  const count = convertedRows.length;
+  const total = convertedRows.reduce((sum, row) => sum + (Number(row.total_amount) || 0), 0);
+
+  return buildTrace({
+    title: 'Converted',
+    headline: count,
+    mode: 'count',
+    rows: convertedRows,
+    defaultCurrency,
+    confirmation: count === 0
+      ? 'No listed quotations have moved past pending yet.'
+      : `${formatCount(count)} converted quotation${count === 1 ? '' : 's'} worth ${formatMoney(total, defaultCurrency)}.`,
+    footnote: `${filterFootnote(filters)} Converted includes Confirmed, Invoiced, and later fulfilment statuses.`,
   });
 }
 
 export function resolveQuotationKpiTrace(key, context) {
   const {
-    quotations = [],
     filteredQuotations = [],
     filters = {},
     defaultCurrency = 'TZS',
   } = context;
 
+  const rows = filteredQuotations;
+
   switch (key) {
     case 'totalQuotations':
-      return buildTotalQuotationsTrace(quotations, defaultCurrency);
+      return buildTotalQuotationsTrace(rows, filters, defaultCurrency);
     case 'totalValue':
-      return buildTotalValueTrace(quotations, defaultCurrency);
+      return buildTotalValueTrace(rows, filters, defaultCurrency);
     case 'pending':
-      return buildPendingTrace(quotations, defaultCurrency);
+      return buildPendingTrace(rows, filters, defaultCurrency);
+    case 'converted':
     case 'listedNow':
-      return buildListedNowTrace(filteredQuotations, filters, defaultCurrency);
+      return key === 'listedNow'
+        ? buildTotalQuotationsTrace(rows, filters, defaultCurrency)
+        : buildConvertedTrace(rows, filters, defaultCurrency);
     default:
       return null;
   }

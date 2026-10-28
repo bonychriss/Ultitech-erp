@@ -92,6 +92,81 @@ function journal_resolve_payroll_line_accounts(array $accounts): array
 
 $payrollLineAccounts = journal_resolve_payroll_line_accounts($accounts);
 
+$editId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$isEdit = $editId > 0;
+$editJournal = null;
+$editItems = [];
+$editJournalType = 'general';
+$editDescriptionBody = '';
+$editNotes = '';
+$editLocked = false;
+
+if ($isEdit) {
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM erp_journal_entries WHERE id = ? LIMIT 1');
+        $stmt->execute([$editId]);
+        $editJournal = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    } catch (Throwable $e) {
+        $editJournal = null;
+    }
+    if (!$editJournal) {
+        $_SESSION['error_msg'] = 'Journal entry not found.';
+        $mod = isset($_GET['module']) ? (string) $_GET['module'] : 'balances';
+        header('Location: journal-entries.php?module=' . rawurlencode($mod));
+        exit;
+    }
+    $editLocked = strtolower((string) ($editJournal['status'] ?? '')) === 'locked';
+    if ($editLocked) {
+        $_SESSION['error_msg'] = 'Locked journal entries cannot be edited.';
+        $mod = isset($_GET['module']) ? (string) $_GET['module'] : 'balances';
+        header('Location: view-journal.php?id=' . $editId . '&module=' . rawurlencode($mod));
+        exit;
+    }
+
+    $accountCol = function_exists('resolveExistingColumn')
+        ? resolveExistingColumn('erp_journal_items', 'account_id', ['gl_account_id', 'account'])
+        : 'account_id';
+    if (!$accountCol) {
+        $accountCol = 'account_id';
+    }
+    try {
+        $itemsStmt = $pdo->prepare(
+            "SELECT ji.*, a.code, a.name
+             FROM erp_journal_items ji
+             LEFT JOIN erp_accounts a ON a.id = ji.{$accountCol}
+             WHERE ji.journal_id = ?
+             ORDER BY ji.id ASC"
+        );
+        $itemsStmt->execute([$editId]);
+        $editItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        $editItems = [];
+    }
+
+    $rawDesc = (string) ($editJournal['description'] ?? '');
+    if (preg_match('/^\[([^\]]+)\]\s*/', $rawDesc, $tm)) {
+        $tag = trim($tm[1]);
+        $tagToKey = [
+            'General Journal' => 'general',
+            'Sales Journal' => 'sales',
+            'Bank Journal' => 'bank',
+            'Purchase Journal' => 'purchase',
+            'Payment Voucher' => 'payment',
+            'Payroll Journal' => 'payroll',
+        ];
+        if (isset($tagToKey[$tag])) {
+            $editJournalType = $tagToKey[$tag];
+        }
+        $rawDesc = trim(substr($rawDesc, strlen($tm[0])));
+    }
+    if (preg_match('/\n\nNotes:\s*(.*)$/s', $rawDesc, $nm)) {
+        $editNotes = trim($nm[1]);
+        $editDescriptionBody = trim(substr($rawDesc, 0, -strlen($nm[0])));
+    } else {
+        $editDescriptionBody = $rawDesc;
+    }
+}
+
 $nextSeq = 1;
 try {
     $last = $pdo->query("SELECT MAX(CAST(SUBSTRING(entry_number, 4) AS UNSIGNED)) FROM erp_journal_entries")->fetchColumn();
@@ -99,10 +174,34 @@ try {
 } catch (Throwable $e) {
     $nextSeq = 1;
 }
-$previewRef = 'JE-' . date('Y') . '-' . str_pad((string) $nextSeq, 6, '0', STR_PAD_LEFT);
+$previewRef = $isEdit
+    ? (string) ($editJournal['entry_number'] ?? ('JE-' . $editId))
+    : ('JE-' . date('Y') . '-' . str_pad((string) $nextSeq, 6, '0', STR_PAD_LEFT));
 
 $jeModule = isset($_GET['module']) ? htmlspecialchars((string) $_GET['module']) : 'balances';
-$page_title = 'Create Journal Entry';
+$page_title = $isEdit ? 'Edit Journal Entry' : 'Create Journal Entry';
+$editPayload = null;
+if ($isEdit && $editJournal) {
+    $accColForPayload = $accountCol ?? 'account_id';
+    $editPayload = [
+        'id' => $editId,
+        'date' => (string) ($editJournal['date'] ?? date('Y-m-d')),
+        'journal_type' => $editJournalType,
+        'description' => $editDescriptionBody,
+        'notes' => $editNotes,
+        'entry_number' => $previewRef,
+        'status' => (string) ($editJournal['status'] ?? 'posted'),
+        'lines' => array_map(static function ($it) use ($accColForPayload) {
+            $accId = (int) ($it[$accColForPayload] ?? ($it['account_id'] ?? ($it['gl_account_id'] ?? 0)));
+            return [
+                'account_id' => $accId,
+                'debit' => (float) ($it['debit'] ?? 0),
+                'credit' => (float) ($it['credit'] ?? 0),
+                'line_desc' => '',
+            ];
+        }, $editItems),
+    ];
+}
 
 include __DIR__ . '/../modules/balances/includes/header.php';
 ?>
@@ -251,8 +350,8 @@ include __DIR__ . '/../modules/balances/includes/header.php';
 
         <div class="cje-top">
             <div>
-                <h1 class="cje-title">Create Journal Entry</h1>
-                <p class="cje-sub">Record a new journal entry with balanced debit and credit lines.</p>
+                <h1 class="cje-title"><?= $isEdit ? 'Edit Journal Entry' : 'Create Journal Entry' ?></h1>
+                <p class="cje-sub"><?= $isEdit ? 'Update this journal entry and keep debits and credits balanced.' : 'Record a new journal entry with balanced debit and credit lines.' ?></p>
                 <nav class="cje-bc" aria-label="Breadcrumb">
                     <a href="../index.php">Home</a>
                     <i class="fas fa-chevron-right" aria-hidden="true"></i>
@@ -260,18 +359,23 @@ include __DIR__ . '/../modules/balances/includes/header.php';
                     <i class="fas fa-chevron-right" aria-hidden="true"></i>
                     <a href="journal-entries.php?module=<?= $jeModule ?>">Journal Entries</a>
                     <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                    <span>Create Journal Entry</span>
+                    <span><?= $isEdit ? 'Edit Journal Entry' : 'Create Journal Entry' ?></span>
                 </nav>
             </div>
             <div class="cje-actions">
-                <button type="button" class="cje-btn" id="btnDraft">Save as Draft</button>
-                <button type="submit" form="createJournalForm" class="cje-btn success" id="postBtn"><i class="fas fa-check"></i> Post Entry</button>
-                <a class="cje-btn" href="journal-entries.php?module=<?= $jeModule ?>">Cancel</a>
+                <?php if (!$isEdit): ?>
+                  <button type="button" class="cje-btn" id="btnDraft">Save as Draft</button>
+                <?php endif; ?>
+                <button type="submit" form="createJournalForm" class="cje-btn success" id="postBtn"><i class="fas fa-check"></i> <?= $isEdit ? 'Save Changes' : 'Post Entry' ?></button>
+                <a class="cje-btn" href="<?= $isEdit ? ('view-journal.php?id=' . (int) $editId . '&module=' . $jeModule) : ('journal-entries.php?module=' . $jeModule) ?>">Cancel</a>
             </div>
         </div>
 
         <form id="createJournalForm" method="post" action="#" autocomplete="off">
-            <input type="hidden" name="action" value="create">
+            <input type="hidden" name="action" value="<?= $isEdit ? 'update' : 'create' ?>">
+            <?php if ($isEdit): ?>
+              <input type="hidden" name="id" id="editJournalId" value="<?= (int) $editId ?>">
+            <?php endif; ?>
 
             <div class="cje-grid">
                 <div>
@@ -281,13 +385,22 @@ include __DIR__ . '/../modules/balances/includes/header.php';
                             <div class="cje-row3">
                                 <div class="cje-fg">
                                     <label for="journal_type">Journal</label>
+                                    <?php
+                                      $jeDateVal = $isEdit ? (string) ($editJournal['date'] ?? date('Y-m-d')) : date('Y-m-d');
+                                      $jePeriodVal = date('F Y', strtotime($jeDateVal . ' 12:00:00') ?: time());
+                                      $typeOpts = [
+                                          'general' => 'General Journal',
+                                          'sales' => 'Sales Journal',
+                                          'bank' => 'Bank Journal',
+                                          'purchase' => 'Purchase Journal',
+                                          'payment' => 'Payment Voucher',
+                                          'payroll' => 'Payroll Journal',
+                                      ];
+                                    ?>
                                     <select class="cje-sel" id="journal_type" name="journal_type">
-                                        <option value="general">General Journal</option>
-                                        <option value="sales">Sales Journal</option>
-                                        <option value="bank">Bank Journal</option>
-                                        <option value="purchase">Purchase Journal</option>
-                                        <option value="payment">Payment Voucher</option>
-                                        <option value="payroll">Payroll Journal</option>
+                                        <?php foreach ($typeOpts as $tk => $tl): ?>
+                                          <option value="<?= htmlspecialchars($tk, ENT_QUOTES, 'UTF-8') ?>"<?= $isEdit && $editJournalType === $tk ? ' selected' : '' ?>><?= htmlspecialchars($tl, ENT_QUOTES, 'UTF-8') ?></option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="cje-fg">
@@ -296,29 +409,29 @@ include __DIR__ . '/../modules/balances/includes/header.php';
                                 </div>
                                 <div class="cje-fg">
                                     <label for="transaction_date">Transaction date</label>
-                                    <input class="cje-inp" id="transaction_date" name="date" type="date" value="<?= htmlspecialchars(date('Y-m-d')) ?>" required>
+                                    <input class="cje-inp" id="transaction_date" name="date" type="date" value="<?= htmlspecialchars($jeDateVal, ENT_QUOTES, 'UTF-8') ?>" required>
                                 </div>
                             </div>
                             <div class="cje-row2" style="margin-top:14px;">
                                 <div class="cje-fg">
                                     <label for="posting_date">Posting date</label>
-                                    <input class="cje-inp" id="posting_date" type="date" value="<?= htmlspecialchars(date('Y-m-d')) ?>">
+                                    <input class="cje-inp" id="posting_date" type="date" value="<?= htmlspecialchars($jeDateVal, ENT_QUOTES, 'UTF-8') ?>">
                                 </div>
                                 <div class="cje-fg">
                                     <label>Period</label>
                                     <div class="cje-period">
-                                        <input class="cje-inp" id="period_display" type="text" value="<?= htmlspecialchars(date('F Y')) ?>" readonly style="flex:1;min-width:0;">
+                                        <input class="cje-inp" id="period_display" type="text" value="<?= htmlspecialchars($jePeriodVal, ENT_QUOTES, 'UTF-8') ?>" readonly style="flex:1;min-width:0;">
                                         <span class="cje-badge">Open</span>
                                     </div>
                                 </div>
                             </div>
                             <div class="cje-fg" style="margin-top:14px;">
                                 <label for="description">Description</label>
-                                <textarea class="cje-ta" id="description" name="description" rows="3" placeholder="Main description for this journal entry"></textarea>
+                                <textarea class="cje-ta" id="description" name="description" rows="3" placeholder="Main description for this journal entry"><?= $isEdit ? htmlspecialchars($editDescriptionBody, ENT_QUOTES, 'UTF-8') : '' ?></textarea>
                             </div>
                             <div class="cje-fg" style="margin-top:14px;">
                                 <label for="notes">Notes <span class="opt">(optional)</span></label>
-                                <textarea class="cje-ta" id="notes" name="notes" rows="2" placeholder="Internal notes"></textarea>
+                                <textarea class="cje-ta" id="notes" name="notes" rows="2" placeholder="Internal notes"><?= $isEdit ? htmlspecialchars($editNotes, ENT_QUOTES, 'UTF-8') : '' ?></textarea>
                             </div>
                         </div>
                     </section>
@@ -371,12 +484,12 @@ include __DIR__ . '/../modules/balances/includes/header.php';
                         <div class="hd">Journal Summary</div>
                         <div class="bd">
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                                <span class="cje-draft-pill" id="sumStatus">Draft</span>
+                                <span class="cje-draft-pill" id="sumStatus"><?= $isEdit ? 'Editing' : 'Draft' ?></span>
                             </div>
-                            <div class="cje-kv"><span>Journal</span><span id="sumJournal">General Journal</span></div>
+                            <div class="cje-kv"><span>Journal</span><span id="sumJournal"><?= htmlspecialchars($typeOpts[$editJournalType] ?? 'General Journal', ENT_QUOTES, 'UTF-8') ?></span></div>
                             <div class="cje-kv"><span>Reference</span><span id="sumRef"><?= htmlspecialchars($previewRef) ?></span></div>
-                            <div class="cje-kv"><span>Transaction date</span><span id="sumDate"><?= htmlspecialchars(date('d/m/Y')) ?></span></div>
-                            <div class="cje-kv"><span>Period</span><span id="sumPeriod"><?= htmlspecialchars(date('F Y')) ?></span></div>
+                            <div class="cje-kv"><span>Transaction date</span><span id="sumDate"><?= htmlspecialchars(date('d/m/Y', strtotime($jeDateVal . ' 12:00:00') ?: time()), ENT_QUOTES, 'UTF-8') ?></span></div>
+                            <div class="cje-kv"><span>Period</span><span id="sumPeriod"><?= htmlspecialchars($jePeriodVal, ENT_QUOTES, 'UTF-8') ?></span></div>
                             <div class="cje-kv" style="align-items:flex-start;"><span>Description</span><span id="sumDesc" style="font-weight:500;max-width:180px;">—</span></div>
                         </div>
                     </div>
@@ -420,6 +533,8 @@ include __DIR__ . '/../modules/balances/includes/header.php';
 (() => {
     const accounts = <?= json_encode($accounts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     const payrollLineAccounts = <?= json_encode($payrollLineAccounts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+    const editPayload = <?= json_encode($editPayload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
+    const isEdit = !!(editPayload && editPayload.id);
     const journalLabels = {
         general: 'General Journal',
         sales: 'Sales Journal',
@@ -446,7 +561,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         ).join('');
     }
 
-    function addLine() {
+    function addLine(prefill) {
         const i = lineCount++;
         const tr = document.createElement('tr');
         tr.className = 'je-line';
@@ -461,6 +576,16 @@ include __DIR__ . '/../modules/balances/includes/header.php';
             <td><select class="cje-sel" name="items[${i}][project]"><option value="">—</option><option>General</option><option>Project A</option><option>Project B</option></select></td>
             <td class="act"><button type="button" class="cje-btn" style="padding:6px 10px;" title="Remove line" data-remove><i class="fas fa-trash"></i></button></td>`;
         tbody.appendChild(tr);
+        if (prefill) {
+            const sel = tr.querySelector('select[name*="[account_id]"]');
+            const deb = tr.querySelector('.debit-inp');
+            const cre = tr.querySelector('.credit-inp');
+            const ld = tr.querySelector('input[name*="[line_desc]"]');
+            if (sel && prefill.account_id) sel.value = String(prefill.account_id);
+            if (deb && prefill.debit > 0) deb.value = String(prefill.debit);
+            if (cre && prefill.credit > 0) cre.value = String(prefill.credit);
+            if (ld && prefill.line_desc) ld.value = String(prefill.line_desc);
+        }
         tr.querySelector('[data-remove]').addEventListener('click', () => { tr.remove(); renumber(); calculateTotals(); });
         tr.querySelectorAll('.debit-inp, .credit-inp').forEach(inp => inp.addEventListener('input', calculateTotals));
         tr.querySelectorAll('.debit-inp').forEach(inp => inp.addEventListener('input', () => {
@@ -593,7 +718,9 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         document.getElementById('attachmentInput').click();
     });
 
-    document.getElementById('btnDraft').addEventListener('click', () => {
+    const btnDraft = document.getElementById('btnDraft');
+    if (btnDraft) {
+      btnDraft.addEventListener('click', () => {
         const payload = {
             journal_type: document.getElementById('journal_type').value,
             date: document.getElementById('transaction_date').value,
@@ -611,7 +738,8 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         alertEl.className = 'ok';
         alertEl.textContent = 'Draft saved in this browser. Use Post Entry to submit to the server.';
         alertEl.style.display = 'block';
-    });
+      });
+    }
 
     function buildDescription() {
         const j = document.getElementById('journal_type');
@@ -635,7 +763,8 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         postBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting…';
 
         const fd = new FormData();
-        fd.append('action', 'create');
+        fd.append('action', isEdit ? 'update' : 'create');
+        if (isEdit) fd.append('id', String(editPayload.id));
         fd.append('date', document.getElementById('transaction_date').value);
         fd.append('description', buildDescription());
 
@@ -658,9 +787,9 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         try {
             const response = await fetch('../api/journal-entries.php', { method: 'POST', body: fd });
             const result = await response.json();
-            if (!result.success) throw new Error(result.message || 'Failed to create journal entry');
+            if (!result.success) throw new Error(result.message || (isEdit ? 'Failed to update journal entry' : 'Failed to create journal entry'));
             alertEl.className = 'ok';
-            alertEl.textContent = 'Journal entry posted. Redirecting…';
+            alertEl.textContent = isEdit ? 'Journal entry updated. Redirecting…' : 'Journal entry posted. Redirecting…';
             alertEl.style.display = 'block';
             setTimeout(() => { window.location.href = 'view-journal.php?id=' + encodeURIComponent(result.id) + '&module=<?= $jeModule ?>'; }, 900);
         } catch (err) {
@@ -672,8 +801,12 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         }
     });
 
-    addLine();
-    addLine();
+    if (isEdit && Array.isArray(editPayload.lines) && editPayload.lines.length) {
+        editPayload.lines.forEach(line => addLine(line));
+    } else {
+        addLine();
+        addLine();
+    }
     syncSummary();
     calculateTotals();
 })();

@@ -9,7 +9,7 @@ import {
 import { createPortal } from 'react-dom';
 import {
   AlertCircle,
-  CheckCircle2,
+  Clock,
   FileText,
   Loader2,
   Search,
@@ -509,16 +509,24 @@ export default function InvoicesListPage() {
     return mineOk && matchesSearch && matchesStatus && matchesDate;
   }), [invoices, search, statusFilter, myInvoicesOnly, dateFrom, dateTo, currentUserId]);
 
+  /** Summary cards always match the rows currently shown in the table (like revenue). */
   const invoiceStats = useMemo(() => {
     let totalVal = 0;
     let outstanding = 0;
-    invoices.forEach((inv) => {
+    let overdue = 0;
+    filteredInvoices.forEach((inv) => {
       totalVal += parseFloat(inv.total_amount) || 0;
       const bal = parseFloat(inv.balance_due) || 0;
       if (bal > 0.005) outstanding += 1;
+      if (isInvoiceDueDateOverdue(inv)) overdue += 1;
     });
-    return { total: invoices.length, totalVal, outstanding };
-  }, [invoices]);
+    return {
+      total: filteredInvoices.length,
+      totalVal,
+      outstanding,
+      overdue,
+    };
+  }, [filteredInvoices]);
 
   const kpiTraceContext = useMemo(() => ({
     invoices,
@@ -1150,14 +1158,14 @@ export default function InvoicesListPage() {
       )}
 
       <section className="exp-desk-kpi-grid inv-kpi-grid" aria-label="Summary">
-        <button {...kpiCardProps('totalInvoices', 'total invoices', 'invoices')} title="All invoices on record. Click to see breakdown">
+        <button {...kpiCardProps('totalInvoices', 'total invoices', 'invoices')} title="Invoices matching current filters. Click to see breakdown">
           <div className="inv-kpi-top">
             <span className="inv-kpi-label">Total invoices</span>
             <span className="inv-kpi-icon"><FileText size={16} aria-hidden="true" /></span>
           </div>
           <strong className="inv-kpi-value">{fmtBig(invoiceStats.total)}</strong>
         </button>
-        <button {...kpiCardProps('totalValue', 'total value', 'value')} title="Sum of invoice totals. Click to see breakdown">
+        <button {...kpiCardProps('totalValue', 'total value', 'value')} title="Sum of listed invoice totals. Click to see breakdown">
           <div className="inv-kpi-top">
             <span className="inv-kpi-label">Total value</span>
             <span className="inv-kpi-icon"><Wallet size={16} aria-hidden="true" /></span>
@@ -1166,19 +1174,19 @@ export default function InvoicesListPage() {
             {defaultCurrency} {formatCurrency(invoiceStats.totalVal)}
           </strong>
         </button>
-        <button {...kpiCardProps('outstanding', 'outstanding', 'outstanding')} title="Invoices with a balance due. Click to see breakdown">
+        <button {...kpiCardProps('outstanding', 'outstanding', 'outstanding')} title="Listed invoices with a balance due. Click to see breakdown">
           <div className="inv-kpi-top">
             <span className="inv-kpi-label">Outstanding</span>
             <span className="inv-kpi-icon"><AlertCircle size={16} aria-hidden="true" /></span>
           </div>
           <strong className="inv-kpi-value">{fmtBig(invoiceStats.outstanding)}</strong>
         </button>
-        <button {...kpiCardProps('listedNow', 'listed now', 'listed')} title="Matching current filters. Click to see breakdown">
+        <button {...kpiCardProps('overdue', 'overdue', 'listed')} title="Listed invoices past due with a balance. Click to see breakdown">
           <div className="inv-kpi-top">
-            <span className="inv-kpi-label">Listed now</span>
-            <span className="inv-kpi-icon"><CheckCircle2 size={16} aria-hidden="true" /></span>
+            <span className="inv-kpi-label">Overdue</span>
+            <span className="inv-kpi-icon"><Clock size={16} aria-hidden="true" /></span>
           </div>
-          <strong className="inv-kpi-value">{filteredInvoices.length}</strong>
+          <strong className="inv-kpi-value">{fmtBig(invoiceStats.overdue)}</strong>
         </button>
       </section>
 

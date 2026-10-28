@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  CheckCircle2,
   Clock,
   EllipsisVertical,
   Download,
@@ -295,9 +294,9 @@ function saveListStateForReturn(state) {
 function TypeBadge({ type }) {
   const t = (type || 'spare').toLowerCase();
   if (t === 'truck') {
-    return <span className="prod-desk-type prod-desk-type--truck">Truck</span>;
+    return <span className="qt-type-badge qt-type-badge--truck">TRUCK</span>;
   }
-  return <span className="prod-desk-type prod-desk-type--spare">Spare Part</span>;
+  return <span className="qt-type-badge qt-type-badge--spare">SPARE</span>;
 }
 
 function StatusPill({ status }) {
@@ -479,17 +478,25 @@ export default function SalesOrdersListPage() {
     return mineOk && matchesSearch && matchesStatus && matchesDate;
   }), [orders, search, statusFilter, myOrdersOnly, dateFrom, dateTo, currentUserId]);
 
+  /** Summary cards always match the rows currently shown in the table (like invoices). */
   const orderStats = useMemo(() => {
     const terminal = new Set(['paid', 'completed', 'delivered', 'cancelled', 'canceled']);
     let totalVal = 0;
     let pipeline = 0;
-    orders.forEach((o) => {
+    let invoiced = 0;
+    filteredOrders.forEach((o) => {
       totalVal += parseFloat(o.total_amount) || 0;
       const st = (o.status || '').toLowerCase().trim();
       if (!terminal.has(st)) pipeline += 1;
+      if (st === 'invoiced' || rowHasInvoice(o)) invoiced += 1;
     });
-    return { total: orders.length, totalVal, pipeline };
-  }, [orders]);
+    return {
+      total: filteredOrders.length,
+      totalVal,
+      pipeline,
+      invoiced,
+    };
+  }, [filteredOrders]);
 
   const selectedList = useMemo(
     () => filteredOrders.filter((o) => selectedIds.has(o.id)),
@@ -984,14 +991,14 @@ export default function SalesOrdersListPage() {
       )}
 
       <section className="exp-desk-kpi-grid so-kpi-grid so-kpi-grid--slim" aria-label="Summary">
-        <article className="so-kpi so-kpi--orders" title="All sales orders on record">
+        <article className="so-kpi so-kpi--orders" title="Orders matching current filters">
           <div className="so-kpi-top">
             <span className="so-kpi-label">Total orders</span>
             <span className="so-kpi-icon"><FileText size={16} aria-hidden="true" /></span>
           </div>
           <strong className="so-kpi-value">{fmtBig(orderStats.total)}</strong>
         </article>
-        <article className="so-kpi so-kpi--value" title="Sum of order totals">
+        <article className="so-kpi so-kpi--value" title="Sum of listed order totals">
           <div className="so-kpi-top">
             <span className="so-kpi-label">Total value</span>
             <span className="so-kpi-icon"><Wallet size={16} aria-hidden="true" /></span>
@@ -1000,41 +1007,71 @@ export default function SalesOrdersListPage() {
             {defaultCurrency} {formatCurrency(orderStats.totalVal)}
           </strong>
         </article>
-        <article className="so-kpi so-kpi--pipeline" title="Not yet completed, paid or cancelled">
+        <article className="so-kpi so-kpi--pipeline" title="Listed orders not yet completed, paid or cancelled">
           <div className="so-kpi-top">
             <span className="so-kpi-label">Pipeline</span>
             <span className="so-kpi-icon"><Clock size={16} aria-hidden="true" /></span>
           </div>
           <strong className="so-kpi-value">{fmtBig(orderStats.pipeline)}</strong>
         </article>
-        <article className="so-kpi so-kpi--listed" title="Matching current filters">
+        <article className="so-kpi so-kpi--listed" title="Listed orders that already have an invoice">
           <div className="so-kpi-top">
-            <span className="so-kpi-label">Listed now</span>
-            <span className="so-kpi-icon"><CheckCircle2 size={16} aria-hidden="true" /></span>
+            <span className="so-kpi-label">Invoiced</span>
+            <span className="so-kpi-icon"><Receipt size={16} aria-hidden="true" /></span>
           </div>
-          <strong className="so-kpi-value">{filteredOrders.length}</strong>
+          <strong className="so-kpi-value">{fmtBig(orderStats.invoiced)}</strong>
         </article>
       </section>
 
-      <section className="exp-desk-results so-orders-table qt-quotations-table" aria-label="Sales orders">
-        <div className="prod-desk-results-head">
-          <span className="prod-desk-results-count">
+      <section className="exp-desk-results so-orders-table" aria-label="Sales orders">
+        <div className="exp-desk-results-head">
+          <span className="exp-desk-results-count">
             {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'}
           </span>
         </div>
 
+        {selectedIds.size > 0 ? (
+          <div className="qt-bulk-bar">
+            <span>{selectedIds.size} selected</span>
+            {canInvoice ? (
+              <a
+                className="qt-bulk-btn"
+                href={buildInvoiceCreateHref(urls, Array.from(selectedIds)[0])}
+                onClick={(e) => handleInvoiceLinkClick(
+                  e,
+                  buildInvoiceCreateHref(urls, Array.from(selectedIds)[0]),
+                  { ...invoiceTransformOptions(selectedList[0]), module: init?.module || 'sales' },
+                )}
+              >
+                <Receipt size={14} style={{ marginRight: 6 }} aria-hidden="true" />
+                Invoice
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+
         {filteredOrders.length === 0 ? (
-          <div className="prod-desk-empty">
-            <FileText size={28} style={{ color: '#94a3b8' }} aria-hidden="true" />
-            <p className="prod-desk-empty-title">No sales orders found</p>
-            <p className="prod-desk-empty-sub">Try adjusting your search or filters.</p>
+          <div className="exp-desk-empty">
+            <FileText className="exp-desk-empty-icon" aria-hidden="true" />
+            <p className="exp-desk-empty-title">No sales orders found</p>
+            <p className="exp-desk-empty-sub">Try adjusting your search or filters.</p>
           </div>
         ) : (
-          <div className="prod-desk-table-wrap">
-            <table className="prod-desk-table">
+          <div className="exp-desk-table-wrap">
+            <table className="exp-desk-table so-desk-table">
+              <colgroup>
+                <col className="so-col-check" />
+                <col className="so-col-number" />
+                <col className="so-col-customer" />
+                <col className="so-col-salesperson" />
+                <col className="so-col-date" />
+                <col className="so-col-total" />
+                <col className="so-col-status" />
+                <col className="so-col-actions" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th style={{ width: 40 }}>
+                  <th className="so-col-check" title="Select all">
                     <input
                       type="checkbox"
                       checked={filteredOrders.length > 0 && selectedIds.size === filteredOrders.length}
@@ -1042,13 +1079,13 @@ export default function SalesOrdersListPage() {
                       aria-label="Select all"
                     />
                   </th>
-                  <th>Order</th>
-                  {supportsOrderTypeSplit ? <th>Type</th> : null}
-                  <th>Customer</th>
-                  <th>Salesperson</th>
-                  <th>Status</th>
-                  <th>Total</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th className="so-col-number">Order</th>
+                  <th className="so-col-customer">Customer</th>
+                  <th className="so-col-salesperson">Salesperson</th>
+                  <th className="so-col-date">Date</th>
+                  <th className="so-col-total">Total</th>
+                  <th className="so-col-status">Status</th>
+                  <th className="qt-col-actions so-col-actions" aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
@@ -1059,11 +1096,7 @@ export default function SalesOrdersListPage() {
                       key={o.id}
                       data-order-id={o.id}
                       aria-current={openedId === Number(o.id) ? 'true' : undefined}
-                      className={[
-                        'exp-desk-row-clickable',
-                        isSelected ? 'is-selected' : '',
-                        openedId === Number(o.id) ? 'is-glow' : '',
-                      ].filter(Boolean).join(' ')}
+                      className={`exp-desk-row-clickable${isSelected ? ' qt-row-selected' : ''}${openedId === Number(o.id) ? ' is-opened' : ''}`}
                       tabIndex={0}
                       onClick={(event) => handleRowClick(event, o)}
                       onKeyDown={(event) => {
@@ -1073,7 +1106,7 @@ export default function SalesOrdersListPage() {
                         }
                       }}
                     >
-                      <td onClick={(e) => e.stopPropagation()}>
+                      <td className="so-col-check" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -1081,42 +1114,35 @@ export default function SalesOrdersListPage() {
                           aria-label={`Select ${o.order_number || o.id}`}
                         />
                       </td>
-                      <td>
-                        <div className="prod-desk-product">
-                          <div style={{ minWidth: 0 }}>
-                            <a
-                              href={buildUrl(urls.view, o.id)}
-                              className="prod-desk-name"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                markOpened(o.id);
-                              }}
-                            >
-                              {o.order_number || `Order #${o.id}`}
-                            </a>
-                            <div className="prod-desk-code">DATE: {formatDateTime(o.created_at)}</div>
-                          </div>
-                        </div>
+                      <td className="so-col-number">
+                        <span className="so-number-cell">
+                          <a
+                            href={buildUrl(urls.view, o.id)}
+                            className="exp-desk-ref"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markOpened(o.id);
+                            }}
+                          >
+                            {o.order_number || `Order #${o.id}`}
+                          </a>
+                          {supportsOrderTypeSplit && o.order_type ? (
+                            <span className="so-number-type"><TypeBadge type={o.order_type} /></span>
+                          ) : null}
+                        </span>
                       </td>
-                      {supportsOrderTypeSplit ? (
-                        <td>
-                          <TypeBadge type={o.order_type} />
-                        </td>
-                      ) : null}
-                      <td>
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            textTransform: isRoadmaster ? 'uppercase' : 'none',
-                          }}
+                      <td className="so-col-customer">
+                        <span
+                          className="exp-desk-cell-main so-cell-customer"
+                          style={{ textTransform: isRoadmaster ? 'uppercase' : 'none' }}
                           title={o.company_name || ''}
                         >
                           {o.company_name || '-'}
-                        </div>
+                        </span>
                       </td>
-                      <td>
+                      <td className="so-col-salesperson">
                         <div className="qt-salesperson-cell">
-                          <span className="qt-avatar qt-avatar--sm" style={avatarStyle(o.salesperson)}>
+                          <span className="qt-avatar" style={avatarStyle(o.salesperson)}>
                             {initials(o.salesperson)}
                           </span>
                           <span className="qt-salesperson-name" title={o.salesperson || ''}>
@@ -1124,16 +1150,14 @@ export default function SalesOrdersListPage() {
                           </span>
                         </div>
                       </td>
-                      <td>
-                        <StatusPill status={o.status} />
+                      <td className="so-col-date">
+                        <span className="exp-desk-subdate so-date-value">
+                          {formatDateTime(o.created_at)}
+                        </span>
                       </td>
-                      <td>
-                        <div className="prod-desk-muted">Amount</div>
-                        <div className="prod-desk-price">
-                          {formatCurrency(o.total_amount)}
-                        </div>
-                      </td>
-                      <td className="qt-col-actions" onClick={(e) => e.stopPropagation()} data-qt-actions="1">
+                      <td className="exp-desk-amt so-col-total">{formatCurrency(o.total_amount)}</td>
+                      <td className="so-col-status"><StatusPill status={o.status} /></td>
+                      <td className="qt-col-actions so-col-actions" onClick={(e) => e.stopPropagation()} data-qt-actions="1">
                         <div className="qt-actions-menu">
                           <button
                             type="button"
@@ -1184,26 +1208,6 @@ export default function SalesOrdersListPage() {
             </table>
           </div>
         )}
-
-        {selectedIds.size > 0 ? (
-          <div className="prod-desk-bulk-bar">
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, borderRight: '1px solid #334155', paddingRight: '0.75rem' }}>
-              {selectedIds.size} selected
-            </span>
-            {canInvoice ? (
-              <a
-                href={buildInvoiceCreateHref(urls, Array.from(selectedIds)[0])}
-                onClick={(e) => handleInvoiceLinkClick(
-                  e,
-                  buildInvoiceCreateHref(urls, Array.from(selectedIds)[0]),
-                  { ...invoiceTransformOptions(selectedList[0]), module: init?.module || 'sales' },
-                )}
-              >
-                Invoice
-              </a>
-            ) : null}
-          </div>
-        ) : null}
       </section>
     </div>
   );

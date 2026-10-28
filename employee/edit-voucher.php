@@ -23,13 +23,11 @@ if (!isset($_GET['id'])) {
 
 $voucher_id = intval($_GET['id']);
 
-// Check if user can edit this voucher (full or limited classification edit)
-if (!canEditVoucher($voucher_id, $_SESSION['user_id']) && !canLimitedEditApprovedVoucher($voucher_id, $_SESSION['user_id'])) {
-    header('Location: ' . $dashboardUrl);
-    exit();
-}
+$sessionUserId = function_exists('resolveVoucherSessionUserId')
+    ? resolveVoucherSessionUserId($pdo)
+    : (int) ($_SESSION['user_id'] ?? 0);
 
-// Get voucher details
+// Get voucher details first so Edit uses the loaded row (and can heal stuck is_draft).
 $stmt = $pdo->prepare("SELECT * FROM payment_vouchers WHERE id = ?");
 $stmt->execute([$voucher_id]);
 $voucher = $stmt->fetch();
@@ -39,9 +37,24 @@ if (!$voucher) {
     exit();
 }
 
+if (function_exists('healPublishedVoucherStuckIsDraft')) {
+    healPublishedVoucherStuckIsDraft($pdo, $voucher);
+}
+
+// Check if user can edit this voucher (full or limited classification edit)
+$canEditThis = function_exists('canEditVoucherRow')
+    ? canEditVoucherRow($voucher, $sessionUserId)
+    : (function_exists('canEditVoucher') && canEditVoucher($voucher_id, $sessionUserId));
+$canLimitedEdit = function_exists('canLimitedEditApprovedVoucher')
+    && canLimitedEditApprovedVoucher($voucher_id, $sessionUserId);
+if (!$canEditThis && !$canLimitedEdit) {
+    header('Location: ' . $dashboardUrl);
+    exit();
+}
+
 // Private Back/leave drafts are creator-only until Create Voucher publishes them.
 if (function_exists('viewerCanSeePrivateDraftVoucher')
-    && !viewerCanSeePrivateDraftVoucher($voucher, (int) ($_SESSION['user_id'] ?? 0))) {
+    && !viewerCanSeePrivateDraftVoucher($voucher, $sessionUserId)) {
     header('Location: ' . $dashboardUrl);
     exit();
 }
@@ -496,63 +509,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
         }
         
         // Handle newly uploaded supporting files (additive; existing retained)
-        $newUploads = 0;
-        if (!empty($_FILES['supporting_files']) && isset($_FILES['supporting_files']['name']) && is_array($_FILES['supporting_files']['name'])) {
-            ensureVoucherAttachmentsSchema();
-            $baseDir = ensureVoucherUploadsDir();
-            $voucherDir = $baseDir . DIRECTORY_SEPARATOR . $voucher_id;
-            if (!is_dir($voucherDir)) { @mkdir($voucherDir, 0775, true); }
-            if (is_dir($voucherDir) && !is_writable($voucherDir)) { @chmod($voucherDir, 0775); }
-            // Allowed types mirror create page
-            $allowedExt = ['pdf','jpg','jpeg','png','gif','doc','docx','xls','xlsx'];
-            // Dynamic max: min(upload_max_filesize, post_max_size)
-            $toBytes = function($val){ $val=trim((string)$val); if($val==='') return 0; $u=strtolower(substr($val,-1)); $n=(float)$val; switch($u){ case 'g': $n*=1024; case 'm': $n*=1024; case 'k': $n*=1024; } return (int)round($n); };
-            $maxServer = min(max(1,$toBytes(ini_get('upload_max_filesize') ?: '10M')), max(1,$toBytes(ini_get('post_max_size') ?: '10M')));
-            $names = $_FILES['supporting_files']['name'];
-            $tmps  = $_FILES['supporting_files']['tmp_name'];
-            $types = $_FILES['supporting_files']['type'];
-            $sizes = $_FILES['supporting_files']['size'];
-            $errs  = $_FILES['supporting_files']['error'];
-            $count = count($names);
-            for ($i=0; $i<$count; $i++) {
-                if (!isset($names[$i]) || $errs[$i] !== UPLOAD_ERR_OK) continue;
-                $orig = $names[$i];
-                $size = (int)($sizes[$i] ?? 0);
-                $mime = (string)($types[$i] ?? 'application/octet-stream');
-                $tmp  = $tmps[$i];
-                if ($size <= 0 || $size > $maxServer) continue;
-                $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
-                if (!in_array($ext, $allowedExt, true)) continue;
-                $safeBase = preg_replace('/[^A-Za-z0-9_-]+/', '_', pathinfo($orig, PATHINFO_FILENAME));
-                if ($safeBase === '') { $safeBase = 'file'; }
-                $unique = $safeBase . '_' . date('YmdHis') . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
-                $destAbs = $voucherDir . DIRECTORY_SEPARATOR . $unique;
-                $destRel = 'assets/uploads/vouchers/' . $voucher_id . '/' . $unique;
-                if (@move_uploaded_file($tmp, $destAbs)) {
-                    addVoucherAttachment($voucher_id, $destRel, $orig, $mime, $size, (int)$_SESSION['user_id']);
-                    $newUploads++;
-                }
-            }
-            if ($newUploads > 0) {
-                try {
-                    // Recompute total attachments count from DB for accuracy
-                    $attCountStmt = $pdo->prepare('SELECT COUNT(*) AS c FROM voucher_attachments WHERE voucher_id = ?');
-                    $attCountStmt->execute([$voucher_id]);
-                    $realCount = (int)($attCountStmt->fetch()['c'] ?? $newUploads);
-                    $up = $pdo->prepare('UPDATE payment_vouchers SET supporting_documents = ? WHERE id = ?');
-                    $up->execute([$realCount, $voucher_id]);
-                } catch (Throwable $e) { /* ignore */ }
-            } else {
-                // Keep supporting_documents aligned with real rows even when no new files arrived.
-                try {
-                    $attCountStmt = $pdo->prepare('SELECT COUNT(*) AS c FROM voucher_attachments WHERE voucher_id = ?');
-                    $attCountStmt->execute([$voucher_id]);
-                    $realCount = (int) ($attCountStmt->fetchColumn() ?: 0);
-                    $up = $pdo->prepare('UPDATE payment_vouchers SET supporting_documents = ? WHERE id = ?');
-                    $up->execute([$realCount, $voucher_id]);
-                } catch (Throwable $e) { /* ignore */ }
-            }
+        $queuedUploads = function_exists('countQueuedSupportingFileUploads')
+            ? countQueuedSupportingFileUploads($_FILES['supporting_files'] ?? null)
+            : 0;
+        $uploadUserId = function_exists('resolveVoucherSessionUserId')
+            ? resolveVoucherSessionUserId($pdo)
+            : (int) ($_SESSION['user_id'] ?? 0);
+        $newUploads = function_exists('processVoucherSupportingFileUploads')
+            ? (int) processVoucherSupportingFileUploads($voucher_id, $uploadUserId)
+            : 0;
+        if ($queuedUploads > 0 && $newUploads < 1) {
+            throw new Exception(
+                'Supporting file upload failed. Use PDF, JPG, PNG, GIF, WEBP, DOC, or XLS (max size allowed by the server) and try again.'
+            );
         }
+        try {
+            $attCountStmt = $pdo->prepare('SELECT COUNT(*) AS c FROM voucher_attachments WHERE voucher_id = ?');
+            $attCountStmt->execute([$voucher_id]);
+            $realCount = (int) ($attCountStmt->fetchColumn() ?: 0);
+            $up = $pdo->prepare('UPDATE payment_vouchers SET supporting_documents = ? WHERE id = ?');
+            $up->execute([$realCount, $voucher_id]);
+        } catch (Throwable $e) { /* ignore */ }
 
         if (function_exists('syncVoucherApprovalAssignees')) {
             syncVoucherApprovalAssignees($pdo, $voucher_id, array(

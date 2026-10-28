@@ -2133,6 +2133,78 @@ function expenses_stock_purchase_voucher_purpose_sql(string $alias = 'pv'): stri
 }
 
 /**
+ * Build revenue-style monthly voucher-entry labels for stock purchase PVs.
+ * Same rule as revenue: PREFIX-YEAR-MONTH-SEQ (resets each calendar month).
+ * Official voucher_no (PV/UGT/…) is unchanged in the database.
+ *
+ * @return array<int, string> map of payment_vouchers.id => "PV-2026-10-1"
+ */
+function expenses_stock_purchase_voucher_entry_labels(PDO $pdo): array
+{
+    if (!function_exists('tableExists') || !tableExists('payment_vouchers', $pdo)) {
+        return [];
+    }
+
+    $purposeSql = expenses_stock_purchase_voucher_purpose_sql('pv');
+    $params = [];
+    $where = ['1=1', $purposeSql];
+
+    if (function_exists('columnExists') && columnExists('payment_vouchers', 'is_draft', $pdo)) {
+        $where[] = 'IFNULL(pv.is_draft, 0) = 0';
+    }
+
+    if (function_exists('companyScopeSql')) {
+        [$companyFrag, $companyParams] = companyScopeSql('payment_vouchers', 'pv');
+        if (is_string($companyFrag) && trim($companyFrag) !== '') {
+            $where[] = $companyFrag;
+            foreach ($companyParams as $cp) {
+                $params[] = $cp;
+            }
+        }
+    }
+
+    $whereSql = implode(' AND ', $where);
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT pv.id, pv.date_created
+             FROM payment_vouchers pv
+             WHERE {$whereSql}
+             ORDER BY COALESCE(DATE(pv.date_created), '1970-01-01') ASC, pv.id ASC"
+        );
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        error_log('expenses_stock_purchase_voucher_entry_labels: ' . $e->getMessage());
+
+        return [];
+    }
+
+    $seqByMonth = [];
+    $labels = [];
+    foreach ($rows as $row) {
+        $id = (int) ($row['id'] ?? 0);
+        if ($id <= 0) {
+            continue;
+        }
+        $dateRaw = trim((string) ($row['date_created'] ?? ''));
+        if ($dateRaw !== '' && strlen($dateRaw) >= 10) {
+            $dateRaw = substr($dateRaw, 0, 10);
+        }
+        $ts = $dateRaw !== '' ? strtotime($dateRaw) : false;
+        $year = $ts ? (int) date('Y', $ts) : (int) date('Y');
+        $month = $ts ? (int) date('n', $ts) : (int) date('n');
+        $key = $year . '-' . $month;
+        if (!isset($seqByMonth[$key])) {
+            $seqByMonth[$key] = 0;
+        }
+        $seqByMonth[$key]++;
+        $labels[$id] = 'PV-' . $year . '-' . $month . '-' . $seqByMonth[$key];
+    }
+
+    return $labels;
+}
+
+/**
  * Map a payment voucher (+ first line item) into the expenses desk row shape.
  *
  * @param array<string, mixed> $voucher
@@ -2374,6 +2446,10 @@ function expenses_fetch_vouchers_as_list_rows(PDO $pdo, array $filters = [], str
         return [];
     }
 
+    $entryLabels = $purposeMode === 'stock_purchase'
+        ? expenses_stock_purchase_voucher_entry_labels($pdo)
+        : [];
+
     $out = [];
     foreach ($rows as $voucher) {
         $firstItem = [
@@ -2390,6 +2466,16 @@ function expenses_fetch_vouchers_as_list_rows(PDO $pdo, array $filters = [], str
             $vu = trim((string) ($row['voucher_url'] ?? ''));
             if ($vu !== '' && stripos($vu, 'from=purchases') === false) {
                 $row['voucher_url'] = $vu . (str_contains($vu, '?') ? '&' : '?') . 'from=purchases';
+            }
+            $pvId = (int) ($row['pv_id'] ?? 0);
+            $official = (string) ($row['expense_number'] ?? '');
+            $row['voucher_no_official'] = $official;
+            if ($pvId > 0 && isset($entryLabels[$pvId])) {
+                // Purchases desk "Voucher Entry" follows revenue rules: PV-YEAR-MONTH-SEQ
+                $row['voucher_entry'] = $entryLabels[$pvId];
+                $row['expense_number'] = $entryLabels[$pvId];
+            } else {
+                $row['voucher_entry'] = $official;
             }
         }
         $out[] = $row;

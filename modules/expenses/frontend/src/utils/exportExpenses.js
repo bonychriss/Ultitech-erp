@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatDateDigits, formatVoucherRef } from './formatDisplay';
 
 function safeFilePart(value) {
   const cleaned = String(value || '')
@@ -29,13 +30,7 @@ function cleanText(value) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  const normalized = String(dateStr).includes('T') ? String(dateStr) : String(dateStr).replace(' ', 'T');
-  const d = new Date(normalized);
-  if (Number.isNaN(d.getTime())) return String(dateStr);
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}/${mm}/${d.getFullYear()}`;
+  return formatDateDigits(dateStr);
 }
 
 function expenseStatusLabel(row) {
@@ -56,10 +51,13 @@ function expensePayee(row) {
   return String(row?.description ?? row?.display_name ?? '').trim() || '(No payee)';
 }
 
-function toRows(expenses) {
+function toRows(expenses, { purchasesDesk = false } = {}) {
+  const refKey = purchasesDesk ? 'Voucher Entry' : 'Reference';
   return expenses.map((row, index) => ({
     'S/N': index + 1,
-    Reference: row.expense_number || `#${row.id}`,
+    [refKey]: purchasesDesk
+      ? formatVoucherRef(row.voucher_entry || row.expense_number, `#${row.id}`)
+      : (row.expense_number || `#${row.id}`),
     Date: formatDate(row.date),
     Payee: expensePayee(row),
     Account: row.category_name || row.main_account_name || '',
@@ -70,15 +68,16 @@ function toRows(expenses) {
   }));
 }
 
-export async function exportExpensesExcel(expenses) {
+export async function exportExpensesExcel(expenses, options = {}) {
   if (!expenses.length) {
     throw new Error('No expenses found for the selected date range.');
   }
-  const rows = toRows(expenses);
+  const purchasesDesk = Boolean(options.purchasesDesk);
+  const rows = toRows(expenses, { purchasesDesk });
   const worksheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Expenses');
-  XLSX.writeFile(workbook, stamp('expenses', 'xlsx'));
+  XLSX.utils.book_append_sheet(workbook, worksheet, purchasesDesk ? 'Purchases' : 'Expenses');
+  XLSX.writeFile(workbook, stamp(purchasesDesk ? 'purchases' : 'expenses', 'xlsx'));
 }
 
 export async function exportExpensesPdf(expenses, options = {}) {
@@ -86,6 +85,8 @@ export async function exportExpensesPdf(expenses, options = {}) {
     throw new Error('No expenses found for the selected date range.');
   }
 
+  const purchasesDesk = Boolean(options.purchasesDesk);
+  const refHead = purchasesDesk ? 'Voucher Entry' : 'Reference';
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
   const marginX = 36;
   let y = 40;
@@ -93,7 +94,7 @@ export async function exportExpensesPdf(expenses, options = {}) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(15, 23, 42);
-  doc.text(options.title || 'Expenses report', marginX, y);
+  doc.text(options.title || (purchasesDesk ? 'Purchases report' : 'Expenses report'), marginX, y);
   y += 18;
 
   if (options.subtitle) {
@@ -108,7 +109,11 @@ export async function exportExpensesPdf(expenses, options = {}) {
 
   const body = expenses.map((row, index) => [
     String(index + 1),
-    cleanText(row.expense_number || `#${row.id}`) || '-',
+    cleanText(
+      purchasesDesk
+        ? formatVoucherRef(row.voucher_entry || row.expense_number, `#${row.id}`)
+        : (row.expense_number || `#${row.id}`),
+    ) || '-',
     formatDate(row.date),
     cleanText(expensePayee(row)),
     cleanText(row.category_name || row.main_account_name || '-') || '-',
@@ -119,7 +124,7 @@ export async function exportExpensesPdf(expenses, options = {}) {
 
   autoTable(doc, {
     startY: y,
-    head: [['S/N', 'Reference', 'Date', 'Payee', 'Account', 'Payment', 'Amount', 'Status']],
+    head: [['S/N', refHead, 'Date', 'Payee', 'Account', 'Payment', 'Amount', 'Status']],
     body,
     styles: {
       font: 'helvetica',

@@ -415,25 +415,28 @@ export default function QuotationsListPage() {
     });
   }, [filteredQuotations]);
 
+  /** Summary cards always match the rows currently shown in the table (like invoices). */
   const quotationStats = useMemo(() => {
-    const y = new Date().getFullYear();
     let totalVal = 0;
     let pending = 0;
-    let convertedYtd = 0;
-    quotations.forEach((q) => {
+    let converted = 0;
+    filteredQuotations.forEach((q) => {
       totalVal += parseFloat(q.total_amount) || 0;
-      const st = (q.status || '').toLowerCase();
+      const st = (q.status || '').toLowerCase().trim();
       if (['quotation', 'draft', 'sent'].includes(st)) pending += 1;
       if (['confirmed', 'invoiced', 'processing', 'shipped', 'delivered', 'paid', 'completed'].includes(st)) {
-        const d = q.created_at ? new Date(q.created_at) : null;
-        if (d && !Number.isNaN(d.getTime()) && d.getFullYear() === y) convertedYtd += 1;
+        converted += 1;
       }
     });
-    return { total: quotations.length, totalVal, pending, convertedYtd };
-  }, [quotations]);
+    return {
+      total: filteredQuotations.length,
+      totalVal,
+      pending,
+      converted,
+    };
+  }, [filteredQuotations]);
 
   const kpiTraceContext = useMemo(() => ({
-    quotations,
     filteredQuotations,
     filters: {
       search,
@@ -442,7 +445,7 @@ export default function QuotationsListPage() {
     },
     statusOptions: STATUS_OPTIONS,
     defaultCurrency,
-  }), [quotations, filteredQuotations, search, statusFilter, myQuotationsOnly, defaultCurrency]);
+  }), [filteredQuotations, search, statusFilter, myQuotationsOnly, defaultCurrency]);
 
   const selectedList = useMemo(
     () => filteredQuotations.filter((q) => selectedIds.has(q.id)),
@@ -893,14 +896,14 @@ export default function QuotationsListPage() {
       )}
 
       <section className="exp-desk-kpi-grid so-kpi-grid so-kpi-grid--slim" aria-label="Summary">
-        <button {...kpiCardProps('totalQuotations', 'total quotations', 'orders')}>
+        <button {...kpiCardProps('totalQuotations', 'total quotations', 'orders')} title="Quotations matching current filters. Click to see breakdown">
           <div className="so-kpi-top">
             <span className="so-kpi-label">Total quotations</span>
             <span className="so-kpi-icon"><FileText size={16} aria-hidden="true" /></span>
           </div>
           <strong className="so-kpi-value">{fmtBig(quotationStats.total)}</strong>
         </button>
-        <button {...kpiCardProps('totalValue', 'total value', 'value')}>
+        <button {...kpiCardProps('totalValue', 'total value', 'value')} title="Sum of listed quotation totals. Click to see breakdown">
           <div className="so-kpi-top">
             <span className="so-kpi-label">Total value</span>
             <span className="so-kpi-icon"><Wallet size={16} aria-hidden="true" /></span>
@@ -909,19 +912,19 @@ export default function QuotationsListPage() {
             {defaultCurrency} {formatCurrency(quotationStats.totalVal)}
           </strong>
         </button>
-        <button {...kpiCardProps('pending', 'pending', 'pipeline')}>
+        <button {...kpiCardProps('pending', 'pending', 'pipeline')} title="Listed quotations still in Quotation, Draft, or Sent. Click to see breakdown">
           <div className="so-kpi-top">
             <span className="so-kpi-label">Pending</span>
             <span className="so-kpi-icon"><Clock size={16} aria-hidden="true" /></span>
           </div>
           <strong className="so-kpi-value">{fmtBig(quotationStats.pending)}</strong>
         </button>
-        <button {...kpiCardProps('listedNow', 'listed now', 'listed')} title="Matching current filters. Click to see breakdown">
+        <button {...kpiCardProps('converted', 'converted', 'listed')} title="Listed quotations that moved past pending. Click to see breakdown">
           <div className="so-kpi-top">
-            <span className="so-kpi-label">Listed now</span>
+            <span className="so-kpi-label">Converted</span>
             <span className="so-kpi-icon"><CheckCircle2 size={16} aria-hidden="true" /></span>
           </div>
-          <strong className="so-kpi-value">{filteredQuotations.length}</strong>
+          <strong className="so-kpi-value">{fmtBig(quotationStats.converted)}</strong>
         </button>
       </section>
 

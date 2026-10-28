@@ -1470,7 +1470,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 @media (max-width: 767.98px) {
-  /* Purchases: match balances mobile visibility ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ cards instead of wide table */
+  /* Purchases: match balances mobile visibility ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ cards instead of wide table */
   .exp-desk-page--purchases .exp-desk-table-wrap {
     display: none !important;
   }
@@ -1490,10 +1490,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
     width: 100%;
     min-width: 0;
   }
-  /* Total Payables is the odd last card ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ span the full row */
-  .exp-desk-page--purchases .exp-desk-kpi-grid--dash > .exp-desk-kpi-card:last-child {
-    grid-column: 1 / -1;
-  }
+  /* Total Payables is the odd last card ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ span the full row */
   .exp-desk-page--purchases .exp-desk-results-head {
     padding: 0.35rem 0;
   }

@@ -1309,89 +1309,172 @@ export default function ExpensesDeskPage() {
       )}
 
       <section className="exp-desk-kpi-grid exp-desk-kpi-grid--dash" aria-label="Summary">
-        <button {...kpiCardProps('totalExclusive', 'total expenses exclusive')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--violet">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 6v12M8 10h5a2.5 2.5 0 0 1 0 5H8" />
-            </svg>
-          </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">{purchasesDesk ? 'Total Purchases' : 'Total Expenses (Exclusive)'}</div>
-            <KpiMoney amount={summaryStats.total_exclusive} />
-            <div className="exp-desk-kpi-helper">{purchasesDesk ? 'voucher totals' : 'amount − VAT'}</div>
-          </div>
-        </button>
-        {!purchasesDesk && (
-        <button {...kpiCardProps('inputVat', 'Input VAT')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--indigo">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M4 7h16M4 12h10M4 17h7" />
-              <path d="M18 12v7M15.5 16.5 18 19l2.5-2.5" />
-            </svg>
-          </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">Input VAT</div>
-            <KpiMoney amount={summaryStats.input_vat} />
-          </div>
-        </button>
+        {purchasesDesk ? (
+          <>
+            <button {...kpiCardProps('totalExclusive', 'Total Exclusive')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--violet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v12M8 10h5a2.5 2.5 0 0 1 0 5H8" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Total Exclusive</div>
+                <KpiMoney amount={summaryStats.total_exclusive} />
+                <div className="exp-desk-kpi-helper">Before VAT</div>
+              </div>
+            </button>
+            <button {...kpiCardProps('vat', 'VAT')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--indigo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M4 7h16M4 12h10M4 17h7" />
+                  <path d="M18 12v7M15.5 16.5 18 19l2.5-2.5" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">VAT</div>
+                <KpiMoney amount={summaryStats.vat} />
+                <div className="exp-desk-kpi-helper">Total VAT included</div>
+              </div>
+            </button>
+            <button {...kpiCardProps('grossTotal', 'Gross Total')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--teal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <rect x="2" y="7" width="20" height="14" rx="2" />
+                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Gross Total</div>
+                <KpiMoney amount={summaryStats.gross_total} />
+                <div className="exp-desk-kpi-helper">After tax</div>
+              </div>
+            </button>
+            <button {...kpiCardProps('totalPurchases', 'Total Purchases')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <path d="M14 2v6h6M8 13h8M8 17h6" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Total Purchases</div>
+                <KpiMoney amount={summaryStats.total_purchases} />
+                <div className="exp-desk-kpi-helper">
+                  {summaryStats.purchase_count
+                    ? `${Number(summaryStats.purchase_count).toLocaleString('en-US')} in view`
+                    : 'All entries in view'}
+                </div>
+              </div>
+            </button>
+            <button {...kpiCardProps('outstanding', 'Outstanding')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--amber">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Outstanding</div>
+                <KpiMoney amount={summaryStats.outstanding} />
+                <div className="exp-desk-kpi-helper">{formatPctOfTotal(summaryStats.pct_outstanding)}</div>
+              </div>
+            </button>
+            <button {...kpiCardProps('overdue', 'Overdue')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--rose">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <path d="M12 9v4M12 17h.01" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Overdue</div>
+                <KpiMoney amount={summaryStats.overdue} />
+                <div className="exp-desk-kpi-helper">{formatPctOfTotal(summaryStats.pct_overdue)}</div>
+              </div>
+            </button>
+          </>
+        ) : (
+          <>
+            <button {...kpiCardProps('totalExclusive', 'total expenses exclusive')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--violet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v12M8 10h5a2.5 2.5 0 0 1 0 5H8" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Total Expenses (Exclusive)</div>
+                <KpiMoney amount={summaryStats.total_exclusive} />
+                <div className="exp-desk-kpi-helper">amount − VAT</div>
+              </div>
+            </button>
+            <button {...kpiCardProps('inputVat', 'Input VAT')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--indigo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M4 7h16M4 12h10M4 17h7" />
+                  <path d="M18 12v7M15.5 16.5 18 19l2.5-2.5" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Input VAT</div>
+                <KpiMoney amount={summaryStats.input_vat} />
+              </div>
+            </button>
+            <button {...kpiCardProps('totalInclusive', 'Total Expenses (VAT + Exclusive)')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--teal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <rect x="2" y="7" width="20" height="14" rx="2" />
+                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Total Expenses (VAT + Exclusive)</div>
+                <KpiMoney amount={summaryStats.total_inclusive} />
+                <div className="exp-desk-kpi-helper">gross</div>
+              </div>
+            </button>
+            <button {...kpiCardProps('totalBank', 'Total Bank')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M3 10h18L12 3 3 10z" />
+                  <path d="M5 10v8h14v-8" />
+                  <path d="M9 18v-4h6v4" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Total Bank</div>
+                <KpiMoney amount={summaryStats.total_bank} />
+                <div className="exp-desk-kpi-helper">bank / mobile / cheque</div>
+              </div>
+            </button>
+            <button {...kpiCardProps('totalCash', 'Total Cash')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--amber">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <rect x="2" y="6" width="20" height="12" rx="2" />
+                  <circle cx="12" cy="12" r="2.5" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Total Cash</div>
+                <KpiMoney amount={summaryStats.total_cash} />
+              </div>
+            </button>
+            <button {...kpiCardProps('totalPayables', 'Total Payables')}>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--rose">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M8 7h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3V9a2 2 0 0 1 2-2z" />
+                  <path d="M10 12h6M10 15h4" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Total Payables</div>
+                <KpiMoney amount={summaryStats.total_payables} />
+                <div className="exp-desk-kpi-helper">Credit payment type</div>
+              </div>
+            </button>
+          </>
         )}
-        <button {...kpiCardProps('totalInclusive', purchasesDesk ? 'Listed vouchers' : 'Total Expenses (VAT + Exclusive)')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--teal">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <rect x="2" y="7" width="20" height="14" rx="2" />
-              <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-            </svg>
-          </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">{purchasesDesk ? 'Listed now' : 'Total Expenses (VAT + Exclusive)'}</div>
-            {purchasesDesk ? (
-              <div className="exp-desk-kpi-value">{expenses.length}</div>
-            ) : (
-              <KpiMoney amount={summaryStats.total_inclusive} />
-            )}
-            <div className="exp-desk-kpi-helper">{purchasesDesk ? 'matching filters' : 'gross'}</div>
-          </div>
-        </button>
-        <button {...kpiCardProps('totalBank', 'Total Bank')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--blue">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M3 10h18L12 3 3 10z" />
-              <path d="M5 10v8h14v-8" />
-              <path d="M9 18v-4h6v4" />
-            </svg>
-          </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">Total Bank</div>
-            <KpiMoney amount={summaryStats.total_bank} />
-            <div className="exp-desk-kpi-helper">bank / mobile / cheque</div>
-          </div>
-        </button>
-        <button {...kpiCardProps('totalCash', 'Total Cash')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--amber">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <rect x="2" y="6" width="20" height="12" rx="2" />
-              <circle cx="12" cy="12" r="2.5" />
-            </svg>
-          </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">Total Cash</div>
-            <KpiMoney amount={summaryStats.total_cash} />
-          </div>
-        </button>
-        <button {...kpiCardProps('totalPayables', 'Total Payables')}>
-          <div className="exp-desk-kpi-icon exp-desk-kpi-icon--rose">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M8 7h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3V9a2 2 0 0 1 2-2z" />
-              <path d="M10 12h6M10 15h4" />
-            </svg>
-          </div>
-          <div className="exp-desk-kpi-body">
-            <div className="exp-desk-kpi-label">Total Payables</div>
-            <KpiMoney amount={summaryStats.total_payables} />
-            <div className="exp-desk-kpi-helper">Credit payment type</div>
-          </div>
-        </button>
       </section>
 
       {showAnalytics ? (

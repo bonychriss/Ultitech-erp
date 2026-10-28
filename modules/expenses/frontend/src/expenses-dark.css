@@ -26,17 +26,16 @@ html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-
   color: #e9edef !important;
 }
 
-html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link {
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .exp-desk-breadcrumb,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-sep,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-current {
   color: #00a884 !important;
 }
 
 html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link:hover {
   color: #06cf9c !important;
-}
-
-html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-sep,
-html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-current {
-  color: #8696a0 !important;
 }
 
 /* --- List page --- */
@@ -137,6 +136,72 @@ html[data-theme="dark"] body.page-exp-desk .exp-desk-mobile-card-main .exp-desk-
 
 html[data-theme="dark"] body.page-exp-desk .exp-desk-mobile-card-main .exp-desk-party-name {
   color: #8696a0 !important;
+}
+
+/* Party avatars — saturated tones so initials read on teal-night cards */
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av {
+  border-width: 1px;
+  font-weight: 800;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av--tone-0 {
+  background: rgba(249, 115, 22, 0.28) !important;
+  color: #fdba74 !important;
+  border-color: rgba(249, 115, 22, 0.55) !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av--tone-1 {
+  background: rgba(59, 130, 246, 0.3) !important;
+  color: #93c5fd !important;
+  border-color: rgba(59, 130, 246, 0.55) !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av--tone-2 {
+  background: rgba(34, 197, 94, 0.28) !important;
+  color: #86efac !important;
+  border-color: rgba(34, 197, 94, 0.5) !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av--tone-3 {
+  background: rgba(139, 92, 246, 0.3) !important;
+  color: #c4b5fd !important;
+  border-color: rgba(139, 92, 246, 0.55) !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av--tone-4 {
+  background: rgba(236, 72, 153, 0.3) !important;
+  color: #f9a8d4 !important;
+  border-color: rgba(236, 72, 153, 0.55) !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av--tone-5 {
+  background: rgba(6, 182, 212, 0.28) !important;
+  color: #67e8f9 !important;
+  border-color: rgba(6, 182, 212, 0.5) !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av--tone-6 {
+  background: rgba(234, 179, 8, 0.28) !important;
+  color: #fde047 !important;
+  border-color: rgba(234, 179, 8, 0.5) !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av--tone-7 {
+  background: rgba(99, 102, 241, 0.3) !important;
+  color: #a5b4fc !important;
+  border-color: rgba(99, 102, 241, 0.55) !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av--tone-8 {
+  background: rgba(168, 85, 247, 0.3) !important;
+  color: #d8b4fe !important;
+  border-color: rgba(168, 85, 247, 0.55) !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av--tone-9 {
+  background: rgba(148, 163, 184, 0.28) !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.5) !important;
 }
 
 html[data-theme="dark"] body.page-exp-desk .exp-desk-mobile-card-amt,
@@ -549,9 +614,9 @@ html[data-theme="dark"] body.page-exp-desk .exp-desk-type-meta {
 }
 
 html[data-theme="dark"] body.page-exp-desk .exp-desk-type {
-  background: #202c33 !important;
+  background: transparent !important;
   color: #e9edef !important;
-  border: 1px solid #2a3942;
+  border: none;
 }
 
 html[data-theme="dark"] body.page-exp-desk .exp-desk-type--with-icon svg,

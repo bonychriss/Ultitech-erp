@@ -35,12 +35,11 @@ import {
   fetchPostDraftPreview,
   isPurchasesDesk,
   postDraftExpense,
-  purchasesCreateVoucherUrl,
   purchasesVoucherViewUrl,
 } from '../api/expensesDesk';
 import { exportExpensesExcel, exportExpensesPdf } from '../utils/exportExpenses';
 import { resolveKpiTrace } from '../utils/kpiTrace';
-import { buildListedSummaryStats } from '../utils/summaryStats';
+import { buildListedSummaryStats, buildPurchasesSummaryStats } from '../utils/summaryStats';
 
 const emptyAdvancedFilters = {
   status: '',
@@ -598,8 +597,8 @@ export default function ExpensesDeskPage() {
     { value: 'bank', label: 'Bank transfer' },
   ];
   const summaryStats = useMemo(
-    () => buildListedSummaryStats(expenses),
-    [expenses],
+    () => (purchasesDesk ? buildPurchasesSummaryStats(expenses) : buildListedSummaryStats(expenses)),
+    [expenses, purchasesDesk],
   );
   const statusBreakdown = useMemo(
     () => buildStatusBreakdownFromRows(expenses),
@@ -628,10 +627,15 @@ export default function ExpensesDeskPage() {
   }
 
   function openKpiTrace(key) {
-    const trace = resolveKpiTrace(key, init, expenses, filters);
+    const trace = resolveKpiTrace(key, init, expenses, filters, { purchasesDesk });
     if (trace) {
       setActiveKpiTrace({ key, trace });
     }
+  }
+
+  function formatPctOfTotal(value) {
+    const pct = Number(value) || 0;
+    return `${pct.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}% of total`;
   }
 
   function kpiCardProps(key, label) {
@@ -1248,17 +1252,7 @@ export default function ExpensesDeskPage() {
           </div>
         );
 
-        const createControl = purchasesDesk ? (
-          <a
-            href={purchasesCreateVoucherUrl()}
-            className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
-            aria-label="Create purchase"
-          >
-            <Plus size={16} aria-hidden="true" />
-            <span className="exp-desk-btn-label-desktop">Create purchase</span>
-            <span className="exp-desk-btn-label-mobile">New</span>
-          </a>
-        ) : (
+        const createControl = purchasesDesk ? null : (
           <button
             type="button"
             className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
@@ -1626,7 +1620,7 @@ export default function ExpensesDeskPage() {
                       <td className="col-type">
                         <div className="exp-desk-type-cell">
                           <span className="exp-desk-type exp-desk-type--with-icon">
-                            <TypeIcon size={14} strokeWidth={2} aria-hidden="true" />
+                            <TypeIcon size={12} strokeWidth={2} aria-hidden="true" />
                             <span>{methodLabel}</span>
                           </span>
                           {accountLabel ? (

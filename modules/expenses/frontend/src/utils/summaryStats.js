@@ -90,6 +90,98 @@ export function buildListedSummaryStats(expenses = []) {
   };
 }
 
+function isPurchasesKpiRow(row) {
+  const display = String(row?.display_status ?? '').toLowerCase().trim();
+  const status = String(row?.status ?? '').toLowerCase().trim();
+  if (['draft', 'rejected', 'deleted'].includes(display) || ['draft', 'rejected', 'deleted'].includes(status)) {
+    return false;
+  }
+  return true;
+}
+
+function isPurchaseUnpaid(row) {
+  if (Number(row?.is_paid) === 1) return false;
+  const display = String(row?.display_status ?? '').toLowerCase().trim();
+  const status = String(row?.status ?? '').toLowerCase().trim();
+  if (display === 'paid' || status === 'paid') return false;
+  return true;
+}
+
+function purchaseDueDate(row) {
+  const raw = String(row?.due_date || row?.payment_due_date || row?.date || '').trim();
+  if (!raw) return null;
+  const due = new Date(raw.includes('T') ? raw : `${raw}T12:00:00`);
+  if (Number.isNaN(due.getTime())) return null;
+  due.setHours(0, 0, 0, 0);
+  return due;
+}
+
+/**
+ * Purchases desk KPIs (mirror revenue desk): exclusive, VAT, gross,
+ * total purchases, outstanding unpaid, and overdue unpaid.
+ */
+export function buildPurchasesSummaryStats(expenses = []) {
+  let totalExclusive = 0;
+  let vat = 0;
+  let grossTotal = 0;
+  let purchaseCount = 0;
+  let outstanding = 0;
+  let overdue = 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (const row of Array.isArray(expenses) ? expenses : []) {
+    if (!isPurchasesKpiRow(row)) continue;
+    const amount = Number(row.amount) || 0;
+    if (amount <= 0) continue;
+
+    let tax = Math.max(0, Number(row.tax_amount) || 0);
+    if (tax > amount) tax = amount;
+    const exclusive = Math.max(0, amount - tax);
+
+    totalExclusive += exclusive;
+    vat += tax;
+    grossTotal += amount;
+    purchaseCount += 1;
+
+    if (!isPurchaseUnpaid(row)) continue;
+    outstanding += amount;
+    const due = purchaseDueDate(row);
+    if (due && due < today) {
+      overdue += amount;
+    }
+  }
+
+  const pctBase = grossTotal > 0.009 ? grossTotal : 0;
+  return {
+    total_exclusive: Math.round(totalExclusive * 100) / 100,
+    vat: Math.round(vat * 100) / 100,
+    gross_total: Math.round(grossTotal * 100) / 100,
+    total_purchases: Math.round(grossTotal * 100) / 100,
+    purchase_count: purchaseCount,
+    outstanding: Math.round(outstanding * 100) / 100,
+    overdue: Math.round(overdue * 100) / 100,
+    pct_outstanding: pctBase > 0.009 ? (outstanding / pctBase) * 100 : 0,
+    pct_overdue: pctBase > 0.009 ? (overdue / pctBase) * 100 : 0,
+  };
+}
+
+export function purchasesRowsForTrace(expenses = [], key = '') {
+  const rows = (Array.isArray(expenses) ? expenses : []).filter(isPurchasesKpiRow);
+  if (key === 'outstanding' || key === 'overdue') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return rows.filter((row) => {
+      if (!isPurchaseUnpaid(row)) return false;
+      if (key !== 'overdue') return true;
+      const due = purchaseDueDate(row);
+      return Boolean(due && due < today);
+    });
+  }
+  return rows;
+}
+
 export function summaryRowsForTrace(expenses = []) {
   return (Array.isArray(expenses) ? expenses : []).filter(inSummary);
 }

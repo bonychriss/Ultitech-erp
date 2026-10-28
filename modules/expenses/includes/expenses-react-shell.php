@@ -166,6 +166,11 @@ body.page-exp-desk .employee-header--exp-desk .exp-module-update-badge,
 body.page-exp-desk .employee-header--exp-desk .header-actions-tray .exp-module-update-badge {
     display: none !important;
 }
+body.page-exp-desk .employee-header--exp-desk .header-content,
+body.page-exp-desk .employee-header--exp-desk .header-right.header-actions-tray,
+body.page-exp-desk .employee-header--exp-desk .exp-desk-header-tools {
+    position: static !important;
+}
 body.page-exp-desk .employee-header--exp-desk .header-right.header-actions-tray {
     display: flex !important;
     align-items: center !important;
@@ -334,13 +339,16 @@ html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-
     color: #e9edef !important;
 }
 
-html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link {
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .exp-desk-breadcrumb,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-sep,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-current {
     color: #00a884 !important;
 }
 
-html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-sep,
-html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-current {
-    color: #8696a0 !important;
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link:hover {
+    color: #06cf9c !important;
 }
 
 /* Match sidebar to WhatsApp teal-night (balances). */

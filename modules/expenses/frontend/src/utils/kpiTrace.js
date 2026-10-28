@@ -1,4 +1,10 @@
-import { buildListedSummaryStats, paymentBucket, summaryRowsForTrace } from './summaryStats';
+import {
+  buildListedSummaryStats,
+  buildPurchasesSummaryStats,
+  paymentBucket,
+  purchasesRowsForTrace,
+  summaryRowsForTrace,
+} from './summaryStats';
 
 function formatMoney(value, currency = 'TZS') {
   const code = String(currency || 'TZS').replace(/^TSh$/i, 'TZS');
@@ -153,6 +159,45 @@ const SUMMARY_KPI_META = {
   },
 };
 
+const PURCHASES_KPI_META = {
+  totalExclusive: {
+    title: 'Total Exclusive',
+    field: 'total_exclusive',
+    method: 'SUM(amount − tax_amount) on listed purchase vouchers',
+    confirmation: 'VAT-exclusive total of purchases currently in view.',
+  },
+  vat: {
+    title: 'VAT',
+    field: 'vat',
+    method: 'SUM(tax_amount) on listed purchase vouchers',
+    confirmation: 'Total VAT included in the purchases currently in view.',
+  },
+  grossTotal: {
+    title: 'Gross Total',
+    field: 'gross_total',
+    method: 'SUM(amount) on listed purchase vouchers',
+    confirmation: 'Gross purchase total including VAT.',
+  },
+  totalPurchases: {
+    title: 'Total Purchases',
+    field: 'total_purchases',
+    method: 'SUM(amount) for every purchase voucher in the current filtered list',
+    confirmation: 'Total value of purchase vouchers currently listed.',
+  },
+  outstanding: {
+    title: 'Outstanding',
+    field: 'outstanding',
+    method: 'SUM(amount) where the purchase voucher is not paid',
+    confirmation: 'Unpaid purchase vouchers still outstanding.',
+  },
+  overdue: {
+    title: 'Overdue',
+    field: 'overdue',
+    method: 'SUM(amount) where unpaid and due/date is before today',
+    confirmation: 'Unpaid purchase vouchers that are past due.',
+  },
+};
+
 function normalizeTrace(trace) {
   return {
     ...trace,
@@ -208,9 +253,37 @@ function buildSummaryTraceFallback(key, init, expenses) {
   };
 }
 
-export function resolveKpiTrace(key, init, expenses, filters) {
+function buildPurchasesTraceFromList(key, expenses, filters, categories = []) {
+  const meta = PURCHASES_KPI_META[key];
+  if (!meta) return null;
+
+  const summary = buildPurchasesSummaryStats(expenses);
+  const rows = purchasesRowsForTrace(expenses, key);
+
+  return {
+    title: meta.title,
+    headline: String(summary[meta.field] ?? 0),
+    currency: 'TZS',
+    source: 'listed purchase vouchers',
+    method: meta.method,
+    criteria: [
+      ...filterCriteria(filters, categories),
+      { label: 'Summary scope', value: 'Matches the filtered purchases table and summary cards' },
+    ],
+    confirmation: meta.confirmation,
+    viaAi: false,
+    items: rows.map(mapExpenseToTraceItem),
+    footnote: 'Totals follow the filters applied to the purchases table.',
+  };
+}
+
+export function resolveKpiTrace(key, init, expenses, filters, options = {}) {
   if (key === 'listedNow') {
     return buildListedNowTrace(expenses, filters, init?.categories ?? []);
+  }
+
+  if (options.purchasesDesk && PURCHASES_KPI_META[key]) {
+    return normalizeTrace(buildPurchasesTraceFromList(key, expenses, filters, init?.categories ?? []));
   }
 
   if (SUMMARY_KPI_META[key]) {

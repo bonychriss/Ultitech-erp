@@ -1470,7 +1470,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 @media (max-width: 767.98px) {
-  /* Purchases: match balances mobile visibility ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ cards instead of wide table */
+  /* Purchases: match balances mobile visibility ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ cards instead of wide table */
   .exp-desk-page--purchases .exp-desk-table-wrap {
     display: none !important;
   }
@@ -1490,7 +1490,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
     width: 100%;
     min-width: 0;
   }
-  /* Total Payables is the odd last card ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ span the full row */
+  /* Total Payables is the odd last card ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ span the full row */
   .exp-desk-page--purchases .exp-desk-results-head {
     padding: 0.35rem 0;
   }
@@ -4546,6 +4546,32 @@ body.page-exp-desk button.exp-desk-row-action {
   font-weight: 500;
 }
 
+/* Purchases KPIs — tighter type so amounts like VAT fit cleanly */
+.exp-desk-page--purchases .exp-desk-kpi-label {
+  font-size: 0.62rem;
+}
+
+.exp-desk-page--purchases .exp-desk-kpi-value,
+.exp-desk-page--purchases .exp-desk-kpi-value--money {
+  font-size: clamp(0.68rem, 1vw, 0.82rem);
+}
+
+.exp-desk-page--purchases .exp-desk-kpi-value--money.is-lg {
+  font-size: clamp(0.62rem, 0.95vw, 0.74rem);
+}
+
+.exp-desk-page--purchases .exp-desk-kpi-value--money.is-xl {
+  font-size: clamp(0.56rem, 0.88vw, 0.68rem);
+}
+
+.exp-desk-page--purchases .exp-desk-kpi-value--money.is-xxl {
+  font-size: clamp(0.5rem, 0.8vw, 0.62rem);
+}
+
+.exp-desk-page--purchases .exp-desk-kpi-grid--dash .exp-desk-kpi-helper {
+  font-size: 0.62rem;
+}
+
 .exp-desk-analytics {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
@@ -5461,8 +5487,8 @@ body.page-exp-desk button.exp-desk-row-action {
 }
 
 .pur-kpi-sheet-icon {
-  width: 2.65rem;
-  height: 2.65rem;
+  width: 1.85rem;
+  height: 1.85rem;
   border-radius: 999px;
   background: #ede9fe;
   color: #7c3aed;
@@ -5478,14 +5504,14 @@ body.page-exp-desk button.exp-desk-row-action {
 
 .pur-kpi-sheet-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #0f172a;
 }
 
 .pur-kpi-sheet-headline {
-  margin: 0.15rem 0 0;
-  font-size: 1.45rem;
+  margin: 0.08rem 0 0;
+  font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #0f172a;
@@ -5493,8 +5519,8 @@ body.page-exp-desk button.exp-desk-row-action {
 }
 
 .pur-kpi-sheet-helper {
-  margin: 0.2rem 0 0;
-  font-size: 0.78rem;
+  margin: 0.12rem 0 0;
+  font-size: 0.6rem;
   color: #64748b;
 }
 
@@ -5565,11 +5591,19 @@ body.page-exp-desk button.exp-desk-row-action {
   min-height: 2.35rem;
   padding: 0 0.7rem;
   border: 1px solid #e2e8f0;
-  border-radius: 0.7rem;
+  border-radius: 0.7rem !important;
   background: #fff;
   color: #334155;
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+.pur-kpi-sheet-date {
+  flex: 1 1 auto;
+  min-width: 11.5rem;
+  min-height: 2.05rem;
+  height: 2.05rem;
+  padding: 0 1.85rem 0 0.75rem;
 }
 
 .pur-kpi-sheet-date select,
@@ -5596,22 +5630,28 @@ body.page-exp-desk button.exp-desk-row-action {
 .pur-kpi-sheet-filters-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 2.35rem;
-  padding: 0 0.8rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.7rem;
-  background: #fff;
+  justify-content: center;
+  width: 2.05rem;
+  min-height: 2.05rem;
+  height: 2.05rem;
+  padding: 0;
+  border: none !important;
+  border-radius: 0.55rem !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: #334155;
-  font-size: 0.8rem;
-  font-weight: 600;
   cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.pur-kpi-sheet-filters-btn:hover {
+  color: #0f172a;
+  background: rgba(15, 23, 42, 0.05) !important;
 }
 
 .pur-kpi-sheet-filters-btn.is-active {
-  border-color: #c7d2fe;
   color: #4338ca;
-  background: #eef2ff;
+  background: transparent !important;
 }
 
 .pur-kpi-sheet-filters-panel {
@@ -5705,15 +5745,23 @@ body.page-exp-desk button.exp-desk-row-action {
   font-size: 0.85rem;
 }
 
+/* Beat global style.css `button { border-radius: 0 !important }` */
 .pur-kpi-sheet-card {
   width: 100%;
   text-align: left;
   border: 1px solid #e2e8f0;
-  border-radius: 0.9rem;
+  border-radius: 16px !important;
   background: #fff;
   padding: 0.75rem 0.8rem;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.pur-kpi-sheet-card .exp-desk-party-av {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 999px !important;
+  font-size: 0.7rem;
 }
 
 .pur-kpi-sheet-card:hover,

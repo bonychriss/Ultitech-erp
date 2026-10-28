@@ -1,4 +1,4 @@
-/* Expenses / Purchases desk — WhatsApp teal-night dark (match balances) */
+/* Expenses / Purchases desk â WhatsApp teal-night dark (match balances) */
 
 html[data-theme="dark"] body.page-exp-desk,
 html[data-theme="dark"] body.page-exp-desk.dashboard,
@@ -138,7 +138,7 @@ html[data-theme="dark"] body.page-exp-desk .exp-desk-mobile-card-main .exp-desk-
   color: #8696a0 !important;
 }
 
-/* Party avatars — saturated tones so initials read on teal-night cards */
+/* Party avatars â saturated tones so initials read on teal-night cards */
 html[data-theme="dark"] body.page-exp-desk .exp-desk-party-av {
   border-width: 1px;
   font-weight: 800;
@@ -1384,7 +1384,7 @@ html[data-theme="dark"] body.page-exp-desk .exp-desk-analytics-empty--overlay p 
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
 }
 
-/* Purchases KPI sheet � dark */
+/* Purchases KPI sheet  dark */
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet {
   background: #111b21;
   box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.45);
@@ -1417,27 +1417,35 @@ html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-close:hover {
   color: #e9edef;
 }
 
+html[data-theme="dark"] .pur-kpi-sheet-confirm,
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-confirm {
-  background: #0b141a;
-  border-color: #2a3942;
+  background: #202c33 !important;
+  border: 1px solid #3b4a54 !important;
 }
 
+html[data-theme="dark"] .pur-kpi-sheet-confirm-title,
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-confirm-title {
-  color: #00a884;
+  color: #00a884 !important;
 }
 
+html[data-theme="dark"] .pur-kpi-sheet-confirm-text,
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-confirm-text {
-  color: #e9edef;
+  color: #e9edef !important;
 }
 
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-date,
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-sort,
-html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-filters-btn,
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-search input,
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-card,
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-filter-field select {
   background: #0b141a;
   border-color: #2a3942;
+  color: #e9edef;
+}
+
+html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-filters-btn {
+  background: transparent !important;
+  border: none !important;
   color: #e9edef;
 }
 
@@ -1447,9 +1455,8 @@ html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-filters-panel {
 }
 
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-filters-btn.is-active {
-  background: #202c33;
-  border-color: #3b4a54;
-  color: #e9edef;
+  background: transparent !important;
+  color: #00a884;
 }
 
 html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-search-icon {

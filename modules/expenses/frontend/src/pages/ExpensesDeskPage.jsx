@@ -39,8 +39,28 @@ import {
   purchasesVoucherViewUrl,
 } from '../api/expensesDesk';
 import { exportExpensesExcel, exportExpensesPdf } from '../utils/exportExpenses';
-import { resolveKpiTrace } from '../utils/kpiTrace';
+import { isPurchasesKpiKey, resolveKpiTrace } from '../utils/kpiTrace';
 import { buildListedSummaryStats, buildPurchasesSummaryStats } from '../utils/summaryStats';
+
+function purchasesKpiKeyFromLocation() {
+  if (typeof window === 'undefined') return '';
+  const key = String(new URLSearchParams(window.location.search).get('kpi') || '').trim();
+  return isPurchasesKpiKey(key) ? key : '';
+}
+
+function writePurchasesKpiToLocation(key) {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (key && isPurchasesKpiKey(key)) {
+    url.searchParams.set('kpi', key);
+  } else {
+    url.searchParams.delete('kpi');
+  }
+  const next = `${url.pathname}${url.search}${url.hash}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (next === current) return;
+  window.history.replaceState(window.history.state, '', next);
+}
 
 const emptyAdvancedFilters = {
   status: '',
@@ -631,8 +651,29 @@ export default function ExpensesDeskPage() {
     const trace = resolveKpiTrace(key, init, expenses, filters, { purchasesDesk });
     if (trace) {
       setActiveKpiTrace({ key, trace });
+      if (purchasesDesk) {
+        writePurchasesKpiToLocation(key);
+      }
     }
   }
+
+  function closeKpiTrace() {
+    setActiveKpiTrace(null);
+    if (purchasesDesk) {
+      writePurchasesKpiToLocation('');
+    }
+  }
+
+  // Keep purchases KPI sheet open across refresh via ?kpi=
+  useEffect(() => {
+    if (!purchasesDesk || !init || loading) return undefined;
+    const key = purchasesKpiKeyFromLocation();
+    if (!key) return undefined;
+    const trace = resolveKpiTrace(key, init, expenses, filters, { purchasesDesk: true });
+    if (!trace) return undefined;
+    setActiveKpiTrace({ key, trace });
+    return undefined;
+  }, [purchasesDesk, init, loading, expenses, filters]);
 
   function formatPctOfTotal(value) {
     const pct = Number(value) || 0;
@@ -1228,11 +1269,18 @@ export default function ExpensesDeskPage() {
         <PurchaseKpiTraceSheet
           trace={activeKpiTrace.trace}
           traceKey={activeKpiTrace.key}
-          onClose={() => setActiveKpiTrace(null)}
+          onClose={closeKpiTrace}
           onOpenItem={(item) => {
-            if (item?.voucherUrl) {
-              window.location.href = item.voucherUrl;
+            if (!item?.voucherUrl) return;
+            // Remember purchases (+ open KPI) so Back returns here after refresh-safe navigation.
+            try {
+              if (window.erpNavBack && typeof window.erpNavBack.push === 'function') {
+                window.erpNavBack.push({ href: window.location.href, force: true });
+              }
+            } catch {
+              /* ignore */
             }
+            window.location.assign(item.voucherUrl);
           }}
         />
       )}
@@ -1242,7 +1290,7 @@ export default function ExpensesDeskPage() {
           traceKey={activeKpiTrace.key}
           filters={filters}
           listedCount={expenses.length}
-          onClose={() => setActiveKpiTrace(null)}
+          onClose={closeKpiTrace}
         />
       )}
       {renderFiltersPanel()}

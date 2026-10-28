@@ -161,7 +161,7 @@ export default function PurchaseKpiTraceSheet({
         <header className="pur-kpi-sheet-head">
           <div className="pur-kpi-sheet-head-main">
             <div className="pur-kpi-sheet-icon" aria-hidden="true">
-              <FileText size={22} strokeWidth={2} />
+              <FileText size={18} strokeWidth={2} />
             </div>
             <div className="pur-kpi-sheet-head-copy">
               <h2 id="pur-kpi-sheet-title" className="pur-kpi-sheet-title">{trace.title}</h2>
@@ -199,9 +199,10 @@ export default function PurchaseKpiTraceSheet({
               type="button"
               className={`pur-kpi-sheet-filters-btn${filtersOpen || statusFilter ? ' is-active' : ''}`}
               onClick={() => setFiltersOpen((v) => !v)}
+              aria-label="Filters"
+              title="Filters"
             >
-              <SlidersHorizontal size={15} aria-hidden="true" />
-              <span>Filters</span>
+              <SlidersHorizontal size={18} strokeWidth={2.25} aria-hidden="true" />
             </button>
           </div>
 
@@ -229,7 +230,7 @@ export default function PurchaseKpiTraceSheet({
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search voucher #, payee, description..."
+              placeholder="Search voucher no, payee, description..."
               aria-label="Search contributing records"
             />
           </div>
@@ -261,7 +262,7 @@ export default function PurchaseKpiTraceSheet({
             visibleItems.map((item) => {
               const payee = String(item.payee || '-');
               const TypeIcon = paymentTypeIcon(item);
-              const methodLabel = String(item.paymentMethodLabel || '').trim() || 'ù';
+              const methodLabel = String(item.paymentMethodLabel || '').trim() || '-';
               const accountLabel = String(item.categoryName || '').trim();
               return (
                 <button
@@ -283,7 +284,7 @@ export default function PurchaseKpiTraceSheet({
                         {partyInitials(payee)}
                       </span>
                       <div className="pur-kpi-sheet-card-copy">
-                        <span className="pur-kpi-sheet-card-ref">{item.expenseNumber || 'ù'}</span>
+                        <span className="pur-kpi-sheet-card-ref">{item.expenseNumber || '-'}</span>
                         <span className="pur-kpi-sheet-card-payee">{payee}</span>
                       </div>
                     </div>
@@ -303,7 +304,7 @@ export default function PurchaseKpiTraceSheet({
                       <TypeIcon size={13} aria-hidden="true" />
                       <span>
                         {methodLabel}
-                        {accountLabel ? ` ù ${accountLabel}` : ''}
+                        {accountLabel ? ` / ${accountLabel}` : ''}
                       </span>
                     </div>
                     <ChevronRight size={16} className="pur-kpi-sheet-card-chevron" aria-hidden="true" />

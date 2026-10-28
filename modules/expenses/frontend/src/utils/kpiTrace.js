@@ -298,6 +298,10 @@ export function purchasesKpiHelper(key) {
   return helpers[key] || '';
 }
 
+export function isPurchasesKpiKey(key) {
+  return Boolean(PURCHASES_KPI_META[key]);
+}
+
 function buildPurchasesTraceFromList(key, expenses, filters, categories = []) {
   const meta = PURCHASES_KPI_META[key];
   if (!meta) return null;

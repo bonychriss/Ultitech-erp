@@ -2204,7 +2204,21 @@ function expenses_map_general_voucher_to_list_row(array $voucher, ?array $firstI
         'is_paid' => $isPaid ? 1 : 0,
         'can_edit' => 0,
         'can_delete' => 0,
-        'voucher_url' => '../../employee/view-voucher.php?id=' . $pvId . '&module=voucher',
+        'voucher_url' => (static function () use ($pvId): string {
+            $qs = 'id=' . $pvId . '&module=voucher';
+            if (function_exists('company_url')) {
+                try {
+                    return (string) company_url('employee/view-voucher.php') . '?' . $qs;
+                } catch (Throwable $e) {
+                    // fall through
+                }
+            }
+            if (function_exists('app_url')) {
+                return (string) app_url('/employee/view-voucher.php') . '?' . $qs;
+            }
+
+            return '../../employee/view-voucher.php?' . $qs;
+        })(),
         'prepared_by' => (string) ($voucher['prepared_by'] ?? ''),
     ];
 }

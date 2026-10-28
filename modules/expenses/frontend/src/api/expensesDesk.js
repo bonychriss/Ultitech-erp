@@ -88,6 +88,18 @@ export function purchasesCreateVoucherUrl() {
   return '../../employee/create-voucher.php?module=voucher&purpose=stock_purchase';
 }
 
+/**
+ * Full payment-voucher detail URL (POs + attachments live on view-voucher).
+ */
+export function purchasesVoucherViewUrl(expense) {
+  if (!expense || typeof expense !== 'object') return '';
+  const boot = typeof expense.voucher_url === 'string' ? expense.voucher_url.trim() : '';
+  if (boot !== '') return boot;
+  const pvId = Number(expense.pv_id || 0);
+  if (pvId <= 0) return '';
+  return `../../employee/view-voucher.php?id=${pvId}&module=voucher`;
+}
+
 export function exportUrl(filters = {}) {
   const params = new URLSearchParams({ module: 'expenses' });
   if (filters.search) params.set('search', filters.search);

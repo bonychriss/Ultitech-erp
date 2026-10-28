@@ -29,6 +29,7 @@ import {
   isPurchasesDesk,
   postDraftExpense,
   purchasesCreateVoucherUrl,
+  purchasesVoucherViewUrl,
 } from '../api/expensesDesk';
 import { exportExpensesExcel, exportExpensesPdf } from '../utils/exportExpenses';
 import { resolveKpiTrace } from '../utils/kpiTrace';
@@ -713,10 +714,21 @@ export default function ExpensesDeskPage() {
     });
   }
 
+  function openExpenseDetails(expense) {
+    setSelectedId(expense.row_key || Number(expense.id) || 0);
+    if (purchasesDesk) {
+      const voucherUrl = purchasesVoucherViewUrl(expense);
+      if (voucherUrl) {
+        window.location.href = voucherUrl;
+        return;
+      }
+    }
+    setPreviewExpense(expense);
+  }
+
   function handleExpenseRowClick(event, expense) {
     if (isRowActionTarget(event.target)) return;
-    setSelectedId(expense.row_key || Number(expense.id) || 0);
-    setPreviewExpense(expense);
+    openExpenseDetails(expense);
   }
 
   useEffect(() => {
@@ -1386,8 +1398,7 @@ export default function ExpensesDeskPage() {
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault();
-                          setSelectedId(expense.row_key || Number(expense.id) || 0);
-                          setPreviewExpense(expense);
+                          openExpenseDetails(expense);
                         }
                       }}
                     >
@@ -1479,8 +1490,7 @@ export default function ExpensesDeskPage() {
           onClose={closeRowMenu}
           deleting={deletingDraftId === rowMenu.id}
           onView={(expense) => {
-            setSelectedId(Number(expense.id) || 0);
-            setPreviewExpense(expense);
+            openExpenseDetails(expense);
           }}
           onEdit={(expense) => {
             setPreviewExpense(null);

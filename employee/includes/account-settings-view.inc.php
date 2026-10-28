@@ -12,53 +12,80 @@ $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-passwo
 ?>
 <section class="editor-section" id="profile-photo">
     <div class="section-header">
-        <h2 class="section-title">Profile Photo</h2>
-        <p class="section-subtitle">Use the camera on your profile card to upload a new avatar. JPG, PNG, GIF, or WEBP.</p>
+        <h2 class="section-title"><i class="fas fa-image" style="color:#7c3aed;margin-right:0.4rem;"></i>Profile Photo</h2>
+        <p class="section-subtitle">Use the camera on your device or upload a new avatar. JPG, PNG, GIF or WEBP (max 2MB).</p>
     </div>
-    <p class="help-text" style="margin:0;">Your photo appears on vouchers, approvals, and the employee header across Accounting.</p>
+    <div class="ps-photo-actions">
+        <div class="ps-photo-preview">
+            <?php if ($profilePhotoUrl !== ''): ?>
+                <img src="<?= $esc($profilePhotoUrl) ?>" alt="Current photo">
+            <?php else: ?>
+                <span><?= $esc($initial) ?></span>
+            <?php endif; ?>
+        </div>
+        <form method="post" enctype="multipart/form-data" style="margin:0;">
+            <label class="ps-upload-btn">
+                <i class="fas fa-upload"></i> Upload new photo
+                <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
+            </label>
+        </form>
+        <?php if ($profilePhotoUrl !== ''): ?>
+            <form method="post" style="margin:0;" onsubmit="return confirm('Remove your profile photo?');">
+                <button type="submit" name="remove_profile_photo" value="1" class="ps-remove-btn">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+            </form>
+        <?php endif; ?>
+    </div>
 </section>
 
 <section class="editor-section" id="personal-details">
     <div class="section-header">
-        <h2 class="section-title">Personal Details</h2>
+        <h2 class="section-title"><i class="fas fa-user" style="color:#7c3aed;margin-right:0.4rem;"></i>Personal Details</h2>
         <p class="section-subtitle">Update your name, contact information, and account identifiers.</p>
     </div>
-    <div class="form-row">
-        <label class="form-label">Full Name</label>
+    <div class="ps-details-grid">
         <div>
+            <label class="form-label">Full Name</label>
             <form method="post" class="inline-field-form">
-                <input type="text" name="new_full_name" class="form-input" value="<?= $esc($user['full_name'] ?? '') ?>" required minlength="2">
+                <div class="ps-icon-field" style="flex:1;min-width:0;">
+                    <i class="fas fa-user"></i>
+                    <input type="text" name="new_full_name" class="form-input" value="<?= $esc($user['full_name'] ?? '') ?>" required minlength="2">
+                </div>
+                <button type="submit" class="btn-save btn-save-inline">Update</button>
+            </form>
+        </div>
+        <div>
+            <label class="form-label">Username</label>
+            <form method="post" class="inline-field-form">
+                <div class="ps-icon-field" style="flex:1;min-width:0;">
+                    <i class="fas fa-at"></i>
+                    <input type="text" name="new_username" class="form-input" value="<?= $esc($user['username'] ?? '') ?>" required minlength="3">
+                </div>
+                <button type="submit" class="btn-save btn-save-inline">Update</button>
+            </form>
+        </div>
+        <div>
+            <label class="form-label">Email</label>
+            <form method="post" class="inline-field-form">
+                <div class="ps-icon-field" style="flex:1;min-width:0;">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" name="new_email" class="form-input" value="<?= $esc($user['email'] ?? '') ?>" required autocomplete="email">
+                </div>
                 <button type="submit" class="btn-save btn-save-inline">Update</button>
             </form>
         </div>
     </div>
-    <div class="form-row">
-        <label class="form-label">Username</label>
-        <div>
-            <form method="post" class="inline-field-form">
-                <input type="text" name="new_username" class="form-input" value="<?= $esc($user['username'] ?? '') ?>" required minlength="3">
-                <button type="submit" class="btn-save btn-save-inline">Update</button>
-            </form>
-        </div>
-    </div>
-    <div class="form-row">
-        <label class="form-label">Email</label>
-        <div>
-            <form method="post" class="inline-field-form">
-                <input type="email" name="new_email" class="form-input" value="<?= $esc($user['email'] ?? '') ?>" required autocomplete="email">
-                <button type="submit" class="btn-save btn-save-inline">Update</button>
-            </form>
-            <p class="help-text">Used for login and account recovery.</p>
-        </div>
-    </div>
-    <div class="form-row">
+    <div class="form-row" style="margin-top:1rem;">
         <label class="form-label">WhatsApp</label>
         <div>
             <form method="post" class="inline-field-form">
-                <input type="text" name="whatsapp_number" class="form-input" value="<?= $esc($user['whatsapp_number'] ?? '') ?>" placeholder="+255 712 345 678">
+                <div class="ps-icon-field" style="flex:1;min-width:0;">
+                    <i class="fas fa-phone"></i>
+                    <input type="text" name="whatsapp_number" class="form-input" value="<?= $esc($user['whatsapp_number'] ?? '') ?>" placeholder="+255 712 345 678">
+                </div>
                 <button type="submit" class="btn-save btn-save-inline">Save</button>
             </form>
-            <p class="help-text">Include country code for voucher and system notifications.</p>
         </div>
     </div>
 </section>

@@ -184,7 +184,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_FILES['profile_photo'])) {
             }
         }
     }
- else {
+    elseif (isset($_POST['remove_profile_photo'])) {
+        /* handled above */
+    } else {
 		$result = handleUserSignatureUpload($userId);
 		$feedback = $result['ok'] ? 'Signature saved successfully.' : ('Error: ' . $result['error']);
 	}
@@ -262,7 +264,8 @@ if (!empty($user['profile_photo']) && function_exists('mediaUrlFromPath')) {
 }
 $logoutUrl = function_exists('company_url') ? company_url('logout.php') : '../logout.php';
 $employeeHeaderTitle = 'Profile Settings';
-$employeeHeaderSubtitle = '';
+$homeUrl = $profileBackUrl;
+$employeeHeaderSubtitle = '<span style="color:#94a3b8;">Home</span> <span style="color:#cbd5e1;">/</span> <span style="color:#94a3b8;">Account</span> <span style="color:#cbd5e1;">/</span> <span style="color:#7c3aed;">Profile Settings</span>';
 $esc = static function ($value): string {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 };
@@ -302,122 +305,78 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
 	<?php if (function_exists('renderSystemFontHeadMarkup')) { renderSystemFontHeadMarkup(); } ?>
 	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 	<style>
-        body { font-family: var(--erp-font-family, 'Poppins', sans-serif); background: #e8eef4; color: #1e293b; }
-        .main-content-wrapper { padding: 0 0 3rem; }
+        body { font-family: var(--erp-font-family, 'Poppins', sans-serif); background: #f4f6fb; color: #1e293b; }
+        .main-content-wrapper { padding: 0 1.25rem 2.5rem; }
         .page-shell { padding-left: 0; max-width: none; }
-        .editor-shell { max-width: 1120px; margin: 0 auto; padding: 0 1.5rem; }
+        .editor-shell { max-width: 1120px; margin: 0 auto; padding: 0; }
 
-        .acct-banner {
-            height: 210px; margin: 0; border-radius: 0; position: relative; overflow: hidden;
+        .ps-hero {
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+            padding: 1.35rem 1.5rem; margin-bottom: 0.35rem;
+            border-radius: 1.35rem; color: #fff; position: relative; overflow: hidden;
             background:
-                linear-gradient(180deg, rgba(232, 238, 244, 0) 62%, #e8eef4 100%),
-                radial-gradient(ellipse 90% 70% at 18% 100%, #cbd5e1 0%, transparent 55%),
-                radial-gradient(ellipse 70% 80% at 52% 110%, #94a3b8 0%, transparent 50%),
-                radial-gradient(ellipse 80% 75% at 88% 105%, #64748b 0%, transparent 52%),
-                linear-gradient(180deg, #93c5fd 0%, #7dd3fc 28%, #bae6fd 52%, #e0f2fe 78%, #e8eef4 100%);
+                radial-gradient(ellipse 70% 120% at 90% 20%, rgba(196, 181, 253, 0.35), transparent 55%),
+                radial-gradient(ellipse 50% 80% at 10% 120%, rgba(167, 139, 250, 0.28), transparent 50%),
+                linear-gradient(115deg, #3b0764 0%, #5b21b6 42%, #6d28d9 100%);
         }
-
-        .acct-profile-layout {
-            display: grid;
-            grid-template-columns: 250px minmax(0, 1fr) 220px;
-            gap: 1.5rem;
-            align-items: start;
-            margin-top: -96px;
-            padding-bottom: 2.5rem;
+        .ps-hero::after {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 200'%3E%3Cpath d='M0 140 C160 80 280 180 420 110 C560 40 680 150 800 80 L800 200 L0 200 Z' fill='rgba(255,255,255,0.06)'/%3E%3C/svg%3E") bottom / cover no-repeat;
         }
-
-        .acct-profile-col {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            position: sticky;
-            top: 88px;
-        }
-
-        .acct-profile-card,
-        .acct-aside-card,
-        .editor-section {
-            background: #fff;
-            border-radius: 1.5rem;
-            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
-            border: none;
-        }
-
-        .acct-profile-card {
-            padding: 1.5rem 1.25rem 1.25rem;
-            text-align: center;
-        }
-        .account-avatar-wrap { position: relative; width: 128px; height: 128px; margin: 0 auto 0.95rem; }
+        .ps-hero-main { display: flex; align-items: center; gap: 1.15rem; min-width: 0; position: relative; z-index: 1; }
+        .account-avatar-wrap { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
         .account-avatar {
-            width: 128px; height: 128px; border-radius: 50%; background: #f1f5f9; overflow: hidden;
-            border: 5px solid #fff; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12); display: flex; align-items: center; justify-content: center;
+            width: 96px; height: 96px; border-radius: 50%; background: #ede9fe; overflow: hidden;
+            border: 4px solid rgba(255,255,255,0.9); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+            display: flex; align-items: center; justify-content: center;
         }
         .account-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .account-avatar-fallback { font-size: 2.5rem; font-weight: 700; color: #64748b; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+        .account-avatar-fallback { font-size: 2rem; font-weight: 800; color: #5b21b6; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
         .account-avatar-btn {
-            position: absolute; bottom: 4px; right: 4px; width: 34px; height: 34px; border-radius: 50%;
-            background: #fff; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; color: #1da1f2; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            position: absolute; bottom: 2px; right: 2px; width: 28px; height: 28px; border-radius: 50%;
+            background: #7c3aed; border: 2px solid #fff; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.18); font-size: 11px;
         }
-        .account-profile-name { font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0 0 2px; }
-        .account-profile-user { font-size: 0.9rem; color: #64748b; margin: 0 0 8px; }
-        .account-profile-email { font-size: 0.82rem; color: #1da1f2; margin: 0 0 12px; word-break: break-word; }
-        .account-profile-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+        .ps-hero-copy { min-width: 0; }
+        .ps-hero-copy h2 { margin: 0; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.02em; }
+        .ps-hero-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.35rem 0 0.45rem; }
+        .ps-hero-handle { color: rgba(255,255,255,0.82); font-size: 0.88rem; font-weight: 600; }
         .profile-badge {
-            display: inline-flex; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
-            background: #e8f5fe; color: #1da1f2;
+            display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+            background: rgba(255,255,255,0.18); color: #fff;
         }
         .profile-badge-muted { background: #f1f5f9; color: #475569; }
-        .profile-badge-success { background: #dcfce7; color: #166534; }
-        .acct-profile-meta-list {
-            list-style: none; margin: 0.35rem 0 0; padding: 0; text-align: left; font-size: 0.8rem; color: #64748b;
+        .profile-badge-success { background: #bbf7d0; color: #166534; }
+        .ps-hero-email { margin: 0 0 0.45rem; font-size: 0.84rem; color: rgba(255,255,255,0.78); display: flex; align-items: center; gap: 0.4rem; }
+        .ps-hero-meta { display: flex; flex-wrap: wrap; gap: 0.85rem 1.15rem; font-size: 0.78rem; color: rgba(255,255,255,0.78); }
+        .ps-hero-meta span { display: inline-flex; align-items: center; gap: 0.4rem; }
+        .ps-logout {
+            position: relative; z-index: 1; flex-shrink: 0;
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            min-height: 2.2rem; padding: 0 0.95rem; border-radius: 0.7rem;
+            background: rgba(255,255,255,0.12); color: #fff !important; text-decoration: none !important;
+            border: 1px solid rgba(255,255,255,0.22); font-size: 0.82rem; font-weight: 700;
         }
-        .acct-profile-meta-list li {
-            display: flex; align-items: center; gap: 0.55rem; padding: 0.32rem 0;
-        }
-        .acct-profile-meta-list i { width: 1rem; text-align: center; color: #94a3b8; }
-        .acct-profile-meta-list a { color: #1da1f2; text-decoration: none; font-weight: 600; }
-        .acct-profile-actions { display: flex; flex-direction: column; gap: 0.55rem; }
-        .acct-profile-btn {
-            display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
-            width: 100%; min-height: 2.55rem; border-radius: 999px; font-size: 0.84rem; font-weight: 700;
-            text-decoration: none; border: none; cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
-        }
-        .acct-profile-btn--primary { background: #1da1f2; color: #fff; box-shadow: 0 8px 18px rgba(29, 161, 242, 0.28); }
-        .acct-profile-btn--primary:hover { background: #1a91da; color: #fff; }
-        .acct-profile-btn--ghost { background: #1da1f2; color: #fff; box-shadow: 0 8px 18px rgba(29, 161, 242, 0.22); }
-        .acct-profile-btn--ghost:hover { background: #1a91da; color: #fff; }
+        .ps-logout:hover { background: rgba(255,255,255,0.2); color: #fff !important; }
 
-        .acct-feed { min-width: 0; display: flex; flex-direction: column; gap: 0.9rem; padding-top: 108px; }
-        .acct-feed-toolbar {
-            display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
-            padding: 0 0.15rem;
-        }
-        .section-nav {
-            display: flex; flex-wrap: wrap; gap: 0.15rem 1.15rem; align-items: center;
-            background: transparent; border: none; box-shadow: none; padding: 0;
-        }
-        .section-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.15rem 1.15rem; }
+        .section-nav { margin: 0.15rem 0 1rem; }
+        .section-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.15rem 0.35rem; }
         .section-nav li + li { margin-top: 0; }
         .section-nav a {
-            display: inline-block; padding: 0.2rem 0 0.45rem; border-radius: 0;
-            color: #64748b; font-size: 0.92rem; font-weight: 700; text-decoration: none;
-            border-bottom: 3px solid transparent; transition: color 0.15s ease, border-color 0.15s ease;
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.7rem 0.9rem 0.65rem; border-radius: 0;
+            color: #64748b; font-size: 0.88rem; font-weight: 600; text-decoration: none;
+            border-bottom: 2px solid transparent;
         }
         .section-nav a:hover { color: #0f172a; background: transparent; }
-        .section-nav a.is-active { background: transparent; color: #1da1f2; border-bottom-color: #1da1f2; font-weight: 800; }
-        .acct-following-pill {
-            display: inline-flex; align-items: center; justify-content: center;
-            min-height: 2.1rem; padding: 0 1.1rem; border-radius: 999px;
-            background: #1da1f2; color: #fff; font-size: 0.8rem; font-weight: 700; text-decoration: none;
-            box-shadow: 0 6px 14px rgba(29, 161, 242, 0.25);
-        }
-        .acct-following-pill:hover { background: #1a91da; color: #fff; }
+        .section-nav a.is-active { background: transparent; color: #7c3aed; border-bottom-color: #7c3aed; font-weight: 700; }
 
-        .editor-main { min-width: 0; display: flex; flex-direction: column; gap: 0.9rem; }
-        .editor-section {
-            padding: 1.2rem 1.3rem 1.35rem; margin: 0;
-            scroll-margin-top: 100px;
+        .ps-body { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 1rem; align-items: start; }
+        .editor-main { min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
+        .editor-section, .acct-aside-card, .ps-status-card {
+            padding: 1.15rem 1.25rem 1.25rem; margin: 0; scroll-margin-top: 96px;
+            background: #fff; border-radius: 1.15rem; border: 1px solid #eef2f7;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
         }
         .editor-section:last-of-type { margin-bottom: 0; border-bottom: none; }
         .section-header { margin-bottom: 1.1rem; }
@@ -430,17 +389,34 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             width: 100%; padding: 11px 14px; border: 1px solid #e2e8f0; border-radius: 10px;
             font-size: 14px; color: #1e293b; outline: none; transition: all 0.2s; background: #fff;
         }
-        .form-input:focus { border-color: #1da1f2; box-shadow: 0 0 0 4px rgba(29, 161, 242, 0.15); }
+        .form-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12); }
+        .ps-icon-field { position: relative; }
+        .ps-icon-field i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem; }
+        .ps-icon-field .form-input { padding-left: 2.15rem; }
+        .ps-details-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; }
+        .ps-details-grid .form-label { padding-top: 0; margin-bottom: 0.35rem; display: block; }
+        .ps-photo-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+        .ps-photo-preview { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ps-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .ps-upload-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.4rem; padding: 0 1rem;
+            border-radius: 0.75rem; background: #7c3aed; color: #fff; font-size: 0.82rem; font-weight: 700; cursor: pointer;
+        }
+        .ps-remove-btn {
+            display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.4rem; padding: 0 0.9rem;
+            border-radius: 0.75rem; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;
+            font-size: 0.82rem; font-weight: 700; cursor: pointer;
+        }
         .help-text { font-size: 12px; color: #94a3b8; margin-top: 6px; line-height: 1.5; margin-bottom: 0; }
         .inline-field-form { display: flex; gap: 12px; align-items: center; max-width: 640px; }
         .inline-field-form .form-input { flex: 1; min-width: 0; }
         .host-port-grid { display: grid; grid-template-columns: 120px 1fr; gap: 12px; }
         .btn-save {
-            background: #1da1f2; color: white; padding: 12px 28px; border-radius: 999px;
+            background: #7c3aed; color: white; padding: 12px 28px; border-radius: 0.75rem;
             font-weight: 600; font-size: 14px; border: none; cursor: pointer;
-            box-shadow: 0 4px 12px rgba(29, 161, 242, 0.22); transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.22); transition: all 0.2s;
         }
-        .btn-save:hover { background: #1a91da; }
+        .btn-save:hover { background: #6d28d9; }
         .btn-save-inline { padding: 10px 18px; border-radius: 999px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
         .btn-cancel { border: 1px solid #d8b4fe; color: #7c3aed; background: #faf5ff; transition: all 0.2s; cursor: pointer; }
         .btn-cancel:hover { background: #f3e8ff; color: #6d28d9; }
@@ -452,7 +428,7 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         .btn-secondary-lite:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-danger-lite { border-color: #fecaca; color: #dc2626; }
         .btn-danger-lite:hover { background: #fef2f2; }
-        .profile-photo-row { display: none; }
+        .profile-photo-row { display: flex; }
         .status-pill {
             display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
         }
@@ -526,39 +502,44 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             gap: 12px; flex-wrap: wrap; margin: 0; padding: 0.25rem 0 0.5rem;
         }
 
-        .acct-aside { padding-top: 108px; }
-        .acct-aside-card { padding: 1.2rem 1.1rem 1.35rem; text-align: center; position: sticky; top: 88px; }
-        .acct-aside-illus {
-            width: 100%; height: 120px; border-radius: 1.1rem; margin-bottom: 0.95rem;
-            background:
-                radial-gradient(circle at 30% 40%, #93c5fd 0%, transparent 50%),
-                radial-gradient(circle at 70% 60%, #7dd3fc 0%, transparent 45%),
-                linear-gradient(160deg, #e0f2fe, #eff6ff);
-            display: flex; align-items: center; justify-content: center; color: #1da1f2; font-size: 2rem;
+        .acct-aside { display: flex; flex-direction: column; gap: 1rem; }
+        .acct-aside-card {
+            background: #f5f3ff; border-color: #ede9fe; text-align: left;
         }
-        .acct-aside-card h3 { font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem; }
-        .acct-aside-card p { font-size: 0.8rem; color: #64748b; line-height: 1.5; margin: 0; }
+        .acct-aside-card h3 {
+            font-size: 0.92rem; font-weight: 800; color: #5b21b6; margin: 0 0 0.4rem;
+            display: flex; align-items: center; gap: 0.45rem;
+        }
+        .acct-aside-card p { font-size: 0.78rem; color: #6b7280; line-height: 1.5; margin: 0; }
+        .ps-status-card h3 {
+            font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0 0 0.85rem;
+            display: flex; align-items: center; gap: 0.45rem;
+        }
+        .ps-status-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+            padding: 0.45rem 0; font-size: 0.82rem; color: #64748b;
+        }
+        .ps-status-row span { display: inline-flex; align-items: center; gap: 0.4rem; color: #0f172a; font-weight: 600; }
+        .ps-status-row .profile-badge { background: #f3e8ff; color: #7c3aed; }
+        .ps-status-row .profile-badge-success { background: #dcfce7; color: #166534; }
 
-        @media (max-width: 1100px) {
-            .acct-profile-layout { grid-template-columns: 240px minmax(0, 1fr); }
-            .acct-aside { display: none; }
-        }
+        html[data-theme="dark"] body { background: #0f172a; }
+        html[data-theme="dark"] .editor-section,
+        html[data-theme="dark"] .ps-status-card { background: #1e293b; border-color: #334155; }
+        html[data-theme="dark"] .acct-aside-card { background: #2e1064; border-color: #4c1d95; }
+        html[data-theme="dark"] .section-title, html[data-theme="dark"] .ps-status-card h3 { color: #f8fafc; }
+        html[data-theme="dark"] .form-input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+
         @media (max-width: 992px) {
-            .main-content-wrapper { padding: 0 0 2.5rem !important; }
-            .acct-banner { height: 140px; }
-            .acct-profile-layout {
-                grid-template-columns: 1fr; gap: 1rem; margin-top: -56px; padding: 0 0.85rem 1.5rem;
-            }
-            .editor-shell { padding: 0; }
-            .acct-profile-col, .acct-aside-card { position: static; }
-            .acct-feed, .acct-aside { padding-top: 0; }
+            .main-content-wrapper { padding: 0 0.85rem 2.5rem !important; }
+            .ps-body { grid-template-columns: 1fr; }
+            .ps-hero { flex-direction: column; align-items: flex-start; }
+            .ps-details-grid { grid-template-columns: 1fr; }
             .form-row { grid-template-columns: 1fr; gap: 8px; margin-bottom: 18px; }
             .form-label { padding-top: 0; font-size: 13px; }
             .inline-field-form { flex-direction: column; align-items: stretch; }
             .host-port-grid { grid-template-columns: 1fr; }
             .btn-save { width: 100%; padding: 12px 24px; }
-            .acct-feed-toolbar { flex-direction: column; align-items: stretch; }
-            .acct-following-pill { align-self: flex-end; }
         }
 	</style>
 </head>
@@ -589,68 +570,53 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             </script>
         <?php endif; ?>
 
-        <div class="acct-banner" aria-hidden="true"></div>
         <div class="page-shell editor-shell">
-            <div class="acct-profile-layout">
-                <div class="acct-profile-col">
-                    <aside class="acct-profile-card">
-                        <div class="account-avatar-wrap">
-                            <div class="account-avatar">
-                                <?php if ($profilePhotoUrl !== ''): ?>
-                                    <img src="<?= $esc($profilePhotoUrl) ?>" alt="Profile photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    <span class="account-avatar-fallback" style="display:none;"><?= $esc($initial) ?></span>
-                                <?php else: ?>
-                                    <span class="account-avatar-fallback"><?= $esc($initial) ?></span>
-                                <?php endif; ?>
-                            </div>
-                            <form method="post" enctype="multipart/form-data" class="account-avatar-upload">
-                                <label class="account-avatar-btn" title="Upload photo">
-                                    <i class="fas fa-camera"></i>
-                                    <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
-                                </label>
-                            </form>
-                        </div>
-                        <h2 class="account-profile-name"><?= $esc($user['full_name'] ?? '') ?></h2>
-                        <p class="account-profile-user">@<?= $esc($user['username'] ?? '') ?></p>
-                        <p class="account-profile-email"><?= $esc($user['email'] ?? '') ?></p>
-                        <div class="account-profile-badges">
-                            <span class="profile-badge"><?= $esc(ucfirst((string) ($user['role'] ?? 'user'))) ?></span>
-                            <?php if (!empty($user['department'])): ?>
-                                <span class="profile-badge profile-badge-muted"><?= $esc($user['department']) ?></span>
+            <section class="ps-hero">
+                <div class="ps-hero-main">
+                    <div class="account-avatar-wrap">
+                        <div class="account-avatar">
+                            <?php if ($profilePhotoUrl !== ''): ?>
+                                <img src="<?= $esc($profilePhotoUrl) ?>" alt="Profile photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <span class="account-avatar-fallback" style="display:none;"><?= $esc($initial) ?></span>
+                            <?php else: ?>
+                                <span class="account-avatar-fallback"><?= $esc($initial) ?></span>
                             <?php endif; ?>
-                            <span class="profile-badge profile-badge-success">Active</span>
                         </div>
-                        <ul class="acct-profile-meta-list">
-                            <?php if (!empty($user['whatsapp_number'])): ?>
-                                <li><i class="fas fa-phone"></i><span><?= $esc($user['whatsapp_number']) ?></span></li>
-                            <?php endif; ?>
-                            <li><i class="fas fa-calendar-alt"></i><span>Joined <?= $esc(date('M Y', strtotime((string) ($user['created_at'] ?? 'now')))) ?></span></li>
-                            <li>
-                                <i class="fas fa-signature"></i>
-                                <span><?= $currentSig ? 'Signature on file' : 'Signature missing' ?></span>
-                            </li>
-                        </ul>
-                    </aside>
-                    <div class="acct-profile-actions">
-                        <a href="#personal-details" class="acct-profile-btn acct-profile-btn--primary">Edit profile</a>
-                        <a href="<?= $esc($profileBackUrl) ?>" class="acct-profile-btn acct-profile-btn--ghost">Back to modules</a>
+                        <form method="post" enctype="multipart/form-data">
+                            <label class="account-avatar-btn" title="Upload photo">
+                                <i class="fas fa-camera"></i>
+                                <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
+                            </label>
+                        </form>
+                    </div>
+                    <div class="ps-hero-copy">
+                        <h2><?= $esc($user['full_name'] ?? '') ?></h2>
+                        <div class="ps-hero-chips">
+                            <span class="ps-hero-handle">@<?= $esc($user['username'] ?? '') ?></span>
+                            <span class="profile-badge"><?= $esc($roleLabel) ?></span>
+                            <span class="profile-badge profile-badge-success"><?= $isActiveUser ? 'Active' : 'Inactive' ?></span>
+                        </div>
+                        <p class="ps-hero-email"><i class="fas fa-envelope"></i><?= $esc($user['email'] ?? '') ?></p>
+                        <div class="ps-hero-meta">
+                            <span><i class="fas fa-calendar-alt"></i> Joined <?= $esc($joinedLabel) ?></span>
+                            <span><i class="fas fa-pen"></i> <?= $currentSig ? 'Signature on file' : 'Signature missing' ?></span>
+                        </div>
                     </div>
                 </div>
+                <a href="<?= $esc($logoutUrl) ?>" class="ps-logout"><i class="fas fa-sign-out-alt"></i> Log out</a>
+            </section>
 
-                <div class="acct-feed">
-                    <div class="acct-feed-toolbar">
-                        <nav class="section-nav" aria-label="Profile sections">
-                            <ul>
-                                <li><a href="#profile-photo" class="is-active">Photo</a></li>
-                                <li><a href="#personal-details">Details</a></li>
-                                <li><a href="#change-password">Security</a></li>
-                                <li><a href="#digital-signature">Signature</a></li>
-                                <li><a href="#personal-email">Email</a></li>
-                            </ul>
-                        </nav>
-                        <a href="<?= $esc($logoutUrl) ?>" class="acct-following-pill">Log out</a>
-                    </div>
+            <nav class="section-nav" aria-label="Profile sections">
+                <ul>
+                    <li><a href="#profile-photo" class="is-active"><i class="fas fa-image"></i> Profile</a></li>
+                    <li><a href="#personal-details"><i class="fas fa-id-card"></i> Details</a></li>
+                    <li><a href="#change-password"><i class="fas fa-shield-alt"></i> Security</a></li>
+                    <li><a href="#digital-signature"><i class="fas fa-pen"></i> Signature</a></li>
+                    <li><a href="#personal-email"><i class="fas fa-envelope"></i> Email</a></li>
+                </ul>
+            </nav>
 
+            <div class="ps-body">
                     <div class="editor-main">
 		            <?php require __DIR__ . '/includes/account-settings-view.inc.php'; ?>
 			<!-- Digital Signature -->
@@ -794,9 +760,6 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                             <input type="password" name="smtp_pass" id="smtp_pass" class="form-input" placeholder="Your mailbox password" value="<?= $esc($userEmailSettings['smtp_pass']) ?>" required>
                         </div>
                     </div>
-                </form>
-            </section>
-
                     <div class="editor-footer-actions">
                         <button type="button" class="btn-save" style="background: #f1f5f9; color: #475569; box-shadow: none; border: 1px solid #cbd5e1;" id="testEmailBtn" onclick="testEmailConnection()">
                             <i class="fas fa-plug me-2"></i> Test Connection
@@ -805,14 +768,21 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                             <i class="fas fa-save me-2"></i> Save Email Settings
                         </button>
                     </div>
+                </form>
+            </section>
                     </div>
-                </div>
 
                 <aside class="acct-aside">
                     <div class="acct-aside-card">
-                        <div class="acct-aside-illus" aria-hidden="true"><i class="fas fa-user-shield"></i></div>
-                        <h3>Keep your account ready</h3>
+                        <h3><i class="fas fa-user-shield"></i> Keep your account ready</h3>
                         <p>Update your photo, contact details, and digital signature so vouchers and approvals stay accurate across Accounting.</p>
+                    </div>
+                    <div class="ps-status-card">
+                        <h3><i class="fas fa-wave-square"></i> Account Status</h3>
+                        <div class="ps-status-row">Role <span class="profile-badge"><?= $esc($roleLabel) ?></span></div>
+                        <div class="ps-status-row">Status <span class="profile-badge profile-badge-success"><?= $isActiveUser ? 'Active' : 'Inactive' ?></span></div>
+                        <div class="ps-status-row">Joined <span><i class="fas fa-calendar-alt"></i> <?= $esc($joinedLabel) ?></span></div>
+                        <div class="ps-status-row">Last login <span><i class="fas fa-clock"></i> <?= $esc($lastLoginLabel) ?></span></div>
                     </div>
                 </aside>
             </div>

@@ -22,6 +22,7 @@ import {
 import ExpenseQuickViewModal from '../components/ExpenseQuickViewModal';
 import ExpensePostConfirmModal from '../components/ExpensePostConfirmModal';
 import ExpenseKpiTraceModal from '../components/ExpenseKpiTraceModal';
+import PurchaseKpiTraceSheet from '../components/PurchaseKpiTraceSheet';
 import ExpenseAnalyticsPanel from '../components/ExpenseAnalyticsPanel';
 import ExportMenu from '../components/ExportMenu';
 import ExportRangeModal from '../components/ExportRangeModal';
@@ -1223,7 +1224,19 @@ export default function ExpensesDeskPage() {
           onClose={closePostConfirm}
         />
       )}
-      {activeKpiTrace && (
+      {activeKpiTrace && purchasesDesk && (
+        <PurchaseKpiTraceSheet
+          trace={activeKpiTrace.trace}
+          traceKey={activeKpiTrace.key}
+          onClose={() => setActiveKpiTrace(null)}
+          onOpenItem={(item) => {
+            if (item?.voucherUrl) {
+              window.location.href = item.voucherUrl;
+            }
+          }}
+        />
+      )}
+      {activeKpiTrace && !purchasesDesk && (
         <ExpenseKpiTraceModal
           trace={activeKpiTrace.trace}
           traceKey={activeKpiTrace.key}

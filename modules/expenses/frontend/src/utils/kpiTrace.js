@@ -253,6 +253,51 @@ function buildSummaryTraceFallback(key, init, expenses) {
   };
 }
 
+function purchaseContribution(row, key) {
+  const amount = Number(row.amount) || 0;
+  let tax = Math.max(0, Number(row.tax_amount) || 0);
+  if (tax > amount) tax = amount;
+  const exclusive = Math.max(0, amount - tax);
+  if (key === 'totalExclusive') return exclusive;
+  if (key === 'vat') return tax;
+  return amount;
+}
+
+function mapPurchaseToTraceItem(expense, key) {
+  const base = mapExpenseToTraceItem(expense);
+  const contribution = purchaseContribution(expense, key);
+  return {
+    ...base,
+    contribution,
+    amount: contribution,
+    grossAmount: Number(expense.amount) || 0,
+    paymentMethod: expense.payment_method || '',
+    paymentMethodLabel: expense.payment_method_label || '',
+    categoryName: expense.category_name || expense.main_account_name || 'Stock Purchase',
+    status: expense.status || '',
+    displayStatus: expense.display_status || '',
+    isPosted: Number(expense.is_posted) === 1,
+    isPaid: Number(expense.is_paid) === 1,
+    isVoucher: Number(expense.is_voucher) === 1 || expense.source_type === 'voucher',
+    sourceType: expense.source_type || '',
+    voucherUrl: expense.voucher_url || '',
+    rowKey: expense.row_key || '',
+    note: PURCHASES_KPI_META[key]?.title || 'Purchase voucher in view',
+  };
+}
+
+export function purchasesKpiHelper(key) {
+  const helpers = {
+    totalExclusive: 'Before VAT',
+    vat: 'Total VAT included',
+    grossTotal: 'After tax',
+    totalPurchases: 'Total voucher purchases',
+    outstanding: 'Unpaid purchases',
+    overdue: 'Past due unpaid',
+  };
+  return helpers[key] || '';
+}
+
 function buildPurchasesTraceFromList(key, expenses, filters, categories = []) {
   const meta = PURCHASES_KPI_META[key];
   if (!meta) return null;
@@ -272,7 +317,7 @@ function buildPurchasesTraceFromList(key, expenses, filters, categories = []) {
     ],
     confirmation: meta.confirmation,
     viaAi: false,
-    items: rows.map(mapExpenseToTraceItem),
+    items: rows.map((row) => mapPurchaseToTraceItem(row, key)),
     footnote: 'Totals follow the filters applied to the purchases table.',
   };
 }

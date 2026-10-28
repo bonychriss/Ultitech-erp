@@ -30,24 +30,39 @@ function normalizeCurrencyCode(currency) {
   return String(currency || 'TZS').replace(/^TSh$/i, 'TZS').trim() || 'TZS';
 }
 
-function sumAmountsByCurrency(items) {
+function sumAmountsByCurrency(items, field = 'amount') {
   const totals = new Map();
   for (const item of items) {
     const code = normalizeCurrencyCode(item.currency);
-    totals.set(code, (totals.get(code) || 0) + (Number(item.amount) || 0));
+    totals.set(code, (totals.get(code) || 0) + (Number(item[field] ?? item.amount) || 0));
   }
   return [...totals.entries()].sort(([a], [b]) => a.localeCompare(b));
 }
+
+const EXPENSE_AI_KEYS = new Set([
+  'postedThisMonth',
+  'monthlySpend',
+  'totalRecords',
+  'listedNow',
+  'totalExclusive',
+  'inputVat',
+  'totalInclusive',
+  'totalBank',
+  'totalCash',
+  'totalPayables',
+]);
 
 export default function ExpenseKpiTraceModal({
   trace,
   traceKey,
   filters = {},
   listedCount = 0,
+  purchasesDesk = false,
   onClose,
 }) {
   const items = Array.isArray(trace.items) ? trace.items : [];
-  const amountTotals = sumAmountsByCurrency(items);
+  const amountField = purchasesDesk ? 'contribution' : 'amount';
+  const amountTotals = sumAmountsByCurrency(items, amountField);
   const [confirmation, setConfirmation] = useState(trace.confirmation || '');
   const [viaAi, setViaAi] = useState(Boolean(trace.viaAi));
   const [aiLoading, setAiLoading] = useState(false);
@@ -61,6 +76,16 @@ export default function ExpenseKpiTraceModal({
   }, [trace]);
 
   useEffect(() => {
+    // Purchases KPIs use client-side confirmation; expense AI endpoint only
+    // accepts a fixed allow-list and returns "Invalid KPI key" otherwise.
+    if (purchasesDesk || !EXPENSE_AI_KEYS.has(traceKey)) {
+      setAiLoading(false);
+      setAiError('');
+      setConfirmation(trace.confirmation || '');
+      setViaAi(false);
+      return undefined;
+    }
+
     let cancelled = false;
     setAiLoading(true);
     setAiError('');
@@ -82,7 +107,7 @@ export default function ExpenseKpiTraceModal({
     return () => {
       cancelled = true;
     };
-  }, [traceKey, listedCount, filters, trace.confirmation]);
+  }, [traceKey, listedCount, filters, trace.confirmation, purchasesDesk]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -99,10 +124,12 @@ export default function ExpenseKpiTraceModal({
     };
   }, [onClose]);
 
+  const refLabel = purchasesDesk ? 'Purchase / Date' : 'Expense / Date';
+
   return createPortal(
     <div className="exp-desk-modal-backdrop" onClick={onClose} role="presentation">
       <div
-        className="exp-desk-modal exp-desk-kpi-trace-modal"
+        className={`exp-desk-modal exp-desk-kpi-trace-modal${purchasesDesk ? ' exp-desk-kpi-trace-modal--purchases' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="exp-kpi-trace-title"
@@ -151,6 +178,32 @@ export default function ExpenseKpiTraceModal({
 
             {items.length === 0 ? (
               <p className="exp-desk-kpi-trace-empty">No records contributed to this KPI.</p>
+            ) : purchasesDesk ? (
+              <div className="exp-desk-kpi-trace-table-wrap">
+                <table className="exp-desk-kpi-trace-table exp-desk-kpi-trace-table--purchases">
+                  <thead>
+                    <tr>
+                      <th>{refLabel}</th>
+                      <th>Payee</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => (
+                      <tr key={`${item.id ?? 0}-${item.expenseNumber}-${item.date}`}>
+                        <td>
+                          <div className="exp-desk-kpi-trace-exp-cell">
+                            <span className="exp-desk-kpi-trace-exp-no">{cellText(item.expenseNumber)}</span>
+                            {item.date && (
+                              <span className="exp-desk-kpi-trace-exp-date">{formatDate(item.date)}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="exp-desk-kpi-trace-payee">{cellText(item.payee)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <div className="exp-desk-kpi-trace-table-wrap">
                 <table className="exp-desk-kpi-trace-table">

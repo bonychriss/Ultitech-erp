@@ -1470,7 +1470,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 }
 
 @media (max-width: 767.98px) {
-  /* Purchases: match balances mobile visibility ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ cards instead of wide table */
+  /* Purchases: match balances mobile visibility ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ cards instead of wide table */
   .exp-desk-page--purchases .exp-desk-table-wrap {
     display: none !important;
   }
@@ -1490,7 +1490,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
     width: 100%;
     min-width: 0;
   }
-  /* Total Payables is the odd last card ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ span the full row */
+  /* Total Payables is the odd last card ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ span the full row */
   .exp-desk-page--purchases .exp-desk-results-head {
     padding: 0.35rem 0;
   }
@@ -2615,6 +2615,24 @@ body.page-exp-desk button.exp-desk-row-action {
 /* KPI trace modal */
 .exp-desk-modal.exp-desk-kpi-trace-modal {
   width: min(52rem, calc(100vw - 1.5rem));
+}
+
+.exp-desk-modal.exp-desk-kpi-trace-modal--purchases {
+  width: min(36rem, calc(100vw - 1.25rem));
+}
+
+.exp-desk-kpi-trace-table--purchases {
+  min-width: 0;
+}
+
+.exp-desk-kpi-trace-table--purchases th:first-child,
+.exp-desk-kpi-trace-table--purchases td:first-child {
+  width: 42%;
+}
+
+.exp-desk-kpi-trace-table--purchases .exp-desk-kpi-trace-payee {
+  white-space: normal;
+  word-break: break-word;
 }
 
 .exp-desk-modal-head {
@@ -5381,3 +5399,406 @@ body.page-exp-desk button.exp-desk-row-action {
   }
 }
 
+
+/* Purchases KPI drill-down sheet (mobile-style) */
+.pur-kpi-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  background: rgba(15, 23, 42, 0.48);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+
+.pur-kpi-sheet {
+  width: min(34rem, 100vw);
+  max-height: min(94vh, 54rem);
+  background: #fff;
+  border-radius: 1.15rem 1.15rem 0 0;
+  box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.35rem 0 0;
+}
+
+@media (min-width: 768px) {
+  .pur-kpi-sheet-backdrop {
+    align-items: center;
+    padding: 1rem;
+  }
+  .pur-kpi-sheet {
+    border-radius: 1.15rem;
+    max-height: min(90vh, 52rem);
+  }
+}
+
+.pur-kpi-sheet-handle {
+  width: 2.5rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: #cbd5e1;
+  margin: 0.2rem auto 0.55rem;
+  flex-shrink: 0;
+}
+
+.pur-kpi-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 1rem 0.85rem;
+  flex-shrink: 0;
+}
+
+.pur-kpi-sheet-head-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.pur-kpi-sheet-icon {
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #7c3aed;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pur-kpi-sheet-head-copy {
+  min-width: 0;
+}
+
+.pur-kpi-sheet-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pur-kpi-sheet-headline {
+  margin: 0.15rem 0 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1.15;
+}
+
+.pur-kpi-sheet-helper {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.pur-kpi-sheet-close {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pur-kpi-sheet-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.pur-kpi-sheet-confirm {
+  margin: 0 1rem 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  flex-shrink: 0;
+}
+
+.pur-kpi-sheet-confirm-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1e3a8a;
+}
+
+.pur-kpi-sheet-confirm-text {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: #1e40af;
+}
+
+.pur-kpi-sheet-tools {
+  padding: 0 1rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+.pur-kpi-sheet-tools-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pur-kpi-sheet-date,
+.pur-kpi-sheet-sort {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  padding: 0 0.7rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.7rem;
+  background: #fff;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pur-kpi-sheet-date select,
+.pur-kpi-sheet-sort select,
+.pur-kpi-sheet-filter-field select {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding-right: 0.85rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.pur-kpi-sheet-date svg:last-child,
+.pur-kpi-sheet-sort svg:last-child {
+  position: absolute;
+  right: 0.45rem;
+  pointer-events: none;
+  color: #94a3b8;
+}
+
+.pur-kpi-sheet-filters-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  padding: 0 0.8rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.7rem;
+  background: #fff;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pur-kpi-sheet-filters-btn.is-active {
+  border-color: #c7d2fe;
+  color: #4338ca;
+  background: #eef2ff;
+}
+
+.pur-kpi-sheet-filters-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: #f8fafc;
+}
+
+.pur-kpi-sheet-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.pur-kpi-sheet-filter-field select {
+  min-height: 2.1rem;
+  padding: 0 0.55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.55rem;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pur-kpi-sheet-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pur-kpi-sheet-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.pur-kpi-sheet-search input {
+  width: 100%;
+  min-height: 2.45rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.45rem 0.85rem 0.45rem 2.25rem;
+  font-size: 0.84rem;
+  color: #0f172a;
+  outline: none;
+}
+
+.pur-kpi-sheet-search input:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.pur-kpi-sheet-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.15rem 1rem 0.55rem;
+  flex-shrink: 0;
+}
+
+.pur-kpi-sheet-list-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.pur-kpi-sheet-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pur-kpi-sheet-empty {
+  padding: 1.5rem 0.75rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.pur-kpi-sheet-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  background: #fff;
+  padding: 0.75rem 0.8rem;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.pur-kpi-sheet-card:hover,
+.pur-kpi-sheet-card:focus-visible {
+  border-color: #00a884;
+  outline: none;
+}
+
+.pur-kpi-sheet-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.pur-kpi-sheet-card-main {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.pur-kpi-sheet-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.pur-kpi-sheet-card-ref {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pur-kpi-sheet-card-payee {
+  font-size: 0.74rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+
+.pur-kpi-sheet-card-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.pur-kpi-sheet-card-amt {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #059669;
+  font-variant-numeric: tabular-nums;
+}
+
+.pur-kpi-sheet-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.pur-kpi-sheet-card-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: #64748b;
+  min-width: 0;
+}
+
+.pur-kpi-sheet-card-fact span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pur-kpi-sheet-card-chevron {
+  margin-left: auto;
+  color: #94a3b8;
+  flex-shrink: 0;
+}

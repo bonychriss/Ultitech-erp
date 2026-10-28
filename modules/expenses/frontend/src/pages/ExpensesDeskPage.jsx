@@ -174,6 +174,16 @@ function hasAdvancedFilters(filters) {
   return Object.keys(emptyAdvancedFilters).some((key) => String(filters[key] ?? '').trim() !== '');
 }
 
+function paymentTypeIcon(expense) {
+  const haystack = [
+    expense?.payment_method_label,
+    expense?.payment_method,
+  ].map((v) => String(v || '').toLowerCase()).join(' ');
+  if (haystack.includes('cash')) return Wallet;
+  if (haystack.includes('credit') || haystack.includes('payable')) return CreditCard;
+  return ArrowLeftRight;
+}
+
 function toInputDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -1276,11 +1286,12 @@ export default function ExpensesDeskPage() {
 
         return (
           <div className="exp-desk-page-header exp-desk-page-header--mobile">
-            <div className="exp-desk-page-header-actions">
-              {filterControl}
-            </div>
             <div className="exp-desk-page-header-search">
               {renderSearchField(searchInputRef, 'exp-desk-search')}
+            </div>
+            <div className="exp-desk-page-header-actions">
+              {filterControl}
+              {createControl}
             </div>
           </div>
         );
@@ -1463,8 +1474,7 @@ export default function ExpensesDeskPage() {
                 const totalAmt = Math.max(0, Number(expense.amount) || 0);
                 const accountLabel = expense.category_name || expense.main_account_name || '';
                 const methodLabel = String(expense.payment_method_label || '').trim() || '—';
-                const methodLower = methodLabel.toLowerCase();
-                const TypeIcon = methodLower.includes('cash') ? Wallet : ArrowLeftRight;
+                const TypeIcon = paymentTypeIcon(expense);
                 return (
                   <button
                     key={`m-${rowKey}`}
@@ -1576,6 +1586,8 @@ export default function ExpensesDeskPage() {
                   const vatAmt = Math.max(0, Math.min(totalAmt, Number(expense.tax_amount) || 0));
                   const exclusiveAmt = Math.max(0, totalAmt - vatAmt);
                   const accountLabel = expense.category_name || expense.main_account_name || '';
+                  const methodLabel = String(expense.payment_method_label || '').trim() || '—';
+                  const TypeIcon = paymentTypeIcon(expense);
                   return (
                     <tr
                       key={rowKey}
@@ -1613,8 +1625,9 @@ export default function ExpensesDeskPage() {
                       </td>
                       <td className="col-type">
                         <div className="exp-desk-type-cell">
-                          <span className="exp-desk-type">
-                            {expense.payment_method_label || '-'}
+                          <span className="exp-desk-type exp-desk-type--with-icon">
+                            <TypeIcon size={14} strokeWidth={2} aria-hidden="true" />
+                            <span>{methodLabel}</span>
                           </span>
                           {accountLabel ? (
                             <span className="exp-desk-type-meta" title={accountLabel}>{accountLabel}</span>

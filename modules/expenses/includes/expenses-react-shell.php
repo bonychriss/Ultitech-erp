@@ -335,7 +335,7 @@ html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-
 }
 
 html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link {
-    color: #53bdeb !important;
+    color: #00a884 !important;
 }
 
 html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-sep,

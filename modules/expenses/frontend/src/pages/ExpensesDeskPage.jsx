@@ -29,7 +29,7 @@ import {
   isPurchasesDesk,
   postDraftExpense,
   purchasesCreateVoucherUrl,
-  purchasesVoucherPreviewUrl,
+  purchasesVoucherViewUrl,
 } from '../api/expensesDesk';
 import { exportExpensesExcel, exportExpensesPdf } from '../utils/exportExpenses';
 import { resolveKpiTrace } from '../utils/kpiTrace';
@@ -717,9 +717,9 @@ export default function ExpensesDeskPage() {
   function openExpenseDetails(expense) {
     setSelectedId(expense.row_key || Number(expense.id) || 0);
     if (purchasesDesk) {
-      const previewUrl = purchasesVoucherPreviewUrl(expense);
-      if (previewUrl) {
-        window.location.href = previewUrl;
+      const voucherUrl = purchasesVoucherViewUrl(expense);
+      if (voucherUrl) {
+        window.location.href = voucherUrl;
         return;
       }
     }

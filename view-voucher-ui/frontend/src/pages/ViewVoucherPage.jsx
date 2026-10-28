@@ -167,7 +167,19 @@ export default function ViewVoucherPage() {
       <div className="page-shell">
         <div className="vv-view-layout">
           <div className="vv-voucher-toolbar vv-mobile-toolbar no-print voucher-actions-bar">
-            {data.status?.label ? (
+            {data.actions?.fromPurchases ? (
+              <a
+                className="vv-purchases-back erp-nav-back-ignore"
+                href={data.actions.backUrl}
+                onClick={(e) => {
+                  e.preventDefault()
+                  window.location.href = data.actions.backUrl
+                }}
+              >
+                <i className="fas fa-arrow-left" aria-hidden="true" />
+                {data.actions.backLabel || 'Back to Purchases'}
+              </a>
+            ) : data.status?.label ? (
               <span className={`vv-status-badge ${data.status.className || 'vv-status-pending'}`}>
                 {data.status.label}
               </span>

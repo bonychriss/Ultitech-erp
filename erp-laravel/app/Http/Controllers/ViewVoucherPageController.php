@@ -20,12 +20,18 @@ class ViewVoucherPageController extends Controller
         }
 
         $clientCfg = is_array($erp['client_cfg'] ?? null) ? $erp['client_cfg'] : [];
+        $hideSidebar = !empty($erp['hide_sidebar']);
+        $fromPurchases = !empty($erp['from_purchases']);
+        $activeModule = (string) ($erp['active_module'] ?? ($fromPurchases ? 'accounting' : 'voucher'));
         $viewData = (new ViewVoucherShell())->viewData([
             'pageTitle' => (string) ($erp['page_title'] ?? 'Payment Voucher'),
             'headerTitle' => (string) ($erp['header_title'] ?? 'Voucher Preview'),
             'headerSubtitle' => (string) ($erp['header_subtitle'] ?? ''),
             'headerRightHtml' => (string) ($erp['header_right_html'] ?? ''),
             'clientCfg' => $clientCfg,
+            'hideSidebar' => $hideSidebar,
+            'fromPurchases' => $fromPurchases,
+            'activeModule' => $activeModule,
         ]);
 
         if ($viewData === null) {
@@ -45,6 +51,8 @@ class ViewVoucherPageController extends Controller
         $employeeHeaderRightHtml = $viewData['employeeHeaderRightHtml'] ?? '';
         $hideHeaderCompanyBranding = $viewData['hideHeaderCompanyBranding'];
         $employeeHeaderExtraClass = $viewData['employeeHeaderExtraClass'];
+        $hideSidebar = !empty($viewData['hideSidebar']);
+        $active_module = (string) ($viewData['active_module'] ?? $activeModule);
 
         return view('erp.react-shell', $viewData + [
             'page_title' => $page_title,
@@ -53,6 +61,8 @@ class ViewVoucherPageController extends Controller
             'employeeHeaderRightHtml' => $employeeHeaderRightHtml,
             'hideHeaderCompanyBranding' => $hideHeaderCompanyBranding,
             'employeeHeaderExtraClass' => $employeeHeaderExtraClass,
+            'hideSidebar' => $hideSidebar,
+            'active_module' => $active_module,
         ]);
     }
 }

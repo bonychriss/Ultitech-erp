@@ -19,6 +19,15 @@ $bodyExtraClass = 'page-exp-desk';
 $expensesPage = 'list';
 $expensesDeskMode = 'purchases';
 
+$purchasesBackUrl = function_exists('company_url')
+    ? company_url('modules/accounting/index') . '?module=accounting'
+    : (function_exists('app_url')
+        ? app_url('/modules/accounting/index.php') . '?module=accounting'
+        : '../accounting/index.php?module=accounting');
+$employeeHeaderSubtitle = '<a class="exp-desk-header-back erp-nav-back-ignore" href="'
+    . htmlspecialchars($purchasesBackUrl, ENT_QUOTES, 'UTF-8')
+    . '"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Accounting</a>';
+
 $assets = expensesDeskLoadReactAssets();
 if ($assets === null) {
     http_response_code(503);
@@ -55,7 +64,8 @@ $expensesHeadMarkup = '<link rel="stylesheet" crossorigin href="' . htmlspecialc
     . "\n" . '<script>window.__EXPENSES_API_BASE__ = ' . json_encode($expensesApiBase, JSON_UNESCAPED_SLASHES) . ';'
     . 'window.__EXPENSES_PAGE__ = ' . json_encode($expensesPage, JSON_UNESCAPED_SLASHES) . ';'
     . 'window.__EXPENSES_DESK_MODE__ = ' . json_encode($expensesDeskMode, JSON_UNESCAPED_SLASHES) . ';'
-    . 'window.__PURCHASES_CREATE_VOUCHER_URL__ = ' . json_encode($createVoucherUrl, JSON_UNESCAPED_SLASHES) . ';</script>';
+    . 'window.__PURCHASES_CREATE_VOUCHER_URL__ = ' . json_encode($createVoucherUrl, JSON_UNESCAPED_SLASHES) . ';'
+    . 'window.__PURCHASES_BACK_URL__ = ' . json_encode($purchasesBackUrl, JSON_UNESCAPED_SLASHES) . ';</script>';
 
 // Shell script src also comes from $assets — point JS at expenses dist.
 $assets['jsFile'] = $assets['jsFile'];

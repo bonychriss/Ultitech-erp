@@ -217,15 +217,27 @@ $vvConfig = [
     'flash' => $flash,
 ];
 
+$vvFromPurchases = strtolower(trim((string) ($_GET['from'] ?? ''))) === 'purchases'
+    || !empty($vvData['actions']['fromPurchases']);
 $vvBreadcrumbHome = $vvData['breadcrumbs']['home'];
 $vvBreadcrumbAll = $vvData['breadcrumbs']['all'];
-$employeeHeaderSubtitle = '<nav class="vv-breadcrumb" aria-label="Breadcrumb">'
-    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($vvBreadcrumbHome) . '">Home</a>'
-    . '<span class="vv-breadcrumb-sep">/</span>'
-    . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="' . htmlspecialchars($vvBreadcrumbAll) . '">Vouchers</a>'
-    . '<span class="vv-breadcrumb-sep">/</span>'
-    . '<span class="vv-breadcrumb-current">' . htmlspecialchars($vvData['voucher']['voucher_no'] ?? '') . '</span>'
-    . '</nav>';
+$vvBackUrl = (string) ($vvData['actions']['backUrl'] ?? $vvBreadcrumbHome);
+if ($vvFromPurchases) {
+    $employeeHeaderSubtitle = '<nav class="vv-breadcrumb" aria-label="Breadcrumb">'
+        . '<a class="vv-breadcrumb-link vv-breadcrumb-back erp-nav-back-ignore" href="' . htmlspecialchars($vvBackUrl) . '">'
+        . '<i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Purchases</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<span class="vv-breadcrumb-current">' . htmlspecialchars($vvData['voucher']['voucher_no'] ?? '') . '</span>'
+        . '</nav>';
+} else {
+    $employeeHeaderSubtitle = '<nav class="vv-breadcrumb" aria-label="Breadcrumb">'
+        . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($vvBreadcrumbHome) . '">Home</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="' . htmlspecialchars($vvBreadcrumbAll) . '">Vouchers</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<span class="vv-breadcrumb-current">' . htmlspecialchars($vvData['voucher']['voucher_no'] ?? '') . '</span>'
+        . '</nav>';
+}
 
 $statusClass = htmlspecialchars($vvData['status']['className'] ?? 'vv-status-pending');
 $statusLabel = htmlspecialchars($vvData['status']['label'] ?? 'Pending');
@@ -235,10 +247,17 @@ $employeeHeaderRightHtml = '<div class="vv-header-status-actions no-print">'
     . '</div>';
 
 // Render via erp-laravel (ViewVoucherShell + React view-voucher-ui).
-if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
-    $_GET['module'] = 'voucher';
+if ($vvFromPurchases) {
+    // Same sidebar context as modules/purchases/index (path forces accounting nav).
+    $_GET['module'] = 'purchases';
+    $_SESSION['active_module'] = 'purchases';
+    $active_module = 'accounting';
+} else {
+    if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
+        $_GET['module'] = 'voucher';
+    }
+    $_SESSION['active_module'] = 'voucher';
 }
-$_SESSION['active_module'] = 'voucher';
 
 $slug = trim((string) ($_SESSION['company_slug'] ?? (function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : '')));
 if ($slug === '' && function_exists('getRequestedCompanySlug')) {
@@ -267,7 +286,7 @@ $GLOBALS['ERP_VOUCHER_CONTEXT'] = [
     'full_name' => (string) ($_SESSION['full_name'] ?? ''),
     'company_id' => (int) ($_SESSION['company_id'] ?? 0),
     'company_slug' => $slug,
-    'back_url' => $backUrl,
+    'back_url' => $vvFromPurchases ? $vvBackUrl : $backUrl,
     'voucher_url' => $publicUrl,
     'app_root' => rtrim((string) (function_exists('app_url') ? app_url('/') : '/public_html'), '/'),
     'db_name' => $dbName !== '' ? $dbName : (defined('DB_NAME') ? (string) DB_NAME : ''),
@@ -275,9 +294,12 @@ $GLOBALS['ERP_VOUCHER_CONTEXT'] = [
     'is_finance' => function_exists('isFinance') && isFinance(),
     'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'voucher',
     'page_title' => 'Payment Voucher - ' . (string) ($vvData['voucher']['voucher_no'] ?? ''),
-    'header_title' => 'Voucher Preview',
+    'header_title' => $vvFromPurchases ? 'Purchase voucher' : 'Voucher Preview',
     'header_subtitle' => $employeeHeaderSubtitle,
     'header_right_html' => $employeeHeaderRightHtml,
+    'hide_sidebar' => false,
+    'from_purchases' => $vvFromPurchases,
+    'active_module' => $vvFromPurchases ? 'accounting' : 'voucher',
     'client_cfg' => $vvConfig,
 ];
 

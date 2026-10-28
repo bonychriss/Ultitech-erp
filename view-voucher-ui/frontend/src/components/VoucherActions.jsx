@@ -142,7 +142,7 @@ export default function VoucherActions({
             className="dropdown-item erp-nav-back-ignore"
             onClick={(e) => {
               e.preventDefault()
-              if (actions.returnFinance) {
+              if (actions.returnFinance || actions.fromPurchases) {
                 window.location.href = actions.backUrl
                 return
               }
@@ -152,7 +152,7 @@ export default function VoucherActions({
               window.location.href = actions.backUrl
             }}
           >
-            <i className="fas fa-arrow-left" aria-hidden="true" /> Back
+            <i className="fas fa-arrow-left" aria-hidden="true" /> {actions.backLabel || 'Back'}
           </a>
 
           {permissions.canEdit && (

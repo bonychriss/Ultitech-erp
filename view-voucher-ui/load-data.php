@@ -719,11 +719,14 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             : app_url('modules/finance/my_expenses.php');
     }
     $fromDesk = strtolower(trim((string) ($_GET['from'] ?? '')));
-    if ($fromDesk === 'purchases') {
+    $fromPurchases = ($fromDesk === 'purchases');
+    if ($fromPurchases) {
         $purchasesBack = function_exists('company_url')
             ? company_url('modules/purchases/index')
             : (function_exists('app_url') ? app_url('/modules/purchases/index.php') : '/modules/purchases/index.php');
         $backLink = $vvJoinQs((string) $purchasesBack, 'module=purchases');
+        $homeLink = $backLink;
+        $allLink = $backLink;
     }
     $approvedByAdmin = !empty($voucher['approved_by']) && (isset($voucher['approver_role']) && defined('ROLE_ADMIN') && $voucher['approver_role'] === ROLE_ADMIN);
     $canMarkPaid = !$isPaid && $statusLower === 'approved' && (
@@ -941,6 +944,8 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             ],
             'actions' => [
                 'backUrl' => $backLink,
+                'backLabel' => $fromPurchases ? 'Back to Purchases' : 'Back',
+                'fromPurchases' => $fromPurchases,
                 'editHref' => $editHref,
                 'markPaidUrl' => app_url(isAdmin() ? '/mark-paid.php' : '/employee/mark-paid.php'),
                 // Always absolute under company slug so /ultimate/view-voucher.php can POST approve.
@@ -953,6 +958,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                     : (function_exists('app_url') ? app_url('/view-voucher.php') : 'view-voucher.php'))
                     . '?id=' . $voucherId
                     . ($returnFinance ? '&return=finance' : '')
+                    . ($fromPurchases ? '&from=purchases' : '')
                     . (isset($_GET['module']) && (string) $_GET['module'] !== ''
                         ? '&module=' . rawurlencode((string) $_GET['module'])
                         : ''),

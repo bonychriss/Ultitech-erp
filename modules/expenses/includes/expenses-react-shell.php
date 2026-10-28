@@ -6,15 +6,10 @@
  *          $assets (from expensesDeskLoadReactAssets), optional $expensesPage.
  */
 $expensesPage = $expensesPage ?? 'list';
-$expensesDeskScrollable = !empty($expensesDeskScrollable) || $expensesPage === 'voucher-preview';
 $GLOBALS['_erp_header_style_linked'] = true;
-$htmlLockClass = $expensesDeskScrollable ? 'page-exp-desk-lock page-exp-desk-scroll' : 'page-exp-desk-lock';
-$bodyDeskClass = $expensesDeskScrollable
-    ? 'dashboard page-exp-desk page-exp-desk--scroll exp-dashboard-page'
-    : 'dashboard page-exp-desk exp-dashboard-page';
 ?>
 <!DOCTYPE html>
-<html lang="en" class="<?= htmlspecialchars($htmlLockClass, ENT_QUOTES, 'UTF-8') ?>">
+<html lang="en" class="page-exp-desk-lock">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,9 +19,6 @@ $bodyDeskClass = $expensesDeskScrollable
         var t = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
         document.documentElement.classList.add('page-exp-desk-lock');
-        <?php if ($expensesDeskScrollable): ?>
-        document.documentElement.classList.add('page-exp-desk-scroll');
-        <?php endif; ?>
     })();
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -34,7 +26,7 @@ $bodyDeskClass = $expensesDeskScrollable
     <?= expensesDeskShellHeadExtras() ?>
     <?= $expensesHeadMarkup ?>
 </head>
-<body class="<?= htmlspecialchars($bodyDeskClass, ENT_QUOTES, 'UTF-8') ?>">
+<body class="dashboard page-exp-desk exp-dashboard-page">
 
 <?php include __DIR__ . '/../../../includes/header_employee.php'; ?>
 
@@ -128,6 +120,22 @@ body.page-exp-desk .employee-header--exp-desk .employee-header-page-title {
     color: #0f172a !important;
     letter-spacing: -0.02em;
     white-space: nowrap;
+}
+body.page-exp-desk .employee-header--exp-desk .employee-header-page-subtitle {
+    color: inherit !important;
+}
+body.page-exp-desk .employee-header--exp-desk .exp-desk-header-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #2563eb !important;
+    text-decoration: none !important;
+}
+body.page-exp-desk .employee-header--exp-desk .exp-desk-header-back:hover {
+    color: #1d4ed8 !important;
+    text-decoration: underline !important;
 }
 body.page-exp-desk .employee-header--exp-desk .exp-module-update-badge,
 body.page-exp-desk .employee-header--exp-desk .header-actions-tray .exp-module-update-badge {
@@ -270,67 +278,6 @@ html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-
     color: #e2e8f0 !important;
 }
 
-/* Voucher preview (and other scrollable desk pages): unlock vertical scroll. */
-html.page-exp-desk-scroll,
-html.page-exp-desk-scroll body,
-body.page-exp-desk.page-exp-desk--scroll,
-body.page-exp-desk.page-exp-desk--scroll.dashboard {
-    height: auto !important;
-    max-height: none !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: auto !important;
-    scrollbar-width: thin !important;
-    -ms-overflow-style: auto !important;
-}
-html.page-exp-desk-scroll::-webkit-scrollbar,
-html.page-exp-desk-scroll body::-webkit-scrollbar,
-body.page-exp-desk.page-exp-desk--scroll .layout-main-wrapper::-webkit-scrollbar,
-body.page-exp-desk.page-exp-desk--scroll .flex-grow-1::-webkit-scrollbar,
-body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root::-webkit-scrollbar,
-body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root #root::-webkit-scrollbar,
-body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root .exp-desk-page::-webkit-scrollbar {
-    width: 10px !important;
-    height: 10px !important;
-    display: block !important;
-}
-body.page-exp-desk.page-exp-desk--scroll .layout-main-wrapper,
-body.page-exp-desk.page-exp-desk--scroll .layout-main-wrapper.min-vh-100,
-body.page-exp-desk.page-exp-desk--scroll .layout-main-wrapper > .flex-grow-1,
-body.page-exp-desk.page-exp-desk--scroll .flex-grow-1.d-flex.flex-column,
-body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root,
-body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root #root,
-body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root .exp-desk-page {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    overscroll-behavior: auto !important;
-    scrollbar-width: thin !important;
-}
-body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root {
-    flex: 0 1 auto !important;
-    padding-bottom: 2rem !important;
-}
-
-/* Keep content clear of the fixed left nav (offset the column once). */
-@media (min-width: 768px) {
-    body.page-exp-desk.page-exp-desk--scroll .layout-main-wrapper > .flex-grow-1 {
-        margin-left: 212px !important;
-        width: calc(100% - 212px) !important;
-        max-width: none !important;
-    }
-    body.page-exp-desk.page-exp-desk--scroll.sidebar-collapsed .layout-main-wrapper > .flex-grow-1 {
-        margin-left: 72px !important;
-        width: calc(100% - 72px) !important;
-    }
-    body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root,
-    body.page-exp-desk.page-exp-desk--scroll .employee-header.employee-header--exp-desk,
-    body.page-exp-desk.page-exp-desk--scroll .header {
-        margin-left: 0 !important;
-        width: 100% !important;
-        max-width: none !important;
-    }
-}
 </style>
 
 <main class="main-content exp-desk-react-root">

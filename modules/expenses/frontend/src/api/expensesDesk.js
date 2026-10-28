@@ -73,20 +73,12 @@ export function deskPageUrl(file, extraParams = {}) {
   const module = isPurchasesDesk() ? 'purchases' : 'expenses';
   const params = new URLSearchParams({ module, ...extraParams });
   if (isPurchasesDesk()) {
-    // Purchases list + voucher preview live at modules/purchases; create/import stay on expenses if ever used.
-    const name = String(file || '').toLowerCase();
-    if (name === 'index.php' || name === 'voucher.php') {
-      return `../purchases/${name}?${params.toString()}`;
+    // Purchases list lives at modules/purchases; create/import stay on expenses if ever used.
+    if (String(file || '').toLowerCase() === 'index.php') {
+      return `../purchases/index.php?${params.toString()}`;
     }
   }
   return `./${file}?${params.toString()}`;
-}
-
-/** Purchases desk: in-app voucher preview page (not the employee view-voucher screen). */
-export function purchasesVoucherPreviewUrl(expense) {
-  const pvId = Number(expense?.pv_id || 0);
-  if (pvId <= 0) return '';
-  return deskPageUrl('voucher.php', { pv_id: String(pvId) });
 }
 
 export function purchasesCreateVoucherUrl() {
@@ -118,17 +110,17 @@ export function purchasesVoucherViewUrl(expense) {
     try {
       const u = new URL(url, window.location.href);
       u.searchParams.set('from', 'purchases');
-      if (!u.searchParams.get('module')) u.searchParams.set('module', 'voucher');
+      u.searchParams.set('module', 'purchases');
       return u.pathname + u.search + u.hash;
     } catch {
       const join = String(url).includes('?') ? '&' : '?';
-      return `${url}${join}from=purchases`;
+      return `${url}${join}from=purchases&module=purchases`;
     }
   };
   if (boot !== '') return withFrom(boot);
   const pvId = Number(expense.pv_id || 0);
   if (pvId <= 0) return '';
-  return withFrom(`../../employee/view-voucher.php?id=${pvId}&module=voucher`);
+  return withFrom(`../../employee/view-voucher.php?id=${pvId}`);
 }
 
 export function exportUrl(filters = {}) {

@@ -34,6 +34,9 @@ final class ViewVoucherShell
         $clientCfg = is_array($cfg['clientCfg'] ?? null) ? $cfg['clientCfg'] : [];
         $headerSubtitle = (string) ($cfg['headerSubtitle'] ?? '');
         $headerRightHtml = (string) ($cfg['headerRightHtml'] ?? '');
+        $hideSidebar = !empty($cfg['hideSidebar']);
+        $fromPurchases = !empty($cfg['fromPurchases']);
+        $activeModule = (string) ($cfg['activeModule'] ?? ($fromPurchases ? 'accounting' : 'voucher'));
 
         $cssUrl = $assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'];
         $jsUrl = $assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'];
@@ -82,18 +85,27 @@ final class ViewVoucherShell
             . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8')
             . '"></script>';
 
+        $bodyClass = 'vv-view-voucher-page vv-actions-in-header page-view-voucher page-voucher-laravel page-erp-laravel';
+        if ($fromPurchases) {
+            $bodyClass .= ' vv-from-purchases';
+        }
+        if ($hideSidebar) {
+            $bodyClass .= ' vv-no-sidebar';
+        }
+
         return [
             'pageTitle' => $pageTitle,
-            'bodyClass' => 'vv-view-voucher-page vv-actions-in-header page-view-voucher page-voucher-laravel page-erp-laravel',
+            'bodyClass' => $bodyClass,
             'headMarkup' => $headMarkup,
             'footerScripts' => $footerScripts,
             'employeeHeaderTitle' => $headerTitle,
             'employeeHeaderSubtitle' => $headerSubtitle,
             'employeeHeaderRightHtml' => $headerRightHtml,
             'hideHeaderCompanyBranding' => true,
-            'employeeHeaderExtraClass' => 'employee-header--view-voucher',
+            'employeeHeaderExtraClass' => 'employee-header--view-voucher' . ($fromPurchases ? ' employee-header--from-purchases' : ''),
             'mainRootClass' => 'vv-react-shell view-voucher-react-root',
-            'active_module' => 'voucher',
+            'active_module' => $activeModule,
+            'hideSidebar' => $hideSidebar,
         ];
     }
 
@@ -180,6 +192,35 @@ main.main-content.view-voucher-react-root {
 main.main-content.vv-react-shell #root { width: 100%; max-width: none; margin: 0; }
 @media (max-width: 767.98px) {
     main.main-content.vv-react-shell { padding: 0.5rem 0.75rem 1.5rem !important; }
+}
+body.vv-view-voucher-page.vv-no-sidebar .sidebar-container,
+body.vv-view-voucher-page.vv-no-sidebar #native-sidebar {
+    display: none !important;
+}
+body.vv-view-voucher-page.vv-no-sidebar .employee-header-menu-btn {
+    display: none !important;
+}
+body.vv-view-voucher-page.vv-no-sidebar .main-content,
+body.vv-view-voucher-page.vv-no-sidebar .header,
+body.vv-view-voucher-page.vv-no-sidebar .employee-header,
+body.vv-view-voucher-page.vv-no-sidebar .admin-header {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+}
+body.vv-view-voucher-page .vv-breadcrumb-back,
+body.vv-view-voucher-page .vv-purchases-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 700;
+    color: #2563eb !important;
+    text-decoration: none !important;
+}
+body.vv-view-voucher-page .vv-breadcrumb-back:hover,
+body.vv-view-voucher-page .vv-purchases-back:hover {
+    color: #1d4ed8 !important;
+    text-decoration: underline !important;
 }
 </style>
 CSS;

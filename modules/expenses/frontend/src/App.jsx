@@ -2,7 +2,6 @@ import ExpensesDeskPage from './pages/ExpensesDeskPage';
 import ExpenseCreatePage from './pages/ExpenseCreatePage';
 import ExpenseSmartInsightsPage from './pages/ExpenseSmartInsightsPage';
 import ExpenseImportPage from './pages/ExpenseImportPage';
-import PurchasesVoucherPreviewPage from './pages/PurchasesVoucherPreviewPage';
 import { deskPageUrl } from './api/expensesDesk';
 
 function resolvePage() {
@@ -32,9 +31,6 @@ function App() {
   }
   if (page === 'import') {
     return <ExpenseImportPage />;
-  }
-  if (page === 'voucher-preview') {
-    return <PurchasesVoucherPreviewPage />;
   }
   return <ExpensesDeskPage />;
 }

@@ -40,6 +40,10 @@
     $GLOBALS['_erp_header_style_linked'] = true;
     // Ensure include scope sees Blade view flags (e.g. accounting hub).
     $hideSidebar = !empty($hideSidebar ?? false);
+    if (!empty($active_module)) {
+        $active_module = (string) $active_module;
+        $_SESSION['active_module'] = $active_module;
+    }
     $headerPath = rtrim((string) config('erp.app_root'), '\\/') . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'header_employee.php';
     if (is_file($headerPath)) {
         include $headerPath;

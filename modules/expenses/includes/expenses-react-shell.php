@@ -299,6 +299,64 @@ html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-
     color: #e2e8f0 !important;
 }
 
+/*
+ * Purchases desk: scroll the main column only.
+ * Keep html/body locked so the fixed sidebar never moves with the page.
+ */
+html.page-exp-desk-scroll,
+html.page-exp-desk-scroll body,
+body.page-exp-desk.page-exp-desk--scroll,
+body.page-exp-desk.page-exp-desk--scroll.dashboard {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+}
+body.page-exp-desk.page-exp-desk--scroll .sidebar-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    z-index: 1000 !important;
+}
+body.page-exp-desk.page-exp-desk--scroll .layout-main-wrapper,
+body.page-exp-desk.page-exp-desk--scroll .layout-main-wrapper.min-vh-100 {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+}
+body.page-exp-desk.page-exp-desk--scroll .layout-main-wrapper > .flex-grow-1,
+body.page-exp-desk.page-exp-desk--scroll .flex-grow-1.d-flex.flex-column {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: thin !important;
+    -ms-overflow-style: auto !important;
+}
+body.page-exp-desk.page-exp-desk--scroll .layout-main-wrapper > .flex-grow-1::-webkit-scrollbar {
+    width: 10px !important;
+    display: block !important;
+}
+body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root,
+body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root #root,
+body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root .exp-desk-page {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+}
+body.page-exp-desk.page-exp-desk--scroll main.main-content.exp-desk-react-root {
+    flex: 0 1 auto !important;
+    padding-bottom: 2rem !important;
+}
+body.page-exp-desk.page-exp-desk--scroll .employee-header.employee-header--exp-desk {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1020 !important;
+}
 </style>
 
 <main class="main-content exp-desk-react-root">

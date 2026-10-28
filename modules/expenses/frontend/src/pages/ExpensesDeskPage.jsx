@@ -93,6 +93,10 @@ function isThisMonthRange(filters, now = new Date()) {
 }
 
 function defaultListFilters() {
+  // Purchases: show recent vouchers (no month lock). Expenses still defaults to this month.
+  if (isPurchasesDesk()) {
+    return { ...emptyFilters };
+  }
   return { ...emptyFilters, ...thisMonthDateRange() };
 }
 
@@ -105,7 +109,7 @@ function filtersFromLocationSearch() {
   if (allowed.has(status)) {
     base.status = status;
   }
-  // Explicit URL dates override the default month filter (empty = all dates).
+  // Explicit URL dates override the default (empty = all / recent).
   if (params.has('date_from') || params.has('date_to')) {
     base.date_from = String(params.get('date_from') || '').trim();
     base.date_to = String(params.get('date_to') || '').trim();
@@ -1344,15 +1348,15 @@ export default function ExpensesDeskPage() {
         <div className="exp-desk-table-wrap">
           <table className="exp-desk-table exp-desk-table--ledger">
               <colgroup>
-              <col className="col-ref" style={{ width: purchasesDesk ? '12%' : undefined }} />
-              <col className="col-date" style={{ width: purchasesDesk ? '8%' : undefined }} />
+              <col className="col-ref" style={{ width: purchasesDesk ? '14%' : undefined }} />
+              <col className="col-date" style={{ width: purchasesDesk ? '9%' : undefined }} />
               <col className="col-payee" style={{ width: purchasesDesk ? '18%' : undefined }} />
-              <col className="col-type" style={{ width: purchasesDesk ? '14%' : undefined }} />
-              <col className="col-total" style={{ width: purchasesDesk ? '12%' : undefined }} />
-              <col className="col-exclusive" style={{ width: purchasesDesk ? '12%' : undefined }} />
-              <col className="col-vat" style={{ width: purchasesDesk ? '9%' : undefined }} />
+              <col className="col-type" style={{ width: purchasesDesk ? '12%' : undefined }} />
+              <col className="col-total" style={{ width: purchasesDesk ? '11%' : undefined }} />
+              <col className="col-exclusive" style={{ width: purchasesDesk ? '11%' : undefined }} />
+              <col className="col-vat" style={{ width: purchasesDesk ? '8%' : undefined }} />
               <col className="col-status" style={{ width: purchasesDesk ? '9%' : undefined }} />
-              <col className="col-actions" style={{ width: purchasesDesk ? '6%' : undefined }} />
+              <col className="col-actions" style={{ width: purchasesDesk ? '8%' : undefined }} />
             </colgroup>
             <thead>
               <tr>

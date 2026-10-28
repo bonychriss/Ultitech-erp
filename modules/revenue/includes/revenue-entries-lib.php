@@ -477,11 +477,13 @@ function revenue_entries_parse_filters(array $get): array
         }
     }
 
-    $sort = strtolower(preg_replace('/[^a-z_]/', '', $get['sort'] ?? 'date'));
-    if (!in_array($sort, ['date', 'amount'], true)) {
-        $sort = 'date';
+    $sort = strtolower(preg_replace('/[^a-z_]/', '', $get['sort'] ?? 'voucher'));
+    if (!in_array($sort, ['date', 'amount', 'voucher'], true)) {
+        $sort = 'voucher';
     }
-    $dir = strtolower((string) ($get['dir'] ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
+    // Voucher/date default #1→current (asc); amount defaults highest-first.
+    $dirDefault = $sort === 'amount' ? 'desc' : 'asc';
+    $dir = strtolower((string) ($get['dir'] ?? $dirDefault)) === 'asc' ? 'ASC' : 'DESC';
 
     return [
         'tab' => $tab,
@@ -708,7 +710,18 @@ function revenue_entries_fetch(PDO $revPdo, array $get): array
 
     $sort = $filters['sort'];
     $dir = $filters['dir'];
-    $orderSql = $sort === 'amount' ? "re.amount_total $dir, re.id DESC" : "re.entry_date $dir, re.id DESC";
+    if ($sort === 'amount') {
+        $orderSql = "re.amount_total $dir, re.id DESC";
+    } elseif ($sort === 'voucher') {
+        // Natural order for REV-YEAR-MONTH-SEQ (and similar dash refs).
+        $orderSql = "CAST(NULLIF(SUBSTRING_INDEX(SUBSTRING_INDEX(re.voucher_number, '-', 2), '-', -1), '') AS UNSIGNED) $dir, "
+            . "CAST(NULLIF(SUBSTRING_INDEX(SUBSTRING_INDEX(re.voucher_number, '-', 3), '-', -1), '') AS UNSIGNED) $dir, "
+            . "CAST(NULLIF(SUBSTRING_INDEX(re.voucher_number, '-', -1), '') AS UNSIGNED) $dir, "
+            . "re.voucher_number $dir, re.id DESC";
+    } else {
+        // Match list direction for id so first→latest stays stable within a day.
+        $orderSql = "re.entry_date $dir, re.id $dir";
+    }
     $dueDateSelect = 'NULL AS linked_due_date';
     if ($hasInvoices) {
         try {

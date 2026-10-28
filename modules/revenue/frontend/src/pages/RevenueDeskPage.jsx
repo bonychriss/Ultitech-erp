@@ -44,8 +44,9 @@ const emptyFilters = {
   tab: 'all',
   search: '',
   ...emptyAdvancedFilters,
-  sort: 'date',
-  dir: 'desc',
+  // Revenue: voucher #1 at top → current/latest at bottom (opposite of other desks).
+  sort: 'voucher',
+  dir: 'asc',
 };
 
 function hasAdvancedFilters(activeFilters) {
@@ -105,6 +106,8 @@ function readListStateFromUrl() {
       type: p.get('type') || '',
       status: p.get('status') || '',
       payment: p.get('payment') || '',
+      sort: p.get('sort') || '',
+      dir: p.get('dir') || '',
     },
   };
 }
@@ -124,6 +127,8 @@ function writeListStateToUrl(search, filters, selectedId) {
   setOrDel('customer_id', filters && filters.customer_id);
   setOrDel('date_from', filters && filters.date_from);
   setOrDel('date_to', filters && filters.date_to);
+  setOrDel('sort', filters && filters.sort);
+  setOrDel('dir', filters && filters.dir);
   setOrDel('sel', selectedId ? String(selectedId) : '');
   url.searchParams.delete('success');
   url.searchParams.delete('open_export');
@@ -322,6 +327,12 @@ function mergeListFilters(urlList, restoredList) {
     date_from = restoredFilters.date_from || '';
     date_to = restoredFilters.date_to || '';
   }
+  const sort = ['date', 'amount', 'voucher'].includes(String(urlFilters.sort || '').toLowerCase())
+    ? String(urlFilters.sort).toLowerCase()
+    : emptyFilters.sort;
+  const dir = ['asc', 'desc'].includes(String(urlFilters.dir || '').toLowerCase())
+    ? String(urlFilters.dir).toLowerCase()
+    : emptyFilters.dir;
   return {
     ...emptyFilters,
     search: restoredList && typeof restoredList.search === 'string'
@@ -333,6 +344,8 @@ function mergeListFilters(urlList, restoredList) {
     type: urlFilters.type || restoredFilters.type || '',
     status: urlFilters.status || restoredFilters.status || '',
     payment: urlFilters.payment || restoredFilters.payment || '',
+    sort,
+    dir,
   };
 }
 
@@ -539,6 +552,8 @@ export default function RevenueDeskPage() {
           date_from = defaults.date_from || '';
           date_to = defaults.date_to || '';
         }
+        const urlSort = String(urlParams?.get('sort') || bootFilters.sort || '').toLowerCase();
+        const urlDir = String(urlParams?.get('dir') || bootFilters.dir || '').toLowerCase();
         const initial = {
           ...emptyFilters,
           date_from,
@@ -548,6 +563,9 @@ export default function RevenueDeskPage() {
           type: urlType || restoredFilters.type || bootFilters.type || '',
           customer_id: urlParams?.get('customer_id') || restoredFilters.customer_id || bootFilters.customer_id || '',
           search: urlQ,
+          // Prefer voucher #1→current unless URL already asked for another sort.
+          sort: ['date', 'amount', 'voucher'].includes(urlSort) ? urlSort : 'voucher',
+          dir: ['asc', 'desc'].includes(urlDir) ? urlDir : 'asc',
         };
         setDraftSearch(urlQ);
         appliedSearchRef.current = urlQ.trim();
@@ -835,7 +853,13 @@ export default function RevenueDeskPage() {
   const hasSearchValue = filters.search.trim() !== '' || draftSearch.trim() !== '';
 
   function applyFilters() {
-    setFilters((current) => ({ ...current, ...draftFilters }));
+    const datesCleared = !String(draftFilters.date_from || '').trim()
+      && !String(draftFilters.date_to || '').trim();
+    setFilters((current) => ({
+      ...current,
+      ...draftFilters,
+      ...(datesCleared ? { sort: 'voucher', dir: 'asc' } : {}),
+    }));
     setFiltersOpen(false);
   }
 
@@ -866,7 +890,13 @@ export default function RevenueDeskPage() {
   function resetFilters() {
     const cleared = { ...emptyAdvancedFilters };
     setDraftFilters(cleared);
-    setFilters((current) => ({ ...current, ...cleared }));
+    // All data: voucher #1 (first) at top → current/latest at bottom.
+    setFilters((current) => ({
+      ...current,
+      ...cleared,
+      sort: 'voucher',
+      dir: 'asc',
+    }));
     setFiltersOpen(false);
   }
 
@@ -874,7 +904,12 @@ export default function RevenueDeskPage() {
     if (key === 'date_from') {
       const cleared = { date_from: '', date_to: '' };
       setDraftFilters((current) => ({ ...current, ...cleared }));
-      setFilters((current) => ({ ...current, ...cleared }));
+      setFilters((current) => ({
+        ...current,
+        ...cleared,
+        sort: 'voucher',
+        dir: 'asc',
+      }));
       return;
     }
     setDraftFilters((current) => ({ ...current, [key]: '' }));
@@ -1101,8 +1136,19 @@ export default function RevenueDeskPage() {
 
   function toggleSort(column) {
     setFilters((current) => {
-      const nextDir = current.sort === column && current.dir === 'desc' ? 'asc' : 'desc';
-      return { ...current, sort: column, dir: nextDir };
+      if (current.sort === column) {
+        return {
+          ...current,
+          sort: column,
+          dir: current.dir === 'asc' ? 'desc' : 'asc',
+        };
+      }
+      // First click: voucher/date asc (first→present); amount desc (largest first).
+      return {
+        ...current,
+        sort: column,
+        dir: column === 'amount' ? 'desc' : 'asc',
+      };
     });
   }
 
@@ -1432,7 +1478,14 @@ export default function RevenueDeskPage() {
           </colgroup>
           <thead>
             <tr>
-              <th className="col-voucher">Voucher</th>
+              <th className="col-voucher">
+                <button type="button" className="rev-desk-th-sort" onClick={() => toggleSort('voucher')}>
+                  Voucher
+                  {filters.sort === 'voucher' ? (
+                    <span className="rev-desk-sort-hint">{filters.dir === 'desc' ? ' ↓' : ' ↑'}</span>
+                  ) : null}
+                </button>
+              </th>
               <th className="col-date">
                 <button type="button" className="rev-desk-th-sort" onClick={() => toggleSort('date')}>
                   Date

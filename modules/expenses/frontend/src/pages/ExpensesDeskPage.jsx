@@ -1071,7 +1071,7 @@ export default function ExpensesDeskPage() {
   }
 
   return (
-    <div className="exp-desk-page exp-desk-page--analytics-off">
+    <div className={`exp-desk-page exp-desk-page--analytics-off${purchasesDesk ? ' exp-desk-page--purchases' : ''}`}>
       {previewExpense && !purchasesDesk ? (
         <ExpenseQuickViewModal
           expense={previewExpense}
@@ -1343,16 +1343,16 @@ export default function ExpensesDeskPage() {
 
         <div className="exp-desk-table-wrap">
           <table className="exp-desk-table exp-desk-table--ledger">
-            <colgroup>
-              <col className="col-ref" />
-              <col className="col-date" />
-              <col className="col-payee" />
-              <col className="col-type" />
-              <col className="col-total" />
-              <col className="col-exclusive" />
-              <col className="col-vat" />
-              <col className="col-status" />
-              <col className="col-actions" />
+              <colgroup>
+              <col className="col-ref" style={{ width: purchasesDesk ? '12%' : undefined }} />
+              <col className="col-date" style={{ width: purchasesDesk ? '8%' : undefined }} />
+              <col className="col-payee" style={{ width: purchasesDesk ? '18%' : undefined }} />
+              <col className="col-type" style={{ width: purchasesDesk ? '14%' : undefined }} />
+              <col className="col-total" style={{ width: purchasesDesk ? '12%' : undefined }} />
+              <col className="col-exclusive" style={{ width: purchasesDesk ? '12%' : undefined }} />
+              <col className="col-vat" style={{ width: purchasesDesk ? '9%' : undefined }} />
+              <col className="col-status" style={{ width: purchasesDesk ? '9%' : undefined }} />
+              <col className="col-actions" style={{ width: purchasesDesk ? '6%' : undefined }} />
             </colgroup>
             <thead>
               <tr>

@@ -6,10 +6,15 @@
  *          $assets (from expensesDeskLoadReactAssets), optional $expensesPage.
  */
 $expensesPage = $expensesPage ?? 'list';
+$expensesDeskScrollable = !empty($expensesDeskScrollable);
 $GLOBALS['_erp_header_style_linked'] = true;
+$htmlLockClass = $expensesDeskScrollable ? 'page-exp-desk-lock page-exp-desk-scroll' : 'page-exp-desk-lock';
+$bodyDeskClass = $expensesDeskScrollable
+    ? 'dashboard page-exp-desk page-exp-desk--scroll exp-dashboard-page'
+    : 'dashboard page-exp-desk exp-dashboard-page';
 ?>
 <!DOCTYPE html>
-<html lang="en" class="page-exp-desk-lock">
+<html lang="en" class="<?= htmlspecialchars($htmlLockClass, ENT_QUOTES, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,6 +24,9 @@ $GLOBALS['_erp_header_style_linked'] = true;
         var t = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
         document.documentElement.classList.add('page-exp-desk-lock');
+        <?php if ($expensesDeskScrollable): ?>
+        document.documentElement.classList.add('page-exp-desk-scroll');
+        <?php endif; ?>
     })();
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -26,7 +34,7 @@ $GLOBALS['_erp_header_style_linked'] = true;
     <?= expensesDeskShellHeadExtras() ?>
     <?= $expensesHeadMarkup ?>
 </head>
-<body class="dashboard page-exp-desk exp-dashboard-page">
+<body class="<?= htmlspecialchars($bodyDeskClass, ENT_QUOTES, 'UTF-8') ?>">
 
 <?php include __DIR__ . '/../../../includes/header_employee.php'; ?>
 

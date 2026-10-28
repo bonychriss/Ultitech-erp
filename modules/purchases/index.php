@@ -18,6 +18,7 @@ $employeeHeaderExtraClass = 'employee-header--exp-desk';
 $bodyExtraClass = 'page-exp-desk';
 $expensesPage = 'list';
 $expensesDeskMode = 'purchases';
+$expensesDeskScrollable = true;
 
 $purchasesHomeUrl = function_exists('company_url')
     ? company_url('select-module')

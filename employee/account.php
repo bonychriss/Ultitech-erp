@@ -264,82 +264,150 @@ $saveEmailApiUrl = function_exists('company_url')
 	<?php if (function_exists('renderSystemFontHeadMarkup')) { renderSystemFontHeadMarkup(); } ?>
 	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 	<style>
-        body { font-family: var(--erp-font-family, 'Poppins', sans-serif); background: #f8fafc; color: #1e293b; }
-        .main-content-wrapper { padding: 2rem; }
-        .page-shell { padding-left: 4rem; }
-        .editor-shell { max-width: 1140px; margin: 0 auto; }
-        .editor-topbar {
-            display: flex; align-items: center; justify-content: space-between;
-            gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;
+        body { font-family: var(--erp-font-family, 'Poppins', sans-serif); background: #eef2f6; color: #1e293b; }
+        .main-content-wrapper { padding: 0 0 3rem; }
+        .page-shell { padding-left: 0; max-width: none; }
+        .editor-shell { max-width: 1180px; margin: 0 auto; padding: 0 1.25rem; }
+
+        .acct-banner {
+            height: 168px; margin: 0; border-radius: 0;
+            background:
+                linear-gradient(135deg, rgba(15, 23, 42, 0.28), rgba(124, 58, 237, 0.35)),
+                radial-gradient(ellipse at 20% 80%, #94a3b8 0%, transparent 55%),
+                linear-gradient(160deg, #64748b 0%, #334155 45%, #1e293b 100%);
         }
-        .editor-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 2rem; align-items: start; }
-        .section-nav { position: sticky; top: 96px; align-self: start; }
-        .section-nav ul { list-style: none; margin: 0; padding: 0; }
-        .section-nav li + li { margin-top: 0.5rem; }
+
+        .acct-profile-layout {
+            display: grid;
+            grid-template-columns: 260px minmax(0, 1fr) 240px;
+            gap: 1.25rem;
+            align-items: start;
+            margin-top: -72px;
+            padding-bottom: 2rem;
+        }
+
+        .acct-profile-card,
+        .acct-feed-card,
+        .acct-aside-card {
+            background: #fff;
+            border-radius: 1.35rem;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+        }
+
+        .acct-profile-card {
+            padding: 1.35rem 1.25rem 1.15rem;
+            text-align: center;
+            position: sticky;
+            top: 88px;
+        }
+        .account-avatar-wrap { position: relative; width: 118px; height: 118px; margin: 0 auto 0.85rem; }
+        .account-avatar {
+            width: 118px; height: 118px; border-radius: 50%; background: #f1f5f9; overflow: hidden;
+            border: 4px solid #fff; box-shadow: 0 0 0 1px #e2e8f0; display: flex; align-items: center; justify-content: center;
+        }
+        .account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .account-avatar-fallback { font-size: 2.4rem; font-weight: 700; color: #64748b; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+        .account-avatar-btn {
+            position: absolute; bottom: 2px; right: 2px; width: 34px; height: 34px; border-radius: 50%;
+            background: #fff; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: #7c3aed; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .account-profile-name { font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0 0 2px; }
+        .account-profile-user { font-size: 0.88rem; color: #64748b; margin: 0 0 6px; }
+        .account-profile-email { font-size: 0.8rem; color: #94a3b8; margin: 0 0 12px; word-break: break-word; }
+        .account-profile-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+        .profile-badge {
+            display: inline-flex; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
+            background: #f3e8ff; color: #7c3aed;
+        }
+        .profile-badge-muted { background: #f1f5f9; color: #475569; }
+        .profile-badge-success { background: #dcfce7; color: #166534; }
+        .acct-profile-meta-list {
+            list-style: none; margin: 0.75rem 0 1rem; padding: 0; text-align: left; font-size: 0.78rem; color: #64748b;
+        }
+        .acct-profile-meta-list li {
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.28rem 0;
+        }
+        .acct-profile-meta-list i { width: 1rem; text-align: center; color: #94a3b8; }
+        .acct-profile-actions { display: flex; flex-direction: column; gap: 0.55rem; }
+        .acct-profile-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+            width: 100%; min-height: 2.45rem; border-radius: 999px; font-size: 0.84rem; font-weight: 700;
+            text-decoration: none; border: none; cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
+        }
+        .acct-profile-btn--primary { background: #7c3aed; color: #fff; box-shadow: 0 6px 16px rgba(124, 58, 237, 0.25); }
+        .acct-profile-btn--primary:hover { background: #6d28d9; color: #fff; }
+        .acct-profile-btn--ghost { background: #eff6ff; color: #2563eb; }
+        .acct-profile-btn--ghost:hover { background: #dbeafe; color: #1d4ed8; }
+
+        .acct-feed { min-width: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+        .acct-feed-toolbar {
+            display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
+            padding-top: 0.35rem;
+        }
+        .section-nav {
+            display: flex; flex-wrap: wrap; gap: 0.15rem 0.85rem; align-items: center;
+            background: transparent; border: none; box-shadow: none; padding: 0;
+        }
+        .section-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.15rem 0.85rem; }
+        .section-nav li + li { margin-top: 0; }
         .section-nav a {
-            display: block; padding: 0.45rem 0.75rem; border-radius: 8px;
-            color: #64748b; font-size: 13px; font-weight: 500; text-decoration: none; transition: all 0.2s ease;
+            display: inline-block; padding: 0.35rem 0.15rem 0.55rem; border-radius: 0;
+            color: #64748b; font-size: 0.84rem; font-weight: 600; text-decoration: none;
+            border-bottom: 2px solid transparent; transition: color 0.15s ease, border-color 0.15s ease;
         }
-        .section-nav a:hover { background: #eff6ff; color: #2563eb; }
-        .section-nav a.is-active { background: #f3e8ff; color: #7c3aed; font-weight: 600; }
-        .editor-main { min-width: 0; }
-        .editor-section { padding-bottom: 2rem; margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; scroll-margin-top: 90px; }
-        .editor-section:last-of-type { margin-bottom: 1.5rem; border-bottom: none; }
-        .section-header { margin-bottom: 1.25rem; }
-        .section-title { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
-        .section-subtitle { font-size: 12px; color: #94a3b8; margin: 0; }
-        .form-row { display: grid; grid-template-columns: 210px 1fr; align-items: start; margin-bottom: 24px; }
+        .section-nav a:hover { color: #0f172a; background: transparent; }
+        .section-nav a.is-active { background: transparent; color: #7c3aed; border-bottom-color: #7c3aed; font-weight: 700; }
+        .acct-following-pill {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-height: 2rem; padding: 0 0.95rem; border-radius: 999px;
+            background: #7c3aed; color: #fff; font-size: 0.78rem; font-weight: 700; text-decoration: none;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.22);
+        }
+        .acct-following-pill:hover { background: #6d28d9; color: #fff; }
+
+        .editor-main { min-width: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+        .editor-section {
+            padding: 1.15rem 1.25rem 1.25rem; margin: 0; border: none;
+            scroll-margin-top: 100px; background: #fff;
+            border-radius: 1.35rem; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+        }
+        .editor-section:last-of-type { margin-bottom: 0; border-bottom: none; }
+        .section-header { margin-bottom: 1.1rem; }
+        .section-title { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+        .section-subtitle { font-size: 0.78rem; color: #94a3b8; margin: 0; }
+        .form-row { display: grid; grid-template-columns: 160px 1fr; align-items: start; margin-bottom: 20px; }
         .form-row:last-child { margin-bottom: 0; }
-        .form-label { font-size: 14px; font-weight: 500; color: #1e293b; padding-top: 12px; margin: 0; }
+        .form-label { font-size: 13px; font-weight: 600; color: #334155; padding-top: 12px; margin: 0; }
         .form-input {
-            width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 10px;
+            width: 100%; padding: 11px 14px; border: 1px solid #e2e8f0; border-radius: 10px;
             font-size: 14px; color: #1e293b; outline: none; transition: all 0.2s; background: #fff;
         }
-        .form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        .form-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12); }
         .help-text { font-size: 12px; color: #94a3b8; margin-top: 6px; line-height: 1.5; margin-bottom: 0; }
         .inline-field-form { display: flex; gap: 12px; align-items: center; max-width: 640px; }
         .inline-field-form .form-input { flex: 1; min-width: 0; }
         .host-port-grid { display: grid; grid-template-columns: 120px 1fr; gap: 12px; }
         .btn-save {
-            background: #7c3aed; color: white; padding: 14px 48px; border-radius: 12px;
-            font-weight: 600; font-size: 15px; border: none; cursor: pointer;
+            background: #7c3aed; color: white; padding: 12px 28px; border-radius: 999px;
+            font-weight: 600; font-size: 14px; border: none; cursor: pointer;
             box-shadow: 0 4px 12px rgba(124, 58, 237, 0.22); transition: all 0.2s;
         }
         .btn-save:hover { background: #6d28d9; }
-        .btn-save-inline { padding: 10px 20px; border-radius: 10px; font-size: 14px; white-space: nowrap; flex-shrink: 0; }
+        .btn-save-inline { padding: 10px 18px; border-radius: 999px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
         .btn-cancel { border: 1px solid #d8b4fe; color: #7c3aed; background: #faf5ff; transition: all 0.2s; cursor: pointer; }
         .btn-cancel:hover { background: #f3e8ff; color: #6d28d9; }
         .btn-secondary-lite {
             border: 1px solid #e2e8f0; background: #fff; color: #475569; padding: 8px 14px;
-            border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+            border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer;
         }
         .btn-secondary-lite:hover { background: #f8fafc; }
         .btn-secondary-lite:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-danger-lite { border-color: #fecaca; color: #dc2626; }
         .btn-danger-lite:hover { background: #fef2f2; }
-        .profile-photo-row { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
-        .account-avatar-wrap { position: relative; flex-shrink: 0; width: 120px; height: 120px; }
-        .account-avatar {
-            width: 120px; height: 120px; border-radius: 50%; background: #f1f5f9; overflow: hidden;
-            border: 4px solid #fff; box-shadow: 0 0 0 1px #e2e8f0; display: flex; align-items: center; justify-content: center;
-        }
-        .account-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .account-avatar-fallback { font-size: 2.5rem; font-weight: 700; color: #64748b; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
-        .account-avatar-btn {
-            position: absolute; bottom: 0; right: 0; width: 36px; height: 36px; border-radius: 50%;
-            background: #fff; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; color: #7c3aed; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        }
-        .account-profile-name { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0 0 4px; }
-        .account-profile-user { font-size: 14px; color: #64748b; margin: 0 0 4px; }
-        .account-profile-email { font-size: 14px; color: #94a3b8; margin: 0 0 12px; }
-        .account-profile-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-        .profile-badge {
-            display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
-            background: #f3e8ff; color: #7c3aed;
-        }
-        .profile-badge-muted { background: #f1f5f9; color: #475569; }
-        .profile-badge-success { background: #dcfce7; color: #166534; }
+        .profile-photo-row { display: none; }
         .status-pill {
             display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
         }
@@ -410,21 +478,40 @@ $saveEmailApiUrl = function_exists('company_url')
         .subsection-label { font-size: 14px; font-weight: 700; color: #334155; margin: 0 0 16px; }
         .editor-footer-actions {
             display: flex; justify-content: flex-end; align-items: center;
-            gap: 16px; flex-wrap: wrap; margin-bottom: 5rem; padding-top: 8px;
+            gap: 12px; flex-wrap: wrap; margin: 0; padding: 0.25rem 0 0.5rem;
+        }
+
+        .acct-aside-card { padding: 1.15rem 1.1rem 1.25rem; text-align: center; position: sticky; top: 88px; }
+        .acct-aside-illus {
+            width: 100%; height: 110px; border-radius: 1rem; margin-bottom: 0.85rem;
+            background:
+                radial-gradient(circle at 30% 40%, #c4b5fd 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, #93c5fd 0%, transparent 45%),
+                linear-gradient(160deg, #ede9fe, #eff6ff);
+            display: flex; align-items: center; justify-content: center; color: #7c3aed; font-size: 2rem;
+        }
+        .acct-aside-card h3 { font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0 0 0.45rem; }
+        .acct-aside-card p { font-size: 0.78rem; color: #64748b; line-height: 1.45; margin: 0; }
+
+        @media (max-width: 1100px) {
+            .acct-profile-layout { grid-template-columns: 240px minmax(0, 1fr); }
+            .acct-aside { display: none; }
         }
         @media (max-width: 992px) {
-            .main-content-wrapper { padding: 1rem !important; }
-            .page-shell { padding-left: 0; }
-            .editor-topbar { flex-direction: column; align-items: flex-start; }
-            .editor-layout { grid-template-columns: 1fr; gap: 1rem; }
-            .section-nav { position: static; }
-            .section-nav ul { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-            .section-nav li + li { margin-top: 0; }
-            .form-row { grid-template-columns: 1fr; gap: 8px; margin-bottom: 20px; }
+            .main-content-wrapper { padding: 0 0 2.5rem !important; }
+            .acct-banner { height: 120px; }
+            .acct-profile-layout {
+                grid-template-columns: 1fr; gap: 1rem; margin-top: -48px; padding: 0 0.85rem 1.5rem;
+            }
+            .editor-shell { padding: 0; }
+            .acct-profile-card, .acct-aside-card { position: static; }
+            .form-row { grid-template-columns: 1fr; gap: 8px; margin-bottom: 18px; }
             .form-label { padding-top: 0; font-size: 13px; }
             .inline-field-form { flex-direction: column; align-items: stretch; }
             .host-port-grid { grid-template-columns: 1fr; }
-            .btn-save { width: 100%; padding: 14px 24px; }
+            .btn-save { width: 100%; padding: 12px 24px; }
+            .acct-feed-toolbar { flex-direction: column; align-items: stretch; }
+            .acct-following-pill { align-self: flex-end; }
         }
 	</style>
 </head>
@@ -455,31 +542,68 @@ $saveEmailApiUrl = function_exists('company_url')
             </script>
         <?php endif; ?>
 
+        <div class="acct-banner" aria-hidden="true"></div>
         <div class="page-shell editor-shell">
-            <div class="editor-topbar">
-                <div>
-                    <h1 class="text-xl font-semibold text-slate-800">Profile Settings</h1>
-                    <p class="text-sm text-slate-400 mt-1 mb-0">Manage your profile, security, signature, and personal email.</p>
-                </div>
-                <a href="<?= $esc($profileBackUrl) ?>" class="text-slate-400 hover:text-slate-600 text-sm font-medium flex items-center gap-2">
-                    <i class="fas fa-arrow-left text-xs"></i> Back to Modules
-                </a>
-            </div>
-            
-            <div class="editor-layout">
-                <aside class="section-nav">
-                    <ul>
-                        <li><a href="#profile-photo" class="is-active">Profile Photo</a></li>
-                        <li><a href="#personal-details">Personal Details</a></li>
-                        <li><a href="#change-password">Security &amp; Password</a></li>
-                        <li><a href="#digital-signature">Digital Signature</a></li>
-                        <li><a href="#personal-email">Personal Email</a></li>
+            <div class="acct-profile-layout">
+                <aside class="acct-profile-card">
+                    <div class="account-avatar-wrap">
+                        <div class="account-avatar">
+                            <?php if ($profilePhotoUrl !== ''): ?>
+                                <img src="<?= $esc($profilePhotoUrl) ?>" alt="Profile photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <span class="account-avatar-fallback" style="display:none;"><?= $esc($initial) ?></span>
+                            <?php else: ?>
+                                <span class="account-avatar-fallback"><?= $esc($initial) ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <form method="post" enctype="multipart/form-data" class="account-avatar-upload">
+                            <label class="account-avatar-btn" title="Upload photo">
+                                <i class="fas fa-camera"></i>
+                                <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
+                            </label>
+                        </form>
+                    </div>
+                    <h2 class="account-profile-name"><?= $esc($user['full_name'] ?? '') ?></h2>
+                    <p class="account-profile-user">@<?= $esc($user['username'] ?? '') ?></p>
+                    <p class="account-profile-email"><?= $esc($user['email'] ?? '') ?></p>
+                    <div class="account-profile-badges">
+                        <span class="profile-badge"><?= $esc(ucfirst((string) ($user['role'] ?? 'user'))) ?></span>
+                        <?php if (!empty($user['department'])): ?>
+                            <span class="profile-badge profile-badge-muted"><?= $esc($user['department']) ?></span>
+                        <?php endif; ?>
+                        <span class="profile-badge profile-badge-success">Active</span>
+                    </div>
+                    <ul class="acct-profile-meta-list">
+                        <?php if (!empty($user['whatsapp_number'])): ?>
+                            <li><i class="fas fa-phone"></i><span><?= $esc($user['whatsapp_number']) ?></span></li>
+                        <?php endif; ?>
+                        <li><i class="fas fa-calendar-alt"></i><span>Joined <?= $esc(date('M Y', strtotime((string) ($user['created_at'] ?? 'now')))) ?></span></li>
+                        <li>
+                            <i class="fas fa-signature"></i>
+                            <span><?= $currentSig ? 'Signature on file' : 'Signature missing' ?></span>
+                        </li>
                     </ul>
+                    <div class="acct-profile-actions">
+                        <a href="#personal-details" class="acct-profile-btn acct-profile-btn--primary">Edit profile</a>
+                        <a href="<?= $esc($profileBackUrl) ?>" class="acct-profile-btn acct-profile-btn--ghost">Back to modules</a>
+                    </div>
                 </aside>
-                
-                <div class="editor-main">
-		            <?php require __DIR__ . '/includes/account-settings-view.inc.php'; ?>
 
+                <div class="acct-feed">
+                    <div class="acct-feed-toolbar">
+                        <nav class="section-nav" aria-label="Profile sections">
+                            <ul>
+                                <li><a href="#profile-photo" class="is-active">Photo</a></li>
+                                <li><a href="#personal-details">Details</a></li>
+                                <li><a href="#change-password">Security</a></li>
+                                <li><a href="#digital-signature">Signature</a></li>
+                                <li><a href="#personal-email">Email</a></li>
+                            </ul>
+                        </nav>
+                        <a href="<?= $esc($logoutUrl) ?>" class="acct-following-pill">Log out</a>
+                    </div>
+
+                    <div class="editor-main">
+		            <?php require __DIR__ . '/includes/account-settings-view.inc.php'; ?>
 			<!-- Digital Signature -->
 			<section class="editor-section" id="digital-signature">
                 <div class="section-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
@@ -632,7 +756,16 @@ $saveEmailApiUrl = function_exists('company_url')
                             <i class="fas fa-save me-2"></i> Save Email Settings
                         </button>
                     </div>
+                    </div>
                 </div>
+
+                <aside class="acct-aside">
+                    <div class="acct-aside-card">
+                        <div class="acct-aside-illus" aria-hidden="true"><i class="fas fa-user-shield"></i></div>
+                        <h3>Keep your account ready</h3>
+                        <p>Update your photo, contact details, and digital signature so vouchers and approvals stay accurate across Accounting.</p>
+                    </div>
+                </aside>
             </div>
         </div>
 </div>

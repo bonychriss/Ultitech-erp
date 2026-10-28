@@ -13,44 +13,9 @@ $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-passwo
 <section class="editor-section" id="profile-photo">
     <div class="section-header">
         <h2 class="section-title">Profile Photo</h2>
-        <p class="section-subtitle">Update your avatar and view your core identity details.</p>
+        <p class="section-subtitle">Use the camera on your profile card to upload a new avatar. JPG, PNG, GIF, or WEBP.</p>
     </div>
-    <div class="form-row">
-        <label class="form-label">Avatar</label>
-        <div>
-            <div class="profile-photo-row">
-                <div class="account-avatar-wrap">
-                    <div class="account-avatar">
-                        <?php if ($profilePhotoUrl !== ''): ?>
-                            <img src="<?= $esc($profilePhotoUrl) ?>" alt="Profile photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                            <span class="account-avatar-fallback" style="display:none;"><?= $esc($initial) ?></span>
-                        <?php else: ?>
-                            <span class="account-avatar-fallback"><?= $esc($initial) ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <form method="post" enctype="multipart/form-data" class="account-avatar-upload">
-                        <label class="account-avatar-btn" title="Upload photo">
-                            <i class="fas fa-camera"></i>
-                            <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
-                        </label>
-                    </form>
-                </div>
-                <div class="account-profile-meta">
-                    <h3 class="account-profile-name"><?= $esc($user['full_name'] ?? '') ?></h3>
-                    <p class="account-profile-user">@<?= $esc($user['username'] ?? '') ?></p>
-                    <p class="account-profile-email"><?= $esc($user['email'] ?? '') ?></p>
-                    <div class="account-profile-badges">
-                        <span class="profile-badge"><?= $esc(ucfirst((string) ($user['role'] ?? 'user'))) ?></span>
-                        <?php if (!empty($user['department'])): ?>
-                            <span class="profile-badge profile-badge-muted"><?= $esc($user['department']) ?></span>
-                        <?php endif; ?>
-                        <span class="profile-badge profile-badge-success">Active</span>
-                    </div>
-                    <p class="help-text">Member since <?= $esc(date('M Y', strtotime((string) ($user['created_at'] ?? 'now')))) ?></p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <p class="help-text" style="margin:0;">Your photo appears on vouchers, approvals, and the employee header across Accounting.</p>
 </section>
 
 <section class="editor-section" id="personal-details">

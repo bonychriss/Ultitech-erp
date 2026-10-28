@@ -222,22 +222,14 @@ $vvFromPurchases = strtolower(trim((string) ($_GET['from'] ?? ''))) === 'purchas
 $vvBreadcrumbHome = $vvData['breadcrumbs']['home'];
 $vvBreadcrumbAll = $vvData['breadcrumbs']['all'];
 $vvBackUrl = (string) ($vvData['actions']['backUrl'] ?? $vvBreadcrumbHome);
-if ($vvFromPurchases) {
-    $employeeHeaderSubtitle = '<nav class="vv-breadcrumb" aria-label="Breadcrumb">'
-        . '<a class="vv-breadcrumb-link vv-breadcrumb-back erp-nav-back-ignore" href="' . htmlspecialchars($vvBackUrl) . '">'
-        . '<i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Purchases</a>'
-        . '<span class="vv-breadcrumb-sep">/</span>'
-        . '<span class="vv-breadcrumb-current">' . htmlspecialchars($vvData['voucher']['voucher_no'] ?? '') . '</span>'
-        . '</nav>';
-} else {
-    $employeeHeaderSubtitle = '<nav class="vv-breadcrumb" aria-label="Breadcrumb">'
-        . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($vvBreadcrumbHome) . '">Home</a>'
-        . '<span class="vv-breadcrumb-sep">/</span>'
-        . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="' . htmlspecialchars($vvBreadcrumbAll) . '">Vouchers</a>'
-        . '<span class="vv-breadcrumb-sep">/</span>'
-        . '<span class="vv-breadcrumb-current">' . htmlspecialchars($vvData['voucher']['voucher_no'] ?? '') . '</span>'
-        . '</nav>';
-}
+$employeeHeaderSubtitle = '<nav class="vv-breadcrumb" aria-label="Breadcrumb">'
+    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($vvBreadcrumbHome) . '">Home</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="'
+    . htmlspecialchars($vvFromPurchases ? $vvBackUrl : $vvBreadcrumbAll) . '">Vouchers</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<span class="vv-breadcrumb-current">' . htmlspecialchars($vvData['voucher']['voucher_no'] ?? '') . '</span>'
+    . '</nav>';
 
 $statusClass = htmlspecialchars($vvData['status']['className'] ?? 'vv-status-pending');
 $statusLabel = htmlspecialchars($vvData['status']['label'] ?? 'Pending');

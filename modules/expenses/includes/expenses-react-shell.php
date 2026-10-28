@@ -124,18 +124,31 @@ body.page-exp-desk .employee-header--exp-desk .employee-header-page-title {
 body.page-exp-desk .employee-header--exp-desk .employee-header-page-subtitle {
     color: inherit !important;
 }
-body.page-exp-desk .employee-header--exp-desk .exp-desk-header-back {
+body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb,
+body.page-exp-desk .employee-header--exp-desk .exp-desk-breadcrumb {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.35rem;
+    margin: 0;
     font-size: 0.82rem;
-    font-weight: 700;
+    line-height: 1.3;
+}
+body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link {
     color: #2563eb !important;
+    font-weight: 600;
     text-decoration: none !important;
 }
-body.page-exp-desk .employee-header--exp-desk .exp-desk-header-back:hover {
+body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link:hover {
     color: #1d4ed8 !important;
     text-decoration: underline !important;
+}
+body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-sep {
+    color: #94a3b8;
+}
+body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-current {
+    color: #64748b;
+    font-weight: 600;
 }
 body.page-exp-desk .employee-header--exp-desk .exp-module-update-badge,
 body.page-exp-desk .employee-header--exp-desk .header-actions-tray .exp-module-update-badge {

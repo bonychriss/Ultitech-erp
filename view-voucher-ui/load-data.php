@@ -725,7 +725,9 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             ? company_url('modules/purchases/index')
             : (function_exists('app_url') ? app_url('/modules/purchases/index.php') : '/modules/purchases/index.php');
         $backLink = $vvJoinQs((string) $purchasesBack, 'module=purchases');
-        $homeLink = $backLink;
+        $homeLink = function_exists('company_url')
+            ? company_url('select-module')
+            : (function_exists('app_url') ? app_url('/select-module.php') : '/select-module.php');
         $allLink = $backLink;
     }
     $approvedByAdmin = !empty($voucher['approved_by']) && (isset($voucher['approver_role']) && defined('ROLE_ADMIN') && $voucher['approver_role'] === ROLE_ADMIN);

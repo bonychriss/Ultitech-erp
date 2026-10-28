@@ -19,14 +19,22 @@ $bodyExtraClass = 'page-exp-desk';
 $expensesPage = 'list';
 $expensesDeskMode = 'purchases';
 
+$purchasesHomeUrl = function_exists('company_url')
+    ? company_url('select-module')
+    : (function_exists('app_url') ? app_url('/select-module.php') : '../../select-module.php');
 $purchasesBackUrl = function_exists('company_url')
     ? company_url('modules/accounting/index') . '?module=accounting'
     : (function_exists('app_url')
         ? app_url('/modules/accounting/index.php') . '?module=accounting'
         : '../accounting/index.php?module=accounting');
-$employeeHeaderSubtitle = '<a class="exp-desk-header-back erp-nav-back-ignore" href="'
-    . htmlspecialchars($purchasesBackUrl, ENT_QUOTES, 'UTF-8')
-    . '"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Accounting</a>';
+$employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb" aria-label="Breadcrumb">'
+    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($purchasesHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="'
+    . htmlspecialchars($purchasesBackUrl, ENT_QUOTES, 'UTF-8') . '">Accounting</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<span class="vv-breadcrumb-current">Purchases</span>'
+    . '</nav>';
 
 $assets = expensesDeskLoadReactAssets();
 if ($assets === null) {

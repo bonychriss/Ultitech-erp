@@ -177,11 +177,12 @@ function GmailAttachCard({
 }
 
 export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
-  const { attachments, salesOrderDocs, swiftProxy, documents, permissions } = data
-  // Linked POs render in LinkedPurchaseOrdersCard (full preview), not as mini cards here.
+  const { attachments, purchaseOrderDocs, salesOrderDocs, swiftProxy, documents, permissions } = data
+  const poDocs = Array.isArray(purchaseOrderDocs) ? purchaseOrderDocs : []
   const soDocs = Array.isArray(salesOrderDocs) ? salesOrderDocs : []
   const fileCount = (Array.isArray(attachments) ? attachments.length : 0)
     + soDocs.length
+    + poDocs.length
     + (swiftProxy ? 1 : 0)
   if (fileCount === 0 && !documents?.mismatch) return null
 
@@ -232,6 +233,21 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
               previewUrl={att.missing ? undefined : att.proxyLink}
               canDelete={permissions.canDeleteAttachment && att.id !== 0}
               onDelete={() => onDeleteAttachment(att)}
+            />
+          ))}
+
+          {poDocs.map((po) => (
+            <GmailAttachCard
+              key={`po-${po.id}`}
+              iconClass="fa-file-invoice"
+              name={`${po.poNumber || `PO-${po.id}`}.pdf`}
+              sub={po.createdBy
+                ? `Purchase Order \u00b7 Created by ${po.createdBy}`
+                : 'Purchase Order'}
+              viewHref={po.viewLink}
+              downloadHref={po.viewLink}
+              previewUrl={po.viewLink}
+              htmlEmbed
             />
           ))}
 

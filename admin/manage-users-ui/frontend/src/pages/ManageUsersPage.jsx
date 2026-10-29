@@ -732,15 +732,52 @@ function StatCard({ icon, tone, value, label }) {
   )
 }
 
+const REGISTER_STEPS = [
+  'Creating the employee account',
+  'Sending welcome notifications',
+  'Emailing the login link',
+]
+
 function RegisterView({ formAction, departments, onCancel }) {
+  const [busy, setBusy] = useState(false)
+  const [step, setStep] = useState(0)
+
   useEffect(() => {
     window.scrollTo({ top: 0 })
     const onKey = (e) => {
-      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Escape' && !busy) onCancel()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onCancel])
+  }, [onCancel, busy])
+
+  useEffect(() => {
+    if (!busy) return undefined
+    const t = window.setInterval(() => {
+      setStep((s) => Math.min(s + 1, REGISTER_STEPS.length - 1))
+    }, 1400)
+    return () => window.clearInterval(t)
+  }, [busy])
+
+  useEffect(() => {
+    const onShow = (e) => {
+      if (e.persisted) {
+        setBusy(false)
+        setStep(0)
+      }
+    }
+    window.addEventListener('pageshow', onShow)
+    return () => window.removeEventListener('pageshow', onShow)
+  }, [])
+
+  const onSubmit = (e) => {
+    if (busy) {
+      e.preventDefault()
+      return
+    }
+    setStep(0)
+    setBusy(true)
+  }
 
   return (
     <section className="mu-reg">
@@ -764,7 +801,7 @@ function RegisterView({ formAction, departments, onCancel }) {
         <div className="mu-reg-form">
           <h2 className="mu-reg-title">Register New Employee</h2>
           <p className="mu-reg-sub">We'll email them a login link and greet them with a welcome notification.</p>
-          <form method="POST" action={formAction} autoComplete="off">
+          <form method="POST" action={formAction} autoComplete="off" onSubmit={onSubmit} aria-busy={busy}>
             <input type="hidden" name="action" value="register" />
             <div className="mu-reg-grid">
               <FormField label="Full Name (used as username)" name="full_name" required placeholder="e.g. John Doe" />
@@ -781,15 +818,37 @@ function RegisterView({ formAction, departments, onCancel }) {
             </div>
             <PasswordPair prefix="reg" fieldNames={{ a: 'password', b: 'confirm_password' }} />
             <div className="mu-reg-actions">
-              <button type="submit" className="mu-reg-submit">
-                <UserPlus size={16} aria-hidden />
-                Register Employee
+              <button type="submit" className="mu-reg-submit" disabled={busy}>
+                {busy ? <span className="mu-spin" aria-hidden /> : <UserPlus size={16} aria-hidden />}
+                {busy ? 'Registering…' : 'Register Employee'}
               </button>
-              <button type="button" className="mu-reg-cancel" onClick={onCancel}>Cancel</button>
+              <button type="button" className="mu-reg-cancel" onClick={onCancel} disabled={busy}>Cancel</button>
             </div>
           </form>
         </div>
       </div>
+      {busy ? (
+        <div className="mu-reg-loading" role="status" aria-live="polite">
+          <div className="mu-reg-loading-card">
+            <div className="mu-reg-loading-orb" aria-hidden>
+              <span className="mu-reg-loading-ring" />
+              <UserPlus size={26} />
+            </div>
+            <h3>Registering employee</h3>
+            <ul className="mu-reg-steps">
+              {REGISTER_STEPS.map((label, i) => (
+                <li key={label} className={i < step ? 'is-done' : i === step ? 'is-active' : ''}>
+                  <span className="mu-reg-step-dot" aria-hidden>
+                    {i < step ? <Check size={12} strokeWidth={3} /> : null}
+                  </span>
+                  {label}
+                </li>
+              ))}
+            </ul>
+            <div className="mu-reg-loading-bar" aria-hidden><span /></div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

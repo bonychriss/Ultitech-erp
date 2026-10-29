@@ -124,6 +124,71 @@ function manageUsersCompanyTagline(): string
     }
 }
 
+/**
+ * Illustrations for the welcome email (files in assets/images/).
+ *
+ * @return array<string, array{label:string,file:string}>
+ */
+function manageUsersWelcomeCharacters(): array
+{
+    return [
+        'wave' => ['label' => 'Peace sign', 'file' => 'welcome-email-wave.png'],
+        'man' => ['label' => 'Waving hello', 'file' => 'welcome-email-man.png'],
+        'laptop' => ['label' => 'Thumbs up + laptop', 'file' => 'welcome-email-laptop.png'],
+        'highfive' => ['label' => 'High five', 'file' => 'welcome-email-highfive.png'],
+        'key' => ['label' => 'Handing the key', 'file' => 'welcome-email-key.png'],
+        'bot' => ['label' => 'Friendly bot', 'file' => 'welcome-email-bot.png'],
+        'none' => ['label' => 'No illustration', 'file' => ''],
+    ];
+}
+
+function manageUsersWelcomeCharacter(): string
+{
+    global $pdo;
+    $key = '';
+    if ($pdo instanceof PDO) {
+        try {
+            $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'welcome_email_character' LIMIT 1");
+            $stmt->execute();
+            $key = trim((string) ($stmt->fetchColumn() ?: ''));
+        } catch (Throwable $e) {
+            $key = '';
+        }
+    }
+
+    return array_key_exists($key, manageUsersWelcomeCharacters()) ? $key : 'wave';
+}
+
+function manageUsersSaveWelcomeCharacter(string $key): bool
+{
+    global $pdo;
+    if (!($pdo instanceof PDO) || !array_key_exists($key, manageUsersWelcomeCharacters())) {
+        return false;
+    }
+    try {
+        $stmt = $pdo->prepare(
+            "INSERT INTO system_settings (setting_key, setting_value) VALUES ('welcome_email_character', ?)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)"
+        );
+
+        return $stmt->execute([$key]);
+    } catch (Throwable $e) {
+        error_log('manageUsersSaveWelcomeCharacter: ' . $e->getMessage());
+
+        return false;
+    }
+}
+
+function manageUsersWelcomeCharacterUrl(string $key): string
+{
+    $file = manageUsersWelcomeCharacters()[$key]['file'] ?? '';
+    if ($file === '' || !is_file(dirname(__DIR__, 2) . '/assets/images/' . $file)) {
+        return '';
+    }
+
+    return manageUsersAbsoluteUrl(function_exists('app_url') ? app_url('/assets/images/' . $file) : '/assets/images/' . $file);
+}
+
 function manageUsersFirstName(string $fullName): string
 {
     $fullName = trim($fullName);
@@ -228,7 +293,7 @@ function manageUsersAbsoluteUrl(string $url): string
 /**
  * Google-account-style email: table layout + inline styles (email clients strip <style>, flexbox and SVG).
  *
- * @param array{first:string,email:string,department:string,company:string,loginUrl:string,logo:string,tagline?:string} $d
+ * @param array{first:string,email:string,department:string,company:string,loginUrl:string,logo:string,tagline?:string,character?:string} $d
  */
 function manageUsersWelcomeEmailHtml(array $d): string
 {
@@ -246,9 +311,7 @@ function manageUsersWelcomeEmailHtml(array $d): string
         ? ' under the <b>' . $e($d['department']) . ' Department</b>'
         : '';
     $p = 'margin:0 0 14px;' . $font . 'font-size:14px;line-height:22px;color:#3c4043;';
-    $hero = is_file(dirname(__DIR__, 2) . '/assets/images/welcome-email-wave.png')
-        ? manageUsersAbsoluteUrl(function_exists('app_url') ? app_url('/assets/images/welcome-email-wave.png') : '/assets/images/welcome-email-wave.png')
-        : '';
+    $hero = manageUsersWelcomeCharacterUrl((string) ($d['character'] ?? manageUsersWelcomeCharacter()));
 
     $chip = '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px 0 0;"><tr>'
         . '<td style="padding:2px 12px 2px 2px;border:1px solid #dadce0;border-radius:16px;">'

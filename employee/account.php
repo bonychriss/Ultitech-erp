@@ -627,6 +627,25 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03); padding: 0.95rem 0.95rem 1rem;
         }
         .ps-sig-card[hidden] { display: none !important; }
+
+        .swal2-popup.ps-del-popup { border-radius: 14px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18); }
+        .swal2-html-container.ps-del-body { margin: 0; padding: 0; overflow: visible; }
+        .ps-del-icon { width: 44px; height: 44px; margin: 0 auto 0.55rem; color: #dc2626; }
+        .ps-del-icon svg { width: 100%; height: 100%; }
+        .ps-del-title { margin: 0 0 0.45rem; font-size: 1.3rem; font-weight: 700; color: #111827; }
+        .ps-del-text { margin: 0; font-size: 0.88rem; color: #111827; }
+        .swal2-actions.ps-del-actions { margin: 1.15rem 0 0; gap: 0.75rem; width: 100%; flex-wrap: nowrap; }
+        .swal2-popup .swal2-actions button.ps-del-btn { flex: 1 1 0; min-height: 2.6rem; padding: 0 1rem; border: 0 !important; border-radius: 8px !important; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin: 0; }
+        .swal2-popup .swal2-actions button.ps-del-btn--no { background: #e5e7eb !important; color: #111827 !important; }
+        .swal2-popup .swal2-actions button.ps-del-btn--no:hover { background: #d9dce1 !important; }
+        .swal2-popup .swal2-actions button.ps-del-btn--yes { background: #ef2b2b !important; color: #fff !important; box-shadow: 0 6px 16px rgba(239, 43, 43, 0.45); }
+        .swal2-popup .swal2-actions button.ps-del-btn--yes:hover { background: #dc2626 !important; }
+        .swal2-popup .swal2-actions button.ps-del-btn:focus,
+        .swal2-popup .swal2-actions button.ps-del-btn:focus-visible { outline: none !important; box-shadow: none; }
+        .swal2-popup .swal2-actions button.ps-del-btn--yes:focus { box-shadow: 0 6px 16px rgba(239, 43, 43, 0.45); }
+        html[data-theme="dark"] .swal2-popup.ps-del-popup { background: #1e293b; }
+        html[data-theme="dark"] .ps-del-title, html[data-theme="dark"] .ps-del-text { color: #f8fafc; }
+        html[data-theme="dark"] .swal2-popup .swal2-actions button.ps-del-btn--no { background: #334155 !important; color: #f8fafc !important; }
         .ps-sig-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 0.9rem; }
         .ps-sig-status {
             display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.8rem;
@@ -663,6 +682,11 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         .ps-sig-btn--danger:hover:not(:disabled) { background: #fef2f2; }
         .ps-sig-btn--accent { border-color: #c4b5fd; color: #5b45d6; }
         .ps-sig-btn--accent:hover { background: #f5f3ff; }
+        .ps-sig-btn.ps-sig-btn--plain,
+        html[data-theme="dark"] .ps-sig-btn.ps-sig-btn--plain { border: 0; background: transparent; padding: 0 0.35rem; }
+        .ps-sig-btn.ps-sig-btn--plain:hover:not(:disabled) { background: transparent; text-decoration: underline; }
+        html[data-theme="dark"] .ps-sig-btn--accent.ps-sig-btn--plain { color: #a78bfa; }
+        html[data-theme="dark"] .ps-sig-btn--danger.ps-sig-btn--plain { color: #f87171; }
         .ps-sig-save {
             margin-left: auto; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.25rem; padding: 0 1.1rem;
             border: 0; border-radius: 7px; background: #5b45d6; color: #fff; font-size: 0.8rem; font-weight: 500; cursor: pointer;
@@ -922,9 +946,10 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                         </div>
                         <?php if ($currentSig): ?>
                             <div class="ps-sig-current-actions">
-                                <button type="button" class="ps-sig-btn ps-sig-btn--accent" onclick="psReplaceSignature()"><i class="fas fa-rotate"></i> Replace</button>
-                                <form method="post" onsubmit="return confirm('Delete your signature? This cannot be undone.');" style="margin:0;">
-                                    <button type="submit" name="delete_signature" value="1" class="ps-sig-btn ps-sig-btn--danger"><i class="fas fa-trash"></i> Remove</button>
+                                <button type="button" class="ps-sig-btn ps-sig-btn--accent ps-sig-btn--plain" onclick="psReplaceSignature()"><i class="fas fa-rotate"></i> Replace</button>
+                                <form method="post" id="psDeleteSigForm" style="margin:0;">
+                                    <input type="hidden" name="delete_signature" value="1">
+                                    <button type="button" class="ps-sig-btn ps-sig-btn--danger ps-sig-btn--plain" onclick="psConfirmDeleteSignature()"><i class="fas fa-trash"></i> Remove</button>
                                 </form>
                             </div>
                         <?php endif; ?>
@@ -1384,6 +1409,41 @@ function psReplaceSignature() {
 	container.scrollIntoView({ behavior: 'smooth', block: 'center' });
 	container.classList.add('is-highlight');
 	setTimeout(() => container.classList.remove('is-highlight'), 1600);
+}
+
+function psConfirmDeleteSignature() {
+	const form = document.getElementById('psDeleteSigForm');
+	if (!form) return;
+	if (typeof Swal === 'undefined') {
+		if (confirm('Delete your signature? This cannot be undone.')) form.submit();
+		return;
+	}
+	Swal.fire({
+		html:
+			'<div class="ps-del-icon" aria-hidden="true">'
+			+ '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+			+ '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>'
+			+ '<line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>'
+			+ '<h2 class="ps-del-title">Delete Signature</h2>'
+			+ '<p class="ps-del-text">You\'re going to delete your &ldquo;Signature&rdquo;</p>',
+		showCancelButton: true,
+		confirmButtonText: 'Yes, Delete!',
+		cancelButtonText: 'No, keep it.',
+		reverseButtons: true,
+		focusCancel: true,
+		buttonsStyling: false,
+		width: 340,
+		padding: '1.4rem 1.25rem 1.25rem',
+		customClass: {
+			popup: 'ps-del-popup',
+			htmlContainer: 'ps-del-body',
+			actions: 'ps-del-actions',
+			confirmButton: 'ps-del-btn ps-del-btn--yes',
+			cancelButton: 'ps-del-btn ps-del-btn--no'
+		}
+	}).then((result) => {
+		if (result.isConfirmed) form.submit();
+	});
 }
 
 function psCancelReplaceSignature() {

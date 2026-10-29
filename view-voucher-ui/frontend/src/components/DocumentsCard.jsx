@@ -176,7 +176,7 @@ function GmailAttachCard({
   )
 }
 
-export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
+export default function DocumentsCard({ data, onPreview, onDeleteAttachment, onUnlinkOrder }) {
   const { attachments, purchaseOrderDocs, salesOrderDocs, swiftProxy, documents, permissions } = data
   const poDocs = Array.isArray(purchaseOrderDocs) ? purchaseOrderDocs : []
   const soDocs = Array.isArray(salesOrderDocs) ? salesOrderDocs : []
@@ -216,6 +216,8 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
                 downloadHref={downloadUrl}
                 previewUrl={viewUrl}
                 htmlEmbed
+                canDelete={!!permissions.canUnlinkOrders}
+                onDelete={onUnlinkOrder ? () => onUnlinkOrder('sales', so) : undefined}
               />
             )
           })}
@@ -248,6 +250,8 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
               downloadHref={po.viewLink}
               previewUrl={po.viewLink}
               htmlEmbed
+              canDelete={!!permissions.canUnlinkOrders}
+              onDelete={onUnlinkOrder ? () => onUnlinkOrder('purchase', po) : undefined}
             />
           ))}
 

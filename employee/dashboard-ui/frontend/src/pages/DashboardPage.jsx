@@ -1243,7 +1243,7 @@ export default function DashboardPage() {
         )}
 
       {/* Voucher table */}
-      <div className={`ed-card${HIDE_KPIS ? ' ed-card--table-only' : ''}`}>
+      <div className={`ed-card ed-card--list${HIDE_KPIS ? ' ed-card--table-only' : ''}`}>
         {!HIDE_KPIS && (
         <div className="ed-card-head">
           <h3 className="ed-card-title">
@@ -1271,15 +1271,15 @@ export default function DashboardPage() {
             <div className="ed-table-wrap">
             <table className="ed-table ed-table--full">
               <colgroup>
-                <col className="ed-col-sn" style={{ width: '3%' }} />
-                <col className="ed-col-vno" style={{ width: '12%' }} />
-                <col className="ed-col-payee" style={{ width: '9%' }} />
-                <col className="ed-col-prep" style={{ width: '8%' }} />
-                <col className="ed-col-desc" style={{ width: '30%' }} />
+                <col className="ed-col-sn" style={{ width: '4%' }} />
+                <col className="ed-col-vno" style={{ width: '13%' }} />
+                <col className="ed-col-payee" style={{ width: '12%' }} />
+                <col className="ed-col-prep" style={{ width: '10%' }} />
+                <col className="ed-col-desc" style={{ width: '23%' }} />
                 <col className="ed-col-amt" style={{ width: '11%' }} />
-                <col className="ed-col-date" style={{ width: '10%' }} />
-                <col className="ed-col-status" style={{ width: '8%' }} />
-                <col className="ed-col-actions" style={{ width: '7%' }} />
+                <col className="ed-col-date" style={{ width: '9%' }} />
+                <col className="ed-col-status" style={{ width: '10%' }} />
+                <col className="ed-col-actions" style={{ width: '8%' }} />
               </colgroup>
               <thead>
                 <tr>

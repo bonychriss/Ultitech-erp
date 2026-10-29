@@ -617,6 +617,76 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             border-radius: 10px; border-color: #eceef5; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03); padding: 0.95rem 0.75rem 1rem;
         }
         .editor-section[hidden] { display: none !important; }
+
+        .editor-section.ps-sig-wrap {
+            background: transparent; border: 0; box-shadow: none; padding: 0;
+            display: flex; flex-direction: column; gap: 0.75rem;
+        }
+        .ps-sig-card {
+            background: #fff; border: 1px solid #eceef5; border-radius: 10px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03); padding: 0.95rem 0.95rem 1rem;
+        }
+        .ps-sig-card[hidden] { display: none !important; }
+        .ps-sig-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 0.9rem; }
+        .ps-sig-status {
+            display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.8rem;
+            border-radius: 999px; font-size: 0.72rem; font-weight: 500;
+        }
+        .ps-sig-status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+        .ps-sig-status.is-active { background: #dcfce7; color: #15803d; }
+        .ps-sig-status.is-missing { background: #fef9c3; color: #a16207; }
+        .ps-sig-wrap .sig-tools { gap: 1.1rem; margin-bottom: 0.75rem; }
+        .ps-sig-wrap .sig-tool-group { gap: 0.6rem; }
+        .ps-sig-wrap .sig-tool-label { font-size: 0.68rem; font-weight: 600; color: #6b7280; letter-spacing: 0.04em; margin-right: 0.35rem; }
+        .sig-tool-divider { width: 1px; height: 24px; background: #e5e7eb; }
+        .ps-sig-wrap .pen-size-btn, .ps-sig-wrap .color-btn { width: 32px; height: 32px; border-color: #e5e7eb; border-radius: 7px; }
+        .ps-sig-wrap .pen-size-btn.active, .ps-sig-wrap .color-btn.active { border-color: #a78bfa; background: #f1effd; color: #5b45d6; }
+        .ps-sig-wrap .pen-size-btn { color: #111827; }
+        .ps-sig-wrap .canvas-container { border: 1.5px dashed #c9c3ee; border-radius: 10px; }
+        .ps-sig-wrap #sigCanvas { height: 125px; }
+        .ps-sig-wrap .canvas-placeholder {
+            display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+            font-size: 0.82rem; color: #9ca3af; opacity: 1;
+        }
+        .ps-sig-wrap .canvas-placeholder i { font-size: 1rem; }
+        .ps-sig-wrap .canvas-container.has-content .canvas-placeholder { opacity: 0; }
+        .ps-sig-wrap .canvas-container.is-highlight { border-color: #5b45d6; box-shadow: 0 0 0 4px rgba(91, 69, 214, 0.12); }
+        .ps-sig-wrap .sig-actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.75rem; }
+        .ps-sig-btn {
+            display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.1rem; padding: 0 0.95rem;
+            border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; color: #374151;
+            font-size: 0.78rem; font-weight: 500; cursor: pointer;
+        }
+        .ps-sig-btn:hover:not(:disabled) { background: #f9fafb; }
+        .ps-sig-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+        .ps-sig-btn--danger { border-color: #fca5a5; color: #dc2626; }
+        .ps-sig-btn--danger:hover:not(:disabled) { background: #fef2f2; }
+        .ps-sig-btn--accent { border-color: #c4b5fd; color: #5b45d6; }
+        .ps-sig-btn--accent:hover { background: #f5f3ff; }
+        .ps-sig-save {
+            margin-left: auto; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.25rem; padding: 0 1.1rem;
+            border: 0; border-radius: 7px; background: #5b45d6; color: #fff; font-size: 0.8rem; font-weight: 500; cursor: pointer;
+        }
+        .ps-sig-save:hover:not(:disabled) { background: #4c38c4; }
+        .ps-sig-save:disabled { opacity: 0.6; cursor: not-allowed; }
+        .ps-sig-current-head { margin-bottom: 0.8rem; }
+        .ps-sig-current { display: flex; align-items: center; gap: 1rem; }
+        .ps-sig-current-preview {
+            flex: 1; min-width: 0; height: 64px; border: 1.5px dashed #e5e7eb; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; padding: 0.35rem;
+        }
+        .ps-sig-current-preview img { max-height: 100%; max-width: 100%; object-fit: contain; }
+        .ps-sig-current-empty { font-size: 0.76rem; color: #9ca3af; }
+        .ps-sig-current-actions { display: flex; gap: 0.6rem; flex-shrink: 0; }
+        @media (max-width: 640px) {
+            .sig-tool-divider { display: none; }
+            .ps-sig-current { flex-direction: column; align-items: stretch; }
+            .ps-sig-current-actions { justify-content: flex-end; }
+        }
+        html[data-theme="dark"] .ps-sig-card { background: #1e293b; border-color: #334155; }
+        html[data-theme="dark"] .ps-sig-btn, html[data-theme="dark"] .ps-sig-wrap .pen-size-btn,
+        html[data-theme="dark"] .ps-sig-wrap .color-btn { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+        html[data-theme="dark"] .ps-sig-current-preview { border-color: #334155; background: #fff; }
         .ps-sec-head { display: flex; align-items: flex-start; gap: 0.75rem; }
         .ps-sec-icon {
             width: 32px; height: 32px; border-radius: 8px; background: #f1f0fb; color: #4b5563;
@@ -786,70 +856,76 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                     <div class="editor-main">
 		            <?php require __DIR__ . '/includes/account-settings-view.inc.php'; ?>
 			<!-- Digital Signature -->
-			<section class="editor-section" id="digital-signature">
-                <div class="section-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                    <div class="ps-sec-head">
-                        <span class="ps-sec-icon"><i class="fas fa-pen"></i></span>
-                        <div>
-                            <h2 class="section-title">Digital Signature</h2>
-                            <p class="section-subtitle">Draw your signature below. It will appear on vouchers where your name is used.</p>
-                        </div>
-                    </div>
-                    <?php if ($currentSig): ?>
-                        <span class="status-pill is-active">Signature Active</span>
-                    <?php else: ?>
-                        <span class="status-pill is-missing">Signature Missing</span>
-                    <?php endif; ?>
-                </div>
-                <div class="form-row">
-                    <label class="form-label">Draw Signature</label>
-                    <div>
-                        <div class="sig-tools">
-                            <div class="sig-tool-group">
-                                <span class="sig-tool-label">Size</span>
-                                <button type="button" class="pen-size-btn active" data-size="2" onclick="setPenSize(2)" title="Thin"><div class="dot"></div></button>
-                                <button type="button" class="pen-size-btn" data-size="4" onclick="setPenSize(4)" title="Medium"><div class="dot"></div></button>
-                                <button type="button" class="pen-size-btn" data-size="6" onclick="setPenSize(6)" title="Thick"><div class="dot"></div></button>
-                            </div>
-                            <div class="sig-tool-group">
-                                <span class="sig-tool-label">Color</span>
-                                <button type="button" class="color-btn active" data-color="#000000" onclick="setPenColor('#000000')" title="Black"><div class="color-circle" style="background:#000;"></div></button>
-                                <button type="button" class="color-btn" data-color="#1e40af" onclick="setPenColor('#1e40af')" title="Blue"><div class="color-circle" style="background:#1e40af;"></div></button>
-                                <button type="button" class="color-btn" data-color="#7c3aed" onclick="setPenColor('#7c3aed')" title="Purple"><div class="color-circle" style="background:#7c3aed;"></div></button>
+			<section class="editor-section ps-sig-wrap" id="digital-signature">
+                <div class="ps-sig-card" id="psSigDrawCard"<?= $currentSig ? ' hidden' : '' ?>>
+                    <div class="ps-sig-head">
+                        <div class="ps-sec-head">
+                            <span class="ps-sec-icon"><i class="fas fa-pen"></i></span>
+                            <div>
+                                <h2 class="section-title"><?= $currentSig ? 'Replace Signature' : 'Digital Signature' ?></h2>
+                                <p class="section-subtitle"><?= $currentSig
+                                    ? 'Draw a new signature. Saving it replaces your current one.'
+                                    : 'Draw your signature below. It will appear on vouchers and approvals where your name is used.' ?></p>
                             </div>
                         </div>
-                        <div class="canvas-container" id="canvasContainer">
-                            <canvas id="sigCanvas" height="250"></canvas>
-                            <div class="canvas-placeholder">Sign here</div>
-                        </div>
-                        <div class="sig-actions">
-                            <button type="button" class="btn-secondary-lite" onclick="undoStroke()" id="undoBtn" disabled><i class="fas fa-undo"></i> Undo</button>
-                            <button type="button" class="btn-secondary-lite" onclick="redoStroke()" id="redoBtn" disabled><i class="fas fa-redo"></i> Redo</button>
-                            <button type="button" class="btn-secondary-lite btn-danger-lite" onclick="clearCanvas()"><i class="fas fa-trash"></i> Clear</button>
-                            <button type="button" class="btn-save btn-save-inline" onclick="saveSignature()" id="saveBtn" disabled><i class="fas fa-save"></i> Save Signature</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <label class="form-label">Current Signature</label>
-                    <div>
                         <?php if ($currentSig): ?>
-                            <div class="signature-preview-box">
-                                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-                                    <strong style="font-size:12px;text-transform:uppercase;color:#64748b;">Preview</strong>
-                                    <form method="post" onsubmit="return confirm('Delete your signature? This cannot be undone.');" style="margin:0;">
-                                        <button type="submit" name="delete_signature" value="1" class="btn-secondary-lite btn-danger-lite"><i class="fas fa-trash"></i> Remove</button>
-                                    </form>
-                                </div>
-                                <div style="text-align:center;padding:12px;background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
-                                    <img src="<?= $esc(function_exists('mediaUrlFromPath') ? mediaUrlFromPath($currentSig, false) : ('../' . ltrim((string) $currentSig, '/'))) ?>" alt="Current signature">
-                                </div>
-                                <p class="help-text"><i class="fas fa-check-circle" style="color:#16a34a;"></i> Used on all new vouchers.</p>
-                            </div>
+                            <span class="ps-sig-status is-active"><span class="ps-sig-status-dot"></span>Signature Active</span>
                         <?php else: ?>
-                            <div class="signature-empty">
-                                <i class="fas fa-signature" style="font-size:28px;opacity:0.35;display:block;margin-bottom:8px;"></i>
-                                No active signature yet. Draw and save one above.
+                            <span class="ps-sig-status is-missing"><span class="ps-sig-status-dot"></span>Signature Missing</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="sig-tools">
+                        <div class="sig-tool-group">
+                            <span class="sig-tool-label">Pen size</span>
+                            <button type="button" class="pen-size-btn active" data-size="2" onclick="setPenSize(2)" title="Thin"><div class="dot"></div></button>
+                            <button type="button" class="pen-size-btn" data-size="4" onclick="setPenSize(4)" title="Medium"><div class="dot"></div></button>
+                            <button type="button" class="pen-size-btn" data-size="6" onclick="setPenSize(6)" title="Thick"><div class="dot"></div></button>
+                        </div>
+                        <span class="sig-tool-divider" aria-hidden="true"></span>
+                        <div class="sig-tool-group">
+                            <span class="sig-tool-label">Ink color</span>
+                            <button type="button" class="color-btn active" data-color="#000000" onclick="setPenColor('#000000')" title="Black"><div class="color-circle" style="background:#000;"></div></button>
+                            <button type="button" class="color-btn" data-color="#1e40af" onclick="setPenColor('#1e40af')" title="Blue"><div class="color-circle" style="background:#1e40af;"></div></button>
+                            <button type="button" class="color-btn" data-color="#7c3aed" onclick="setPenColor('#7c3aed')" title="Purple"><div class="color-circle" style="background:#7c3aed;"></div></button>
+                        </div>
+                    </div>
+                    <div class="canvas-container" id="canvasContainer">
+                        <canvas id="sigCanvas" height="125"></canvas>
+                        <div class="canvas-placeholder"><i class="fas fa-pencil"></i><span>Sign here</span></div>
+                    </div>
+                    <div class="sig-actions">
+                        <button type="button" class="ps-sig-btn" onclick="undoStroke()" id="undoBtn" disabled><i class="fas fa-rotate-left"></i> Undo</button>
+                        <button type="button" class="ps-sig-btn" onclick="redoStroke()" id="redoBtn" disabled><i class="fas fa-rotate-right"></i> Redo</button>
+                        <button type="button" class="ps-sig-btn ps-sig-btn--danger" onclick="clearCanvas()"><i class="fas fa-trash"></i> Clear</button>
+                        <?php if ($currentSig): ?>
+                            <button type="button" class="ps-sig-btn" onclick="psCancelReplaceSignature()">Cancel</button>
+                        <?php endif; ?>
+                        <button type="button" class="ps-sig-save" onclick="saveSignature()" id="saveBtn" disabled><i class="fas fa-floppy-disk"></i> Save signature</button>
+                    </div>
+                </div>
+
+                <div class="ps-sig-card">
+                    <div class="ps-sec-head ps-sig-current-head">
+                        <span class="ps-sec-icon"><i class="far fa-image"></i></span>
+                        <div>
+                            <h2 class="section-title">Current Signature</h2>
+                            <p class="section-subtitle"><?= $currentSig ? 'This is your currently saved signature.' : 'You have not saved a signature yet.' ?></p>
+                        </div>
+                    </div>
+                    <div class="ps-sig-current">
+                        <div class="ps-sig-current-preview">
+                            <?php if ($currentSig): ?>
+                                <img src="<?= $esc(function_exists('mediaUrlFromPath') ? mediaUrlFromPath($currentSig, false) : ('../' . ltrim((string) $currentSig, '/'))) ?>" alt="Current signature">
+                            <?php else: ?>
+                                <span class="ps-sig-current-empty">No signature on file. Draw one above and save it.</span>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($currentSig): ?>
+                            <div class="ps-sig-current-actions">
+                                <button type="button" class="ps-sig-btn ps-sig-btn--accent" onclick="psReplaceSignature()"><i class="fas fa-rotate"></i> Replace</button>
+                                <form method="post" onsubmit="return confirm('Delete your signature? This cannot be undone.');" style="margin:0;">
+                                    <button type="submit" name="delete_signature" value="1" class="ps-sig-btn ps-sig-btn--danger"><i class="fas fa-trash"></i> Remove</button>
+                                </form>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -1299,6 +1375,25 @@ function updateButtons() {
 	undoBtn.disabled = strokes.length === 0;
 	redoBtn.disabled = redoStack.length === 0;
 	saveBtn.disabled = strokes.length === 0;
+}
+
+function psReplaceSignature() {
+	const card = document.getElementById('psSigDrawCard');
+	if (card) card.hidden = false;
+	resizeCanvas();
+	container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	container.classList.add('is-highlight');
+	setTimeout(() => container.classList.remove('is-highlight'), 1600);
+}
+
+function psCancelReplaceSignature() {
+	strokes = [];
+	redoStack = [];
+	redrawCanvas();
+	updateButtons();
+	updatePlaceholder();
+	const card = document.getElementById('psSigDrawCard');
+	if (card) card.hidden = true;
 }
 
 function updatePlaceholder() {

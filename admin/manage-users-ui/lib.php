@@ -226,118 +226,72 @@ function manageUsersAbsoluteUrl(string $url): string
 }
 
 /**
- * Table-based, inline-styled markup: email clients strip <style>, flexbox and SVG.
+ * Google-account-style email: table layout + inline styles (email clients strip <style>, flexbox and SVG).
  *
  * @param array{first:string,email:string,department:string,company:string,loginUrl:string,logo:string,tagline?:string} $d
  */
 function manageUsersWelcomeEmailHtml(array $d): string
 {
     $e = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
-    $font = "font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
+    $font = "font-family:'Google Sans',Roboto,'Segoe UI',Helvetica,Arial,sans-serif;";
     $company = trim($d['company']);
     $url = $e($d['loginUrl']);
-    $tile = static fn (string $emoji, string $bg): string =>
-        '<td width="40" valign="middle" style="width:40px;"><div style="width:40px;height:40px;line-height:40px;text-align:center;border-radius:10px;background:' . $bg . ';font-size:18px;">' . $emoji . '</div></td>';
+    $initial = strtoupper(substr($d['first'] !== '' ? $d['first'] : $d['email'], 0, 1));
 
     $brand = $d['logo'] !== ''
-        ? '<img src="' . $e($d['logo']) . '" alt="' . $e($company) . '" height="44" style="display:block;height:44px;width:auto;border:0;">'
-        : '<span style="' . $font . 'font-size:18px;font-weight:800;color:#1f2937;">' . $e($company !== '' ? $company : 'Welcome') . '</span>';
+        ? '<img src="' . $e($d['logo']) . '" alt="' . $e($company) . '" height="40" style="display:block;margin:0 auto;height:40px;width:auto;border:0;">'
+        : '<div style="' . $font . 'font-size:20px;font-weight:500;color:#202124;">' . $e($company !== '' ? $company : 'Welcome') . '</div>';
 
-    $deptLine = $d['department'] !== ''
-        ? 'Your account has been created for you in the <strong style="color:#6d28d9;">' . $e($d['department']) . '</strong> department.'
-        : 'Your account has been created and is ready to use.';
-
-    $feature = static fn (string $emoji, string $bg, string $title, string $text): string =>
-        '<td valign="top" width="33%" style="padding:0 6px;">'
-        . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
-        . '<td valign="top" style="padding-right:10px;"><div style="width:34px;height:34px;line-height:34px;text-align:center;border-radius:9px;background:' . $bg . ';font-size:16px;">' . $emoji . '</div></td>'
-        . '<td valign="top" style="' . $font . '"><div style="font-size:13px;font-weight:700;color:#1f2937;">' . $title . '</div>'
-        . '<div style="font-size:12px;line-height:1.45;color:#6b7280;margin-top:2px;">' . $text . '</div></td>'
-        . '</tr></table></td>';
+    $deptText = $d['department'] !== ''
+        ? ' under the <b>' . $e($d['department']) . ' Department</b>'
+        : '';
+    $p = 'margin:0 0 14px;' . $font . 'font-size:14px;line-height:22px;color:#3c4043;';
 
     return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-        . '<meta name="color-scheme" content="light"><title>Welcome aboard</title></head>'
-        . '<body style="margin:0;padding:0;background:#f3f0ff;' . $font . 'color:#1f2937;">'
-        . '<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your ' . $e($company !== '' ? $company : '') . ' account is ready. Sign in to get started.</div>'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f0ff;background-image:linear-gradient(180deg,#ede9fe 0%,#f8f7ff 60%,#f3f0ff 100%);"><tr><td align="center" style="padding:32px 12px;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #ece8fb;border-radius:22px;box-shadow:0 18px 50px rgba(76,29,149,0.10);overflow:hidden;">'
+        . '<meta name="color-scheme" content="light"><title>Welcome</title></head>'
+        . '<body style="margin:0;padding:0;background:#ffffff;' . $font . 'color:#202124;">'
+        . '<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your account is ready. Sign in to get started.</div>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:40px 12px;">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">'
 
-        // Header: logo + tagline over a soft lavender wash
-        . '<tr><td style="padding:26px 32px 0;background:#ffffff;background-image:radial-gradient(120% 90% at 100% 0%,#ede9fe 0%,rgba(237,233,254,0) 60%);">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . '<td valign="middle">' . $brand . '</td>'
-        . (trim($d['tagline'] ?? '') !== ''
-            ? '<td valign="middle" align="right" style="' . $font . 'font-size:12px;line-height:1.5;color:#6b7280;max-width:180px;">' . $e(trim($d['tagline']))
-                . '<div style="width:34px;height:2px;background:#8b5cf6;border-radius:2px;margin:6px 0 0 auto;"></div></td>'
-            : '')
-        . '</tr></table></td></tr>'
+        . '<tr><td style="border:1px solid #dadce0;border-radius:8px;padding:40px 24px 32px;">'
 
-        // Badge + headline
-        . '<tr><td align="center" style="padding:26px 32px 0;">'
-        . '<span style="display:inline-block;padding:6px 14px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;letter-spacing:.08em;' . $font . '">&#128100;&nbsp; NEW TEAM MEMBER</span>'
-        . '<h1 style="margin:16px 0 0;' . $font . 'font-size:32px;line-height:1.2;font-weight:800;color:#111827;letter-spacing:-0.02em;">Welcome aboard, <span style="color:#7c3aed;">' . $e($d['first']) . '!</span> &#127881;</h1>'
-        . '<p style="margin:14px 0 0;' . $font . 'font-size:15px;line-height:1.65;color:#4b5563;">We are so glad to have you on the team!<br>' . $deptLine . '<br>Use the button below to sign in and get started.</p>'
+        // Logo + headline + account chip
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding-bottom:20px;border-bottom:1px solid #dadce0;">'
+        . $brand
+        . '<div style="' . $font . 'font-size:24px;line-height:32px;color:#202124;margin-top:20px;">Welcome aboard, ' . $e($d['first']) . '</div>'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px auto 0;"><tr>'
+        . '<td style="padding:2px 12px 2px 2px;border:1px solid #dadce0;border-radius:16px;">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
+        . '<td><div style="width:20px;height:20px;line-height:20px;border-radius:50%;background:#7c3aed;color:#ffffff;text-align:center;' . $font . 'font-size:11px;font-weight:500;">' . $e($initial) . '</div></td>'
+        . '<td style="padding-left:8px;' . $font . 'font-size:14px;color:#3c4043;">' . $e($d['email']) . '</td>'
+        . '</tr></table></td></tr></table>'
+        . '</td></tr></table>'
+
+        // Body
+        . '<div style="padding-top:20px;text-align:left;">'
+        . '<p style="' . $p . '">Welcome to <b>' . $e($company !== '' ? $company : 'the team') . '!</b> '
+        . 'Your account has been successfully created' . $deptText . '.</p>'
+        . '<p style="' . $p . 'margin-bottom:0;">Your administrator will provide your password. Once received, sign in using your '
+        . 'registered email address to access your account and get started.</p>'
+        . '</div>'
+
+        // Button
+        . '<div style="padding-top:28px;text-align:center;">'
+        . '<a href="' . $url . '" target="_blank" style="' . $font . 'display:inline-block;background:#7c3aed;color:#ffffff;font-size:14px;font-weight:600;line-height:16px;text-decoration:none;padding:12px 24px;border-radius:4px;">Sign in to your account</a>'
+        . '</div>'
+
+        . '<div style="' . $font . 'font-size:12px;line-height:16px;color:#5f6368;padding-top:24px;text-align:left;">'
+        . 'Please change your password after you sign in for the first time. If you were not expecting this email, you can ignore it.'
+        . '</div>'
+
         . '</td></tr>'
 
-        // Credentials card
-        . '<tr><td style="padding:24px 32px 0;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf9ff;border:1px solid #ece8fb;border-radius:16px;">'
-        . '<tr><td style="padding:16px 18px;border-bottom:1px solid #ece8fb;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . $tile('&#9993;&#65039;', '#ede9fe')
-        . '<td valign="middle" style="padding-left:14px;' . $font . '"><div style="font-size:12px;color:#6b7280;">Login email</div>'
-        . '<div style="font-size:15px;font-weight:700;color:#111827;margin-top:2px;word-break:break-all;">' . $e($d['email']) . '</div></td>'
-        . '</tr></table></td></tr>'
-        . '<tr><td style="padding:16px 18px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . $tile('&#128274;', '#ede9fe')
-        . '<td valign="middle" style="padding-left:14px;' . $font . '"><div style="font-size:12px;color:#6b7280;">Password</div>'
-        . '<div style="font-size:15px;color:#111827;margin-top:2px;">Provided by your administrator</div></td>'
-        . '</tr></table></td></tr>'
-        . '</table></td></tr>'
-
-        // CTA button
-        . '<tr><td align="center" style="padding:22px 32px 0;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="border-radius:14px;background:#7c3aed;background-image:linear-gradient(90deg,#7c3aed 0%,#8b5cf6 100%);box-shadow:0 10px 24px rgba(124,58,237,0.30);">'
-        . '<a href="' . $url . '" target="_blank" style="display:block;padding:16px 24px;' . $font . 'font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:14px;">&#10140;&nbsp; Log in to your account &nbsp;&rarr;</a>'
-        . '</td></tr></table></td></tr>'
-
-        // "or" divider
-        . '<tr><td style="padding:18px 32px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . '<td width="45%" style="border-top:1px solid #e5e7eb;font-size:0;line-height:0;">&nbsp;</td>'
-        . '<td align="center" style="padding:0 10px;' . $font . 'font-size:12px;color:#9ca3af;">or</td>'
-        . '<td width="45%" style="border-top:1px solid #e5e7eb;font-size:0;line-height:0;">&nbsp;</td>'
-        . '</tr></table></td></tr>'
-
-        // Direct link
-        . '<tr><td style="padding:18px 32px 0;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf9ff;border:1px solid #ece8fb;border-radius:14px;"><tr><td style="padding:14px 18px;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' . $tile('&#128279;', '#ede9fe')
-        . '<td valign="middle" style="padding-left:14px;' . $font . '"><div style="font-size:12px;color:#6b7280;">Direct link</div>'
-        . '<a href="' . $url . '" target="_blank" style="font-size:14px;color:#6d28d9;text-decoration:none;word-break:break-all;">' . $url . '</a></td>'
-        . '</tr></table></td></tr></table></td></tr>'
-
-        // Security note
-        . '<tr><td style="padding:14px 32px 0;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;border:1px solid #e4dcfd;border-radius:14px;"><tr><td style="padding:14px 18px;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' . $tile('&#8505;&#65039;', '#ffffff')
-        . '<td valign="middle" style="padding-left:14px;' . $font . '"><div style="font-size:14px;font-weight:700;color:#5b21b6;">Not expecting this email?</div>'
-        . '<div style="font-size:13px;line-height:1.5;color:#4b5563;margin-top:2px;">If you did not expect this email, you can safely ignore it or contact your administrator for assistance. Please change your password after your first login.</div></td>'
-        . '</tr></table></td></tr></table></td></tr>'
-
-        // Feature row
-        . '<tr><td style="padding:26px 26px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . $feature('&#128101;', '#ede9fe', 'Connect with your team', 'Get to know your colleagues and managers.')
-        . $feature('&#128221;', '#e0f2fe', 'Complete your profile', 'Add a photo and update your details.')
-        . $feature('&#129513;', '#dcfce7', 'Explore the system', 'Access the modules and tools you need.')
-        . '</tr></table></td></tr>'
-
-        // Signature footer
-        . '<tr><td align="center" style="padding:24px 32px 28px;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . '<td width="30%" style="border-top:1px solid #ece8fb;font-size:0;line-height:0;">&nbsp;</td>'
-        . '<td align="center" style="padding:0 12px;font-family:\'Brush Script MT\',\'Segoe Script\',cursive;font-size:22px;color:#7c3aed;white-space:nowrap;">Welcome to the team!</td>'
-        . '<td width="30%" style="border-top:1px solid #ece8fb;font-size:0;line-height:0;">&nbsp;</td>'
-        . '</tr></table>'
-        . ($company !== '' ? '<div style="margin-top:14px;' . $font . 'font-size:11px;color:#9ca3af;">&copy; ' . date('Y') . ' ' . $e($company) . '</div>' : '')
+        // Footer
+        . '<tr><td style="' . $font . 'font-size:11px;line-height:18px;color:rgba(0,0,0,0.54);text-align:center;padding-top:20px;">'
+        . 'You received this email because an account was created for you.<br>'
+        . 'If the button does not work, open: <a href="' . $url . '" style="color:rgba(0,0,0,0.54);">' . $url . '</a>'
+        . ($company !== '' ? '<div style="margin-top:12px;">&copy; ' . date('Y') . ' ' . $e($company) . '</div>' : '')
         . '</td></tr>'
 
         . '</table></td></tr></table></body></html>';

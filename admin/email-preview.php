@@ -7,6 +7,9 @@ declare(strict_types=1);
  */
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/manage-users-ui/lib.php';
+if (!defined('ERP_SKIP_COOKIE_CONSENT')) {
+    define('ERP_SKIP_COOKIE_CONSENT', true);
+}
 manageUsersUiRequireAdmin();
 
 $in = static fn (string $key, string $default): string => trim((string) ($_GET[$key] ?? $default));
@@ -80,7 +83,6 @@ $h = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
         <label>Full name <input name="name" value="<?= $h($sample['name']) ?>"></label>
         <label>Email <input name="email" value="<?= $h($sample['email']) ?>"></label>
         <label>Department <input name="department" value="<?= $h($sample['department']) ?>"></label>
-        <label>Tagline <input name="tagline" value="<?= $h($sample['tagline']) ?>" placeholder="(none)"></label>
         <button type="submit">Update preview</button>
         <a class="ep-btn" href="<?= $h($rawUrl) ?>" target="_blank" rel="noopener">Open raw HTML</a>
         <span class="ep-size">

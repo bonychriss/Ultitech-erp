@@ -164,7 +164,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_FILES['profile_photo'])) {
     elseif (isset($_POST['action']) && $_POST['action'] === 'change_password') {
         $newPassword = (string) ($_POST['new_password'] ?? '');
         $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
-        if ($newPassword !== $confirmPassword) {
+        $pwStmt = $pdo->prepare('SELECT password FROM users WHERE id = ? LIMIT 1');
+        $pwStmt->execute([$userId]);
+        if ((string) $pwStmt->fetchColumn() !== '') {
+            $feedback = 'Error: You already have a password. Use "Forgot password" to reset it by email.';
+        } elseif ($newPassword !== $confirmPassword) {
             $feedback = 'Error: New passwords do not match.';
         } else {
             $strength = function_exists('evaluatePasswordStrength')
@@ -197,6 +201,9 @@ $initial = strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1));
 $stmt = $pdo->prepare("SELECT id, username, full_name, email, role, department, is_active, created_at, updated_at, profile_photo, whatsapp_number FROM users WHERE id = ?");
 $stmt->execute([$userId]);
 $user = $stmt->fetch();
+$pwStmt = $pdo->prepare('SELECT password FROM users WHERE id = ? LIMIT 1');
+$pwStmt->execute([$userId]);
+$userHasPassword = (string) $pwStmt->fetchColumn() !== '';
 
 if (!$user) {
 	header('Location: dashboard.php');
@@ -483,10 +490,11 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         .account-pw-field .account-pw-input { padding-right: 48px; }
         .account-pw-toggle {
             position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px;
-            border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; border-radius: 8px; cursor: pointer;
+            border: 0 !important; background: transparent !important; box-shadow: none !important; color: #64748b; cursor: pointer;
             display: inline-flex; align-items: center; justify-content: center; padding: 0;
         }
-        .account-pw-toggle.is-visible { color: #7c3aed; border-color: rgba(124, 58, 237, 0.45); background: rgba(124, 58, 237, 0.12); }
+        .account-pw-toggle:hover { color: #475569; }
+        .account-pw-toggle.is-visible { color: #7c3aed; }
         .account-pw-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; pointer-events: none; }
         .account-pw-toggle svg.account-pw-toggle-svg--hide { display: none; }
         .account-pw-toggle.is-visible svg.account-pw-toggle-svg--show { display: none; }
@@ -503,6 +511,30 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         .account-pw-rules li i { font-size: 6px; color: #cbd5e1; }
         .account-pw-rules li.is-met { color: #0f172a; font-weight: 500; }
         .account-pw-rules li.is-met i { color: #7c3aed; }
+        #change-password .form-row { margin-bottom: 12px; }
+        #change-password .account-pw-strength { margin-top: 8px; }
+        #change-password .account-pw-strength-top { margin-bottom: 5px; }
+        #change-password .account-pw-strength-bar { height: 6px; }
+        #change-password .account-pw-field,
+        #change-password .account-pw-strength { max-width: none; }
+        #change-password .form-row { grid-template-columns: 140px 1fr; }
+        #change-password .account-pw-rules { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 8px; }
+        #change-password .account-pw-rules li { margin-bottom: 0; white-space: nowrap; }
+        #change-password .help-text { margin-top: 4px; }
+        #change-password .account-pw-match:empty { display: none; }
+        #change-password .password-actions-row { padding-top: 0; flex-wrap: nowrap; }
+        #change-password .form-row:last-child { align-items: center; margin-bottom: 0; }
+        #change-password .account-pw-strength-top:has(.account-pw-strength-score:empty) { display: none; }
+        #change-password .btn-save-inline { border-radius: 8px !important; padding: 10px 22px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); }
+        .ps-pw-reset { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+        .ps-pw-reset-text { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #64748b; }
+        .ps-pw-reset-text strong { font-size: 14px; font-weight: 600; color: #0f172a; }
+        .ps-pw-reset-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; background: #7c3aed; color: #fff; font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); }
+        .ps-pw-reset-btn:hover { background: #6d28d9; color: #fff; }
+        html[data-theme="dark"] .ps-pw-reset { background: #0f172a; border-color: #334155; }
+        html[data-theme="dark"] .ps-pw-reset-text strong { color: #f8fafc; }
+        @media (max-width: 640px) { #change-password .password-actions-row { flex-wrap: wrap; } }
+        @media (max-width: 992px) { #change-password .form-row { grid-template-columns: 1fr; } }
         .account-pw-match.is-ok { color: #16a34a; font-weight: 600; }
         .account-pw-match.is-bad { color: #dc2626; font-weight: 600; }
         .subsection-label { font-size: 14px; font-weight: 700; color: #334155; margin: 0 0 16px; }
@@ -688,8 +720,8 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         html[data-theme="dark"] .ps-sig-btn--accent.ps-sig-btn--plain { color: #a78bfa; }
         html[data-theme="dark"] .ps-sig-btn--danger.ps-sig-btn--plain { color: #f87171; }
         .ps-sig-save {
-            margin-left: auto; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.25rem; padding: 0 1.1rem;
-            border: 0; border-radius: 7px; background: #5b45d6; color: #fff; font-size: 0.8rem; font-weight: 500; cursor: pointer;
+            margin-left: auto; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.25rem; padding: 0 1.35rem;
+            border: 0; border-radius: 999px !important; background: #5b45d6; color: #fff; font-size: 0.8rem; font-weight: 500; cursor: pointer;
         }
         .ps-sig-save:hover:not(:disabled) { background: #4c38c4; }
         .ps-sig-save:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -918,9 +950,9 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                         <div class="canvas-placeholder"><i class="fas fa-pencil"></i><span>Sign here</span></div>
                     </div>
                     <div class="sig-actions">
-                        <button type="button" class="ps-sig-btn" onclick="undoStroke()" id="undoBtn" disabled><i class="fas fa-rotate-left"></i> Undo</button>
-                        <button type="button" class="ps-sig-btn" onclick="redoStroke()" id="redoBtn" disabled><i class="fas fa-rotate-right"></i> Redo</button>
-                        <button type="button" class="ps-sig-btn ps-sig-btn--danger" onclick="clearCanvas()"><i class="fas fa-trash"></i> Clear</button>
+                        <button type="button" class="ps-sig-btn ps-sig-btn--plain" onclick="undoStroke()" id="undoBtn" disabled><i class="fas fa-rotate-left"></i> Undo</button>
+                        <button type="button" class="ps-sig-btn ps-sig-btn--plain" onclick="redoStroke()" id="redoBtn" disabled><i class="fas fa-rotate-right"></i> Redo</button>
+                        <button type="button" class="ps-sig-btn ps-sig-btn--danger ps-sig-btn--plain" onclick="clearCanvas()"><i class="fas fa-trash"></i> Clear</button>
                         <?php if ($currentSig): ?>
                             <button type="button" class="ps-sig-btn" onclick="psCancelReplaceSignature()">Cancel</button>
                         <?php endif; ?>
@@ -1346,13 +1378,18 @@ function setPenColor(color) {
 
 function clearCanvas() {
 	if (strokes.length === 0) return;
-	if (!confirm('Clear your signature?')) return;
-	
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	strokes = [];
-	redoStack = [];
-	updateButtons();
-	updatePlaceholder();
+	psConfirmPopup({
+		title: 'Clear Signature',
+		text: 'You\'re going to clear your &ldquo;Drawing&rdquo;',
+		confirmText: 'Yes, Clear!',
+		fallback: 'Clear your signature?'
+	}, () => {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		strokes = [];
+		redoStack = [];
+		updateButtons();
+		updatePlaceholder();
+	});
 }
 
 function undoStroke() {
@@ -1410,8 +1447,17 @@ function psReplaceSignature() {
 function psConfirmDeleteSignature() {
 	const form = document.getElementById('psDeleteSigForm');
 	if (!form) return;
+	psConfirmPopup({
+		title: 'Delete Signature',
+		text: 'You\'re going to delete your &ldquo;Signature&rdquo;',
+		confirmText: 'Yes, Delete!',
+		fallback: 'Delete your signature? This cannot be undone.'
+	}, () => form.submit());
+}
+
+function psConfirmPopup(opts, onConfirm) {
 	if (typeof Swal === 'undefined') {
-		if (confirm('Delete your signature? This cannot be undone.')) form.submit();
+		if (confirm(opts.fallback)) onConfirm();
 		return;
 	}
 	Swal.fire({
@@ -1420,10 +1466,10 @@ function psConfirmDeleteSignature() {
 			+ '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
 			+ '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>'
 			+ '<line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>'
-			+ '<h2 class="ps-del-title">Delete Signature</h2>'
-			+ '<p class="ps-del-text">You\'re going to delete your &ldquo;Signature&rdquo;</p>',
+			+ '<h2 class="ps-del-title">' + opts.title + '</h2>'
+			+ '<p class="ps-del-text">' + opts.text + '</p>',
 		showCancelButton: true,
-		confirmButtonText: 'Yes, Delete!',
+		confirmButtonText: opts.confirmText,
 		cancelButtonText: 'No, keep it.',
 		reverseButtons: true,
 		focusCancel: true,
@@ -1438,7 +1484,7 @@ function psConfirmDeleteSignature() {
 			cancelButton: 'ps-del-btn ps-del-btn--no'
 		}
 	}).then((result) => {
-		if (result.isConfirmed) form.submit();
+		if (result.isConfirmed) onConfirm();
 	});
 }
 

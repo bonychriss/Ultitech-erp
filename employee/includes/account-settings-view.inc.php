@@ -110,6 +110,17 @@ $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-passwo
             <p class="section-subtitle">Manage your password and authentication settings.</p>
         </div>
     </div>
+    <?php if (!empty($userHasPassword)): ?>
+    <div class="ps-pw-reset">
+        <div class="ps-pw-reset-text">
+            <strong>Your password is set</strong>
+            <span>Forgot it or want a new one? We'll email you a reset link.</span>
+        </div>
+        <a href="<?= $esc($forgotPasswordUrl) ?>" class="ps-pw-reset-btn">
+            <i class="fas fa-envelope" aria-hidden="true"></i> Forgot password? Reset by email
+        </a>
+    </div>
+    <?php else: ?>
     <form method="post" class="account-password-form">
         <input type="hidden" name="action" value="change_password">
         <div class="form-row">
@@ -164,4 +175,5 @@ $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-passwo
             </div>
         </div>
     </form>
+    <?php endif; ?>
 </section>

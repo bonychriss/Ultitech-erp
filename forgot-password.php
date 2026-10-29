@@ -2,6 +2,17 @@
 require_once 'includes/functions.php';
 require_once 'includes/mailer.php';
 
+$fpRequestPath = (string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+if ($_SERVER['REQUEST_METHOD'] === 'GET'
+    && str_ends_with(strtolower($fpRequestPath), '/forgot-password.php')
+    && function_exists('getRequestedCompanySlug') && getRequestedCompanySlug() !== '') {
+    $fpQuery = $_GET;
+    unset($fpQuery['company_slug']);
+    header('Location: ' . company_url('forgot-password', getRequestedCompanySlug()) . ($fpQuery ? '?' . http_build_query($fpQuery) : ''), true, 301);
+    exit;
+}
+$fpLoginUrl = function_exists('company_url') ? company_url('login') : 'login.php';
+
 $message = '';
 $error = '';
 
@@ -49,60 +60,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password - PAYMENT VOUCHER SYSTEM</title>
-    <link rel="stylesheet" href="assets/css/auth.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+    <title>Forgot Password</title>
+    <?php require_once __DIR__ . '/includes/partials/favicon.php'; echo erp_favicon_tags(); ?>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        .auth-wrap { max-width: 400px; padding: 20px; margin: 0 auto; margin-top: 50px; }
-        .auth-card { padding: 30px; border-radius: 0; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-top: 4px solid #d42426; }
-        .brand { text-align: center; margin-bottom: 20px; }
-        .title { text-align: center; margin-bottom: 20px; color: #111; font-weight: 600; }
-        .form-row { margin-bottom: 15px; }
-        .label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #374151; }
-        .input { width: 100%; padding: 10px; border: 1px solid #d1d5db; font-family: inherit; font-size: 14px; }
-        .btn { width: 100%; padding: 12px; background: #2b2f42; color: #fff; border: none; cursor: pointer; font-weight: 500; font-size: 14px; transition: background 0.2s; }
-        .btn:hover { background: #1f2334; }
-        .alert { padding: 12px; margin-bottom: 15px; font-size: 14px; }
-        .alert.error { background: #fee2e2; color: #b91c1c; }
-        .alert.success { background: #dcfce7; color: #15803d; word-break: break-all; }
-        .links { margin-top: 20px; text-align: center; font-size: 13px; }
-        .links a { color: #d42426; text-decoration: none; }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; font-family: 'Poppins', sans-serif; background: #fff; color: #1f2937; display: flex; flex-direction: column; }
+        .fp-top { border-bottom: 1px solid #eef0f4; max-width: 1100px; width: 100%; margin: 0 auto; padding: 18px 24px; }
+        .fp-top img { height: 48px; max-width: 200px; object-fit: contain; display: block; }
+        .fp-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+        .fp-grid { width: 100%; max-width: 1000px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+        .fp-title { margin: 0 0 14px; font-size: 30px; font-weight: 600; color: #1f2937; }
+        .fp-sub { margin: 0 0 26px; font-size: 15px; line-height: 1.7; color: #64748b; max-width: 360px; }
+        .fp-form { display: flex; flex-direction: column; gap: 10px; max-width: 440px; }
+        .fp-row { display: flex; gap: 10px; }
+        .fp-input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid #e2e8f0; border-radius: 3px; font: inherit; font-size: 13px; color: #1f2937; outline: none; transition: border-color .15s; }
+        .fp-form > .fp-input { flex: none; }
+        .fp-form .fp-input { height: 44px !important; min-height: 44px; padding: 0 14px !important; }
+        .fp-input::placeholder { color: #9ca3af; }
+        .fp-input:focus { border-color: #1a88ff; }
+        .fp-btn { height: 44px; padding: 0 26px; border: 0; border-radius: 3px; background: #1a88ff; color: #fff; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; transition: background .15s; }
+        .fp-btn:hover { background: #0b74e5; }
+        .fp-alert { max-width: 440px; padding: 11px 14px; margin-bottom: 16px; border-radius: 4px; font-size: 13px; }
+        .fp-alert.error { background: #fee2e2; color: #b91c1c; }
+        .fp-alert.success { background: #dcfce7; color: #15803d; word-break: break-word; }
+        .fp-back { display: inline-block; margin-top: 22px; font-size: 13px; color: #1a88ff; text-decoration: none; }
+        .fp-back:hover { text-decoration: underline; }
+        .fp-art { display: flex; justify-content: center; }
+        .fp-art img { width: 100%; max-width: 480px; height: auto; display: block; }
+        @media (max-width: 820px) {
+            .fp-grid { grid-template-columns: 1fr; gap: 28px; }
+            .fp-art { order: -1; }
+            .fp-art img { max-width: 300px; }
+            .fp-title { font-size: 24px; }
+        }
+        @media (max-width: 480px) { .fp-row { flex-direction: column; } .fp-btn { width: 100%; } }
     </style>
 </head>
 <body>
-    
-    <div class="auth-wrap">
-        <div class="auth-card">
-            <div class="brand">
-                <img src="assets/images/Untitled.jpg" alt="Logo" style="height: 60px;">
-                <h1 style="font-size: 18px; margin-top: 10px;">Reset Password</h1>
-            </div>
+    <header class="fp-top">
+        <?php $fpLogo = function_exists('getCompanyLogoUrl') ? getCompanyLogoUrl() : ''; ?>
+        <?php if ($fpLogo !== ''): ?>
+            <a href="<?= htmlspecialchars($fpLoginUrl) ?>"><img src="<?= htmlspecialchars($fpLogo) ?>" alt="Logo"></a>
+        <?php endif; ?>
+    </header>
 
-            <?php if ($message): ?>
-                <div class="alert success"><?= $message ?></div>
-            <?php endif; ?>
+    <main class="fp-main">
+        <div class="fp-grid">
+            <section>
+                <h1 class="fp-title">Forgot your password?</h1>
+                <p class="fp-sub">Don't worry. We'll reset your password and send you a link to create a new one.</p>
 
-            <?php if ($error): ?>
-                <div class="alert error"><?= htmlspecialchars($error) ?></div>
-            <?php endif; ?>
+                <?php if ($message): ?>
+                    <div class="fp-alert success"><?= $message ?></div>
+                <?php endif; ?>
+                <?php if ($error): ?>
+                    <div class="fp-alert error"><?= htmlspecialchars($error) ?></div>
+                <?php endif; ?>
 
-            <form method="post">
-                <div class="form-row">
-                    <label class="label" for="full_name">Full Name</label>
-                    <input class="input" type="text" id="full_name" name="full_name" required placeholder="John Doe">
-                </div>
-                <div class="form-row">
-                    <label class="label" for="email">Email Address</label>
-                    <input class="input" type="email" id="email" name="email" required placeholder="Enter your email address">
-                </div>
+                <form method="post" class="fp-form">
+                    <input class="fp-input" type="text" name="full_name" required placeholder="Your full name" aria-label="Full name" value="<?= htmlspecialchars($_POST['full_name'] ?? '') ?>">
+                    <div class="fp-row">
+                        <input class="fp-input" type="email" name="email" required placeholder="Your email" aria-label="Email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+                        <button type="submit" class="fp-btn">Reset password</button>
+                    </div>
+                </form>
 
-                <button type="submit" class="btn">Send Reset Link</button>
-            </form>
+                <a href="<?= htmlspecialchars($fpLoginUrl) ?>" class="fp-back">&larr; Back to Login</a>
+            </section>
 
-            <div class="links">
-                <a href="login.php">Back to Login</a>
+            <div class="fp-art" aria-hidden="true">
+                <img src="<?= htmlspecialchars(function_exists('app_url') ? app_url('/assets/images/forgot-password-illustration.jpg') : 'assets/images/forgot-password-illustration.jpg') ?>" alt="">
             </div>
         </div>
-    </div>
+    </main>
 </body>
 </html>

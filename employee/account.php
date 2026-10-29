@@ -63,6 +63,70 @@ if (function_exists('ensureProfilePhotoColumn')) {
 if (function_exists('ensureWhatsAppColumn')) {
     ensureWhatsAppColumn();
 }
+$psSyncCompanyIndex = static function () use ($userId): void {
+    $cid = (int) (currentCompanyId() ?? ($_SESSION['company_id'] ?? 0));
+    if ($cid > 0 && function_exists('syncUserCompanyIndex')) {
+        syncUserCompanyIndex($cid, $userId);
+    }
+};
+/** @return true|string true on success, otherwise an error message */
+$psUpdateFullName = static function (string $newFullName) use ($pdo, $userId) {
+    if (strlen($newFullName) < 2) {
+        return 'Full Name must be at least 2 characters.';
+    }
+    $oldFullName = (string) ($_SESSION['full_name'] ?? '');
+    $stmt = $pdo->prepare('UPDATE users SET full_name = ? WHERE id = ?');
+    if (!$stmt->execute([$newFullName, $userId])) {
+        return 'Failed to update name.';
+    }
+    $_SESSION['full_name'] = $newFullName;
+    // payment_vouchers stores these names as legacy text, not user ids
+    foreach (['applicant', 'prepared_by', 'checked_by', 'department_manager', 'general_manager'] as $field) {
+        try {
+            $colCheck = $pdo->query("SHOW COLUMNS FROM payment_vouchers LIKE '$field'");
+            if ($colCheck->fetch()) {
+                $upd = $pdo->prepare("UPDATE payment_vouchers SET $field = ? WHERE $field = ?");
+                $upd->execute([$newFullName, $oldFullName]);
+            }
+        } catch (Exception $e) { }
+    }
+    return true;
+};
+$psUpdateUsername = static function (string $newUsername) use ($pdo, $userId, $psSyncCompanyIndex) {
+    if (strlen($newUsername) < 3) {
+        return 'Username must be at least 3 characters.';
+    }
+    $stmt = $pdo->prepare('SELECT id FROM users WHERE username = ? AND id != ?');
+    $stmt->execute([$newUsername, $userId]);
+    if ($stmt->fetch()) {
+        return 'Username already taken.';
+    }
+    $stmt = $pdo->prepare('UPDATE users SET username = ? WHERE id = ?');
+    if (!$stmt->execute([$newUsername, $userId])) {
+        return 'Failed to update username.';
+    }
+    $_SESSION['username'] = $newUsername;
+    $psSyncCompanyIndex();
+    return true;
+};
+$psUpdateEmail = static function (string $newEmail) use ($pdo, $userId, $psSyncCompanyIndex) {
+    if ($newEmail === '' || !filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+        return 'Enter a valid email address.';
+    }
+    $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1');
+    $stmt->execute([$newEmail, $userId]);
+    if ($stmt->fetch()) {
+        return 'Email already in use.';
+    }
+    $stmt = $pdo->prepare('UPDATE users SET email = ? WHERE id = ?');
+    if (!$stmt->execute([$newEmail, $userId])) {
+        return 'Failed to update email.';
+    }
+    $_SESSION['email'] = $newEmail;
+    $psSyncCompanyIndex();
+    return true;
+};
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_FILES['profile_photo'])) {
 	if (isset($_POST['delete_signature'])) {
 		try {
@@ -71,100 +135,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_FILES['profile_photo'])) {
 		} catch (Exception $e) {
 			$feedback = 'Error: ' . $e->getMessage();
 		}
-	} // Handle WhatsApp Number Update
-    elseif (isset($_POST['whatsapp_number'])) {
-        $wa_number = trim($_POST['whatsapp_number']);
-        $stmt = $pdo->prepare('UPDATE users SET whatsapp_number = ? WHERE id = ?');
-        $stmt->execute([$wa_number, $userId]);
-        $feedback = 'WhatsApp number updated successfully.';
-    }
-    // Handle Email Update
-    elseif (isset($_POST['new_email'])) {
+	}
+    elseif (isset($_POST['action']) && $_POST['action'] === 'save_personal_details') {
+        $cur = $pdo->prepare('SELECT full_name, username, email, whatsapp_number FROM users WHERE id = ? LIMIT 1');
+        $cur->execute([$userId]);
+        $cur = $cur->fetch() ?: [];
+        $errors = [];
+        $changed = 0;
+
+        $newFullName = trim((string) ($_POST['new_full_name'] ?? ''));
+        if ($newFullName !== (string) ($cur['full_name'] ?? '')) {
+            $r = $psUpdateFullName($newFullName);
+            $r === true ? $changed++ : $errors[] = $r;
+        }
+        $newUsername = trim((string) ($_POST['new_username'] ?? ''));
+        if ($newUsername !== (string) ($cur['username'] ?? '')) {
+            $r = $psUpdateUsername($newUsername);
+            $r === true ? $changed++ : $errors[] = $r;
+        }
         $newEmail = function_exists('normalizeLoginEmail')
             ? normalizeLoginEmail($_POST['new_email'] ?? '')
             : strtolower(trim((string) ($_POST['new_email'] ?? '')));
-        if ($newEmail === '' || !filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
-            $feedback = 'Error: Enter a valid email address.';
-        } else {
-            $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1');
-            $stmt->execute([$newEmail, $userId]);
-            if ($stmt->fetch()) {
-                $feedback = 'Error: Email already in use.';
-            } else {
-                $stmt = $pdo->prepare('UPDATE users SET email = ? WHERE id = ?');
-                if ($stmt->execute([$newEmail, $userId])) {
-                    $_SESSION['email'] = $newEmail;
-                    $cid = (int) (currentCompanyId() ?? ($_SESSION['company_id'] ?? 0));
-                    if ($cid > 0 && function_exists('syncUserCompanyIndex')) {
-                        syncUserCompanyIndex($cid, $userId);
-                    }
-                    $feedback = 'Email updated successfully.';
-                } else {
-                    $feedback = 'Error: Failed to update email.';
-                }
-            }
+        if ($newEmail !== strtolower((string) ($cur['email'] ?? ''))) {
+            $r = $psUpdateEmail($newEmail);
+            $r === true ? $changed++ : $errors[] = $r;
         }
-    }
-    // Handle Full Name Update
-    elseif (isset($_POST['new_full_name'])) {
-        $newFullName = trim($_POST['new_full_name']);
-        if (strlen($newFullName) >= 2) {
-            $oldFullName = $_SESSION['full_name'];
-            $stmt = $pdo->prepare("UPDATE users SET full_name = ? WHERE id = ?");
-            if ($stmt->execute([$newFullName, $userId])) {
-                $_SESSION['full_name'] = $newFullName;
-                
-                // Propagate name change to payment_vouchers (legacy text fields)
-                $voucherFields = ['applicant', 'prepared_by', 'checked_by', 'department_manager', 'general_manager'];
-                foreach ($voucherFields as $field) {
-                    try {
-                        $colCheck = $pdo->query("SHOW COLUMNS FROM payment_vouchers LIKE '$field'");
-                        if ($colCheck->fetch()) {
-                            $upd = $pdo->prepare("UPDATE payment_vouchers SET $field = ? WHERE $field = ?");
-                            $upd->execute([$newFullName, $oldFullName]);
-                        }
-                    } catch (Exception $e) { }
-                }
-                $feedback = 'Full Name updated successfully.';
-            } else {
-                $feedback = 'Error: Failed to update name.';
-            }
-        } else {
-            $feedback = 'Error: Full Name must be at least 2 characters.';
+        $waNumber = trim((string) ($_POST['whatsapp_number'] ?? ''));
+        if ($waNumber !== (string) ($cur['whatsapp_number'] ?? '')) {
+            $stmt = $pdo->prepare('UPDATE users SET whatsapp_number = ? WHERE id = ?');
+            $stmt->execute([$waNumber, $userId]);
+            $changed++;
         }
-    }
-    // Handle Username Update
-    elseif (isset($_POST['new_username'])) {
-        $newUsername = trim($_POST['new_username']);
-        if (strlen($newUsername) >= 3) {
-            // Check uniqueness
-            $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
-            $stmt->execute([$newUsername, $userId]);
-            
-            if ($stmt->fetch()) {
-                $feedback = 'Error: Username already taken.';
-            } else {
-                $stmt = $pdo->prepare("UPDATE users SET username = ? WHERE id = ?");
-                if ($stmt->execute([$newUsername, $userId])) {
-                    $_SESSION['username'] = $newUsername;
-                    $cid = (int) (currentCompanyId() ?? ($_SESSION['company_id'] ?? 0));
-                    if ($cid > 0) {
-                        syncUserCompanyIndex($cid, $userId);
-                    }
-                    $feedback = 'Username updated successfully.';
-                } else {
-                    $feedback = 'Error: Failed to update username.';
-                }
-            }
+
+        if ($errors) {
+            $feedback = 'Error: ' . implode(' ', $errors);
         } else {
-            $feedback = 'Error: Username must be at least 3 characters.';
+            $feedback = $changed ? 'Personal details saved successfully.' : 'No changes to save.';
         }
     }
     // Change password while logged in (current password not required)
     elseif (isset($_POST['action']) && $_POST['action'] === 'change_password') {
         $newPassword = (string) ($_POST['new_password'] ?? '');
         $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
-        if ($newPassword !== $confirmPassword) {
+        $pwStmt = $pdo->prepare('SELECT password FROM users WHERE id = ? LIMIT 1');
+        $pwStmt->execute([$userId]);
+        if ((string) $pwStmt->fetchColumn() !== '') {
+            $feedback = 'Error: You already have a password. Use "Forgot password" to reset it by email.';
+        } elseif ($newPassword !== $confirmPassword) {
             $feedback = 'Error: New passwords do not match.';
         } else {
             $strength = function_exists('evaluatePasswordStrength')
@@ -197,6 +214,9 @@ $initial = strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1));
 $stmt = $pdo->prepare("SELECT id, username, full_name, email, role, department, is_active, created_at, updated_at, profile_photo, whatsapp_number FROM users WHERE id = ?");
 $stmt->execute([$userId]);
 $user = $stmt->fetch();
+$pwStmt = $pdo->prepare('SELECT password FROM users WHERE id = ? LIMIT 1');
+$pwStmt->execute([$userId]);
+$userHasPassword = (string) $pwStmt->fetchColumn() !== '';
 
 if (!$user) {
 	header('Location: dashboard.php');
@@ -269,14 +289,20 @@ $esc = static function ($value): string {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 };
 $employeeHeaderSubtitle = '<span class="ps-crumbs"><a href="' . $esc($profileBackUrl) . '">Home</a> <span class="ps-crumb-sep">/</span> <a href="#profile-photo">Account</a> <span class="ps-crumb-sep">/</span> <span class="ps-crumb-current">Profile Settings</span></span>';
-$psNameParts = preg_split('/\s+/', trim((string) ($_SESSION['full_name'] ?? 'User'))) ?: ['U'];
-$psInitials = strtoupper(substr((string) ($psNameParts[0] ?? 'U'), 0, 1) . (count($psNameParts) > 1 ? substr((string) end($psNameParts), 0, 1) : ''));
 $psNotificationsUrl = function_exists('company_url') ? company_url('notifications.php') : '../notifications.php';
+$psUnreadCount = 0;
+if (function_exists('getTotalHeaderUnreadNotificationCount')) {
+    try {
+        $psUnreadCount = getTotalHeaderUnreadNotificationCount();
+    } catch (Throwable $e) {
+        $psUnreadCount = 0;
+    }
+}
 $employeeHeaderRightHtml = '<div class="ps-head-tools">'
     . '<label class="ps-head-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>'
     . '<input type="search" id="psHeadSearch" placeholder="Search anything..." autocomplete="off" aria-label="Search profile settings"></label>'
-    . '<a href="' . $esc($psNotificationsUrl) . '" class="ps-head-bell" title="Notifications" aria-label="Notifications"><i class="far fa-bell"></i><span class="ps-head-dot"></span></a>'
-    . '<span class="ps-head-avatar" title="' . $esc($_SESSION['full_name'] ?? '') . '">' . $esc($psInitials) . '</span>'
+    . '<a href="' . $esc($psNotificationsUrl) . '" class="ps-head-bell ps-head-bell--mobile" title="Notifications" aria-label="Notifications">'
+    . '<i class="far fa-bell"></i>' . ($psUnreadCount > 0 ? '<span class="ps-head-dot"></span>' : '') . '</a>'
     . '</div>';
 $selectArrow = "background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E'); background-size: 1.25rem; background-repeat: no-repeat; background-position: right 12px center;";
 $saveEmailApiUrl = function_exists('company_url')
@@ -483,10 +509,11 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         .account-pw-field .account-pw-input { padding-right: 48px; }
         .account-pw-toggle {
             position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px;
-            border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; border-radius: 8px; cursor: pointer;
+            border: 0 !important; background: transparent !important; box-shadow: none !important; color: #64748b; cursor: pointer;
             display: inline-flex; align-items: center; justify-content: center; padding: 0;
         }
-        .account-pw-toggle.is-visible { color: #7c3aed; border-color: rgba(124, 58, 237, 0.45); background: rgba(124, 58, 237, 0.12); }
+        .account-pw-toggle:hover { color: #475569; }
+        .account-pw-toggle.is-visible { color: #7c3aed; }
         .account-pw-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; pointer-events: none; }
         .account-pw-toggle svg.account-pw-toggle-svg--hide { display: none; }
         .account-pw-toggle.is-visible svg.account-pw-toggle-svg--show { display: none; }
@@ -503,6 +530,52 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         .account-pw-rules li i { font-size: 6px; color: #cbd5e1; }
         .account-pw-rules li.is-met { color: #0f172a; font-weight: 500; }
         .account-pw-rules li.is-met i { color: #7c3aed; }
+        #change-password .form-row { margin-bottom: 12px; }
+        #change-password .account-pw-strength { margin-top: 8px; }
+        #change-password .account-pw-strength-top { margin-bottom: 5px; }
+        #change-password .account-pw-strength-bar { height: 6px; }
+        #change-password .account-pw-field,
+        #change-password .account-pw-strength { max-width: none; }
+        #change-password .form-row { grid-template-columns: 140px 1fr; }
+        #change-password .account-pw-rules { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 8px; }
+        #change-password .account-pw-rules li { margin-bottom: 0; white-space: nowrap; }
+        #change-password .help-text { margin-top: 4px; }
+        #change-password .account-pw-match:empty { display: none; }
+        #change-password .password-actions-row { padding-top: 0; flex-wrap: nowrap; }
+        #change-password .form-row:last-child { align-items: center; margin-bottom: 0; }
+        #change-password .account-pw-strength-top:has(.account-pw-strength-score:empty) { display: none; }
+        #change-password .btn-save-inline { border-radius: 8px !important; padding: 10px 22px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); }
+        .ps-toast {
+            position: fixed; top: 14px; right: 24px; z-index: 2147483000; display: flex; align-items: center; gap: 12px;
+            min-width: 280px; max-width: 380px; padding: 12px 12px 12px 12px; background: #fff; border: 1px solid #eef0f4;
+            border-radius: 12px; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12); font-size: 13.5px; font-weight: 500; color: #1f2937;
+            opacity: 0; transform: translateY(-8px); transition: opacity .2s ease, transform .2s ease;
+        }
+        .ps-toast.is-in { opacity: 1; transform: none; }
+        .ps-toast i { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; background: #dcfce7; color: #16a34a; }
+        .ps-toast span { flex: 1; line-height: 1.4; }
+        .ps-toast--error i { background: #fee2e2; color: #dc2626; }
+        .ps-toast--info i { background: #f1f5f9; color: #64748b; }
+        .ps-toast .ps-toast-close { flex-shrink: 0; width: 26px; height: 26px; border: 0; border-radius: 6px !important; background: transparent; color: #9ca3af; font-size: 18px; line-height: 1; cursor: pointer; padding: 0; }
+        .ps-toast .ps-toast-close:hover { background: #f3f4f6; color: #374151; }
+        html[data-theme="dark"] .ps-toast { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+        @media (max-width: 640px) { .ps-toast { top: 12px; left: 12px; right: 12px; min-width: 0; max-width: none; } }
+        .ps-coming-soon { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1px dashed #d8d4f5; border-radius: 10px; background: #faf9ff; }
+        .ps-coming-soon-icon { width: 38px; height: 38px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: #ede9fe; color: #7c3aed; font-size: 16px; }
+        .ps-coming-soon div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #64748b; }
+        .ps-coming-soon strong { font-size: 14px; font-weight: 600; color: #0f172a; }
+        html[data-theme="dark"] .ps-coming-soon { background: #0f172a; border-color: #334155; }
+        html[data-theme="dark"] .ps-coming-soon strong { color: #f8fafc; }
+        .ps-pw-reset { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+        .ps-pw-reset-text { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #64748b; }
+        .ps-pw-reset-text strong { font-size: 14px; font-weight: 600; color: #0f172a; }
+        .ps-pw-reset-btn { display: inline-flex; align-items: center; gap: 8px; color: #7c3aed; font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+        .ps-pw-reset-btn:hover { color: #6d28d9; text-decoration: underline; }
+        html[data-theme="dark"] .ps-pw-reset-btn { color: #a78bfa; }
+        html[data-theme="dark"] .ps-pw-reset { background: #0f172a; border-color: #334155; }
+        html[data-theme="dark"] .ps-pw-reset-text strong { color: #f8fafc; }
+        @media (max-width: 640px) { #change-password .password-actions-row { flex-wrap: wrap; } }
+        @media (max-width: 992px) { #change-password .form-row { grid-template-columns: 1fr; } }
         .account-pw-match.is-ok { color: #16a34a; font-weight: 600; }
         .account-pw-match.is-bad { color: #dc2626; font-weight: 600; }
         .subsection-label { font-size: 14px; font-weight: 700; color: #334155; margin: 0 0 16px; }
@@ -536,17 +609,18 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         body.ps-page, body.ps-page.dashboard, body.ps-page .layout-main-wrapper,
         body.ps-page .layout-main-wrapper > .flex-grow-1, body.ps-page .employee-header { background: #f8fafc !important; }
         body.ps-page #native-sidebar .mb-auto { margin-bottom: 0 !important; }
-        body.ps-page .employee-header { padding-top: 1rem !important; }
+        body.ps-page .employee-header { padding-top: 0.75rem !important; border-bottom: 0 !important; box-shadow: none !important; }
         @media (min-width: 993px) {
             body.ps-page .employee-header { position: relative !important; }
-            body.ps-page .employee-header .header-right { position: absolute !important; top: 1.1rem; right: 1.25rem; }
+            body.ps-page .employee-header .header-right { position: absolute !important; top: 0.85rem; left: 50%; right: auto; transform: translateX(-50%); }
+            body.ps-page .ps-head-search { width: 340px; }
         }
         body.ps-page #native-sidebar .nav-link.active {
             background: #efedfc !important; color: #4338ca !important; border-radius: 10px; font-weight: 600;
         }
         body.ps-page #native-sidebar .nav-link.active i { color: #4338ca !important; }
         body.ps-page .employee-header-page-title { font-size: 26px !important; font-weight: 700 !important; color: #111827 !important; }
-        .ps-crumbs { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+        .ps-crumbs { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; margin-top: 6px; }
         .ps-crumbs a { color: #5b54c9; text-decoration: none; }
         .ps-crumbs a:hover { text-decoration: underline; }
         .ps-crumb-sep { color: #9ca3af; }
@@ -563,6 +637,7 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             position: relative; width: 36px; height: 36px; border-radius: 50%; display: inline-flex;
             align-items: center; justify-content: center; color: #374151 !important; text-decoration: none !important; font-size: 17px;
         }
+        @media (min-width: 993px) { .ps-head-bell--mobile { display: none !important; } }
         .ps-head-dot { position: absolute; top: 6px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: #ef4444; border: 1.5px solid #f8fafc; }
         .ps-head-avatar {
             width: 38px; height: 38px; border-radius: 50%; background: #ebe8fb; color: #3730a3;
@@ -617,6 +692,100 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             border-radius: 10px; border-color: #eceef5; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03); padding: 0.95rem 0.75rem 1rem;
         }
         .editor-section[hidden] { display: none !important; }
+
+        .editor-section.ps-sig-wrap {
+            background: transparent; border: 0; box-shadow: none; padding: 0;
+            display: flex; flex-direction: column; gap: 0.75rem;
+        }
+        .ps-sig-card {
+            background: #fff; border: 1px solid #eceef5; border-radius: 10px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03); padding: 0.95rem 0.95rem 1rem;
+        }
+        .ps-sig-card[hidden] { display: none !important; }
+
+        .swal2-popup.ps-del-popup { border-radius: 14px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18); }
+        .swal2-html-container.ps-del-body { margin: 0; padding: 0; overflow: visible; }
+        .ps-del-icon { width: 44px; height: 44px; margin: 0 auto 0.55rem; color: #dc2626; }
+        .ps-del-icon svg { width: 100%; height: 100%; }
+        .ps-del-title { margin: 0 0 0.45rem; font-size: 1.3rem; font-weight: 700; color: #111827; }
+        .ps-del-text { margin: 0; font-size: 0.88rem; color: #111827; }
+        .swal2-actions.ps-del-actions { margin: 1.15rem 0 0; gap: 0.75rem; width: 100%; flex-wrap: nowrap; }
+        .swal2-popup .swal2-actions button.ps-del-btn { flex: 1 1 0; min-height: 2.6rem; padding: 0 1rem; border: 0 !important; border-radius: 8px !important; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin: 0; }
+        .swal2-popup .swal2-actions button.ps-del-btn--no { background: #e5e7eb !important; color: #111827 !important; }
+        .swal2-popup .swal2-actions button.ps-del-btn--no:hover { background: #d9dce1 !important; }
+        .swal2-popup .swal2-actions button.ps-del-btn--yes { background: #ef2b2b !important; color: #fff !important; box-shadow: 0 6px 16px rgba(239, 43, 43, 0.45); }
+        .swal2-popup .swal2-actions button.ps-del-btn--yes:hover { background: #dc2626 !important; }
+        .swal2-popup .swal2-actions button.ps-del-btn:focus,
+        .swal2-popup .swal2-actions button.ps-del-btn:focus-visible { outline: none !important; box-shadow: none; }
+        .swal2-popup .swal2-actions button.ps-del-btn--yes:focus { box-shadow: 0 6px 16px rgba(239, 43, 43, 0.45); }
+        html[data-theme="dark"] .swal2-popup.ps-del-popup { background: #1e293b; }
+        html[data-theme="dark"] .ps-del-title, html[data-theme="dark"] .ps-del-text { color: #f8fafc; }
+        html[data-theme="dark"] .swal2-popup .swal2-actions button.ps-del-btn--no { background: #334155 !important; color: #f8fafc !important; }
+        .ps-sig-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 0.9rem; }
+        .ps-sig-status {
+            display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.8rem;
+            border-radius: 999px; font-size: 0.72rem; font-weight: 500;
+        }
+        .ps-sig-status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+        .ps-sig-status.is-active { background: #dcfce7; color: #15803d; }
+        .ps-sig-status.is-missing { background: #fef9c3; color: #a16207; }
+        .ps-sig-wrap .sig-tools { gap: 1.1rem; margin-bottom: 0.75rem; }
+        .ps-sig-wrap .sig-tool-group { gap: 0.6rem; }
+        .ps-sig-wrap .sig-tool-label { font-size: 0.68rem; font-weight: 600; color: #6b7280; letter-spacing: 0.04em; margin-right: 0.35rem; }
+        .sig-tool-divider { width: 1px; height: 24px; background: #e5e7eb; }
+        .ps-sig-wrap .pen-size-btn, .ps-sig-wrap .color-btn { width: 32px; height: 32px; border-color: #e5e7eb; border-radius: 7px; }
+        .ps-sig-wrap .pen-size-btn.active, .ps-sig-wrap .color-btn.active { border-color: #a78bfa; background: #f1effd; color: #5b45d6; }
+        .ps-sig-wrap .pen-size-btn { color: #111827; }
+        .ps-sig-wrap .canvas-container { border: 1.5px dashed #c9c3ee; border-radius: 10px; }
+        .ps-sig-wrap #sigCanvas { height: 125px; }
+        .ps-sig-wrap .canvas-placeholder {
+            display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+            font-size: 0.82rem; color: #9ca3af; opacity: 1;
+        }
+        .ps-sig-wrap .canvas-placeholder i { font-size: 1rem; }
+        .ps-sig-wrap .canvas-container.has-content .canvas-placeholder { opacity: 0; }
+        .ps-sig-wrap .canvas-container.is-highlight { border-color: #5b45d6; box-shadow: 0 0 0 4px rgba(91, 69, 214, 0.12); }
+        .ps-sig-wrap .sig-actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.75rem; }
+        .ps-sig-btn {
+            display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.1rem; padding: 0 0.95rem;
+            border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; color: #374151;
+            font-size: 0.78rem; font-weight: 500; cursor: pointer;
+        }
+        .ps-sig-btn:hover:not(:disabled) { background: #f9fafb; }
+        .ps-sig-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+        .ps-sig-btn--danger { border-color: #fca5a5; color: #dc2626; }
+        .ps-sig-btn--danger:hover:not(:disabled) { background: #fef2f2; }
+        .ps-sig-btn--accent { border-color: #c4b5fd; color: #5b45d6; }
+        .ps-sig-btn--accent:hover { background: #f5f3ff; }
+        .ps-sig-btn.ps-sig-btn--plain,
+        html[data-theme="dark"] .ps-sig-btn.ps-sig-btn--plain { border: 0; background: transparent; padding: 0 0.35rem; }
+        .ps-sig-btn.ps-sig-btn--plain:hover:not(:disabled) { background: transparent; text-decoration: underline; }
+        html[data-theme="dark"] .ps-sig-btn--accent.ps-sig-btn--plain { color: #a78bfa; }
+        html[data-theme="dark"] .ps-sig-btn--danger.ps-sig-btn--plain { color: #f87171; }
+        .ps-sig-save {
+            margin-left: auto; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.25rem; padding: 0 1.35rem;
+            border: 0; border-radius: 999px !important; background: #5b45d6; color: #fff; font-size: 0.8rem; font-weight: 500; cursor: pointer;
+        }
+        .ps-sig-save:hover:not(:disabled) { background: #4c38c4; }
+        .ps-sig-save:disabled { opacity: 0.6; cursor: not-allowed; }
+        .ps-sig-current-head { margin-bottom: 0.8rem; }
+        .ps-sig-current { display: flex; align-items: center; gap: 1rem; }
+        .ps-sig-current-preview {
+            flex: 1; min-width: 0; height: 64px; border: 1.5px dashed #e5e7eb; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; padding: 0.35rem;
+        }
+        .ps-sig-current-preview img { max-height: 100%; max-width: 100%; object-fit: contain; }
+        .ps-sig-current-empty { font-size: 0.76rem; color: #9ca3af; }
+        .ps-sig-current-actions { display: flex; gap: 0.6rem; flex-shrink: 0; }
+        @media (max-width: 640px) {
+            .sig-tool-divider { display: none; }
+            .ps-sig-current { flex-direction: column; align-items: stretch; }
+            .ps-sig-current-actions { justify-content: flex-end; }
+        }
+        html[data-theme="dark"] .ps-sig-card { background: #1e293b; border-color: #334155; }
+        html[data-theme="dark"] .ps-sig-btn, html[data-theme="dark"] .ps-sig-wrap .pen-size-btn,
+        html[data-theme="dark"] .ps-sig-wrap .color-btn { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+        html[data-theme="dark"] .ps-sig-current-preview { border-color: #334155; background: #fff; }
         .ps-sec-head { display: flex; align-items: flex-start; gap: 0.75rem; }
         .ps-sec-icon {
             width: 32px; height: 32px; border-radius: 8px; background: #f1f0fb; color: #4b5563;
@@ -641,9 +810,10 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         .ps-upload-btn:hover { background: #4c38c4; }
         .ps-remove-btn { min-height: 2.15rem; padding: 0 0.9rem; border-radius: 4px; background: #f3f4f6; color: #374151; border-color: #e5e7eb; font-size: 0.74rem; font-weight: 500; }
 
-        #personal-details .inline-field-form .btn-save-inline { display: none; }
-        #personal-details .inline-field-form.is-dirty .btn-save-inline { display: inline-flex; }
-        #personal-details .inline-field-form { max-width: none; }
+        #personal-details .ps-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem; }
+        .ps-details-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+        .ps-details-save { display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 999px !important; font-size: 13px; }
+        .ps-details-save:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
         .acct-aside-card {
             display: flex; gap: 0.85rem; align-items: flex-start; padding: 1rem;
@@ -700,12 +870,171 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             .main-content-wrapper { padding: 0 0.85rem 2.5rem !important; }
             .ps-body { grid-template-columns: 1fr; }
             .ps-hero { flex-direction: column; align-items: flex-start; }
-            .ps-details-grid { grid-template-columns: 1fr; }
+            .ps-details-grid, #personal-details .ps-details-grid { grid-template-columns: 1fr; }
+            .ps-details-save { width: 100%; justify-content: center; }
             .form-row { grid-template-columns: 1fr; gap: 8px; margin-bottom: 18px; }
             .form-label { padding-top: 0; font-size: 13px; }
             .inline-field-form { flex-direction: column; align-items: stretch; }
             .host-port-grid { grid-template-columns: 1fr; }
             .btn-save { width: 100%; padding: 12px 24px; }
+        }
+
+        @media (max-width: 992px) {
+            body.ps-page[data-ps-tab]:not([data-ps-tab="profile-photo"]) .acct-aside { display: none; }
+        }
+        @media (max-width: 640px) {
+            body.ps-page .employee-header-page-title { font-size: 20px !important; }
+            .ps-crumbs { font-size: 12px; gap: 6px; margin-top: 2px; }
+
+            .ps-hero {
+                position: relative; flex-direction: row; align-items: center; min-height: 0;
+                padding: 1rem 0.9rem; margin-top: 0.6rem; gap: 0;
+            }
+            .ps-hero-main { gap: 0.9rem; align-items: center; width: 100%; padding-right: 92px; }
+            .account-avatar-wrap, .account-avatar { width: 76px; height: 76px; }
+            .account-avatar { border-width: 3px; }
+            .account-avatar-btn { width: 24px; height: 24px; font-size: 10px; }
+            .ps-hero-copy h2 { font-size: 1.1rem; }
+            .ps-hero-chips { gap: 0.35rem; margin: 0.2rem 0 0.35rem; }
+            .ps-hero-handle { font-size: 0.78rem; }
+            .ps-hero .profile-badge { padding: 2px 9px; font-size: 10px; }
+            .ps-hero-email { font-size: 0.74rem; margin-bottom: 0; word-break: break-all; }
+            .ps-logout {
+                position: absolute; top: 0.85rem; right: 0.8rem; margin: 0; z-index: 2;
+                min-height: 2rem; padding: 0 0.7rem; font-size: 0.72rem; border-radius: 8px;
+            }
+
+            .section-nav { padding: 0 0.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .section-nav::-webkit-scrollbar { display: none; }
+            .section-nav ul { flex-wrap: nowrap; gap: 0 0.2rem; }
+            .section-nav li { flex-shrink: 0; }
+            .section-nav a { padding: 0.75rem 0.55rem 0.65rem; font-size: 0.8rem; white-space: nowrap; }
+            .section-nav a i { font-size: 0.85rem; }
+
+            .editor-section { padding: 0.9rem 0.85rem 1rem; }
+            .ps-photo-actions { gap: 0.7rem; padding-left: 0; flex-wrap: wrap; }
+            .ps-photo-preview { width: 52px; height: 52px; }
+            .ps-upload-btn, .ps-remove-btn { min-height: 2.2rem; font-size: 0.74rem; }
+            .ps-upload-btn { border-radius: 6px; }
+            .ps-remove-btn { border-radius: 6px; background: #fff; }
+            .ps-details-save { border-radius: 10px !important; min-height: 2.75rem; }
+        }
+
+        /* ---------- Dark theme ---------- */
+        html[data-theme="dark"] body.ps-page,
+        html[data-theme="dark"] body.ps-page .layout-main-wrapper,
+        html[data-theme="dark"] body.ps-page .layout-main-wrapper > .flex-grow-1,
+        html[data-theme="dark"] body.ps-page .employee-header { background: #0b141a !important; }
+        html[data-theme="dark"] body.ps-page .employee-header { border-bottom: 0 !important; box-shadow: none !important; }
+        html[data-theme="dark"] body.ps-page .employee-header-page-title { color: #e9edef !important; }
+        html[data-theme="dark"] .ps-crumbs a { color: #818cf8; }
+        html[data-theme="dark"] .ps-crumb-sep { color: #667781; }
+        html[data-theme="dark"] .ps-crumb-current { color: #00a884; }
+        html[data-theme="dark"] .ps-head-search { background: #111b21; border-color: #2a3942; color: #8696a0; }
+        html[data-theme="dark"] .ps-head-search input { color: #e9edef; }
+        html[data-theme="dark"] .ps-head-search input::placeholder { color: #8696a0; }
+        html[data-theme="dark"] .ps-head-bell { color: #e9edef !important; }
+        html[data-theme="dark"] .ps-head-dot { border-color: #0b141a; }
+
+        html[data-theme="dark"] .ps-hero {
+            background:
+                radial-gradient(ellipse 50% 140% at 82% 0%, rgba(99, 102, 241, 0.22), transparent 60%),
+                radial-gradient(ellipse 45% 120% at 100% 100%, rgba(0, 168, 132, 0.10), transparent 60%),
+                linear-gradient(100deg, #111b21 0%, #16222b 55%, #1b2635 100%);
+            border: 1px solid #2a3942;
+        }
+        html[data-theme="dark"] .account-avatar { border-color: #818cf8; box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.18); }
+        html[data-theme="dark"] .account-avatar-btn { background: #6366f1; color: #fff; }
+        html[data-theme="dark"] .ps-hero .profile-badge { background: #6366f1; color: #fff; }
+        html[data-theme="dark"] .ps-hero .profile-badge-success { background: rgba(34, 197, 94, 0.12); color: #86efac; border-color: #22c55e; }
+        html[data-theme="dark"] .ps-logout { border-color: rgba(255, 255, 255, 0.45); color: #fff !important; }
+        html[data-theme="dark"] .ps-logout:hover { background: rgba(255, 255, 255, 0.08); }
+
+        html[data-theme="dark"] .section-nav { background: #111b21; border-color: #2a3942; }
+        html[data-theme="dark"] .section-nav a,
+        html[data-theme="dark"] .section-nav a i { color: #8696a0; }
+        html[data-theme="dark"] .section-nav a:hover { color: #fff; }
+        html[data-theme="dark"] .section-nav a.is-active,
+        html[data-theme="dark"] .section-nav a.is-active i { color: #fff; }
+        html[data-theme="dark"] .section-nav a.is-active { background: transparent; border-bottom: 2px solid #818cf8; border-radius: 0; box-shadow: none; }
+
+        html[data-theme="dark"] .editor-section,
+        html[data-theme="dark"] .ps-status-card,
+        html[data-theme="dark"] .acct-aside-card,
+        html[data-theme="dark"] .ps-sig-card { background: #111b21; border-color: #2a3942; box-shadow: none; }
+        html[data-theme="dark"] .ps-sec-icon { background: #202c33; color: #a5b4fc; }
+        html[data-theme="dark"] .section-title,
+        html[data-theme="dark"] .ps-status-card h3,
+        html[data-theme="dark"] .acct-aside-card h3 { color: #e9edef; }
+        html[data-theme="dark"] .section-subtitle,
+        html[data-theme="dark"] .help-text { color: #8696a0; }
+        html[data-theme="dark"] .form-label { color: #e9edef; }
+        html[data-theme="dark"] .form-input,
+        html[data-theme="dark"] .ps-sig-wrap .form-input { background: #0b141a; border-color: #2a3942; color: #e9edef; }
+        html[data-theme="dark"] .form-input::placeholder { color: #667781; }
+        html[data-theme="dark"] .form-input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+        html[data-theme="dark"] .ps-icon-field i { color: #8696a0; }
+
+        html[data-theme="dark"] .ps-photo-preview { background: #202c33; }
+        html[data-theme="dark"] .ps-photo-cam { border-color: #111b21; }
+        html[data-theme="dark"] .ps-upload-btn { background: #6366f1; color: #fff; }
+        html[data-theme="dark"] .ps-remove-btn { background: transparent; border-color: #3b4a54; color: #e9edef; }
+        html[data-theme="dark"] .ps-remove-btn:hover { background: #202c33; }
+        html[data-theme="dark"] .btn-save,
+        html[data-theme="dark"] .ps-details-save,
+        html[data-theme="dark"] .ps-sig-save { background: #6366f1; color: #fff; border: 0; box-shadow: none; }
+        html[data-theme="dark"] .ps-details-save:disabled { opacity: 0.45; box-shadow: none; }
+
+        html[data-theme="dark"] .ps-status-row,
+        html[data-theme="dark"] .ps-status-row .ps-status-label { color: #8696a0; }
+        html[data-theme="dark"] .ps-status-value { color: #e9edef; }
+        html[data-theme="dark"] .ps-status-row .profile-badge { background: rgba(99, 102, 241, 0.18); color: #a5b4fc; }
+        html[data-theme="dark"] .ps-status-row .profile-badge-success { background: rgba(34, 197, 94, 0.14); color: #86efac; }
+
+        html[data-theme="dark"] .ps-pw-reset,
+        html[data-theme="dark"] .ps-coming-soon { background: #0b141a; border-color: #2a3942; }
+        html[data-theme="dark"] .ps-pw-reset-text strong,
+        html[data-theme="dark"] .ps-coming-soon strong { color: #e9edef; }
+        html[data-theme="dark"] .ps-pw-reset-text,
+        html[data-theme="dark"] .ps-coming-soon div { color: #8696a0; }
+        html[data-theme="dark"] .ps-coming-soon-icon { background: #202c33; color: #a5b4fc; }
+        html[data-theme="dark"] .account-pw-strength-bar { background: #2a3942; }
+        html[data-theme="dark"] .account-pw-rules { color: #8696a0; }
+        html[data-theme="dark"] .account-pw-rules li.is-met { color: #e9edef; }
+        html[data-theme="dark"] .account-pw-toggle { color: #8696a0; }
+
+        html[data-theme="dark"] .ps-sig-current-preview { border-color: #2a3942; }
+        html[data-theme="dark"] .ps-toast { background: #202c33; border-color: #2a3942; color: #e9edef; }
+        html[data-theme="dark"] .ps-toast .ps-toast-close:hover { background: #2a3942; color: #fff; }
+        /* :not(#_) lifts these above the global dark-theme a:not(...) rule, which chains eight :not() classes */
+        html[data-theme="dark"] body.ps-page .ps-crumbs a:not(#_) { color: #60a5fa !important; }
+        html[data-theme="dark"] body.ps-page .ps-crumb-current:not(#_) { color: #00a884 !important; }
+        html[data-theme="dark"] body.ps-page .section-nav a:not(#_),
+        html[data-theme="dark"] body.ps-page .section-nav a:not(#_) i { color: #8696a0 !important; }
+        html[data-theme="dark"] body.ps-page .section-nav a.is-active:not(#_),
+        html[data-theme="dark"] body.ps-page .section-nav a.is-active:not(#_) i { color: #e9edef !important; }
+        html[data-theme="dark"] body.ps-page .ps-logout:not(#_),
+        html[data-theme="dark"] body.ps-page .ps-logout:not(#_) i { color: #fff !important; }
+        html[data-theme="dark"] body.ps-page .ps-head-bell:not(#_),
+        html[data-theme="dark"] body.ps-page .ps-head-bell:not(#_) i { color: #e9edef !important; }
+        html[data-theme="dark"] body.ps-page .ps-pw-reset-btn:not(#_),
+        html[data-theme="dark"] body.ps-page .account-forgot-link:not(#_) { color: #818cf8 !important; }
+        html[data-theme="dark"] body.ps-page .form-input:not(#_) { background-color: #0b141a !important; border-color: #2a3942 !important; color: #e9edef !important; }
+        html[data-theme="dark"] body.ps-page .form-input:not(#_):focus { border-color: #818cf8 !important; }
+        html[data-theme="dark"] body.ps-page .ps-head-search input:not(#_) { background-color: transparent !important; border: 0 !important; }
+        html[data-theme="dark"] body.ps-page #native-sidebar .nav-link.active:not(#_),
+        html[data-theme="dark"] body.ps-page #native-sidebar .nav-link.active:not(#_) i { background: rgba(99, 102, 241, 0.2) !important; color: #a5b4fc !important; }
+        html[data-theme="dark"] body.ps-page #native-sidebar .nav-link.active:not(#_) i { background: transparent !important; }
+
+        html[data-theme="dark"] body.ps-page .main-content-wrapper:not(#_),
+        html[data-theme="dark"] body.ps-page .page-shell:not(#_),
+        html[data-theme="dark"] body.ps-page .ps-body:not(#_),
+        html[data-theme="dark"] body.ps-page .editor-main:not(#_),
+        html[data-theme="dark"] body.ps-page .acct-aside:not(#_) { background: transparent !important; }
+        html[data-theme="dark"] body.ps-page #native-sidebar:not(#_) { background: #0b141a !important; border-right-color: #2a3942 !important; }
+
+        @media (max-width: 768px) {
+            .ps-icon-field .form-input:not(#_) { padding-left: 2.4rem !important; }
         }
 	</style>
 </head>
@@ -714,25 +1043,25 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
 
 <div class="main-content-wrapper">
 		<?php if (!empty($feedback)): ?>
+            <?php
+            $psToastType = stripos($feedback, 'error') === 0 ? 'error' : (stripos($feedback, 'no changes') === 0 ? 'info' : 'success');
+            $psToastText = $psToastType === 'error' ? trim(substr($feedback, 6)) : $feedback;
+            ?>
+            <div class="ps-toast ps-toast--<?= $psToastType ?>" id="psToast" role="status" aria-live="polite">
+                <i class="fas <?= $psToastType === 'error' ? 'fa-circle-exclamation' : ($psToastType === 'info' ? 'fa-circle-info' : 'fa-circle-check') ?>" aria-hidden="true"></i>
+                <span><?= $esc($psToastText) ?></span>
+                <button type="button" class="ps-toast-close" aria-label="Dismiss" onclick="this.parentNode.remove()">&times;</button>
+            </div>
             <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        timerProgressBar: true,
-                        didOpen: (toast) => {
-                            toast.addEventListener('mouseenter', Swal.stopTimer)
-                            toast.addEventListener('mouseleave', Swal.resumeTimer)
-                        }
-                    });
-
-                    Toast.fire({
-                        icon: '<?= strpos(strtolower($feedback), "success") !== false ? "success" : "error" ?>',
-                        title: <?= json_encode($feedback) ?>
-                    });
-                });
+                (function () {
+                    var t = document.getElementById('psToast');
+                    if (!t) return;
+                    requestAnimationFrame(function () { t.classList.add('is-in'); });
+                    setTimeout(function () {
+                        t.classList.remove('is-in');
+                        setTimeout(function () { t.remove(); }, 250);
+                    }, 3000);
+                })();
             </script>
         <?php endif; ?>
 
@@ -760,13 +1089,8 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                         <div class="ps-hero-chips">
                             <span class="ps-hero-handle">@<?= $esc($user['username'] ?? '') ?></span>
                             <span class="profile-badge"><?= $esc($roleLabel) ?></span>
-                            <span class="profile-badge profile-badge-success"><?= $isActiveUser ? 'Active' : 'Inactive' ?></span>
                         </div>
                         <p class="ps-hero-email"><?= $esc($user['email'] ?? '') ?></p>
-                        <div class="ps-hero-meta">
-                            <span><i class="far fa-calendar"></i> Joined <?= $esc($joinedLabel) ?></span>
-                            <span><i class="fas fa-pen"></i> <?= $currentSig ? 'Signature on file' : 'Signature missing' ?></span>
-                        </div>
                     </div>
                 </div>
                 <a href="<?= $esc($logoutUrl) ?>" class="ps-logout"><i class="fas fa-arrow-right-from-bracket"></i> Log out</a>
@@ -775,9 +1099,9 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             <nav class="section-nav" aria-label="Profile sections">
                 <ul>
                     <li><a href="#profile-photo" class="is-active"><i class="far fa-user"></i> Profile</a></li>
-                    <li><a href="#personal-details"><i class="fas fa-table-cells-large"></i> Details</a></li>
-                    <li><a href="#change-password"><i class="fas fa-shield-halved"></i> Security</a></li>
-                    <li><a href="#digital-signature"><i class="fas fa-pen"></i> Signature</a></li>
+                    <li><a href="#personal-details"><i class="far fa-id-card"></i> Details</a></li>
+                    <li><a href="#change-password"><i class="fas fa-lock"></i> Security</a></li>
+                    <li><a href="#digital-signature"><i class="fas fa-signature"></i> Signature</a></li>
                     <li><a href="#personal-email"><i class="far fa-envelope"></i> Email</a></li>
                 </ul>
             </nav>
@@ -786,74 +1110,77 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                     <div class="editor-main">
 		            <?php require __DIR__ . '/includes/account-settings-view.inc.php'; ?>
 			<!-- Digital Signature -->
-			<section class="editor-section" id="digital-signature">
-                <div class="section-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                    <div class="ps-sec-head">
-                        <span class="ps-sec-icon"><i class="fas fa-pen"></i></span>
-                        <div>
-                            <h2 class="section-title">Digital Signature</h2>
-                            <p class="section-subtitle">Draw your signature below. It will appear on vouchers where your name is used.</p>
-                        </div>
-                    </div>
-                    <?php if ($currentSig): ?>
-                        <span class="status-pill is-active">Signature Active</span>
-                    <?php else: ?>
-                        <span class="status-pill is-missing">Signature Missing</span>
-                    <?php endif; ?>
-                </div>
-                <div class="form-row">
-                    <label class="form-label">Draw Signature</label>
-                    <div>
-                        <div class="sig-tools">
-                            <div class="sig-tool-group">
-                                <span class="sig-tool-label">Size</span>
-                                <button type="button" class="pen-size-btn active" data-size="2" onclick="setPenSize(2)" title="Thin"><div class="dot"></div></button>
-                                <button type="button" class="pen-size-btn" data-size="4" onclick="setPenSize(4)" title="Medium"><div class="dot"></div></button>
-                                <button type="button" class="pen-size-btn" data-size="6" onclick="setPenSize(6)" title="Thick"><div class="dot"></div></button>
-                            </div>
-                            <div class="sig-tool-group">
-                                <span class="sig-tool-label">Color</span>
-                                <button type="button" class="color-btn active" data-color="#000000" onclick="setPenColor('#000000')" title="Black"><div class="color-circle" style="background:#000;"></div></button>
-                                <button type="button" class="color-btn" data-color="#1e40af" onclick="setPenColor('#1e40af')" title="Blue"><div class="color-circle" style="background:#1e40af;"></div></button>
-                                <button type="button" class="color-btn" data-color="#7c3aed" onclick="setPenColor('#7c3aed')" title="Purple"><div class="color-circle" style="background:#7c3aed;"></div></button>
+			<section class="editor-section ps-sig-wrap" id="digital-signature">
+                <div class="ps-sig-card" id="psSigDrawCard"<?= $currentSig ? ' hidden' : '' ?>>
+                    <div class="ps-sig-head">
+                        <div class="ps-sec-head">
+                            <span class="ps-sec-icon"><i class="fas fa-pen"></i></span>
+                            <div>
+                                <h2 class="section-title"><?= $currentSig ? 'Replace Signature' : 'Digital Signature' ?></h2>
+                                <p class="section-subtitle"><?= $currentSig
+                                    ? 'Draw a new signature. Saving it replaces your current one.'
+                                    : 'Draw your signature below. It will appear on vouchers and approvals where your name is used.' ?></p>
                             </div>
                         </div>
-                        <div class="canvas-container" id="canvasContainer">
-                            <canvas id="sigCanvas" height="250"></canvas>
-                            <div class="canvas-placeholder">Sign here</div>
-                        </div>
-                        <div class="sig-actions">
-                            <button type="button" class="btn-secondary-lite" onclick="undoStroke()" id="undoBtn" disabled><i class="fas fa-undo"></i> Undo</button>
-                            <button type="button" class="btn-secondary-lite" onclick="redoStroke()" id="redoBtn" disabled><i class="fas fa-redo"></i> Redo</button>
-                            <button type="button" class="btn-secondary-lite btn-danger-lite" onclick="clearCanvas()"><i class="fas fa-trash"></i> Clear</button>
-                            <button type="button" class="btn-save btn-save-inline" onclick="saveSignature()" id="saveBtn" disabled><i class="fas fa-save"></i> Save Signature</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <label class="form-label">Current Signature</label>
-                    <div>
                         <?php if ($currentSig): ?>
-                            <div class="signature-preview-box">
-                                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-                                    <strong style="font-size:12px;text-transform:uppercase;color:#64748b;">Preview</strong>
-                                    <form method="post" onsubmit="return confirm('Delete your signature? This cannot be undone.');" style="margin:0;">
-                                        <button type="submit" name="delete_signature" value="1" class="btn-secondary-lite btn-danger-lite"><i class="fas fa-trash"></i> Remove</button>
-                                    </form>
-                                </div>
-                                <div style="text-align:center;padding:12px;background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
-                                    <img src="<?= $esc(function_exists('mediaUrlFromPath') ? mediaUrlFromPath($currentSig, false) : ('../' . ltrim((string) $currentSig, '/'))) ?>" alt="Current signature">
-                                </div>
-                                <p class="help-text"><i class="fas fa-check-circle" style="color:#16a34a;"></i> Used on all new vouchers.</p>
-                            </div>
+                            <span class="ps-sig-status is-active"><span class="ps-sig-status-dot"></span>Signature Active</span>
                         <?php else: ?>
-                            <div class="signature-empty">
-                                <i class="fas fa-signature" style="font-size:28px;opacity:0.35;display:block;margin-bottom:8px;"></i>
-                                No active signature yet. Draw and save one above.
-                            </div>
+                            <span class="ps-sig-status is-missing"><span class="ps-sig-status-dot"></span>Signature Missing</span>
                         <?php endif; ?>
                     </div>
+                    <div class="sig-tools">
+                        <div class="sig-tool-group">
+                            <span class="sig-tool-label">Pen size</span>
+                            <button type="button" class="pen-size-btn active" data-size="2" onclick="setPenSize(2)" title="Thin"><div class="dot"></div></button>
+                            <button type="button" class="pen-size-btn" data-size="4" onclick="setPenSize(4)" title="Medium"><div class="dot"></div></button>
+                            <button type="button" class="pen-size-btn" data-size="6" onclick="setPenSize(6)" title="Thick"><div class="dot"></div></button>
+                        </div>
+                        <span class="sig-tool-divider" aria-hidden="true"></span>
+                        <div class="sig-tool-group">
+                            <span class="sig-tool-label">Ink color</span>
+                            <button type="button" class="color-btn active" data-color="#000000" onclick="setPenColor('#000000')" title="Black"><div class="color-circle" style="background:#000;"></div></button>
+                            <button type="button" class="color-btn" data-color="#1e40af" onclick="setPenColor('#1e40af')" title="Blue"><div class="color-circle" style="background:#1e40af;"></div></button>
+                            <button type="button" class="color-btn" data-color="#7c3aed" onclick="setPenColor('#7c3aed')" title="Purple"><div class="color-circle" style="background:#7c3aed;"></div></button>
+                        </div>
+                    </div>
+                    <div class="canvas-container" id="canvasContainer">
+                        <canvas id="sigCanvas" height="125"></canvas>
+                        <div class="canvas-placeholder"><i class="fas fa-pencil"></i><span>Sign here</span></div>
+                    </div>
+                    <div class="sig-actions">
+                        <button type="button" class="ps-sig-btn ps-sig-btn--plain" onclick="undoStroke()" id="undoBtn" disabled><i class="fas fa-rotate-left"></i> Undo</button>
+                        <button type="button" class="ps-sig-btn ps-sig-btn--plain" onclick="redoStroke()" id="redoBtn" disabled><i class="fas fa-rotate-right"></i> Redo</button>
+                        <button type="button" class="ps-sig-btn ps-sig-btn--danger ps-sig-btn--plain" onclick="clearCanvas()"><i class="fas fa-trash"></i> Clear</button>
+                        <?php if ($currentSig): ?>
+                            <button type="button" class="ps-sig-btn" onclick="psCancelReplaceSignature()">Cancel</button>
+                        <?php endif; ?>
+                        <button type="button" class="ps-sig-save" onclick="saveSignature()" id="saveBtn" disabled><i class="fas fa-floppy-disk"></i> Save signature</button>
+                    </div>
                 </div>
+
+                <?php if ($currentSig): ?>
+                <div class="ps-sig-card">
+                    <div class="ps-sec-head ps-sig-current-head">
+                        <span class="ps-sec-icon"><i class="far fa-image"></i></span>
+                        <div>
+                            <h2 class="section-title">Current Signature</h2>
+                            <p class="section-subtitle">This is your currently saved signature.</p>
+                        </div>
+                    </div>
+                    <div class="ps-sig-current">
+                        <div class="ps-sig-current-preview">
+                            <img src="<?= $esc(function_exists('mediaUrlFromPath') ? mediaUrlFromPath($currentSig, false) : ('../' . ltrim((string) $currentSig, '/'))) ?>" alt="Current signature">
+                        </div>
+                            <div class="ps-sig-current-actions">
+                                <button type="button" class="ps-sig-btn ps-sig-btn--accent ps-sig-btn--plain" onclick="psReplaceSignature()"><i class="fas fa-rotate"></i> Replace</button>
+                                <form method="post" id="psDeleteSigForm" style="margin:0;">
+                                    <input type="hidden" name="delete_signature" value="1">
+                                    <button type="button" class="ps-sig-btn ps-sig-btn--danger ps-sig-btn--plain" onclick="psConfirmDeleteSignature()"><i class="fas fa-trash"></i> Remove</button>
+                                </form>
+                            </div>
+                    </div>
+                </div>
+                <?php endif; ?>
 			</section>
 
             <!-- Personal Email Settings -->
@@ -865,6 +1192,16 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                         <p class="section-subtitle">Configure your personal IMAP/SMTP credentials for the email module.</p>
                     </div>
 				</div>
+                <?php $psEmailComingSoon = true; ?>
+                <?php if ($psEmailComingSoon): ?>
+                <div class="ps-coming-soon">
+                    <span class="ps-coming-soon-icon"><i class="far fa-clock"></i></span>
+                    <div>
+                        <strong>Coming soon</strong>
+                        <span>Connecting your personal mailbox will be available in a future update.</span>
+                    </div>
+                </div>
+                <?php else: ?>
                 <form id="emailSettingsForm" onsubmit="saveEmailSettings(event)">
                     <p class="subsection-label">Incoming Server (IMAP)</p>
                     <div class="form-row">
@@ -941,6 +1278,7 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                         </button>
                     </div>
                 </form>
+                <?php endif; ?>
             </section>
                     </div>
 
@@ -1249,13 +1587,18 @@ function setPenColor(color) {
 
 function clearCanvas() {
 	if (strokes.length === 0) return;
-	if (!confirm('Clear your signature?')) return;
-	
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	strokes = [];
-	redoStack = [];
-	updateButtons();
-	updatePlaceholder();
+	psConfirmPopup({
+		title: 'Clear Signature',
+		text: 'You\'re going to clear your &ldquo;Drawing&rdquo;',
+		confirmText: 'Yes, Clear!',
+		fallback: 'Clear your signature?'
+	}, () => {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		strokes = [];
+		redoStack = [];
+		updateButtons();
+		updatePlaceholder();
+	});
 }
 
 function undoStroke() {
@@ -1299,6 +1642,69 @@ function updateButtons() {
 	undoBtn.disabled = strokes.length === 0;
 	redoBtn.disabled = redoStack.length === 0;
 	saveBtn.disabled = strokes.length === 0;
+}
+
+function psReplaceSignature() {
+	const card = document.getElementById('psSigDrawCard');
+	if (card) card.hidden = false;
+	resizeCanvas();
+	container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	container.classList.add('is-highlight');
+	setTimeout(() => container.classList.remove('is-highlight'), 1600);
+}
+
+function psConfirmDeleteSignature() {
+	const form = document.getElementById('psDeleteSigForm');
+	if (!form) return;
+	psConfirmPopup({
+		title: 'Delete Signature',
+		text: 'You\'re going to delete your &ldquo;Signature&rdquo;',
+		confirmText: 'Yes, Delete!',
+		fallback: 'Delete your signature? This cannot be undone.'
+	}, () => form.submit());
+}
+
+function psConfirmPopup(opts, onConfirm) {
+	if (typeof Swal === 'undefined') {
+		if (confirm(opts.fallback)) onConfirm();
+		return;
+	}
+	Swal.fire({
+		html:
+			'<div class="ps-del-icon" aria-hidden="true">'
+			+ '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+			+ '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>'
+			+ '<line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>'
+			+ '<h2 class="ps-del-title">' + opts.title + '</h2>'
+			+ '<p class="ps-del-text">' + opts.text + '</p>',
+		showCancelButton: true,
+		confirmButtonText: opts.confirmText,
+		cancelButtonText: 'No, keep it.',
+		reverseButtons: true,
+		focusCancel: true,
+		buttonsStyling: false,
+		width: 340,
+		padding: '1.4rem 1.25rem 1.25rem',
+		customClass: {
+			popup: 'ps-del-popup',
+			htmlContainer: 'ps-del-body',
+			actions: 'ps-del-actions',
+			confirmButton: 'ps-del-btn ps-del-btn--yes',
+			cancelButton: 'ps-del-btn ps-del-btn--no'
+		}
+	}).then((result) => {
+		if (result.isConfirmed) onConfirm();
+	});
+}
+
+function psCancelReplaceSignature() {
+	strokes = [];
+	redoStack = [];
+	redrawCanvas();
+	updateButtons();
+	updatePlaceholder();
+	const card = document.getElementById('psSigDrawCard');
+	if (card) card.hidden = true;
 }
 
 function updatePlaceholder() {
@@ -1375,6 +1781,7 @@ var psShowTab = (function () {
             link.classList.toggle('is-active', on);
             link.setAttribute('aria-selected', on ? 'true' : 'false');
         });
+        document.body.setAttribute('data-ps-tab', id);
         try { sessionStorage.setItem(storageKey, id); } catch (e) {}
         if (updateHash && history.replaceState) history.replaceState(null, '', '#' + id);
         if (id === 'digital-signature' && typeof resizeCanvas === 'function') {
@@ -1404,13 +1811,17 @@ var psShowTab = (function () {
 })();
 
 (function () {
-    document.querySelectorAll('#personal-details .inline-field-form').forEach(function (form) {
-        var input = form.querySelector('input');
-        if (!input) return;
-        input.addEventListener('input', function () {
-            form.classList.toggle('is-dirty', input.value !== input.defaultValue);
-        });
-    });
+    var detailsForm = document.getElementById('psDetailsForm');
+    if (detailsForm) {
+        var detailsSave = detailsForm.querySelector('.ps-details-save');
+        var detailsInputs = detailsForm.querySelectorAll('input:not([type="hidden"])');
+        var syncDetailsSave = function () {
+            var dirty = Array.prototype.some.call(detailsInputs, function (i) { return i.value !== i.defaultValue; });
+            if (detailsSave) detailsSave.disabled = !dirty;
+        };
+        detailsInputs.forEach(function (i) { i.addEventListener('input', syncDetailsSave); });
+        syncDetailsSave();
+    }
 
     var search = document.getElementById('psHeadSearch');
     if (!search) return;

@@ -52,6 +52,9 @@ RewriteRule ^([A-Za-z0-9-]+)/(.+\.php)$ $2?company_slug=$1 [QSA,L,NC]
 # /{company_slug}/login
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/login/?$ login.php?company_slug=$1 [QSA,L,NC]
+# /{company_slug}/forgot-password
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/forgot-password/?$ forgot-password.php?company_slug=$1 [QSA,L,NC]
 # /{company_slug}/owner/sites/dashboard
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/owner/sites/dashboard/?$ select-module.php?company_slug=$1 [QSA,L,NC]

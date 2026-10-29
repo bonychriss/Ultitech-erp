@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ArrowLeft,
   Banknote,
   Bell,
   Boxes,
@@ -44,7 +43,11 @@ const MODULE_ICONS = {
 function ModuleIcon({ id, color }) {
   const Icon = MODULE_ICONS[id] || Bell
   return (
-    <span className="ncr-settings-module-icon" style={{ color: color || '#64748b' }} aria-hidden>
+    <span
+      className={`ncr-settings-module-icon nc-r-icon nc-mod-${String(id).replace(/[^a-z0-9_]/gi, '')}`}
+      style={{ color: color || '#64748b' }}
+      aria-hidden
+    >
       <Icon size={18} strokeWidth={1.75} />
     </span>
   )
@@ -161,18 +164,18 @@ export default function NotificationsSettingsPage() {
     <div className="ncr-shell ncr-settings-page">
       <div className="ncr-main">
         <header className="ncr-topbar">
-          <div className="ncr-settings-heading">
-            {cfg.listUrl ? (
-              <a href={cfg.listUrl} className="ncr-back" title="Back to notifications">
-                <ArrowLeft size={18} strokeWidth={1.75} aria-hidden />
-              </a>
-            ) : null}
-            <div>
-              <h1 className="ncr-title">Notification settings</h1>
-              <p className="ncr-settings-sub">
-                Choose which modules can send you notifications. Changes save automatically.
-              </p>
-            </div>
+          <div className="ncr-title-block">
+            <h1 className="ncr-title">Notification settings</h1>
+            <nav className="ncr-crumbs" aria-label="Breadcrumb">
+              {cfg.homeUrl ? <a href={cfg.homeUrl}>Home</a> : <span>Home</span>}
+              <span className="ncr-crumb-sep">/</span>
+              {cfg.listUrl ? <a href={cfg.listUrl}>Notifications</a> : <span>Notifications</span>}
+              <span className="ncr-crumb-sep">/</span>
+              <span className="ncr-crumb-current" aria-current="page">Settings</span>
+            </nav>
+            <p className="ncr-settings-sub">
+              Choose which modules can send you notifications. Changes save automatically.
+            </p>
           </div>
           <div className="ncr-topbar-actions">
             {busy || saved ? (
@@ -208,7 +211,7 @@ export default function NotificationsSettingsPage() {
               </div>
             </div>
             <div className="ncr-settings-bulk">
-              <button type="button" className="ncr-clear-read" onClick={() => setAll(true)}>
+              <button type="button" className="ncr-mark-all" onClick={() => setAll(true)}>
                 Enable all
               </button>
               <button type="button" className="ncr-clear-read" onClick={() => setAll(false)}>

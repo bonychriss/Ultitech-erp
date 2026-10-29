@@ -227,7 +227,14 @@ function RowActionsMenu({
     }
   }, [open, onClose])
 
-  const items = []
+  const items = [{
+    key: 'reference',
+    label: r.is_reference ? 'Unmark reference' : 'Mark as reference',
+    icon: <Star size={14} fill={r.is_reference ? 'currentColor' : 'none'} aria-hidden="true" />,
+    className: r.is_reference ? 'ed-menu-ref is-marked' : 'ed-menu-ref',
+    disabled: togglingRef === r.id,
+    onClick: () => { onToggleReference(r); onClose() },
+  }]
   if (IS_ADMIN && r.can_approve) {
     items.push({
       key: 'approve',
@@ -289,17 +296,6 @@ function RowActionsMenu({
 
   return (
     <div className="ed-actions-menu">
-      <button
-        type="button"
-        className={`ed-star${r.is_reference ? ' is-marked' : ''}`}
-        title={r.is_reference ? 'Reference voucher (click to unmark)' : 'Mark as reference'}
-        aria-label={r.is_reference ? 'Unmark reference' : 'Mark as reference'}
-        aria-pressed={r.is_reference}
-        disabled={togglingRef === r.id}
-        onClick={() => onToggleReference(r)}
-      >
-        <Star size={14} fill={r.is_reference ? 'currentColor' : 'none'} aria-hidden="true" />
-      </button>
       {items.length > 0 ? (
         <button
           ref={btnRef}
@@ -693,6 +689,8 @@ export default function DashboardPage() {
       : urlList.search
   ))
   const [togglingRef, setTogglingRef] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [bulkRefBusy, setBulkRefBusy] = useState(false)
   const [aiFilters, setAiFilters] = useState(() => (
     restoredList && restoredList.filters
       ? normalizeListFilters(restoredList.filters)
@@ -888,6 +886,29 @@ export default function DashboardPage() {
     })
   }
 
+  async function handleBulkReference(mark) {
+    const targets = filteredVouchers.filter(
+      (v) => selectedIds.has(v.id) && v.can_view !== false && !!v.is_reference !== mark,
+    )
+    if (!targets.length) return
+    setBulkRefBusy(true)
+    targets.forEach((v) => setVoucherReference(v.id, mark))
+    const results = await Promise.allSettled(targets.map((v) => toggleReference(v.id)))
+    let failed = 0
+    results.forEach((res, i) => {
+      const v = targets[i]
+      if (res.status === 'fulfilled') {
+        setVoucherReference(v.id, parseInt(String(res.value?.is_reference ?? '0'), 10) === 1)
+      } else {
+        failed += 1
+        setVoucherReference(v.id, v.is_reference)
+      }
+    })
+    if (failed) setError(`Could not update ${failed} of ${targets.length} vouchers.`)
+    setBulkRefBusy(false)
+    setSelectedIds(new Set())
+  }
+
   async function handleToggleReference(voucher) {
     setTogglingRef(voucher.id)
     setVoucherReference(voucher.id, !voucher.is_reference)
@@ -938,6 +959,31 @@ export default function DashboardPage() {
     [allVouchers, searchInput, aiFilters],
   )
   const suggestions = useMemo(() => filteredVouchers.slice(0, 6), [filteredVouchers])
+
+  useEffect(() => { setSelectedIds(new Set()) }, [searchInput, aiFilters])
+
+  const selectableIds = useMemo(
+    () => filteredVouchers.filter((v) => v.can_view !== false).map((v) => v.id),
+    [filteredVouchers],
+  )
+  const selectedCount = selectableIds.filter((id) => selectedIds.has(id)).length
+  const allSelected = selectableIds.length > 0 && selectedCount === selectableIds.length
+  const selectedVouchers = filteredVouchers.filter((v) => selectedIds.has(v.id))
+  const canBulkMark = selectedVouchers.some((v) => !v.is_reference)
+  const canBulkUnmark = selectedVouchers.some((v) => v.is_reference)
+
+  function toggleRowSelected(id) {
+    setSelectedIds((cur) => {
+      const next = new Set(cur)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleAllSelected() {
+    setSelectedIds(allSelected ? new Set() : new Set(selectableIds))
+  }
 
   const openExportModal = (format) => {
     setExportFormat(format)
@@ -1268,28 +1314,68 @@ export default function DashboardPage() {
         ) : filteredVouchers.length === 0 ? (
           <div className="ed-empty">No vouchers match your search.</div>
         ) : (
+            <>
+            {selectedCount > 0 ? (
+              <div className="ed-bulk-bar" role="region" aria-label="Selected vouchers">
+                <span className="ed-bulk-count">{selectedCount} selected</span>
+                <button
+                  type="button"
+                  className="ed-bulk-btn"
+                  disabled={bulkRefBusy || !canBulkMark}
+                  onClick={() => handleBulkReference(true)}
+                >
+                  <Star size={14} fill="currentColor" aria-hidden="true" /> Mark as reference
+                </button>
+                <button
+                  type="button"
+                  className="ed-bulk-btn"
+                  disabled={bulkRefBusy || !canBulkUnmark}
+                  onClick={() => handleBulkReference(false)}
+                >
+                  <Star size={14} aria-hidden="true" /> Unmark reference
+                </button>
+                <button
+                  type="button"
+                  className="ed-bulk-btn ed-bulk-btn--ghost"
+                  disabled={bulkRefBusy}
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Clear
+                </button>
+              </div>
+            ) : null}
             <div className="ed-table-wrap">
             <table className="ed-table ed-table--full">
               <colgroup>
-                <col className="ed-col-sn" style={{ width: '4%' }} />
-                <col className="ed-col-vno" style={{ width: '13%' }} />
-                <col className="ed-col-payee" style={{ width: '12%' }} />
+                <col className="ed-col-sn" style={{ width: '6%' }} />
+                <col className="ed-col-vno" style={{ width: '14%' }} />
+                <col className="ed-col-payee" style={{ width: '13%' }} />
                 <col className="ed-col-prep" style={{ width: '10%' }} />
-                <col className="ed-col-desc" style={{ width: '23%' }} />
-                <col className="ed-col-amt" style={{ width: '11%' }} />
-                <col className="ed-col-date" style={{ width: '9%' }} />
+                <col className="ed-col-desc" style={{ width: '26%' }} />
+                <col className="ed-col-amt" style={{ width: '13%' }} />
                 <col className="ed-col-status" style={{ width: '10%' }} />
                 <col className="ed-col-actions" style={{ width: '8%' }} />
               </colgroup>
               <thead>
                 <tr>
-                  <th className="ed-col-sn">S/N</th>
+                  <th className="ed-col-sn">
+                    <label className="ed-check-wrap">
+                      <input
+                        type="checkbox"
+                        className="ed-check"
+                        checked={allSelected}
+                        ref={(el) => { if (el) el.indeterminate = selectedCount > 0 && !allSelected }}
+                        onChange={toggleAllSelected}
+                        aria-label="Select all vouchers"
+                      />
+                      <span>S/N</span>
+                    </label>
+                  </th>
                   <th className="ed-col-vno">Voucher No.</th>
                   <th className="ed-col-payee">Payee</th>
                   <th className="ed-col-prep ed-hide-mobile">Prepared By</th>
                   <th className="ed-col-desc ed-hide-mobile">Description</th>
-                  <th className="ed-ta-right ed-col-amt">Amount</th>
-                  <th className="ed-col-date">Date Created</th>
+                  <th className="ed-ta-right ed-col-amt">Amount / Date</th>
                   <th className="ed-col-status">Status</th>
                   <th className="ed-col-actions">Actions</th>
                 </tr>
@@ -1302,13 +1388,28 @@ export default function DashboardPage() {
                     <tr
                       key={r.id}
                       data-voucher-id={r.id}
-                      className={`ed-row${canView ? '' : ' ed-row--locked'}${highlightedId === r.id ? ' is-selected' : ''}`}
+                      className={`ed-row${canView ? '' : ' ed-row--locked'}${highlightedId === r.id ? ' is-selected' : ''}${selectedIds.has(r.id) ? ' is-checked' : ''}`}
                       onClick={canView ? () => goView(r.id) : undefined}
                       style={canView ? undefined : { cursor: 'default' }}
                     >
-                      <td className="ed-sn">{r.sn}</td>
+                      <td className="ed-sn" onClick={canView ? (e) => e.stopPropagation() : undefined}>
+                        <label className="ed-check-wrap">
+                          <input
+                            type="checkbox"
+                            className="ed-check"
+                            checked={selectedIds.has(r.id)}
+                            disabled={!canView}
+                            onChange={() => toggleRowSelected(r.id)}
+                            aria-label={`Select ${r.voucher_no}`}
+                          />
+                          <span>{r.sn}</span>
+                        </label>
+                      </td>
                       <td className="ed-vno">
                         {r.voucher_no}
+                        {r.is_reference ? (
+                          <Star size={12} fill="currentColor" className="ed-ref-mark" aria-label="Reference voucher" />
+                        ) : null}
                         {r.is_restricted ? <Lock size={12} aria-label="Restricted" style={{ marginLeft: 4, verticalAlign: 'middle' }} /> : null}
                       </td>
                       {canView ? (
@@ -1323,15 +1424,17 @@ export default function DashboardPage() {
                           </td>
                           <td className="ed-ta-right ed-col-amt">
                             <span className="ed-amt">{formatAmount(r.currency, r.total_amount)}</span>
+                            <div className="ed-amt-date">{formatDate(r.date_created)} <small>{formatTime(r.created_at)}</small></div>
                           </td>
                         </>
                       ) : (
-                        <td colSpan={4} className="ed-restricted ed-restricted-span">(Restricted Content)</td>
+                        <>
+                          <td colSpan={3} className="ed-restricted ed-restricted-span">(Restricted Content)</td>
+                          <td className="ed-ta-right ed-col-amt">
+                            <div className="ed-amt-date">{formatDate(r.date_created)} <small>{formatTime(r.created_at)}</small></div>
+                          </td>
+                        </>
                       )}
-                      <td className="ed-muted ed-date-cell">
-                        {formatDate(r.date_created)}
-                        <br /><small>{formatTime(r.created_at)}</small>
-                      </td>
                       <td className="ed-status-cell"><span className={pill.cls}>{pill.label}</span></td>
                       <td className="ed-row-actions" onClick={(e) => e.stopPropagation()}>
                         {canView ? (
@@ -1352,6 +1455,7 @@ export default function DashboardPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

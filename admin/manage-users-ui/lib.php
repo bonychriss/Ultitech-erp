@@ -246,6 +246,9 @@ function manageUsersWelcomeEmailHtml(array $d): string
         ? ' under the <b>' . $e($d['department']) . ' Department</b>'
         : '';
     $p = 'margin:0 0 14px;' . $font . 'font-size:14px;line-height:22px;color:#3c4043;';
+    $hero = is_file(dirname(__DIR__, 2) . '/assets/images/welcome-email-wave.png')
+        ? manageUsersAbsoluteUrl(function_exists('app_url') ? app_url('/assets/images/welcome-email-wave.png') : '/assets/images/welcome-email-wave.png')
+        : '';
 
     return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         . '<meta name="color-scheme" content="light"><title>Welcome</title></head>'
@@ -259,7 +262,8 @@ function manageUsersWelcomeEmailHtml(array $d): string
         // Logo + headline + account chip
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding-bottom:20px;border-bottom:1px solid #dadce0;">'
         . $brand
-        . '<div style="' . $font . 'font-size:24px;line-height:32px;color:#202124;margin-top:20px;">Welcome aboard, ' . $e($d['first']) . '</div>'
+        . ($hero !== '' ? '<img src="' . $e($hero) . '" alt="" width="130" height="144" style="display:block;margin:20px auto 0;width:130px;height:auto;border:0;">' : '')
+        . '<div style="' . $font . 'font-size:24px;line-height:32px;color:#202124;margin-top:16px;">Welcome aboard, ' . $e($d['first']) . '</div>'
         . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px auto 0;"><tr>'
         . '<td style="padding:2px 12px 2px 2px;border:1px solid #dadce0;border-radius:16px;">'
         . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'

@@ -240,7 +240,7 @@ function manageUsersAbsoluteUrl(string $url): string
  *
  * @return array{cid:string,name:string,type:string,path?:string,content?:string}|null
  */
-function manageUsersEmailInlineImage(string $url, string $cid): ?array
+function manageUsersEmailInlineImage(string $url, string $cid, int $maxHeight = 0): ?array
 {
     $url = trim($url);
     if ($url === '') {
@@ -280,7 +280,54 @@ function manageUsersEmailInlineImage(string $url, string $cid): ?array
         return null;
     }
 
-    return ['cid' => $cid, 'name' => basename($file), 'type' => $allowed[$ext], 'path' => $file];
+    $part = ['cid' => $cid, 'name' => basename($file), 'type' => $allowed[$ext], 'path' => $file];
+    if ($maxHeight > 0 && filesize($file) > 150 * 1024) {
+        $small = manageUsersEmailShrinkImage($file, $maxHeight);
+        if ($small !== null) {
+            unset($part['path']);
+            $part['name'] = pathinfo($file, PATHINFO_FILENAME) . '.png';
+            $part['type'] = 'image/png';
+            $part['content'] = $small;
+        }
+    }
+
+    return $part;
+}
+
+/**
+ * Downscale an image to a PNG of at most $maxHeight px tall (keeps transparency). Null when GD can't read it.
+ */
+function manageUsersEmailShrinkImage(string $file, int $maxHeight): ?string
+{
+    if (!function_exists('imagecreatefromstring')) {
+        return null;
+    }
+    $bytes = @file_get_contents($file);
+    $src = $bytes !== false ? @imagecreatefromstring($bytes) : false;
+    if ($src === false) {
+        return null;
+    }
+    $w = imagesx($src);
+    $h = imagesy($src);
+    if ($h <= $maxHeight) {
+        imagedestroy($src);
+
+        return null;
+    }
+    $nh = $maxHeight;
+    $nw = max(1, (int) round($w * $nh / $h));
+    $dst = imagecreatetruecolor($nw, $nh);
+    imagealphablending($dst, false);
+    imagesavealpha($dst, true);
+    imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 0, 0, 0, 127));
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    ob_start();
+    imagepng($dst, null, 9);
+    $out = (string) ob_get_clean();
+    imagedestroy($src);
+    imagedestroy($dst);
+
+    return $out !== '' ? $out : null;
 }
 
 /**
@@ -398,7 +445,7 @@ function manageUsersSendLoginLinkEmail(string $email, string $fullName, string $
 
     $attachments = [];
     $logoUrl = function_exists('getCompanyLogoUrl') ? (string) getCompanyLogoUrl() : '';
-    $logoPart = manageUsersEmailInlineImage($logoUrl, 'company-logo');
+    $logoPart = manageUsersEmailInlineImage($logoUrl, 'company-logo', 120);
     if ($logoPart !== null) {
         $attachments[] = $logoPart;
         $logo = 'cid:company-logo';

@@ -156,8 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         syncLoginPasswordToControlPlane(array((string) $targetUser['email']), $hash, $company_id);
                     }
                     $displayName = (string) ($targetUser['full_name'] ?? $targetUser['username'] ?? 'user');
-                    manageUsersFlashPasswordOnce($displayName, $newPassword);
-                    $success = 'Password updated for ' . $displayName . '. Copy it from the dialog — it cannot be viewed again later.';
+                    $success = 'Password updated for ' . $displayName . '.';
                 } catch (PDOException $e) {
                     $error = 'Could not update password: ' . $e->getMessage();
                 }
@@ -555,8 +554,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 if ($newUserId > 0 && $hasCompanyId && $company_id > 0 && function_exists('syncUserCompanyIndex')) {
                                     syncUserCompanyIndex($company_id, $newUserId);
                                 }
-                                manageUsersFlashPasswordOnce($full_name, $password);
-                                $success = 'Employee registered successfully! Copy the login password from the dialog.';
+                                $success = 'Employee registered successfully!';
                             } else {
                                 $error = 'Registration failed. Please try again.';
                             }

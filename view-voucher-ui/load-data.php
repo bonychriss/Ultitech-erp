@@ -760,6 +760,8 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     $vvShowEdit = ($canEditRow && !$isPosted && !$returnFinance)
         || (function_exists('canLimitedEditApprovedVoucher') && canLimitedEditApprovedVoucher($voucherId, $sessionUserId));
     $canDeleteAttachment = (bool) $canEditRow;
+    $canUnlinkOrders = !$isPaid && !$isPosted
+        && (isAdmin() || ($canEditRow && $statusLower !== 'approved'));
 
     $userPendingApprovals = [];
     $pendingCount = 0;
@@ -958,6 +960,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 'canPost' => $canPost,
                 'canEdit' => $vvShowEdit,
                 'canDeleteAttachment' => $canDeleteAttachment,
+                'canUnlinkOrders' => $canUnlinkOrders,
                 'canFinalApprove' => isAdmin() && in_array($statusLower, [defined('STATUS_PENDING') ? STATUS_PENDING : 'pending', defined('STATUS_CONFIRMING') ? STATUS_CONFIRMING : 'confirming'], true),
                 'canReject' => isAdmin() && in_array($statusLower, [defined('STATUS_PENDING') ? STATUS_PENDING : 'pending', defined('STATUS_CONFIRMING') ? STATUS_CONFIRMING : 'confirming'], true),
                 'blockFinalApproveOnConfirming' => $statusLower === 'confirming',

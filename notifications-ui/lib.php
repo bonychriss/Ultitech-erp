@@ -106,6 +106,28 @@ function notificationsUiRelativeTime($createdAt): string
 /**
  * Infer ERP module key from notification row (link + copy + source).
  */
+/**
+ * Account lifecycle notices sent from Manage Users: '', 'password', 'welcome' or 'new_member'.
+ */
+function notificationsUiAccountNoticeKind(array $n): string
+{
+    $title = strtolower(trim((string) ($n['title'] ?? '')));
+    if ($title === '') {
+        return '';
+    }
+    if (str_starts_with($title, 'your password was changed')) {
+        return 'password';
+    }
+    if (str_starts_with($title, 'welcome aboard')) {
+        return 'welcome';
+    }
+    if (str_starts_with($title, 'new team member')) {
+        return 'new_member';
+    }
+
+    return '';
+}
+
 function notificationsUiDetectModule(array $n): string
 {
     $src = strtolower(trim((string) ($n['src'] ?? $n['source'] ?? '')));
@@ -120,6 +142,10 @@ function notificationsUiDetectModule(array $n): string
 
     if ($src === 'core' || (int) ($n['voucher_id'] ?? 0) > 0) {
         return 'voucher';
+    }
+
+    if (notificationsUiAccountNoticeKind($n) !== '') {
+        return 'account';
     }
 
     if (preg_match('/module=payroll|\/payroll|modules\/payroll|payslip|run-payroll/', $blob)
@@ -267,6 +293,7 @@ function notificationsUiVisual(array $n): array
         'suggest' => ['icon' => 'spark', 'tone' => 'amber'],
         'admin' => ['icon' => 'shield', 'tone' => 'slate'],
         'tasks' => ['icon' => 'tasks', 'tone' => 'blue'],
+        'account' => ['icon' => 'account', 'tone' => 'indigo'],
         'system' => ['icon' => 'system', 'tone' => 'slate'],
         'general' => ['icon' => 'bell', 'tone' => 'slate'],
     ];
@@ -274,7 +301,14 @@ function notificationsUiVisual(array $n): array
     $visual = $map[$module] ?? $map['general'];
 
     // Action / status overrides within a module
-    if ($module === 'voucher') {
+    if ($module === 'account') {
+        $kind = notificationsUiAccountNoticeKind($n);
+        if ($kind === 'welcome') {
+            $visual = ['icon' => 'welcome', 'tone' => 'indigo'];
+        } elseif ($kind === 'new_member') {
+            $visual = ['icon' => 'user-plus', 'tone' => 'indigo'];
+        }
+    } elseif ($module === 'voucher') {
         if (preg_match('/\b(reject|denied|cancelled)\b/', $blob) || $type === 'danger') {
             $visual = ['icon' => 'alert', 'tone' => 'rose'];
         } elseif (preg_match('/\b(paid|posted|approved|complete)\b/', $blob) || $type === 'success') {
@@ -333,6 +367,7 @@ function notificationsUiModuleLabel(string $module): string
         'suggest' => 'Suggestions',
         'admin' => 'Admin',
         'tasks' => 'Tasks',
+        'account' => 'Account',
         'system' => 'System',
         'general' => 'Notification',
     ];

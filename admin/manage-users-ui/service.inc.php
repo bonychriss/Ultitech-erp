@@ -156,8 +156,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         syncLoginPasswordToControlPlane(array((string) $targetUser['email']), $hash, $company_id);
                     }
                     $displayName = (string) ($targetUser['full_name'] ?? $targetUser['username'] ?? 'user');
-                    manageUsersFlashPasswordOnce($displayName, $newPassword);
-                    $success = 'Password updated for ' . $displayName . '. Copy it from the dialog — it cannot be viewed again later.';
+                    manageUsersNotifyPasswordChanged((int) $targetUser['id']);
+                    $success = 'Password updated for ' . $displayName . '.';
                 } catch (PDOException $e) {
                     $error = 'Could not update password: ' . $e->getMessage();
                 }
@@ -228,6 +228,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             syncLoginPasswordToControlPlane($emails, $hash, $company_id);
                         }
                     }
+
+                    manageUsersNotifyPasswordChangedMany(array_values(array_filter(
+                        array_map('intval', $eligibleIds),
+                        static fn (int $id): bool => $id !== $currentUserId
+                    )));
 
                     $_SESSION['manage_users_bulk_pw_flash'] = array(
                         'password' => $newPassword,
@@ -555,8 +560,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 if ($newUserId > 0 && $hasCompanyId && $company_id > 0 && function_exists('syncUserCompanyIndex')) {
                                     syncUserCompanyIndex($company_id, $newUserId);
                                 }
-                                manageUsersFlashPasswordOnce($full_name, $password);
-                                $success = 'Employee registered successfully! Copy the login password from the dialog.';
+                                manageUsersNotifyNewEmployee($pdo, $newUserId, $full_name, (string) $department, (bool) $hasCompanyId, (int) $company_id);
+                                if (manageUsersSendLoginLinkEmail($email, $full_name, (string) $department)) {
+                                    $success = 'Employee registered. A login link was emailed to ' . $email . '.';
+                                } else {
+                                    $success = 'Employee registered, but the login email could not be sent. Share the login link with them manually.';
+                                }
                             } else {
                                 $error = 'Registration failed. Please try again.';
                             }

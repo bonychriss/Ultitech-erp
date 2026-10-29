@@ -15165,6 +15165,132 @@ function deleteVoucherDiskAttachment($voucherId, $fileName, $userId)
     }
 }
 
+/**
+ * Remove a linked sales order or stock purchase order from a payment voucher's
+ * supporting documents. The order itself is kept; only the link is cleared
+ * (voucher linked_* columns, plus the PO's pointer back to this voucher).
+ * Paid/posted vouchers are locked; approved vouchers can only be changed by admins.
+ *
+ * @param string $kind 'sales' | 'purchase'
+ * @return array{ok:bool,error?:string}
+ */
+function unlinkVoucherLinkedOrder($voucherId, string $kind, $orderId, $userId): array
+{
+    global $pdo;
+    $voucherId = (int) $voucherId;
+    $orderId = (int) $orderId;
+    $userId = (int) $userId;
+    if ($voucherId <= 0 || $orderId <= 0 || !in_array($kind, ['sales', 'purchase'], true)) {
+        return ['ok' => false, 'error' => 'Invalid request'];
+    }
+    $isPurchase = $kind === 'purchase';
+    $idsCol = $isPurchase ? 'linked_stock_po_ids' : 'linked_sales_order_ids';
+    $idCol = $isPurchase ? 'linked_stock_po_id' : 'linked_sales_order_id';
+    $label = $isPurchase ? 'purchase order' : 'sales order';
+
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM payment_vouchers WHERE id = ? LIMIT 1');
+        $stmt->execute([$voucherId]);
+        $voucher = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$voucher) {
+            return ['ok' => false, 'error' => 'Voucher not found'];
+        }
+        if (!array_key_exists($idsCol, $voucher) && !array_key_exists($idCol, $voucher)) {
+            return ['ok' => false, 'error' => 'This voucher has no linked ' . $label . 's'];
+        }
+
+        $admin = function_exists('isAdmin') && isAdmin();
+        $canEdit = function_exists('canEditVoucherRow')
+            ? canEditVoucherRow($voucher, $userId)
+            : canEditVoucher($voucherId, $userId);
+        if (!$admin && !$canEdit) {
+            return ['ok' => false, 'error' => 'Permission denied'];
+        }
+        if ((int) ($voucher['is_paid'] ?? 0) === 1 || (int) ($voucher['is_posted'] ?? 0) === 1) {
+            return ['ok' => false, 'error' => 'Cannot remove documents from a paid or posted voucher'];
+        }
+        if (!$admin && strtolower((string) ($voucher['status'] ?? '')) === 'approved') {
+            return ['ok' => false, 'error' => 'Cannot remove documents from an approved voucher'];
+        }
+
+        $linked = $isPurchase
+            ? parseLinkedStockPoIdsFromVoucher($voucher)
+            : parseLinkedSalesOrderIdsFromVoucher($voucher);
+        $remaining = array_values(array_filter(array_map('intval', $linked), static fn (int $id): bool => $id !== $orderId));
+
+        $poLinksBack = false;
+        if ($isPurchase && tableExists('stocks_purchase_orders', $pdo)) {
+            $st = $pdo->prepare('SELECT * FROM stocks_purchase_orders WHERE id = ? LIMIT 1');
+            $st->execute([$orderId]);
+            $po = $st->fetch(PDO::FETCH_ASSOC) ?: null;
+        } else {
+            $po = null;
+        }
+        $poVoucherIds = [];
+        if ($po) {
+            $raw = trim((string) ($po['payment_voucher_ids'] ?? ''));
+            $decoded = $raw !== '' ? json_decode($raw, true) : null;
+            foreach ((is_array($decoded) ? $decoded : ($raw !== '' ? preg_split('/\s*,\s*/', $raw) : [])) as $pv) {
+                if ((int) $pv > 0) {
+                    $poVoucherIds[] = (int) $pv;
+                }
+            }
+            $poLinksBack = (int) ($po['payment_voucher_id'] ?? 0) === $voucherId || in_array($voucherId, $poVoucherIds, true);
+        }
+
+        if (count($remaining) === count($linked) && !$poLinksBack) {
+            return ['ok' => false, 'error' => 'That ' . $label . ' is not linked to this voucher'];
+        }
+
+        $pdo->beginTransaction();
+
+        $sets = [];
+        $params = [];
+        if (array_key_exists($idsCol, $voucher)) {
+            $sets[] = "`$idsCol` = ?";
+            $params[] = $remaining === [] ? null : json_encode($remaining);
+        }
+        if (array_key_exists($idCol, $voucher)) {
+            $sets[] = "`$idCol` = ?";
+            $params[] = $remaining === [] ? null : $remaining[0];
+        }
+        $params[] = $voucherId;
+        $pdo->prepare('UPDATE payment_vouchers SET ' . implode(', ', $sets) . ' WHERE id = ?')->execute($params);
+
+        if ($po && $poLinksBack) {
+            $poSets = [];
+            $poParams = [];
+            if (array_key_exists('payment_voucher_id', $po) && (int) $po['payment_voucher_id'] === $voucherId) {
+                $poSets[] = 'payment_voucher_id = NULL';
+            }
+            if (array_key_exists('payment_voucher_ids', $po) && in_array($voucherId, $poVoucherIds, true)) {
+                $left = array_values(array_filter($poVoucherIds, static fn (int $pv): bool => $pv !== $voucherId));
+                $poSets[] = 'payment_voucher_ids = ?';
+                $poParams[] = $left === [] ? null : json_encode($left);
+            }
+            if ($poSets !== []) {
+                $poParams[] = $orderId;
+                $pdo->prepare('UPDATE stocks_purchase_orders SET ' . implode(', ', $poSets) . ' WHERE id = ?')->execute($poParams);
+            }
+        }
+
+        if (function_exists('logVoucherAction')) {
+            logVoucherAction($voucherId, $userId, 'attachment_deleted', 'Removed linked ' . $label . ' #' . $orderId);
+        }
+
+        $pdo->commit();
+
+        return ['ok' => true];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('Unlink voucher order error: ' . $e->getMessage());
+
+        return ['ok' => false, 'error' => 'Database error: ' . $e->getMessage()];
+    }
+}
+
 // -------------- Signature helpers --------------
 function getUserSignaturePathById($userId)
 {

@@ -101,6 +101,48 @@ export default function ViewVoucherPage() {
     }
   }, [data])
 
+  const unlinkOrder = useCallback(async (kind, doc) => {
+    const isPurchase = kind === 'purchase'
+    const number = isPurchase ? (doc.poNumber || `PO-${doc.id}`) : (doc.orderNumber || `SO-${doc.id}`)
+    const typeLabel = isPurchase ? 'purchase order' : 'sales order'
+    const text = `${number} will be removed from this voucher's supporting documents. The ${typeLabel} itself is not deleted.`
+    if (typeof window.Swal === 'undefined') {
+      if (!window.confirm(text)) return
+    } else {
+      const r = await window.Swal.fire({
+        title: `Remove ${number}?`,
+        text,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, remove it',
+        confirmButtonColor: '#dc2626',
+      })
+      if (!r.isConfirmed) return
+    }
+    const fd = new FormData()
+    fd.append('unlink_order', kind)
+    fd.append('voucher_id', String(data.voucher.id))
+    fd.append('order_id', String(doc.id))
+    try {
+      const res = await fetch(data.actions.deleteAttachmentUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+      const j = await res.json()
+      if (j.ok) {
+        const listKey = isPurchase ? 'purchaseOrderDocs' : 'salesOrderDocs'
+        setData((prev) => ({
+          ...prev,
+          [listKey]: (prev[listKey] || []).filter((d) => d.id !== doc.id),
+        }))
+        if (window.Swal) window.Swal.fire('Removed', `${number} is no longer attached to this voucher.`, 'success')
+      } else if (window.Swal) {
+        window.Swal.fire('Error', j.error || 'Could not remove the document', 'error')
+      } else {
+        alert(j.error || 'Could not remove the document')
+      }
+    } catch {
+      if (window.Swal) window.Swal.fire('Error', 'A system error occurred.', 'error')
+    }
+  }, [data])
+
   const postTarget = `${window.location.pathname}${window.location.search}`
   const headerMount = typeof document !== 'undefined' ? document.getElementById('vv-actions-header-mount') : null
 
@@ -205,6 +247,7 @@ export default function ViewVoucherPage() {
             data={data}
             onPreview={(url, kind, isImage = false) => setPreview({ open: true, url, kind, isImage: Boolean(isImage) })}
             onDeleteAttachment={deleteAttachment}
+            onUnlinkOrder={unlinkOrder}
           />
 
           {data.comments.length > 0 && (

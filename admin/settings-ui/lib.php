@@ -133,6 +133,16 @@ function adminSettingsUiHubCards(): array
             'superAdminOnly' => false,
         ],
         [
+            'id' => 'business_field',
+            'title' => 'Company field',
+            'description' => 'Your line of business; sets the matching character in welcome emails.',
+            'href' => '#company-field',
+            'accent' => '#7c3aed',
+            'icon' => 'briefcase',
+            'action' => 'business_field',
+            'superAdminOnly' => false,
+        ],
+        [
             'id' => 'system_font',
             'title' => 'System font',
             'description' => 'Applies across modules, sidebars, forms, and dashboards for this company.',
@@ -355,8 +365,25 @@ function adminSettingsUiInitPayload(): array
         }
     }
 
+    require_once dirname(__DIR__, 2) . '/includes/welcome-characters.php';
+    $businessFieldOptions = [];
+    foreach (companyBusinessFields() as $fieldId => $field) {
+        $businessFieldOptions[] = [
+            'id' => $fieldId,
+            'label' => $field['label'],
+            'description' => $field['description'],
+            'character' => $field['character'],
+            'image' => welcomeCharacterImagePath($field['character']),
+        ];
+    }
+
     return [
         'companyName' => $companyName,
+        'businessField' => [
+            'current' => companyBusinessField(),
+            'options' => $businessFieldOptions,
+            'previewUrl' => adminSettingsUiWebBasePath() . '/email-preview.php',
+        ],
         'todayLabel' => date('l, d M Y'),
         'isSuperAdmin' => function_exists('isSuperAdmin') && isSuperAdmin(),
         'isSystemAdmin' => $isSystemAdmin,
@@ -379,6 +406,7 @@ function adminSettingsUiInitPayload(): array
         ],
         'api' => [
             'saveFont' => adminSettingsUiPublicUrl('api/save-font.php'),
+            'saveBusinessField' => adminSettingsUiPublicUrl('api/save-business-field.php'),
             'factoryReset' => adminSettingsUiPublicUrl('api/factory-reset.php'),
             'saveSiteContact' => adminSettingsUiPublicUrl('api/save-site-contact.php'),
             'saveWebQuoteAccess' => adminSettingsUiPublicUrl('api/save-web-quote-access.php'),

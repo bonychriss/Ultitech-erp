@@ -19,6 +19,12 @@ $attachmentId = isset($_POST['attachment_id']) ? (int)$_POST['attachment_id'] : 
 $voucherId = isset($_POST['voucher_id']) ? (int)$_POST['voucher_id'] : 0;
 $fileName = isset($_POST['file_name']) ? (string)$_POST['file_name'] : '';
 
+$unlinkKind = isset($_POST['unlink_order']) ? (string) $_POST['unlink_order'] : '';
+if ($unlinkKind !== '') {
+    echo json_encode(unlinkVoucherLinkedOrder($voucherId, $unlinkKind, (int) ($_POST['order_id'] ?? 0), $_SESSION['user_id']));
+    exit;
+}
+
 if ($attachmentId < 0 && $voucherId > 0 && $fileName !== '') {
     echo json_encode(deleteVoucherDiskAttachment($voucherId, $fileName, $_SESSION['user_id']));
     exit;

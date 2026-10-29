@@ -851,6 +851,47 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             .host-port-grid { grid-template-columns: 1fr; }
             .btn-save { width: 100%; padding: 12px 24px; }
         }
+
+        @media (max-width: 992px) {
+            body.ps-page[data-ps-tab]:not([data-ps-tab="profile-photo"]) .acct-aside { display: none; }
+        }
+        @media (max-width: 640px) {
+            body.ps-page .employee-header-page-title { font-size: 20px !important; }
+            .ps-crumbs { font-size: 12px; gap: 6px; margin-top: 2px; }
+
+            .ps-hero {
+                position: relative; flex-direction: row; align-items: center; min-height: 0;
+                padding: 1rem 0.9rem; margin-top: 0.6rem; gap: 0;
+            }
+            .ps-hero-main { gap: 0.9rem; align-items: center; width: 100%; padding-right: 92px; }
+            .account-avatar-wrap, .account-avatar { width: 76px; height: 76px; }
+            .account-avatar { border-width: 3px; }
+            .account-avatar-btn { width: 24px; height: 24px; font-size: 10px; }
+            .ps-hero-copy h2 { font-size: 1.1rem; }
+            .ps-hero-chips { gap: 0.35rem; margin: 0.2rem 0 0.35rem; }
+            .ps-hero-handle { font-size: 0.78rem; }
+            .ps-hero .profile-badge { padding: 2px 9px; font-size: 10px; }
+            .ps-hero-email { font-size: 0.74rem; margin-bottom: 0; word-break: break-all; }
+            .ps-logout {
+                position: absolute; top: 0.85rem; right: 0.8rem; margin: 0; z-index: 2;
+                min-height: 2rem; padding: 0 0.7rem; font-size: 0.72rem; border-radius: 8px;
+            }
+
+            .section-nav { padding: 0 0.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .section-nav::-webkit-scrollbar { display: none; }
+            .section-nav ul { flex-wrap: nowrap; gap: 0 0.2rem; }
+            .section-nav li { flex-shrink: 0; }
+            .section-nav a { padding: 0.75rem 0.55rem 0.65rem; font-size: 0.8rem; white-space: nowrap; }
+            .section-nav a i { font-size: 0.85rem; }
+
+            .editor-section { padding: 0.9rem 0.85rem 1rem; }
+            .ps-photo-actions { gap: 0.7rem; padding-left: 0; flex-wrap: wrap; }
+            .ps-photo-preview { width: 52px; height: 52px; }
+            .ps-upload-btn, .ps-remove-btn { min-height: 2.2rem; font-size: 0.74rem; }
+            .ps-upload-btn { border-radius: 6px; }
+            .ps-remove-btn { border-radius: 6px; background: #fff; }
+            .ps-details-save { border-radius: 10px !important; min-height: 2.75rem; }
+        }
 	</style>
 </head>
 <body class="dashboard ps-page">
@@ -1596,6 +1637,7 @@ var psShowTab = (function () {
             link.classList.toggle('is-active', on);
             link.setAttribute('aria-selected', on ? 'true' : 'false');
         });
+        document.body.setAttribute('data-ps-tab', id);
         try { sessionStorage.setItem(storageKey, id); } catch (e) {}
         if (updateHash && history.replaceState) history.replaceState(null, '', '#' + id);
         if (id === 'digital-signature' && typeof resizeCanvas === 'function') {

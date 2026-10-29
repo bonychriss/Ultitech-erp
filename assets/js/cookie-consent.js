@@ -184,7 +184,6 @@
     var existing = readStored();
     window.__ERP_COOKIE_CONSENT__ = existing;
     if (!existing) {
-      // Banner ships with is-open so it is visible even if JS is late.
       openBanner();
     } else {
       closeBanner();

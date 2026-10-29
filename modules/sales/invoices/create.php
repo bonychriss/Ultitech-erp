@@ -329,5 +329,9 @@ if ($createViewHtml === '') {
 if (!headers_sent()) {
     header('Content-Type: text/html; charset=utf-8');
 }
+// The global output buffers were cleared above, so the sitewide cookie banner must be added here.
+if (function_exists('erp_inject_cookie_consent_into_html_buffer')) {
+    $createViewHtml = erp_inject_cookie_consent_into_html_buffer($createViewHtml);
+}
 echo $createViewHtml;
 exit;

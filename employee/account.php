@@ -289,9 +289,20 @@ $esc = static function ($value): string {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 };
 $employeeHeaderSubtitle = '<span class="ps-crumbs"><a href="' . $esc($profileBackUrl) . '">Home</a> <span class="ps-crumb-sep">/</span> <a href="#profile-photo">Account</a> <span class="ps-crumb-sep">/</span> <span class="ps-crumb-current">Profile Settings</span></span>';
+$psNotificationsUrl = function_exists('company_url') ? company_url('notifications.php') : '../notifications.php';
+$psUnreadCount = 0;
+if (function_exists('getTotalHeaderUnreadNotificationCount')) {
+    try {
+        $psUnreadCount = getTotalHeaderUnreadNotificationCount();
+    } catch (Throwable $e) {
+        $psUnreadCount = 0;
+    }
+}
 $employeeHeaderRightHtml = '<div class="ps-head-tools">'
     . '<label class="ps-head-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>'
     . '<input type="search" id="psHeadSearch" placeholder="Search anything..." autocomplete="off" aria-label="Search profile settings"></label>'
+    . '<a href="' . $esc($psNotificationsUrl) . '" class="ps-head-bell ps-head-bell--mobile" title="Notifications" aria-label="Notifications">'
+    . '<i class="far fa-bell"></i>' . ($psUnreadCount > 0 ? '<span class="ps-head-dot"></span>' : '') . '</a>'
     . '</div>';
 $selectArrow = "background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E'); background-size: 1.25rem; background-repeat: no-repeat; background-position: right 12px center;";
 $saveEmailApiUrl = function_exists('company_url')
@@ -534,6 +545,21 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         #change-password .form-row:last-child { align-items: center; margin-bottom: 0; }
         #change-password .account-pw-strength-top:has(.account-pw-strength-score:empty) { display: none; }
         #change-password .btn-save-inline { border-radius: 8px !important; padding: 10px 22px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); }
+        .ps-toast {
+            position: fixed; top: 14px; right: 24px; z-index: 2147483000; display: flex; align-items: center; gap: 12px;
+            min-width: 280px; max-width: 380px; padding: 12px 12px 12px 12px; background: #fff; border: 1px solid #eef0f4;
+            border-radius: 12px; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12); font-size: 13.5px; font-weight: 500; color: #1f2937;
+            opacity: 0; transform: translateY(-8px); transition: opacity .2s ease, transform .2s ease;
+        }
+        .ps-toast.is-in { opacity: 1; transform: none; }
+        .ps-toast i { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; background: #dcfce7; color: #16a34a; }
+        .ps-toast span { flex: 1; line-height: 1.4; }
+        .ps-toast--error i { background: #fee2e2; color: #dc2626; }
+        .ps-toast--info i { background: #f1f5f9; color: #64748b; }
+        .ps-toast .ps-toast-close { flex-shrink: 0; width: 26px; height: 26px; border: 0; border-radius: 6px !important; background: transparent; color: #9ca3af; font-size: 18px; line-height: 1; cursor: pointer; padding: 0; }
+        .ps-toast .ps-toast-close:hover { background: #f3f4f6; color: #374151; }
+        html[data-theme="dark"] .ps-toast { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+        @media (max-width: 640px) { .ps-toast { top: 12px; left: 12px; right: 12px; min-width: 0; max-width: none; } }
         .ps-coming-soon { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1px dashed #d8d4f5; border-radius: 10px; background: #faf9ff; }
         .ps-coming-soon-icon { width: 38px; height: 38px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: #ede9fe; color: #7c3aed; font-size: 16px; }
         .ps-coming-soon div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #64748b; }
@@ -583,10 +609,10 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         body.ps-page, body.ps-page.dashboard, body.ps-page .layout-main-wrapper,
         body.ps-page .layout-main-wrapper > .flex-grow-1, body.ps-page .employee-header { background: #f8fafc !important; }
         body.ps-page #native-sidebar .mb-auto { margin-bottom: 0 !important; }
-        body.ps-page .employee-header { padding-top: 0.4rem !important; }
+        body.ps-page .employee-header { padding-top: 0.75rem !important; }
         @media (min-width: 993px) {
             body.ps-page .employee-header { position: relative !important; }
-            body.ps-page .employee-header .header-right { position: absolute !important; top: 0.5rem; left: 50%; right: auto; transform: translateX(-50%); }
+            body.ps-page .employee-header .header-right { position: absolute !important; top: 0.85rem; left: 50%; right: auto; transform: translateX(-50%); }
             body.ps-page .ps-head-search { width: 340px; }
         }
         body.ps-page #native-sidebar .nav-link.active {
@@ -611,6 +637,7 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             position: relative; width: 36px; height: 36px; border-radius: 50%; display: inline-flex;
             align-items: center; justify-content: center; color: #374151 !important; text-decoration: none !important; font-size: 17px;
         }
+        @media (min-width: 993px) { .ps-head-bell--mobile { display: none !important; } }
         .ps-head-dot { position: absolute; top: 6px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: #ef4444; border: 1.5px solid #f8fafc; }
         .ps-head-avatar {
             width: 38px; height: 38px; border-radius: 50%; background: #ebe8fb; color: #3730a3;
@@ -899,25 +926,25 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
 
 <div class="main-content-wrapper">
 		<?php if (!empty($feedback)): ?>
+            <?php
+            $psToastType = stripos($feedback, 'error') === 0 ? 'error' : (stripos($feedback, 'no changes') === 0 ? 'info' : 'success');
+            $psToastText = $psToastType === 'error' ? trim(substr($feedback, 6)) : $feedback;
+            ?>
+            <div class="ps-toast ps-toast--<?= $psToastType ?>" id="psToast" role="status" aria-live="polite">
+                <i class="fas <?= $psToastType === 'error' ? 'fa-circle-exclamation' : ($psToastType === 'info' ? 'fa-circle-info' : 'fa-circle-check') ?>" aria-hidden="true"></i>
+                <span><?= $esc($psToastText) ?></span>
+                <button type="button" class="ps-toast-close" aria-label="Dismiss" onclick="this.parentNode.remove()">&times;</button>
+            </div>
             <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        timerProgressBar: true,
-                        didOpen: (toast) => {
-                            toast.addEventListener('mouseenter', Swal.stopTimer)
-                            toast.addEventListener('mouseleave', Swal.resumeTimer)
-                        }
-                    });
-
-                    Toast.fire({
-                        icon: '<?= strpos(strtolower($feedback), "success") !== false ? "success" : "error" ?>',
-                        title: <?= json_encode($feedback) ?>
-                    });
-                });
+                (function () {
+                    var t = document.getElementById('psToast');
+                    if (!t) return;
+                    requestAnimationFrame(function () { t.classList.add('is-in'); });
+                    setTimeout(function () {
+                        t.classList.remove('is-in');
+                        setTimeout(function () { t.remove(); }, 250);
+                    }, 3000);
+                })();
             </script>
         <?php endif; ?>
 

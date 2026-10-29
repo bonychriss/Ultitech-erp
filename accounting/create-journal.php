@@ -342,6 +342,57 @@ include __DIR__ . '/../modules/balances/includes/header.php';
     @media (max-width: 720px) {
         .cje-row2, .cje-row3, .cje-totals { grid-template-columns: 1fr; }
     }
+
+    html[data-theme="dark"] body .main-content.cje-shell { background: #0b1324 !important; color: #f1f5f9 !important; --cje-btn-fg: #e2e8f0; }
+    html[data-theme="dark"] .cje-shell .cje-title { color: #f8fafc !important; }
+    html[data-theme="dark"] .cje-shell .cje-sub,
+    html[data-theme="dark"] .cje-shell .cje-bc,
+    html[data-theme="dark"] .cje-shell .cje-bc span,
+    html[data-theme="dark"] .cje-shell .cje-bc i { color: #8b9ab3 !important; }
+    html[data-theme="dark"] .cje-shell .cje-card { background: #0f1b2e !important; border-color: #1f2d45 !important; box-shadow: none !important; }
+    html[data-theme="dark"] .cje-shell .cje-card > .hd { color: #f1f5f9 !important; border-bottom-color: #1f2d45 !important; }
+    html[data-theme="dark"] .cje-shell .cje-card > .hd .num { background: rgba(96, 165, 250, .14) !important; color: #60a5fa !important; }
+    html[data-theme="dark"] .cje-shell .cje-fg label { color: #8b9ab3 !important; }
+    html[data-theme="dark"] .cje-shell .cje-fg label .opt,
+    html[data-theme="dark"] .cje-shell .hd .opt { color: #64748b !important; }
+    html[data-theme="dark"] .cje-shell .cje-inp,
+    html[data-theme="dark"] .cje-shell .cje-sel,
+    html[data-theme="dark"] .cje-shell .cje-ta { background: #0c1628 !important; border-color: #2a3a55 !important; color: #f1f5f9 !important; color-scheme: dark; }
+    html[data-theme="dark"] .cje-shell .cje-inp[readonly] { background: #13203a !important; color: #94a3b8 !important; }
+    html[data-theme="dark"] .cje-shell .cje-inp::placeholder,
+    html[data-theme="dark"] .cje-shell .cje-ta::placeholder { color: #5b6b85 !important; }
+    html[data-theme="dark"] .cje-shell .cje-inp:focus,
+    html[data-theme="dark"] .cje-shell .cje-sel:focus,
+    html[data-theme="dark"] .cje-shell .cje-ta:focus { border-color: #60a5fa !important; outline: none; box-shadow: 0 0 0 3px rgba(96, 165, 250, .18) !important; }
+    html[data-theme="dark"] .cje-shell .cje-badge { background: rgba(34, 197, 94, .14) !important; color: #4ade80 !important; }
+    html[data-theme="dark"] .cje-shell .cje-btn { background: #0f1b2e !important; border-color: #2a3a55 !important; color: #e2e8f0 !important; }
+    html[data-theme="dark"] .cje-shell .cje-btn.success { background: #16a34a !important; border-color: #16a34a !important; color: #fff !important; }
+    html[data-theme="dark"] .cje-shell .cje-btn.primary { background: #2563eb !important; border-color: #2563eb !important; color: #fff !important; }
+    html[data-theme="dark"] .cje-shell .cje-btn i { color: inherit !important; }
+    html[data-theme="dark"] .cje-shell .cje-table-wrap { border-color: #1f2d45 !important; background: transparent !important; }
+    html[data-theme="dark"] .cje-shell .cje-table,
+    html[data-theme="dark"] .cje-shell .cje-table thead,
+    html[data-theme="dark"] .cje-shell .cje-table tbody,
+    html[data-theme="dark"] .cje-shell .cje-table tr { background: transparent !important; }
+    html[data-theme="dark"] .cje-shell .cje-table th { background: #0c1628 !important; color: #8b9ab3 !important; border-bottom-color: #1f2d45 !important; }
+    html[data-theme="dark"] .cje-shell .cje-table td { background: transparent !important; color: #e2e8f0 !important; border-bottom-color: #1a273d !important; }
+    html[data-theme="dark"] .cje-shell .cje-totals { background: #0c1628 !important; border-color: #1f2d45 !important; color: #f1f5f9 !important; }
+    html[data-theme="dark"] .cje-shell .cje-totals span { color: #f1f5f9 !important; }
+    html[data-theme="dark"] .cje-shell .cje-balance-bar.ok { background: rgba(34, 197, 94, .14) !important; color: #4ade80 !important; }
+    html[data-theme="dark"] .cje-shell .cje-balance-bar.no { background: rgba(248, 113, 113, .12) !important; color: #f87171 !important; }
+    html[data-theme="dark"] .cje-shell .cje-drop { background: #0c1628 !important; border-color: #2a3a55 !important; color: #8b9ab3 !important; }
+    html[data-theme="dark"] .cje-shell .cje-drop span { color: #8b9ab3 !important; }
+    html[data-theme="dark"] .cje-shell .cje-side .cje-card .bd,
+    html[data-theme="dark"] .cje-shell .cje-kv span:first-child,
+    html[data-theme="dark"] .cje-shell .cje-tgl .sub { color: #8b9ab3 !important; }
+    html[data-theme="dark"] .cje-shell .cje-kv span:last-child,
+    html[data-theme="dark"] .cje-shell .cje-tgl .lbl,
+    html[data-theme="dark"] .cje-shell .cje-side h4 { color: #f1f5f9 !important; }
+    html[data-theme="dark"] .cje-shell .cje-draft-pill { background: rgba(251, 146, 60, .14) !important; color: #fb923c !important; }
+    html[data-theme="dark"] .cje-shell .cje-switch span { background: #2a3a55 !important; }
+    html[data-theme="dark"] .cje-shell .cje-switch input:checked + span { background: #2563eb !important; }
+    html[data-theme="dark"] .cje-shell #alertMessage.ok { background: rgba(34, 197, 94, .14); color: #4ade80; border-color: rgba(34, 197, 94, .4); }
+    html[data-theme="dark"] .cje-shell #alertMessage.err { background: rgba(248, 113, 113, .12); color: #f87171; border-color: rgba(248, 113, 113, .4); }
 </style>
 
 <main class="main-content cje-shell">
@@ -351,7 +402,6 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         <div class="cje-top">
             <div>
                 <h1 class="cje-title"><?= $isEdit ? 'Edit Journal Entry' : 'Create Journal Entry' ?></h1>
-                <p class="cje-sub"><?= $isEdit ? 'Update this journal entry and keep debits and credits balanced.' : 'Record a new journal entry with balanced debit and credit lines.' ?></p>
                 <nav class="cje-bc" aria-label="Breadcrumb">
                     <a href="../index.php">Home</a>
                     <i class="fas fa-chevron-right" aria-hidden="true"></i>
@@ -367,7 +417,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
                   <button type="button" class="cje-btn" id="btnDraft">Save as Draft</button>
                 <?php endif; ?>
                 <button type="submit" form="createJournalForm" class="cje-btn success" id="postBtn"><i class="fas fa-check"></i> <?= $isEdit ? 'Save Changes' : 'Post Entry' ?></button>
-                <a class="cje-btn" href="<?= $isEdit ? ('view-journal.php?id=' . (int) $editId . '&module=' . $jeModule) : ('journal-entries.php?module=' . $jeModule) ?>">Cancel</a>
+                <a class="cje-btn" style="color:var(--cje-btn-fg, #0f172a)!important" href="<?= $isEdit ? ('view-journal.php?id=' . (int) $editId . '&module=' . $jeModule) : ('journal-entries.php?module=' . $jeModule) ?>">Cancel</a>
             </div>
         </div>
 

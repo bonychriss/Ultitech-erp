@@ -75,11 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .fp-back { display: inline-block; margin-top: 22px; font-size: 13px; color: #1a88ff; text-decoration: none; }
         .fp-back:hover { text-decoration: underline; }
         .fp-art { display: flex; justify-content: center; }
-        .fp-art svg { width: 100%; max-width: 420px; height: auto; }
+        .fp-art img { width: 100%; max-width: 480px; height: auto; display: block; }
         @media (max-width: 820px) {
             .fp-grid { grid-template-columns: 1fr; gap: 28px; }
             .fp-art { order: -1; }
-            .fp-art svg { max-width: 280px; }
+            .fp-art img { max-width: 300px; }
             .fp-title { font-size: 24px; }
         }
         @media (max-width: 480px) { .fp-row { flex-direction: column; } .fp-btn { width: 100%; } }
@@ -118,36 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </section>
 
             <div class="fp-art" aria-hidden="true">
-                <svg viewBox="0 0 420 340" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M150 40l8 5-8 5z" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
-                    <path d="M20 110l9 4-8 6z" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
-                    <path d="M395 160l8 6-9 3z" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
-                    <path d="M360 300l10 3-7 7z" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
-                    <ellipse cx="215" cy="305" rx="150" ry="10" fill="#f1f5f9"/>
-                    <path d="M352 110c14 30 14 120 0 175h-18c-12-55-12-145 0-175z" fill="#eef2f6"/>
-                    <rect x="336" y="270" width="30" height="35" rx="3" fill="#e2e8f0"/>
-                    <rect x="90" y="170" width="240" height="8" rx="2" fill="#e5e9f0"/>
-                    <rect x="300" y="178" width="8" height="125" fill="#edf0f5"/>
-                    <rect x="110" y="178" width="8" height="125" fill="#edf0f5"/>
-                    <rect x="98" y="128" width="62" height="40" rx="3" fill="#e5e9f0"/>
-                    <rect x="122" y="168" width="14" height="3" fill="#d7dde6"/>
-                    <rect x="190" y="230" width="70" height="8" rx="3" fill="#e2e8f0"/>
-                    <rect x="222" y="238" width="6" height="60" fill="#e2e8f0"/>
-                    <path d="M200 170c-6-28 14-52 42-50 24 2 40 22 36 48l-6 40c-2 10-10 16-20 16h-30c-12 0-20-8-21-20z" fill="#ffffff" stroke="#e5e7eb" stroke-width="2"/>
-                    <path d="M270 140c18 8 30 22 30 34l-4 4c-12 0-22-10-34-20z" fill="#ffffff" stroke="#e5e7eb" stroke-width="2"/>
-                    <path d="M296 176l10 6-6 6-10-4z" fill="#f4b8a4"/>
-                    <path d="M212 112c-8-22 4-44 26-46 18-2 30 10 30 26 0 12-6 22-16 26-14 6-34 4-40-6z" fill="#f4b8a4"/>
-                    <path d="M206 98c-6-24 10-46 34-46 22 0 36 16 32 36-14-10-34-12-52-4-6 4-10 10-14 14z" fill="#f2665a"/>
-                    <path d="M252 120l12 10-8 6-10-10z" fill="#2563eb"/>
-                    <path d="M206 228h64c10 0 16 8 14 18l-14 50h-18l8-42h-50c-12 0-18-12-12-22z" fill="#f2665a"/>
-                    <path d="M210 232c-4 18-2 40 6 64h-18c-10-22-12-44-6-62z" fill="#ef5a4c"/>
-                    <path d="M196 296h22l4 8h-28z" fill="#1d4ed8"/>
-                    <path d="M250 296h22l4 8h-28z" fill="#1d4ed8"/>
-                    <path d="M188 210c-6 20-4 46 6 70" fill="none" stroke="#f4b8a4" stroke-width="7" stroke-linecap="round"/>
-                    <circle cx="160" cy="300" r="5" fill="none" stroke="#1f2a44" stroke-width="2"/>
-                    <circle cx="173" cy="300" r="5" fill="none" stroke="#1f2a44" stroke-width="2"/>
-                    <path d="M165 300h3M178 300c4 0 6 2 8 4" fill="none" stroke="#1f2a44" stroke-width="2"/>
-                </svg>
+                <img src="<?= htmlspecialchars(function_exists('app_url') ? app_url('/assets/images/forgot-password-illustration.jpg') : 'assets/images/forgot-password-illustration.jpg') ?>" alt="">
             </div>
         </div>
     </main>

@@ -6,7 +6,6 @@ import VoucherPreview from '../components/VoucherPreview.jsx'
 import VoucherActions from '../components/VoucherActions.jsx'
 import ApprovalFlowCard from '../components/ApprovalFlowCard.jsx'
 import DocumentsCard from '../components/DocumentsCard.jsx'
-import LinkedPurchaseOrdersCard from '../components/LinkedPurchaseOrdersCard.jsx'
 import { MarkPaidModal, AdminApprovalModal, DocPreviewModal, ApproveModal } from '../components/Modals.jsx'
 
 export default function ViewVoucherPage() {
@@ -71,7 +70,8 @@ export default function ViewVoucherPage() {
     }
   }, [loading])
 
-  const deleteAttachment = useCallback(async (id) => {
+  const deleteAttachment = useCallback(async (att) => {
+    const id = att.id
     if (typeof window.Swal === 'undefined') {
       if (!window.confirm('Delete this attachment?')) return
     } else {
@@ -80,6 +80,10 @@ export default function ViewVoucherPage() {
     }
     const fd = new FormData()
     fd.append('attachment_id', String(id))
+    if (id < 0) {
+      fd.append('voucher_id', String(data.voucher.id))
+      fd.append('file_name', String(att.fileName || ''))
+    }
     try {
       const res = await fetch(data.actions.deleteAttachmentUrl, { method: 'POST', body: fd })
       const j = await res.json()
@@ -194,8 +198,6 @@ export default function ViewVoucherPage() {
               <VoucherPreview data={data} />
             </div>
           </div>
-
-          <LinkedPurchaseOrdersCard data={data} />
 
           <ApprovalFlowCard data={data} />
 

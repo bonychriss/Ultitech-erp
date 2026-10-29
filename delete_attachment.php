@@ -16,6 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $attachmentId = isset($_POST['attachment_id']) ? (int)$_POST['attachment_id'] : 0;
+$voucherId = isset($_POST['voucher_id']) ? (int)$_POST['voucher_id'] : 0;
+$fileName = isset($_POST['file_name']) ? (string)$_POST['file_name'] : '';
+
+if ($attachmentId < 0 && $voucherId > 0 && $fileName !== '') {
+    echo json_encode(deleteVoucherDiskAttachment($voucherId, $fileName, $_SESSION['user_id']));
+    exit;
+}
+
 if ($attachmentId <= 0) {
     echo json_encode(['ok' => false, 'error' => 'Invalid attachment ID']);
     exit;

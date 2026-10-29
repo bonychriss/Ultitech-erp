@@ -1,6 +1,6 @@
 .vv-react-root { min-height: 200px; }
 
-/* Supporting documents â€” compact Gmail-style cards (bundled so layout always applies) */
+/* Supporting documents - compact Gmail-style cards (bundled so layout always applies) */
 .vv-react-root .vv-gmail-list {
   display: flex !important;
   flex-wrap: wrap !important;
@@ -405,7 +405,7 @@
   background: #f9ab00;
 }
 
-/* Linked purchase orders — full preview under the payment voucher */
+/* Linked purchase orders - full preview under the payment voucher */
 .vv-react-root .vv-card-linked-pos {
   margin-top: 1.25rem;
   background: #fff;

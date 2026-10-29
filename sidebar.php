@@ -2164,7 +2164,8 @@ if (!isset($_GET['print'])) {
     
     <ul class="nav nav-pills flex-column">
         <li class="nav-item">
-             <a href="<?= $accountLink ?>" class="nav-link" title="Profile Settings">
+             <?php $__onAccountPage = strpos(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '')), '/employee/account.php') !== false; ?>
+             <a href="<?= $accountLink ?>" class="nav-link<?= $__onAccountPage ? ' active' : '' ?>" title="Profile Settings"<?= $__onAccountPage ? ' aria-current="page"' : '' ?>>
                 <i class="bi bi-person"></i>
                 <span class="sidebar-text">Profile Settings</span>
             </a>

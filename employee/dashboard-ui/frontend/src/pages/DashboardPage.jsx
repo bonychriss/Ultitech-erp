@@ -48,6 +48,8 @@ const URLS = {
   delete: CFG.deleteUrl || 'delete-voucher.php',
   approve: CFG.approveUrl || 'dashboard.php',
   markPaid: CFG.markPaidUrl || 'dashboard.php',
+  stockPay: CFG.stockPayUrl || '',
+  returnUrl: CFG.returnUrl || '',
   reports: CFG.reportsUrl || 'reports.php',
   userManual: CFG.userManualUrl || '../employee/user-manual.php',
 }
@@ -354,8 +356,140 @@ function RowActionsMenu({
   )
 }
 
+const STOCK_PAYMENT_METHODS = ['Bank Transfer', 'RTGS / SWIFT', 'Cash', 'Mobile Money', 'Cheque']
+
+function todayIso() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function returnToPath() {
+  const raw = URLS.returnUrl || `${window.location.pathname}${window.location.search}`
+  try {
+    const u = new URL(raw, window.location.href)
+    return `${u.pathname}${u.search}`
+  } catch {
+    return `${window.location.pathname}${window.location.search}`
+  }
+}
+
+function StockPurchasePayModal({ voucher, accounts, onClose }) {
+  const total = num(voucher.total_amount)
+  const paidSoFar = num(voucher.paid_so_far)
+  const balanceDue = Math.max(0, Math.round((total - paidSoFar) * 100) / 100)
+  const currency = voucher.currency || 'TZS'
+  const [accountId, setAccountId] = useState('')
+  const [amount, setAmount] = useState(balanceDue ? balanceDue.toFixed(2) : '')
+
+  const matchingAccounts = (accounts || []).filter((a) => !a.currency || a.currency === currency)
+  const otherAccounts = (accounts || []).filter((a) => a.currency && a.currency !== currency)
+  const selected = (accounts || []).find((a) => String(a.id) === String(accountId))
+  const payAmount = num(amount)
+  const afterBalance = selected ? num(selected.current_balance) - payAmount : null
+  const isPartial = payAmount > 0 && payAmount < balanceDue - 0.009
+
+  const accountOption = (a) => (
+    <option key={a.id} value={a.id}>
+      {a.name} ({a.currency} {num(a.current_balance).toLocaleString('en-US', { minimumFractionDigits: 2 })})
+    </option>
+  )
+
+  return (
+    <div className="ed-modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="ed-modal ed-modal--wide" role="dialog" aria-modal="true" aria-label="Pay stock purchase voucher">
+        <div className="ed-modal-head">
+          <h3>Pay Stock Purchase</h3>
+          <button type="button" className="ed-modal-close" onClick={onClose} aria-label="Close">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="ed-modal-details">
+          <div><strong>Voucher:</strong> {voucher.voucher_no}</div>
+          <div><strong>Supplier:</strong> {voucher.payee_name}</div>
+          <div><strong>Voucher total:</strong> {formatAmount(currency, total)}</div>
+          {paidSoFar > 0 ? (
+            <div><strong>Already paid:</strong> {formatAmount(currency, paidSoFar)}</div>
+          ) : null}
+          <div><strong>Balance due:</strong> {formatAmount(currency, balanceDue)}</div>
+        </div>
+        <form method="POST" action={URLS.stockPay} encType="multipart/form-data" className="ed-modal-form">
+          <input type="hidden" name="voucher_id" value={voucher.id} />
+          <input type="hidden" name="return_to" value={returnToPath()} />
+          {MODULE ? <input type="hidden" name="module" value={MODULE} /> : null}
+          <label className="ed-modal-label">
+            Pay from account (Bank / Cash)
+            <select name="account_id" required value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+              <option value="" disabled>Select account</option>
+              {matchingAccounts.length > 0 ? (
+                <optgroup label={`${currency} accounts`}>{matchingAccounts.map(accountOption)}</optgroup>
+              ) : null}
+              {otherAccounts.length > 0 ? (
+                <optgroup label="Other currencies">{otherAccounts.map(accountOption)}</optgroup>
+              ) : null}
+            </select>
+          </label>
+          {selected ? (
+            <div className={`ed-modal-balance${afterBalance < 0 ? ' is-negative' : ''}`}>
+              Balance after payment: {formatAmount(selected.currency, afterBalance)}
+              {selected.currency && selected.currency !== currency ? ' (account currency differs from voucher)' : ''}
+            </div>
+          ) : null}
+          <div className="ed-modal-grid">
+            <label className="ed-modal-label">
+              Amount to pay ({currency})
+              <input
+                type="number"
+                name="payment_amount"
+                required
+                min="0.01"
+                step="0.01"
+                max={balanceDue || undefined}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </label>
+            <label className="ed-modal-label">
+              Payment date
+              <input type="date" name="payment_date" required defaultValue={todayIso()} />
+            </label>
+            <label className="ed-modal-label">
+              Payment method
+              <select name="payment_method" required defaultValue="Bank Transfer">
+                {STOCK_PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </label>
+            <label className="ed-modal-label">
+              Reference no.
+              <input type="text" name="payment_reference_no" required placeholder="Bank / SWIFT reference" />
+            </label>
+          </div>
+          {isPartial ? (
+            <div className="ed-modal-hint">Partial payment: the voucher stays open until the balance is paid.</div>
+          ) : null}
+          <label className="ed-modal-label">
+            Notes (optional)
+            <input type="text" name="payment_notes" placeholder="e.g. first installment" />
+          </label>
+          <label className="ed-modal-label">
+            Payment proof (SWIFT / bank slip)
+            <input type="file" name="swift_file" required accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.doc,.docx,.xls,.xlsx" />
+          </label>
+          <div className="ed-modal-actions">
+            <button type="button" className="ed-btn ed-btn--ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="ed-btn ed-btn--primary">Post Payment</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 function AdminPayModal({ voucher, accounts, onClose }) {
   if (!voucher) return null
+  if (voucher.purpose === 'stock_purchase' && URLS.stockPay) {
+    return <StockPurchasePayModal voucher={voucher} accounts={accounts} onClose={onClose} />
+  }
   return (
     <div className="ed-modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="ed-modal" role="dialog" aria-modal="true" aria-label="Confirm payment">

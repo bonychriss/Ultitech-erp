@@ -21,8 +21,25 @@ $deskUrl = function_exists('app_url')
     ? app_url('/modules/finance/stock-purchase-payment-desk.php')
     : '/modules/finance/stock-purchase-payment-desk.php';
 
+$deskPayReturnTo = trim((string) ($_POST['return_to'] ?? ''));
+if ($deskPayReturnTo !== ''
+    && ($deskPayReturnTo[0] !== '/' || str_starts_with($deskPayReturnTo, '//') || preg_match('/[\r\n\\\\]/', $deskPayReturnTo))) {
+    $deskPayReturnTo = '';
+}
+
 function deskPayRedirect(string $deskUrl, string $tab, ?string $success = null, ?string $error = null): void
 {
+    global $deskPayReturnTo;
+    if ($deskPayReturnTo !== '') {
+        if ($success !== null) {
+            $_SESSION['success_msg'] = $success;
+        }
+        if ($error !== null) {
+            $_SESSION['error_msg'] = $error;
+        }
+        header('Location: ' . $deskPayReturnTo);
+        exit;
+    }
     if ($success !== null) {
         $_SESSION['desk_pay_success'] = $success;
     }
@@ -138,9 +155,6 @@ function deskPayVoucherEligible(array $row, int $companyId): bool
         return false;
     }
     if (resolvePaymentVoucherPurposeFromRow($row) !== 'stock_purchase') {
-        return false;
-    }
-    if ((int) ($row['linked_stock_po_id'] ?? 0) <= 0) {
         return false;
     }
     if ($companyId > 0 && array_key_exists('company_id', $row) && (int) ($row['company_id'] ?? 0) !== $companyId) {
@@ -590,7 +604,7 @@ try {
         ? 'Payment posted successfully. Bank/Cash balance has been updated.'
         : 'Partial payment of ' . number_format($paymentAmount, 2) . ' posted. Remaining balance: ' . number_format(max(0, $totalAmount - $newPaidTotal), 2) . '.';
     if ($postedAccountName !== '') {
-        $successMessage .= ' Posted to ' . $postedAccountName . ' ó view it in Chart of Accounts.';
+        $successMessage .= ' Posted to ' . $postedAccountName . ' ù view it in Chart of Accounts.';
     }
 
     deskPayRedirect(

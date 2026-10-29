@@ -402,6 +402,10 @@ $dashboardConfig = [
     'deleteMode' => 'action',
     'approveUrl' => $adminBase . '/dashboard.php',
     'markPaidUrl' => $adminBase . '/dashboard.php',
+    'stockPayUrl' => function_exists('company_url')
+        ? (string) company_url('modules/finance/api/mark-stock-purchase-voucher-paid.php')
+        : adminDashboardUiRootWebPath() . '/modules/finance/api/mark-stock-purchase-voucher-paid.php',
+    'returnUrl' => $adminBase . '/dashboard.php?module=' . rawurlencode($qsModule),
     'reportsUrl' => $adminBase . '/reports.php',
     'userManualUrl' => $employeeBase . '/user-manual.php',
     'referenceToggleUrl' => $referenceToggleUrl,

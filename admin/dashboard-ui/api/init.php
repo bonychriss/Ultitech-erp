@@ -112,6 +112,13 @@ try {
         ? '(SELECT COUNT(*) FROM voucher_attachments va WHERE va.voucher_id = pv.id) AS attachment_count'
         : '0 AS attachment_count';
 
+    $purposeSelectSql = '';
+    foreach (['purpose', 'payment_purpose', 'voucher_purpose'] as $purposeCol) {
+        if (function_exists('columnExists') && columnExists('payment_vouchers', $purposeCol, $pdo)) {
+            $purposeSelectSql .= ", pv.`{$purposeCol}`";
+        }
+    }
+
     $listWhere = ($companySql !== '' ? $companySql : ' WHERE 1=1') . $privateDraftSql;
     $orderSql = function_exists('buildPaymentVoucherListOrderBySql')
         ? buildPaymentVoucherListOrderBySql('newest', 'pv')
@@ -126,7 +133,8 @@ try {
                 IFNULL(pv.is_reference,0) AS is_reference,
                 IFNULL(pv.is_draft,0) AS is_draft,
                 (SELECT COUNT(*) FROM voucher_items vi WHERE vi.voucher_id = pv.id) AS item_count,
-                $attachmentCountSql,
+                $attachmentCountSql
+                $purposeSelectSql,
                 u.full_name AS creator_name, u.department
             FROM payment_vouchers pv
             LEFT JOIN users u ON pv.created_by = u.id
@@ -207,7 +215,44 @@ try {
             'can_approve' => $canApprove,
             'can_reject' => $canReject,
             'can_mark_paid' => $canMarkPaid,
+            'purpose' => function_exists('resolvePaymentVoucherPurposeFromRow')
+                ? resolvePaymentVoucherPurposeFromRow($v)
+                : 'general',
+            'paid_so_far' => 0.0,
         ];
+    }
+
+    // Balances may live on a different connection than vouchers; payment pickers and
+    // partial-payment totals must come from the same PDO the stock payment endpoint posts to.
+    $balancesPdo = function_exists('balances_resolve_pdo') ? balances_resolve_pdo() : null;
+    if (!($balancesPdo instanceof PDO)) {
+        $balancesPdo = $pdo;
+    }
+
+    $openStockIds = [];
+    foreach ($recent as $idx => $r) {
+        if ($r['purpose'] === 'stock_purchase' && $r['can_mark_paid']) {
+            $openStockIds[(int) $r['id']] = $idx;
+        }
+    }
+    if ($openStockIds !== [] && function_exists('tableExists') && tableExists('account_transactions', $balancesPdo)) {
+        try {
+            $ph = implode(',', array_fill(0, count($openStockIds), '?'));
+            $paidStmt = $balancesPdo->prepare(
+                "SELECT reference_id, COALESCE(SUM(amount), 0) AS paid FROM account_transactions
+                 WHERE reference_type = 'payment_voucher' AND type = 'debit' AND reference_id IN ($ph)
+                 GROUP BY reference_id"
+            );
+            $paidStmt->execute(array_keys($openStockIds));
+            foreach ($paidStmt->fetchAll(PDO::FETCH_ASSOC) as $pr) {
+                $rid = (int) ($pr['reference_id'] ?? 0);
+                if (isset($openStockIds[$rid])) {
+                    $recent[$openStockIds[$rid]]['paid_so_far'] = (float) ($pr['paid'] ?? 0);
+                }
+            }
+        } catch (Throwable $ePaid) {
+            // optional
+        }
     }
 
     $tpSql = "SELECT payee_name, SUM(total_amount) AS total FROM payment_vouchers pv"
@@ -230,17 +275,21 @@ try {
 
     $accounts = [];
     try {
-        $faStmt = $pdo->query("SELECT id, name, current_balance, currency, type FROM financial_accounts WHERE status = 'active' ORDER BY name ASC");
-        if ($faStmt) {
-            foreach ($faStmt->fetchAll(PDO::FETCH_ASSOC) as $acc) {
-                $accounts[] = [
-                    'id' => (int) ($acc['id'] ?? 0),
-                    'name' => (string) ($acc['name'] ?? ''),
-                    'current_balance' => (float) ($acc['current_balance'] ?? 0),
-                    'currency' => (string) ($acc['currency'] ?? 'TZS'),
-                    'type' => (string) ($acc['type'] ?? ''),
-                ];
-            }
+        $accRows = function_exists('balancesFetchAccountsWithLiveBalance')
+            ? balancesFetchAccountsWithLiveBalance($balancesPdo, true)
+            : [];
+        if ($accRows === []) {
+            $faStmt = $balancesPdo->query("SELECT id, name, current_balance, currency, type FROM financial_accounts WHERE status = 'active' ORDER BY name ASC");
+            $accRows = $faStmt ? ($faStmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+        }
+        foreach ($accRows as $acc) {
+            $accounts[] = [
+                'id' => (int) ($acc['id'] ?? 0),
+                'name' => (string) ($acc['name'] ?? ''),
+                'current_balance' => (float) ($acc['live_balance'] ?? $acc['current_balance'] ?? 0),
+                'currency' => (string) ($acc['currency'] ?? 'TZS'),
+                'type' => (string) ($acc['type'] ?? ''),
+            ];
         }
     } catch (Throwable $eAcc) {
         // optional

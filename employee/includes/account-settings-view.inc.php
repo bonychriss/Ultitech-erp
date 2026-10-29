@@ -11,28 +11,37 @@ $esc = static function ($value): string {
 $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-password.php') : '../forgot-password.php';
 ?>
 <section class="editor-section" id="profile-photo">
-    <div class="section-header">
-        <h2 class="section-title"><i class="fas fa-image" style="color:#7c3aed;margin-right:0.4rem;"></i>Profile Photo</h2>
-        <p class="section-subtitle">Use the camera on your device or upload a new avatar. JPG, PNG, GIF or WEBP (max 2MB).</p>
+    <div class="section-header ps-sec-head">
+        <span class="ps-sec-icon"><i class="far fa-image"></i></span>
+        <div>
+            <h2 class="section-title">Profile Photo</h2>
+            <p class="section-subtitle">Use the camera on your device or upload a new avatar. JPG, PNG, GIF or WEBP (max 2MB).</p>
+        </div>
     </div>
     <div class="ps-photo-actions">
-        <div class="ps-photo-preview">
-            <?php if ($profilePhotoUrl !== ''): ?>
-                <img src="<?= $esc($profilePhotoUrl) ?>" alt="Current photo">
-            <?php else: ?>
-                <span><?= $esc($initial) ?></span>
-            <?php endif; ?>
-        </div>
+        <form method="post" enctype="multipart/form-data" class="ps-photo-preview-wrap">
+            <div class="ps-photo-preview">
+                <?php if ($profilePhotoUrl !== ''): ?>
+                    <img src="<?= $esc($profilePhotoUrl) ?>" alt="Current photo">
+                <?php else: ?>
+                    <span><?= $esc($initial) ?></span>
+                <?php endif; ?>
+            </div>
+            <label class="ps-photo-cam" title="Take or choose a photo">
+                <i class="fas fa-camera"></i>
+                <input type="file" name="profile_photo" accept="image/*" capture="user" hidden onchange="this.form.submit()">
+            </label>
+        </form>
         <form method="post" enctype="multipart/form-data" style="margin:0;">
             <label class="ps-upload-btn">
-                <i class="fas fa-upload"></i> Upload new photo
+                <i class="fas fa-arrow-up-from-bracket"></i> Upload new photo
                 <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
             </label>
         </form>
         <?php if ($profilePhotoUrl !== ''): ?>
             <form method="post" style="margin:0;" onsubmit="return confirm('Remove your profile photo?');">
                 <button type="submit" name="remove_profile_photo" value="1" class="ps-remove-btn">
-                    <i class="fas fa-trash"></i> Remove
+                    <i class="far fa-trash-can"></i> Remove
                 </button>
             </form>
         <?php endif; ?>
@@ -40,9 +49,12 @@ $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-passwo
 </section>
 
 <section class="editor-section" id="personal-details">
-    <div class="section-header">
-        <h2 class="section-title"><i class="fas fa-user" style="color:#7c3aed;margin-right:0.4rem;"></i>Personal Details</h2>
-        <p class="section-subtitle">Update your name, contact information, and account identifiers.</p>
+    <div class="section-header ps-sec-head">
+        <span class="ps-sec-icon"><i class="far fa-user"></i></span>
+        <div>
+            <h2 class="section-title">Personal Details</h2>
+            <p class="section-subtitle">Update your name, contact information, and account identifiers.</p>
+        </div>
     </div>
     <div class="ps-details-grid">
         <div>
@@ -91,9 +103,12 @@ $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-passwo
 </section>
 
 <section class="editor-section" id="change-password">
-    <div class="section-header">
-        <h2 class="section-title">Security &amp; Password</h2>
-        <p class="section-subtitle">Manage your password and authentication settings.</p>
+    <div class="section-header ps-sec-head">
+        <span class="ps-sec-icon"><i class="fas fa-shield-halved"></i></span>
+        <div>
+            <h2 class="section-title">Security &amp; Password</h2>
+            <p class="section-subtitle">Manage your password and authentication settings.</p>
+        </div>
     </div>
     <form method="post" class="account-password-form">
         <input type="hidden" name="action" value="change_password">

@@ -265,10 +265,19 @@ if (!empty($user['profile_photo']) && function_exists('mediaUrlFromPath')) {
 $logoutUrl = function_exists('company_url') ? company_url('logout.php') : '../logout.php';
 $employeeHeaderTitle = 'Profile Settings';
 $homeUrl = $profileBackUrl;
-$employeeHeaderSubtitle = '<span style="color:#94a3b8;">Home</span> <span style="color:#cbd5e1;">/</span> <span style="color:#94a3b8;">Account</span> <span style="color:#cbd5e1;">/</span> <span style="color:#7c3aed;">Profile Settings</span>';
 $esc = static function ($value): string {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 };
+$employeeHeaderSubtitle = '<span class="ps-crumbs"><a href="' . $esc($profileBackUrl) . '">Home</a> <span class="ps-crumb-sep">/</span> <a href="#profile-photo">Account</a> <span class="ps-crumb-sep">/</span> <span class="ps-crumb-current">Profile Settings</span></span>';
+$psNameParts = preg_split('/\s+/', trim((string) ($_SESSION['full_name'] ?? 'User'))) ?: ['U'];
+$psInitials = strtoupper(substr((string) ($psNameParts[0] ?? 'U'), 0, 1) . (count($psNameParts) > 1 ? substr((string) end($psNameParts), 0, 1) : ''));
+$psNotificationsUrl = function_exists('company_url') ? company_url('notifications.php') : '../notifications.php';
+$employeeHeaderRightHtml = '<div class="ps-head-tools">'
+    . '<label class="ps-head-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>'
+    . '<input type="search" id="psHeadSearch" placeholder="Search anything..." autocomplete="off" aria-label="Search profile settings"></label>'
+    . '<a href="' . $esc($psNotificationsUrl) . '" class="ps-head-bell" title="Notifications" aria-label="Notifications"><i class="far fa-bell"></i><span class="ps-head-dot"></span></a>'
+    . '<span class="ps-head-avatar" title="' . $esc($_SESSION['full_name'] ?? '') . '">' . $esc($psInitials) . '</span>'
+    . '</div>';
 $selectArrow = "background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E'); background-size: 1.25rem; background-repeat: no-repeat; background-position: right 12px center;";
 $saveEmailApiUrl = function_exists('company_url')
     ? company_url('api/save_user_email_settings.php')
@@ -284,7 +293,7 @@ if ($lastLoginTs) {
     } elseif ($lastLoginDay === $yesterday) {
         $lastLoginLabel = 'Yesterday, ' . date('g:i A', $lastLoginTs);
     } else {
-        $lastLoginLabel = date('M j, Y g:i A', $lastLoginTs);
+        $lastLoginLabel = date(date('Y', $lastLoginTs) === date('Y') ? 'M j, g:i A' : 'M j, Y', $lastLoginTs);
     }
 } else {
     $lastLoginLabel = '—';
@@ -523,6 +532,163 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         .ps-status-row .profile-badge { background: #f3e8ff; color: #7c3aed; }
         .ps-status-row .profile-badge-success { background: #dcfce7; color: #166534; }
 
+        /* ---- Profile Settings mock ---- */
+        body.ps-page, body.ps-page.dashboard, body.ps-page .layout-main-wrapper,
+        body.ps-page .layout-main-wrapper > .flex-grow-1, body.ps-page .employee-header { background: #f8fafc !important; }
+        body.ps-page #native-sidebar .mb-auto { margin-bottom: 0 !important; }
+        body.ps-page .employee-header { padding-top: 1rem !important; }
+        @media (min-width: 993px) {
+            body.ps-page .employee-header { position: relative !important; }
+            body.ps-page .employee-header .header-right { position: absolute !important; top: 1.1rem; right: 1.25rem; }
+        }
+        body.ps-page #native-sidebar .nav-link.active {
+            background: #efedfc !important; color: #4338ca !important; border-radius: 10px; font-weight: 600;
+        }
+        body.ps-page #native-sidebar .nav-link.active i { color: #4338ca !important; }
+        body.ps-page .employee-header-page-title { font-size: 26px !important; font-weight: 700 !important; color: #111827 !important; }
+        .ps-crumbs { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+        .ps-crumbs a { color: #5b54c9; text-decoration: none; }
+        .ps-crumbs a:hover { text-decoration: underline; }
+        .ps-crumb-sep { color: #9ca3af; }
+        .ps-crumb-current { color: #4b5563; }
+        .ps-head-tools { display: flex; align-items: center; gap: 14px; }
+        .ps-head-search {
+            display: flex; align-items: center; gap: 8px; width: 172px; height: 40px; margin: 0;
+            padding: 0 12px; background: #fff; border: 1px solid #e6e8f0; border-radius: 10px; color: #6b7280;
+        }
+        .ps-head-search i { font-size: 13px; }
+        .ps-head-search input { border: 0; outline: 0; background: transparent; width: 100%; font-size: 12px; color: #111827; }
+        .ps-head-search input::placeholder { color: #6b7280; }
+        .ps-head-bell {
+            position: relative; width: 36px; height: 36px; border-radius: 50%; display: inline-flex;
+            align-items: center; justify-content: center; color: #374151 !important; text-decoration: none !important; font-size: 17px;
+        }
+        .ps-head-dot { position: absolute; top: 6px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: #ef4444; border: 1.5px solid #f8fafc; }
+        .ps-head-avatar {
+            width: 38px; height: 38px; border-radius: 50%; background: #ebe8fb; color: #3730a3;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+        }
+
+        .editor-shell { max-width: none; }
+        .ps-hero {
+            min-height: 124px; padding: 1.1rem 1.4rem 1.1rem 1.9rem; margin: 0.9rem 0 0;
+            border-radius: 12px 12px 0 0;
+            background:
+                radial-gradient(ellipse 45% 140% at 78% 10%, rgba(129, 120, 214, 0.38), transparent 60%),
+                radial-gradient(ellipse 40% 120% at 100% 100%, rgba(99, 88, 196, 0.45), transparent 60%),
+                linear-gradient(100deg, #2b2462 0%, #352d78 45%, #3f3690 100%);
+        }
+        .ps-hero::after {
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 200' preserveAspectRatio='none'%3E%3Cpath d='M330 200 C420 120 520 40 640 60 C720 72 770 40 800 20 L800 200 Z' fill='rgba(255,255,255,0.05)'/%3E%3Cpath d='M260 200 C380 150 470 70 600 90 C700 105 760 70 800 55' fill='none' stroke='rgba(255,255,255,0.10)' stroke-width='2'/%3E%3C/svg%3E") right bottom / 100% 100% no-repeat;
+        }
+        .ps-hero-main { gap: 1.6rem; }
+        .account-avatar-wrap, .account-avatar { width: 104px; height: 104px; }
+        .account-avatar { border: 4px solid #fff; box-shadow: 0 10px 26px rgba(15, 23, 42, 0.28); }
+        .account-avatar-btn {
+            bottom: 2px; right: 0; width: 30px; height: 30px; background: #fff; color: #5b45d6;
+            border: 0; font-size: 12px; box-shadow: 0 3px 10px rgba(15, 23, 42, 0.25);
+        }
+        .ps-hero-copy h2 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.01em; }
+        .ps-hero-chips { gap: 0.55rem; margin: 0.3rem 0 0.55rem; }
+        .ps-hero-handle { color: rgba(255,255,255,0.9); font-size: 0.9rem; font-weight: 500; margin-right: 0.2rem; }
+        .ps-hero .profile-badge { padding: 3px 13px; font-size: 11px; font-weight: 600; background: #5b45d6; color: #fff; }
+        .ps-hero .profile-badge-success { background: rgba(34, 197, 94, 0.08); color: #86efac; border: 1px solid #4ade80; }
+        .ps-hero-email { font-size: 0.82rem; color: rgba(255,255,255,0.82); margin-bottom: 0.6rem; }
+        .ps-hero-meta { font-size: 0.74rem; gap: 1.1rem; }
+        .ps-logout {
+            align-self: flex-start; margin-top: 0.4rem; min-height: 2.35rem; padding: 0 1.1rem; border-radius: 9px;
+            background: transparent; border: 1px solid rgba(255,255,255,0.55); font-weight: 600; font-size: 0.8rem;
+        }
+        .ps-logout:hover { background: rgba(255,255,255,0.1); }
+
+        .section-nav {
+            margin: 0 0 1rem; padding: 0 0 0 1rem; background: #fff;
+            border: 1px solid #eceef5; border-top: 0; border-radius: 0 0 12px 12px;
+        }
+        .section-nav ul { gap: 0 1.6rem; }
+        .section-nav a { padding: 0.95rem 0.6rem 0.85rem; font-size: 0.9rem; font-weight: 500; color: #374151; }
+        .section-nav a i { font-size: 1rem; color: #4b5563; }
+        .section-nav a.is-active { color: #5b45d6; border-bottom: 2px solid #5b45d6; font-weight: 600; }
+        .section-nav a.is-active i { color: #5b45d6; }
+
+        .ps-body { grid-template-columns: minmax(0, 1fr) 265px; gap: 0.75rem; }
+        .editor-main { gap: 0.75rem; }
+        .editor-section, .acct-aside-card, .ps-status-card {
+            border-radius: 10px; border-color: #eceef5; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03); padding: 0.95rem 0.75rem 1rem;
+        }
+        .editor-section[hidden] { display: none !important; }
+        .ps-sec-head { display: flex; align-items: flex-start; gap: 0.75rem; }
+        .ps-sec-icon {
+            width: 32px; height: 32px; border-radius: 8px; background: #f1f0fb; color: #4b5563;
+            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.9rem;
+        }
+        .section-header.ps-sec-head { margin-bottom: 1rem; }
+        .section-title { font-size: 0.95rem; font-weight: 600; color: #111827; margin-bottom: 2px; }
+        .section-subtitle { font-size: 0.74rem; color: #6b7280; }
+        .form-label { font-weight: 500; color: #374151; }
+        .form-input { border-color: #e2e5ee; border-radius: 6px; padding: 9px 12px; font-size: 13px; }
+        .ps-icon-field i { color: #6b7280; }
+
+        .ps-photo-actions { gap: 0.95rem; padding-left: 1.6rem; }
+        .ps-photo-preview-wrap { position: relative; margin: 0; }
+        .ps-photo-preview { width: 44px; height: 44px; }
+        .ps-photo-cam {
+            position: absolute; right: -5px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%;
+            background: #5b45d6; color: #fff; border: 2px solid #fff; display: flex; align-items: center;
+            justify-content: center; font-size: 8px; cursor: pointer; margin: 0;
+        }
+        .ps-upload-btn { min-height: 2.15rem; padding: 0 1.05rem; border-radius: 4px; background: #5b45d6; font-size: 0.74rem; font-weight: 500; margin: 0 0 0 1.4rem; }
+        .ps-upload-btn:hover { background: #4c38c4; }
+        .ps-remove-btn { min-height: 2.15rem; padding: 0 0.9rem; border-radius: 4px; background: #f3f4f6; color: #374151; border-color: #e5e7eb; font-size: 0.74rem; font-weight: 500; }
+
+        #personal-details .inline-field-form .btn-save-inline { display: none; }
+        #personal-details .inline-field-form.is-dirty .btn-save-inline { display: inline-flex; }
+        #personal-details .inline-field-form { max-width: none; }
+
+        .acct-aside-card {
+            display: flex; gap: 0.85rem; align-items: flex-start; padding: 1rem;
+            background: linear-gradient(120deg, #ecebfb 0%, #f4f3fd 100%); border-color: #e7e5f8;
+        }
+        .acct-aside-icon {
+            width: 36px; height: 36px; border-radius: 9px; background: #dcd8f8; color: #5b45d6; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 0.95rem; margin-top: 0.15rem;
+        }
+        .acct-aside-card h3 { font-size: 0.8rem; font-weight: 600; color: #111827; margin: 0 0 0.3rem; }
+        .acct-aside-card p { font-size: 0.72rem; color: #6b7280; }
+        .ps-status-card { padding: 1rem; }
+        .ps-status-card h3 { font-size: 0.85rem; font-weight: 600; color: #111827; margin-bottom: 0.8rem; }
+        .ps-status-card h3 i { color: #5b45d6; font-size: 0.8rem; }
+        .ps-status-row {
+            display: grid; grid-template-columns: 92px 1fr; justify-content: start; align-items: center; white-space: nowrap;
+            padding: 0.32rem 0; font-size: 0.74rem; color: #374151;
+        }
+        .ps-status-row .ps-status-label { color: #374151; font-weight: 400; }
+        .ps-status-row > span:last-child { justify-self: start; }
+        .ps-status-value { display: inline-flex; align-items: center; gap: 0.45rem; color: #111827; font-weight: 400 !important; }
+        .ps-status-value i { color: #6b7280; }
+        .ps-status-row .profile-badge { background: #ece9fb; color: #5b45d6; font-weight: 500; padding: 2px 9px; }
+        .ps-status-row .profile-badge-success { background: #dcfce7; color: #15803d; }
+
+        html[data-theme="dark"] body.ps-page, html[data-theme="dark"] body.ps-page .layout-main-wrapper,
+        html[data-theme="dark"] body.ps-page .layout-main-wrapper > .flex-grow-1,
+        html[data-theme="dark"] body.ps-page .employee-header { background: #0f172a !important; }
+        html[data-theme="dark"] .section-nav { background: #1e293b; border-color: #334155; }
+        html[data-theme="dark"] .section-nav a, html[data-theme="dark"] .section-nav a i { color: #cbd5e1; }
+        html[data-theme="dark"] .section-nav a.is-active, html[data-theme="dark"] .section-nav a.is-active i { color: #a78bfa; border-bottom-color: #a78bfa; }
+        html[data-theme="dark"] .ps-sec-icon { background: #334155; color: #e2e8f0; }
+        html[data-theme="dark"] .acct-aside-card h3, html[data-theme="dark"] .ps-status-value { color: #f8fafc; }
+        html[data-theme="dark"] .ps-status-row, html[data-theme="dark"] .ps-status-row .ps-status-label { color: #cbd5e1; }
+        html[data-theme="dark"] .ps-head-search, html[data-theme="dark"] .ps-head-avatar { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+        html[data-theme="dark"] .ps-head-bell { color: #e2e8f0 !important; }
+        html[data-theme="dark"] body.ps-page .employee-header-page-title { color: #f8fafc !important; }
+
+        @media (max-width: 992px) {
+            .ps-head-search { display: none; }
+            .section-nav ul { gap: 0 0.4rem; }
+            .ps-upload-btn { margin-left: 0; }
+            .ps-photo-actions { padding-left: 0; }
+        }
+
         html[data-theme="dark"] body { background: #0f172a; }
         html[data-theme="dark"] .editor-section,
         html[data-theme="dark"] .ps-status-card { background: #1e293b; border-color: #334155; }
@@ -543,7 +709,7 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         }
 	</style>
 </head>
-<body class="dashboard">
+<body class="dashboard ps-page">
 <?php require_once __DIR__ . '/../includes/header_employee.php'; ?>
 
 <div class="main-content-wrapper">
@@ -596,23 +762,23 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                             <span class="profile-badge"><?= $esc($roleLabel) ?></span>
                             <span class="profile-badge profile-badge-success"><?= $isActiveUser ? 'Active' : 'Inactive' ?></span>
                         </div>
-                        <p class="ps-hero-email"><i class="fas fa-envelope"></i><?= $esc($user['email'] ?? '') ?></p>
+                        <p class="ps-hero-email"><?= $esc($user['email'] ?? '') ?></p>
                         <div class="ps-hero-meta">
-                            <span><i class="fas fa-calendar-alt"></i> Joined <?= $esc($joinedLabel) ?></span>
+                            <span><i class="far fa-calendar"></i> Joined <?= $esc($joinedLabel) ?></span>
                             <span><i class="fas fa-pen"></i> <?= $currentSig ? 'Signature on file' : 'Signature missing' ?></span>
                         </div>
                     </div>
                 </div>
-                <a href="<?= $esc($logoutUrl) ?>" class="ps-logout"><i class="fas fa-sign-out-alt"></i> Log out</a>
+                <a href="<?= $esc($logoutUrl) ?>" class="ps-logout"><i class="fas fa-arrow-right-from-bracket"></i> Log out</a>
             </section>
 
             <nav class="section-nav" aria-label="Profile sections">
                 <ul>
-                    <li><a href="#profile-photo" class="is-active"><i class="fas fa-image"></i> Profile</a></li>
-                    <li><a href="#personal-details"><i class="fas fa-id-card"></i> Details</a></li>
-                    <li><a href="#change-password"><i class="fas fa-shield-alt"></i> Security</a></li>
+                    <li><a href="#profile-photo" class="is-active"><i class="far fa-user"></i> Profile</a></li>
+                    <li><a href="#personal-details"><i class="fas fa-table-cells-large"></i> Details</a></li>
+                    <li><a href="#change-password"><i class="fas fa-shield-halved"></i> Security</a></li>
                     <li><a href="#digital-signature"><i class="fas fa-pen"></i> Signature</a></li>
-                    <li><a href="#personal-email"><i class="fas fa-envelope"></i> Email</a></li>
+                    <li><a href="#personal-email"><i class="far fa-envelope"></i> Email</a></li>
                 </ul>
             </nav>
 
@@ -622,9 +788,12 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
 			<!-- Digital Signature -->
 			<section class="editor-section" id="digital-signature">
                 <div class="section-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                    <div>
-                        <h2 class="section-title">Digital Signature</h2>
-                        <p class="section-subtitle">Draw your signature below. It will appear on vouchers where your name is used.</p>
+                    <div class="ps-sec-head">
+                        <span class="ps-sec-icon"><i class="fas fa-pen"></i></span>
+                        <div>
+                            <h2 class="section-title">Digital Signature</h2>
+                            <p class="section-subtitle">Draw your signature below. It will appear on vouchers where your name is used.</p>
+                        </div>
                     </div>
                     <?php if ($currentSig): ?>
                         <span class="status-pill is-active">Signature Active</span>
@@ -689,9 +858,12 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
 
             <!-- Personal Email Settings -->
 			<section class="editor-section" id="personal-email">
-                <div class="section-header">
-					<h2 class="section-title">Personal Email Account</h2>
-                    <p class="section-subtitle">Configure your personal IMAP/SMTP credentials for the email module.</p>
+                <div class="section-header ps-sec-head">
+                    <span class="ps-sec-icon"><i class="far fa-envelope"></i></span>
+                    <div>
+                        <h2 class="section-title">Personal Email Account</h2>
+                        <p class="section-subtitle">Configure your personal IMAP/SMTP credentials for the email module.</p>
+                    </div>
 				</div>
                 <form id="emailSettingsForm" onsubmit="saveEmailSettings(event)">
                     <p class="subsection-label">Incoming Server (IMAP)</p>
@@ -773,16 +945,12 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                     </div>
 
                 <aside class="acct-aside">
-                    <div class="acct-aside-card">
-                        <h3><i class="fas fa-user-shield"></i> Keep your account ready</h3>
-                        <p>Update your photo, contact details, and digital signature so vouchers and approvals stay accurate across Accounting.</p>
-                    </div>
                     <div class="ps-status-card">
-                        <h3><i class="fas fa-wave-square"></i> Account Status</h3>
-                        <div class="ps-status-row">Role <span class="profile-badge"><?= $esc($roleLabel) ?></span></div>
-                        <div class="ps-status-row">Status <span class="profile-badge profile-badge-success"><?= $isActiveUser ? 'Active' : 'Inactive' ?></span></div>
-                        <div class="ps-status-row">Joined <span><i class="fas fa-calendar-alt"></i> <?= $esc($joinedLabel) ?></span></div>
-                        <div class="ps-status-row">Last login <span><i class="fas fa-clock"></i> <?= $esc($lastLoginLabel) ?></span></div>
+                        <h3><i class="fas fa-chart-line"></i> Account Status</h3>
+                        <div class="ps-status-row"><span class="ps-status-label">Role</span><span class="profile-badge"><?= $esc($roleLabel) ?></span></div>
+                        <div class="ps-status-row"><span class="ps-status-label">Status</span><span class="profile-badge profile-badge-success"><?= $isActiveUser ? 'Active' : 'Inactive' ?></span></div>
+                        <div class="ps-status-row"><span class="ps-status-label">Joined</span><span class="ps-status-value"><i class="far fa-calendar"></i> <?= $esc($joinedLabel) ?></span></div>
+                        <div class="ps-status-row"><span class="ps-status-label">Last login</span><span class="ps-status-value"><i class="far fa-clock"></i> <?= $esc($lastLoginLabel) ?></span></div>
                     </div>
                 </aside>
             </div>
@@ -1191,35 +1359,71 @@ document.addEventListener('keydown', (e) => {
 
 // Show feedback is handled by top of file script
 
-(function () {
+var psShowTab = (function () {
     var navLinks = document.querySelectorAll('.section-nav a[href^="#"]');
-    var sections = document.querySelectorAll('.editor-section[id]');
-    if (!navLinks.length || !sections.length) return;
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.editor-section[id]'));
+    if (!navLinks.length || !sections.length) return function () {};
+    var storageKey = 'psActiveTab';
 
-    function setActiveNav(id) {
-        navLinks.forEach(function (link) {
-            link.classList.toggle('is-active', link.getAttribute('href') === '#' + id);
+    function show(id, updateHash) {
+        if (!sections.some(function (s) { return s.id === id; })) id = sections[0].id;
+        sections.forEach(function (section) {
+            section.hidden = section.id !== id;
         });
+        navLinks.forEach(function (link) {
+            var on = link.getAttribute('href') === '#' + id;
+            link.classList.toggle('is-active', on);
+            link.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        try { sessionStorage.setItem(storageKey, id); } catch (e) {}
+        if (updateHash && history.replaceState) history.replaceState(null, '', '#' + id);
+        if (id === 'digital-signature' && typeof resizeCanvas === 'function') {
+            requestAnimationFrame(resizeCanvas);
+        }
     }
 
     navLinks.forEach(function (link) {
+        link.setAttribute('role', 'tab');
         link.addEventListener('click', function (e) {
-            var target = document.querySelector(link.getAttribute('href'));
-            if (!target) return;
             e.preventDefault();
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            setActiveNav(target.id);
+            show(link.getAttribute('href').slice(1), true);
         });
     });
 
-    if ('IntersectionObserver' in window) {
-        var observer = new IntersectionObserver(function (entries) {
-            entries.forEach(function (entry) {
-                if (entry.isIntersecting) setActiveNav(entry.target.id);
-            });
-        }, { rootMargin: '-20% 0px -60% 0px', threshold: 0 });
-        sections.forEach(function (section) { observer.observe(section); });
+    var initial = (location.hash || '').slice(1);
+    if (!initial) {
+        try { initial = sessionStorage.getItem(storageKey) || ''; } catch (e) { initial = ''; }
     }
+    show(initial, false);
+    if (location.hash) {
+        window.addEventListener('load', function () { window.scrollTo(0, 0); });
+    }
+    window.addEventListener('hashchange', function () { show(location.hash.slice(1), false); });
+
+    return show;
+})();
+
+(function () {
+    document.querySelectorAll('#personal-details .inline-field-form').forEach(function (form) {
+        var input = form.querySelector('input');
+        if (!input) return;
+        input.addEventListener('input', function () {
+            form.classList.toggle('is-dirty', input.value !== input.defaultValue);
+        });
+    });
+
+    var search = document.getElementById('psHeadSearch');
+    if (!search) return;
+    search.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        var q = search.value.trim().toLowerCase();
+        if (!q) return;
+        var hit = Array.prototype.find.call(document.querySelectorAll('.editor-section[id]'), function (section) {
+            return section.textContent.toLowerCase().indexOf(q) !== -1;
+        });
+        if (hit) psShowTab(hit.id, true);
+    });
 })();
 </script>
 </body>

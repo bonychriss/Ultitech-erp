@@ -503,6 +503,10 @@ export default function CreateVoucherPage() {
     if (!window.confirm(`Remove attachment "${att.original_name}"?`)) return
     const fd = new FormData()
     fd.append('attachment_id', String(att.id))
+    if (Number(att.id) < 0) {
+      fd.append('voucher_id', String(CFG.voucherId || ''))
+      fd.append('file_name', String(att.file_path || '').split('/').pop())
+    }
     try {
       const res = await fetch(CFG.deleteAttachmentUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
       const data = await res.json()

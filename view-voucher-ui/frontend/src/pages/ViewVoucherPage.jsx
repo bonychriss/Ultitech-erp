@@ -71,7 +71,8 @@ export default function ViewVoucherPage() {
     }
   }, [loading])
 
-  const deleteAttachment = useCallback(async (id) => {
+  const deleteAttachment = useCallback(async (att) => {
+    const id = att.id
     if (typeof window.Swal === 'undefined') {
       if (!window.confirm('Delete this attachment?')) return
     } else {
@@ -80,6 +81,10 @@ export default function ViewVoucherPage() {
     }
     const fd = new FormData()
     fd.append('attachment_id', String(id))
+    if (id < 0) {
+      fd.append('voucher_id', String(data.voucher.id))
+      fd.append('file_name', String(att.fileName || ''))
+    }
     try {
       const res = await fetch(data.actions.deleteAttachmentUrl, { method: 'POST', body: fd })
       const j = await res.json()

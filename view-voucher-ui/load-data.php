@@ -681,6 +681,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         $attachmentRows[] = [
             'id' => (int) ($att['id'] ?? 0),
             'name' => $name,
+            'fileName' => basename($rel),
             'proxyLink' => $missing ? null : (app_url('/proxy_pdf.php') . '?file=' . urlencode($rel)),
             'isImage' => $isImg,
             'typeLabel' => $isImg ? 'Image' : ($ext === 'PDF' ? 'PDF' : $ext),

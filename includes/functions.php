@@ -15106,6 +15106,65 @@ function deleteVoucherAttachment($attachmentId, $userId)
     }
 }
 
+/**
+ * Delete a voucher file that exists on disk but has no voucher_attachments row
+ * (listed by getVoucherAttachments with a negative synthetic id).
+ */
+function deleteVoucherDiskAttachment($voucherId, $fileName, $userId)
+{
+    global $pdo;
+    $voucherId = (int) $voucherId;
+    $userId = (int) $userId;
+    $fileName = basename(str_replace('\\', '/', (string) $fileName));
+
+    if ($voucherId <= 0 || $fileName === '' || $fileName === '.' || $fileName === '..') {
+        return ['ok' => false, 'error' => 'Invalid attachment'];
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT status FROM payment_vouchers WHERE id = ?");
+        $stmt->execute([$voucherId]);
+        $voucher = $stmt->fetch();
+        if (!$voucher) {
+            return ['ok' => false, 'error' => 'Voucher not found'];
+        }
+        if (!canEditVoucher($voucherId, $userId)) {
+            return ['ok' => false, 'error' => 'Permission denied'];
+        }
+        if (strtolower((string) $voucher['status']) === 'approved') {
+            return ['ok' => false, 'error' => 'Cannot delete attachments from an approved voucher'];
+        }
+
+        $match = null;
+        foreach (getVoucherAttachments($voucherId) as $att) {
+            if (empty($att['_from_disk'])) {
+                continue;
+            }
+            if (basename((string) ($att['file_path'] ?? '')) === $fileName) {
+                $match = $att;
+                break;
+            }
+        }
+        if ($match === null) {
+            return ['ok' => false, 'error' => 'Attachment not found'];
+        }
+
+        $absPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . ltrim((string) $match['file_path'], '/\\');
+        if (is_file($absPath) && !@unlink($absPath)) {
+            return ['ok' => false, 'error' => 'Could not delete the file from the server'];
+        }
+
+        if (function_exists('logVoucherAction')) {
+            logVoucherAction($voucherId, $userId, 'attachment_deleted', 'Deleted attachment: ' . $fileName);
+        }
+
+        return ['ok' => true];
+    } catch (Exception $e) {
+        error_log("Delete Disk Attachment Error: " . $e->getMessage());
+        return ['ok' => false, 'error' => 'Database error: ' . $e->getMessage()];
+    }
+}
+
 // -------------- Signature helpers --------------
 function getUserSignaturePathById($userId)
 {

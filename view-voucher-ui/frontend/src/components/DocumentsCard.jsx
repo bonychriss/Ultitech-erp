@@ -230,8 +230,8 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment }) {
               onView={att.missing ? undefined : () => onPreview(att.proxyLink, 'supporting', att.isImage)}
               downloadHref={att.missing ? undefined : att.proxyLink}
               previewUrl={att.missing ? undefined : att.proxyLink}
-              canDelete={permissions.canDeleteAttachment && att.id > 0}
-              onDelete={() => onDeleteAttachment(att.id)}
+              canDelete={permissions.canDeleteAttachment && att.id !== 0}
+              onDelete={() => onDeleteAttachment(att)}
             />
           ))}
 

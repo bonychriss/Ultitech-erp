@@ -117,7 +117,7 @@ $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-passwo
             <span>Forgot it or want a new one? We'll email you a reset link.</span>
         </div>
         <a href="<?= $esc($forgotPasswordUrl) ?>" class="ps-pw-reset-btn">
-            <i class="fas fa-envelope" aria-hidden="true"></i> Forgot password? Reset by email
+            <i class="fas fa-envelope" aria-hidden="true"></i> Forgot password?
         </a>
     </div>
     <?php else: ?>

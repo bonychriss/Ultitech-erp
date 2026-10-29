@@ -529,8 +529,9 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         .ps-pw-reset { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
         .ps-pw-reset-text { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #64748b; }
         .ps-pw-reset-text strong { font-size: 14px; font-weight: 600; color: #0f172a; }
-        .ps-pw-reset-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; background: #7c3aed; color: #fff; font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); }
-        .ps-pw-reset-btn:hover { background: #6d28d9; color: #fff; }
+        .ps-pw-reset-btn { display: inline-flex; align-items: center; gap: 8px; color: #7c3aed; font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+        .ps-pw-reset-btn:hover { color: #6d28d9; text-decoration: underline; }
+        html[data-theme="dark"] .ps-pw-reset-btn { color: #a78bfa; }
         html[data-theme="dark"] .ps-pw-reset { background: #0f172a; border-color: #334155; }
         html[data-theme="dark"] .ps-pw-reset-text strong { color: #f8fafc; }
         @media (max-width: 640px) { #change-password .password-actions-row { flex-wrap: wrap; } }
@@ -578,7 +579,7 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         }
         body.ps-page #native-sidebar .nav-link.active i { color: #4338ca !important; }
         body.ps-page .employee-header-page-title { font-size: 26px !important; font-weight: 700 !important; color: #111827 !important; }
-        .ps-crumbs { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+        .ps-crumbs { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; }
         .ps-crumbs a { color: #5b54c9; text-decoration: none; }
         .ps-crumbs a:hover { text-decoration: underline; }
         .ps-crumb-sep { color: #9ca3af; }

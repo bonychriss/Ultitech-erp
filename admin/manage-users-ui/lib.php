@@ -250,42 +250,53 @@ function manageUsersWelcomeEmailHtml(array $d): string
         ? manageUsersAbsoluteUrl(function_exists('app_url') ? app_url('/assets/images/welcome-email-wave.png') : '/assets/images/welcome-email-wave.png')
         : '';
 
-    return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-        . '<meta name="color-scheme" content="light"><title>Welcome</title></head>'
-        . '<body style="margin:0;padding:0;background:#ffffff;' . $font . 'color:#202124;">'
-        . '<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your account is ready. Sign in to get started.</div>'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:40px 12px;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">'
-
-        . '<tr><td style="border:1px solid #dadce0;border-radius:8px;padding:40px 24px 32px;">'
-
-        // Logo + headline + account chip
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding-bottom:20px;border-bottom:1px solid #dadce0;">'
-        . $brand
-        . ($hero !== '' ? '<img src="' . $e($hero) . '" alt="" width="130" height="144" style="display:block;margin:20px auto 0;width:130px;height:auto;border:0;">' : '')
-        . '<div style="' . $font . 'font-size:24px;line-height:32px;color:#202124;margin-top:16px;">Welcome aboard, ' . $e($d['first']) . '</div>'
-        . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px auto 0;"><tr>'
+    $chip = '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px 0 0;"><tr>'
         . '<td style="padding:2px 12px 2px 2px;border:1px solid #dadce0;border-radius:16px;">'
         . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
         . '<td><div style="width:20px;height:20px;line-height:20px;border-radius:50%;background:#7c3aed;color:#ffffff;text-align:center;' . $font . 'font-size:11px;font-weight:500;">' . $e($initial) . '</div></td>'
         . '<td style="padding-left:8px;' . $font . 'font-size:14px;color:#3c4043;">' . $e($d['email']) . '</td>'
-        . '</tr></table></td></tr></table>'
+        . '</tr></table></td></tr></table>';
+
+    return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        . '<meta name="color-scheme" content="light"><title>Welcome</title>'
+        . '<style>@media only screen and (max-width:560px){'
+        . '.wm-col{display:block!important;width:100%!important;max-width:100%!important;}'
+        . '.wm-art{text-align:center!important;padding:0 0 8px!important;}'
+        . '.wm-art img{margin:0 auto!important;width:150px!important;}'
+        . '.wm-copy{padding:0!important;}'
+        . '.wm-h1{font-size:26px!important;line-height:32px!important;}'
+        . '}</style></head>'
+        . '<body style="margin:0;padding:0;background:#ffffff;' . $font . 'color:#202124;">'
+        . '<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your account is ready. Sign in to get started.</div>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:40px 12px;">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;">'
+
+        . '<tr><td style="border:1px solid #dadce0;border-radius:8px;padding:28px 28px 32px;">'
+
+        // Logo
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="left" style="padding-bottom:20px;">'
+        . str_replace('margin:0 auto;', 'margin:0;', $brand)
         . '</td></tr></table>'
 
-        // Body
-        . '<div style="padding-top:20px;text-align:left;">'
-        . '<p style="' . $p . '">Welcome to <b>' . $e($company !== '' ? $company : 'the team') . '!</b> '
+        // Illustration left, copy right
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+        . ($hero !== ''
+            ? '<td class="wm-col wm-art" width="200" valign="middle" style="width:200px;padding-right:16px;">'
+                . '<img src="' . $e($hero) . '" alt="" width="190" style="display:block;width:190px;height:auto;border:0;"></td>'
+            : '')
+        . '<td class="wm-col wm-copy" valign="middle" style="padding-left:12px;text-align:left;">'
+        . '<div class="wm-h1" style="' . $font . 'font-size:30px;line-height:36px;font-weight:700;color:#202124;letter-spacing:-0.01em;">Welcome aboard, ' . $e($d['first']) . '!</div>'
+        . $chip
+        . '<p style="' . $p . 'margin-top:18px;">Welcome to <b>' . $e($company !== '' ? $company : 'the team') . '!</b> '
         . 'Your account has been successfully created' . $deptText . '.</p>'
-        . '<p style="' . $p . 'margin-bottom:0;">Your administrator will provide your password. Once received, sign in using your '
+        . '<p style="' . $p . '">Your administrator will provide your password. Once received, sign in using your '
         . 'registered email address to access your account and get started.</p>'
+        . '<div style="padding-top:8px;">'
+        . '<a href="' . $url . '" target="_blank" style="' . $font . 'display:inline-block;background:#7c3aed;color:#ffffff;font-size:14px;font-weight:600;line-height:16px;text-decoration:none;padding:12px 26px;border-radius:999px;">Sign in to your account</a>'
         . '</div>'
+        . '</td></tr></table>'
 
-        // Button
-        . '<div style="padding-top:28px;text-align:center;">'
-        . '<a href="' . $url . '" target="_blank" style="' . $font . 'display:inline-block;background:#7c3aed;color:#ffffff;font-size:14px;font-weight:600;line-height:16px;text-decoration:none;padding:12px 24px;border-radius:4px;">Sign in to your account</a>'
-        . '</div>'
-
-        . '<div style="' . $font . 'font-size:12px;line-height:16px;color:#5f6368;padding-top:24px;text-align:left;">'
+        . '<div style="' . $font . 'font-size:12px;line-height:16px;color:#5f6368;padding-top:28px;margin-top:24px;border-top:1px solid #f1f3f4;text-align:left;">'
         . 'Please change your password after you sign in for the first time. If you were not expecting this email, you can ignore it.'
         . '</div>'
 

@@ -156,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         syncLoginPasswordToControlPlane(array((string) $targetUser['email']), $hash, $company_id);
                     }
                     $displayName = (string) ($targetUser['full_name'] ?? $targetUser['username'] ?? 'user');
+                    manageUsersNotifyPasswordChanged((int) $targetUser['id']);
                     $success = 'Password updated for ' . $displayName . '.';
                 } catch (PDOException $e) {
                     $error = 'Could not update password: ' . $e->getMessage();
@@ -227,6 +228,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             syncLoginPasswordToControlPlane($emails, $hash, $company_id);
                         }
                     }
+
+                    manageUsersNotifyPasswordChangedMany(array_values(array_filter(
+                        array_map('intval', $eligibleIds),
+                        static fn (int $id): bool => $id !== $currentUserId
+                    )));
 
                     $_SESSION['manage_users_bulk_pw_flash'] = array(
                         'password' => $newPassword,
@@ -554,6 +560,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 if ($newUserId > 0 && $hasCompanyId && $company_id > 0 && function_exists('syncUserCompanyIndex')) {
                                     syncUserCompanyIndex($company_id, $newUserId);
                                 }
+                                manageUsersNotifyNewEmployee($pdo, $newUserId, $full_name, (string) $department, (bool) $hasCompanyId, (int) $company_id);
                                 $success = 'Employee registered successfully!';
                             } else {
                                 $error = 'Registration failed. Please try again.';

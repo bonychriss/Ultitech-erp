@@ -215,6 +215,7 @@ html[data-theme="dark"] .ncr-row:has(.nc-mod-attendance) .ncr-mod-badge:not(#_),
 html[data-theme="dark"] .ncr-row:has(.nc-mod-letter) .ncr-mod-badge:not(#_), html[data-theme="dark"] .nc-r-icon.nc-mod-letter:not(#_),
 html[data-theme="dark"] .ncr-row:has(.nc-mod-suggest) .ncr-mod-badge:not(#_), html[data-theme="dark"] .nc-r-icon.nc-mod-suggest:not(#_) { color: #fbbf24 !important; }
 html[data-theme="dark"] .ncr-row:has(.nc-mod-tasks) .ncr-mod-badge:not(#_), html[data-theme="dark"] .nc-r-icon.nc-mod-tasks:not(#_) { color: #fb7185 !important; }
+html[data-theme="dark"] .ncr-row:has(.nc-mod-account) .ncr-mod-badge:not(#_), html[data-theme="dark"] .nc-r-icon.nc-mod-account:not(#_) { color: #a5b4fc !important; }
 html[data-theme="dark"] .nc-r-icon.nc-status-alert:not(#_) { color: #fb7185 !important; }
 
 html[data-theme="dark"] .ncr-empty:not(#_) { color: #8696a0; }

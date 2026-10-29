@@ -5,6 +5,7 @@ import {
   Bell,
   Boxes,
   Check,
+  CircleUserRound,
   ClipboardList,
   Clock,
   FileText,
@@ -13,11 +14,13 @@ import {
   LineChart,
   Mail,
   Package,
+  PartyPopper,
   Receipt,
   Settings,
   Shield,
   Sparkles,
   Truck,
+  UserPlus,
   Users,
   Wallet,
   Wrench,
@@ -42,6 +45,7 @@ const MODULE_LABELS = {
   suggest: 'Suggestions',
   admin: 'Admin',
   tasks: 'Tasks',
+  account: 'Account',
   system: 'System',
   general: 'Notification',
 }
@@ -83,6 +87,7 @@ const MODULE_COLORS = {
   suggest: '#ca8a04',
   admin: '#4b5563',
   tasks: '#e11d48',
+  account: '#4f46e5',
   system: '#4b5563',
   general: '#64748b',
 }
@@ -202,6 +207,12 @@ function IconFor({ icon, color }) {
       return <FileText {...props} />
     case 'users':
       return <Users {...props} />
+    case 'account':
+      return <CircleUserRound {...props} />
+    case 'welcome':
+      return <PartyPopper {...props} />
+    case 'user-plus':
+      return <UserPlus {...props} />
     case 'check':
       return <Check {...props} />
     case 'alert':

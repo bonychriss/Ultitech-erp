@@ -98,6 +98,105 @@ function manageUsersUiPdo(): PDO
     throw new RuntimeException('Database connection unavailable.');
 }
 
+function manageUsersCompanyLabel(): string
+{
+    $name = trim((string) ($_SESSION['company_name'] ?? ''));
+    if ($name === '' && defined('COMPANY_NAME')) {
+        $name = trim((string) COMPANY_NAME);
+    }
+
+    return $name;
+}
+
+function manageUsersFirstName(string $fullName): string
+{
+    $fullName = trim($fullName);
+    $parts = preg_split('/\s+/', $fullName) ?: [];
+
+    return $parts[0] ?? $fullName;
+}
+
+/**
+ * Titles must match notificationsUiAccountNoticeKind() so the Account icon is used.
+ */
+function manageUsersNotifyPasswordChanged(int $userId): void
+{
+    if ($userId <= 0 || !function_exists('createSystemNotification')) {
+        return;
+    }
+    try {
+        createSystemNotification(
+            $userId,
+            'Your password was changed',
+            'An administrator reset your login password on ' . date('d M Y \a\t H:i')
+                . '. If you did not request this, contact your administrator right away.',
+            function_exists('company_url') ? company_url('employee/account.php') : null,
+            'info'
+        );
+    } catch (Throwable $e) {
+        error_log('manageUsersNotifyPasswordChanged: ' . $e->getMessage());
+    }
+}
+
+/**
+ * @param list<int> $userIds
+ */
+function manageUsersNotifyPasswordChangedMany(array $userIds): void
+{
+    foreach (array_unique(array_map('intval', $userIds)) as $uid) {
+        manageUsersNotifyPasswordChanged($uid);
+    }
+}
+
+function manageUsersNotifyNewEmployee(PDO $pdo, int $newUserId, string $fullName, string $department, bool $hasCompanyId, int $companyId): void
+{
+    if ($newUserId <= 0 || !function_exists('createSystemNotification')) {
+        return;
+    }
+    $company = manageUsersCompanyLabel();
+    $first = manageUsersFirstName($fullName);
+    $dept = trim($department);
+
+    try {
+        createSystemNotification(
+            $newUserId,
+            'Welcome aboard, ' . $first . '!',
+            'We are so glad to have you' . ($company !== '' ? ' at ' . $company : ' on the team')
+                . '. Take a moment to complete your profile and add a photo so your colleagues can get to know you.',
+            function_exists('company_url') ? company_url('employee/account.php') : null,
+            'success'
+        );
+    } catch (Throwable $e) {
+        error_log('manageUsersNotifyNewEmployee welcome: ' . $e->getMessage());
+    }
+
+    try {
+        $sql = 'SELECT id FROM users WHERE id <> ? AND (is_active = 1 OR is_active IS NULL)';
+        $params = [$newUserId];
+        if ($hasCompanyId) {
+            $sql .= ' AND company_id = ?';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
+    } catch (Throwable $e) {
+        error_log('manageUsersNotifyNewEmployee recipients: ' . $e->getMessage());
+        $ids = [];
+    }
+
+    $title = 'New team member: ' . trim($fullName);
+    $message = trim($fullName) . ' has joined' . ($dept !== '' ? ' the ' . $dept . ' department' : ' the team')
+        . '. Say hello and help them feel welcome!';
+    foreach ($ids as $uid) {
+        try {
+            createSystemNotification($uid, $title, $message, null, 'info');
+        } catch (Throwable $e) {
+            error_log('manageUsersNotifyNewEmployee broadcast: ' . $e->getMessage());
+        }
+    }
+}
+
 function manageUsersFlashPasswordOnce($userName, $plainPassword): void
 {
     $_SESSION['manage_users_pw_flash'] = [

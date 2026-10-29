@@ -824,3 +824,149 @@ html body.dashboard .ash-modal--contact a.ash-btn-ghost {
   color: #64748b;
   font-size: 0.8rem;
 }
+
+.ash-modal.ash-modal--field {
+  width: min(44rem, 100%);
+  max-height: min(92vh, 760px);
+  overflow: auto;
+  padding: 1.1rem 1.25rem 1rem;
+  border-radius: 14px;
+}
+
+.ash-modal--field h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ash-modal--field .ash-reset-lead {
+  font-size: 0.8rem;
+  margin: 0 0 0.85rem;
+}
+
+.ash-field-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.ash-modal--field button.ash-field-tile.ash-field-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.6rem 0.5rem 0.7rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px !important;
+  background: #fff;
+  color: #0f172a;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.ash-modal--field button.ash-field-tile.ash-field-tile:hover {
+  border-color: #c4b5fd;
+  transform: translateY(-1px);
+}
+
+.ash-modal--field button.ash-field-tile.is-active {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.ash-field-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 92px;
+  border-radius: 9px;
+  background: #f5f3ff;
+  overflow: hidden;
+}
+
+.ash-field-art img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.ash-field-label {
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.ash-field-desc {
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: #64748b;
+}
+
+.ash-field-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ash-field-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #7c3aed;
+  color: #fff;
+}
+
+.ash-modal--field .ash-modal-actions {
+  align-items: center;
+  margin-top: 0.9rem;
+}
+
+.ash-field-preview {
+  margin-right: auto;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #7c3aed;
+  text-decoration: none;
+}
+
+.ash-field-preview:hover {
+  text-decoration: underline;
+}
+
+.ash-modal--field .ash-btn-primary,
+.ash-modal--field .ash-btn-ghost,
+html body.page-admin-settings .ash-modal--field .ash-btn-primary,
+html body.page-admin-settings .ash-modal--field .ash-btn-ghost {
+  padding: 0.45rem 1.15rem !important;
+  font-size: 0.8rem !important;
+  border-radius: 9999px !important;
+}
+
+@media (max-width: 720px) {
+  .ash-field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ash-field-art {
+    height: 80px;
+  }
+}

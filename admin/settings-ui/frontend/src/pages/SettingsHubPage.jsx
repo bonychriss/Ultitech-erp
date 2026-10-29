@@ -16,10 +16,13 @@ import {
   MessageCircle,
   Type,
   Globe,
+  Briefcase,
+  Check,
 } from 'lucide-react'
 import {
   executeFactoryReset,
   getSettingsCfg,
+  saveBusinessField,
   saveSiteContact,
   saveSystemFont,
   saveWebQuoteAccess,
@@ -42,6 +45,7 @@ const ICON_MAP = {
   invoice: FileSpreadsheet,
   mail: Mail,
   trash: Trash2,
+  briefcase: Briefcase,
 }
 
 const SITE_TEXT_SECTIONS = [
@@ -149,6 +153,11 @@ export default function SettingsHubPage() {
     () => new Set((cfg.webQuoteAccess?.selectedIds || []).map((id) => Number(id))),
   )
   const [quoteAccessFilter, setQuoteAccessFilter] = useState('')
+  const [businessFieldSaved, setBusinessFieldSaved] = useState(cfg.businessField?.current || '')
+  const [businessFieldPick, setBusinessFieldPick] = useState(cfg.businessField?.current || '')
+  const [businessFieldOpen, setBusinessFieldOpen] = useState(false)
+  const [businessFieldBusy, setBusinessFieldBusy] = useState(false)
+  const businessFieldOptions = cfg.businessField?.options || []
 
   const catalog = cfg.font?.catalog || []
   const selectedFont = catalog.find((f) => f.id === fontKey) || {
@@ -202,6 +211,34 @@ export default function SettingsHubPage() {
     } finally {
       setFontBusy(false)
     }
+  }
+
+  const openBusinessField = () => {
+    setBusinessFieldPick(businessFieldSaved || businessFieldOptions[0]?.id || '')
+    setBusinessFieldOpen(true)
+  }
+
+  const onSaveBusinessField = async (e) => {
+    e.preventDefault()
+    if (!businessFieldPick) return
+    setBusinessFieldBusy(true)
+    try {
+      const data = await saveBusinessField(cfg.api?.saveBusinessField, businessFieldPick)
+      setBusinessFieldSaved(data.current || businessFieldPick)
+      setFlash({ type: 'success', message: data.message || 'Company field updated.' })
+      setBusinessFieldOpen(false)
+    } catch (err) {
+      setFlash({ type: 'error', message: err.message || 'Could not save the company field.' })
+    } finally {
+      setBusinessFieldBusy(false)
+    }
+  }
+
+  const businessFieldPreviewHref = () => {
+    const option = businessFieldOptions.find((o) => o.id === businessFieldPick)
+    const base = cfg.businessField?.previewUrl || ''
+    if (!base || !option) return base
+    return `${base}?character=${encodeURIComponent(option.character)}`
   }
 
   const onFactoryReset = async (e) => {
@@ -335,6 +372,7 @@ export default function SettingsHubPage() {
             const isReset = card.action === 'factory_reset'
             const isRegister = card.action === 'register_company'
             const isFont = card.action === 'system_font'
+            const isBusinessField = card.action === 'business_field'
             const isContact = card.action === 'site_contact'
             const isQuoteAccess = card.action === 'permissions' || card.action === 'web_quote_access'
             const content = (
@@ -362,6 +400,14 @@ export default function SettingsHubPage() {
                   className="ash-card-link"
                   onClick={() => setFontOpen(true)}
                 >
+                  {content}
+                </button>
+              )
+            }
+
+            if (isBusinessField) {
+              return (
+                <button key={card.id} type="button" className="ash-card-link" onClick={openBusinessField}>
                   {content}
                 </button>
               )
@@ -486,6 +532,85 @@ export default function SettingsHubPage() {
                   disabled={fontBusy}
                 >
                   {fontBusy ? 'Saving…' : 'Apply font'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {businessFieldOpen ? (
+        <div
+          className="ash-modal-backdrop"
+          role="presentation"
+          onClick={() => !businessFieldBusy && setBusinessFieldOpen(false)}
+        >
+          <div
+            className="ash-modal ash-modal--field"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ash-field-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="ash-field-title">Company field</h2>
+            <p className="ash-reset-lead">
+              Pick your line of business. New employee welcome emails will use the matching character.
+            </p>
+            <form onSubmit={onSaveBusinessField}>
+              <div className="ash-field-grid" role="radiogroup" aria-label="Company field">
+                {businessFieldOptions.map((option) => {
+                  const active = option.id === businessFieldPick
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      className={`ash-field-tile${active ? ' is-active' : ''}`}
+                      onClick={() => setBusinessFieldPick(option.id)}
+                    >
+                      {option.id === businessFieldSaved ? <span className="ash-field-badge">Current</span> : null}
+                      {active ? (
+                        <span className="ash-field-check" aria-hidden="true">
+                          <Check size={12} strokeWidth={3} />
+                        </span>
+                      ) : null}
+                      <span className="ash-field-art">
+                        {option.image ? <img src={option.image} alt="" loading="lazy" /> : null}
+                      </span>
+                      <span className="ash-field-label">{option.label}</span>
+                      <span className="ash-field-desc">{option.description}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="ash-modal-actions">
+                {businessFieldPreviewHref() ? (
+                  <a
+                    className="ash-field-preview"
+                    href={businessFieldPreviewHref()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Preview welcome email
+                  </a>
+                ) : null}
+                <button
+                  type="button"
+                  className="ash-btn-ghost"
+                  style={{ borderRadius: 9999 }}
+                  onClick={() => setBusinessFieldOpen(false)}
+                  disabled={businessFieldBusy}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="ash-btn-primary"
+                  style={{ borderRadius: 9999 }}
+                  disabled={businessFieldBusy || !businessFieldPick}
+                >
+                  {businessFieldBusy ? 'Saving…' : 'Save field'}
                 </button>
               </div>
             </form>

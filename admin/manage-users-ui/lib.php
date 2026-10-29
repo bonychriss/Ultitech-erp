@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/service.inc.php';
+require_once dirname(__DIR__, 2) . '/includes/welcome-characters.php';
 
 function manageUsersUiWebBasePath(): string
 {
@@ -124,75 +125,11 @@ function manageUsersCompanyTagline(): string
     }
 }
 
-/**
- * Illustrations for the welcome email (files in assets/images/).
- *
- * @return array<string, array{label:string,file:string,group:string}>
- */
-function manageUsersWelcomeCharacters(): array
-{
-    return [
-        'wave' => ['label' => 'Peace sign', 'file' => 'welcome-email-wave.png', 'group' => 'General'],
-        'man' => ['label' => 'Waving hello', 'file' => 'welcome-email-man.png', 'group' => 'General'],
-        'laptop' => ['label' => 'Thumbs up + laptop', 'file' => 'welcome-email-laptop.png', 'group' => 'General'],
-        'highfive' => ['label' => 'High five', 'file' => 'welcome-email-highfive.png', 'group' => 'General'],
-        'key' => ['label' => 'Handing the key', 'file' => 'welcome-email-key.png', 'group' => 'General'],
-        'bot' => ['label' => 'Friendly bot', 'file' => 'welcome-email-bot.png', 'group' => 'General'],
-        'spares' => ['label' => 'Spares mechanic', 'file' => 'welcome-email-spares.png', 'group' => 'Industry'],
-        'truck' => ['label' => 'Truck driver', 'file' => 'welcome-email-truck.png', 'group' => 'Industry'],
-        'ppe' => ['label' => 'PPE / safety', 'file' => 'welcome-email-ppe.png', 'group' => 'Industry'],
-        'food' => ['label' => 'Food / chef', 'file' => 'welcome-email-food.png', 'group' => 'Industry'],
-        'logistics' => ['label' => 'Warehouse / logistics', 'file' => 'welcome-email-logistics.png', 'group' => 'Industry'],
-        'delivery' => ['label' => 'Delivery courier', 'file' => 'welcome-email-delivery.png', 'group' => 'Industry'],
-        'none' => ['label' => 'No illustration', 'file' => '', 'group' => 'Other'],
-    ];
-}
-
-function manageUsersWelcomeCharacter(): string
-{
-    global $pdo;
-    $key = '';
-    if ($pdo instanceof PDO) {
-        try {
-            $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'welcome_email_character' LIMIT 1");
-            $stmt->execute();
-            $key = trim((string) ($stmt->fetchColumn() ?: ''));
-        } catch (Throwable $e) {
-            $key = '';
-        }
-    }
-
-    return array_key_exists($key, manageUsersWelcomeCharacters()) ? $key : 'wave';
-}
-
-function manageUsersSaveWelcomeCharacter(string $key): bool
-{
-    global $pdo;
-    if (!($pdo instanceof PDO) || !array_key_exists($key, manageUsersWelcomeCharacters())) {
-        return false;
-    }
-    try {
-        $stmt = $pdo->prepare(
-            "INSERT INTO system_settings (setting_key, setting_value) VALUES ('welcome_email_character', ?)
-             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)"
-        );
-
-        return $stmt->execute([$key]);
-    } catch (Throwable $e) {
-        error_log('manageUsersSaveWelcomeCharacter: ' . $e->getMessage());
-
-        return false;
-    }
-}
-
 function manageUsersWelcomeCharacterUrl(string $key): string
 {
-    $file = manageUsersWelcomeCharacters()[$key]['file'] ?? '';
-    if ($file === '' || !is_file(dirname(__DIR__, 2) . '/assets/images/' . $file)) {
-        return '';
-    }
+    $path = welcomeCharacterImagePath($key);
 
-    return manageUsersAbsoluteUrl(function_exists('app_url') ? app_url('/assets/images/' . $file) : '/assets/images/' . $file);
+    return $path === '' ? '' : manageUsersAbsoluteUrl($path);
 }
 
 function manageUsersFirstName(string $fullName): string
@@ -297,6 +234,56 @@ function manageUsersAbsoluteUrl(string $url): string
 }
 
 /**
+ * Turn a site image URL (or data: URI) into an inline CID attachment.
+ * Mail clients load remote images through their own proxies, so localhost / intranet URLs never render.
+ * SVG is skipped because Gmail and Outlook do not display it.
+ *
+ * @return array{cid:string,name:string,type:string,path?:string,content?:string}|null
+ */
+function manageUsersEmailInlineImage(string $url, string $cid): ?array
+{
+    $url = trim($url);
+    if ($url === '') {
+        return null;
+    }
+    $allowed = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'webp' => 'image/webp'];
+
+    if (preg_match('#^data:(image/(png|jpe?g|gif|webp));base64,(.+)$#is', $url, $m)) {
+        $bytes = base64_decode($m[3], true);
+        if ($bytes === false || $bytes === '') {
+            return null;
+        }
+        $ext = strtolower($m[2]) === 'jpg' ? 'jpeg' : strtolower($m[2]);
+
+        return ['cid' => $cid, 'name' => $cid . '.' . $ext, 'type' => strtolower($m[1]), 'content' => $bytes];
+    }
+
+    $path = (string) (parse_url($url, PHP_URL_PATH) ?? '');
+    if (preg_match('#^https?://#i', $url)) {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $ownHost = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
+        if ($host === '' || $host !== $ownHost) {
+            return null;
+        }
+    }
+    $rel = '/' . ltrim(rawurldecode($path), '/');
+    $base = function_exists('app_url') ? rtrim((string) parse_url((string) app_url('/'), PHP_URL_PATH), '/') : '';
+    if ($base !== '' && str_starts_with($rel, $base . '/')) {
+        $rel = substr($rel, strlen($base));
+    }
+    if (str_contains($rel, '..')) {
+        return null;
+    }
+    $file = dirname(__DIR__, 2) . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    if (!isset($allowed[$ext]) || !is_file($file)) {
+        return null;
+    }
+
+    return ['cid' => $cid, 'name' => basename($file), 'type' => $allowed[$ext], 'path' => $file];
+}
+
+/**
  * Google-account-style email: table layout + inline styles (email clients strip <style>, flexbox and SVG).
  *
  * @param array{first:string,email:string,department:string,company:string,loginUrl:string,logo:string,tagline?:string,character?:string} $d
@@ -317,7 +304,9 @@ function manageUsersWelcomeEmailHtml(array $d): string
         ? ' under the <b>' . $e($d['department']) . ' Department</b>'
         : '';
     $p = 'margin:0 0 14px;' . $font . 'font-size:14px;line-height:22px;color:#3c4043;';
-    $hero = manageUsersWelcomeCharacterUrl((string) ($d['character'] ?? manageUsersWelcomeCharacter()));
+    $hero = array_key_exists('heroSrc', $d)
+        ? (string) $d['heroSrc']
+        : manageUsersWelcomeCharacterUrl((string) ($d['character'] ?? manageUsersWelcomeCharacter()));
 
     $chip = '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px 0 0;"><tr>'
         . '<td style="padding:2px 12px 2px 2px;border:1px solid #dadce0;border-radius:16px;">'
@@ -406,7 +395,24 @@ function manageUsersSendLoginLinkEmail(string $email, string $fullName, string $
     $where = $company !== '' ? $company : 'the team';
 
     $subject = 'Welcome to ' . $where . ' - your account is ready';
-    $logo = function_exists('getCompanyLogoUrl') ? manageUsersAbsoluteUrl((string) getCompanyLogoUrl()) : '';
+
+    $attachments = [];
+    $logoUrl = function_exists('getCompanyLogoUrl') ? (string) getCompanyLogoUrl() : '';
+    $logoPart = manageUsersEmailInlineImage($logoUrl, 'company-logo');
+    if ($logoPart !== null) {
+        $attachments[] = $logoPart;
+        $logo = 'cid:company-logo';
+    } else {
+        $logo = preg_match('#^https?://#i', $logoUrl) ? $logoUrl : '';
+    }
+
+    $heroSrc = '';
+    $heroPart = manageUsersEmailInlineImage(welcomeCharacterImagePath(manageUsersWelcomeCharacter()), 'welcome-hero');
+    if ($heroPart !== null) {
+        $attachments[] = $heroPart;
+        $heroSrc = 'cid:welcome-hero';
+    }
+
     $body = manageUsersWelcomeEmailHtml([
         'first' => $first,
         'email' => $email,
@@ -414,11 +420,12 @@ function manageUsersSendLoginLinkEmail(string $email, string $fullName, string $
         'company' => $company,
         'loginUrl' => $loginUrl,
         'logo' => $logo,
+        'heroSrc' => $heroSrc,
         'tagline' => manageUsersCompanyTagline(),
     ]);
 
     try {
-        return (bool) @sendEmail($email, $subject, $body, true);
+        return (bool) @sendEmail($email, $subject, $body, true, $attachments);
     } catch (Throwable $ex) {
         error_log('manageUsersSendLoginLinkEmail: ' . $ex->getMessage());
 

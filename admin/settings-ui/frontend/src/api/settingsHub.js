@@ -16,6 +16,20 @@ export async function saveSystemFont(apiUrl, systemFont) {
   return data
 }
 
+export async function saveBusinessField(apiUrl, businessField) {
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ business_field: businessField }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || !data.ok) {
+    throw new Error(data.message || 'Could not save the company field.')
+  }
+  return data
+}
+
 export async function saveSiteContact(apiUrl, contact) {
   const res = await fetch(apiUrl, {
     method: 'POST',

@@ -514,10 +514,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             app_log('create-voucher: itemsValid=' . count($items) . ' total_amount=' . $total_amount);
         }
 
-        // Stock purchase PVs use PUR-YYYY-M-N; general PVs keep PV/... sequence.
-        $voucher_no = ($voucher_purpose === 'stock_purchase' && function_exists('generateStockPurchaseVoucherNumber'))
-            ? generateStockPurchaseVoucherNumber()
-            : generateVoucherNumber();
+        $voucher_no = generateVoucherNumber();
 
         // Start transaction
         $pdo->beginTransaction();

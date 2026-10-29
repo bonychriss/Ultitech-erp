@@ -1,4 +1,4 @@
-/* Notifications React desk ù unique ncr-* classes avoid header notifications-centre.css cards */
+/* Notifications React desk ? unique ncr-* classes avoid header notifications-centre.css cards */
 
 :root {
   --ncr-text: #0f172a;
@@ -53,6 +53,36 @@
   letter-spacing: -0.01em;
 }
 
+.ncr-title-block {
+  min-width: 0;
+}
+
+.ncr-crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+.ncr-crumbs a {
+  color: #5b54c9;
+  text-decoration: none;
+}
+
+.ncr-crumbs a:hover {
+  text-decoration: underline;
+}
+
+.ncr-crumb-sep {
+  color: #9ca3af;
+}
+
+.ncr-crumb-current {
+  color: #4b5563;
+}
+
 .ncr-topbar-actions {
   display: inline-flex;
   align-items: center;
@@ -63,46 +93,42 @@
 
 .ncr-mark-all {
   border: none;
-  background: #0f172a;
-  color: #ffffff;
-  font-size: 0.8125rem;
+  background: transparent;
+  color: #4f46e5;
+  font-size: 0.875rem;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  padding: 0.4rem 0.85rem;
-  border-radius: 8px;
+  padding: 0.25rem 0;
   line-height: 1.2;
 }
 
 .ncr-mark-all:hover:not(:disabled):not(.is-disabled) {
-  color: #ffffff;
-  background: #1e293b;
+  color: #3730a3;
+  text-decoration: underline;
 }
 
 .ncr-mark-all.is-disabled,
 .ncr-mark-all:disabled {
-  opacity: 0.45;
   cursor: default;
-  color: #ffffff;
+  color: #9ca3af;
 }
 
 .ncr-clear-read {
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
+  border: none;
+  background: transparent;
   color: #64748b;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  padding: 0.4rem 0.85rem;
-  border-radius: 8px;
+  padding: 0.25rem 0;
   line-height: 1.2;
 }
 
 .ncr-clear-read:hover:not(:disabled) {
   color: #0f172a;
-  border-color: #cbd5e1;
-  background: #f8fafc;
+  text-decoration: underline;
 }
 
 .ncr-clear-read:disabled {
@@ -421,8 +447,32 @@
     padding: 4px 0 12px;
     margin-bottom: 14px;
   }
-  .ncr-title {
-    font-size: 1.25rem;
+  .ncr-title-block {
+    flex: 1 1 100%;
+  }
+  /* Lifted into the mobile header row (52px tall, hamburger centred at 26px). */
+  .ncr-topbar-actions {
+    position: absolute;
+    top: -41px;
+    right: 0.75rem;
+    z-index: 1030;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+  .ncr-title.ncr-title {
+    font-size: 1.6rem !important;
+    line-height: 1.2;
+  }
+  .ncr-crumbs {
+    font-size: 15px;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .ncr-settings-card-title.ncr-settings-card-title {
+    font-size: 1rem !important;
+  }
+  .ncr-settings-module.ncr-settings-module--head {
+    display: none;
   }
 }
 
@@ -454,13 +504,9 @@ html[data-theme='dark'] .ncr-row-message {
   color: #94a3b8;
 }
 html[data-theme='dark'] .ncr-clear-read {
-  background: #1e293b;
-  border-color: #334155;
   color: #94a3b8;
 }
 html[data-theme='dark'] .ncr-clear-read:hover:not(:disabled) {
-  background: #243447;
-  border-color: #475569;
   color: #e2e8f0;
 }
 html[data-theme='dark'] .ncr-dismiss:hover {
@@ -495,7 +541,7 @@ html[data-theme='dark'] .ncr-dismiss:hover {
 }
 
 .ncr-settings-sub {
-  margin: 0.15rem 0 0;
+  margin: 0.6rem 0 0;
   font-size: 0.875rem;
   color: var(--ncr-muted);
 }
@@ -559,7 +605,8 @@ html[data-theme='dark'] .ncr-dismiss:hover {
 
 .ncr-settings-bulk {
   display: flex;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
@@ -684,8 +731,8 @@ html[data-theme='dark'] .ncr-dismiss:hover {
   }
 }
 
-/* Spec: 63 ù 28 track, 37-wide white pill thumb.
-   style.css sets button { border-radius: 0 !important } ù beat it here. */
+/* Spec: 63 ? 28 track, 37-wide white pill thumb.
+   style.css sets button { border-radius: 0 !important } ? beat it here. */
 button.ncr-switch,
 .ncr-switch {
   position: relative;

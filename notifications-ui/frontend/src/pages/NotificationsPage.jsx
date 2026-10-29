@@ -262,6 +262,50 @@ function countReadInSections(sections) {
   return n
 }
 
+function normPath(href) {
+  try {
+    const p = new URL(String(href || ''), window.location.href).pathname
+    return p.replace(/\/+$/, '').replace(/\.php$/i, '').toLowerCase()
+  } catch {
+    return ''
+  }
+}
+
+function isNotificationsPath(href) {
+  return /\/notifications(\/settings)?$/.test(normPath(href))
+}
+
+/** Page the user opened Notifications from (nav-back stack, then same-origin referrer). */
+function getPreviousPage(homeUrl) {
+  let href = ''
+  let title = ''
+  try {
+    const stack = JSON.parse(sessionStorage.getItem('erpNavBack.stack.v2') || '[]')
+    for (let i = Array.isArray(stack) ? stack.length - 1 : -1; i >= 0; i -= 1) {
+      const item = stack[i]
+      if (item && item.href && !isNotificationsPath(item.href)) {
+        href = String(item.href)
+        title = String(item.title || '')
+        break
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  if (!href) {
+    try {
+      const ref = document.referrer ? new URL(document.referrer) : null
+      if (ref && ref.origin === window.location.origin) href = ref.href
+    } catch {
+      /* ignore */
+    }
+  }
+  if (!href || isNotificationsPath(href)) return null
+  if (homeUrl && normPath(href) === normPath(homeUrl)) return null
+  const label = title.split(/\s[-|–]\s/)[0].trim()
+  return { href, label: label || 'Back' }
+}
+
 const SECTION_META = [
   { key: 'today', label: 'Today' },
   { key: 'yesterday', label: 'Yesterday' },
@@ -275,6 +319,7 @@ export default function NotificationsPage() {
   const [sections, setSections] = useState(initialSections)
   const [countUnread, setCountUnread] = useState(Number(cfg.countUnread || 0))
   const [busy, setBusy] = useState(false)
+  const prevPage = useMemo(() => getPreviousPage(cfg.homeUrl), [cfg.homeUrl])
 
   const totalItems = useMemo(() => {
     return (
@@ -366,7 +411,22 @@ export default function NotificationsPage() {
     <div className="ncr-shell">
       <div className="ncr-main">
         <header className="ncr-topbar">
-          <h1 className="ncr-title">Notifications</h1>
+          <div className="ncr-title-block">
+            <h1 className="ncr-title">Notifications</h1>
+            <nav className="ncr-crumbs" aria-label="Breadcrumb">
+              {cfg.homeUrl ? <a href={cfg.homeUrl}>Home</a> : <span>Home</span>}
+              {prevPage ? (
+                <>
+                  <span className="ncr-crumb-sep">/</span>
+                  <a href={prevPage.href} className="erp-nav-back" title={`Back to ${prevPage.label}`}>
+                    {prevPage.label}
+                  </a>
+                </>
+              ) : null}
+              <span className="ncr-crumb-sep">/</span>
+              <span className="ncr-crumb-current" aria-current="page">Notifications</span>
+            </nav>
+          </div>
           <div className="ncr-topbar-actions">
             {readCount > 0 ? (
               <button

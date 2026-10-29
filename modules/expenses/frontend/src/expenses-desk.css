@@ -5944,3 +5944,105 @@ body.page-exp-desk button.exp-desk-row-action {
     font-size: 0.68rem;
   }
 }
+
+/* List header search toggle (sales lists, customers, customer statement).
+   The expenses desk no longer uses these classes; other desks still do. */
+.exp-desk-search-expand {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .exp-desk-page-header-search--desktop {
+    display: none;
+  }
+
+  .exp-desk-search-expand {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    order: 0;
+  }
+
+  body.page-exp-desk .exp-desk-search-toggle {
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 50% !important;
+    background: #fff;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  }
+
+  body.page-exp-desk .exp-desk-search-toggle:hover,
+  body.page-exp-desk .exp-desk-search-toggle.is-active {
+    border-color: #a5b4fc;
+    color: #4f46e5;
+  }
+
+  body.page-exp-desk .exp-desk-search-toggle.has-value {
+    border-color: #c7d2fe;
+    color: #4f46e5;
+    background: #eef2ff;
+  }
+
+  .exp-desk-search-panel {
+    flex: 0 0 0;
+    width: 0;
+    min-width: 0;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    margin-left: 0;
+    transition:
+      flex 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+      width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+      max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.22s ease,
+      margin-left 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+  }
+
+  .exp-desk-search-panel.is-open {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: 100%;
+    opacity: 1;
+    margin-left: 0.5rem;
+    pointer-events: auto;
+  }
+
+  .exp-desk-search-panel .exp-desk-search-field {
+    width: 100%;
+    min-width: 0;
+  }
+}
+.exp-desk-toolbar-secondary {
+  display: contents;
+}
+
+@media (max-width: 767.98px) {
+  .exp-desk-page-header-actions:has(> .exp-desk-toolbar-secondary) {
+    width: 100%;
+  }
+
+  .exp-desk-toolbar-secondary {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+  }
+
+  .exp-desk-toolbar-secondary .exp-desk-filter-dropdown,
+  .exp-desk-toolbar-secondary .exp-export-menu,
+  .exp-desk-toolbar-secondary .exp-desk-btn-create {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+}

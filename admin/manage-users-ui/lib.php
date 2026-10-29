@@ -127,18 +127,24 @@ function manageUsersCompanyTagline(): string
 /**
  * Illustrations for the welcome email (files in assets/images/).
  *
- * @return array<string, array{label:string,file:string}>
+ * @return array<string, array{label:string,file:string,group:string}>
  */
 function manageUsersWelcomeCharacters(): array
 {
     return [
-        'wave' => ['label' => 'Peace sign', 'file' => 'welcome-email-wave.png'],
-        'man' => ['label' => 'Waving hello', 'file' => 'welcome-email-man.png'],
-        'laptop' => ['label' => 'Thumbs up + laptop', 'file' => 'welcome-email-laptop.png'],
-        'highfive' => ['label' => 'High five', 'file' => 'welcome-email-highfive.png'],
-        'key' => ['label' => 'Handing the key', 'file' => 'welcome-email-key.png'],
-        'bot' => ['label' => 'Friendly bot', 'file' => 'welcome-email-bot.png'],
-        'none' => ['label' => 'No illustration', 'file' => ''],
+        'wave' => ['label' => 'Peace sign', 'file' => 'welcome-email-wave.png', 'group' => 'General'],
+        'man' => ['label' => 'Waving hello', 'file' => 'welcome-email-man.png', 'group' => 'General'],
+        'laptop' => ['label' => 'Thumbs up + laptop', 'file' => 'welcome-email-laptop.png', 'group' => 'General'],
+        'highfive' => ['label' => 'High five', 'file' => 'welcome-email-highfive.png', 'group' => 'General'],
+        'key' => ['label' => 'Handing the key', 'file' => 'welcome-email-key.png', 'group' => 'General'],
+        'bot' => ['label' => 'Friendly bot', 'file' => 'welcome-email-bot.png', 'group' => 'General'],
+        'spares' => ['label' => 'Spares mechanic', 'file' => 'welcome-email-spares.png', 'group' => 'Industry'],
+        'truck' => ['label' => 'Truck driver', 'file' => 'welcome-email-truck.png', 'group' => 'Industry'],
+        'ppe' => ['label' => 'PPE / safety', 'file' => 'welcome-email-ppe.png', 'group' => 'Industry'],
+        'food' => ['label' => 'Food / chef', 'file' => 'welcome-email-food.png', 'group' => 'Industry'],
+        'logistics' => ['label' => 'Warehouse / logistics', 'file' => 'welcome-email-logistics.png', 'group' => 'Industry'],
+        'delivery' => ['label' => 'Delivery courier', 'file' => 'welcome-email-delivery.png', 'group' => 'Industry'],
+        'none' => ['label' => 'No illustration', 'file' => '', 'group' => 'Other'],
     ];
 }
 

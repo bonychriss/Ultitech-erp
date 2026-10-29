@@ -6046,3 +6046,25 @@ body.page-exp-desk button.exp-desk-row-action {
     min-width: 0;
   }
 }
+@media (min-width: 768px) {
+  .exp-desk-page-header:has(.exp-desk-toolbar-secondary) {
+    display: grid;
+    grid-template-columns: 1fr minmax(16rem, 36rem) 1fr;
+    align-items: center;
+    gap: 1rem 1.25rem;
+    min-height: 40px;
+    padding: 0.15rem 0 0.25rem;
+  }
+
+  .exp-desk-page-header:has(.exp-desk-toolbar-secondary) .exp-desk-page-header-search {
+    grid-column: 2;
+    width: 100%;
+    min-width: 0;
+    justify-self: center;
+  }
+
+  .exp-desk-page-header:has(.exp-desk-toolbar-secondary) .exp-desk-page-header-actions {
+    grid-column: 3;
+    justify-self: end;
+  }
+}

@@ -928,23 +928,19 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                     </div>
                 </div>
 
+                <?php if ($currentSig): ?>
                 <div class="ps-sig-card">
                     <div class="ps-sec-head ps-sig-current-head">
                         <span class="ps-sec-icon"><i class="far fa-image"></i></span>
                         <div>
                             <h2 class="section-title">Current Signature</h2>
-                            <p class="section-subtitle"><?= $currentSig ? 'This is your currently saved signature.' : 'You have not saved a signature yet.' ?></p>
+                            <p class="section-subtitle">This is your currently saved signature.</p>
                         </div>
                     </div>
                     <div class="ps-sig-current">
                         <div class="ps-sig-current-preview">
-                            <?php if ($currentSig): ?>
-                                <img src="<?= $esc(function_exists('mediaUrlFromPath') ? mediaUrlFromPath($currentSig, false) : ('../' . ltrim((string) $currentSig, '/'))) ?>" alt="Current signature">
-                            <?php else: ?>
-                                <span class="ps-sig-current-empty">No signature on file. Draw one above and save it.</span>
-                            <?php endif; ?>
+                            <img src="<?= $esc(function_exists('mediaUrlFromPath') ? mediaUrlFromPath($currentSig, false) : ('../' . ltrim((string) $currentSig, '/'))) ?>" alt="Current signature">
                         </div>
-                        <?php if ($currentSig): ?>
                             <div class="ps-sig-current-actions">
                                 <button type="button" class="ps-sig-btn ps-sig-btn--accent ps-sig-btn--plain" onclick="psReplaceSignature()"><i class="fas fa-rotate"></i> Replace</button>
                                 <form method="post" id="psDeleteSigForm" style="margin:0;">
@@ -952,9 +948,9 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                                     <button type="button" class="ps-sig-btn ps-sig-btn--danger ps-sig-btn--plain" onclick="psConfirmDeleteSignature()"><i class="fas fa-trash"></i> Remove</button>
                                 </form>
                             </div>
-                        <?php endif; ?>
                     </div>
                 </div>
+                <?php endif; ?>
 			</section>
 
             <!-- Personal Email Settings -->

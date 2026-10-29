@@ -18,7 +18,7 @@ export default function LinkedPurchaseOrdersCard({ data }) {
       <div className="vv-card-head">
         <h2 className="vv-card-title">
           Linked Purchase Order{docs.length === 1 ? '' : 's'}
-          <span className="vv-gmail-count"> · {docs.length}</span>
+          <span className="vv-gmail-count"> Â· {docs.length}</span>
         </h2>
       </div>
       <div className="vv-card-body vv-linked-po-list">
@@ -37,7 +37,7 @@ export default function LinkedPurchaseOrdersCard({ data }) {
                 <div className="vv-linked-po-titles">
                   <h3 className="vv-linked-po-title">{po.poNumber || `PO-${po.id}`}</h3>
                   {meta.length > 0 ? (
-                    <p className="vv-linked-po-meta">{meta.join(' · ')}</p>
+                    <p className="vv-linked-po-meta">{meta.join(' Â· ')}</p>
                   ) : null}
                 </div>
                 <div className="vv-linked-po-actions">

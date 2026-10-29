@@ -741,6 +741,7 @@ switch ($active_module) {
             addItem($menuItems, 'bulk-upload', 'Upload', 'upload', $prefix . 'employee/bulk-upload-vouchers.php?module=voucher');
             addItem($menuItems, 'export', 'Download Excel', 'download', $prefix . 'export_confirm.php');
         }
+        addItem($menuItems, 'user-manual', 'User Guide', 'book', $prefix . 'employee/user-manual.php?module=voucher');
         break;
 
     case 'attendance':

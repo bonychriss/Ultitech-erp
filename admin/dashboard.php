@@ -415,20 +415,14 @@ $dashboardConfig = [
 
 $GLOBALS['_erp_header_style_linked'] = false;
 $employeeHeaderTitle = 'Dashboard';
-$reportsHref = htmlspecialchars($adminBase . '/reports.php?module=' . rawurlencode($qsModule), ENT_QUOTES, 'UTF-8');
-$userManualHref = htmlspecialchars($employeeBase . '/user-manual.php?module=' . rawurlencode($qsModule), ENT_QUOTES, 'UTF-8');
 $createHref = htmlspecialchars($employeeBase . '/create-voucher.php?module=' . rawurlencode($qsModule), ENT_QUOTES, 'UTF-8');
 
 $employeeHeaderCenterHtml = '<div class="ad-header-toolbar">'
-    . '<a href="' . $reportsHref . '" class="ad-chip-btn ad-chip-btn--ghost">'
-    . '<span class="ad-chip-dollar" aria-hidden="true">$</span> Reports</a>'
     . '<div class="ad-search-with-filter">'
     . '<div id="ed-dashboard-search-slot" class="ed-dashboard-search-slot"></div>'
     . '<div id="pv-filter-slot" class="pv-filter-slot pv-filter-slot--beside-search"></div>'
     . '</div>'
     . '<div class="ad-header-actions">'
-    . '<a href="' . $userManualHref . '" class="ad-chip-btn ad-chip-btn--ghost ad-chip-btn--icon" title="User Guide" aria-label="User Guide">'
-    . '<i class="fas fa-book-open" aria-hidden="true"></i></a>'
     . '<a href="' . $createHref . '" class="ad-chip-btn ad-chip-btn--primary">'
     . '<i class="fas fa-plus" aria-hidden="true"></i> Create Voucher</a>'
     . '</div>'
@@ -501,8 +495,8 @@ $employeeHeaderRightHtml = null;
             height: auto !important;
             min-height: 64px;
             overflow: visible !important;
-            position: sticky !important;
-            top: 0 !important;
+            position: relative !important;
+            top: auto !important;
             z-index: 1020 !important;
         }
         body.dashboard .header.admin-header::after { display: none !important; }

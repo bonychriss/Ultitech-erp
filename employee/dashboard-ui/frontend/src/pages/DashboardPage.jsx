@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Ban,
-  BookOpen,
   CheckCircle2,
   Clock,
   CreditCard,
@@ -1250,20 +1249,8 @@ export default function DashboardPage() {
         <div className={`ed-sticky-top${HIDE_KPIS ? ' ed-sticky-top--no-kpis' : ''}`}>
           {!headerSearchSlot && (
             <div className="ed-header">
-              {IS_ADMIN && (
-                <div className="ed-header-left">
-                  <a href={`${URLS.reports}${PREPEND_MODULE}`} className="ed-btn ed-btn--ghost">
-                    <DollarSign size={16} aria-hidden="true" /> Reports
-                  </a>
-                </div>
-              )}
               {searchBar}
               <div className="ed-header-actions">
-                {IS_ADMIN && (
-                  <a href={`${URLS.userManual}${PREPEND_MODULE}`} className="ed-btn ed-btn--ghost">
-                    <BookOpen size={16} aria-hidden="true" /> User Guide
-                  </a>
-                )}
                 <a href={`${URLS.create}${PREPEND_MODULE}`} className="ed-btn ed-btn--primary">
                   <Plus size={18} aria-hidden="true" /> Create Voucher
                 </a>

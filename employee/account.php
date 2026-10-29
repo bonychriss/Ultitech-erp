@@ -63,6 +63,70 @@ if (function_exists('ensureProfilePhotoColumn')) {
 if (function_exists('ensureWhatsAppColumn')) {
     ensureWhatsAppColumn();
 }
+$psSyncCompanyIndex = static function () use ($userId): void {
+    $cid = (int) (currentCompanyId() ?? ($_SESSION['company_id'] ?? 0));
+    if ($cid > 0 && function_exists('syncUserCompanyIndex')) {
+        syncUserCompanyIndex($cid, $userId);
+    }
+};
+/** @return true|string true on success, otherwise an error message */
+$psUpdateFullName = static function (string $newFullName) use ($pdo, $userId) {
+    if (strlen($newFullName) < 2) {
+        return 'Full Name must be at least 2 characters.';
+    }
+    $oldFullName = (string) ($_SESSION['full_name'] ?? '');
+    $stmt = $pdo->prepare('UPDATE users SET full_name = ? WHERE id = ?');
+    if (!$stmt->execute([$newFullName, $userId])) {
+        return 'Failed to update name.';
+    }
+    $_SESSION['full_name'] = $newFullName;
+    // payment_vouchers stores these names as legacy text, not user ids
+    foreach (['applicant', 'prepared_by', 'checked_by', 'department_manager', 'general_manager'] as $field) {
+        try {
+            $colCheck = $pdo->query("SHOW COLUMNS FROM payment_vouchers LIKE '$field'");
+            if ($colCheck->fetch()) {
+                $upd = $pdo->prepare("UPDATE payment_vouchers SET $field = ? WHERE $field = ?");
+                $upd->execute([$newFullName, $oldFullName]);
+            }
+        } catch (Exception $e) { }
+    }
+    return true;
+};
+$psUpdateUsername = static function (string $newUsername) use ($pdo, $userId, $psSyncCompanyIndex) {
+    if (strlen($newUsername) < 3) {
+        return 'Username must be at least 3 characters.';
+    }
+    $stmt = $pdo->prepare('SELECT id FROM users WHERE username = ? AND id != ?');
+    $stmt->execute([$newUsername, $userId]);
+    if ($stmt->fetch()) {
+        return 'Username already taken.';
+    }
+    $stmt = $pdo->prepare('UPDATE users SET username = ? WHERE id = ?');
+    if (!$stmt->execute([$newUsername, $userId])) {
+        return 'Failed to update username.';
+    }
+    $_SESSION['username'] = $newUsername;
+    $psSyncCompanyIndex();
+    return true;
+};
+$psUpdateEmail = static function (string $newEmail) use ($pdo, $userId, $psSyncCompanyIndex) {
+    if ($newEmail === '' || !filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+        return 'Enter a valid email address.';
+    }
+    $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1');
+    $stmt->execute([$newEmail, $userId]);
+    if ($stmt->fetch()) {
+        return 'Email already in use.';
+    }
+    $stmt = $pdo->prepare('UPDATE users SET email = ? WHERE id = ?');
+    if (!$stmt->execute([$newEmail, $userId])) {
+        return 'Failed to update email.';
+    }
+    $_SESSION['email'] = $newEmail;
+    $psSyncCompanyIndex();
+    return true;
+};
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_FILES['profile_photo'])) {
 	if (isset($_POST['delete_signature'])) {
 		try {
@@ -71,93 +135,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_FILES['profile_photo'])) {
 		} catch (Exception $e) {
 			$feedback = 'Error: ' . $e->getMessage();
 		}
-	} // Handle WhatsApp Number Update
-    elseif (isset($_POST['whatsapp_number'])) {
-        $wa_number = trim($_POST['whatsapp_number']);
-        $stmt = $pdo->prepare('UPDATE users SET whatsapp_number = ? WHERE id = ?');
-        $stmt->execute([$wa_number, $userId]);
-        $feedback = 'WhatsApp number updated successfully.';
-    }
-    // Handle Email Update
-    elseif (isset($_POST['new_email'])) {
+	}
+    elseif (isset($_POST['action']) && $_POST['action'] === 'save_personal_details') {
+        $cur = $pdo->prepare('SELECT full_name, username, email, whatsapp_number FROM users WHERE id = ? LIMIT 1');
+        $cur->execute([$userId]);
+        $cur = $cur->fetch() ?: [];
+        $errors = [];
+        $changed = 0;
+
+        $newFullName = trim((string) ($_POST['new_full_name'] ?? ''));
+        if ($newFullName !== (string) ($cur['full_name'] ?? '')) {
+            $r = $psUpdateFullName($newFullName);
+            $r === true ? $changed++ : $errors[] = $r;
+        }
+        $newUsername = trim((string) ($_POST['new_username'] ?? ''));
+        if ($newUsername !== (string) ($cur['username'] ?? '')) {
+            $r = $psUpdateUsername($newUsername);
+            $r === true ? $changed++ : $errors[] = $r;
+        }
         $newEmail = function_exists('normalizeLoginEmail')
             ? normalizeLoginEmail($_POST['new_email'] ?? '')
             : strtolower(trim((string) ($_POST['new_email'] ?? '')));
-        if ($newEmail === '' || !filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
-            $feedback = 'Error: Enter a valid email address.';
-        } else {
-            $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1');
-            $stmt->execute([$newEmail, $userId]);
-            if ($stmt->fetch()) {
-                $feedback = 'Error: Email already in use.';
-            } else {
-                $stmt = $pdo->prepare('UPDATE users SET email = ? WHERE id = ?');
-                if ($stmt->execute([$newEmail, $userId])) {
-                    $_SESSION['email'] = $newEmail;
-                    $cid = (int) (currentCompanyId() ?? ($_SESSION['company_id'] ?? 0));
-                    if ($cid > 0 && function_exists('syncUserCompanyIndex')) {
-                        syncUserCompanyIndex($cid, $userId);
-                    }
-                    $feedback = 'Email updated successfully.';
-                } else {
-                    $feedback = 'Error: Failed to update email.';
-                }
-            }
+        if ($newEmail !== strtolower((string) ($cur['email'] ?? ''))) {
+            $r = $psUpdateEmail($newEmail);
+            $r === true ? $changed++ : $errors[] = $r;
         }
-    }
-    // Handle Full Name Update
-    elseif (isset($_POST['new_full_name'])) {
-        $newFullName = trim($_POST['new_full_name']);
-        if (strlen($newFullName) >= 2) {
-            $oldFullName = $_SESSION['full_name'];
-            $stmt = $pdo->prepare("UPDATE users SET full_name = ? WHERE id = ?");
-            if ($stmt->execute([$newFullName, $userId])) {
-                $_SESSION['full_name'] = $newFullName;
-                
-                // Propagate name change to payment_vouchers (legacy text fields)
-                $voucherFields = ['applicant', 'prepared_by', 'checked_by', 'department_manager', 'general_manager'];
-                foreach ($voucherFields as $field) {
-                    try {
-                        $colCheck = $pdo->query("SHOW COLUMNS FROM payment_vouchers LIKE '$field'");
-                        if ($colCheck->fetch()) {
-                            $upd = $pdo->prepare("UPDATE payment_vouchers SET $field = ? WHERE $field = ?");
-                            $upd->execute([$newFullName, $oldFullName]);
-                        }
-                    } catch (Exception $e) { }
-                }
-                $feedback = 'Full Name updated successfully.';
-            } else {
-                $feedback = 'Error: Failed to update name.';
-            }
-        } else {
-            $feedback = 'Error: Full Name must be at least 2 characters.';
+        $waNumber = trim((string) ($_POST['whatsapp_number'] ?? ''));
+        if ($waNumber !== (string) ($cur['whatsapp_number'] ?? '')) {
+            $stmt = $pdo->prepare('UPDATE users SET whatsapp_number = ? WHERE id = ?');
+            $stmt->execute([$waNumber, $userId]);
+            $changed++;
         }
-    }
-    // Handle Username Update
-    elseif (isset($_POST['new_username'])) {
-        $newUsername = trim($_POST['new_username']);
-        if (strlen($newUsername) >= 3) {
-            // Check uniqueness
-            $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
-            $stmt->execute([$newUsername, $userId]);
-            
-            if ($stmt->fetch()) {
-                $feedback = 'Error: Username already taken.';
-            } else {
-                $stmt = $pdo->prepare("UPDATE users SET username = ? WHERE id = ?");
-                if ($stmt->execute([$newUsername, $userId])) {
-                    $_SESSION['username'] = $newUsername;
-                    $cid = (int) (currentCompanyId() ?? ($_SESSION['company_id'] ?? 0));
-                    if ($cid > 0) {
-                        syncUserCompanyIndex($cid, $userId);
-                    }
-                    $feedback = 'Username updated successfully.';
-                } else {
-                    $feedback = 'Error: Failed to update username.';
-                }
-            }
+
+        if ($errors) {
+            $feedback = 'Error: ' . implode(' ', $errors);
         } else {
-            $feedback = 'Error: Username must be at least 3 characters.';
+            $feedback = $changed ? 'Personal details saved successfully.' : 'No changes to save.';
         }
     }
     // Change password while logged in (current password not required)
@@ -276,14 +289,9 @@ $esc = static function ($value): string {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 };
 $employeeHeaderSubtitle = '<span class="ps-crumbs"><a href="' . $esc($profileBackUrl) . '">Home</a> <span class="ps-crumb-sep">/</span> <a href="#profile-photo">Account</a> <span class="ps-crumb-sep">/</span> <span class="ps-crumb-current">Profile Settings</span></span>';
-$psNameParts = preg_split('/\s+/', trim((string) ($_SESSION['full_name'] ?? 'User'))) ?: ['U'];
-$psInitials = strtoupper(substr((string) ($psNameParts[0] ?? 'U'), 0, 1) . (count($psNameParts) > 1 ? substr((string) end($psNameParts), 0, 1) : ''));
-$psNotificationsUrl = function_exists('company_url') ? company_url('notifications.php') : '../notifications.php';
 $employeeHeaderRightHtml = '<div class="ps-head-tools">'
     . '<label class="ps-head-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>'
     . '<input type="search" id="psHeadSearch" placeholder="Search anything..." autocomplete="off" aria-label="Search profile settings"></label>'
-    . '<a href="' . $esc($psNotificationsUrl) . '" class="ps-head-bell" title="Notifications" aria-label="Notifications"><i class="far fa-bell"></i><span class="ps-head-dot"></span></a>'
-    . '<span class="ps-head-avatar" title="' . $esc($_SESSION['full_name'] ?? '') . '">' . $esc($psInitials) . '</span>'
     . '</div>';
 $selectArrow = "background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E'); background-size: 1.25rem; background-repeat: no-repeat; background-position: right 12px center;";
 $saveEmailApiUrl = function_exists('company_url')
@@ -526,6 +534,12 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         #change-password .form-row:last-child { align-items: center; margin-bottom: 0; }
         #change-password .account-pw-strength-top:has(.account-pw-strength-score:empty) { display: none; }
         #change-password .btn-save-inline { border-radius: 8px !important; padding: 10px 22px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); }
+        .ps-coming-soon { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1px dashed #d8d4f5; border-radius: 10px; background: #faf9ff; }
+        .ps-coming-soon-icon { width: 38px; height: 38px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: #ede9fe; color: #7c3aed; font-size: 16px; }
+        .ps-coming-soon div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #64748b; }
+        .ps-coming-soon strong { font-size: 14px; font-weight: 600; color: #0f172a; }
+        html[data-theme="dark"] .ps-coming-soon { background: #0f172a; border-color: #334155; }
+        html[data-theme="dark"] .ps-coming-soon strong { color: #f8fafc; }
         .ps-pw-reset { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
         .ps-pw-reset-text { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #64748b; }
         .ps-pw-reset-text strong { font-size: 14px; font-weight: 600; color: #0f172a; }
@@ -569,17 +583,18 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         body.ps-page, body.ps-page.dashboard, body.ps-page .layout-main-wrapper,
         body.ps-page .layout-main-wrapper > .flex-grow-1, body.ps-page .employee-header { background: #f8fafc !important; }
         body.ps-page #native-sidebar .mb-auto { margin-bottom: 0 !important; }
-        body.ps-page .employee-header { padding-top: 1rem !important; }
+        body.ps-page .employee-header { padding-top: 0.4rem !important; }
         @media (min-width: 993px) {
             body.ps-page .employee-header { position: relative !important; }
-            body.ps-page .employee-header .header-right { position: absolute !important; top: 1.1rem; right: 1.25rem; }
+            body.ps-page .employee-header .header-right { position: absolute !important; top: 0.5rem; left: 50%; right: auto; transform: translateX(-50%); }
+            body.ps-page .ps-head-search { width: 340px; }
         }
         body.ps-page #native-sidebar .nav-link.active {
             background: #efedfc !important; color: #4338ca !important; border-radius: 10px; font-weight: 600;
         }
         body.ps-page #native-sidebar .nav-link.active i { color: #4338ca !important; }
         body.ps-page .employee-header-page-title { font-size: 26px !important; font-weight: 700 !important; color: #111827 !important; }
-        .ps-crumbs { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; }
+        .ps-crumbs { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; margin-top: 6px; }
         .ps-crumbs a { color: #5b54c9; text-decoration: none; }
         .ps-crumbs a:hover { text-decoration: underline; }
         .ps-crumb-sep { color: #9ca3af; }
@@ -768,9 +783,10 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
         .ps-upload-btn:hover { background: #4c38c4; }
         .ps-remove-btn { min-height: 2.15rem; padding: 0 0.9rem; border-radius: 4px; background: #f3f4f6; color: #374151; border-color: #e5e7eb; font-size: 0.74rem; font-weight: 500; }
 
-        #personal-details .inline-field-form .btn-save-inline { display: none; }
-        #personal-details .inline-field-form.is-dirty .btn-save-inline { display: inline-flex; }
-        #personal-details .inline-field-form { max-width: none; }
+        #personal-details .ps-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem; }
+        .ps-details-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+        .ps-details-save { display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 999px !important; font-size: 13px; }
+        .ps-details-save:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
         .acct-aside-card {
             display: flex; gap: 0.85rem; align-items: flex-start; padding: 1rem;
@@ -827,7 +843,8 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             .main-content-wrapper { padding: 0 0.85rem 2.5rem !important; }
             .ps-body { grid-template-columns: 1fr; }
             .ps-hero { flex-direction: column; align-items: flex-start; }
-            .ps-details-grid { grid-template-columns: 1fr; }
+            .ps-details-grid, #personal-details .ps-details-grid { grid-template-columns: 1fr; }
+            .ps-details-save { width: 100%; justify-content: center; }
             .form-row { grid-template-columns: 1fr; gap: 8px; margin-bottom: 18px; }
             .form-label { padding-top: 0; font-size: 13px; }
             .inline-field-form { flex-direction: column; align-items: stretch; }
@@ -887,13 +904,8 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                         <div class="ps-hero-chips">
                             <span class="ps-hero-handle">@<?= $esc($user['username'] ?? '') ?></span>
                             <span class="profile-badge"><?= $esc($roleLabel) ?></span>
-                            <span class="profile-badge profile-badge-success"><?= $isActiveUser ? 'Active' : 'Inactive' ?></span>
                         </div>
                         <p class="ps-hero-email"><?= $esc($user['email'] ?? '') ?></p>
-                        <div class="ps-hero-meta">
-                            <span><i class="far fa-calendar"></i> Joined <?= $esc($joinedLabel) ?></span>
-                            <span><i class="fas fa-pen"></i> <?= $currentSig ? 'Signature on file' : 'Signature missing' ?></span>
-                        </div>
                     </div>
                 </div>
                 <a href="<?= $esc($logoutUrl) ?>" class="ps-logout"><i class="fas fa-arrow-right-from-bracket"></i> Log out</a>
@@ -902,9 +914,9 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             <nav class="section-nav" aria-label="Profile sections">
                 <ul>
                     <li><a href="#profile-photo" class="is-active"><i class="far fa-user"></i> Profile</a></li>
-                    <li><a href="#personal-details"><i class="fas fa-table-cells-large"></i> Details</a></li>
-                    <li><a href="#change-password"><i class="fas fa-shield-halved"></i> Security</a></li>
-                    <li><a href="#digital-signature"><i class="fas fa-pen"></i> Signature</a></li>
+                    <li><a href="#personal-details"><i class="far fa-id-card"></i> Details</a></li>
+                    <li><a href="#change-password"><i class="fas fa-lock"></i> Security</a></li>
+                    <li><a href="#digital-signature"><i class="fas fa-signature"></i> Signature</a></li>
                     <li><a href="#personal-email"><i class="far fa-envelope"></i> Email</a></li>
                 </ul>
             </nav>
@@ -995,6 +1007,16 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                         <p class="section-subtitle">Configure your personal IMAP/SMTP credentials for the email module.</p>
                     </div>
 				</div>
+                <?php $psEmailComingSoon = true; ?>
+                <?php if ($psEmailComingSoon): ?>
+                <div class="ps-coming-soon">
+                    <span class="ps-coming-soon-icon"><i class="far fa-clock"></i></span>
+                    <div>
+                        <strong>Coming soon</strong>
+                        <span>Connecting your personal mailbox will be available in a future update.</span>
+                    </div>
+                </div>
+                <?php else: ?>
                 <form id="emailSettingsForm" onsubmit="saveEmailSettings(event)">
                     <p class="subsection-label">Incoming Server (IMAP)</p>
                     <div class="form-row">
@@ -1071,6 +1093,7 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                         </button>
                     </div>
                 </form>
+                <?php endif; ?>
             </section>
                     </div>
 
@@ -1602,13 +1625,17 @@ var psShowTab = (function () {
 })();
 
 (function () {
-    document.querySelectorAll('#personal-details .inline-field-form').forEach(function (form) {
-        var input = form.querySelector('input');
-        if (!input) return;
-        input.addEventListener('input', function () {
-            form.classList.toggle('is-dirty', input.value !== input.defaultValue);
-        });
-    });
+    var detailsForm = document.getElementById('psDetailsForm');
+    if (detailsForm) {
+        var detailsSave = detailsForm.querySelector('.ps-details-save');
+        var detailsInputs = detailsForm.querySelectorAll('input:not([type="hidden"])');
+        var syncDetailsSave = function () {
+            var dirty = Array.prototype.some.call(detailsInputs, function (i) { return i.value !== i.defaultValue; });
+            if (detailsSave) detailsSave.disabled = !dirty;
+        };
+        detailsInputs.forEach(function (i) { i.addEventListener('input', syncDetailsSave); });
+        syncDetailsSave();
+    }
 
     var search = document.getElementById('psHeadSearch');
     if (!search) return;

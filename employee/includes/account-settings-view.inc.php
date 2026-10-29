@@ -8,7 +8,7 @@
 $esc = static function ($value): string {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 };
-$forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-password.php') : '../forgot-password.php';
+$forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-password') : '../forgot-password.php';
 ?>
 <section class="editor-section" id="profile-photo">
     <div class="section-header ps-sec-head">
@@ -56,50 +56,42 @@ $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-passwo
             <p class="section-subtitle">Update your name, contact information, and account identifiers.</p>
         </div>
     </div>
-    <div class="ps-details-grid">
-        <div>
-            <label class="form-label">Full Name</label>
-            <form method="post" class="inline-field-form">
-                <div class="ps-icon-field" style="flex:1;min-width:0;">
+    <form method="post" id="psDetailsForm">
+        <input type="hidden" name="action" value="save_personal_details">
+        <div class="ps-details-grid">
+            <div>
+                <label class="form-label" for="psFullName">Full Name</label>
+                <div class="ps-icon-field">
                     <i class="fas fa-user"></i>
-                    <input type="text" name="new_full_name" class="form-input" value="<?= $esc($user['full_name'] ?? '') ?>" required minlength="2">
+                    <input type="text" id="psFullName" name="new_full_name" class="form-input" value="<?= $esc($user['full_name'] ?? '') ?>" required minlength="2">
                 </div>
-                <button type="submit" class="btn-save btn-save-inline">Update</button>
-            </form>
-        </div>
-        <div>
-            <label class="form-label">Username</label>
-            <form method="post" class="inline-field-form">
-                <div class="ps-icon-field" style="flex:1;min-width:0;">
+            </div>
+            <div>
+                <label class="form-label" for="psUsername">Username</label>
+                <div class="ps-icon-field">
                     <i class="fas fa-at"></i>
-                    <input type="text" name="new_username" class="form-input" value="<?= $esc($user['username'] ?? '') ?>" required minlength="3">
+                    <input type="text" id="psUsername" name="new_username" class="form-input" value="<?= $esc($user['username'] ?? '') ?>" required minlength="3">
                 </div>
-                <button type="submit" class="btn-save btn-save-inline">Update</button>
-            </form>
-        </div>
-        <div>
-            <label class="form-label">Email</label>
-            <form method="post" class="inline-field-form">
-                <div class="ps-icon-field" style="flex:1;min-width:0;">
+            </div>
+            <div>
+                <label class="form-label" for="psEmail">Email</label>
+                <div class="ps-icon-field">
                     <i class="fas fa-envelope"></i>
-                    <input type="email" name="new_email" class="form-input" value="<?= $esc($user['email'] ?? '') ?>" required autocomplete="email">
+                    <input type="email" id="psEmail" name="new_email" class="form-input" value="<?= $esc($user['email'] ?? '') ?>" required autocomplete="email">
                 </div>
-                <button type="submit" class="btn-save btn-save-inline">Update</button>
-            </form>
-        </div>
-    </div>
-    <div class="form-row" style="margin-top:1rem;">
-        <label class="form-label">WhatsApp</label>
-        <div>
-            <form method="post" class="inline-field-form">
-                <div class="ps-icon-field" style="flex:1;min-width:0;">
+            </div>
+            <div>
+                <label class="form-label" for="psWhatsapp">WhatsApp</label>
+                <div class="ps-icon-field">
                     <i class="fas fa-phone"></i>
-                    <input type="text" name="whatsapp_number" class="form-input" value="<?= $esc($user['whatsapp_number'] ?? '') ?>" placeholder="+255 712 345 678">
+                    <input type="text" id="psWhatsapp" name="whatsapp_number" class="form-input" value="<?= $esc($user['whatsapp_number'] ?? '') ?>" placeholder="+255 712 345 678">
                 </div>
-                <button type="submit" class="btn-save btn-save-inline">Save</button>
-            </form>
+            </div>
         </div>
-    </div>
+        <div class="ps-details-actions">
+            <button type="submit" class="btn-save ps-details-save"><i class="fas fa-floppy-disk"></i> Save changes</button>
+        </div>
+    </form>
 </section>
 
 <section class="editor-section" id="change-password">

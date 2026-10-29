@@ -2,6 +2,17 @@
 require_once 'includes/functions.php';
 require_once 'includes/mailer.php';
 
+$fpRequestPath = (string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+if ($_SERVER['REQUEST_METHOD'] === 'GET'
+    && str_ends_with(strtolower($fpRequestPath), '/forgot-password.php')
+    && function_exists('getRequestedCompanySlug') && getRequestedCompanySlug() !== '') {
+    $fpQuery = $_GET;
+    unset($fpQuery['company_slug']);
+    header('Location: ' . company_url('forgot-password', getRequestedCompanySlug()) . ($fpQuery ? '?' . http_build_query($fpQuery) : ''), true, 301);
+    exit;
+}
+$fpLoginUrl = function_exists('company_url') ? company_url('login') : 'login.php';
+
 $message = '';
 $error = '';
 
@@ -49,7 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password - PAYMENT VOUCHER SYSTEM</title>
+    <title>Forgot Password</title>
+    <?php require_once __DIR__ . '/includes/partials/favicon.php'; echo erp_favicon_tags(); ?>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
@@ -89,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <header class="fp-top">
         <?php $fpLogo = function_exists('getCompanyLogoUrl') ? getCompanyLogoUrl() : ''; ?>
         <?php if ($fpLogo !== ''): ?>
-            <a href="login.php"><img src="<?= htmlspecialchars($fpLogo) ?>" alt="Logo"></a>
+            <a href="<?= htmlspecialchars($fpLoginUrl) ?>"><img src="<?= htmlspecialchars($fpLogo) ?>" alt="Logo"></a>
         <?php endif; ?>
     </header>
 
@@ -114,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </form>
 
-                <a href="login.php" class="fp-back">&larr; Back to Login</a>
+                <a href="<?= htmlspecialchars($fpLoginUrl) ?>" class="fp-back">&larr; Back to Login</a>
             </section>
 
             <div class="fp-art" aria-hidden="true">

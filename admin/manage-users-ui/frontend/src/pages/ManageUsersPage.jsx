@@ -24,6 +24,7 @@ import {
   UserX,
   Users,
 } from 'lucide-react'
+import registerIllustration from '../assets/register-illustration.jpg'
 
 function getCfg() {
   return window.__MANAGE_USERS_CFG__ || {}
@@ -256,8 +257,6 @@ export default function ManageUsersPage() {
     bulkBase + (bulkIncludeSelf ? 1 : 0) + (bulkIncludeAdmin && bulkHasAdmin ? 1 : 0)
 
   const pwNewRef = useRef(null)
-  const pwCopyRef = useRef(null)
-
   return (
     <div className="mu-desk">
       {toast ? (
@@ -274,6 +273,14 @@ export default function ManageUsersPage() {
           <button type="button" className="mu-toast-close" aria-label="Dismiss" onClick={dismissToast}>&times;</button>
         </div>
       ) : null}
+      {registerOpen ? (
+        <RegisterView
+          formAction={formAction}
+          departments={departments}
+          onCancel={() => setRegisterOpen(false)}
+        />
+      ) : (
+      <>
       <header className="mu-page-header">
         <div>
           <h1>User Management</h1>
@@ -591,24 +598,8 @@ export default function ManageUsersPage() {
           </nav>
         ) : null}
       </div>
-
-      <Overlay open={registerOpen} onClose={() => setRegisterOpen(false)}>
-        <ModalHead title="Register New Employee" onClose={() => setRegisterOpen(false)} />
-        <form method="POST" action={formAction}>
-          <input type="hidden" name="action" value="register" />
-          <FormField label="Full Name (used as username)" name="full_name" required placeholder="e.g. John Doe" />
-          <FormField label="Email Address" name="email" type="email" required placeholder="john@example.com" />
-          <label className="mu-form-label">Department</label>
-          <select name="department" className="mu-input" required defaultValue="">
-            <option value="" disabled>Select department</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-          <PasswordPair prefix="reg" fieldNames={{ a: 'password', b: 'confirm_password' }} />
-          <ModalActions onCancel={() => setRegisterOpen(false)} submitLabel="Register Employee" />
-        </form>
-      </Overlay>
+      </>
+      )}
 
       <Overlay open={passwordOpen} onClose={() => setPasswordOpen(false)} className="mu-panel-pw">
         <div className="mu-pw-head">
@@ -629,7 +620,6 @@ export default function ManageUsersPage() {
           <PasswordPair
             prefix="new"
             fieldNames={{ a: 'new_password', b: 'confirm_password' }}
-            copyRef={pwCopyRef}
             inputRef={pwNewRef}
           />
           <ModalActions onCancel={() => setPasswordOpen(false)} submitLabel="Save password" />
@@ -742,6 +732,68 @@ function StatCard({ icon, tone, value, label }) {
   )
 }
 
+function RegisterView({ formAction, departments, onCancel }) {
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+    const onKey = (e) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
+  return (
+    <section className="mu-reg">
+      <nav className="mu-reg-crumbs" aria-label="Breadcrumb">
+        <button type="button" onClick={onCancel}>
+          <ChevronLeft size={15} aria-hidden />
+          User Management
+        </button>
+        <span aria-hidden>/</span>
+        <span aria-current="page">Register employee</span>
+      </nav>
+      <div className="mu-reg-card">
+        <aside className="mu-reg-art">
+          <img src={registerIllustration} alt="" />
+          <p>
+            Bring a new teammate on board
+            <br />
+            in less than a minute!
+          </p>
+        </aside>
+        <div className="mu-reg-form">
+          <h2 className="mu-reg-title">Register New Employee</h2>
+          <p className="mu-reg-sub">We'll email them a login link and greet them with a welcome notification.</p>
+          <form method="POST" action={formAction} autoComplete="off">
+            <input type="hidden" name="action" value="register" />
+            <div className="mu-reg-grid">
+              <FormField label="Full Name (used as username)" name="full_name" required placeholder="e.g. John Doe" />
+              <FormField label="Email Address" name="email" type="email" required placeholder="john@example.com" />
+            </div>
+            <div className="mu-form-group">
+              <label className="mu-form-label" htmlFor="mu_reg_department">Department</label>
+              <select id="mu_reg_department" name="department" className="mu-input" required defaultValue="">
+                <option value="" disabled>Select department</option>
+                {departments.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+            <PasswordPair prefix="reg" fieldNames={{ a: 'password', b: 'confirm_password' }} />
+            <div className="mu-reg-actions">
+              <button type="submit" className="mu-reg-submit">
+                <UserPlus size={16} aria-hidden />
+                Register Employee
+              </button>
+              <button type="button" className="mu-reg-cancel" onClick={onCancel}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function ModalHead({ title, onClose }) {
   return (
     <div className="mu-modal-head">
@@ -769,7 +821,7 @@ function FormField({ label, name, type = 'text', required, placeholder }) {
   )
 }
 
-function PasswordPair({ prefix, fieldNames, copyRef, inputRef }) {
+function PasswordPair({ prefix, fieldNames, inputRef }) {
   const names = fieldNames || {
     a: prefix === 'new' ? 'new_password' : `${prefix}_password`,
     b: prefix === 'new' ? 'confirm_password' : `${prefix}_confirm_password`,
@@ -840,13 +892,10 @@ function PasswordPair({ prefix, fieldNames, copyRef, inputRef }) {
             <span className="mu-copy-icon" aria-hidden>
               <FileText size={17} />
             </span>
-            <div>
+            <div className="mu-copy-text">
               <div className="mu-copy-title">Copy password for employee</div>
               <div className="mu-copy-sub">Share this password with the employee securely.</div>
             </div>
-          </div>
-          <div className="mu-copy-row">
-            <input ref={copyRef} readOnly value={copyVal} placeholder="Generate or type a password above" />
             <button
               type="button"
               className="mu-btn-copy"

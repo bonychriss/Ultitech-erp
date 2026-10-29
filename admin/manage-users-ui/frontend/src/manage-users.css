@@ -506,6 +506,14 @@ table.mu-table tbody tr:hover { background: #fafafa; }
 }
 .mu-copy-title { font-size: 0.875rem; font-weight: 700; color: #111827; }
 .mu-copy-sub { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+.mu-copy-text { flex: 1; min-width: 0; }
+.mu-copy-box .mu-copy-head.mu-copy-head { margin-bottom: 0; }
+.mu-copy-head .mu-btn-copy { flex-shrink: 0; height: 36px; padding: 0 14px; font-size: 0.8125rem; }
+.mu-panel-pw .mu-copy-box .mu-copy-sub { display: block; }
+@media (max-width: 520px) {
+  .mu-copy-box .mu-copy-head.mu-copy-head { flex-wrap: wrap; }
+  .mu-copy-head .mu-btn-copy { width: 100%; justify-content: center; }
+}
 .mu-copy-row { display: flex; gap: 10px; }
 .mu-copy-row input {
   flex: 1;
@@ -646,6 +654,85 @@ html[data-theme="dark"] .mu-toast .mu-toast-close:hover { background: #2a3942; c
 @media (max-width: 640px) { .mu-toast { top: 12px; left: 12px; right: 12px; min-width: 0; max-width: none; } }
 
 .mu-panel.mu-panel-pw { padding: 14px 18px; }
+
+.mu-reg { max-width: 960px; margin: 0 auto; }
+.mu-reg-crumbs { display: flex; align-items: center; gap: 8px; margin: 4px 0 14px; font-size: 14px; color: #64748b; }
+.mu-reg-crumbs button {
+  display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none;
+  color: #4f46e5; font: inherit; font-weight: 600; cursor: pointer;
+}
+.mu-reg-crumbs button:hover { text-decoration: underline; }
+.mu-reg-crumbs [aria-current] { color: #111827; font-weight: 500; }
+.mu-reg-card {
+  display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  background: #fff; border: 1px solid #eef0f4; border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06); overflow: hidden;
+}
+.mu-reg-art {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: 28px 28px; background: #fff;
+}
+.mu-reg-art img { width: 100%; max-width: 360px; height: auto; display: block; }
+.mu-reg-art p { margin: 0; text-align: center; font-size: 0.95rem; line-height: 1.45; font-weight: 500; color: #334155; }
+.mu-reg-form { padding: 26px 30px; border-left: 1px solid #f1f5f9; }
+.mu-reg-form .mu-reg-title.mu-reg-title { margin: 0; font-size: 1.35rem; font-weight: 700; color: #4f46e5; letter-spacing: -0.01em; }
+.mu-reg-sub { margin: 4px 0 16px; font-size: 0.8rem; color: #64748b; }
+.mu-reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.mu-reg .mu-form-group { margin-bottom: 10px; }
+.mu-reg .mu-form-label { font-size: 0.75rem; font-weight: 600; color: #374151; margin-bottom: 4px; }
+.mu-reg .mu-input {
+  height: 36px; padding: 0 12px; border: 1px solid #e2e8f0; border-radius: 9px !important;
+  font-size: 0.8125rem; background: #fff; color: #111827;
+}
+.mu-reg .mu-input:focus { outline: none; border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+.mu-reg .mu-pw-field .mu-input { padding-right: 190px; }
+.mu-reg .mu-copy-box { margin-top: 2px; padding: 10px 12px; }
+.mu-reg .mu-copy-head { margin-bottom: 8px; gap: 10px; }
+.mu-reg .mu-copy-row input,
+.mu-reg .mu-btn-copy { height: 34px; font-size: 0.8125rem; }
+.mu-reg .mu-copy-icon { width: 28px; height: 28px; border-radius: 8px; }
+.mu-reg .mu-copy-title { font-size: 0.8125rem; }
+.mu-reg .mu-copy-sub { font-size: 0.7rem; }
+.mu-reg .mu-pw-gen,
+.mu-reg .mu-pw-show { height: 26px; padding: 0 9px; font-size: 0.75rem; }
+.mu-reg-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.mu-reg-submit {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 40px;
+  border: 0; border-radius: 10px !important; background: #1f2937; color: #fff; font-size: 0.875rem; font-weight: 600; cursor: pointer;
+}
+.mu-reg-submit:hover { background: #111827; }
+.mu-reg-cancel {
+  width: 100%; height: 36px; border: 1px solid #e5e7eb; border-radius: 10px !important; background: #fff;
+  color: #374151; font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+}
+.mu-reg-cancel:hover { background: #f9fafb; }
+html[data-theme="dark"] .mu-reg-crumbs { color: #8696a0; }
+html[data-theme="dark"] .mu-reg-crumbs button { color: #a5b4fc; }
+html[data-theme="dark"] .mu-reg-crumbs [aria-current] { color: #e9edef; }
+html[data-theme="dark"] .mu-reg-card { background: #111b21; border-color: #2a3942; box-shadow: none; }
+html[data-theme="dark"] .mu-reg-art { background: #111b21; }
+html[data-theme="dark"] .mu-reg-art img { border-radius: 14px; opacity: 0.92; }
+html[data-theme="dark"] .mu-reg-art p { color: #e9edef; }
+html[data-theme="dark"] .mu-reg-form { border-left-color: #2a3942; }
+html[data-theme="dark"] .mu-reg-form .mu-reg-title.mu-reg-title { color: #a5b4fc; }
+html[data-theme="dark"] .mu-reg-sub,
+html[data-theme="dark"] .mu-reg .mu-form-label { color: #8696a0; }
+html[data-theme="dark"] .mu-reg .mu-input { background: #202c33; border-color: #2a3942; color: #e9edef; }
+html[data-theme="dark"] .mu-reg-submit { background: #6366f1; }
+html[data-theme="dark"] .mu-reg-submit:hover { background: #4f46e5; }
+html[data-theme="dark"] .mu-reg-cancel { background: transparent; border-color: #3b4a54; color: #e9edef; }
+@media (max-width: 900px) {
+  .mu-reg-card { grid-template-columns: 1fr; }
+  .mu-reg-art { padding: 24px 20px 8px; gap: 12px; }
+  .mu-reg-art img { max-width: 240px; }
+  .mu-reg-art p { font-size: 0.875rem; }
+  .mu-reg-form { padding: 22px 18px 24px; border-left: 0; border-top: 1px solid #f1f5f9; }
+  .mu-reg-form .mu-reg-title.mu-reg-title { font-size: 1.25rem; }
+  .mu-reg-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .mu-reg .mu-pw-field .mu-input { padding-right: 14px; }
+}
 .mu-panel-pw .mu-pw-head { margin-bottom: 10px; gap: 10px; align-items: center; }
 .mu-panel-pw .mu-pw-head-icon { width: 34px; height: 34px; border-radius: 10px; }
 .mu-panel-pw .mu-pw-head-text { padding-top: 0; }
@@ -671,6 +758,7 @@ html[data-theme="dark"] .mu-toast .mu-toast-close:hover { background: #2a3942; c
   .mu-pw-field .mu-input { padding-right: 14px; }
   .mu-pw-tools { position: static; transform: none; margin-top: 8px; justify-content: flex-end; }
   .mu-copy-row { flex-direction: column; }
+  .mu-copy-row input { flex: none; }
 }
 .mu-dept-cell { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .mu-extra-roles { display: flex; flex-wrap: wrap; gap: 4px; }

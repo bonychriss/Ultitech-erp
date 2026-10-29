@@ -561,7 +561,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     syncUserCompanyIndex($company_id, $newUserId);
                                 }
                                 manageUsersNotifyNewEmployee($pdo, $newUserId, $full_name, (string) $department, (bool) $hasCompanyId, (int) $company_id);
-                                $success = 'Employee registered successfully!';
+                                if (manageUsersSendLoginLinkEmail($email, $full_name, (string) $department)) {
+                                    $success = 'Employee registered. A login link was emailed to ' . $email . '.';
+                                } else {
+                                    $success = 'Employee registered, but the login email could not be sent. Share the login link with them manually.';
+                                }
                             } else {
                                 $error = 'Registration failed. Please try again.';
                             }

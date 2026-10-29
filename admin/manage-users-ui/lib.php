@@ -197,6 +197,78 @@ function manageUsersNotifyNewEmployee(PDO $pdo, int $newUserId, string $fullName
     }
 }
 
+function manageUsersAbsoluteUrl(string $url): string
+{
+    if ($url === '' || preg_match('#^https?://#i', $url)) {
+        return $url;
+    }
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443
+        || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+    return ($https ? 'https://' : 'http://') . $host . '/' . ltrim($url, '/');
+}
+
+/**
+ * Email the new employee a link to the company login page. Never includes the password.
+ */
+function manageUsersSendLoginLinkEmail(string $email, string $fullName, string $department): bool
+{
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    if (!function_exists('sendEmail')) {
+        $mailer = dirname(__DIR__, 2) . '/includes/mailer.php';
+        if (is_file($mailer)) {
+            require_once $mailer;
+        }
+    }
+    if (!function_exists('sendEmail')) {
+        return false;
+    }
+
+    $company = manageUsersCompanyLabel();
+    $loginUrl = manageUsersAbsoluteUrl(function_exists('company_url') ? company_url('login') : 'login.php');
+    $e = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+    $first = manageUsersFirstName($fullName);
+    $where = $company !== '' ? $company : 'the team';
+
+    $subject = 'Welcome to ' . $where . ' - your account is ready';
+    $body = '<!doctype html><html><body style="margin:0;padding:0;background:#f5f3ff;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;padding:32px 12px;"><tr><td align="center">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #ede9fe;border-radius:16px;">'
+        . '<tr><td style="padding:32px 32px 8px;">'
+        . '<div style="font-size:13px;font-weight:bold;color:#7c3aed;letter-spacing:.04em;text-transform:uppercase;">' . $e($where) . '</div>'
+        . '<h1 style="margin:10px 0 0;font-size:22px;line-height:1.3;color:#111827;">Welcome aboard, ' . $e($first) . '!</h1>'
+        . '<p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#4b5563;">An account has been created for you'
+        . ($department !== '' ? ' in the <strong>' . $e($department) . '</strong> department' : '')
+        . '. Use the button below to sign in.</p>'
+        . '</td></tr>'
+        . '<tr><td style="padding:20px 32px 4px;">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#faf8ff;border:1px solid #ede9fe;border-radius:12px;">'
+        . '<tr><td style="padding:14px 16px;font-size:14px;line-height:1.7;color:#374151;">'
+        . '<strong>Login email:</strong> ' . $e($email) . '<br>'
+        . '<strong>Password:</strong> provided to you by your administrator'
+        . '</td></tr></table>'
+        . '</td></tr>'
+        . '<tr><td align="center" style="padding:24px 32px 8px;">'
+        . '<a href="' . $e($loginUrl) . '" style="display:inline-block;background:#1f2937;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:13px 32px;border-radius:10px;">Log in to your account</a>'
+        . '</td></tr>'
+        . '<tr><td style="padding:12px 32px 28px;font-size:12px;line-height:1.6;color:#6b7280;">'
+        . 'Or paste this link into your browser:<br><a href="' . $e($loginUrl) . '" style="color:#6d28d9;word-break:break-all;">' . $e($loginUrl) . '</a>'
+        . '<br><br>Please change your password after your first login (Profile Settings &rarr; Password). If you were not expecting this email, you can ignore it.'
+        . '</td></tr>'
+        . '</table></td></tr></table></body></html>';
+
+    try {
+        return (bool) @sendEmail($email, $subject, $body, true);
+    } catch (Throwable $ex) {
+        error_log('manageUsersSendLoginLinkEmail: ' . $ex->getMessage());
+
+        return false;
+    }
+}
+
 function manageUsersFlashPasswordOnce($userName, $plainPassword): void
 {
     $_SESSION['manage_users_pw_flash'] = [

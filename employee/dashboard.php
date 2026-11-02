@@ -58,13 +58,15 @@ if (isset($_GET['msg'])) {
     $flashMsg = $msgMap[(string) $_GET['msg']] ?? '';
 }
 
+$dashboardModule = isset($_GET['module']) ? (string) $_GET['module'] : 'voucher';
 $dashboardConfig = [
     'myVouchersUrl' => company_url('employee/my-vouchers.php'),
+    'allVouchersUrl' => company_url('employee/my-vouchers.php?all=1'),
     'createUrl' => company_url('employee/create-voucher.php'),
     'viewUrl' => '../view-voucher.php',
     'editUrl' => 'edit-voucher.php',
     'deleteUrl' => 'delete-voucher.php',
-    'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'voucher',
+    'module' => $dashboardModule,
     'share' => true,
     'referenceToggleUrl' => company_url('toggle-voucher-reference.php'),
     'flash' => $flashMsg,
@@ -72,6 +74,13 @@ $dashboardConfig = [
 
 $page_title = 'Dashboard';
 $employeeHeaderTitle = 'Dashboard';
+$dashboardHomeUrl = company_url('select-module');
+$dashboardBreadcrumbLabel = $dashboardModule === 'voucher' ? 'Payment Vouchers' : 'Dashboard';
+$employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb dashboard-breadcrumb" aria-label="Breadcrumb">'
+    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($dashboardHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<span class="vv-breadcrumb-current" aria-current="page">' . htmlspecialchars($dashboardBreadcrumbLabel, ENT_QUOTES, 'UTF-8') . '</span>'
+    . '</nav>';
 $hideHeaderCompanyBranding = true;
 $GLOBALS['_erp_header_style_linked'] = false;
 ?>
@@ -109,13 +118,13 @@ $GLOBALS['_erp_header_style_linked'] = false;
         .main-content.dashboard-react-root {
             width: 100% !important;
             max-width: none !important;
-            padding: 0.25rem 1.25rem 2rem !important;
+            padding: 0 1.25rem 2rem !important;
             box-sizing: border-box;
             background: #f1f5f9 !important;
         }
         .main-content.dashboard-react-root #root { width: 100%; max-width: none; margin: 0; }
-        @media (max-width: 1024px) { .main-content.dashboard-react-root { padding: 1rem 0.875rem 1.5rem !important; } }
-        @media (max-width: 767.98px) { .main-content.dashboard-react-root { padding: 0.875rem 0.75rem 1.5rem !important; } }
+        @media (max-width: 1024px) { .main-content.dashboard-react-root { padding: 0.5rem 0.875rem 1.5rem !important; } }
+        @media (max-width: 767.98px) { .main-content.dashboard-react-root { padding: 0.375rem 0.75rem 1.5rem !important; } }
         /* Flatten the top header card on this page only + match the page bg */
         body.dashboard .header,
         body.dashboard .employee-header {
@@ -124,6 +133,39 @@ $GLOBALS['_erp_header_style_linked'] = false;
             background: #f1f5f9 !important;
             border: none !important;
             box-shadow: none !important;
+        }
+        body.dashboard .header.employee-header .vv-breadcrumb,
+        body.dashboard .header.employee-header .exp-desk-breadcrumb {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            margin: 0;
+            font-size: 0.82rem;
+            line-height: 1.3;
+        }
+        body.dashboard .header.employee-header .vv-breadcrumb-link {
+            color: #2563eb !important;
+            font-weight: 600;
+            text-decoration: none !important;
+        }
+        body.dashboard .header.employee-header .vv-breadcrumb-link:hover {
+            color: #1d4ed8 !important;
+            text-decoration: underline !important;
+        }
+        body.dashboard .header.employee-header .vv-breadcrumb-sep { color: #94a3b8; }
+        body.dashboard .header.employee-header .vv-breadcrumb-current {
+            color: #64748b;
+            font-weight: 600;
+        }
+        html[data-theme="dark"] body.dashboard .header.employee-header .vv-breadcrumb,
+        html[data-theme="dark"] body.dashboard .header.employee-header .vv-breadcrumb-link,
+        html[data-theme="dark"] body.dashboard .header.employee-header .vv-breadcrumb-sep,
+        html[data-theme="dark"] body.dashboard .header.employee-header .vv-breadcrumb-current {
+            color: #00a884 !important;
+        }
+        html[data-theme="dark"] body.dashboard .header.employee-header .vv-breadcrumb-link:hover {
+            color: #06cf9c !important;
         }
         /* Pin the dark-theme + notification icons to the very top of the header bar */
         body.dashboard .employee-header .header-content {

@@ -96,7 +96,7 @@ export default function LoginPage() {
                       type="text"
                       name="user"
                       id="user"
-                      placeholder="Your Name"
+                      placeholder="Email or username"
                       autoComplete="username"
                       value={loginUser}
                       onChange={(e) => setLoginUser(e.target.value)}

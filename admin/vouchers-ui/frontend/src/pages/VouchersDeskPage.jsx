@@ -69,10 +69,11 @@ const emptyFilters = {
   page: 1,
 }
 
-const ALLOWED_STATUS = new Set(['pending', 'approved', 'rejected', 'paid', 'posted', 'draft'])
+const ALLOWED_STATUS = new Set(['pending', 'confirming', 'approved', 'rejected', 'paid', 'posted', 'draft'])
 
 const STATUS_LABELS = {
   pending: 'Pending',
+  confirming: 'Confirming',
   approved: 'Approved',
   rejected: 'Rejected',
   paid: 'Paid',
@@ -345,6 +346,16 @@ function RowActionsMenu({
     icon: <Eye size={14} aria-hidden="true" />,
     href: `${URLS.view}?id=${v.id}${APPEND_MODULE}`,
   })
+  items.push({
+    key: 'reference',
+    label: v.is_reference ? 'Unmark reference' : 'Mark as reference',
+    icon: <Star size={14} aria-hidden="true" />,
+    disabled: togglingRef === v.id,
+    onClick: () => {
+      onToggleReference(v)
+      onClose()
+    },
+  })
   if (canEdit) {
     items.push({
       key: 'edit',
@@ -442,17 +453,6 @@ function RowActionsMenu({
   return (
     <div className="pv-actions-menu">
       <button
-        type="button"
-        className={`pv-star${v.is_reference ? ' is-marked' : ''}`}
-        title={v.is_reference ? 'Reference voucher (click to unmark)' : 'Mark as reference'}
-        aria-label={v.is_reference ? 'Unmark reference' : 'Mark as reference'}
-        aria-pressed={v.is_reference}
-        disabled={togglingRef === v.id}
-        onClick={() => onToggleReference(v)}
-      >
-        <Star size={14} fill={v.is_reference ? 'currentColor' : 'none'} aria-hidden="true" />
-      </button>
-      <button
         ref={btnRef}
         type="button"
         className={`pv-icon-btn pv-menu-trigger${open ? ' is-open' : ''}`}
@@ -507,6 +507,7 @@ export default function VouchersDeskPage() {
   const [draftFilters, setDraftFilters] = useState(() => filtersFromUrl())
   const prefixTouchedRef = useRef(false)
   const [vouchers, setVouchers] = useState([])
+  const [selectedVoucherIds, setSelectedVoucherIds] = useState(() => new Set())
   const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total_records: 0, per_page: 100 })
   const [prefixOptions, setPrefixOptions] = useState([])
   const [payAccounts, setPayAccounts] = useState([])
@@ -982,6 +983,22 @@ export default function VouchersDeskPage() {
   const showingPage = pagination.page || 1
   const totalPages = pagination.total_pages || 1
   const activeFilterChips = buildActiveFilterChips(filters)
+  const statusOnlyFilter = activeFilterChips.length === 1 && activeFilterChips[0].key === 'status'
+  const showActiveFilterChips = activeFilterChips.length > 0 && !statusOnlyFilter
+  const selectedVisibleVoucherCount = vouchers.filter((voucher) => selectedVoucherIds.has(Number(voucher.id))).length
+  const allVisibleVouchersSelected = vouchers.length > 0 && selectedVisibleVoucherCount === vouchers.length
+
+  function toggleVisibleVoucherSelection(checked) {
+    setSelectedVoucherIds((current) => {
+      const next = new Set(current)
+      vouchers.forEach((voucher) => {
+        const id = Number(voucher.id)
+        if (checked) next.add(id)
+        else next.delete(id)
+      })
+      return next
+    })
+  }
 
   function renderFiltersPanel() {
     if (!filtersOpen || !filterPanelStyle) return null
@@ -1051,6 +1068,7 @@ export default function VouchersDeskPage() {
                 >
                   <option value="">All statuses</option>
                   <option value="pending">Pending</option>
+                  <option value="confirming">Confirming</option>
                   <option value="approved">Approved</option>
                   <option value="rejected">Rejected</option>
                   <option value="paid">Paid</option>
@@ -1243,7 +1261,7 @@ export default function VouchersDeskPage() {
         )
       })()}
 
-      {activeFilterChips.length > 0 && (
+      {showActiveFilterChips && (
         <div className="pv-active-filters" aria-label="Active filters">
           {activeFilterChips.map((chip) => (
             <button
@@ -1313,26 +1331,38 @@ export default function VouchersDeskPage() {
             <div className="pv-table-wrap">
               <table className="pv-table pv-table--full">
                 <colgroup>
-                  <col style={{ width: '3.5%' }} />
-                  <col style={{ width: '16%' }} />
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '9%' }} />
-                  <col style={{ width: FEAT.share ? '14%' : '18%' }} />
+                  <col style={{ width: '6%' }} />
                   <col style={{ width: '13%' }} />
-                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '12.5%' }} />
+                  <col style={{ width: '9.5%' }} />
+                  <col style={{ width: FEAT.share ? '25%' : '29%' }} />
+                  <col style={{ width: '14%' }} />
                   <col style={{ width: '9%' }} />
                   {FEAT.share ? <col style={{ width: '4.5%' }} /> : null}
-                  <col style={{ width: FEAT.share ? '7%' : '7.5%' }} />
+                  <col style={{ width: FEAT.share ? '6.5%' : '7%' }} />
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>S/N</th>
+                    <th className="pv-serial-cell">
+                      <label className="pv-check-wrap">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all visible vouchers"
+                          checked={allVisibleVouchersSelected}
+                          ref={(input) => {
+                            if (input) input.indeterminate = selectedVisibleVoucherCount > 0 && !allVisibleVouchersSelected
+                          }}
+                          onChange={(event) => toggleVisibleVoucherSelection(event.target.checked)}
+                          onClick={(event) => event.stopPropagation()}
+                        />
+                        <span>S/N</span>
+                      </label>
+                    </th>
                     <th>Voucher No.</th>
                     <th>Payee</th>
                     <th>Prepared By</th>
                     <th className="pv-col-desc">Description</th>
-                    <th className="pv-col-amount">Amount</th>
-                    <th>Date Created</th>
+                    <th className="pv-col-amount-date">Amount / Date</th>
                     <th>Status</th>
                     {FEAT.share && <th>Share</th>}
                     <th>Actions</th>
@@ -1351,25 +1381,47 @@ export default function VouchersDeskPage() {
                       onClick={canView ? () => goView(v.id) : undefined}
                       style={canView ? undefined : { cursor: 'default' }}
                     >
-                      <td>{v.sn}</td>
+                      <td className="pv-serial-cell" onClick={(event) => event.stopPropagation()}>
+                        <label className="pv-check-wrap">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select voucher ${v.voucher_no}`}
+                            checked={selectedVoucherIds.has(Number(v.id))}
+                            onChange={(event) => {
+                              const checked = event.target.checked
+                              setSelectedVoucherIds((current) => {
+                                const next = new Set(current)
+                                if (checked) next.add(Number(v.id))
+                                else next.delete(Number(v.id))
+                                return next
+                              })
+                            }}
+                          />
+                          <span>{v.sn}</span>
+                        </label>
+                      </td>
                       <td className="pv-voucher-no">
                         <span className="pv-voucher-no-main">{v.voucher_no}</span>
                         {v.is_restricted ? <Lock size={12} aria-label="Restricted" className="pv-lock-ic" /> : null}
                       </td>
                       {canView ? (
                         <>
-                          <td>
+                          <td className="pv-mobile-payee">
                             <span className="pv-payee">{v.payee_name}</span>
                           </td>
-                          <td>
+                          <td className="pv-mobile-prepared">
                             <span className="pv-prepared">{v.prepared_by}</span>
                             {v.department ? <span className="pv-dept">{v.department}</span> : null}
                           </td>
                           <td className="pv-col-desc">
                             <div className="pv-desc">{v.description || '—'}</div>
                           </td>
-                          <td className="pv-col-amount">
+                          <td className="pv-col-amount-date">
                             <span className="pv-amount">{formatAmount(v.currency, v.total_amount)}</span>
+                            <span className="pv-date-time">
+                              <span className="pv-date">{formatDate(v.date_created)}</span>
+                              {formatTime(v.created_at) ? <span className="pv-time">{formatTime(v.created_at)}</span> : null}
+                            </span>
                           </td>
                         </>
                       ) : (
@@ -1377,15 +1429,11 @@ export default function VouchersDeskPage() {
                           <td colSpan={4} className="pv-restricted">(Restricted Content)</td>
                         </>
                       )}
-                      <td>
-                        <span className="pv-date">{formatDate(v.date_created)}</span>
-                        {formatTime(v.created_at) ? <span className="pv-time">{formatTime(v.created_at)}</span> : null}
-                      </td>
                       <td className="pv-status-cell">
                         <span className={statusBadgeClass(v)}>{v.display_status}</span>
                       </td>
                       {FEAT.share && (
-                        <td onClick={(e) => e.stopPropagation()}>
+                        <td className="pv-mobile-share" onClick={(e) => e.stopPropagation()}>
                           {canView ? (
                             <button
                               type="button"

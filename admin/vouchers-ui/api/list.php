@@ -94,9 +94,11 @@ try {
             // Posted only (ledger-synced vouchers).
             $where_conditions[] = 'IFNULL(pv.is_posted, 0) = 1';
         } elseif ($status_filter === 'draft') {
-            $where_conditions[] = "(LOWER(COALESCE(pv.status,'')) = 'draft' OR IFNULL(pv.is_draft,0) = 1 OR (pv.status IN ('pending', 'confirming') AND (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.payee_name,'') = '(Draft)' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))))";
+            $where_conditions[] = "(LOWER(COALESCE(pv.status,'')) = 'draft' OR IFNULL(pv.is_draft,0) = 1 OR pv.status = 'confirming' OR (pv.status IN ('pending', 'confirming') AND (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.payee_name,'') = '(Draft)' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))))";
         } elseif ($status_filter === 'pending') {
-            $where_conditions[] = "pv.status IN ('pending', 'confirming') AND IFNULL(pv.is_draft,0) = 0 AND NOT (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.payee_name,'') = '(Draft)' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))";
+            $where_conditions[] = "pv.status = 'pending' AND IFNULL(pv.is_draft,0) = 0 AND NOT (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.payee_name,'') = '(Draft)' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))";
+        } elseif ($status_filter === 'confirming') {
+            $where_conditions[] = "pv.status = 'confirming' AND IFNULL(pv.is_draft,0) = 0 AND NOT (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.payee_name,'') = '(Draft)' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))";
         } elseif ($status_filter === 'approved') {
             // Status approved only — exclude paid/posted (those show under Paid / Posted).
             $where_conditions[] = "pv.status = 'approved' AND IFNULL(pv.is_paid, 0) = 0 AND IFNULL(pv.is_posted, 0) = 0";
@@ -303,10 +305,14 @@ try {
     }
     $statsQuery = "SELECT
         COUNT(*) as total,
-        SUM(CASE WHEN status IN ('pending', 'confirming') AND NOT (
+        SUM(CASE WHEN status = 'pending' AND NOT (
             COALESCE(payee_name,'') = '' OR COALESCE(total_amount,0) <= 0 OR
             NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = id)
         ) THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'confirming' AND NOT (
+            COALESCE(payee_name,'') = '' OR COALESCE(total_amount,0) <= 0 OR
+            NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = id)
+        ) THEN 1 ELSE 0 END) as confirming,
         SUM(CASE WHEN status = 'approved' AND IFNULL(is_paid,0) = 0 AND IFNULL(is_posted,0) = 0 THEN 1 ELSE 0 END) as approved,
         SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
         SUM(CASE WHEN IFNULL(is_paid,0) = 1 AND IFNULL(is_posted,0) = 0 THEN 1 ELSE 0 END) as paid,
@@ -319,6 +325,7 @@ try {
     $stats = [
         'total' => (int) ($statsRow['total'] ?? 0),
         'pending' => (int) ($statsRow['pending'] ?? 0),
+        'confirming' => (int) ($statsRow['confirming'] ?? 0),
         'approved' => (int) ($statsRow['approved'] ?? 0),
         'rejected' => (int) ($statsRow['rejected'] ?? 0),
         'paid' => (int) ($statsRow['paid'] ?? 0),

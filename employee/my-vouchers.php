@@ -38,10 +38,15 @@ if ($flashMsg === '' && isset($_GET['msg']) && $_GET['msg'] === 'deleted') {
 }
 
 $qsModule = isset($_GET['module']) && (string) $_GET['module'] !== '' ? (string) $_GET['module'] : 'voucher';
+$showAllVouchers = isset($_GET['all']) && (string) $_GET['all'] === '1';
 $employeeDir = dashboardUiWebBasePath();
 $rootDir = rtrim(dirname($employeeDir), '/');
 $adminDir = ($rootDir === '' || $rootDir === '/') ? '/admin' : ($rootDir . '/admin');
 $viewUrl = ($rootDir === '' || $rootDir === '/') ? '/view-voucher.php' : ($rootDir . '/view-voucher.php');
+$dashboardUrl = function_exists('company_url')
+    ? company_url('employee/dashboard.php?module=' . rawurlencode($qsModule))
+    : ($employeeDir . '/dashboard.php?module=' . rawurlencode($qsModule));
+$dashboardHref = htmlspecialchars($dashboardUrl, ENT_QUOTES, 'UTF-8');
 
 $referenceToggleUrl = function_exists('paymentVoucherReferenceToggleUrl')
     ? paymentVoucherReferenceToggleUrl()
@@ -53,8 +58,8 @@ $dashboardConfig = [
     'role' => $isAdminViewer ? 'admin' : 'employee',
     'inlineApproveReject' => $isAdminViewer,
     'hideKpis' => true,
-    'ownVouchersOnly' => true,
-    'listTitle' => 'My Vouchers',
+    'ownVouchersOnly' => !$showAllVouchers,
+    'listTitle' => $showAllVouchers ? 'All Vouchers' : 'My Vouchers',
     'share' => false,
     'module' => $qsModule,
     'myVouchersUrl' => $employeeDir . '/my-vouchers.php',
@@ -73,7 +78,12 @@ $dashboardConfig = [
 ];
 
 $GLOBALS['_erp_header_style_linked'] = false;
-$employeeHeaderTitle = 'My Vouchers';
+$employeeHeaderTitle = $showAllVouchers ? 'All Vouchers' : 'My Vouchers';
+$employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb dashboard-breadcrumb" aria-label="Breadcrumb">'
+    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . $dashboardHref . '">Home</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<span class="vv-breadcrumb-current" aria-current="page">' . htmlspecialchars($employeeHeaderTitle, ENT_QUOTES, 'UTF-8') . '</span>'
+    . '</nav>';
 $hideHeaderCompanyBranding = true;
 
 $userManualHref = htmlspecialchars($employeeDir . '/user-manual.php?module=' . rawurlencode($qsModule), ENT_QUOTES, 'UTF-8');
@@ -82,14 +92,12 @@ $reportsHref = htmlspecialchars($adminDir . '/reports.php?module=' . rawurlencod
 $canSeeReports = $isAdminViewer || (function_exists('isFinance') && isFinance());
 
 $employeeHeaderCenterHtml = '<div class="ad-header-toolbar">'
+    . '<div id="ed-dashboard-search-slot" class="ed-dashboard-search-slot"></div>'
+    . '<div class="ad-header-actions">'
     . ($canSeeReports
         ? '<a href="' . $reportsHref . '" class="ad-chip-btn ad-chip-btn--ghost">'
             . '<span class="ad-chip-dollar" aria-hidden="true">$</span> Reports</a>'
         : '')
-    . '<div id="ed-dashboard-search-slot" class="ed-dashboard-search-slot"></div>'
-    . '<div class="ad-header-actions">'
-    . '<a href="' . $userManualHref . '" class="ad-chip-btn ad-chip-btn--ghost ad-chip-btn--icon" title="User Guide" aria-label="User Guide">'
-    . '<i class="fas fa-book-open" aria-hidden="true"></i></a>'
     . '<a href="' . $createHref . '" class="ad-chip-btn ad-chip-btn--primary">'
     . '<i class="fas fa-plus" aria-hidden="true"></i> Create Voucher</a>'
     . '</div>'
@@ -102,7 +110,7 @@ $employeeHeaderRightHtml = null;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Vouchers - Ultimate General Trading</title>
+    <title><?= htmlspecialchars($employeeHeaderTitle, ENT_QUOTES, 'UTF-8') ?> - Ultimate General Trading</title>
     <script>
     (function() {
         var t = localStorage.getItem('theme') || 'light';
@@ -123,6 +131,40 @@ $employeeHeaderRightHtml = null;
         body.dashboard { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
         html, body.dashboard, .main-content, .layout-main-wrapper { scrollbar-width: none !important; -ms-overflow-style: none !important; }
         html::-webkit-scrollbar, body.dashboard::-webkit-scrollbar, .main-content::-webkit-scrollbar, .layout-main-wrapper::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+
+        body.dashboard .header.employee-header .vv-breadcrumb,
+        body.dashboard .header.employee-header .exp-desk-breadcrumb {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            margin: 0;
+            font-size: 0.82rem;
+            line-height: 1.3;
+        }
+        body.dashboard .header.employee-header .vv-breadcrumb-link {
+            color: #2563eb !important;
+            font-weight: 600;
+            text-decoration: none !important;
+        }
+        body.dashboard .header.employee-header .vv-breadcrumb-link:hover {
+            color: #1d4ed8 !important;
+            text-decoration: underline !important;
+        }
+        body.dashboard .header.employee-header .vv-breadcrumb-sep { color: #94a3b8; }
+        body.dashboard .header.employee-header .vv-breadcrumb-current {
+            color: #64748b;
+            font-weight: 600;
+        }
+        html[data-theme="dark"] body.dashboard .header.employee-header .vv-breadcrumb,
+        html[data-theme="dark"] body.dashboard .header.employee-header .vv-breadcrumb-link,
+        html[data-theme="dark"] body.dashboard .header.employee-header .vv-breadcrumb-sep,
+        html[data-theme="dark"] body.dashboard .header.employee-header .vv-breadcrumb-current {
+            color: #00a884 !important;
+        }
+        html[data-theme="dark"] body.dashboard .header.employee-header .vv-breadcrumb-link:hover {
+            color: #06cf9c !important;
+        }
 
         .main-content.dashboard-react-root {
             width: 100% !important;
@@ -183,23 +225,24 @@ $employeeHeaderRightHtml = null;
             width: 100%;
         }
         body.dashboard .ad-header-toolbar {
-            display: flex;
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) auto;
             align-items: center;
             gap: 10px;
             width: 100%;
             min-width: 0;
         }
         body.dashboard .ed-dashboard-search-slot {
-            flex: 1 1 auto;
-            min-width: 180px;
-            max-width: 520px;
+            justify-self: center;
+            width: min(100%, 520px);
+            min-width: 0;
         }
         body.dashboard .ad-header-actions {
             display: flex;
             align-items: center;
             gap: 8px;
-            flex: 0 0 auto;
-            margin-left: auto;
+            justify-self: end;
+            min-width: max-content;
         }
 
         .ad-chip-btn {
@@ -356,6 +399,43 @@ $employeeHeaderRightHtml = null;
         }
         @media (max-width: 767.98px) {
             .main-content.dashboard-react-root { padding: 0.875rem 0.75rem 1.5rem !important; }
+            body.dashboard .header.employee-header .header-content {
+                grid-template-columns: auto minmax(0, 1fr);
+                grid-template-rows: auto auto;
+                gap: 2px 10px;
+                padding: 4px 12px !important;
+            }
+            body.dashboard .header.employee-header .header-left {
+                display: flex !important;
+                grid-column: 1;
+                grid-row: 1;
+            }
+            body.dashboard .header.employee-header .employee-header-page-heading {
+                grid-column: 2;
+                grid-row: 1;
+                min-width: 0;
+            }
+            body.dashboard .ad-header-toolbar {
+                grid-template-columns: minmax(0, 1fr);
+            }
+            body.dashboard .employee-header-center-slot {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                margin-top: -45px !important;
+            }
+            body.dashboard .ad-header-actions {
+                grid-row: 1;
+                transform: none;
+            }
+            body.dashboard .ad-header-actions .ad-chip-btn {
+                height: 34px;
+                gap: 5px;
+                padding: 0 9px;
+                font-size: 12px;
+            }
+            body.dashboard .ed-dashboard-search-slot {
+                grid-row: 2;
+            }
         }
     </style>
 </head>

@@ -61,9 +61,10 @@ function adminDashboardUiLoadReactAssets(): ?array
 
     $cssPath = $distDir . '/assets/' . $cssFile;
     $jsPath = $distDir . '/assets/' . $jsFile;
-    $rootWeb = adminDashboardUiRootWebPath();
     // Static Vite assets are physical paths (/{base}/employee/...), not /{company}/...
-    $assetBase = ($rootWeb === '' ? '' : $rootWeb) . '/employee/dashboard-ui/frontend/dist/assets/';
+    $assetBase = function_exists('app_url')
+        ? app_url('/employee/dashboard-ui/frontend/dist/assets/')
+        : '/employee/dashboard-ui/frontend/dist/assets/';
     // JSON API must be company-prefixed or bare /admin/... redirects to the wrong tenant.
     $apiUrl = function_exists('company_url')
         ? rtrim((string) company_url('admin/dashboard-ui/api'), '/')

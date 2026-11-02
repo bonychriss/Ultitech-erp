@@ -63,10 +63,14 @@ try {
 
     $stmt = $pdo->prepare("SELECT
             COUNT(*) AS total,
-            SUM(CASE WHEN pv.status IN ('pending', 'confirming') AND NOT (
+            SUM(CASE WHEN pv.status='pending' AND NOT (
                 COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.total_amount,0) <= 0 OR
                 NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id)
             ) THEN 1 ELSE 0 END) AS pending,
+            SUM(CASE WHEN pv.status='confirming' AND NOT (
+                COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.total_amount,0) <= 0 OR
+                NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id)
+            ) THEN 1 ELSE 0 END) AS confirming,
             SUM(CASE WHEN pv.status='approved' AND IFNULL(pv.is_paid,0) = 0 AND IFNULL(pv.is_posted,0) = 0 THEN 1 ELSE 0 END) AS approved,
             SUM(CASE WHEN pv.status='rejected' THEN 1 ELSE 0 END) AS rejected,
             SUM(CASE WHEN IFNULL(pv.is_paid,0) = 1 AND IFNULL(pv.is_posted,0) = 0 THEN 1 ELSE 0 END) AS paid,
@@ -85,6 +89,7 @@ try {
     $stats = [
         'total' => (int) ($statsRow['total'] ?? 0),
         'pending' => (int) ($statsRow['pending'] ?? 0),
+        'confirming' => (int) ($statsRow['confirming'] ?? 0),
         'approved' => (int) ($statsRow['approved'] ?? 0),
         'rejected' => (int) ($statsRow['rejected'] ?? 0),
         'paid' => (int) ($statsRow['paid'] ?? 0),

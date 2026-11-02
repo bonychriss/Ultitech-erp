@@ -415,6 +415,15 @@ $dashboardConfig = [
 
 $GLOBALS['_erp_header_style_linked'] = false;
 $employeeHeaderTitle = 'Dashboard';
+$dashboardHomeUrl = function_exists('company_url')
+    ? company_url('select-module')
+    : (function_exists('app_url') ? app_url('/select-module.php') : '../select-module.php');
+$dashboardBreadcrumbLabel = $qsModule === 'voucher' ? 'Payment Vouchers' : 'Dashboard';
+$employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb dashboard-breadcrumb" aria-label="Breadcrumb">'
+    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($dashboardHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<span class="vv-breadcrumb-current">' . htmlspecialchars($dashboardBreadcrumbLabel, ENT_QUOTES, 'UTF-8') . '</span>'
+    . '</nav>';
 $createHref = htmlspecialchars($employeeBase . '/create-voucher.php?module=' . rawurlencode($qsModule), ENT_QUOTES, 'UTF-8');
 
 $employeeHeaderCenterHtml = '<div class="ad-header-toolbar">'
@@ -465,6 +474,40 @@ $employeeHeaderRightHtml = null;
             background: #f1f5f9 !important;
         }
         .main-content.dashboard-react-root #root { width: 100%; max-width: none; margin: 0; }
+
+        body.dashboard .header.admin-header .vv-breadcrumb,
+        body.dashboard .header.admin-header .exp-desk-breadcrumb {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            margin: 0;
+            font-size: 0.82rem;
+            line-height: 1.3;
+        }
+        body.dashboard .header.admin-header .vv-breadcrumb-link {
+            color: #2563eb !important;
+            font-weight: 600;
+            text-decoration: none !important;
+        }
+        body.dashboard .header.admin-header .vv-breadcrumb-link:hover {
+            color: #1d4ed8 !important;
+            text-decoration: underline !important;
+        }
+        body.dashboard .header.admin-header .vv-breadcrumb-sep { color: #94a3b8; }
+        body.dashboard .header.admin-header .vv-breadcrumb-current {
+            color: #64748b;
+            font-weight: 600;
+        }
+        html[data-theme="dark"] body.dashboard .header.admin-header .vv-breadcrumb,
+        html[data-theme="dark"] body.dashboard .header.admin-header .vv-breadcrumb-link,
+        html[data-theme="dark"] body.dashboard .header.admin-header .vv-breadcrumb-sep,
+        html[data-theme="dark"] body.dashboard .header.admin-header .vv-breadcrumb-current {
+            color: #00a884 !important;
+        }
+        html[data-theme="dark"] body.dashboard .header.admin-header .vv-breadcrumb-link:hover {
+            color: #06cf9c !important;
+        }
 
         /* Hide React's duplicate action row — everything lives in the PHP header */
         body.dashboard .ed-header--actions-only,

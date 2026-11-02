@@ -41,6 +41,7 @@ const HIDE_KPIS = CFG.hideKpis === true
 const LIST_TITLE = CFG.listTitle || 'All Vouchers'
 const URLS = {
   myVouchers: CFG.myVouchersUrl || (IS_ADMIN ? 'all-vouchers.php' : 'my-vouchers.php'),
+  allVouchers: CFG.allVouchersUrl || CFG.myVouchersUrl || (IS_ADMIN ? 'all-vouchers.php' : 'my-vouchers.php'),
   create: CFG.createUrl || 'create-voucher.php',
   view: CFG.viewUrl || '../view-voucher.php',
   edit: CFG.editUrl || 'edit-voucher.php',
@@ -55,6 +56,9 @@ const URLS = {
 const MODULE = CFG.module || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('module') || '' : '')
 const APPEND_MODULE = MODULE ? `&module=${encodeURIComponent(MODULE)}` : ''
 const PREPEND_MODULE = MODULE ? `?module=${encodeURIComponent(MODULE)}` : ''
+const allVouchersHref = MODULE
+  ? `${URLS.allVouchers}${URLS.allVouchers.includes('?') ? '&' : '?'}module=${encodeURIComponent(MODULE)}`
+  : URLS.allVouchers
 // Share column is opt-in (admin dashboard table has star + ⋮ only).
 const SHARE_ENABLED = CFG.share === true
 const DELETE_MODE = CFG.deleteMode || 'simple' // 'simple' | 'action'
@@ -1043,7 +1047,7 @@ export default function DashboardPage() {
         { key: 'rejected', label: 'Rejected', value: formatInt(stats.rejected), sub: 'Review', subCls: 'ed-sub--amber', color: 'red', icon: <XCircle size={14} />, href: `${listBase}status=rejected${APPEND_MODULE}` },
         { key: 'paid', label: 'Paid', value: formatInt(stats.paid), sub: `${pct(stats.paid, total)}% of total`, subCls: 'ed-sub--blue', color: 'blue', icon: <CreditCard size={14} />, href: `${listBase}status=paid${APPEND_MODULE}` },
         { key: 'posted', label: 'Posted', value: formatInt(stats.posted), sub: 'Ledger sync', subCls: 'ed-sub--green', color: 'indigo', icon: <Upload size={14} />, href: `${listBase}status=posted${APPEND_MODULE}` },
-        { key: 'draft', label: 'Needs Info', value: formatInt(stats.draft), sub: 'Drafts', subCls: '', color: 'amber', icon: <FileText size={14} />, href: `${listBase}status=draft${APPEND_MODULE}` },
+        { key: 'draft', label: 'Needs Info', value: formatInt(stats.draft + stats.confirming), sub: 'Drafts', subCls: '', color: 'amber', icon: <FileText size={14} />, href: `${listBase}status=draft${APPEND_MODULE}` },
         { key: 'amount', label: 'Approved Volume', value: totalAmountLabel, sub: 'TZS / USD', subCls: '', color: 'blue', icon: <DollarSign size={14} />, href: `${listBase}status=approved${APPEND_MODULE}`, wide: true },
       ]
     : [
@@ -1280,7 +1284,7 @@ export default function DashboardPage() {
         {!HIDE_KPIS && (
         <div className="ed-card-head">
           <h3 className="ed-card-title">
-            <a href={`${URLS.myVouchers}${PREPEND_MODULE}`} className="ed-card-title-link">
+            <a href={allVouchersHref} className="ed-card-title-link">
               {LIST_TITLE}
             </a>
           </h3>

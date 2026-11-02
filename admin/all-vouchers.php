@@ -119,13 +119,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['voucher_id'])) {
 require_once __DIR__ . '/vouchers-ui/lib.php';
 
 $qsModule = isset($_GET['module']) && (string) $_GET['module'] !== '' ? (string) $_GET['module'] : 'voucher';
+$voucherStatus = strtolower(trim((string) ($_GET['status'] ?? '')));
+$voucherPageTitles = [
+    'pending' => 'Pending Vouchers',
+    'confirming' => 'Confirming Vouchers',
+    'draft' => 'Needs Info',
+    'approved' => 'Approved Vouchers',
+    'rejected' => 'Rejected Vouchers',
+    'paid' => 'Paid Vouchers',
+    'posted' => 'Posted Vouchers',
+];
+$voucherPageTitle = $voucherPageTitles[$voucherStatus] ?? 'All Vouchers';
 
 $assets = vouchersUiLoadReactAssets();
 if ($assets === null) {
     http_response_code(503);
     header('Content-Type: text/html; charset=utf-8');
-    echo '<!DOCTYPE html><html><head><title>All Vouchers</title></head><body style="font-family:sans-serif;padding:2rem;">';
-    echo '<h1>All Vouchers</h1>';
+    echo '<!DOCTYPE html><html><head><title>' . htmlspecialchars($voucherPageTitle, ENT_QUOTES, 'UTF-8') . '</title></head><body style="font-family:sans-serif;padding:2rem;">';
+    echo '<h1>' . htmlspecialchars($voucherPageTitle, ENT_QUOTES, 'UTF-8') . '</h1>';
     echo '<p>The React UI has not been built yet. Run <code>npm install</code> and <code>npm run build</code> inside <code>admin/vouchers-ui/frontend/</code>.</p>';
     echo '</body></html>';
     exit;
@@ -165,41 +176,54 @@ $vouchersConfig = [
     'markPostedMode' => 'query',
     'markPaidUrl' => $adminBase . '/all-vouchers.php',
     'markPaidMode' => 'swift',
-    'pageTitle' => 'All Vouchers',
+    'pageTitle' => $voucherPageTitle,
     'pageSubtitle' => 'Manage and track all payment vouchers',
     'mountSearchInHeader' => true,
 ];
 
 $GLOBALS['_erp_header_style_linked'] = false;
-$employeeHeaderTitle = 'All Vouchers';
-$reportsHref = htmlspecialchars($adminBase . '/reports.php?module=' . rawurlencode($qsModule), ENT_QUOTES, 'UTF-8');
-$userManualHref = htmlspecialchars($employeeBase . '/user-manual.php?module=' . rawurlencode($qsModule), ENT_QUOTES, 'UTF-8');
+$employeeHeaderTitle = $voucherPageTitle;
+$vouchersHomeUrl = $adminBase . '/dashboard.php?module=' . rawurlencode($qsModule);
+$employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb dashboard-breadcrumb" aria-label="Breadcrumb">'
+    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($vouchersHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<span class="vv-breadcrumb-current">' . htmlspecialchars($voucherPageTitle, ENT_QUOTES, 'UTF-8') . '</span>'
+    . '</nav>';
 $createHref = htmlspecialchars($employeeBase . '/create-voucher.php?module=' . rawurlencode($qsModule), ENT_QUOTES, 'UTF-8');
 
 $employeeHeaderCenterHtml = '<div class="ad-header-toolbar">'
-    . '<a href="' . $reportsHref . '" class="ad-chip-btn ad-chip-btn--ghost">'
-    . '<span class="ad-chip-dollar" aria-hidden="true">$</span> Reports</a>'
     . '<div class="ad-search-with-filter">'
     . '<div id="ed-dashboard-search-slot" class="ed-dashboard-search-slot"></div>'
     . '<div id="pv-filter-slot" class="pv-filter-slot pv-filter-slot--beside-search"></div>'
     . '</div>'
-    . '<div class="ad-header-actions">'
-    . '<a href="' . $userManualHref . '" class="ad-chip-btn ad-chip-btn--ghost ad-chip-btn--icon" title="User Guide" aria-label="User Guide">'
-    . '<i class="fas fa-book-open" aria-hidden="true"></i></a>'
+    . '</div>';
+$voucherStageStatus = $voucherStatus === 'pending'
+    ? 'confirming'
+    : ($voucherStatus === 'confirming' ? 'pending' : '');
+$voucherStageLabel = $voucherStageStatus === 'confirming'
+    ? 'Confirming Vouchers'
+    : 'Pending Vouchers';
+$voucherStageLink = $voucherStageStatus !== ''
+    ? '<a href="' . htmlspecialchars($adminBase . '/all-vouchers.php?' . http_build_query([
+        'status' => $voucherStageStatus,
+        'module' => $qsModule,
+    ]), ENT_QUOTES, 'UTF-8') . '" class="ad-chip-btn ad-chip-btn--ghost">'
+        . htmlspecialchars($voucherStageLabel, ENT_QUOTES, 'UTF-8') . '</a>'
+    : '';
+$employeeHeaderRightHtml = '<div class="ad-header-actions">'
+    . $voucherStageLink
     . '<a href="' . $createHref . '" class="ad-chip-btn ad-chip-btn--primary">'
     . '<i class="fas fa-plus" aria-hidden="true"></i> Create Voucher</a>'
-    . '</div>'
     . '</div>';
 
 $employeeHeaderAfterThemeHtml = null;
-$employeeHeaderRightHtml = null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Vouchers - Ultimate General Trading</title>
+    <title><?= htmlspecialchars($voucherPageTitle, ENT_QUOTES, 'UTF-8') ?> - Ultimate General Trading</title>
     <script>
     (function() {
         var t = localStorage.getItem('theme') || 'light';
@@ -233,6 +257,40 @@ $employeeHeaderRightHtml = null;
         }
         .main-content.vouchers-react-root #root { width: 100%; max-width: none; margin: 0; }
 
+        body.dashboard .header.admin-header .vv-breadcrumb,
+        body.dashboard .header.admin-header .exp-desk-breadcrumb {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            margin: 0;
+            font-size: 0.82rem;
+            line-height: 1.3;
+        }
+        body.dashboard .header.admin-header .vv-breadcrumb-link {
+            color: #2563eb !important;
+            font-weight: 600;
+            text-decoration: none !important;
+        }
+        body.dashboard .header.admin-header .vv-breadcrumb-link:hover {
+            color: #1d4ed8 !important;
+            text-decoration: underline !important;
+        }
+        body.dashboard .header.admin-header .vv-breadcrumb-sep { color: #94a3b8; }
+        body.dashboard .header.admin-header .vv-breadcrumb-current {
+            color: #64748b;
+            font-weight: 600;
+        }
+        html[data-theme="dark"] body.dashboard .header.admin-header .vv-breadcrumb,
+        html[data-theme="dark"] body.dashboard .header.admin-header .vv-breadcrumb-link,
+        html[data-theme="dark"] body.dashboard .header.admin-header .vv-breadcrumb-sep,
+        html[data-theme="dark"] body.dashboard .header.admin-header .vv-breadcrumb-current {
+            color: #00a884 !important;
+        }
+        html[data-theme="dark"] body.dashboard .header.admin-header .vv-breadcrumb-link:hover {
+            color: #06cf9c !important;
+        }
+
         body.dashboard .header.admin-header {
             background: #f1f5f9 !important;
             border: none !important;
@@ -240,15 +298,15 @@ $employeeHeaderRightHtml = null;
             height: auto !important;
             min-height: 64px;
             overflow: visible !important;
-            position: sticky !important;
-            top: 0 !important;
+            position: relative !important;
+            top: auto !important;
             z-index: 1020 !important;
         }
         body.dashboard .header.admin-header::after { display: none !important; }
 
         body.dashboard .header.admin-header .header-content {
             display: grid !important;
-            grid-template-columns: auto minmax(280px, 1fr) auto;
+            grid-template-columns: minmax(0, 1fr) minmax(280px, 528px) minmax(0, 1fr);
             align-items: center !important;
             gap: 14px;
             min-height: 64px;
@@ -574,12 +632,12 @@ $employeeHeaderRightHtml = null;
             body.dashboard .ad-header-actions {
                 order: 2;
                 margin-left: 0;
-                width: 100%;
-                justify-content: stretch;
+                width: auto;
+                justify-content: flex-end;
                 gap: 8px;
             }
             body.dashboard .ad-header-actions .ad-chip-btn {
-                flex: 1 1 auto;
+                flex: 0 0 auto;
                 justify-content: center;
                 height: 38px;
                 font-size: 13px;
@@ -591,9 +649,6 @@ $employeeHeaderRightHtml = null;
             body.dashboard .pv-filter-slot--beside-search .pv-filter-btn {
                 width: 36px !important;
                 height: 36px !important;
-            }
-            body.dashboard .ad-header-toolbar > .ad-chip-btn--ghost:first-child {
-                display: none;
             }
             body.dashboard .header.admin-header .employee-header-page-title {
                 font-size: 1.15rem !important;

@@ -367,15 +367,41 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         ? resolveVoucherSessionUserId($pdo)
         : (int) ($_SESSION['user_id'] ?? 0);
 
+    $companyId = function_exists('currentCompanyId')
+        ? (int) (currentCompanyId() ?? 0)
+        : (int) ($_SESSION['company_id'] ?? 0);
+    $usersHaveCompanyId = function_exists('columnExists')
+        && columnExists('users', 'company_id', $pdo);
+    $mustScopeUsers = $usersHaveCompanyId
+        || (defined('IS_SHARED_TRIAL_DB') && IS_SHARED_TRIAL_DB);
+    $vouchersHaveCompanyId = function_exists('columnExists')
+        && columnExists('payment_vouchers', 'company_id', $pdo);
+    $creatorCompanyScope = $usersHaveCompanyId
+        ? ' AND u.company_id = ?'
+        : ($mustScopeUsers ? ' AND 1 = 0' : '');
+    $approverCompanyScope = $usersHaveCompanyId
+        ? ' AND ua.company_id = ?'
+        : ($mustScopeUsers ? ' AND 1 = 0' : '');
+    $voucherCompanyScope = $vouchersHaveCompanyId ? ' AND pv.company_id = ?' : '';
+    $voucherParams = [];
+    if ($usersHaveCompanyId) {
+        $voucherParams[] = $companyId;
+        $voucherParams[] = $companyId;
+    }
+    $voucherParams[] = $voucherId;
+    if ($vouchersHaveCompanyId) {
+        $voucherParams[] = $companyId;
+    }
+
     $stmt = $pdo->prepare(
         'SELECT pv.*, u.full_name AS creator_name, u.department AS creator_department, '
         . 'ua.full_name AS approver_name, ua.email AS approver_email, ua.role AS approver_role '
         . 'FROM payment_vouchers pv '
-        . 'LEFT JOIN users u ON pv.created_by = u.id '
-        . 'LEFT JOIN users ua ON pv.approved_by = ua.id '
-        . 'WHERE pv.id = ?'
+        . 'LEFT JOIN users u ON pv.created_by = u.id' . $creatorCompanyScope . ' '
+        . 'LEFT JOIN users ua ON pv.approved_by = ua.id' . $approverCompanyScope . ' '
+        . 'WHERE pv.id = ?' . $voucherCompanyScope
     );
-    $stmt->execute([$voucherId]);
+    $stmt->execute($voucherParams);
     $voucher = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$voucher) {
         return ['ok' => false, 'error' => 'Voucher not found', 'code' => 404];
@@ -449,7 +475,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         }
     }
 
-    // GM display + signature
+    // GM display
     $gmDisplay = trim((string) ($voucher['general_manager'] ?? '')) !== '' ? (string) $voucher['general_manager'] : '';
     if (($voucher['status'] ?? '') === 'approved') {
         $approverEmail = strtolower(trim((string) ($voucher['approver_email'] ?? '')));
@@ -466,23 +492,22 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     if ($gmDisplay === '' && ($voucher['status'] ?? '') === 'approved' && !empty($voucher['approved_by'])) {
         $gmDisplay = trim((string) ($voucher['approver_name'] ?? ''));
     }
-    $gmSigRel = null;
-    if (!empty($voucher['approved_by']) && ($voucher['status'] ?? '') === 'approved') {
-        $rawPath = function_exists('getUserSignaturePathById') ? getUserSignaturePathById((int) $voucher['approved_by']) : null;
-        if ($rawPath) {
-            $gmSigRel = app_url('/' . ltrim($rawPath, '/'));
-        }
-    }
-
     // User photos, signatures, phones
     $userPhotos = [];
     $userPhotosById = [];
+    $userIds = [];
     $signaturesById = [];
-    $signaturesByName = [];
     $phonesByName = [];
     try {
-        $uStmt = $pdo->query('SELECT lower(full_name) as name, profile_photo, signature_path, id, phone FROM users');
+        $userScope = $usersHaveCompanyId
+            ? ($companyId > 0 ? ' WHERE company_id = ?' : ' WHERE 1 = 0')
+            : ($mustScopeUsers ? ' WHERE 1 = 0' : '');
+        $uStmt = $pdo->prepare(
+            'SELECT lower(full_name) as name, profile_photo, signature_path, id, phone FROM users' . $userScope
+        );
+        $uStmt->execute($usersHaveCompanyId && $companyId > 0 ? [$companyId] : []);
         while ($uRow = $uStmt->fetch(PDO::FETCH_ASSOC)) {
+            $userIds[(int) $uRow['id']] = true;
             $uName = function_exists('normalizePersonNameKey') ? normalizePersonNameKey($uRow['name']) : strtolower(trim((string) $uRow['name']));
             if (!empty($uRow['profile_photo'])) {
                 $userPhotos[$uName] = $uRow['profile_photo'];
@@ -494,12 +519,13 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             if (!empty($uRow['signature_path'])) {
                 $fullSig = function_exists('mediaUrlFromPath') ? mediaUrlFromPath($uRow['signature_path']) : '';
                 if ($fullSig !== '') {
-                    $signaturesByName[$uName] = $fullSig;
                     $signaturesById[(int) $uRow['id']] = $fullSig;
                 }
             }
         }
-    } catch (Throwable $e) { /* ignore */ }
+    } catch (Throwable $e) {
+        error_log('view-voucher scoped user lookup failed: ' . $e->getMessage());
+    }
 
     try {
         $__aps = $pdo->prepare("SELECT approver_id, approver_name, role, status, signature_path, approved_at FROM approvals WHERE voucher_id = ? AND status = 'approved'");
@@ -514,14 +540,8 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             if ($fullSig === '') {
                 continue;
             }
-            if ($aid && !isset($signaturesById[$aid])) {
+            if ($aid && isset($userIds[$aid]) && !isset($signaturesById[$aid])) {
                 $signaturesById[$aid] = $fullSig;
-            }
-            if (!empty($row['approver_name'])) {
-                $lowName = function_exists('normalizePersonNameKey') ? normalizePersonNameKey($row['approver_name']) : strtolower(trim((string) $row['approver_name']));
-                if (!isset($signaturesByName[$lowName])) {
-                    $signaturesByName[$lowName] = $fullSig;
-                }
             }
         }
     } catch (Throwable $e) { /* ignore */ }
@@ -552,9 +572,6 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     require __DIR__ . '/../includes/voucher-approval-flow-data.php';
 
     // Build approval table slots
-    $normalizePersonName = static function ($name) {
-        return strtolower(trim((string) preg_replace('/\s+/', ' ', (string) $name)));
-    };
     $vvStageByRole = [];
     foreach ($allStages as $vvStage) {
         $vvRoleKey = strtolower(trim((string) ($vvStage['role'] ?? '')));
@@ -598,33 +615,38 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         [
             'label' => 'Applicant',
             'name' => $vvPickName($voucher['applicant'] ?? '', $vvApplicantStage),
+            'approver_id' => (int) ($vvApplicantStage['approver_id'] ?? 0),
             'approved' => ((isset($roleStatusMap['applicant']) && $roleStatusMap['applicant'] === 'approved') || $vvStageApproved($vvApplicantStage)),
             'sig' => null,
         ],
         [
             'label' => 'Check',
             'name' => $vvPickName($voucher['checked_by'] ?? '', $vvCheckStage),
+            'approver_id' => (int) ($vvCheckStage['approver_id'] ?? 0),
             'approved' => ((isset($roleStatusMap['checked by']) && $roleStatusMap['checked by'] === 'approved') || $vvStageApproved($vvCheckStage)),
             'sig' => null,
         ],
         [
             'label' => 'Dept Manager',
             'name' => $vvPickName($voucher['department_manager'] ?? '', $vvDeptStage),
+            'approver_id' => (int) ($vvDeptStage['approver_id'] ?? 0),
             'approved' => ((isset($roleStatusMap['department manager']) && $roleStatusMap['department manager'] === 'approved') || $vvStageApproved($vvDeptStage)),
             'sig' => null,
         ],
         [
             'label' => 'General Manager',
             'name' => $vvPickName($gmDisplay !== '' ? $gmDisplay : ($voucher['general_manager'] ?? ''), $vvGmStage),
+            'approver_id' => (int) ($voucher['approved_by'] ?? ($vvGmStage['approver_id'] ?? 0)),
             'approved' => $statusLower === 'approved',
-            'sig' => $gmSigRel,
+            'sig' => null,
         ],
     ];
     foreach ($approvalSlots as $idx => $slot) {
-        $nameKey = $normalizePersonName($slot['name']);
-        if (empty($approvalSlots[$idx]['sig']) && $nameKey !== '' && !empty($signaturesByName[$nameKey])) {
-            $approvalSlots[$idx]['sig'] = $signaturesByName[$nameKey];
+        $approverId = (int) ($slot['approver_id'] ?? 0);
+        if ($approverId > 0 && !empty($signaturesById[$approverId])) {
+            $approvalSlots[$idx]['sig'] = $signaturesById[$approverId];
         }
+        unset($approvalSlots[$idx]['approver_id']);
     }
 
     // Swift proxy

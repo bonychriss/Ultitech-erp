@@ -2912,25 +2912,36 @@ function resolveVoucherUserIdByDisplayName(PDO $pdo, $displayName)
     try {
         $cols = $pdo->query('SHOW COLUMNS FROM users')->fetchAll(PDO::FETCH_COLUMN) ?: array();
         $hasName = in_array('name', $cols, true);
+        $hasCompanyId = in_array('company_id', $cols, true);
+        $mustScopeCompany = $hasCompanyId
+            || (defined('IS_SHARED_TRIAL_DB') && IS_SHARED_TRIAL_DB);
+        $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+        if ($hasCompanyId && $companyId <= 0) {
+            return 0;
+        }
+        $companyScope = $hasCompanyId
+            ? ' AND company_id = ?'
+            : ($mustScopeCompany ? ' AND 1 = 0' : '');
+        $companyParams = $hasCompanyId ? array($companyId) : array();
         $displayExpr = $hasName
             ? "TRIM(COALESCE(NULLIF(TRIM(full_name), ''), NULLIF(TRIM(name), ''), username, ''))"
             : "TRIM(COALESCE(NULLIF(TRIM(full_name), ''), username, ''))";
-        $st = $pdo->prepare('SELECT id FROM users WHERE ' . $displayExpr . ' = ? LIMIT 1');
-        $st->execute(array($displayName));
+        $st = $pdo->prepare('SELECT id FROM users WHERE ' . $displayExpr . ' = ?' . $companyScope . ' LIMIT 1');
+        $st->execute(array_merge(array($displayName), $companyParams));
         $id = (int) ($st->fetchColumn() ?: 0);
         if ($id > 0) {
             return $id;
         }
         if ($hasName) {
             $st = $pdo->prepare(
-                'SELECT id FROM users WHERE TRIM(full_name) = ? OR TRIM(name) = ? OR TRIM(username) = ? LIMIT 1'
+                'SELECT id FROM users WHERE (TRIM(full_name) = ? OR TRIM(name) = ? OR TRIM(username) = ?)' . $companyScope . ' LIMIT 1'
             );
-            $st->execute(array($displayName, $displayName, $displayName));
+            $st->execute(array_merge(array($displayName, $displayName, $displayName), $companyParams));
         } else {
             $st = $pdo->prepare(
-                'SELECT id FROM users WHERE TRIM(full_name) = ? OR TRIM(username) = ? LIMIT 1'
+                'SELECT id FROM users WHERE (TRIM(full_name) = ? OR TRIM(username) = ?)' . $companyScope . ' LIMIT 1'
             );
-            $st->execute(array($displayName, $displayName));
+            $st->execute(array_merge(array($displayName, $displayName), $companyParams));
         }
         return (int) ($st->fetchColumn() ?: 0);
     } catch (Throwable $e) {

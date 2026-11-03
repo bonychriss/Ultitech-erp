@@ -1,6 +1,6 @@
 const blankCell = '\u00a0';
 
-export default function ExpenseDetailTable() {
+export default function ExpenseDetailTable({ expense }) {
   return (
     <div className="exp-desk-expense-sheet">
       <div className="exp-desk-expense-table-wrap">
@@ -14,7 +14,7 @@ export default function ExpenseDetailTable() {
           <tbody>
             <tr>
               <td>Voucher NO. :</td>
-              <td>{blankCell}</td>
+              <td>{expense?.expense_number || blankCell}</td>
               <td>Date:</td>
               <td>{blankCell}</td>
             </tr>

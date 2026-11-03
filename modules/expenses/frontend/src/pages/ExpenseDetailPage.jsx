@@ -122,7 +122,7 @@ export default function ExpenseDetailPage() {
               </button>
             </div>
           ) : null}
-          <ExpenseDetailTable />
+          <ExpenseDetailTable expense={expense} />
         </>
       ) : null}
     </div>

@@ -1,5 +1,6 @@
 import ExpensesDeskPage from './pages/ExpensesDeskPage';
 import ExpenseCreatePage from './pages/ExpenseCreatePage';
+import ExpenseDetailPage from './pages/ExpenseDetailPage';
 import ExpenseSmartInsightsPage from './pages/ExpenseSmartInsightsPage';
 import ExpenseImportPage from './pages/ExpenseImportPage';
 import { deskPageUrl } from './api/expensesDesk';
@@ -25,6 +26,9 @@ function App() {
         }}
       />
     );
+  }
+  if (page === 'detail') {
+    return <ExpenseDetailPage />;
   }
   if (page === 'insights') {
     return <ExpenseSmartInsightsPage />;

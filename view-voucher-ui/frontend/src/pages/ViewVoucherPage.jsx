@@ -235,6 +235,7 @@ export default function ViewVoucherPage() {
             <VoucherActions {...actionProps} />
           </div>
 
+
           <div className="vv-preview-section">
             <div className="vv-preview-body voucher-scroll">
               <VoucherPreview data={data} />

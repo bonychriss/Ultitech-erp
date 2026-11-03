@@ -70,6 +70,17 @@ export async function fetchDeskExpenses(filters = {}) {
   return data;
 }
 
+export async function fetchExpenseDetail(id) {
+  const res = await fetch(`${getApiBase()}/expense-detail.php?id=${encodeURIComponent(String(id))}`, {
+    credentials: 'same-origin',
+  });
+  const data = await parseJson(res);
+  if (!res.ok || !data.ok || !data.data) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 export function deskPageUrl(file, extraParams = {}) {
   const module = isPurchasesDesk() ? 'purchases' : 'expenses';
   const params = new URLSearchParams({ module, ...extraParams });
@@ -105,17 +116,18 @@ export async function fetchPurchasesVoucherPreview(pvId) {
 
 export function purchasesVoucherViewUrl(expense) {
   if (!expense || typeof expense !== 'object') return '';
+  const fromDesk = isPurchasesDesk() ? 'purchases' : 'expenses';
   const boot = typeof expense.voucher_url === 'string' ? expense.voucher_url.trim() : '';
   const withFrom = (url) => {
     if (!url) return '';
     try {
       const u = new URL(url, window.location.href);
-      u.searchParams.set('from', 'purchases');
-      u.searchParams.set('module', 'purchases');
+      u.searchParams.set('from', fromDesk);
+      u.searchParams.set('module', fromDesk);
       return u.pathname + u.search + u.hash;
     } catch {
       const join = String(url).includes('?') ? '&' : '?';
-      return `${url}${join}from=purchases&module=purchases`;
+      return `${url}${join}from=${fromDesk}&module=${fromDesk}`;
     }
   };
   if (boot !== '') return withFrom(boot);

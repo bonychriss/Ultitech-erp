@@ -7,7 +7,10 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
 $key = trim((string) ($_GET['key'] ?? ''));
-$allowed = ['postedThisMonth', 'monthlySpend', 'totalRecords', 'listedNow'];
+$allowed = [
+    'postedThisMonth', 'monthlySpend', 'totalRecords', 'listedNow',
+    'totalExclusive', 'inputVat', 'totalInclusive', 'totalBank', 'totalCash', 'totalPayables',
+];
 
 if (!in_array($key, $allowed, true)) {
     http_response_code(400);

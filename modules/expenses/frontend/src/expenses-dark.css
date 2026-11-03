@@ -957,6 +957,23 @@ html[data-theme="dark"] body.page-exp-desk .exp-desk-quick-action-btn--danger:ho
   background: rgba(127, 29, 29, 0.25) !important;
 }
 
+html[data-theme="dark"] body.page-exp-desk .exp-detail-card {
+  background: #111b21;
+  border-color: #2a3942;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-card-head h2 {
+  color: #e9edef;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-card-head p {
+  color: #8696a0;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-page .exp-desk-expense-sheet {
+  background: #fff;
+}
+
 html[data-theme="dark"] body.page-exp-desk .exp-desk-row-action {
   background: #111b21;
   border-color: #2a3942;

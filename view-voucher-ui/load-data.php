@@ -726,6 +726,17 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     }
     $fromDesk = strtolower(trim((string) ($_GET['from'] ?? '')));
     $fromPurchases = ($fromDesk === 'purchases');
+    $fromExpenses = ($fromDesk === 'expenses');
+    if ($fromExpenses) {
+        $expensesBack = function_exists('company_url')
+            ? company_url('modules/expenses/index')
+            : (function_exists('app_url') ? app_url('/modules/expenses/index.php') : '/modules/expenses/index.php');
+        $backLink = $vvJoinQs((string) $expensesBack, 'module=expenses');
+        $homeLink = function_exists('company_url')
+            ? company_url('select-module')
+            : (function_exists('app_url') ? app_url('/select-module.php') : '/select-module.php');
+        $allLink = $backLink;
+    }
     if ($fromPurchases) {
         $purchasesBack = function_exists('company_url')
             ? company_url('modules/purchases/index')
@@ -884,10 +895,26 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         }
     }
 
+    $vvPurposeRaw = function_exists('resolvePaymentVoucherPurposeFromRow')
+        ? (string) resolvePaymentVoucherPurposeFromRow($voucher)
+        : '';
+    if ($vvPurposeRaw === '') {
+        foreach (['purpose', 'payment_purpose', 'voucher_purpose'] as $vvCol) {
+            $vvRaw = str_replace(' ', '_', strtolower(trim((string) ($voucher[$vvCol] ?? ''))));
+            if ($vvRaw !== '') {
+                $vvPurposeRaw = $vvRaw;
+                break;
+            }
+        }
+    }
+    $vvIsStock = $vvPurposeRaw === 'stock_purchase';
+
     return [
         'ok' => true,
         'payload' => [
             'voucher' => [
+                'voucher_type' => $vvIsStock ? 'stock' : 'general',
+                'voucher_type_label' => $vvIsStock ? 'Stock' : 'Expense',
                 'id' => (int) $voucher['id'],
                 'voucher_no' => (string) ($voucher['voucher_no'] ?? ''),
                 'payee_name' => (string) ($voucher['payee_name'] ?? ''),
@@ -982,6 +1009,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                     . '?id=' . $voucherId
                     . ($returnFinance ? '&return=finance' : '')
                     . ($fromPurchases ? '&from=purchases' : '')
+                    . ($fromExpenses ? '&from=expenses' : '')
                     . (isset($_GET['module']) && (string) $_GET['module'] !== ''
                         ? '&module=' . rawurlencode((string) $_GET['module'])
                         : ''),

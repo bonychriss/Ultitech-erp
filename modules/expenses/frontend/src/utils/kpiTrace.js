@@ -5,6 +5,8 @@ import {
   purchasesRowsForTrace,
   summaryRowsForTrace,
 } from './summaryStats';
+import { purchasesVoucherViewUrl } from '../api/expensesDesk';
+import { expenseStatusLabel } from '../components/ExpenseStatusBadge';
 
 function formatMoney(value, currency = 'TZS') {
   const code = String(currency || 'TZS').replace(/^TSh$/i, 'TZS');
@@ -81,6 +83,11 @@ function mapExpenseToTraceItem(expense) {
     isPosted: Number(expense.is_posted) === 1,
     contribution: Number(expense.amount) || 0,
     note: 'Shown in current filtered table',
+    description: expense.description || '',
+    preparedBy: expense.prepared_by || '',
+    status: expenseStatusLabel(expense),
+    createdAt: expense.created_at || '',
+    voucherUrl: expense.is_voucher || Number(expense.pv_id) > 0 ? purchasesVoucherViewUrl(expense) : '',
   };
 }
 
@@ -233,8 +240,15 @@ function buildSummaryTraceFromList(key, expenses, filters, categories = []) {
     ],
     confirmation: meta.confirmation,
     viaAi: false,
-    items: rows.map(mapExpenseToTraceItem),
-    footnote: 'Totals follow the filters applied to the expenses table.',
+    items: rows.map((row) => {
+      const item = mapExpenseToTraceItem(row);
+      const gross = item.amount;
+      const tax = Math.max(0, Math.min(gross, Number(row.tax_amount) || 0));
+      if (key === 'totalExclusive') item.amount = gross - tax;
+      if (key === 'inputVat') item.amount = tax;
+      item.contribution = item.amount;
+      return item;
+    }),
   };
 }
 

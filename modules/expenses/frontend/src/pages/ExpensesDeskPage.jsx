@@ -19,8 +19,6 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import ExpenseQuickViewModal from '../components/ExpenseQuickViewModal';
-import ExpensePostConfirmModal from '../components/ExpensePostConfirmModal';
 import ExpenseKpiTraceModal from '../components/ExpenseKpiTraceModal';
 import PurchaseKpiTraceSheet from '../components/PurchaseKpiTraceSheet';
 import ExpenseAnalyticsPanel from '../components/ExpenseAnalyticsPanel';
@@ -33,15 +31,29 @@ import {
   deskPageUrl,
   fetchDeskExpenses,
   fetchDeskInit,
-  fetchPostDraftPreview,
   isPurchasesDesk,
-  postDraftExpense,
   purchasesVoucherViewUrl,
 } from '../api/expensesDesk';
 import { exportExpensesExcel, exportExpensesPdf } from '../utils/exportExpenses';
 import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
 import { isPurchasesKpiKey, resolveKpiTrace } from '../utils/kpiTrace';
 import { buildListedSummaryStats, buildPurchasesSummaryStats } from '../utils/summaryStats';
+
+function expenseKpiKeyFromLocation() {
+  if (typeof window === 'undefined') return '';
+  if (window.__EXPENSES_DESK_MODE__ === 'purchases') return '';
+  return String(new URLSearchParams(window.location.search).get('kpi') || '').trim();
+}
+
+function expenseKpiUrl(key) {
+  const url = new URL(window.location.href);
+  if (key) {
+    url.searchParams.set('kpi', key);
+  } else {
+    url.searchParams.delete('kpi');
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
+}
 
 function purchasesKpiKeyFromLocation() {
   if (typeof window === 'undefined') return '';
@@ -156,11 +168,8 @@ function isThisQuarterRange(filters, now = new Date()) {
 }
 
 function defaultListFilters() {
-  // Purchases: show recent vouchers (no month lock). Expenses still defaults to this month.
-  if (isPurchasesDesk()) {
-    return { ...emptyFilters };
-  }
-  return { ...emptyFilters, ...thisMonthDateRange() };
+  // Show recent entries (no month lock), same as Purchases.
+  return { ...emptyFilters };
 }
 
 function filtersFromLocationSearch() {
@@ -361,13 +370,16 @@ export default function ExpensesDeskPage() {
   const [init, setInit] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [filters, setFilters] = useState(initialFilters);
+  const [visibleLimit, setVisibleLimit] = useState(100);
+  const visibleExpenses = useMemo(() => expenses.slice(0, visibleLimit), [expenses, visibleLimit]);
+  useEffect(() => {
+    setVisibleLimit(100);
+  }, [filters]);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [previewExpense, setPreviewExpense] = useState(null);
   const [deletingDraftId, setDeletingDraftId] = useState(null);
-  const [postingDraftId, setPostingDraftId] = useState(null);
-  const [postConfirm, setPostConfirm] = useState(null);
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
+  const [kpiPageKey, setKpiPageKey] = useState(() => expenseKpiKeyFromLocation());
   const [recordModal, setRecordModal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -608,12 +620,30 @@ export default function ExpensesDeskPage() {
   function openKpiTrace(key) {
     const trace = resolveKpiTrace(key, init, expenses, filters, { purchasesDesk });
     if (trace) {
+      if (!purchasesDesk) {
+        window.history.pushState({ expKpi: key }, '', expenseKpiUrl(key));
+        setKpiPageKey(key);
+        window.scrollTo(0, 0);
+        return;
+      }
       setActiveKpiTrace({ key, trace });
       if (purchasesDesk) {
         writePurchasesKpiToLocation(key);
       }
     }
   }
+
+  function closeKpiPage() {
+    window.history.pushState({}, '', expenseKpiUrl(''));
+    setKpiPageKey('');
+  }
+
+  useEffect(() => {
+    if (purchasesDesk) return undefined;
+    const onPop = () => setKpiPageKey(expenseKpiKeyFromLocation());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [purchasesDesk]);
 
   function closeKpiTrace() {
     setActiveKpiTrace(null);
@@ -793,14 +823,16 @@ export default function ExpensesDeskPage() {
 
   function openExpenseDetails(expense) {
     setSelectedId(expense.row_key || Number(expense.id) || 0);
-    if (purchasesDesk) {
+    if (purchasesDesk || expense.source_type === 'voucher' || Number(expense.pv_id) > 0) {
       const voucherUrl = purchasesVoucherViewUrl(expense);
       if (voucherUrl) {
         window.location.href = voucherUrl;
         return;
       }
     }
-    setPreviewExpense(expense);
+    if (Number(expense.id) > 0) {
+      window.location.href = deskPageUrl('detail.php', { id: expense.id });
+    }
   }
 
   function handleExpenseRowClick(event, expense) {
@@ -838,104 +870,13 @@ export default function ExpensesDeskPage() {
     setError('');
     try {
       await deleteDraftExpense(expense.id, init.csrf_token);
-      if (previewExpense?.id === expense.id) {
-        setPreviewExpense(null);
-      }
       await loadData(filters, true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete draft.');
     } finally {
       setDeletingDraftId(null);
     }
-  }, [init?.csrf_token, previewExpense?.id, loadData, filters]);
-
-  const handlePostDraft = useCallback(async (expense) => {
-    if (!expense?.id) return;
-    setError('');
-    setImportNotice('');
-    setPreviewExpense(null);
-    setPostConfirm({
-      expense,
-      preview: null,
-      loading: true,
-      posting: false,
-      posted: null,
-      error: '',
-    });
-    try {
-      const data = await fetchPostDraftPreview(expense.id);
-      setPostConfirm((current) => (
-        current?.expense?.id === expense.id
-          ? {
-              ...current,
-              preview: data.preview || null,
-              loading: false,
-              error: '',
-            }
-          : current
-      ));
-    } catch (err) {
-      setPostConfirm((current) => (
-        current?.expense?.id === expense.id
-          ? {
-              ...current,
-              loading: false,
-              error: err instanceof Error ? err.message : 'Could not load balances.',
-            }
-          : current
-      ));
-    }
-  }, []);
-
-  const confirmPostDraft = useCallback(async () => {
-    const expense = postConfirm?.expense;
-    if (!expense?.id || !init?.csrf_token) return;
-
-    setPostConfirm((current) => (current ? { ...current, posting: true, error: '' } : current));
-    setPostingDraftId(expense.id);
-    try {
-      const result = await postDraftExpense(expense.id, init.csrf_token);
-      const balances = result.balances || null;
-      setPostConfirm((current) => (
-        current?.expense?.id === expense.id
-          ? {
-              ...current,
-              posting: false,
-              posted: balances || {
-                amount: current.preview?.amount,
-                currency_code: current.preview?.currency_code,
-                source_account: current.preview?.source_account,
-              },
-              preview: current.preview
-                ? {
-                    ...current.preview,
-                    source_account: balances?.source_account || current.preview.source_account,
-                  }
-                : current.preview,
-            }
-          : current
-      ));
-      setImportNotice(result.message || `${expense.expense_number || `draft #${expense.id}`} posted to the ledger.`);
-      await loadData(filters, true);
-    } catch (err) {
-      setPostConfirm((current) => (
-        current?.expense?.id === expense.id
-          ? {
-              ...current,
-              posting: false,
-              error: err instanceof Error ? err.message : 'Failed to post draft.',
-            }
-          : current
-      ));
-    } finally {
-      setPostingDraftId(null);
-    }
-  }, [postConfirm?.expense, init?.csrf_token, loadData, filters]);
-
-  const closePostConfirm = useCallback(() => {
-    if (postConfirm?.posting) return;
-    setPostConfirm(null);
-  }, [postConfirm?.posting]);
+  }, [init?.csrf_token, loadData, filters]);
 
   function renderSearchField(inputRef, id = 'exp-desk-search') {
     const showClear = draftFilters.search.trim() !== '' || filters.search.trim() !== '';
@@ -1195,34 +1136,34 @@ export default function ExpensesDeskPage() {
     );
   }
 
+  if (!purchasesDesk && kpiPageKey) {
+    if (loading) {
+      return (
+        <div className="exp-desk-page exp-desk-boot-loading" role="status" aria-live="polite">
+          <Loader2 className="exp-desk-boot-spinner" aria-hidden="true" />
+          <span>Loading records...</span>
+        </div>
+      );
+    }
+    const pageTrace = resolveKpiTrace(kpiPageKey, init, expenses, filters, { purchasesDesk: false });
+    if (pageTrace) {
+      return (
+        <div className="exp-desk-page exp-desk-page--analytics-off exp-desk-page--purchases exp-desk-page--kpi">
+          <ExpenseKpiTraceModal
+            asPage
+            trace={pageTrace}
+            traceKey={kpiPageKey}
+            filters={filters}
+            listedCount={expenses.length}
+            onClose={closeKpiPage}
+          />
+        </div>
+      );
+    }
+  }
+
   return (
-    <div className={`exp-desk-page exp-desk-page--analytics-off${purchasesDesk ? ' exp-desk-page--purchases' : ''}`}>
-      {previewExpense && !purchasesDesk ? (
-        <ExpenseQuickViewModal
-          expense={previewExpense}
-          onClose={() => setPreviewExpense(null)}
-          onDeleteDraft={handleDeleteDraft}
-          onPostDraft={handlePostDraft}
-          onEditDraft={(expense) => {
-            setPreviewExpense(null);
-            setRecordModal({ editId: expense.id });
-          }}
-          deleting={deletingDraftId === previewExpense.id}
-          posting={postingDraftId === previewExpense.id}
-        />
-      ) : null}
-      {postConfirm?.expense && (
-        <ExpensePostConfirmModal
-          expense={postConfirm.expense}
-          preview={postConfirm.preview}
-          loading={postConfirm.loading}
-          posting={postConfirm.posting}
-          posted={postConfirm.posted}
-          error={postConfirm.error}
-          onConfirm={confirmPostDraft}
-          onClose={closePostConfirm}
-        />
-      )}
+    <div className="exp-desk-page exp-desk-page--analytics-off exp-desk-page--purchases">
       {activeKpiTrace && purchasesDesk && (
         <PurchaseKpiTraceSheet
           trace={activeKpiTrace.trace}
@@ -1557,14 +1498,16 @@ export default function ExpensesDeskPage() {
           </div>
         ) : null}
 
-        {purchasesDesk ? (
-          <div className="exp-desk-mobile-cards" aria-label="Stock purchase vouchers">
+        <>
+          <div className="exp-desk-mobile-cards" aria-label={purchasesDesk ? 'Stock purchase vouchers' : 'Expense entries'}>
             {expenses.length === 0 ? (
               <div className="exp-desk-empty exp-desk-empty--mobile">
-                No Stock Purchase vouchers match your filters.
+                {purchasesDesk
+                  ? 'No Stock Purchase vouchers match your filters.'
+                  : 'No expense entries match your filters.'}
               </div>
             ) : (
-              expenses.map((expense) => {
+              visibleExpenses.map((expense) => {
                 const payeeName = expenseDisplayName(expense) || '-';
                 const rowKey = expense.row_key || `exp-${expense.id}`;
                 const totalAmt = Math.max(0, Number(expense.amount) || 0);
@@ -1633,20 +1576,20 @@ export default function ExpensesDeskPage() {
               })
             )}
           </div>
-        ) : null}
+        </>
 
         <div className="exp-desk-table-wrap">
           <table className="exp-desk-table exp-desk-table--ledger">
             <colgroup>
-              <col className={purchasesDesk ? 'col-voucher' : 'col-ref'} style={{ width: purchasesDesk ? '14%' : undefined }} />
-              <col className="col-date" style={{ width: purchasesDesk ? '9%' : undefined }} />
-              <col className="col-payee" style={{ width: purchasesDesk ? '18%' : undefined }} />
-              <col className="col-type" style={{ width: purchasesDesk ? '12%' : undefined }} />
-              <col className="col-total" style={{ width: purchasesDesk ? '11%' : undefined }} />
-              <col className="col-exclusive" style={{ width: purchasesDesk ? '11%' : undefined }} />
-              <col className="col-vat" style={{ width: purchasesDesk ? '8%' : undefined }} />
-              <col className="col-status" style={{ width: purchasesDesk ? '9%' : undefined }} />
-              <col className="col-actions" style={{ width: purchasesDesk ? '8%' : undefined }} />
+              <col className={purchasesDesk ? 'col-voucher' : 'col-ref'} style={{ width: '14%' }} />
+              <col className="col-date" style={{ width: '9%' }} />
+              <col className="col-payee" style={{ width: '18%' }} />
+              <col className="col-type" style={{ width: '12%' }} />
+              <col className="col-total" style={{ width: '11%' }} />
+              <col className="col-exclusive" style={{ width: '11%' }} />
+              <col className="col-vat" style={{ width: '8%' }} />
+              <col className="col-status" style={{ width: '9%' }} />
+              <col className="col-actions" style={{ width: '8%' }} />
             </colgroup>
             <thead>
               <tr>
@@ -1675,7 +1618,7 @@ export default function ExpensesDeskPage() {
                   </td>
                 </tr>
               ) : (
-                expenses.map((expense) => {
+                visibleExpenses.map((expense) => {
                   const payeeName = expenseDisplayName(expense) || '-';
                   const rowKey = expense.row_key || `exp-${expense.id}`;
                   const selectedKey = selectedId === (expense.row_key || expense.id)
@@ -1787,8 +1730,17 @@ export default function ExpensesDeskPage() {
           <span className="exp-desk-pagination-meta">
             {expenses.length === 0
               ? 'Showing 0 records'
-              : `Showing ${expenses.length} record${expenses.length === 1 ? '' : 's'}`}
+              : `Showing ${visibleExpenses.length} of ${expenses.length} record${expenses.length === 1 ? '' : 's'}`}
           </span>
+          {visibleExpenses.length < expenses.length ? (
+            <button
+              type="button"
+              className="exp-desk-btn exp-desk-btn-secondary"
+              onClick={() => setVisibleLimit((n) => n + 100)}
+            >
+              Show more
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -1801,7 +1753,6 @@ export default function ExpensesDeskPage() {
             openExpenseDetails(expense);
           }}
           onEdit={(expense) => {
-            setPreviewExpense(null);
             setRecordModal({ editId: expense.id });
           }}
           onDelete={handleDeleteDraft}

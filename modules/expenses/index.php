@@ -17,7 +17,24 @@ $hideHeaderCompanyBranding = true;
 $employeeHeaderExtraClass = 'employee-header--exp-desk';
 $bodyExtraClass = 'page-exp-desk';
 $expensesPage = 'list';
+$expensesDeskScrollable = true;
 
+$expensesHomeUrl = function_exists('company_url')
+    ? company_url('select-module')
+    : (function_exists('app_url') ? app_url('/select-module.php') : '../../select-module.php');
+$expensesBackUrl = function_exists('company_url')
+    ? company_url('modules/accounting/index') . '?module=accounting'
+    : (function_exists('app_url')
+        ? app_url('/modules/accounting/index.php') . '?module=accounting'
+        : '../accounting/index.php?module=accounting');
+$employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb" aria-label="Breadcrumb">'
+    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($expensesHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="'
+    . htmlspecialchars($expensesBackUrl, ENT_QUOTES, 'UTF-8') . '">Accounting</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<span class="vv-breadcrumb-current">Expenses</span>'
+    . '</nav>';
 $assets = expensesDeskLoadReactAssets();
 if ($assets === null) {
     http_response_code(503);

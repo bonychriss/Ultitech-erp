@@ -393,36 +393,9 @@
   }
 
   function refreshControl() {
-    if (!global.document || !global.document.body || shouldSkipPage()) {
-      var existing = global.document && global.document.getElementById(CONTROL_ID);
-      if (existing) existing.classList.remove('is-visible');
-      return;
-    }
-    ensureStyles();
-    var btn = global.document.getElementById(CONTROL_ID);
-    if (!btn) {
-      btn = global.document.createElement('button');
-      btn.type = 'button';
-      btn.id = CONTROL_ID;
-      btn.setAttribute('aria-label', 'Go back one step');
-      btn.innerHTML = '<span class="erp-nav-back-ico" aria-hidden="true">←</span><span>Back</span>';
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        go(defaultFallback());
-      });
-      global.document.body.appendChild(btn);
-    }
-    if (readStack().length > 0) {
-      // Floating Back is desktop-only; hide on phones/tablets.
-      var mobile = global.matchMedia && global.matchMedia('(max-width: 991.98px)').matches;
-      if (mobile) {
-        btn.classList.remove('is-visible');
-      } else {
-        btn.classList.add('is-visible');
-      }
-    } else {
-      btn.classList.remove('is-visible');
-    }
+    // Floating Back button is disabled on every page; the history stack still works.
+    var floating = global.document && global.document.getElementById(CONTROL_ID);
+    if (floating) floating.parentNode.removeChild(floating);
   }
 
   function onDocumentClick(e) {

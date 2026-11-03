@@ -33,7 +33,7 @@ export default function VoucherPreview({ data }) {
           onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = media.fallbackLogoUrl }}
         />
         <h1 style={{ fontSize: 24, fontWeight: 'bold', margin: 0, color: '#000', letterSpacing: 2, flexGrow: 1, textAlign: 'center', textTransform: 'uppercase' }}>
-          PAYMENT VOUCHER
+          {`${data.voucher?.voucher_type_label || 'Payment'} VOUCHER`.toUpperCase()}
         </h1>
       </div>
 

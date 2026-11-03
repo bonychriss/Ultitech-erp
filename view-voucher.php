@@ -219,16 +219,29 @@ $vvConfig = [
 
 $vvFromPurchases = strtolower(trim((string) ($_GET['from'] ?? ''))) === 'purchases'
     || !empty($vvData['actions']['fromPurchases']);
+$vvFromExpenses = strtolower(trim((string) ($_GET['from'] ?? ''))) === 'expenses';
 $vvBreadcrumbHome = $vvData['breadcrumbs']['home'];
 $vvBreadcrumbAll = $vvData['breadcrumbs']['all'];
 $vvBackUrl = (string) ($vvData['actions']['backUrl'] ?? $vvBreadcrumbHome);
+$vvCrumbLink = static function (string $url, string $label, bool $active = false): string {
+    return '<a class="vv-breadcrumb-link' . ($active ? ' vv-breadcrumb-link--active' : '')
+        . ' erp-nav-back-ignore" href="' . htmlspecialchars($url) . '">' . htmlspecialchars($label) . '</a>';
+};
+$vvCrumbSep = '<span class="vv-breadcrumb-sep">/</span>';
+$vvAccountingUrl = function_exists('company_url')
+    ? company_url('modules/accounting/index') . '?module=accounting'
+    : (function_exists('app_url') ? app_url('/modules/accounting/index.php') . '?module=accounting' : '../accounting/index.php?module=accounting');
+$vvCrumbMiddle = $vvCrumbLink($vvBreadcrumbAll, 'Vouchers', true);
+if ($vvFromPurchases) {
+    $vvCrumbMiddle = $vvCrumbLink($vvAccountingUrl, 'Accounting') . $vvCrumbSep
+        . $vvCrumbLink($vvBackUrl, 'Purchases', true);
+} elseif ($vvFromExpenses) {
+    $vvCrumbMiddle = $vvCrumbLink($vvAccountingUrl, 'Accounting') . $vvCrumbSep
+        . $vvCrumbLink($vvBackUrl, 'Expenses', true);
+}
 $employeeHeaderSubtitle = '<nav class="vv-breadcrumb" aria-label="Breadcrumb">'
-    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($vvBreadcrumbHome) . '">Home</a>'
-    . '<span class="vv-breadcrumb-sep">/</span>'
-    . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="'
-    . htmlspecialchars($vvFromPurchases ? $vvBackUrl : $vvBreadcrumbAll) . '">Vouchers</a>'
-    . '<span class="vv-breadcrumb-sep">/</span>'
-    . '<span class="vv-breadcrumb-current">' . htmlspecialchars($vvData['voucher']['voucher_no'] ?? '') . '</span>'
+    . $vvCrumbLink($vvBreadcrumbHome, 'Home') . $vvCrumbSep
+    . $vvCrumbMiddle
     . '</nav>';
 
 $statusClass = htmlspecialchars($vvData['status']['className'] ?? 'vv-status-pending');
@@ -278,7 +291,7 @@ $GLOBALS['ERP_VOUCHER_CONTEXT'] = [
     'full_name' => (string) ($_SESSION['full_name'] ?? ''),
     'company_id' => (int) ($_SESSION['company_id'] ?? 0),
     'company_slug' => $slug,
-    'back_url' => $vvFromPurchases ? $vvBackUrl : $backUrl,
+    'back_url' => ($vvFromPurchases || $vvFromExpenses) ? $vvBackUrl : $backUrl,
     'voucher_url' => $publicUrl,
     'app_root' => rtrim((string) (function_exists('app_url') ? app_url('/') : '/public_html'), '/'),
     'db_name' => $dbName !== '' ? $dbName : (defined('DB_NAME') ? (string) DB_NAME : ''),
@@ -286,7 +299,7 @@ $GLOBALS['ERP_VOUCHER_CONTEXT'] = [
     'is_finance' => function_exists('isFinance') && isFinance(),
     'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'voucher',
     'page_title' => 'Payment Voucher - ' . (string) ($vvData['voucher']['voucher_no'] ?? ''),
-    'header_title' => $vvFromPurchases ? 'Purchase voucher' : 'Voucher Preview',
+    'header_title' => $vvFromPurchases ? (string) ($vvData['voucher']['voucher_no'] ?? 'Voucher') : 'Voucher Preview',
     'header_subtitle' => $employeeHeaderSubtitle,
     'header_right_html' => $employeeHeaderRightHtml,
     'hide_sidebar' => false,

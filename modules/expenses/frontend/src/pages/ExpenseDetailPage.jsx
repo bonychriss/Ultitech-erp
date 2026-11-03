@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { CheckCircle2, Loader2, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import ExpenseDetailTable from '../components/ExpenseDetailTable';
 import ExpenseStatusBadge, { canDeleteDraftExpense } from '../components/ExpenseStatusBadge';
 import {
@@ -80,51 +81,69 @@ export default function ExpenseDetailPage() {
   }
 
   const isDraft = canDeleteDraftExpense(expense);
+  const headerActionsTarget = document.getElementById('exp-detail-header-actions');
+  const actions = expense ? (
+    <div className="exp-detail-actions">
+      {isDraft ? (
+        <details className="exp-detail-actions-menu">
+          <summary className="exp-desk-btn exp-desk-btn-secondary">
+            <MoreVertical size={16} aria-hidden="true" />
+            Actions
+          </summary>
+          <div className="exp-detail-actions-menu-panel">
+            <button
+              type="button"
+              className="exp-detail-actions-menu-item"
+              onClick={(event) => {
+                event.currentTarget.closest('details').open = false;
+                handlePost();
+              }}
+              disabled={busy}
+            >
+              {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+              Post expense
+            </button>
+            <a
+              className="exp-detail-actions-menu-item"
+              href={deskPageUrl('edit.php', { id: expense.id })}
+            >
+              <Pencil size={15} aria-hidden="true" />
+              Edit draft
+            </a>
+            <button
+              type="button"
+              className="exp-detail-actions-menu-item exp-detail-actions-menu-item--danger"
+              onClick={(event) => {
+                event.currentTarget.closest('details').open = false;
+                handleDelete();
+              }}
+              disabled={busy}
+            >
+              <Trash2 size={15} aria-hidden="true" />
+              Delete draft
+            </button>
+          </div>
+        </details>
+      ) : null}
+      <ExpenseStatusBadge expense={expense} />
+    </div>
+  ) : null;
 
   return (
-    <div className="exp-detail-page">
-      <div className="exp-detail-toolbar">
-        <a className="exp-desk-btn exp-desk-btn-secondary" href={deskPageUrl('index.php')}>
-          <ArrowLeft size={16} aria-hidden="true" />
-          Back to Expenses
-        </a>
-        {!loading && expense ? <ExpenseStatusBadge expense={expense} /> : null}
-      </div>
-
-      {loading ? (
-        <div className="exp-detail-message"><Loader2 size={18} className="animate-spin" />Loading expense details...</div>
-      ) : error && !expense ? (
-        <div className="exp-detail-message exp-detail-message--error" role="alert">{error}</div>
-      ) : expense ? (
-        <>
-          {error ? <div className="exp-detail-alert" role="alert">{error}</div> : null}
-          {isDraft ? (
-            <div className="exp-detail-actions">
-              <button type="button" className="exp-desk-btn exp-desk-btn-primary" onClick={handlePost} disabled={busy}>
-                {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                Post expense
-              </button>
-              <a
-                className="exp-desk-btn exp-desk-btn-secondary"
-                href={deskPageUrl('edit.php', { id: expense.id })}
-              >
-                <Pencil size={15} aria-hidden="true" />
-                Edit draft
-              </a>
-              <button
-                type="button"
-                className="exp-desk-btn exp-desk-btn-secondary exp-desk-quick-action-btn--danger"
-                onClick={handleDelete}
-                disabled={busy}
-              >
-                <Trash2 size={15} aria-hidden="true" />
-                Delete draft
-              </button>
-            </div>
-          ) : null}
+    <>
+      {actions && headerActionsTarget ? createPortal(actions, headerActionsTarget) : null}
+      <div className="exp-detail-page">
+        {loading ? (
+          <div className="exp-detail-message"><Loader2 size={18} className="animate-spin" />Loading expense details...</div>
+        ) : error && !expense ? (
+          <div className="exp-detail-message exp-detail-message--error" role="alert">{error}</div>
+        ) : expense ? (
+          <>
+            {error ? <div className="exp-detail-alert" role="alert">{error}</div> : null}
           <ExpenseDetailTable expense={expense} />
-        </>
-      ) : null}
-    </div>
+          </>
+        ) : null}
+      </div>
+    </>
   );
 }

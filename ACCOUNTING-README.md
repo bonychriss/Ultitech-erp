@@ -82,6 +82,7 @@ Operational **cash book**.
 - Liquidity dashboard, transfers between accounts, transaction history  
 - Core write API: `recordTransaction()` / `balancesRecordTransaction()`  
 - Fed by: sales payments, revenue collections, expense posts, paid vouchers, stock supplier payments  
+- Finance/Admin voucher payment requires an active source account and posts one debit to `account_transactions` (`reference_type = payment_voucher`) while marking the voucher paid; the account balance is recalculated from the ledger.
 
 **Docs:** `modules/balances/README.md`
 

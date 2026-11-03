@@ -16,6 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+$uploadedProofPath = null;
+$paymentCommitted = false;
+
 $voucher_id = isset($_POST['voucher_id']) ? (int)$_POST['voucher_id'] : 0;
 $returnParams = '';
 if (isset($_POST['return']) && $_POST['return'] === 'finance') {
@@ -82,6 +85,39 @@ try {
     if ((int)$v['is_paid'] === 1) {
         // Already marked paid
         header('Location: view-voucher.php?id=' . $voucher_id . $returnParams);
+        exit;
+    }
+
+    $pay_account_id = isset($_POST['account_id']) ? (int) $_POST['account_id'] : 0;
+    $amount = (float) ($v['total_amount'] ?? 0);
+    if ($pay_account_id <= 0) {
+        http_response_code(400);
+        echo 'Select a payment account so marking this voucher paid updates Balances.';
+        exit;
+    }
+    if ($amount <= 0) {
+        http_response_code(400);
+        echo 'Voucher amount must be greater than zero.';
+        exit;
+    }
+
+    $companyId = (int) (currentCompanyId() ?? 0);
+    if (function_exists('balancesUseCompanyScope') && balancesUseCompanyScope($pdo) && $companyId > 0) {
+        $accountStmt = $pdo->prepare("SELECT id, type FROM financial_accounts WHERE id = ? AND company_id = ? AND status = 'active' LIMIT 1");
+        $accountStmt->execute([$pay_account_id, $companyId]);
+    } else {
+        $accountStmt = $pdo->prepare("SELECT id, type FROM financial_accounts WHERE id = ? AND status = 'active' LIMIT 1");
+        $accountStmt->execute([$pay_account_id]);
+    }
+    $paymentAccount = $accountStmt->fetch(PDO::FETCH_ASSOC);
+    if (!$paymentAccount) {
+        http_response_code(400);
+        echo 'Selected payment account is invalid or inactive.';
+        exit;
+    }
+    if (!in_array(balancesAccountLiquidityBucket((string) ($paymentAccount['type'] ?? '')), ['cash', 'bank', 'mobile'], true)) {
+        http_response_code(400);
+        echo 'Selected account is not a valid cash, bank, or mobile-money payment source.';
         exit;
     }
 
@@ -162,31 +198,50 @@ try {
         echo 'Failed to store uploaded file.';
         exit;
     }
+    $uploadedProofPath = $destPath;
     // Build relative path to serve via web
     $relPath = 'assets/uploads/vouchers/' . $voucher_id . '/' . $filename;
 
-    // Balances: Record Transaction before marking paid
-    $pay_account_id = isset($_POST['account_id']) ? (int)$_POST['account_id'] : 0;
-    $amount = (float)($v['total_amount'] ?? 0);
-    if ($voucherPurpose === 'stock_purchase' && $pay_account_id <= 0) {
-        http_response_code(400);
-        echo 'Select a payment account so the stock purchase payment updates Balances.';
+    $pdo->beginTransaction();
+    $lockStmt = $pdo->prepare('SELECT is_paid, status FROM payment_vouchers WHERE id = ? LIMIT 1 FOR UPDATE');
+    $lockStmt->execute([$voucher_id]);
+    $lockedVoucher = $lockStmt->fetch(PDO::FETCH_ASSOC);
+    if (!$lockedVoucher) {
+        throw new RuntimeException('Voucher not found.');
+    }
+    if ((int) ($lockedVoucher['is_paid'] ?? 0) === 1) {
+        $pdo->rollBack();
+        @unlink($uploadedProofPath);
+        $uploadedProofPath = null;
+        header('Location: view-voucher.php?id=' . $voucher_id . $returnParams);
         exit;
     }
-    if ($pay_account_id > 0) {
-        $desc = $voucherPurpose === 'stock_purchase'
-            ? "Stock Purchase Payment Voucher #{$v['voucher_no']} to {$v['payee_name']}"
-            : "Payment for Voucher #{$v['voucher_no']} to {$v['payee_name']}";
-        // Outflow = 'debit' in the Balances module logic
-        $success = recordTransaction($pay_account_id, 'debit', $amount, $desc, 'payment_voucher', $voucher_id);
-        if (!$success) {
-            throw new Exception("Failed to deduct amount from the selected account.");
-        }
+    if (strtolower((string) ($lockedVoucher['status'] ?? '')) !== 'approved') {
+        throw new RuntimeException('Voucher must be approved before payment.');
     }
 
-    // Persist swift_document path and mark as paid
+    $desc = $voucherPurpose === 'stock_purchase'
+        ? "Stock Purchase Payment Voucher #{$v['voucher_no']} to {$v['payee_name']}"
+        : "Payment for Voucher #{$v['voucher_no']} to {$v['payee_name']}";
+    if (!balancesRecordTransaction(
+        $pdo,
+        $pay_account_id,
+        'debit',
+        $amount,
+        $desc,
+        'payment_voucher',
+        $voucher_id,
+        null,
+        $companyId > 0 ? $companyId : null
+    )) {
+        throw new RuntimeException('Failed to deduct amount from the selected account.');
+    }
+
     $upd = $pdo->prepare('UPDATE payment_vouchers SET swift_document = ?, is_paid = 1, paid_by = ?, payment_account_id = ?, paid_at = NOW(), updated_at = NOW() WHERE id = ?');
     $upd->execute([$relPath, (int)$_SESSION['user_id'], $pay_account_id > 0 ? $pay_account_id : null, $voucher_id]);
+    balancesRecalculateAccount($pdo, $pay_account_id, $companyId > 0 ? $companyId : null);
+    $pdo->commit();
+    $paymentCommitted = true;
 
     // Stock purchase PVs: update linked purchase payment_status (+ supplier_payments mirror, no second bank debit)
     if ($voucherPurpose === 'stock_purchase' && function_exists('syncLinkedStockPurchasesAfterVoucherPaid')) {
@@ -235,6 +290,12 @@ try {
     header('Location: ' . $redirectUrl);
     exit;
 } catch (Throwable $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    if (!$paymentCommitted && $uploadedProofPath && is_file($uploadedProofPath)) {
+        @unlink($uploadedProofPath);
+    }
     http_response_code(500);
     echo 'Error: ' . htmlspecialchars($e->getMessage());
 }

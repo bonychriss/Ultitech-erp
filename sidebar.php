@@ -1860,7 +1860,7 @@ if (!isset($_GET['print'])) {
         <div class="d-flex align-items-center logo-container" style="gap: 10px;">
             <?php if ($sidebarCompanyLogoUrl !== ''): ?>
                 <div style="max-height: 50px; max-width: 150px; display: flex; align-items: center; justify-content: flex-start; overflow: hidden; flex-shrink: 0;">
-                    <img src="<?= htmlspecialchars($sidebarCompanyLogoUrl) ?>" alt="Company Logo" style="max-height: 45px; max-width: 100%; object-fit: contain;">
+                    <img src="<?= htmlspecialchars($sidebarCompanyLogoUrl) ?>" alt="Company Logo" style="max-height: 34px; max-width: 100%; object-fit: contain;">
                 </div>
             <?php else: ?>
                 <div style="background: #5c59f0; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0;">
@@ -2198,6 +2198,14 @@ if (!isset($_GET['print'])) {
     </div>
     <?php endif; ?>
 </nav>
+
+<style>
+html[data-theme="dark"] #native-sidebar .logo-container,
+html[data-theme="dark"] #native-sidebar .sidebar-header { background: transparent !important; }
+html[data-theme="dark"] #native-sidebar .logo-container img,
+html[data-theme="dark"] #native-sidebar .sidebar-header img.vv-logo-recolored { background: transparent !important; border-radius: 0 !important; padding: 0 !important; box-shadow: none !important; }
+</style>
+<script src="<?= htmlspecialchars(app_url('/assets/js/voucher-logo-dark.js')) ?>?v=<?= (int) @filemtime(__DIR__ . '/assets/js/voucher-logo-dark.js') ?>"></script>
 
 <!-- Theme Switcher Modal -->
 <div class="modal fade" id="themeModal" tabindex="-1" aria-hidden="true">

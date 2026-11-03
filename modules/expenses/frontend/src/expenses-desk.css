@@ -655,7 +655,7 @@ body.page-exp-desk .exp-desk-page button.exp-desk-filter-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #0f172a;
   text-transform: none;
@@ -670,51 +670,15 @@ body.page-exp-desk .exp-desk-page button.exp-desk-filter-btn {
   flex-shrink: 0;
 }
 
-.exp-desk-date-presets {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
+.exp-desk-date-insight {
   margin-bottom: 0.45rem;
-}
-
-.exp-desk-date-preset {
-  border: 1px solid #e2e8f0;
-  border-radius: 0.45rem;
-  background: #fff;
-  color: #475569;
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.22rem 0.5rem;
-  cursor: pointer;
-}
-
-.exp-desk-date-preset:hover {
-  border-color: #c7d2fe;
-  color: #4f46e5;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #c7d2fe;
+  border-radius: 0.5rem;
   background: #eef2ff;
-}
-
-.exp-desk-date-preset.is-active {
-  border-color: #c7d2fe;
   color: #4338ca;
-  background: #eef2ff;
-}
-
-.exp-desk-date-preset-clear {
-  margin-left: auto;
-  border: none;
-  background: transparent;
-  color: #6366f1;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  padding: 0.15rem 0.1rem;
-  cursor: pointer;
-}
-
-.exp-desk-date-preset-clear:hover {
-  color: #4338ca;
-  text-decoration: underline;
 }
 
 .exp-desk-filters-grid {
@@ -889,6 +853,25 @@ body.page-exp-desk .exp-desk-filters-close {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
+}
+
+.exp-desk-month-insight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #c7d2fe;
+  border-radius: 0.5rem;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.32rem 0.5rem;
+}
+
+.exp-desk-month-insight svg {
+  flex-shrink: 0;
+  width: 0.8rem;
+  height: 0.8rem;
 }
 
 .exp-desk-filter-chip {
@@ -1568,6 +1551,13 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
   flex: 0 0 auto;
 }
 
+.exp-desk-results-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
 .exp-desk-results-count {
   font-size: 0.9rem;
   font-weight: 700;
@@ -2242,6 +2232,238 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
   overflow-x: auto;
 }
 
+.exp-detail-attachments {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+  color: #17324e;
+}
+
+.exp-detail-attachments h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.exp-detail-document-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+}
+
+.exp-detail-document-card {
+  display: flex;
+  flex: 0 0 168px;
+  flex-direction: column;
+  width: 168px;
+  max-width: calc(50% - 6px);
+  overflow: hidden;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.exp-detail-document-card:hover {
+  border-color: #c4c7c5;
+  box-shadow: 0 2px 8px rgba(60, 64, 67, 0.16);
+}
+
+.exp-detail-document-preview {
+  display: flex;
+  width: 100%;
+  height: 118px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: #f1f3f4;
+  cursor: pointer;
+}
+
+.exp-detail-document-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.exp-detail-document-preview iframe {
+  width: 840px;
+  height: 1100px;
+  max-width: none;
+  border: 0;
+  background: #525659;
+  pointer-events: none;
+  transform: scale(0.2);
+  transform-origin: center center;
+}
+
+.exp-detail-document-type {
+  display: inline-flex;
+  min-width: 42px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 2px;
+  background: #5f6368;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.exp-detail-document-type--pdf,
+.exp-detail-document-badge--pdf { background: #ea4335; }
+.exp-detail-document-type--image,
+.exp-detail-document-badge--image,
+.exp-detail-document-type--doc,
+.exp-detail-document-badge--doc { background: #4285f4; }
+.exp-detail-document-type--sheet,
+.exp-detail-document-badge--sheet { background: #0f9d58; }
+
+.exp-detail-document-footer {
+  position: relative;
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  padding: 6px 8px;
+  border-top: 1px solid #e8eaed;
+  background: #f8fafc;
+  color: #5f6368;
+}
+
+.exp-detail-document-badge {
+  display: inline-flex;
+  width: 22px;
+  height: 24px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: #5f6368;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.exp-detail-document-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: #3c4043;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exp-detail-document-download {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+.exp-detail-document-download:hover {
+  background: #e8f0fe;
+  color: #174ea6;
+}
+
+.exp-detail-document-modal {
+  position: fixed;
+  z-index: 3000;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.exp-detail-document-modal-panel {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  background: #fff;
+}
+
+.exp-detail-document-modal-head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.exp-detail-document-modal-head > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exp-detail-document-modal-head button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid #111;
+  border-radius: 0.35rem;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+}
+
+.exp-detail-document-modal-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 16px;
+  background: #fff;
+}
+
+.exp-detail-document-modal-body img {
+  display: block;
+  max-width: min(100%, 960px);
+  max-height: calc(100vh - 96px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.exp-detail-document-modal-body iframe {
+  width: min(100%, 960px);
+  height: calc(100vh - 96px);
+  border: 0;
+  background: #fff;
+}
+
 .exp-desk-expense-table {
   width: 100%;
   border: 1px solid #000;
@@ -2317,11 +2539,28 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
   padding-bottom: 4px;
 }
 
+.exp-detail-applicant {
+  display: flex;
+  min-height: 2rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.exp-detail-applicant-signature {
+  display: block;
+  max-width: min(100%, 150px);
+  max-height: 40px;
+  object-fit: contain;
+  object-position: left center;
+}
+
 .exp-detail-page {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 1.25rem 0 2.5rem;
+  padding: 0 0 2.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -2339,6 +2578,71 @@ body.page-exp-desk .exp-desk-page button.exp-desk-kpi-card {
 .exp-detail-actions {
   justify-content: flex-end;
   flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.exp-detail-header-actions .exp-detail-actions {
+  width: auto;
+  flex-wrap: nowrap;
+}
+
+.exp-detail-actions-menu {
+  position: relative;
+}
+
+.exp-detail-actions-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+.exp-detail-actions-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.exp-detail-actions-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 20;
+  min-width: 11rem;
+  padding: 0.35rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+}
+
+.exp-detail-actions-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: #334155;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.exp-detail-actions-menu-item:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.exp-detail-actions-menu-item--danger {
+  color: #b91c1c;
+}
+
+.exp-detail-actions-menu-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .exp-detail-message,
@@ -2377,7 +2681,7 @@ a.exp-desk-quick-ref-link:hover {
 
 @media (max-width: 640px) {
   .exp-detail-page {
-    padding-top: 0.75rem;
+    padding-top: 0;
   }
 
   .exp-desk-expense-table {
@@ -2385,9 +2689,14 @@ a.exp-desk-quick-ref-link:hover {
     min-width: 700px;
   }
 
+  .exp-detail-document-card {
+    flex-basis: calc(50% - 6px);
+    width: calc(50% - 6px);
+  }
+
   .exp-detail-actions {
     width: 100%;
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 }
 
@@ -2901,9 +3210,54 @@ body.page-exp-desk button.exp-desk-row-action {
 
 .exp-kpi-desk-total-label { font-weight: 700; text-align: right; }
 
-@media (max-width: 720px) {
-  .exp-kpi-desk-wrap { overflow-x: auto; }
-  .exp-kpi-desk-table { min-width: 760px; }
+@media (max-width: 767.98px) {
+  .exp-kpi-desk-wrap { display: none; }
+  .exp-kpi-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .exp-kpi-mobile-card {
+    gap: 0.65rem;
+    text-decoration: none;
+  }
+  .exp-kpi-mobile-number {
+    color: #0f172a;
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+  .exp-kpi-mobile-payee {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+  .exp-kpi-mobile-description {
+    color: #475569;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .exp-kpi-mobile-card .exp-kpi-desk-status {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.45rem;
+    white-space: nowrap;
+  }
+  .exp-kpi-desk-footer {
+    align-items: flex-start;
+    padding: 0.7rem 0.25rem 0.25rem;
+  }
+  .exp-kpi-desk-showing {
+    flex-basis: 100%;
+  }
+  .exp-kpi-desk-totals {
+    flex-wrap: wrap;
+    margin-left: 0.5rem;
+    gap: 0.4rem;
+  }
 }
 
 .exp-desk-kpi-trace-modal--page .exp-desk-kpi-trace-table thead th {
@@ -3115,6 +3469,20 @@ body.page-exp-desk button.exp-desk-row-action {
   margin: 0;
   font-size: 0.875rem;
   color: #64748b;
+}
+
+.exp-desk-kpi-trace-empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 15rem;
+  padding: 1rem;
+}
+
+.exp-desk-kpi-trace-empty-state dotlottie-wc {
+  display: block;
+  width: min(18rem, 100%);
+  height: 15rem;
 }
 
 .exp-desk-kpi-trace-table-wrap {
@@ -4911,11 +5279,7 @@ body.page-exp-desk button.exp-desk-row-action {
   gap: 1rem;
   flex: 0 0 auto;
   align-items: stretch;
-  max-height: min(42vh, 22rem);
   overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
 }
 
 .exp-desk-analytics-card {
@@ -5025,13 +5389,13 @@ body.page-exp-desk button.exp-desk-row-action {
 }
 
 .exp-desk-trend-foot-label {
-  font-size: 0.78rem;
+  font-size: 0.66rem;
   font-weight: 500;
   color: #94a3b8;
 }
 
 .exp-desk-trend-foot-value {
-  font-size: 1.2rem;
+  font-size: 0.98rem;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.02em;
@@ -5039,7 +5403,7 @@ body.page-exp-desk button.exp-desk-row-action {
 }
 
 .exp-desk-trend-foot-hint {
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   color: #94a3b8;
 }
 
@@ -5051,7 +5415,7 @@ body.page-exp-desk button.exp-desk-row-action {
 }
 
 .exp-desk-trend-foot-pct {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #0f172a;
 }

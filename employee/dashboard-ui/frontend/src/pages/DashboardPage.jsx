@@ -24,6 +24,7 @@ import {
 import { aiSearch, fetchDashboard, getConfig, toggleReference } from '../api/dashboard.js'
 import ExportMenu from '../components/ExportMenu.jsx'
 import ExportRangeModal from '../components/ExportRangeModal.jsx'
+import MarkPaidModal from '../components/MarkPaidModal.jsx'
 import { exportVouchersExcel, exportVouchersPdf, filterVouchersByDateRange } from '../utils/exportVouchers.js'
 
 function WhatsAppIcon({ size = 16 }) {
@@ -490,45 +491,14 @@ function AdminPayModal({ voucher, accounts, onClose }) {
     return <StockPurchasePayModal voucher={voucher} accounts={accounts} onClose={onClose} />
   }
   return (
-    <div className="ed-modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="ed-modal" role="dialog" aria-modal="true" aria-label="Confirm payment">
-        <div className="ed-modal-head">
-          <h3>Confirm Payment</h3>
-          <button type="button" className="ed-modal-close" onClick={onClose} aria-label="Close">
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
-        <div className="ed-modal-details">
-          <div><strong>Voucher:</strong> {voucher.voucher_no}</div>
-          <div><strong>Payee:</strong> {voucher.payee_name}</div>
-          <div><strong>Amount:</strong> {formatAmount(voucher.currency, voucher.total_amount)}</div>
-        </div>
-        <form method="POST" action={URLS.markPaid} encType="multipart/form-data" className="ed-modal-form">
-          <input type="hidden" name="voucher_id" value={voucher.id} />
-          <input type="hidden" name="mark_paid" value="1" />
-          {MODULE ? <input type="hidden" name="module" value={MODULE} /> : null}
-          <label className="ed-modal-label">
-            Payment Account
-            <select name="account_id" required defaultValue="">
-              <option value="" disabled>Select account</option>
-              {(accounts || []).map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.currency} {Number(a.current_balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="ed-modal-label">
-            SWIFT Proof (required)
-            <input type="file" name="swift_file" required accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.doc,.docx,.xls,.xlsx" />
-          </label>
-          <div className="ed-modal-actions">
-            <button type="button" className="ed-btn ed-btn--ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="ed-btn ed-btn--primary">Confirm & Mark Paid</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <MarkPaidModal
+      voucher={voucher}
+      accounts={accounts}
+      actionUrl={URLS.markPaid}
+      module={MODULE}
+      formatAmount={formatAmount}
+      onClose={onClose}
+    />
   )
 }
 

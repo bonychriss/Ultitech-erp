@@ -1,0 +1,349 @@
+/* Dark theme (WhatsApp teal-night, matches expenses/balances desk) for the payment voucher view page (html[data-theme="dark"]). */
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .layout-main-wrapper,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .layout-main-wrapper > .d-flex.flex-column,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .main-content,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #root,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-react-root,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .page-shell,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-view-layout {
+  background: #0b141a !important;
+  color: #e9edef;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .employee-header,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .employee-header--page-context,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .admin-header {
+  background: #0b141a !important;
+  border-color: #111b21 !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .employee-header-page-title,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .employee-header .employee-header-page-title[style] {
+  color: #e9edef !important;
+}
+html[data-theme="dark"] .vv-breadcrumb-link { color: #8696a0; }
+html[data-theme="dark"] .vv-breadcrumb-link:hover { color: #e9edef; }
+html[data-theme="dark"] .vv-breadcrumb-link--active { color: #00a884; }
+html[data-theme="dark"] .vv-breadcrumb-link--active:hover { color: #06cf9c; }
+html[data-theme="dark"] .vv-breadcrumb-sep,
+html[data-theme="dark"] .vv-breadcrumb-current { color: #8696a0; }
+
+/* Actions menu */
+html[data-theme="dark"] .vv-actions-menu {
+  background: #111b21;
+  border-color: #2a3942;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .dropdown-item { color: #e9edef; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .dropdown-item:hover { background: #202c33; color: #fff; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .dropdown-item--success { color: #34d399; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .dropdown-item--primary { color: #60a5fa; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .dropdown-item--danger { color: #f87171; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .dropdown-item--pending,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .dropdown-item--pending:hover,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .dropdown-item--muted {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+}
+
+/* Status badges */
+html[data-theme="dark"] .vv-status-approved,
+html[data-theme="dark"] .vv-status-paid,
+html[data-theme="dark"] .status-approved { background: rgba(34, 197, 94, 0.16); color: #4ade80; border-color: rgba(34, 197, 94, 0.35); }
+html[data-theme="dark"] .vv-status-pending,
+html[data-theme="dark"] .vv-status-confirming { background: rgba(249, 115, 22, 0.16); color: #fb923c; border-color: rgba(249, 115, 22, 0.35); }
+html[data-theme="dark"] .vv-status-signed { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border-color: rgba(99, 102, 241, 0.4); }
+html[data-theme="dark"] .vv-status-rejected { background: rgba(239, 68, 68, 0.16); color: #f87171; border-color: rgba(239, 68, 68, 0.35); }
+html[data-theme="dark"] .vv-status-posted { background: rgba(234, 179, 8, 0.16); color: #facc15; border-color: rgba(234, 179, 8, 0.35); }
+
+/* Voucher document: dark paper (print output is unaffected) */
+@media screen {
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-container,
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper,
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-card-preview .voucher-paper {
+    background: #111b21 !important;
+    color: #e9edef !important;
+    border: 1px solid #2a3942 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+  }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-container { padding: 12px; background: transparent !important; border: 0 !important; }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper table {
+    background: #111b21 !important;
+    border-color: #2a3942 !important;
+    color: #e9edef !important;
+  }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper td,
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper th {
+    background: #111b21 !important;
+    border-color: #2a3942 !important;
+    color: #e9edef !important;
+  }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper thead th,
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper th {
+    background: #202c33 !important;
+  }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper .voucher-title,
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-container .voucher-title {
+    color: #e9edef !important;
+  }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper img { background: #fff; border-radius: 4px; }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper img.vv-logo-recolored { background: transparent !important; border-radius: 0; }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper .voucher-logo-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    background: #fff !important;
+    border: 1px solid #2a3942;
+    border-radius: 12px;
+    box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.12);
+  }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper .voucher-logo-wrap.vv-logo-recolored {
+    background: transparent !important;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper .voucher-logo-wrap.vv-logo-recolored img { background: transparent !important; }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper .voucher-logo-wrap img {
+    background: transparent;
+    border-radius: 0;
+    display: block;
+  }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper .vv-approvals-table img,
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper img[alt*="ignature" i],
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .voucher-paper img[src*="signature" i] {
+    background: transparent !important;
+    filter: invert(1) hue-rotate(180deg) brightness(1.15);
+    mix-blend-mode: screen;
+    border-radius: 0;
+    max-height: 44px !important;
+  }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-preview-section [style*="border-top"] { border-top-color: #2a3942 !important; }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-preview-section [style*="background: rgb(249, 250, 251)"] { background: #111b21 !important; border-color: #2a3942 !important; }
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-preview-section h3,
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-preview-section [style*="color: rgb(31, 41, 55)"],
+  html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-preview-section [style*="color: rgb(55, 65, 81)"] { color: #e9edef !important; }
+}
+
+/* Section headings */
+html[data-theme="dark"] .vv-card-title,
+html[data-theme="dark"] .card-title,
+html[data-theme="dark"] .vv-gmail-title,
+html[data-theme="dark"] .approval-header-title,
+html[data-theme="dark"] .approval-header .vv-card-title,
+html[data-theme="dark"] .approval-header .vv-approval-flow-title,
+html[data-theme="dark"] .approval-card .approval-header-title,
+html[data-theme="dark"] .approval-card .approval-header .vv-card-title,
+html[data-theme="dark"] .approval-card .approval-header .vv-approval-flow-title { color: #e9edef !important; }
+html[data-theme="dark"] .vv-gmail-count { color: #8696a0; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-view-layout > div[style*="border-top"],
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-view-layout div[style*="border-top: 1px solid"] { border-color: #2a3942 !important; }
+
+/* Approval flow */
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-badge,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-header .vv-approval-summary,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-card-approval .vv-approval-summary {
+  background: rgba(34, 197, 94, 0.14) !important;
+  color: #4ade80 !important;
+  border-color: rgba(34, 197, 94, 0.35) !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-badge.vv-approval-summary--progress,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-header .vv-approval-summary--progress {
+  background: rgba(148, 163, 184, 0.12) !important;
+  color: #e9edef !important;
+  border-color: #2a3942 !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-badge i,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-header .vv-approval-summary i { color: #00a884 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-timeline::before,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-timeline.approval-stepper::before,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-timeline::before,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-timeline.approval-stepper::before { background: #2a3942 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-step,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-step,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item { border-color: #111b21 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .timeline-dot {
+  box-shadow: 0 0 0 3px #0b141a !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .timeline-dot.pending,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-status-icon--pending {
+  background: #111b21 !important;
+  color: #8696a0 !important;
+  border-color: #3b4a54 !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-status-icon--active {
+  background: rgba(245, 158, 11, 0.18) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-avatar,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-avatar {
+  background: #111b21 !important;
+  box-shadow: 0 0 0 3px #0b141a !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-avatar-icon { color: #8696a0 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-role,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-step.pending .approval-role,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-step.active .approval-role { color: #e9edef !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-name,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-date { color: #8696a0 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-date--pending,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-step.pending .approval-name { color: #8696a0 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-label { color: #e9edef !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-name,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-pending-text { color: #8696a0 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-date { background: rgba(167, 139, 250, 0.14); color: #06cf9c; border-color: rgba(167, 139, 250, 0.3); }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-avatar { background: #111b21; box-shadow: 0 0 0 2px #0b141a, 0 0 0 1px #2a3942; }
+
+/* Approval status colors: completed = green, current = amber, pending = muted, rejected = red */
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-stepper::before { background: #2a3942 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.completed .step-avatar,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.approved .step-avatar {
+  background: rgba(0, 168, 132, 0.18) !important;
+  border-color: #0b141a !important;
+  box-shadow: 0 0 0 2px #00a884 !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.completed .step-avatar-initial,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.approved .step-avatar-initial { color: #06cf9c !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.completed .step-label,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.approved .step-label { color: #06cf9c !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.completed .step-date,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.approved .step-date {
+  background: rgba(0, 168, 132, 0.14);
+  color: #06cf9c;
+  border-color: rgba(0, 168, 132, 0.35);
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-check { background: #00a884 !important; color: #fff !important; }
+
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.active .step-avatar,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.current .step-avatar {
+  background: rgba(245, 158, 11, 0.16) !important;
+  border-color: #0b141a !important;
+  box-shadow: 0 0 0 2px #f59e0b !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.active .step-avatar-initial { color: #fbbf24 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.active .step-label,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.active .step-pending-text,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.current .step-label { color: #fbbf24 !important; }
+
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.pending .step-avatar {
+  background: #111b21 !important;
+  box-shadow: 0 0 0 1px #3b4a54 !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.pending .step-avatar-initial,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-avatar-icon { color: #8696a0 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.pending .step-label { color: #8696a0 !important; }
+
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.rejected .step-avatar {
+  background: rgba(239, 68, 68, 0.16) !important;
+  box-shadow: 0 0 0 2px #ef4444 !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.rejected .step-avatar-initial,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .step-item.rejected .step-label { color: #f87171 !important; }
+
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-step.completed .timeline-dot,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .timeline-dot.completed { background: #00a884 !important; color: #fff !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .timeline-dot.active { background: #f59e0b !important; color: #fff !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-step.completed .approval-role { color: #06cf9c !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-step.active .approval-role { color: #fbbf24 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-step.rejected .approval-role { color: #f87171 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-step.completed .approval-avatar { box-shadow: 0 0 0 2px #00a884 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-step.active .approval-avatar { box-shadow: 0 0 0 2px #f59e0b !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-step.rejected .approval-avatar { box-shadow: 0 0 0 2px #ef4444 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-status-icon--done { background: #00a884 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-date { color: #06cf9c !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .approval-card .approval-date--pending { color: #8696a0 !important; }
+
+/* Supporting documents */
+html[data-theme="dark"] .vv-react-root .vv-gmail-card,
+html[data-theme="dark"] .vv-gmail-card {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+  box-shadow: none;
+}
+html[data-theme="dark"] .vv-react-root .vv-gmail-card:hover,
+html[data-theme="dark"] .vv-gmail-card:hover {
+  border-color: #3b4a54 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .vv-react-root .vv-gmail-card-hit,
+html[data-theme="dark"] .vv-gmail-card-hit { background: #0b141a !important; }
+html[data-theme="dark"] .vv-react-root .vv-gmail-thumb,
+html[data-theme="dark"] .vv-gmail-thumb { background: #0b141a; }
+html[data-theme="dark"] .vv-react-root .vv-gmail-thumb--placeholder,
+html[data-theme="dark"] .vv-react-root .vv-gmail-thumb--empty,
+html[data-theme="dark"] .vv-gmail-thumb--placeholder,
+html[data-theme="dark"] .vv-gmail-thumb--empty { color: #8696a0; }
+html[data-theme="dark"] .vv-react-root .vv-gmail-card-foot,
+html[data-theme="dark"] .vv-gmail-card-foot {
+  background: #111b21 !important;
+  border-top-color: #2a3942 !important;
+}
+html[data-theme="dark"] .vv-react-root .vv-gmail-fname,
+html[data-theme="dark"] .vv-gmail-fname { color: #e9edef; }
+html[data-theme="dark"] .vv-react-root .vv-gmail-foot-action,
+html[data-theme="dark"] .vv-gmail-foot-action { color: #60a5fa; }
+html[data-theme="dark"] .vv-react-root .vv-gmail-foot-action:hover,
+html[data-theme="dark"] .vv-gmail-foot-action:hover { background: rgba(96, 165, 250, 0.16); color: #93c5fd; }
+html[data-theme="dark"] .vv-react-root .vv-gmail-foot-action--danger,
+html[data-theme="dark"] .vv-gmail-foot-action--danger { color: #f87171; }
+html[data-theme="dark"] .vv-react-root .vv-gmail-foot-action--danger:hover,
+html[data-theme="dark"] .vv-gmail-foot-action--danger:hover { background: rgba(248, 113, 113, 0.16); color: #fca5a5; }
+html[data-theme="dark"] .vv-btn-outline,
+html[data-theme="dark"] .btn-outline-purple,
+html[data-theme="dark"] .vv-print-btn { background: transparent; color: #06cf9c; border-color: #7c3aed; }
+html[data-theme="dark"] .vv-btn-outline:hover,
+html[data-theme="dark"] .btn-outline-purple:hover,
+html[data-theme="dark"] .vv-print-btn:hover { background: rgba(124, 58, 237, 0.18); color: #06cf9c; }
+html[data-theme="dark"] .vv-doc-actions .vv-doc-delete { background: rgba(239, 68, 68, 0.14); color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
+html[data-theme="dark"] .vv-alert-warn { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35); }
+
+/* Sidebar + header chrome: same teal-night as the expenses desk */
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .sidebar,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .sidebar-container {
+  --sidebar-bg: #0b141a !important;
+  --sidebar-text: #e9edef !important;
+  --sidebar-hover-bg: #202c33 !important;
+  --sidebar-hover-text: #ffffff !important;
+  --sidebar-active-bg: #202c33 !important;
+  --sidebar-active-text: #ffffff !important;
+  --sidebar-border: #2a3942 !important;
+  --sidebar-icon-color: #8696a0 !important;
+  --sidebar-hover-icon: #e9edef !important;
+  background: #0b141a !important;
+  color: #e9edef !important;
+  border-right-color: #2a3942 !important;
+}
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .nav-link,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .sidebar-text { color: #e9edef !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .nav-link i,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .text-muted,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .sidebar-label { color: #8696a0 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .nav-link:not(.active):hover,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .nav-link.active { background: #202c33 !important; color: #fff !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar hr { border-color: #2a3942 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .employee-header,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .employee-header--page-context { border-bottom: 0 !important; box-shadow: none !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-view-layout > div[style*="border-top"],
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-preview-section [style*="border-top"],
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-view-layout div[style*="border-top: 1px solid"] { border-top: 0 !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .employee-header .employee-header-menu-btn { color: #e9edef !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-breadcrumb-link,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-breadcrumb-sep,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-breadcrumb-current { color: #00a884; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .vv-breadcrumb-link:hover { color: #06cf9c; }
+html[data-theme="dark"] .vv-actions-btn { background: #00a884; border-color: #00a884; color: #fff; box-shadow: none; }
+html[data-theme="dark"] .vv-actions-btn:hover { background: #06cf9c; border-color: #06cf9c; }
+/* Sidebar logo: no white block, uses the recolored logo */
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .sidebar-container .sidebar-logo,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .sidebar-logo,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .sidebar-container .sidebar-header-content { background: transparent !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page .sidebar-container img.vv-logo-recolored,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar img.vv-logo-recolored { background: transparent !important; border-radius: 0 !important; padding: 0 !important; box-shadow: none !important; }
+
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .logo-container,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .sidebar-header { background: transparent !important; }
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .logo-container img,
+html[data-theme="dark"] body.dashboard.vv-view-voucher-page #native-sidebar .sidebar-header img { background: transparent !important; border-radius: 0 !important; box-shadow: none !important; }

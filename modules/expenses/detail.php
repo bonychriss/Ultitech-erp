@@ -15,6 +15,7 @@ if ($expenseId <= 0) {
 $_SESSION['active_module'] = 'expenses';
 $page_title = 'Expense Details';
 $employeeHeaderTitle = 'Expense Details';
+$employeeHeaderRightHtml = '<div id="exp-detail-header-actions" class="exp-detail-header-actions"></div>';
 $hideHeaderCompanyBranding = true;
 $employeeHeaderExtraClass = 'employee-header--exp-desk';
 $bodyExtraClass = 'page-exp-desk';
@@ -24,11 +25,20 @@ $expensesDeskScrollable = true;
 $expensesHomeUrl = function_exists('company_url')
     ? company_url('select-module')
     : (function_exists('app_url') ? app_url('/select-module.php') : '../../select-module.php');
+$expensesAccountingUrl = function_exists('company_url')
+    ? company_url('modules/accounting/index') . '?module=accounting'
+    : (function_exists('app_url')
+        ? app_url('/modules/accounting/index.php') . '?module=accounting'
+        : '../accounting/index.php?module=accounting');
 $expensesBackUrl = function_exists('company_url')
     ? company_url('modules/expenses/index') . '?module=expenses'
-    : (function_exists('app_url') ? app_url('/modules/expenses/index.php') . '?module=expenses' : 'index.php?module=expenses');
+    : (function_exists('app_url')
+        ? app_url('/modules/expenses/index.php') . '?module=expenses'
+        : 'index.php?module=expenses');
 $employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb" aria-label="Breadcrumb">'
     . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($expensesHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+    . '<span class="vv-breadcrumb-sep">/</span>'
+    . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($expensesAccountingUrl, ENT_QUOTES, 'UTF-8') . '">Accounting</a>'
     . '<span class="vv-breadcrumb-sep">/</span>'
     . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($expensesBackUrl, ENT_QUOTES, 'UTF-8') . '">Expenses</a>'
     . '<span class="vv-breadcrumb-sep">/</span>'

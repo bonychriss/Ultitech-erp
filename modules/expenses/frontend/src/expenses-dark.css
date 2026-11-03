@@ -96,11 +96,6 @@ html[data-theme="dark"] body.page-exp-desk .exp-desk-page-header-tools button.ex
   color: #e9edef !important;
 }
 
-html[data-theme="dark"] body.page-exp-desk .exp-desk-date-preset-clear,
-html[data-theme="dark"] .exp-desk-filters-panel--fixed .exp-desk-date-preset-clear {
-  color: #a5b4fc;
-}
-
 html[data-theme="dark"] body.page-exp-desk .exp-desk-unpaid-toggle-title,
 html[data-theme="dark"] .exp-desk-filters-panel--fixed .exp-desk-unpaid-toggle-title {
   color: #e9edef;
@@ -224,6 +219,24 @@ html[data-theme="dark"] body.page-exp-desk .exp-desk-mobile-card-fact-value {
   color: #e9edef !important;
 }
 
+html[data-theme="dark"] body.page-exp-desk .exp-kpi-mobile-number {
+  color: #e9edef;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-kpi-mobile-payee,
+html[data-theme="dark"] body.page-exp-desk .exp-kpi-mobile-description {
+  color: #8696a0;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-kpi-desk-footer {
+  border-top-color: #2a3942;
+  color: #8696a0;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-kpi-desk-totals {
+  color: #e9edef;
+}
+
 html[data-theme="dark"] body.page-exp-desk .exp-desk-empty--mobile {
   background: #111b21 !important;
   border-color: #2a3942 !important;
@@ -296,20 +309,6 @@ html[data-theme="dark"] .exp-desk-filters-panel--fixed .exp-desk-filters-close {
   color: #8696a0;
 }
 
-html[data-theme="dark"] body.page-exp-desk .exp-desk-date-preset,
-html[data-theme="dark"] .exp-desk-filters-panel--fixed .exp-desk-date-preset {
-  background: #0b141a;
-  border-color: #2a3942;
-  color: #e9edef;
-}
-
-html[data-theme="dark"] body.page-exp-desk .exp-desk-date-preset:hover,
-html[data-theme="dark"] .exp-desk-filters-panel--fixed .exp-desk-date-preset:hover {
-  background: rgba(79, 70, 229, 0.2);
-  border-color: #6366f1;
-  color: #c7d2fe;
-}
-
 html[data-theme="dark"] body.page-exp-desk .exp-desk-filters-footer,
 html[data-theme="dark"] .exp-desk-filters-panel--fixed .exp-desk-filters-footer {
   background: #111b21;
@@ -333,6 +332,12 @@ html[data-theme="dark"] .exp-desk-filters-panel--fixed .exp-desk-field input[typ
 }
 
 html[data-theme="dark"] body.page-exp-desk .exp-desk-filter-chip {
+  background: rgba(79, 70, 229, 0.2);
+  border-color: #6366f1;
+  color: #c7d2fe;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-month-insight {
   background: rgba(79, 70, 229, 0.2);
   border-color: #6366f1;
   color: #c7d2fe;
@@ -970,8 +975,89 @@ html[data-theme="dark"] body.page-exp-desk .exp-detail-card-head p {
   color: #8696a0;
 }
 
-html[data-theme="dark"] body.page-exp-desk .exp-detail-page .exp-desk-expense-sheet {
-  background: #fff;
+html[data-theme="dark"] body.page-exp-desk .exp-detail-page .exp-desk-expense-sheet,
+html[data-theme="dark"] body.page-exp-desk .exp-desk-expense-sheet {
+  background: transparent !important;
+  color: #e9edef;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-expense-table {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-expense-table td,
+html[data-theme="dark"] body.page-exp-desk .exp-desk-expense-table th {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-expense-summary td:nth-child(odd),
+html[data-theme="dark"] body.page-exp-desk .exp-desk-expense-approvals td:nth-child(odd) {
+  color: #8696a0 !important;
+  background: #0f1a20 !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-expense-breakdown th {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-attachments,
+html[data-theme="dark"] body.page-exp-desk .exp-detail-attachments h2 {
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-card {
+  background: #111b21;
+  border-color: #2a3942;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-card:hover {
+  border-color: #00a884;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-preview {
+  background: #0b141a;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-footer {
+  background: #111b21;
+  border-top-color: #2a3942;
+  color: #8696a0;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-name {
+  color: #e9edef;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-download {
+  color: #00a884;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-download:hover {
+  background: rgba(0, 168, 132, 0.16);
+  color: #06cf9c;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-modal-panel,
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-modal-body {
+  background: #0b141a;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-modal-head {
+  background: #111b21;
+  border-bottom-color: #2a3942;
+  color: #e9edef;
+}
+
+html[data-theme="dark"] body.page-exp-desk .exp-detail-document-modal-head button {
+  background: #00a884;
+  border-color: #00a884;
 }
 
 html[data-theme="dark"] body.page-exp-desk .exp-desk-row-action {
@@ -1501,3 +1587,6 @@ html[data-theme="dark"] body.page-exp-desk .pur-kpi-sheet-icon {
   background: rgba(124, 58, 237, 0.22);
   color: #c4b5fd;
 }
+
+html[data-theme="dark"] body.page-exp-desk .exp-desk-donut-center strong { color: #e9edef; }
+html[data-theme="dark"] body.page-exp-desk .exp-desk-donut-center span { color: #8696a0; }

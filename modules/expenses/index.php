@@ -48,6 +48,12 @@ if ($assets === null) {
 
 $expensesHeadMarkup = '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') . '">'
     . "\n" . '<script>window.__EXPENSES_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
-    . 'window.__EXPENSES_PAGE__ = ' . json_encode($expensesPage, JSON_UNESCAPED_SLASHES) . ';</script>';
+    . 'window.__EXPENSES_PAGE__ = ' . json_encode($expensesPage, JSON_UNESCAPED_SLASHES) . ';'
+    . 'window.__EXPENSES_EMPTY_LOTTIE_URL__ = ' . json_encode(
+        function_exists('app_url')
+            ? app_url('/assets/animations/nothing.lottie')
+            : expensesDeskPublicUrl('../../../assets/animations/nothing.lottie'),
+        JSON_UNESCAPED_SLASHES
+    ) . ';</script>';
 
 require __DIR__ . '/includes/expenses-react-shell.php';

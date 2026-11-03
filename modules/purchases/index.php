@@ -1,6 +1,6 @@
 <?php
 /**
- * Purchases desk — Stock Purchase payment vouchers (expenses layout).
+ * Purchases desk ï¿½ Stock Purchase payment vouchers (expenses layout).
  * modules/purchases/index.php
  */
 require_once dirname(__DIR__) . '/expenses/includes/expenses-lib.php';
@@ -52,13 +52,6 @@ if ($assets === null) {
 $expensesWebBase = function_exists('app_url')
     ? rtrim((string) app_url('/modules/expenses'), '/')
     : '/modules/expenses';
-if (function_exists('company_url')) {
-    try {
-        $expensesWebBase = rtrim((string) company_url('modules/expenses'), '/');
-    } catch (Throwable $e) {
-        // keep app_url fallback
-    }
-}
 $assets['assetBase'] = $expensesWebBase . '/frontend/dist/assets/';
 $expensesApiBase = $expensesWebBase . '/api';
 
@@ -76,6 +69,6 @@ $expensesHeadMarkup = '<link rel="stylesheet" crossorigin href="' . htmlspecialc
     . 'window.__PURCHASES_CREATE_VOUCHER_URL__ = ' . json_encode($createVoucherUrl, JSON_UNESCAPED_SLASHES) . ';'
     . 'window.__PURCHASES_BACK_URL__ = ' . json_encode($purchasesBackUrl, JSON_UNESCAPED_SLASHES) . ';</script>';
 
-// Shell script src also comes from $assets — point JS at expenses dist.
+// Shell script src also comes from $assets ï¿½ point JS at expenses dist.
 $assets['jsFile'] = $assets['jsFile'];
 require dirname(__DIR__) . '/expenses/includes/expenses-react-shell.php';

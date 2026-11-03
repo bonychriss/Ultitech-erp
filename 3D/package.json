@@ -19,7 +19,8 @@
     "android:open": "npx cap open android",
     "android:build": "node scripts/run-android-build.cjs",
     "android:build:debug": "node scripts/run-android-build.cjs --debug",
-    "logo:ultimate": "node scripts/process-ultimate-logo.mjs"
+    "logo:ultimate": "node scripts/process-ultimate-logo.mjs",
+    "logo:voucher": "node scripts/process-voucher-logo.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",
@@ -30,7 +31,9 @@
     "@imgly/background-removal": "^1.7.0",
     "canvas-confetti": "^1.9.4",
     "electron-updater": "^6.8.9",
+    "jpeg-js": "^0.4.4",
     "lucide-react": "^1.31.0",
+    "pngjs": "^7.0.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

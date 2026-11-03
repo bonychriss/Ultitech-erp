@@ -133,55 +133,67 @@ function isThisMonthRange(filters, now = new Date()) {
   );
 }
 
-function last30DaysRange(now = new Date()) {
-  const from = new Date(now);
-  from.setDate(from.getDate() - 30);
-  return {
-    date_from: toInputDate(from),
-    date_to: toInputDate(now),
-  };
-}
-
-function thisQuarterDateRange(now = new Date()) {
-  const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
-  const from = new Date(now.getFullYear(), quarterStartMonth, 1);
-  return {
-    date_from: toInputDate(from),
-    date_to: toInputDate(now),
-  };
-}
-
-function isLast30DaysRange(filters, now = new Date()) {
-  const range = last30DaysRange(now);
-  return (
-    String(filters?.date_from || '') === range.date_from
-    && String(filters?.date_to || '') === range.date_to
-  );
-}
-
-function isThisQuarterRange(filters, now = new Date()) {
-  const range = thisQuarterDateRange(now);
-  return (
-    String(filters?.date_from || '') === range.date_from
-    && String(filters?.date_to || '') === range.date_to
-  );
-}
-
 function defaultListFilters() {
-  // Show recent entries (no month lock), same as Purchases.
-  return { ...emptyFilters };
+  return { ...emptyFilters, ...thisMonthDateRange() };
+}
+
+function filterStorageKey() {
+  return `exp-desk-filters:${isPurchasesDesk() ? 'purchases' : 'expenses'}`;
+}
+
+// Saved filters stay until the user clears them or the calendar month changes.
+function loadSavedFilters() {
+  try {
+    const raw = window.localStorage.getItem(filterStorageKey());
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    const today = toInputDate(new Date());
+    if (!saved || saved.month !== today.slice(0, 7) || typeof saved.filters !== 'object') {
+      window.localStorage.removeItem(filterStorageKey());
+      return null;
+    }
+    const filters = { ...emptyFilters };
+    Object.keys(emptyFilters).forEach((key) => {
+      if (saved.filters[key] != null) filters[key] = String(saved.filters[key]);
+    });
+    // A "this month to today" range keeps following today's date.
+    if (filters.date_to === saved.day && filters.date_from === `${saved.month}-01`) {
+      filters.date_to = today;
+    }
+    return filters;
+  } catch {
+    return null;
+  }
+}
+
+function saveFilters(filters) {
+  try {
+    const today = toInputDate(new Date());
+    window.localStorage.setItem(filterStorageKey(), JSON.stringify({
+      month: today.slice(0, 7),
+      day: today,
+      filters,
+    }));
+  } catch {
+    // Storage unavailable; filters simply won't persist.
+  }
 }
 
 function filtersFromLocationSearch() {
   const base = defaultListFilters();
   if (typeof window === 'undefined') return base;
   const params = new URLSearchParams(window.location.search);
+  const hasUrlFilters = ['status', 'date_from', 'date_to'].some((k) => params.has(k));
+  if (!hasUrlFilters) {
+    const saved = loadSavedFilters();
+    if (saved) return saved;
+  }
   const status = String(params.get('status') || '').trim().toLowerCase();
   const allowed = new Set(['draft', 'posted', 'unposted', 'pending', 'rejected']);
   if (allowed.has(status)) {
     base.status = status;
   }
-  // Explicit URL dates override the default (empty = all / recent).
+  // Explicit URL dates override the default date range.
   if (params.has('date_from') || params.has('date_to')) {
     base.date_from = String(params.get('date_from') || '').trim();
     base.date_to = String(params.get('date_to') || '').trim();
@@ -374,6 +386,7 @@ export default function ExpensesDeskPage() {
   const visibleExpenses = useMemo(() => expenses.slice(0, visibleLimit), [expenses, visibleLimit]);
   useEffect(() => {
     setVisibleLimit(100);
+    saveFilters(filters);
   }, [filters]);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -390,7 +403,7 @@ export default function ExpensesDeskPage() {
   const [exportModalError, setExportModalError] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
   const [selectedId, setSelectedId] = useState(0);
-  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(true);
   const [importNotice, setImportNotice] = useState(() => importedNoticeFromLocationSearch());
   const filterDropdownRef = useRef(null);
   const filterBtnRef = useRef(null);
@@ -408,7 +421,7 @@ export default function ExpensesDeskPage() {
     setError('');
     try {
       const [initData, listData] = await Promise.all([
-        fetchDeskInit(),
+        fetchDeskInit(activeFilters),
         fetchDeskExpenses(activeFilters),
       ]);
       setInit(initData);
@@ -713,22 +726,6 @@ export default function ExpensesDeskPage() {
     setFilters((current) => ({ ...current, [key]: '' }));
   }
 
-  function setDatePreset(preset) {
-    if (preset === 'month') {
-      setDraftFilters((current) => ({ ...current, ...thisMonthDateRange() }));
-      return;
-    }
-    if (preset === '30d') {
-      setDraftFilters((current) => ({ ...current, ...last30DaysRange() }));
-      return;
-    }
-    if (preset === 'quarter') {
-      setDraftFilters((current) => ({ ...current, ...thisQuarterDateRange() }));
-      return;
-    }
-    setDraftFilters((current) => ({ ...current, date_from: '', date_to: '' }));
-  }
-
   function buildActiveFilterChips(activeFilters) {
     const chips = [];
 
@@ -747,14 +744,12 @@ export default function ExpensesDeskPage() {
       });
     }
 
-    if (activeFilters.date_from || activeFilters.date_to) {
+    if ((activeFilters.date_from || activeFilters.date_to) && !isThisMonthRange(activeFilters)) {
       const fromLabel = activeFilters.date_from ? formatFilterDateLabel(activeFilters.date_from) : 'Any';
       const toLabel = activeFilters.date_to ? formatFilterDateLabel(activeFilters.date_to) : 'Any';
       chips.push({
         key: 'date_from',
-        label: isThisMonthRange(activeFilters)
-          ? 'Date: This month'
-          : `Date: ${fromLabel} - ${toLabel}`,
+        label: `Date: ${fromLabel} - ${toLabel}`,
       });
     }
 
@@ -786,6 +781,19 @@ export default function ExpensesDeskPage() {
   }
 
   const activeFilterChips = buildActiveFilterChips(filters);
+  const isCurrentMonthRange = isThisMonthRange(filters);
+  const [monthNoticeVisible, setMonthNoticeVisible] = useState(true);
+  useEffect(() => {
+    if (!isCurrentMonthRange) return undefined;
+    setMonthNoticeVisible(true);
+    const timer = window.setTimeout(() => setMonthNoticeVisible(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [isCurrentMonthRange]);
+  const showingCurrentMonth = isCurrentMonthRange && monthNoticeVisible;
+  const currentMonthLabel = new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date());
 
   function clearSearch(inputRef) {
     appliedSearchRef.current = '';
@@ -949,35 +957,10 @@ export default function ExpensesDeskPage() {
             <CalendarDays size={15} aria-hidden="true" />
             <span>Date range</span>
           </div>
-          <div className="exp-desk-date-presets" role="group" aria-label="Quick date ranges">
-            <button
-              type="button"
-              className={`exp-desk-date-preset${isThisMonthRange(draftFilters) ? ' is-active' : ''}`}
-              onClick={() => setDatePreset('month')}
-            >
-              This month
-            </button>
-            <button
-              type="button"
-              className={`exp-desk-date-preset${isLast30DaysRange(draftFilters) ? ' is-active' : ''}`}
-              onClick={() => setDatePreset('30d')}
-            >
-              Last 30 days
-            </button>
-            <button
-              type="button"
-              className={`exp-desk-date-preset${isThisQuarterRange(draftFilters) ? ' is-active' : ''}`}
-              onClick={() => setDatePreset('quarter')}
-            >
-              This quarter
-            </button>
-            <button
-              type="button"
-              className="exp-desk-date-preset-clear"
-              onClick={() => setDatePreset('clear')}
-            >
-              Clear
-            </button>
+          <div className="exp-desk-date-insight" role="status">
+            {isThisMonthRange(draftFilters)
+              ? `Displaying data for ${new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date())}`
+              : 'Set a date range below to filter expenses.'}
           </div>
           <div className="exp-desk-filters-grid exp-desk-filters-grid--dates">
             <div className="exp-desk-field">
@@ -1449,9 +1432,17 @@ export default function ExpensesDeskPage() {
 
       <section className="exp-desk-results" aria-label={purchasesDesk ? 'Stock purchase vouchers' : 'Expense entries'}>
         <div className="exp-desk-results-head">
-          <span className="exp-desk-results-count">
-            {expenses.length} {expenses.length === 1 ? 'entry' : 'entries'}
-          </span>
+          <div className="exp-desk-results-summary">
+            {showingCurrentMonth ? (
+              <div className="exp-desk-month-insight" role="status">
+                <CalendarDays size={15} aria-hidden="true" />
+                <span>Displaying data for {currentMonthLabel}</span>
+              </div>
+            ) : null}
+            <span className="exp-desk-results-count">
+              {expenses.length} {expenses.length === 1 ? 'entry' : 'entries'}
+            </span>
+          </div>
           <div className="exp-desk-results-controls">
             <ExportMenu
               exportingExcel={exportingExcel}
@@ -1485,9 +1476,11 @@ export default function ExpensesDeskPage() {
                 <X size={12} aria-hidden="true" />
               </button>
             ))}
-            <button type="button" className="exp-desk-filter-chip exp-desk-filter-chip--clear" onClick={resetFilters}>
-              All data
-            </button>
+            {activeFilterChips.length > 0 ? (
+              <button type="button" className="exp-desk-filter-chip exp-desk-filter-chip--clear" onClick={resetFilters}>
+                All data
+              </button>
+            ) : null}
           </div>
         )}
 

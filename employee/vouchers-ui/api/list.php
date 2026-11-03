@@ -342,8 +342,20 @@ try {
     // Active financial accounts for the Mark Paid modal.
     $payAccounts = [];
     try {
-        $stmtAcc = $pdo->query("SELECT id, name, type, current_balance, currency FROM financial_accounts WHERE status = 'active' ORDER BY name ASC");
+        $companyId = (int) (currentCompanyId() ?? 0);
+        if (function_exists('balancesUseCompanyScope') && balancesUseCompanyScope($pdo) && $companyId > 0) {
+            $stmtAcc = $pdo->prepare("SELECT id, name, type, current_balance, currency FROM financial_accounts WHERE status = 'active' AND company_id = ? ORDER BY name ASC");
+            $stmtAcc->execute([$companyId]);
+        } else {
+            $stmtAcc = $pdo->query("SELECT id, name, type, current_balance, currency FROM financial_accounts WHERE status = 'active' ORDER BY name ASC");
+        }
         foreach (($stmtAcc->fetchAll(PDO::FETCH_ASSOC) ?: []) as $acc) {
+            $bucket = function_exists('balancesAccountLiquidityBucket')
+                ? balancesAccountLiquidityBucket((string) ($acc['type'] ?? ''))
+                : strtolower(trim((string) ($acc['type'] ?? '')));
+            if (!in_array($bucket, ['cash', 'bank', 'mobile'], true)) {
+                continue;
+            }
             $payAccounts[] = [
                 'id' => (int) $acc['id'],
                 'name' => (string) ($acc['name'] ?? ''),

@@ -288,6 +288,10 @@ try {
             $accRows = $faStmt ? ($faStmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
         }
         foreach ($accRows as $acc) {
+            if (function_exists('balancesAccountLiquidityBucket')
+                && !in_array(balancesAccountLiquidityBucket((string) ($acc['type'] ?? '')), ['cash', 'bank', 'mobile'], true)) {
+                continue;
+            }
             $accounts[] = [
                 'id' => (int) ($acc['id'] ?? 0),
                 'name' => (string) ($acc['name'] ?? ''),

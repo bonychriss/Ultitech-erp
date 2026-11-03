@@ -331,6 +331,7 @@ export default function ExpenseCreatePage({
     const formData = new FormData();
     formData.append('csrf_token', init.csrf_token);
     formData.append('save_mode', saveMode);
+    formData.append('notify_success', '1');
     formData.append('date', date);
     formData.append('payment_method', paymentMethod);
     formData.append('currency', currency);

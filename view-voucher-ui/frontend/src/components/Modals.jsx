@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Check, CheckCircle2, ChevronDown, Coins, Landmark, Paperclip, Smartphone, Wallet, X } from 'lucide-react'
+
+function PaymentAccountIcon({ type, size }) {
+  const Icon = type === 'bank' ? Landmark : type === 'mobile' ? Smartphone : type === 'cash' ? Coins : Wallet
+  return <Icon size={size} aria-hidden="true" />
+}
 
 function VvModalOverlay({ open, onClose, children, id }) {
   useEffect(() => {
@@ -35,35 +41,258 @@ function VvModalOverlay({ open, onClose, children, id }) {
 
 export function MarkPaidModal({ open, onClose, data }) {
   if (!open) return null
+  return <MarkPaidDialog onClose={onClose} data={data} />
+}
+
+function MarkPaidDialog({ onClose, data }) {
   const { voucher, finAccounts, actions } = data
+  const fileInputRef = useRef(null)
+  const accountPickerRef = useRef(null)
+  const xhrRef = useRef(null)
+  const redirectTimerRef = useRef(null)
+  const [selectedAccountId, setSelectedAccountId] = useState('')
+  const [accountError, setAccountError] = useState('')
+  const [proofName, setProofName] = useState('')
+  const [isDragging, setIsDragging] = useState(false)
+  const [uploadState, setUploadState] = useState('idle')
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadError, setUploadError] = useState('')
+  const isUploading = uploadState === 'uploading' || uploadState === 'saving'
+
+  function closeModal() {
+    if (!isUploading) onClose()
+  }
+
+  useEffect(() => () => {
+    if (xhrRef.current && xhrRef.current.readyState !== XMLHttpRequest.DONE) {
+      xhrRef.current.abort()
+    }
+    if (redirectTimerRef.current) {
+      window.clearTimeout(redirectTimerRef.current)
+    }
+  }, [])
+
+  function setProofFile(file) {
+    setProofName(file?.name || '')
+    setUploadState(file ? 'ready' : 'idle')
+    setUploadProgress(0)
+    setUploadError('')
+  }
+
+  function handleDrop(event) {
+    event.preventDefault()
+    setIsDragging(false)
+    if (isUploading) return
+    const file = event.dataTransfer.files?.[0]
+    if (!file || !fileInputRef.current) return
+    const transfer = new DataTransfer()
+    transfer.items.add(file)
+    fileInputRef.current.files = transfer.files
+    setProofFile(file)
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault()
+    if (isUploading) return
+    if (!selectedAccountId) {
+      setAccountError('Choose a source account to continue.')
+      accountPickerRef.current?.querySelector('summary')?.focus()
+      return
+    }
+    if (!event.currentTarget.reportValidity()) return
+
+    setAccountError('')
+    setUploadError('')
+    setUploadProgress(0)
+    setUploadState('uploading')
+
+    const xhr = new XMLHttpRequest()
+    xhrRef.current = xhr
+    xhr.upload.addEventListener('progress', (progressEvent) => {
+      if (!progressEvent.lengthComputable) return
+      setUploadProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100))
+    })
+    xhr.upload.addEventListener('load', () => {
+      setUploadProgress(100)
+      setUploadState('saving')
+    })
+    xhr.addEventListener('load', () => {
+      xhrRef.current = null
+      let destination
+      try {
+        destination = new URL(xhr.responseURL)
+      } catch {
+        destination = null
+      }
+
+      const savedVoucherPage = destination
+        && destination.origin === window.location.origin
+        && destination.pathname.endsWith('/view-voucher.php')
+        && destination.searchParams.get('id') === String(voucher.id)
+        && destination.searchParams.get('paid') === '1'
+      if (xhr.status >= 200 && xhr.status < 300 && savedVoucherPage) {
+        setUploadProgress(100)
+        setUploadState('success')
+        redirectTimerRef.current = window.setTimeout(() => {
+          window.location.assign(destination.href)
+        }, 800)
+        return
+      }
+
+      const responseMessage = xhr.responseText?.trim()
+      setUploadError(xhr.status >= 400 && responseMessage && !responseMessage.startsWith('<')
+        ? responseMessage.slice(0, 300)
+        : 'The payment proof could not be confirmed as saved. Please try again.')
+      setUploadState('error')
+    })
+    xhr.addEventListener('error', () => {
+      xhrRef.current = null
+      setUploadError('Network error while uploading the payment proof. Please try again.')
+      setUploadState('error')
+    })
+    xhr.addEventListener('abort', () => {
+      xhrRef.current = null
+      setUploadError('The upload was interrupted. Please try again.')
+      setUploadState('error')
+    })
+    xhr.open('POST', event.currentTarget.action)
+    xhr.send(new FormData(event.currentTarget))
+  }
+
+  const selectedAccount = finAccounts.find((account) => String(account.id) === selectedAccountId)
+  const selectedAccountType = ['bank', 'cash', 'mobile'].includes(selectedAccount?.type) ? selectedAccount.type : 'cash'
+  const accountTypeLabel = (type) => ({
+    bank: 'Bank account',
+    cash: 'Cash account',
+    mobile: 'Mobile money',
+  }[type] || 'Payment account')
+
   return (
-    <VvModalOverlay open={open} onClose={onClose}>
-      <div className="modal-content-clean" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-header-clean">
-          <h3>Mark Voucher as Paid</h3>          <p>Select the account used for payment.</p>
-        </div>
-        <form action={actions.markPaidUrl} method="POST" encType="multipart/form-data">
+    <VvModalOverlay open onClose={closeModal}>
+      <div className="vv-pay-modal" onMouseDown={(e) => e.stopPropagation()}>
+        <header className="vv-pay-modal__header">
+          <div className="vv-pay-modal__icon"><CheckCircle2 size={27} strokeWidth={2.2} /></div>
+          <div className="vv-pay-modal__heading">
+            <h3>Mark Voucher as Paid</h3>
+            <p>Select the source account and attach the payment proof.</p>
+          </div>
+          <button type="button" className="vv-pay-modal__close" onClick={closeModal} disabled={isUploading} aria-label="Close dialog">
+            <X size={21} />
+          </button>
+        </header>
+        <form className="vv-pay-modal__form" action={actions.markPaidUrl} method="POST" encType="multipart/form-data" onSubmit={handleSubmit}>
           <input type="hidden" name="voucher_id" value={voucher.id} />
+          <input type="hidden" name="account_id" value={selectedAccountId} />
           {actions.returnFinance && <input type="hidden" name="return" value="finance" />}
-          <div className="mb-3" style={{ marginBottom: 15 }}>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 600, fontSize: 14, color: '#374151' }}>Source Account</label>
-            <select name="account_id" required style={{ width: '100%', padding: 10, border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 }}>
-              <option value="">Select Account...</option>
-              {finAccounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.currency} {Number(acc.current_balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                </option>
-              ))}
-            </select>
+          <div className="vv-pay-modal__field">
+            <label id="vv-pay-account-label">Source Account</label>
+            <details className={`vv-pay-modal__account-picker${accountError ? ' has-error' : ''}`} ref={accountPickerRef}>
+              <summary
+                aria-labelledby="vv-pay-account-label vv-pay-account-value"
+                aria-invalid={Boolean(accountError)}
+                aria-describedby={accountError ? 'vv-pay-account-error' : undefined}
+                aria-controls="vv-pay-account-options"
+                aria-disabled={isUploading}
+                onClick={(event) => { if (isUploading) event.preventDefault() }}
+              >
+                <span className={`vv-pay-modal__account-icon is-${selectedAccount ? selectedAccountType : 'default'}`}>
+                  <PaymentAccountIcon type={selectedAccount?.type} size={19} />
+                </span>
+                <span className="vv-pay-modal__account-summary" id="vv-pay-account-value">
+                  <strong>{selectedAccount?.name || 'Select a payment account'}</strong>
+                  {selectedAccount && (
+                    <small>
+                      {accountTypeLabel(selectedAccount.type)} · {selectedAccount.currency} {Number(selectedAccount.current_balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </small>
+                  )}
+                  {!selectedAccount && <small>Choose where this payment will be paid from</small>}
+                </span>
+                <ChevronDown className="vv-pay-modal__account-chevron" size={18} aria-hidden="true" />
+              </summary>
+              <div className="vv-pay-modal__account-options" id="vv-pay-account-options" aria-labelledby="vv-pay-account-label">
+                {finAccounts.length > 0 ? finAccounts.map((account) => (
+                  <button
+                    key={account.id}
+                    type="button"
+                    className="vv-pay-modal__account-option"
+                    disabled={isUploading}
+                    aria-current={String(account.id) === selectedAccountId ? 'true' : undefined}
+                    onClick={() => {
+                      setSelectedAccountId(String(account.id))
+                      setAccountError('')
+                      if (accountPickerRef.current) accountPickerRef.current.open = false
+                    }}
+                  >
+                    <span className={`vv-pay-modal__account-option-icon is-${account.type}`}>
+                      <PaymentAccountIcon type={account.type} size={17} />
+                    </span>
+                    <span className="vv-pay-modal__account-option-copy">
+                      <strong>{account.name}</strong>
+                      <small>{accountTypeLabel(account.type)}</small>
+                    </span>
+                    <span className="vv-pay-modal__account-balance">
+                      <strong>{account.currency} {Number(account.current_balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                      {String(account.id) === selectedAccountId && <Check size={16} aria-label="Selected" />}
+                    </span>
+                  </button>
+                )) : (
+                  <p className="vv-pay-modal__account-empty">No active cash, bank, or mobile-money accounts are available.</p>
+                )}
+              </div>
+            </details>
+            {accountError && <span className="vv-pay-modal__account-error" id="vv-pay-account-error" role="alert">{accountError}</span>}
           </div>
-          <div className="mb-3" style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 600, fontSize: 14, color: '#374151' }}>Attach SWIFT Proof (Required)</label>
-            <input type="file" name="swift_file" required accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.doc,.docx,.xls,.xlsx" style={{ width: '100%', padding: 10, border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 }} />
+          <div className="vv-pay-modal__field vv-pay-modal__proof-field">
+            <label>SWIFT Proof (Required)</label>
+            <label
+              className={`vv-pay-modal__dropzone${isDragging ? ' is-dragging' : ''}${isUploading ? ' is-disabled' : ''}`}
+              onDragOver={(event) => { event.preventDefault(); if (!isUploading) setIsDragging(true) }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                name="swift_file"
+                required
+                disabled={isUploading}
+                accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.doc,.docx,.xls,.xlsx"
+                onChange={(event) => setProofFile(event.target.files?.[0])}
+              />
+              <Paperclip size={27} />
+              <span className="vv-pay-modal__file-name">
+                {proofName
+                  ? <><strong>{proofName}</strong></>
+                  : <><strong>Choose file</strong> or drag and drop</>}
+              </span>
+            </label>
+            {uploadState !== 'idle' && (
+              <div className={`vv-pay-modal__upload-status is-${uploadState}`} role={uploadState === 'error' ? 'alert' : 'status'} aria-live="polite">
+                {(uploadState === 'uploading' || uploadState === 'saving') && <span className="vv-pay-modal__spinner" aria-hidden="true" />}
+                {(uploadState === 'ready' || uploadState === 'success') && <CheckCircle2 size={17} aria-hidden="true" />}
+                <div className="vv-pay-modal__upload-copy">
+                  <span>
+                    {uploadState === 'ready' && 'File attached. Click Mark as Paid to upload and save the proof.'}
+                    {uploadState === 'uploading' && `Uploading proof… ${uploadProgress}%`}
+                    {uploadState === 'saving' && 'Upload complete. Saving payment and confirming proof…'}
+                    {uploadState === 'success' && 'Payment proof saved. Opening voucher…'}
+                    {uploadState === 'error' && uploadError}
+                  </span>
+                  {(uploadState === 'uploading' || uploadState === 'saving') && (
+                    <div className="vv-pay-modal__progress" role="progressbar" aria-label="Payment proof upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={uploadState === 'saving' ? 100 : uploadProgress}>
+                      <span className={uploadState === 'saving' ? 'is-indeterminate' : ''} style={{ width: `${uploadState === 'saving' ? 100 : uploadProgress}%` }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="modal-footer-clean">
-            <button type="button" onClick={onClose} className="btn-modal-cancel">Cancel</button>
-            <button type="submit" className="btn-modal-submit" style={{ background: '#065f46', borderColor: '#065f46' }}>Confirm & Mark Paid</button>
-          </div>
+          <footer className="vv-pay-modal__footer">
+            <button type="button" className="vv-pay-modal__button vv-pay-modal__button--cancel" onClick={closeModal} disabled={isUploading}>Cancel</button>
+            <button type="submit" className="vv-pay-modal__button vv-pay-modal__button--submit" disabled={isUploading || uploadState === 'success'}>
+              {uploadState === 'uploading' ? 'Uploading…' : uploadState === 'saving' ? 'Saving…' : uploadState === 'success' ? 'Paid' : 'Mark as Paid'}
+            </button>
+          </footer>
         </form>
       </div>
     </VvModalOverlay>

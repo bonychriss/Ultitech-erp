@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Loader2 } from 'lucide-react'
 import { CFG } from '../config.js'
+import { showToast } from '../toast.js'
 import VoucherPreview from '../components/VoucherPreview.jsx'
 import VoucherActions from '../components/VoucherActions.jsx'
 import ApprovalFlowCard from '../components/ApprovalFlowCard.jsx'
@@ -49,17 +50,17 @@ export default function ViewVoucherPage() {
 
   useEffect(() => {
     const f = CFG.flash || {}
-    if (typeof window.Swal === 'undefined') return
+    const no = data?.voucher?.voucher_no || ''
     if (f.created || f.updated) {
-      window.Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Voucher Created!', html: `No: <strong>${data?.voucher?.voucher_no || ''}</strong>`, showConfirmButton: false, timer: 4000 })
+      showToast(`Voucher created${no ? `: ${no}` : ''}`)
     } else if (f.posted) {
-      window.Swal.fire({ icon: 'success', title: 'Voucher Posted!', text: `Voucher No: ${data?.voucher?.voucher_no || ''} is now finalized.`, confirmButtonColor: '#059669' })
+      showToast(`Voucher ${no} posted and finalized.`.replace('  ', ' '))
     } else if (f.postError) {
-      window.Swal.fire({ icon: 'error', title: 'Oops...', text: f.postError, confirmButtonColor: '#dc3545' })
+      showToast(f.postError, 'error')
     } else if (f.paid) {
-      window.Swal.fire({ icon: 'success', title: 'Payment Successful', text: 'Voucher has been marked as paid.', confirmButtonColor: '#059669' })
+      showToast('Payment successful. Voucher has been marked as paid.')
     } else if (f.payError) {
-      window.Swal.fire({ icon: 'error', title: 'Oops...', text: `Mark paid failed: ${f.payError}`, confirmButtonColor: '#dc3545' })
+      showToast(`Mark paid failed: ${f.payError}`, 'error')
     }
   }, [data])
 

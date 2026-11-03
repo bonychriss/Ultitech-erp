@@ -103,6 +103,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['voucher_id'])) {
         $v = $stmtV->fetch();
         if (!$v) throw new Exception("Voucher not found.");
 
+        if ($account_id !== null && $account_id > 0) {
+            $typeStmt = $pdo->prepare("SELECT type FROM financial_accounts WHERE id = ? AND status = 'active' LIMIT 1");
+            $typeStmt->execute([$account_id]);
+            $accType = $typeStmt->fetchColumn();
+            if ($accType === false || !in_array(balancesAccountLiquidityBucket((string) $accType), ['cash', 'bank', 'mobile'], true)) {
+                throw new Exception('Select an active cash, bank, or mobile-money account.');
+            }
+        }
+        if ($swift_path === null) {
+            throw new Exception('SWIFT proof is required and could not be saved. Please try again.');
+        }
+
         // Mark Paid first (this does its own checks, but we're already in a transaction handled by our own manual control if we want, OR we can let it handle its own)
         // Actually markVoucherPaidStrict starts its own transaction. To nest them, we need to be careful.
         // I'll call it first, if OK, then record balance.
@@ -140,6 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['voucher_id'])) {
 
       // --- UNIFIED LEDGER: POST TO GENERAL LEDGER ON PAYMENT ---
       try {
+          if (!empty($error)) {
+              throw new Exception('Payment failed; ledger posting skipped.');
+          }
           $accSvc = new AccountingService($pdo);
           
           // Use selected account or default to Operating Bank (1001)
@@ -338,6 +353,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['voucher_id'])) {
 // React Admin Dashboard shell (POST handlers above are reused by the UI).
 // -------------------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['voucher_id'])) {
+    if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest' && isset($_POST['mark_paid'])) {
+        header('Content-Type: application/json; charset=utf-8');
+        $paidOk = empty($error);
+        echo json_encode(['ok' => $paidOk, 'error' => $paidOk ? '' : (string) $error]);
+        exit;
+    }
     if (!empty($success)) {
         $_SESSION['success_msg'] = $success;
     }

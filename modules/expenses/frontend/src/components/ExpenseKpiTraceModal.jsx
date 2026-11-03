@@ -315,6 +315,10 @@ export default function ExpenseKpiTraceModal({
   const [viaAi, setViaAi] = useState(Boolean(trace.viaAi));
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [emptyAnimationReady, setEmptyAnimationReady] = useState(
+    () => typeof customElements !== 'undefined' && customElements.get('dotlottie-wc'),
+  );
+  const [emptyAnimationError, setEmptyAnimationError] = useState(false);
   const [page, setPage] = useState(1);
   const insightLines = asPage ? buildInsightSummary(items, trace.title || 'Total') : [];
   const compactInsight = asPage ? buildCompactInsight(items, trace.title || 'Total') : null;
@@ -322,6 +326,35 @@ export default function ExpenseKpiTraceModal({
   const safePage = Math.min(page, pageCount);
   const pageStart = (safePage - 1) * KPI_PAGE_SIZE;
   const pageItems = items.slice(pageStart, pageStart + KPI_PAGE_SIZE);
+  const showEmptyAnimation = !purchasesDesk && items.length === 0;
+
+  useEffect(() => {
+    if (!showEmptyAnimation || emptyAnimationReady) return undefined;
+
+    const playerScriptUrl = 'https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js';
+    let script = document.querySelector(`script[src="${playerScriptUrl}"]`);
+    const isNewScript = !script;
+    if (!script) {
+      script = document.createElement('script');
+      script.type = 'module';
+      script.src = playerScriptUrl;
+    }
+
+    let active = true;
+    const onScriptError = () => {
+      if (active) setEmptyAnimationError(true);
+    };
+    script.addEventListener('error', onScriptError);
+    customElements.whenDefined('dotlottie-wc').then(() => {
+      if (active) setEmptyAnimationReady(true);
+    });
+    if (isNewScript) document.head.appendChild(script);
+
+    return () => {
+      active = false;
+      script.removeEventListener('error', onScriptError);
+    };
+  }, [showEmptyAnimation, emptyAnimationReady]);
 
   useEffect(() => {
     setConfirmation(trace.confirmation || '');
@@ -454,7 +487,26 @@ export default function ExpenseKpiTraceModal({
             </div>
 
             {items.length === 0 ? (
-              <p className="exp-desk-kpi-trace-empty">No records contributed to this KPI.</p>
+              showEmptyAnimation ? (
+                <div className="exp-desk-kpi-trace-empty-state">
+                  {emptyAnimationReady ? (
+                    <dotlottie-wc
+                      src={window.__EXPENSES_EMPTY_LOTTIE_URL__}
+                      autoplay
+                      loop
+                      aria-label="No contributing expense records"
+                    />
+                  ) : emptyAnimationError ? (
+                    <p className="exp-desk-kpi-trace-empty" role="alert">
+                      No records contributed to this KPI. The empty-state animation could not be loaded.
+                    </p>
+                  ) : (
+                    <span className="exp-desk-kpi-trace-empty">Loading empty-state animation...</span>
+                  )}
+                </div>
+              ) : (
+                <p className="exp-desk-kpi-trace-empty">No records contributed to this KPI.</p>
+              )
             ) : purchasesDesk ? (
               <div className="exp-desk-kpi-trace-table-wrap">
                 <table className="exp-desk-kpi-trace-table exp-desk-kpi-trace-table--purchases">
@@ -482,58 +534,111 @@ export default function ExpenseKpiTraceModal({
                 </table>
               </div>
             ) : asPage ? (
-              <div className="exp-kpi-desk-wrap">
-                <table className="exp-kpi-desk-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '4%' }}>#</th>
-                      <th style={{ width: '14%' }}>Expense No.</th>
-                      <th style={{ width: '14%' }}>Payee</th>
-                      <th style={{ width: '14%' }}>Prepared By</th>
-                      <th style={{ width: '18%' }}>Description</th>
-                      <th style={{ width: '12%' }} className="exp-kpi-desk-right">Amount / Date</th>
-                                            <th style={{ width: '9%' }}>Status</th>
-                      <th style={{ width: '6%' }} className="exp-kpi-desk-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pageItems.map((item, index) => (
-                      <tr
-                        key={`${item.id ?? 0}-${item.expenseNumber}-${item.date}`}
-                        className={item.voucherUrl ? 'is-clickable' : undefined}
-                        onClick={item.voucherUrl ? () => window.location.assign(item.voucherUrl) : undefined}
-                      >
-                        <td>{pageStart + index + 1}</td>
-                        <td className="exp-kpi-desk-no">{cellText(item.expenseNumber)}</td>
-                        <td>{cellText(item.payee)}</td>
-                        <td>
-                          <div>{cellText(item.preparedBy)}</div>
-                          <div className="exp-kpi-desk-sub">{cellText(item.account)}</div>
-                        </td>
-                        <td><div className="exp-kpi-desk-desc">{cellText(item.description)}</div></td>
-                        <td className="exp-kpi-desk-right"><div className="exp-kpi-desk-amt">{formatCurrency(item.amount, item.currency)}</div><div className="exp-kpi-desk-date">{formatDateTimeDigits(item.date, item.createdAt)}</div></td>
-                        <td>
-                          <span className={`exp-kpi-desk-status exp-kpi-desk-status--${String(item.status || '').toLowerCase()}`}>
-                            {cellText(item.status)}
-                          </span>
-                        </td>
-                        <td className="exp-kpi-desk-center">
-                          {item.voucherUrl ? (
-                            <a
-                              className="exp-kpi-desk-open"
-                              href={item.voucherUrl}
-                              aria-label={`Open ${item.expenseNumber}`}
-                              title="Open voucher"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              &#8943;
-                            </a>
-                          ) : null}
-                        </td>
+              <>
+                <div className="exp-kpi-desk-wrap">
+                  <table className="exp-kpi-desk-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '4%' }}>#</th>
+                        <th style={{ width: '14%' }}>Expense No.</th>
+                        <th style={{ width: '14%' }}>Payee</th>
+                        <th style={{ width: '14%' }}>Prepared By</th>
+                        <th style={{ width: '18%' }}>Description</th>
+                        <th style={{ width: '12%' }} className="exp-kpi-desk-right">Amount / Date</th>
+                        <th style={{ width: '9%' }}>Status</th>
+                        <th style={{ width: '6%' }} className="exp-kpi-desk-center">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {pageItems.map((item, index) => (
+                        <tr
+                          key={`${item.id ?? 0}-${item.expenseNumber}-${item.date}`}
+                          className={item.voucherUrl ? 'is-clickable' : undefined}
+                          onClick={item.voucherUrl ? () => window.location.assign(item.voucherUrl) : undefined}
+                        >
+                          <td>{pageStart + index + 1}</td>
+                          <td className="exp-kpi-desk-no">{cellText(item.expenseNumber)}</td>
+                          <td>{cellText(item.payee)}</td>
+                          <td>
+                            <div>{cellText(item.preparedBy)}</div>
+                            <div className="exp-kpi-desk-sub">{cellText(item.account)}</div>
+                          </td>
+                          <td><div className="exp-kpi-desk-desc">{cellText(item.description)}</div></td>
+                          <td className="exp-kpi-desk-right"><div className="exp-kpi-desk-amt">{formatCurrency(item.amount, item.currency)}</div><div className="exp-kpi-desk-date">{formatDateTimeDigits(item.date, item.createdAt)}</div></td>
+                          <td>
+                            <span className={`exp-kpi-desk-status exp-kpi-desk-status--${String(item.status || '').toLowerCase()}`}>
+                              {cellText(item.status)}
+                            </span>
+                          </td>
+                          <td className="exp-kpi-desk-center">
+                            {item.voucherUrl ? (
+                              <a
+                                className="exp-kpi-desk-open"
+                                href={item.voucherUrl}
+                                aria-label={`Open ${item.expenseNumber}`}
+                                title="Open voucher"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                &#8943;
+                              </a>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="exp-kpi-mobile-cards" aria-label="Contributing expense records">
+                  {pageItems.map((item, index) => {
+                    const Card = item.voucherUrl ? 'a' : 'article';
+                    return (
+                      <Card
+                        key={`mobile-${item.id ?? 0}-${item.expenseNumber}-${item.date}`}
+                        className="exp-desk-mobile-card exp-kpi-mobile-card"
+                        href={item.voucherUrl || undefined}
+                      >
+                        <div className="exp-desk-mobile-card-top">
+                          <div className="exp-desk-mobile-card-main">
+                            <span className="exp-kpi-mobile-number">
+                              {pageStart + index + 1}. {cellText(item.expenseNumber)}
+                            </span>
+                            <span className="exp-kpi-mobile-payee">{cellText(item.payee)}</span>
+                          </div>
+                          <div className="exp-desk-mobile-card-aside">
+                            <span className="exp-desk-mobile-card-amt">
+                              {formatCurrency(item.amount, item.currency)}
+                            </span>
+                            <span className={`exp-kpi-desk-status exp-kpi-desk-status--${String(item.status || '').toLowerCase()}`}>
+                              {cellText(item.status)}
+                            </span>
+                          </div>
+                        </div>
+                        {item.description ? (
+                          <div className="exp-kpi-mobile-description">{cellText(item.description)}</div>
+                        ) : null}
+                        <div className="exp-desk-mobile-card-foot">
+                          <div className="exp-desk-mobile-card-fact">
+                            <span className="exp-desk-mobile-card-fact-body">
+                              <span className="exp-desk-mobile-card-fact-label">Date</span>
+                              <span className="exp-desk-mobile-card-fact-value">{formatDateTimeDigits(item.date, item.createdAt)}</span>
+                            </span>
+                          </div>
+                          <div className="exp-desk-mobile-card-fact">
+                            <span className="exp-desk-mobile-card-fact-body">
+                              <span className="exp-desk-mobile-card-fact-label">Prepared by</span>
+                              <span className="exp-desk-mobile-card-fact-value">{cellText(item.preparedBy)}</span>
+                              {item.account ? (
+                                <span className="exp-desk-mobile-card-fact-sub">{cellText(item.account)}</span>
+                              ) : null}
+                            </span>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+
                 <div className="exp-kpi-desk-footer">
                   <div className="exp-kpi-desk-showing">
                     Showing {items.length ? pageStart + 1 : 0} &ndash; {Math.min(pageStart + KPI_PAGE_SIZE, items.length)} of {items.length} records
@@ -555,7 +660,7 @@ export default function ExpenseKpiTraceModal({
                     <button type="button" disabled={safePage >= pageCount} onClick={() => setPage(safePage + 1)} aria-label="Next page">&rsaquo;</button>
                   </div>
                 </div>
-              </div>
+              </>
             ) : (
               <div className="exp-desk-kpi-trace-table-wrap">
                 <table className="exp-desk-kpi-trace-table">

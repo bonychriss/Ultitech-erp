@@ -527,6 +527,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         error_log('view-voucher scoped user lookup failed: ' . $e->getMessage());
     }
 
+    $signaturesByRole = [];
     try {
         $__aps = $pdo->prepare("SELECT approver_id, approver_name, role, status, signature_path, approved_at FROM approvals WHERE voucher_id = ? AND status = 'approved'");
         $__aps->execute([$voucherId]);
@@ -542,6 +543,10 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             }
             if ($aid && isset($userIds[$aid]) && !isset($signaturesById[$aid])) {
                 $signaturesById[$aid] = $fullSig;
+            }
+            $roleKeyForSig = strtolower(trim((string) ($row['role'] ?? '')));
+            if ($roleKeyForSig !== '') {
+                $signaturesByRole[$roleKeyForSig] = $fullSig;
             }
         }
     } catch (Throwable $e) { /* ignore */ }
@@ -641,10 +646,25 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             'sig' => null,
         ],
     ];
+    $slotRoleKeys = [
+        ['applicant'],
+        ['check', 'checked by', 'checker'],
+        ['department manager', 'dept manager'],
+        ['general manager', 'gm'],
+    ];
     foreach ($approvalSlots as $idx => $slot) {
         $approverId = (int) ($slot['approver_id'] ?? 0);
         if ($approverId > 0 && !empty($signaturesById[$approverId])) {
             $approvalSlots[$idx]['sig'] = $signaturesById[$approverId];
+        }
+        // Signature captured on the approval itself (e.g. drawn at approval time)
+        if (empty($approvalSlots[$idx]['sig'])) {
+            foreach ($slotRoleKeys[$idx] as $rk) {
+                if (!empty($signaturesByRole[$rk])) {
+                    $approvalSlots[$idx]['sig'] = $signaturesByRole[$rk];
+                    break;
+                }
+            }
         }
         unset($approvalSlots[$idx]['approver_id']);
     }
@@ -819,7 +839,22 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
 
     $finAccounts = [];
     try {
-        $finAccounts = $pdo->query("SELECT id, name, type, current_balance, currency FROM financial_accounts WHERE status = 'active' ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (function_exists('balancesUseCompanyScope') && balancesUseCompanyScope($pdo)) {
+            if ($companyId > 0) {
+                $accountsStmt = $pdo->prepare("SELECT id, name, type, current_balance, currency FROM financial_accounts WHERE status = 'active' AND company_id = ? ORDER BY name ASC");
+                $accountsStmt->execute([$companyId]);
+                $finAccounts = $accountsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
+        } else {
+            $finAccounts = $pdo->query("SELECT id, name, type, current_balance, currency FROM financial_accounts WHERE status = 'active' ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+        $finAccounts = array_values(array_filter($finAccounts, static function (array $account): bool {
+            $bucket = function_exists('balancesAccountLiquidityBucket')
+                ? balancesAccountLiquidityBucket((string) ($account['type'] ?? ''))
+                : strtolower(trim((string) ($account['type'] ?? '')));
+
+            return in_array($bucket, ['cash', 'bank', 'mobile'], true);
+        }));
     } catch (Throwable $e) { /* ignore */ }
 
     $voucherLogoUrl = function_exists('getCompanyLogoUrl') ? getCompanyLogoUrl() : '';
@@ -1041,6 +1076,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 return [
                     'id' => (int) ($acc['id'] ?? 0),
                     'name' => (string) ($acc['name'] ?? ''),
+                    'type' => (string) ($acc['type'] ?? ''),
                     'currency' => (string) ($acc['currency'] ?? 'TZS'),
                     'current_balance' => (float) ($acc['current_balance'] ?? 0),
                 ];

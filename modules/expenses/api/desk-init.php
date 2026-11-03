@@ -101,14 +101,23 @@ try {
         exit;
     }
 
+    $deskFilters = expenses_parse_list_filters($_GET);
+    $deskFilters['source_type'] = '';
+    $hasDeskFilters = count(array_filter($deskFilters, static fn ($v) => $v !== '')) > 0;
+
     // Same universe as the expenses table (receipts + General Payment vouchers).
-    $listedStats = expenses_build_listed_status_breakdown($pdo, []);
+    $listedStats = expenses_build_listed_status_breakdown($pdo, $deskFilters);
     $totalCount = (int) ($listedStats['total'] ?? 0);
     $statusBreakdown = is_array($listedStats['breakdown'] ?? null) ? $listedStats['breakdown'] : [];
 
-    $trendStats = expenses_build_listed_trend_stats($pdo, []);
+    $trendStats = expenses_build_listed_trend_stats($pdo, $deskFilters);
     $postedMonthCount = (int) ($trendStats['posted_month_count'] ?? 0);
     $spendMonth = (float) ($trendStats['spend_month'] ?? 0);
+    if ($hasDeskFilters) {
+        $monthStats = expenses_build_listed_trend_stats($pdo, []);
+        $postedMonthCount = (int) ($monthStats['posted_month_count'] ?? 0);
+        $spendMonth = (float) ($monthStats['spend_month'] ?? 0);
+    }
     $trendRows = is_array($trendStats['trend'] ?? null) ? $trendStats['trend'] : [];
     $trendFrom = (string) ($trendStats['trend_from'] ?? ($currentMonth . '-01'));
     $trendTo = (string) ($trendStats['trend_to'] ?? date('Y-m-t', strtotime($trendFrom)));

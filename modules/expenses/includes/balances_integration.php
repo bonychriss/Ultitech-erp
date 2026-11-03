@@ -979,7 +979,13 @@ function expenses_exclude_petty_cash_sql(string $tableAlias = ''): string
     ];
 
     global $pdo;
+    $hasSourceAccountColumn = false;
     if ($pdo instanceof PDO) {
+        $column = $pdo->query("SHOW COLUMNS FROM erp_expenses LIKE 'source_account_id'")->fetch(PDO::FETCH_ASSOC);
+        $hasSourceAccountColumn = (bool) $column;
+    }
+
+    if ($pdo instanceof PDO && $hasSourceAccountColumn) {
         $ids = expenses_petty_cash_account_ids($pdo);
         if ($ids !== []) {
             $idList = implode(',', array_map('intval', $ids));
@@ -1393,6 +1399,22 @@ function expenses_enrich_list_row(PDO $pdo, array $row): array
     $row['category_name'] = $row['sub_account_name'] !== '-' ? $row['sub_account_name'] : $row['main_account_name'];
     $row['source_account_name'] = expenses_resolve_source_account_name($pdo, $sourceId) ?: '-';
     $row['payment_method_label'] = expenses_payment_method_label($row['payment_method'] ?? '');
+    $paymentTypeLabel = '';
+    $sourceAccount = expenses_resolve_financial_account($pdo, $sourceId);
+    if ($sourceAccount !== null) {
+        $accountMap = expenses_fetch_financial_account_map($pdo);
+        if (expenses_row_is_payment_source_candidate($sourceAccount, $accountMap)) {
+            $paymentKind = expenses_payment_account_kind($sourceAccount);
+            $paymentTypeLabel = [
+                'cash' => 'Cash',
+                'bank' => 'Bank',
+                'mobile' => 'Mobile Wallet',
+            ][$paymentKind] ?? '';
+        }
+    } elseif (strtolower(trim((string) ($row['payment_method'] ?? ''))) === 'cash') {
+        $paymentTypeLabel = 'Cash';
+    }
+    $row['payment_type_label'] = $paymentTypeLabel;
 
     if (function_exists('expenses_currency_display_code')) {
         $row['currency_display'] = expenses_currency_display_code((string) ($row['currency_code'] ?? 'TZS'));
@@ -1873,8 +1895,20 @@ function expenses_build_listed_trend_stats(PDO $pdo, array $filters = []): array
     $trendFrom = $monthStart;
     $trendTo = $monthEnd;
 
-    // Current month empty but historical posted/paid exist → show the active spend window.
-    if ($spendMonth <= 0 && $spendDates !== []) {
+    $filterFrom = trim((string) ($filters['date_from'] ?? ''));
+    $filterTo = trim((string) ($filters['date_to'] ?? ''));
+    $validDate = static fn (string $d): bool => (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) && strtotime($d) !== false;
+
+    if ($validDate($filterFrom) || $validDate($filterTo)) {
+        // The chart follows the date range chosen in the filter.
+        sort($spendDates);
+        $trendFrom = $validDate($filterFrom) ? $filterFrom : ($spendDates[0] ?? $monthStart);
+        $trendTo = $validDate($filterTo) ? $filterTo : date('Y-m-d');
+        if ($trendFrom > $trendTo) {
+            $trendTo = $trendFrom;
+        }
+    } elseif ($spendMonth <= 0 && $spendDates !== []) {
+        // Current month empty but historical posted/paid exist → show the active spend window.
         sort($spendDates);
         $latest = $spendDates[count($spendDates) - 1];
         $earliest = $spendDates[0];

@@ -194,13 +194,15 @@ try {
             throw new PDOException((string) ($postResult['message'] ?? 'Could not post expense to balances.'));
         }
         expenses_mark_expense_posted($pdo, $expenseId);
-        $_SESSION['bal_lottie_success'] = 'Expense recorded and posted to the ledger.';
         $message = 'Expense recorded and posted to the ledger.';
     } else {
         $message = 'Draft updated.';
     }
 
     $pdo->commit();
+    if (!empty($_POST['notify_success'])) {
+        $_SESSION['success'] = $message;
+    }
 
     echo json_encode([
         'ok' => true,

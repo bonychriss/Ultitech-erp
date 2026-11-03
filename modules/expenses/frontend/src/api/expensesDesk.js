@@ -32,9 +32,12 @@ async function parseJson(response) {
   }
 }
 
-export async function fetchDeskInit() {
+export async function fetchDeskInit(filters = {}) {
   const params = new URLSearchParams();
   if (isPurchasesDesk()) params.set('desk', 'purchases');
+  Object.entries(filters || {}).forEach(([key, value]) => {
+    if (value !== '' && value != null) params.set(key, String(value));
+  });
   const qs = params.toString();
   const res = await fetch(`${getApiBase()}/desk-init.php${qs ? `?${qs}` : ''}`);
   const data = await parseJson(res);

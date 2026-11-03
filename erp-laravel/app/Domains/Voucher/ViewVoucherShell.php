@@ -50,6 +50,8 @@ final class ViewVoucherShell
             $extraCss .= '<link rel="stylesheet" href="' . htmlspecialchars(app_url('/assets/css/download-button.css'), ENT_QUOTES, 'UTF-8') . '?v=' . $vvCssV . '">' . "\n";
             $extraCss .= '<link rel="stylesheet" href="' . htmlspecialchars(app_url('/assets/css/voucher-view-page.css'), ENT_QUOTES, 'UTF-8') . '?v=' . $vvCssV . '">' . "\n";
             $extraCss .= '<link rel="stylesheet" href="' . htmlspecialchars(app_url('/assets/css/approval-flow.css'), ENT_QUOTES, 'UTF-8') . '?v=' . $vvCssV . '">' . "\n";
+            $extraCss .= '<link rel="stylesheet" href="' . htmlspecialchars(app_url('/assets/css/voucher-view-dark.css'), ENT_QUOTES, 'UTF-8') . '?v=' . $vvCssV . '">' . "\n";
+            $extraCss .= '<script defer src="' . htmlspecialchars(app_url('/assets/js/voucher-logo-dark.js'), ENT_QUOTES, 'UTF-8') . '?v=' . $vvCssV . '"></script>' . "\n";
         }
 
         $approvalStyles = '';

@@ -299,9 +299,15 @@ export default function ExpenseAnalyticsPanel({
                 tick={{ fill: tickFill, fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
-                width={48}
+                width={56}
                 domain={hasTrendSpend ? [0, 'auto'] : [0, 1]}
-                tickFormatter={(v) => (Number(v) >= 1000 ? `${Math.round(Number(v) / 1000)}k` : String(v))}
+                tickFormatter={(v) => {
+                  const n = Number(v);
+                  if (n >= 1e9) return `${+(n / 1e9).toFixed(1)}B`;
+                  if (n >= 1e6) return `${+(n / 1e6).toFixed(1)}M`;
+                  if (n >= 1e3) return `${Math.round(n / 1e3)}k`;
+                  return String(v);
+                }}
               />
               <Tooltip
                 content={<TrendTooltip />}
@@ -396,7 +402,16 @@ export default function ExpenseAnalyticsPanel({
               </Pie>
               <Tooltip
                 formatter={(value, name) => [`${value}`, name]}
-                contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }}
+                contentStyle={{
+                  borderRadius: 12,
+                  border: `1px solid ${isDark ? '#2a3942' : '#e2e8f0'}`,
+                  background: isDark ? '#202c33' : '#fff',
+                  color: isDark ? '#e9edef' : '#0f172a',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                }}
+                itemStyle={{ color: isDark ? '#e9edef' : '#0f172a' }}
+                labelStyle={{ color: isDark ? '#e9edef' : '#0f172a' }}
+                wrapperStyle={{ zIndex: 5, outline: 'none' }}
               />
             </PieChart>
             <div className="exp-desk-donut-center">

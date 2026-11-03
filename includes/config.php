@@ -378,10 +378,9 @@ if (session_status() == PHP_SESSION_NONE) {
         }
     }
 
+    // Use the site root cookie path so the same auth session is shared across
+    // company alias routes such as /ultimate/* and /erp/* on the same host.
     $sessionCookiePath = '/';
-    if (defined('APP_BASE_PATH') && APP_BASE_PATH !== '' && APP_BASE_PATH !== '/') {
-        $sessionCookiePath = rtrim((string) APP_BASE_PATH, '/') . '/';
-    }
     $sessionSecure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
     if ($sessionSecure) {
         @ini_set('session.cookie_secure', '1');

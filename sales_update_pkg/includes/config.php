@@ -261,11 +261,9 @@ try {
 
 // Start session if not already started
 if (session_status() == PHP_SESSION_NONE) {
-    // Set session cookie parameters before starting the session
+    // Use the site root cookie path so the same auth session is shared across
+    // company alias routes such as /ultimate/* and /erp/* on the same host.
     $sessionCookiePath = '/';
-    if (defined('APP_BASE_PATH') && APP_BASE_PATH !== '' && APP_BASE_PATH !== '/') {
-        $sessionCookiePath = rtrim((string) APP_BASE_PATH, '/') . '/';
-    }
     if (PHP_VERSION_ID >= 70300) {
         @session_set_cookie_params([
             'lifetime' => 0,

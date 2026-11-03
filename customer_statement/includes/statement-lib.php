@@ -53,6 +53,22 @@ function customer_statement_web_base(): string
     return function_exists('app_url') ? app_url('/customer_statement') : '/customer_statement';
 }
 
+function customer_statement_route_base(): string
+{
+    $requestPath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    $requestPath = str_replace('\\', '/', $requestPath);
+    if (preg_match('#^(.*?/customer_statement)(?:/|$)#i', $requestPath, $matches)) {
+        return rtrim($matches[1], '/');
+    }
+
+    return customer_statement_web_base();
+}
+
+function customer_statement_api_base(): string
+{
+    return customer_statement_route_base() . '/api';
+}
+
 function customer_statement_module_query(): string
 {
     $module = isset($_GET['module']) ? trim((string) $_GET['module']) : '';
@@ -419,7 +435,7 @@ function customer_statement_action_query(array $filters, array $selectedCustomer
  */
 function customer_statement_urls(array $filters, array $selectedCustomers): array
 {
-    $base = customer_statement_web_base() . '/index.php';
+    $base = customer_statement_route_base() . '/index.php';
     $module = customer_statement_module_query();
     $returnPath = $base . '?module=' . rawurlencode($module)
         . '&date_from=' . rawurlencode($filters['date_from'])
@@ -445,7 +461,7 @@ function customer_statement_urls(array $filters, array $selectedCustomers): arra
 
     if ($filters['customer_ids'] !== [] && count($selectedCustomers) === 1) {
         $urls['export_pdf'] = $base . customer_statement_action_query($filters, $selectedCustomers, ['download' => 'pdf']);
-        $msg = 'Statement period ' . $filters['date_from'] . ' to ' . $filters['date_to'] . '  ' . (string) ($selectedCustomers[0]['company_name'] ?? '');
+        $msg = 'Statement period ' . $filters['date_from'] . ' to ' . $filters['date_to'] . ' ï¿½ ' . (string) ($selectedCustomers[0]['company_name'] ?? '');
         $digits = preg_replace('/\D+/', '', (string) ($selectedCustomers[0]['phone'] ?? ''));
         if ($digits !== '') {
             $urls['whatsapp'] = 'https://wa.me/' . $digits . '?text=' . rawurlencode($msg);
@@ -698,7 +714,7 @@ function customerStatementDeskLoadReactAssets(): ?array
     return [
         'distHtml' => $distHtml,
         'assetBase' => $base . '/frontend/dist/assets/',
-        'apiUrl' => $base . '/api',
+        'apiUrl' => customer_statement_api_base(),
         'cssFile' => $cssFile,
         'jsFile' => $jsFile,
         'cssVersion' => is_file($cssPath) ? (string) filemtime($cssPath) : (string) time(),

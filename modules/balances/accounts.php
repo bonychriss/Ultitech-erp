@@ -145,6 +145,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 try {
                     $imagePath = balances_store_uploaded_account_image();
+                    if ($imagePath === '' && !empty($_POST['institution'])) {
+                        $imagePath = balances_copy_institution_logo((string) $_POST['institution']);
+                    }
                     $result = balances_create_sub_account(
                         $pdo,
                         $parentId,
@@ -1114,7 +1117,27 @@ include __DIR__ . '/includes/header.php';
     html[data-theme="dark"] body.page-balances-accounts .sub-cur-option:hover,
     html[data-theme="dark"] body.page-balances-accounts .sub-cur-option.is-selected { background: #202c33; }
     .sub-modal-identity { display: flex; align-items: center; gap: 10px; }
-    .sub-modal-identity .sub-modal-input { flex: 1; min-width: 0; }
+    .sub-inst-wrap { position: relative; flex: 1; min-width: 0; }
+    .sub-inst-wrap .sub-modal-input { width: 100%; }
+    .sub-inst-list {
+        position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; right: 0; max-height: 320px; overflow-y: auto;
+        background: #fff; border: 1px solid #d1d5db; border-radius: 10px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14); padding: 4px;
+    }
+    .sub-inst-list[hidden] { display: none; }
+    .sub-inst-item {
+        width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 0; background: transparent;
+        border-radius: 8px; cursor: pointer; text-align: left; font-size: 0.875rem; color: #111827;
+    }
+    .sub-inst-item:hover, .sub-inst-item.is-active { background: #f1f5f9; }
+    .sub-inst-item img { width: 32px; height: 32px; border-radius: 8px; object-fit: contain; background: #fff; box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08); flex-shrink: 0; }
+    .sub-inst-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sub-inst-type { font-size: 0.6875rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
+    .sub-inst-type--bank { background: #dbeafe; color: #1d4ed8; }
+    .sub-inst-type--mobile { background: #fce7f3; color: #be185d; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-inst-list { background: #0b141a; border-color: #2a3942; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-inst-item { color: #e9edef; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-inst-item:hover,
+    html[data-theme="dark"] body.page-balances-accounts .sub-inst-item.is-active { background: #202c33; }
     .sub-modal-image {
         position: relative; flex: 0 0 44px; width: 44px; height: 44px; border-radius: 10px;
         border: 1px dashed #cbd5e1; background: #f8fafc; color: #64748b;
@@ -2172,14 +2195,22 @@ include __DIR__ . '/includes/header.php';
                     <img id="subAccountImagePreview" alt="" hidden>
                     <i class="fas fa-camera" aria-hidden="true"></i>
                 </label>
-                <input type="text"
-                       class="sub-modal-input"
-                       id="subAccountName"
-                       name="account_name"
-                       maxlength="100"
-                       required
-                       placeholder="Enter sub-account name"
-                       autocomplete="off">
+                <div class="sub-inst-wrap">
+                    <input type="text"
+                           class="sub-modal-input"
+                           id="subAccountName"
+                           name="account_name"
+                           maxlength="100"
+                           required
+                           placeholder="Enter sub-account name, e.g. CRDB or M-Pesa"
+                           autocomplete="off"
+                           role="combobox"
+                           aria-autocomplete="list"
+                           aria-controls="subInstitutionList"
+                           aria-expanded="false">
+                    <div class="sub-inst-list" id="subInstitutionList" role="listbox" hidden></div>
+                </div>
+                <input type="hidden" name="institution" id="subInstitution" value="">
             </div>
             <p class="sub-modal-hint">Optional image (for example the bank or wallet logo) &middot; JPG, PNG, WEBP, GIF &middot; max 2MB</p>
             <div class="sub-modal-label-row" style="margin-top:14px;">
@@ -2473,10 +2504,133 @@ document.addEventListener('DOMContentLoaded', function () {
 function rayResetSubImage() {
     var input = document.getElementById('subAccountImage');
     var preview = document.getElementById('subAccountImagePreview');
+    var institution = document.getElementById('subInstitution');
     if (input) input.value = '';
+    if (institution) institution.value = '';
     if (preview) { preview.hidden = true; preview.removeAttribute('src'); }
     if (input && input.parentElement) input.parentElement.classList.remove('has-image');
 }
+
+var balancesInstitutions = <?= json_encode(array_values(array_map(static fn ($i) => [
+    'slug' => $i['slug'],
+    'name' => $i['name'],
+    'type' => $i['type'],
+    'aliases' => $i['aliases'],
+    'logo' => $i['logo'] !== '' ? balancesAccountImageUrl($i['logo']) : '',
+], balances_institutions())), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+document.addEventListener('DOMContentLoaded', function () {
+    var nameInput = document.getElementById('subAccountName');
+    var list = document.getElementById('subInstitutionList');
+    var hidden = document.getElementById('subInstitution');
+    var payWrap = document.getElementById('subPaymentTypeWrap');
+    var paySelect = document.getElementById('subPaymentWalletType');
+    var preview = document.getElementById('subAccountImagePreview');
+    var imageInput = document.getElementById('subAccountImage');
+    if (!nameInput || !list || !hidden) return;
+    var matches = [];
+    var active = -1;
+    var typeLabels = { bank: 'Bank', mobile: 'Mobile money' };
+
+    function close() {
+        list.hidden = true;
+        nameInput.setAttribute('aria-expanded', 'false');
+        active = -1;
+    }
+    function render() {
+        list.innerHTML = '';
+        matches.forEach(function (inst, i) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'sub-inst-item' + (i === active ? ' is-active' : '');
+            item.setAttribute('role', 'option');
+            var img = document.createElement('img');
+            img.alt = '';
+            img.src = inst.logo;
+            var name = document.createElement('span');
+            name.className = 'sub-inst-name';
+            name.textContent = inst.name;
+            var badge = document.createElement('span');
+            badge.className = 'sub-inst-type sub-inst-type--' + inst.type;
+            badge.textContent = typeLabels[inst.type] || inst.type;
+            item.appendChild(img);
+            item.appendChild(name);
+            item.appendChild(badge);
+            item.addEventListener('mousedown', function (e) { e.preventDefault(); choose(inst); });
+            list.appendChild(item);
+        });
+        list.hidden = matches.length === 0;
+        nameInput.setAttribute('aria-expanded', matches.length ? 'true' : 'false');
+    }
+    function search() {
+        var q = nameInput.value.trim().toLowerCase();
+        if (q.length < 1 || (payWrap && payWrap.hidden)) { matches = []; close(); return; }
+        var scored = [];
+        balancesInstitutions.forEach(function (inst) {
+            var hay = [inst.name.toLowerCase()].concat(inst.aliases);
+            var best = -1;
+            hay.forEach(function (h) {
+                if (h.indexOf(q) === 0) best = Math.max(best, 2);
+                else if (h.indexOf(' ' + q) !== -1 || h.indexOf(q) !== -1) best = Math.max(best, 1);
+            });
+            if (best >= 0) scored.push({ inst: inst, score: best });
+        });
+        scored.sort(function (a, b) { return b.score - a.score || a.inst.name.localeCompare(b.inst.name); });
+        matches = scored.slice(0, 8).map(function (s) { return s.inst; });
+        active = matches.length ? 0 : -1;
+        render();
+    }
+    function choose(inst) {
+        nameInput.value = inst.name;
+        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+        hidden.value = inst.slug;
+        if (imageInput) imageInput.value = '';
+        if (paySelect) {
+            var opt = paySelect.querySelector('option[value="' + inst.type + '"]');
+            if (opt && !opt.disabled) {
+                paySelect.value = inst.type;
+                raySyncOpeningField();
+            }
+        }
+        if (preview && inst.logo) {
+            preview.src = inst.logo;
+            preview.hidden = false;
+            preview.parentElement.classList.add('has-image');
+        }
+        matches = [];
+        close();
+    }
+
+    nameInput.addEventListener('input', function (e) {
+        if (hidden.value && e.isTrusted) {
+            hidden.value = '';
+            if (preview && !(imageInput && imageInput.files && imageInput.files.length)) {
+                preview.hidden = true;
+                preview.removeAttribute('src');
+                preview.parentElement.classList.remove('has-image');
+            }
+        }
+        if (e.isTrusted) search();
+    });
+    nameInput.addEventListener('focus', function () { if (!hidden.value) search(); });
+    nameInput.addEventListener('blur', function () { setTimeout(close, 120); });
+    nameInput.addEventListener('keydown', function (e) {
+        if (list.hidden || !matches.length) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            active = (active + (e.key === 'ArrowDown' ? 1 : matches.length - 1)) % matches.length;
+            render();
+        } else if (e.key === 'Enter' && active >= 0) {
+            e.preventDefault();
+            choose(matches[active]);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+        }
+    });
+    if (imageInput) imageInput.addEventListener('change', function () { hidden.value = ''; });
+});
 document.addEventListener('DOMContentLoaded', function () {
     var paySelect = document.getElementById('subPaymentWalletType');
     if (paySelect) paySelect.addEventListener('change', raySyncOpeningField);

@@ -1010,6 +1010,50 @@ function balances_currency_catalog(): array
 }
 
 /**
+ * Banks and mobile money networks with their bundled logo paths (see institutions_catalog.php).
+ *
+ * @return array<string, array{slug:string,name:string,type:string,aliases:list<string>,logo:string}>
+ */
+function balances_institutions(): array
+{
+    static $list = null;
+    if ($list !== null) {
+        return $list;
+    }
+    $list = [];
+    $root = dirname(__DIR__, 2);
+    foreach (require __DIR__ . '/institutions_catalog.php' as $inst) {
+        $logo = 'assets/balances/institutions/' . $inst['slug'] . '.png';
+        $list[$inst['slug']] = [
+            'slug' => $inst['slug'],
+            'name' => $inst['name'],
+            'type' => $inst['type'],
+            'aliases' => $inst['aliases'],
+            'logo' => is_file($root . '/' . $logo) ? $logo : '',
+        ];
+    }
+
+    return $list;
+}
+
+/** Copy a bundled institution logo into the account images folder; returns the new relative path or ''. */
+function balances_copy_institution_logo(string $slug): string
+{
+    $inst = balances_institutions()[$slug] ?? null;
+    if (!$inst || $inst['logo'] === '') {
+        return '';
+    }
+    $root = dirname(__DIR__, 2);
+    $targetDir = $root . '/uploads/balances/accounts/';
+    if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+        return '';
+    }
+    $fileName = 'ACC_' . time() . '_' . bin2hex(random_bytes(4)) . '.png';
+
+    return copy($root . '/' . $inst['logo'], $targetDir . $fileName) ? 'uploads/balances/accounts/' . $fileName : '';
+}
+
+/**
  * Save an uploaded account image from $_FILES[$field]; returns the relative path, or '' when no file was sent.
  *
  * @throws RuntimeException on an invalid or failed upload

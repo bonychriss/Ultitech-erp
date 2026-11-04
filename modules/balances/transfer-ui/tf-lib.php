@@ -1,6 +1,6 @@
 <?php
 /**
- * Internal Transfer  shared backend helpers for React API + shell.
+ * Internal Transfer ï¿½ shared backend helpers for React API + shell.
  */
 declare(strict_types=1);
 
@@ -111,6 +111,8 @@ function tfFetchAccounts(PDO $pdo): array
         "SELECT id, name, type, currency, current_balance
          FROM financial_accounts
          WHERE status = 'active'
+           AND type IN ('bank','cash','mobile')
+           AND id NOT IN (SELECT DISTINCT parent_id FROM financial_accounts WHERE parent_id IS NOT NULL AND parent_id > 0)
          ORDER BY name"
     );
     $rows = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];

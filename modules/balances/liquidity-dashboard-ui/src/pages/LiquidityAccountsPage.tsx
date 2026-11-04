@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ChevronRight, Landmark, Banknote, Smartphone, Wallet } from 'lucide-react';
+import { ChevronRight, Landmark, Banknote, Smartphone, Wallet } from 'lucide-react';
 import { fetchLiquidityAccounts } from '../api';
 import type { LiquidityAccountsPayload, LiquidityBucket } from '../types';
 import { bucketTitle, buildCrumbs, navigateLdView } from '../nav';
@@ -83,13 +83,6 @@ export default function LiquidityAccountsPage({ bucket = null }: { bucket?: Liqu
 
       <div className="ld-header">
         <div>
-          <button
-            type="button"
-            className="ld-back-link"
-            onClick={() => navigateLdView({ name: 'dashboard' })}
-          >
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Back
-          </button>
           <h1>{sectionTotal.label}</h1>
           <p className="ld-header-sub">
             {sectionTotal.count} active account{sectionTotal.count === 1 ? '' : 's'}
@@ -101,11 +94,6 @@ export default function LiquidityAccountsPage({ bucket = null }: { bucket?: Liqu
           <div className="ld-header-hero-value">{sectionTotal.display}</div>
         </div>
       </div>
-
-      <p className="ld-note">
-        Balances use the same live formula as the dashboard: opening balance + credits - debits.
-        Click an account to review monthly movements.
-      </p>
 
       {filteredGroups.length === 0 ? (
         <div className="ld-card">
@@ -125,6 +113,31 @@ export default function LiquidityAccountsPage({ bucket = null }: { bucket?: Liqu
                 </div>
                 <div className="ld-drill-section-total">{group.totalDisplay}</div>
               </div>
+              <ul className="ld-acc-cards">
+                {group.accounts.map((account, index) => (
+                  <li key={account.id}>
+                    <button
+                      type="button"
+                      className="ld-acc-card"
+                      onClick={() => navigateLdView({ name: 'account', accountId: account.id })}
+                    >
+                      <span className={`ld-acc-card-no ld-acc-card-no--${index % 6}`}>{index + 1}</span>
+                      <span className="ld-acc-card-main">
+                        <span className="ld-acc-card-name">{account.name}</span>
+                        <span className="ld-acc-card-meta">
+                          {[account.code, account.typeLabel, account.parentId > 0 ? 'Sub-account' : '']
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      </span>
+                      <span className={`ld-acc-card-bal${account.balance < 0 ? ' is-neg' : ''}`}>
+                        {account.balanceDisplay}
+                      </span>
+                      <ChevronRight className="w-4 h-4 ld-acc-card-go" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
               <div className="ld-ledger-wrap">
                 <table className="ld-ledger">
                   <colgroup>
@@ -177,6 +190,15 @@ export default function LiquidityAccountsPage({ bucket = null }: { bucket?: Liqu
                       );
                     })}
                   </tbody>
+                  <tfoot>
+                    <tr className="ld-ledger-total">
+                      <td colSpan={4} className="ld-ledger-total-gap" />
+                      <td className={`ld-ledger-num ld-ledger-total-cell${group.total < 0 ? ' is-neg' : ''}`}>
+                        <span className="ld-ledger-total-label">Total</span> {group.totalDisplay}
+                      </td>
+                      <td className="ld-ledger-total-gap" />
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </section>

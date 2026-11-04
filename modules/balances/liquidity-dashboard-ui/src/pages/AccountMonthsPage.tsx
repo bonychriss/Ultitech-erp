@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ChevronRight, AlertTriangle, PlayCircle, BookCheck, Wallet } from 'lucide-react';
 import { fetchAccountMonths } from '../api';
 import type { AccountMonthsPayload } from '../types';
 import { buildCrumbs, navigateLdView } from '../nav';
@@ -7,6 +8,8 @@ import Breadcrumbs from '../components/Breadcrumbs';
 
 export default function AccountMonthsPage({ accountId }: { accountId: number }) {
   const [data, setData] = useState<AccountMonthsPayload | null>(null);
+  const [topBar, setTopBar] = useState<Element | null>(null);
+  useEffect(() => { setTopBar(document.querySelector('header .header-content')); }, []);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -48,39 +51,35 @@ export default function AccountMonthsPage({ accountId }: { accountId: number }) 
 
   return (
     <div className="ld-page">
-      <Breadcrumbs items={crumbs} />
-
-      <div className="ld-header">
+      <div className="ld-header ld-header--inline">
         <div>
-          <button type="button" className="ld-back-link" onClick={() => navigateLdView({ name: 'liquidity' })}>
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Back
-          </button>
-          <h1>{account.name}</h1>
-          <p className="ld-header-sub">
-            {account.typeLabel} - {account.bucketLabel}
-            {account.code ? ` - ${account.code}` : ''}
-          </p>
-        </div>
-        <div className="ld-header-hero">
-          <div className="ld-header-hero-label">Current Balance</div>
-          <div className={`ld-header-hero-value${account.balance < 0 ? ' is-neg' : ''}`}>
-            {account.balanceDisplay}
-          </div>
+          <h1 className="ld-title-desktop">{account.name}</h1>
+          {topBar && createPortal(<span className="ld-topbar-title">{account.name}</span>, topBar)}
+          <Breadcrumbs items={crumbs} />
         </div>
       </div>
 
       <div className="ld-summary-grid">
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Opening Balance</div>
-          <div className="ld-summary-value">{account.openingBalanceDisplay}</div>
+        <div className="ld-summary-card ld-summary-card--icon">
+          <span className="ld-summary-icon ld-summary-icon--open"><PlayCircle className="w-4 h-4" aria-hidden="true" /></span>
+          <div>
+            <div className="ld-summary-label">Opening Balance</div>
+            <div className="ld-summary-value">{account.openingBalanceDisplay}</div>
+          </div>
         </div>
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Ledger Closing</div>
-          <div className="ld-summary-value">{account.reconcilingCloseDisplay}</div>
+        <div className="ld-summary-card ld-summary-card--icon">
+          <span className="ld-summary-icon ld-summary-icon--close"><BookCheck className="w-4 h-4" aria-hidden="true" /></span>
+          <div>
+            <div className="ld-summary-label">Ledger Closing</div>
+            <div className="ld-summary-value">{account.reconcilingCloseDisplay}</div>
+          </div>
         </div>
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Live Balance</div>
-          <div className="ld-summary-value">{account.balanceDisplay}</div>
+        <div className="ld-summary-card ld-summary-card--icon">
+          <span className="ld-summary-icon ld-summary-icon--live"><Wallet className="w-4 h-4" aria-hidden="true" /></span>
+          <div>
+            <div className="ld-summary-label">Live Balance</div>
+            <div className="ld-summary-value">{account.balanceDisplay}</div>
+          </div>
         </div>
       </div>
 
@@ -95,6 +94,33 @@ export default function AccountMonthsPage({ accountId }: { accountId: number }) 
         <div className="ld-drill-section-h">
           <h3>Monthly Breakdown</h3>
         </div>
+        <ul className="ld-acc-cards ld-month-cards">
+          {months.map((month, index) => (
+            <li key={month.ym}>
+              <button
+                type="button"
+                className="ld-acc-card ld-month-card"
+                onClick={() => navigateLdView({ name: 'month', accountId, ym: month.ym })}
+              >
+                <span className={`ld-acc-card-no ld-acc-card-no--${index % 6}`}>{index + 1}</span>
+                <span className="ld-acc-card-main">
+                  <span className="ld-acc-card-name">{month.label}</span>
+                  <span className="ld-acc-card-meta">
+                    {month.transactionCount} transaction{month.transactionCount === 1 ? '' : 's'}
+                  </span>
+                </span>
+                <span className={`ld-acc-card-bal${month.closingBalance < 0 ? ' is-neg' : ''}`}>
+                  {month.closingBalanceDisplay}
+                </span>
+                <ChevronRight className="w-4 h-4 ld-acc-card-go" aria-hidden="true" />
+                <span className="ld-month-card-flow">
+                  <span className="ld-month-card-in">In {month.moneyInDisplay}</span>
+                  <span className="ld-month-card-out">Out {month.moneyOutDisplay}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
         <div className="ld-ledger-wrap">
           <table className="ld-ledger ld-ledger--months">
             <colgroup>

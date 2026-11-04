@@ -32,6 +32,12 @@ if (!$expense_id || !$source_account_id) {
     exit;
 }
 
+if (expenses_is_payment_group_account($pdo, (int) $source_account_id)) {
+    http_response_code(422);
+    echo json_encode(['error' => 'Select a specific bank, cash or mobile account, not a parent group.']);
+    exit;
+}
+
 try {
     $pdo->beginTransaction();
     try { $pdo->query("SELECT company_id FROM erp_expenses LIMIT 1"); }

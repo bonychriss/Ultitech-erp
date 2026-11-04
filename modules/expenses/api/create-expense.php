@@ -81,6 +81,8 @@ if ($source_account_id) {
     $sourceRow = expenses_resolve_financial_account($pdo, $source_account_id);
     if ($sourceRow && expenses_is_petty_cash_account_row($sourceRow)) {
         $errors[] = 'Petty cash payments belong in the Petty Cash module, not Expenses.';
+    } elseif ($sourceRow && expenses_is_payment_group_account($pdo, $source_account_id)) {
+        $errors[] = 'Select a specific bank, cash or mobile account, not a parent group.';
     }
 }
 

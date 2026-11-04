@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ExternalLink, Search } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ExternalLink, Search, ChevronRight, PlayCircle, ArrowDownLeft, ArrowUpRight, BookCheck } from 'lucide-react';
 import { fetchMonthTransactions } from '../api';
 import type { MonthTransactionsPayload } from '../types';
 import { buildCrumbs, navigateLdView } from '../nav';
@@ -18,6 +19,8 @@ export default function MonthTransactionsPage({
   const [type, setType] = useState('');
   const [q, setQ] = useState('');
   const [qDraft, setQDraft] = useState('');
+  const [topBar, setTopBar] = useState<Element | null>(null);
+  useEffect(() => { setTopBar(document.querySelector('header .header-content')); }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,45 +67,67 @@ export default function MonthTransactionsPage({
   );
 
   return (
-    <div className="ld-page">
-      <Breadcrumbs items={crumbs} />
-
-      <div className="ld-header">
+    <div className="ld-page ld-month-transactions-page">
+      <div className="ld-header ld-header--inline">
         <div>
-          <button
-            type="button"
-            className="ld-back-link"
-            onClick={() => navigateLdView({ name: 'account', accountId })}
-          >
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Back
-          </button>
-          <h1>
+          <h1 className="ld-title-desktop">
             {account.name}
             <span className="ld-header-muted"> - {month.label}</span>
           </h1>
+          {topBar && createPortal(<span className="ld-topbar-title">{account.name} - {month.label}</span>, topBar)}
+          <Breadcrumbs items={crumbs} />
           <p className="ld-header-sub">Opening + Money In - Money Out = Closing</p>
         </div>
       </div>
 
-      <div className="ld-summary-grid ld-summary-grid--4">
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Opening Balance</div>
-          <div className="ld-summary-value">{month.openingBalanceDisplay}</div>
-        </div>
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Money In</div>
-          <div className="ld-summary-value is-in">{month.moneyInDisplay}</div>
-        </div>
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Money Out</div>
-          <div className="ld-summary-value is-out">{month.moneyOutDisplay}</div>
-        </div>
-        <div className="ld-summary-card">
-          <div className="ld-summary-label">Closing Balance</div>
-          <div className="ld-summary-value">{month.closingBalanceDisplay}</div>
-        </div>
+      <div className="ld-month-search-row">
+        <form
+          className="ld-search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setQ(qDraft.trim());
+          }}
+        >
+          <Search className="w-4 h-4" aria-hidden="true" />
+          <input
+            className="ld-input"
+            value={qDraft}
+            onChange={(e) => setQDraft(e.target.value)}
+            placeholder="Search description / reference"
+          />
+        </form>
       </div>
 
+      <div className="ld-summary-grid ld-summary-grid--4">
+        <div className="ld-summary-card ld-summary-card--icon">
+          <span className="ld-summary-icon ld-summary-icon--open"><PlayCircle className="w-4 h-4" aria-hidden="true" /></span>
+          <div>
+            <div className="ld-summary-label">Opening Balance</div>
+            <div className="ld-summary-value">{month.openingBalanceDisplay}</div>
+          </div>
+        </div>
+        <div className="ld-summary-card ld-summary-card--icon">
+          <span className="ld-summary-icon ld-summary-icon--live"><ArrowDownLeft className="w-4 h-4" aria-hidden="true" /></span>
+          <div>
+            <div className="ld-summary-label">Money In</div>
+            <div className="ld-summary-value is-in">{month.moneyInDisplay}</div>
+          </div>
+        </div>
+        <div className="ld-summary-card ld-summary-card--icon">
+          <span className="ld-summary-icon ld-summary-icon--out"><ArrowUpRight className="w-4 h-4" aria-hidden="true" /></span>
+          <div>
+            <div className="ld-summary-label">Money Out</div>
+            <div className="ld-summary-value is-out">{month.moneyOutDisplay}</div>
+          </div>
+        </div>
+        <div className="ld-summary-card ld-summary-card--icon">
+          <span className="ld-summary-icon ld-summary-icon--close"><BookCheck className="w-4 h-4" aria-hidden="true" /></span>
+          <div>
+            <div className="ld-summary-label">Closing Balance</div>
+            <div className="ld-summary-value">{month.closingBalanceDisplay}</div>
+          </div>
+        </div>
+      </div>
       <section className="ld-drill-section">
         <div className="ld-drill-section-h ld-card-h--filters">
           <h3>Transactions ({transactions.length})</h3>
@@ -117,25 +142,39 @@ export default function MonthTransactionsPage({
               <option value="credit">Money In (Credit)</option>
               <option value="debit">Money Out (Debit)</option>
             </select>
-            <form
-              className="ld-search"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setQ(qDraft.trim());
-              }}
-            >
-              <Search className="w-4 h-4" aria-hidden="true" />
-              <input
-                className="ld-input"
-                value={qDraft}
-                onChange={(e) => setQDraft(e.target.value)}
-                placeholder="Search description / reference"
-              />
-            </form>
           </div>
         </div>
         {loading && <div className="ld-inline-loading">Refreshing...</div>}
-        <div className="ld-ledger-wrap">
+        {transactions.length > 0 && (
+          <ul className="ld-acc-cards ld-month-cards">
+            {transactions.map((tx, index) => {
+              const isOut = tx.type === 'debit';
+              return (
+                <li key={tx.id}>
+                  <button
+                    type="button"
+                    className="ld-acc-card ld-month-card"
+                    onClick={() => navigateLdView({ name: 'transaction', accountId, ym, txId: tx.id })}
+                  >
+                    <span className={`ld-acc-card-no ld-acc-card-no--${index % 6}`}>{index + 1}</span>
+                    <span className="ld-acc-card-main">
+                      <span className="ld-acc-card-name">{tx.description || `#${tx.id}`}</span>
+                      <span className="ld-acc-card-meta">{tx.transactionDate} · #{tx.id}</span>
+                    </span>
+                    <span className={`ld-acc-card-bal ${isOut ? 'ld-tx-out' : 'ld-tx-in'}`}>
+                      {isOut ? `-${tx.debitDisplay}` : `+${tx.creditDisplay}`}
+                    </span>
+                    <ChevronRight className="w-4 h-4 ld-acc-card-go" aria-hidden="true" />
+                    <span className="ld-month-card-flow">
+                      <span className="ld-tx-label">{tx.typeLabel}</span>
+                      <span className={tx.runningBalance < 0 ? 'ld-month-card-out' : ''}>Bal {tx.runningBalanceDisplay}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}        <div className="ld-ledger-wrap">
           {transactions.length === 0 ? (
             <div className="ld-empty ld-ledger-empty">No transactions for this month with the current filters.</div>
           ) : (

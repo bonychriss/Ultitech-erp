@@ -73,6 +73,8 @@ try {
             $errors[] = 'Payment account was not found.';
         } elseif (expenses_is_petty_cash_account_row($sourceRow)) {
             $errors[] = 'Petty cash payments belong in the Petty Cash module, not Expenses.';
+        } elseif (expenses_is_payment_group_account($pdo, $sourceId)) {
+            $errors[] = 'Select a specific bank, cash or mobile account, not a parent group.';
         }
     }
     if ($description === '') {

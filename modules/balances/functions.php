@@ -1409,19 +1409,51 @@ function balances_list_target_parent_accounts(array $parentAccounts, int $source
     }
 
     $targets = [];
+    $seen = [];
     foreach (coa_default_accounts_catalog() as $catalogParent) {
         $code = (string) ($catalogParent['code'] ?? '');
         if ($code === '' || !isset($codeToRow[$code])) {
             continue;
         }
         $row = $codeToRow[$code];
-        if ((int) ($row['id'] ?? 0) === $sourceAccountId) {
+        $rowId = (int) ($row['id'] ?? 0);
+        if ($rowId === $sourceAccountId) {
             continue;
         }
         $targets[] = $row;
+        $seen[$rowId] = true;
     }
 
-    return $targets;
+    $sourceType = (string) ($sourceRow['type'] ?? '');
+    $others = [];
+    foreach ($parentAccounts as $row) {
+        $rowId = (int) ($row['id'] ?? 0);
+        if ($rowId <= 0 || $rowId === $sourceAccountId || isset($seen[$rowId])) {
+            continue;
+        }
+        if ((int) ($row['parent_id'] ?? 0) > 0) {
+            continue;
+        }
+        $rowCode = trim((string) ($row['code'] ?? ''));
+        if ($rowCode === '-') {
+            $rowCode = '';
+        }
+        if ($sourceType !== '' && !coa_account_types_compatible_for_parent($sourceType, (string) ($row['type'] ?? ''), $rowCode)) {
+            continue;
+        }
+        $others[] = $row;
+    }
+    usort($others, static function ($a, $b) {
+        $codeA = (int) preg_replace('/\D/', '', (string) ($a['code'] ?? '0'));
+        $codeB = (int) preg_replace('/\D/', '', (string) ($b['code'] ?? '0'));
+        if ($codeA !== $codeB) {
+            return $codeA <=> $codeB;
+        }
+
+        return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+    });
+
+    return array_merge($targets, $others);
 }
 
 function balances_can_move_parent_to_sub_account(array $parentRow): bool

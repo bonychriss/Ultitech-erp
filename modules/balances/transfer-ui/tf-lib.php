@@ -261,6 +261,10 @@ function tfCreateTransfer(PDO $pdo, array $input): array
 
         $pdo->commit();
 
+        if (function_exists('balancesScheduleLedgerSync')) {
+            balancesScheduleLedgerSync($pdo);
+        }
+
         if (function_exists('recalculateBalance')) {
             recalculateBalance($fromAccount);
             recalculateBalance($toAccount);

@@ -3,6 +3,12 @@ require_once __DIR__ . '/../includes/functions.php';
 requireLogin();
 global $pdo;
 
+require_once __DIR__ . '/../includes/gl/gl_reports.php';
+if (gl_report_source($pdo) === 'ledger' && !isset($_GET['legacy'])) {
+    header('Location: gl-journal.php');
+    exit;
+}
+
 $journals = [];
 try {
     $journals = $pdo->query("

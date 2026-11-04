@@ -166,6 +166,10 @@ if (!function_exists('invoice_gl_post_balanced_entry')) {
         string $description,
         array $items
     ): int {
+        if (is_file(__DIR__ . '/gl/gl_bridge.php')) {
+            require_once __DIR__ . '/gl/gl_bridge.php';
+            gl_bridge_schedule_sync($pdo);
+        }
         if (!invoice_gl_tables_ready($pdo)) {
             throw new RuntimeException('General ledger tables are not available.');
         }

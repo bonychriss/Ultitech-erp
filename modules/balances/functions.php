@@ -3457,12 +3457,36 @@ function balancesRecordTransaction(
 
         if (!$pdo->inTransaction()) {
             balancesRecalculateAccount($pdo, $accountId, $companyId > 0 ? $companyId : null);
+        } else {
+            // Same unit of work as the insert, so it rolls back with it.
+            $delta = $type === 'credit' ? $amount : -$amount;
+            $pdo->prepare('UPDATE financial_accounts SET current_balance = COALESCE(current_balance, 0) + ? WHERE id = ?')
+                ->execute([$delta, $accountId]);
         }
+
+        balancesScheduleLedgerSync($pdo);
 
         return true;
     } catch (Throwable $e) {
         error_log('balancesRecordTransaction: ' . $e->getMessage());
         return false;
+    }
+}
+
+/**
+ * Queue a post-request sync of new money movements into the double-entry ledger.
+ */
+function balancesScheduleLedgerSync(?PDO $pdo): void
+{
+    $bridge = dirname(__DIR__, 2) . '/includes/gl/gl_bridge.php';
+    if (!is_file($bridge)) {
+        return;
+    }
+    try {
+        require_once $bridge;
+        gl_bridge_schedule_sync($pdo);
+    } catch (Throwable $e) {
+        error_log('balancesScheduleLedgerSync: ' . $e->getMessage());
     }
 }
 

@@ -5,6 +5,12 @@ requireLogin();
 
 global $pdo;
 
+require_once __DIR__ . '/../includes/gl/gl_reports.php';
+if (gl_report_source($pdo) === 'ledger' && !isset($_GET['legacy'])) {
+    header('Location: gl-journal.php?new=1');
+    exit;
+}
+
 $accounts = [];
 try {
     $accounts = $pdo->query('SELECT * FROM erp_accounts ORDER BY code ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];

@@ -2050,7 +2050,7 @@ function sppdPayPurchaseOrder(PDO $pdo, array $data, ?array $uploadedFile = null
         $stmt = $pdo->prepare('
             INSERT INTO account_transactions
             (company_id, account_id, transaction_date, type, amount, reference_type, reference_id, description, created_by, created_at, supplier_payment_id)
-            VALUES (?, ?, ?, \'credit\', ?, \'purchase_order\', ?, ?, ?, NOW(), ?)
+            VALUES (?, ?, ?, \'debit\', ?, \'purchase_order\', ?, ?, ?, NOW(), ?)
         ');
         $desc = 'Supplier Payment: ' . $paymentNumber . ' for PO #' . $po['po_number'];
         if ($notes !== '') {
@@ -2119,6 +2119,13 @@ function sppdPayPurchaseOrder(PDO $pdo, array $data, ?array $uploadedFile = null
         }
 
         $pdo->commit();
+
+        if (function_exists('balancesScheduleLedgerSync')) {
+            balancesScheduleLedgerSync($pdo);
+        } elseif (is_file(dirname(__DIR__, 3) . '/includes/gl/gl_bridge.php')) {
+            require_once dirname(__DIR__, 3) . '/includes/gl/gl_bridge.php';
+            gl_bridge_schedule_sync($pdo);
+        }
 
         $message = $markFullyPaid
             ? 'Purchase Order payment registered successfully as ' . $paymentNumber . '.'

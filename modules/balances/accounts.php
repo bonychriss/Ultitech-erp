@@ -578,12 +578,11 @@ if (is_array($selectedParent)) {
         }
     }
 }
-$selectedParentShowsPaymentType = is_array($selectedParentRaw)
-    && function_exists('balances_parent_is_payment_wallet_group')
-    && balances_parent_is_payment_wallet_group($selectedParentRaw);
-$selectedParentDefaultPaymentType = $selectedParentShowsPaymentType && function_exists('balances_infer_payment_wallet_type')
+$selectedParentPaymentMode = is_array($selectedParentRaw) ? balances_parent_payment_type_mode($selectedParentRaw) : 'none';
+$selectedParentShowsPaymentType = $selectedParentPaymentMode === 'required';
+$selectedParentDefaultPaymentType = $selectedParentShowsPaymentType
     ? balances_infer_payment_wallet_type($selectedParentRaw)
-    : 'cash';
+    : '';
 
 $accountRowsById = [];
 foreach ($accountRows as $row) {
@@ -623,9 +622,8 @@ foreach ($parentAccounts as $parentRow) {
             $parentRaw = null;
         }
     }
-    $showsPayment = is_array($parentRaw)
-        && function_exists('balances_parent_is_payment_wallet_group')
-        && balances_parent_is_payment_wallet_group($parentRaw);
+    $paymentMode = is_array($parentRaw) ? balances_parent_payment_type_mode($parentRaw) : 'none';
+    $showsPayment = $paymentMode === 'required';
     $assignRows = function_exists('balances_list_assignable_accounts')
         ? balances_list_assignable_accounts($accountRows, $parentRow, $childrenByParent)
         : [];
@@ -644,10 +642,8 @@ foreach ($parentAccounts as $parentRow) {
     $mobileParentMeta[$pid] = [
         'id' => $pid,
         'name' => (string) ($parentRow['name'] ?? ''),
-        'shows_payment_type' => $showsPayment,
-        'default_payment_type' => $showsPayment && function_exists('balances_infer_payment_wallet_type') && is_array($parentRaw)
-            ? balances_infer_payment_wallet_type($parentRaw)
-            : 'cash',
+        'payment_type_mode' => $paymentMode,
+        'default_payment_type' => $showsPayment ? balances_infer_payment_wallet_type($parentRaw) : '',
         'assignable' => $assignOptions,
     ];
 }
@@ -2118,18 +2114,19 @@ include __DIR__ . '/includes/header.php';
                    required
                    placeholder="Enter sub-account name"
                    autocomplete="off">
-            <div id="subPaymentTypeWrap"<?= $selectedParentShowsPaymentType ? '' : ' hidden' ?>>
+            <div id="subPaymentTypeWrap"<?= $selectedParentPaymentMode !== 'none' ? '' : ' hidden' ?>>
                 <div class="sub-modal-label-row" style="margin-top:14px;">
-                    <label for="subPaymentWalletType">Payment type</label>
+                    <label for="subPaymentWalletType">Account type</label>
                 </div>
                 <select class="sub-modal-select" id="subPaymentWalletType" name="payment_wallet_type"<?= $selectedParentShowsPaymentType ? ' required' : '' ?>>
+                    <option value="" id="subPaymentTypeRegular"<?= $selectedParentShowsPaymentType ? ' hidden disabled' : ' selected' ?>>Regular asset account</option>
                     <?php foreach (balances_payment_wallet_types() as $walletSlug => $walletLabel): ?>
                         <option value="<?= htmlspecialchars($walletSlug, ENT_QUOTES, 'UTF-8') ?>"<?= $walletSlug === $selectedParentDefaultPaymentType ? ' selected' : '' ?>>
                             <?= htmlspecialchars($walletLabel, ENT_QUOTES, 'UTF-8') ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <p class="sub-modal-hint">How this wallet is treated on expenses and transfers (cash, bank, or mobile money).</p>
+                <p class="sub-modal-hint">Bank, Mobile money and Cash accounts can receive and pay money and are listed in their own section. Use Regular asset account for anything else.</p>
             </div>
             <div class="sub-modal-actions">
                 <button type="button" class="sub-modal-btn sub-modal-btn-cancel" id="cancelSubAccountModal">Cancel</button>
@@ -2323,16 +2320,15 @@ function openSubForParent(parentId) {
         title.textContent = 'Add New Sub-account to ' + (meta.name || 'account');
     }
     if (payWrap && paySelect) {
-        if (meta.shows_payment_type) {
-            payWrap.hidden = false;
-            paySelect.required = true;
-            if (meta.default_payment_type) {
-                paySelect.value = meta.default_payment_type;
-            }
-        } else {
-            payWrap.hidden = true;
-            paySelect.required = false;
+        var mode = meta.payment_type_mode || 'none';
+        var regularOpt = document.getElementById('subPaymentTypeRegular');
+        payWrap.hidden = mode === 'none';
+        paySelect.required = mode === 'required';
+        if (regularOpt) {
+            regularOpt.hidden = mode === 'required';
+            regularOpt.disabled = mode === 'required';
         }
+        paySelect.value = mode === 'required' ? (meta.default_payment_type || 'cash') : '';
     }
     modal.classList.add('is-open');
     document.body.style.overflow = 'hidden';

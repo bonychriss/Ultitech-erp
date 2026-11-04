@@ -951,6 +951,26 @@ function balances_parent_is_payment_wallet_group(array $parent): bool
     );
 }
 
+/**
+ * 'required' for cash/bank/mobile groups, 'optional' for general asset parents
+ * (sub-account may be a wallet or a regular asset), 'none' otherwise.
+ */
+function balances_parent_payment_type_mode(array $parent): string
+{
+    if (balances_parent_is_payment_wallet_group($parent)) {
+        return 'required';
+    }
+    if (strtolower(trim((string) ($parent['type'] ?? ''))) !== 'asset') {
+        return 'none';
+    }
+    $parts = balances_parent_account_label_parts($parent);
+    if (preg_match('/receivable|a\/r\b|prepay|inventory|stock|fixed asset|equipment|depreciation|land|building|vehicle/i', $parts['name'])) {
+        return 'none';
+    }
+
+    return 'optional';
+}
+
 function balances_infer_payment_wallet_type(array $parent): string
 {
     $type = strtolower(trim((string) ($parent['type'] ?? '')));
@@ -1075,6 +1095,8 @@ function balances_create_sub_account(PDO $pdo, int $parentId, string $accountNam
             return ['success' => false, 'message' => 'Please select a payment type (Cash, Bank, or Mobile money).'];
         }
         $storedType = $walletType;
+    } elseif (balances_parent_payment_type_mode($parent) === 'optional') {
+        $storedType = balances_normalize_payment_wallet_type($paymentWalletType) ?? $accountType;
     }
     if (function_exists('coa_ensure_account_category')) {
         coa_ensure_account_category(

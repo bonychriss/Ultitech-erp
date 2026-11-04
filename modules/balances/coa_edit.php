@@ -934,7 +934,7 @@ try {
                 </div>
 
                 <div class="coa-field" id="paymentTypeField"<?= ($categoryOptions[$selectedCategory]['account_type'] ?? '') === 'asset' ? '' : ' hidden' ?>>
-                    <label for="payment_wallet_type">Payment type</label>
+                    <label for="payment_wallet_type">Account type</label>
                     <select class="coa-select" id="payment_wallet_type" name="payment_wallet_type">
                         <option value="">Regular asset account</option>
                         <?php foreach (balances_payment_wallet_types() as $walletSlug => $walletLabel): ?>
